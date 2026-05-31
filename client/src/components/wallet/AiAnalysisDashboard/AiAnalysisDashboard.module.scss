@@ -11,6 +11,7 @@
   padding: $spacing-05;
   color: $text-primary;
   min-width: 0;
+  overflow: auto;
 }
 
 .header {
@@ -168,11 +169,25 @@
   background: $border-strong;
 }
 
-.metric_success::before { background: $support-success; }
-.metric_warning::before { background: $support-warning; }
-.metric_danger::before { background: $support-error; }
-.metric_info::before { background: $support-info; }
-.metric_neutral::before { background: $border-strong; }
+.metric_success::before {
+  background: $support-success;
+}
+
+.metric_warning::before {
+  background: $support-warning;
+}
+
+.metric_danger::before {
+  background: $support-error;
+}
+
+.metric_info::before {
+  background: $support-info;
+}
+
+.metric_neutral::before {
+  background: $border-strong;
+}
 
 .metricValue {
   color: $text-primary;
@@ -311,7 +326,7 @@
   line-height: 1.55;
 }
 
-.compactList li + li {
+.compactList li+li {
   margin-top: $spacing-02;
 }
 

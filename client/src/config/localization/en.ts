@@ -358,6 +358,7 @@ export const translation = {
     aiNoData: "No AI analysis data",
     aiSummary: "Summary",
     aiSwapSummary: {
+      button: "View swap analysis",
       title: "AI Swap Summary",
       realizedPnl: "Realized PnL",
       winRate: "Win Rate",
@@ -714,7 +715,7 @@ export const translation = {
     account: "Account",
     language: "Language",
     search: "Search",
-    searchPlaceholder: "Search tokens or wallet addresses…",
+    searchPlaceholder: "Search",
     searchHint: "Type to search for tokens, pools, or wallets",
     searchLoading: "Searching…",
     searchNoResults: "No results found",

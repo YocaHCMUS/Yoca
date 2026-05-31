@@ -331,6 +331,7 @@
 .transferSubRow {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: $spacing-02;
   padding: 0 $spacing-02 $spacing-02 $spacing-06;
   font-family: 'IBM Plex Mono', monospace;
@@ -374,6 +375,12 @@
 
 .transferSpacer {
   flex: 1;
+}
+
+.transferArrow {
+  color: $text-secondary;
+  font-size: 0.75rem;
+  flex-shrink: 0;
 }
 
 .transferAddrLabel {

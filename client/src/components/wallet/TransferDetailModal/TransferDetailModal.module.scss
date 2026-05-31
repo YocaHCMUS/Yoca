@@ -32,8 +32,14 @@
 .row {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: baseline;
   gap: $spacing-02;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  align-items: end;
 }
 
 .rightColumn {
@@ -243,6 +249,12 @@
 
 .transferItem {
   display: flex;
+  flex-direction: column;
+  gap: $spacing-02;
+}
+
+.transferInfoRow {
+  display: flex;
   align-items: center;
   gap: $spacing-02;
 }
@@ -265,7 +277,7 @@
   display: flex;
   align-items: center;
   gap: $spacing-02;
-  padding: 0 $spacing-02 $spacing-02 $spacing-06;
+  padding: 0 $spacing-02 0 0;
   font-family: 'IBM Plex Mono', monospace;
 }
 
@@ -311,11 +323,10 @@
 
 .transferFromTo {
   display: flex;
-  flex-direction: column;
-  align-items: end;
-  gap: 0;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
   min-width: 0;
-  flex-shrink: 1;
 }
 
 .transferArrowSep {
