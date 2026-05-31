@@ -102,6 +102,11 @@ const ERROR = {
   PASSWORD_ALREADY_SET:
     "Password login is already configured for this account.",
   CURRENT_PASSWORD_INVALID: "Current password is invalid.",
+  PASSWORD_RESET_CODE_INVALID: "Reset code is invalid.",
+  PASSWORD_RESET_CODE_EXPIRED:
+    "Reset code has expired. Please request a new code.",
+  PASSWORD_RESET_ATTEMPTS_EXCEEDED:
+    "Too many reset attempts. Please request a new code.",
   EMAIL_ALREADY_IN_USE: "Email is already in use by another account.",
   ACCOUNT_DELETE_CONFIRM_MISMATCH:
     "Account deletion confirmation text does not match.",

@@ -19,6 +19,7 @@ type ClientTypeOf<Route extends keyof AppRoutes> = ReturnType<
 >;
 
 type UsersClient = ClientTypeOf<"/api/users">;
+type AuthClient = ClientTypeOf<"/api/auth">;
 type TokenClient = ClientTypeOf<"/api/tokens">;
 type MiscClient = ClientTypeOf<"/api/misc">;
 type ProfileClient = ClientTypeOf<"/api/profile">;
@@ -41,6 +42,7 @@ type PaymentClient = ClientTypeOf<"/api/payment">;
 export type ApiClient = {
   api: {
     users: UsersClient;
+    auth: AuthClient;
     tokens: TokenClient;
     misc: MiscClient;
     profile: ProfileClient;
@@ -65,6 +67,7 @@ export type ApiClient = {
 const client: ApiClient = {
   api: {
     users: hcc("/api/users"),
+    auth: hcc("/api/auth"),
     tokens: hcc("/api/tokens"),
     misc: hcc("/api/misc"),
     profile: hcc("/api/profile"),

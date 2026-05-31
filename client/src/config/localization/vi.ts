@@ -1221,6 +1221,11 @@ export const translation = defineTranslation({
     PASSWORD_ALREADY_SET:
       "Tài khoản đã có phương thức đăng nhập bằng mật khẩu.",
     CURRENT_PASSWORD_INVALID: "Mật khẩu hiện tại không đúng.",
+    PASSWORD_RESET_CODE_INVALID: "Reset code is invalid.",
+    PASSWORD_RESET_CODE_EXPIRED:
+      "Reset code has expired. Please request a new code.",
+    PASSWORD_RESET_ATTEMPTS_EXCEEDED:
+      "Too many reset attempts. Please request a new code.",
     EMAIL_ALREADY_IN_USE: "Email này đang được sử dụng bởi tài khoản khác.",
     ACCOUNT_DELETE_CONFIRM_MISMATCH:
       "Nội dung xác nhận xóa tài khoản không khớp.",

@@ -3,6 +3,7 @@ import { serve } from "@hono/node-server";
 import { clientDomains } from "@sv/config/security.js";
 import { requestContextMiddleware } from "@sv/middlewares/request-context.js";
 import users, { type UsersAppType } from "@sv/routes/users.js";
+import auth, { type AuthAppType } from "@sv/routes/auth.js";
 import tokens, { type TokenAppType } from "@sv/routes/tokens.js";
 import balances, { type BalancesAppType } from "@sv/routes/balances.js";
 import alerts, { type AlertsRouteAppType } from "@sv/routes/alerts.route.js";
@@ -69,6 +70,7 @@ serve(
 // Define here first
 export type AppRoutes = {
   "/api/users": UsersAppType;
+  "/api/auth": AuthAppType;
   "/api/tokens": TokenAppType;
   "/api/misc": MiscAppType;
   "/api/search": SearchAppType;
@@ -95,6 +97,7 @@ export type AppRoutes = {
 // Then here
 const routes: AppRoutes = {
   "/api/users": users,
+  "/api/auth": auth,
   "/api/tokens": tokens,
   "/api/misc": misc,
   "/api/search": search,

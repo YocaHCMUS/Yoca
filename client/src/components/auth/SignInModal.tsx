@@ -3,13 +3,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useUserTheme } from "@/contexts/ThemeContext";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type MouseEvent } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useLocation } from "react-router";
 import z from "zod";
 import styles from "./AuthModal.module.scss";
 import { GoogleAuthButton } from "./GoogleAuthButton";
 import { WalletAuthButton } from "./WalletAuthButton";
+
+type ForgotPasswordStep = "auth" | "email" | "reset" | "success";
 
 type AuthModalProps = {
   open: boolean;
@@ -34,6 +36,9 @@ export function AuthModalBase({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [forgotStep, setForgotStep] = useState<ForgotPasswordStep>("auth");
+  const [forgotInfoMsg, setForgotInfoMsg] = useState<string | null>(null);
+  const [forgotEmail, setForgotEmail] = useState("");
   
   // Quản lý trạng thái Animation Slide (false = Login, true = Register)
   const [isRegisterMode, setIsRegisterMode] = useState(initialMode === "register");
@@ -55,6 +60,7 @@ export function AuthModalBase({
     register: registerLogin,
     handleSubmit: handleLoginSubmit,
     clearErrors: clearLoginErrors,
+    getValues: getLoginValues,
     formState: { errors: loginErrors },
   } = useForm<LoginSchema>({ resolver: zodResolver(loginSchema) });
 
@@ -78,18 +84,161 @@ export function AuthModalBase({
     formState: { errors: registerErrors },
   } = useForm<RegisterSchema>({ resolver: zodResolver(registerSchema) });
 
+  // ====== SCHEMA & LOGIC FORGOT PASSWORD ======
+  const strongPasswordSchema = z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must include at least one uppercase letter")
+    .regex(/[a-z]/, "Password must include at least one lowercase letter")
+    .regex(/[0-9]/, "Password must include at least one number");
+
+  const forgotEmailSchema = z.object({
+    email: z.email("Invalid email address"),
+  });
+  type ForgotEmailSchema = z.infer<typeof forgotEmailSchema>;
+  const {
+    register: registerForgotEmail,
+    handleSubmit: handleForgotEmailSubmit,
+    clearErrors: clearForgotEmailErrors,
+    setValue: setForgotEmailField,
+    formState: { errors: forgotEmailErrors },
+  } = useForm<ForgotEmailSchema>({ resolver: zodResolver(forgotEmailSchema) });
+
+  const resetPasswordSchema = z
+    .object({
+      email: z.email("Invalid email address"),
+      code: z.string().regex(/^\d{6}$/, "Reset code must be 6 digits"),
+      newPassword: strongPasswordSchema,
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+      message: "Passwords do not match",
+      path: ["confirmPassword"],
+    });
+  type ResetPasswordSchema = z.infer<typeof resetPasswordSchema>;
+  const {
+    register: registerResetPassword,
+    handleSubmit: handleResetPasswordSubmit,
+    clearErrors: clearResetPasswordErrors,
+    setValue: setResetPasswordField,
+    getValues: getResetPasswordValues,
+    formState: { errors: resetPasswordErrors },
+  } = useForm<ResetPasswordSchema>({
+    resolver: zodResolver(resetPasswordSchema),
+  });
+
 
   // ====== HANDLERS ======
   function handleClose() {
     setErrMsg(null);
+    setForgotInfoMsg(null);
+    setForgotStep("auth");
     clearLoginErrors();
     clearRegisterErrors();
+    clearForgotEmailErrors();
+    clearResetPasswordErrors();
     onClose();
   }
 
   function toggleMode() {
     setIsRegisterMode((prev) => !prev);
     setErrMsg(null);
+    setForgotInfoMsg(null);
+    setForgotStep("auth");
+  }
+
+  function openForgotPassword(event: MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    const currentEmail = getLoginValues("email") || "";
+    setErrMsg(null);
+    setForgotInfoMsg(null);
+    setForgotStep("email");
+    setForgotEmail(currentEmail);
+    setForgotEmailField("email", currentEmail);
+  }
+
+  function backToSignIn() {
+    setErrMsg(null);
+    setForgotInfoMsg(null);
+    setForgotStep("auth");
+  }
+
+  async function sendPasswordResetCode(email: string, stayOnReset = false) {
+    setIsSubmitting(true);
+    setErrMsg(null);
+    setForgotInfoMsg(null);
+    try {
+      const resp = await client.api.auth["forgot-password"].$post({
+        json: { email },
+      });
+
+      if (resp.status === 200) {
+        const data = await resp.json();
+        setForgotEmail(email);
+        setResetPasswordField("email", email);
+        setForgotInfoMsg(data.message);
+        if (!stayOnReset) {
+          setForgotStep("reset");
+        }
+      } else if (resp.status === 422) {
+        const res = await resp.json();
+        setErrMsg(tr(`ERROR.${res.errorCode}`));
+      } else {
+        setErrMsg(tr("ERROR.GENERAL_UNKNOWN_ERR"));
+      }
+    } catch (error) {
+      console.error(error);
+      setErrMsg(tr("ERROR.NETWORK_ERR"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function onForgotEmailSubmit(data: ForgotEmailSchema) {
+    await sendPasswordResetCode(data.email);
+  }
+
+  async function onResendCode() {
+    const email = getResetPasswordValues("email") || forgotEmail;
+    const parsed = forgotEmailSchema.safeParse({ email });
+    if (!parsed.success) {
+      setErrMsg("Enter a valid email address.");
+      return;
+    }
+    await sendPasswordResetCode(parsed.data.email, true);
+  }
+
+  async function onResetPassword(data: ResetPasswordSchema) {
+    setIsSubmitting(true);
+    setErrMsg(null);
+    setForgotInfoMsg(null);
+    try {
+      const resp = await client.api.auth["reset-password"].$post({
+        json: {
+          email: data.email,
+          code: data.code,
+          newPassword: data.newPassword,
+        },
+      });
+
+      if (resp.status === 200) {
+        setForgotStep("success");
+      } else if (
+        resp.status === 400 ||
+        resp.status === 422 ||
+        resp.status === 429
+      ) {
+        const res = await resp.json();
+        setErrMsg(tr(`ERROR.${res.errorCode}`));
+      } else {
+        setErrMsg(tr("ERROR.GENERAL_UNKNOWN_ERR"));
+      }
+    } catch (error) {
+      console.error(error);
+      setErrMsg(tr("ERROR.NETWORK_ERR"));
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   async function onLogin(data: LoginSchema) {
@@ -148,6 +297,95 @@ export function AuthModalBase({
 
   if (!open) return null;
 
+  if (forgotStep !== "auth") {
+    return (
+      <div className={`${styles.overlay} ${isLight ? styles.lightOverlay : ""}`} onClick={handleClose}>
+        <div
+          className={`${styles.container} ${styles.resetContainer} ${isLight ? styles.lightContainer : ""}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className={`${styles.formBox} ${styles.resetFormBox} ${isLight ? styles.lightFormBox : ""}`}>
+            {forgotStep === "email" && (
+              <form onSubmit={handleForgotEmailSubmit(onForgotEmailSubmit)}>
+                <h1>Reset password</h1>
+                <p className={styles.formDescription}>Enter your email and we will send a 6-digit reset code.</p>
+                {errMsg && <p className={`${styles.globalError} ${isLight ? styles.lightError : ""}`}>{errMsg}</p>}
+                {forgotInfoMsg && <p className={styles.successText}>{forgotInfoMsg}</p>}
+
+                <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+                  <input className={isLight ? styles.lightInput : undefined} type="email" placeholder={tr("auth.email")} disabled={isSubmitting} {...registerForgotEmail("email")} />
+                  <i className={`bx bxs-envelope ${isLight ? styles.lightIcon : ""}`}></i>
+                </div>
+                {forgotEmailErrors.email && <span className={styles.errorText}>{forgotEmailErrors.email.message}</span>}
+
+                <button type="submit" className={`${styles.btn} ${isLight ? styles.lightBtn : ""}`} disabled={isSubmitting}>
+                  {isSubmitting ? tr("common.loading") : "Send code"}
+                </button>
+                <button type="button" className={`${styles.secondaryBtn} ${isLight ? styles.lightSecondaryBtn : ""}`} onClick={backToSignIn} disabled={isSubmitting}>
+                  Back to sign in
+                </button>
+              </form>
+            )}
+
+            {forgotStep === "reset" && (
+              <form onSubmit={handleResetPasswordSubmit(onResetPassword)}>
+                <h1>Enter reset code</h1>
+                {errMsg && <p className={`${styles.globalError} ${isLight ? styles.lightError : ""}`}>{errMsg}</p>}
+                {forgotInfoMsg && <p className={styles.successText}>{forgotInfoMsg}</p>}
+
+                <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+                  <input className={isLight ? styles.lightInput : undefined} type="email" placeholder={tr("auth.email")} disabled={isSubmitting} {...registerResetPassword("email")} />
+                  <i className={`bx bxs-envelope ${isLight ? styles.lightIcon : ""}`}></i>
+                </div>
+                {resetPasswordErrors.email && <span className={styles.errorText}>{resetPasswordErrors.email.message}</span>}
+
+                <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+                  <input className={isLight ? styles.lightInput : undefined} type="text" inputMode="numeric" maxLength={6} placeholder="6-digit code" disabled={isSubmitting} {...registerResetPassword("code")} />
+                  <i className={`bx bxs-key ${isLight ? styles.lightIcon : ""}`}></i>
+                </div>
+                {resetPasswordErrors.code && <span className={styles.errorText}>{resetPasswordErrors.code.message}</span>}
+
+                <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+                  <input className={isLight ? styles.lightInput : undefined} type="password" placeholder="New password" disabled={isSubmitting} {...registerResetPassword("newPassword")} />
+                  <i className={`bx bxs-lock-alt ${isLight ? styles.lightIcon : ""}`}></i>
+                </div>
+                {resetPasswordErrors.newPassword && <span className={styles.errorText}>{resetPasswordErrors.newPassword.message}</span>}
+
+                <div className={`${styles.inputBox} ${isLight ? styles.lightInputBox : ""}`}>
+                  <input className={isLight ? styles.lightInput : undefined} type="password" placeholder="Confirm new password" disabled={isSubmitting} {...registerResetPassword("confirmPassword")} />
+                  <i className={`bx bxs-lock-alt ${isLight ? styles.lightIcon : ""}`}></i>
+                </div>
+                {resetPasswordErrors.confirmPassword && <span className={styles.errorText}>{resetPasswordErrors.confirmPassword.message}</span>}
+
+                <button type="submit" className={`${styles.btn} ${isLight ? styles.lightBtn : ""}`} disabled={isSubmitting}>
+                  {isSubmitting ? tr("common.loading") : "Reset password"}
+                </button>
+                <div className={styles.buttonRow}>
+                  <button type="button" className={`${styles.secondaryBtn} ${isLight ? styles.lightSecondaryBtn : ""}`} onClick={onResendCode} disabled={isSubmitting}>
+                    Resend code
+                  </button>
+                  <button type="button" className={`${styles.secondaryBtn} ${isLight ? styles.lightSecondaryBtn : ""}`} onClick={backToSignIn} disabled={isSubmitting}>
+                    Back to sign in
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {forgotStep === "success" && (
+              <div className={styles.successPanel}>
+                <h1>Password updated</h1>
+                <p className={styles.formDescription}>You can now sign in with your new password.</p>
+                <button type="button" className={`${styles.btn} ${isLight ? styles.lightBtn : ""}`} onClick={backToSignIn}>
+                  Back to sign in
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`${styles.overlay} ${isLight ? styles.lightOverlay : ""}`} onClick={handleClose}>
       <div 
@@ -174,7 +412,7 @@ export function AuthModalBase({
             {loginErrors.password && <span className={styles.errorText}>{loginErrors.password.message}</span>}
 
             <div className={`${styles.forgotLink} ${isLight ? styles.lightForgotLink : ""}`}>
-              <a href="#">{tr("auth.forgotPassword")}</a>
+              <a href="#" onClick={openForgotPassword}>{tr("auth.forgotPassword")}</a>
             </div>
 
             <button type="submit" className={`${styles.btn} ${isLight ? styles.lightBtn : ""}`} disabled={isSubmitting}>

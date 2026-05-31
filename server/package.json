@@ -37,6 +37,7 @@
     "google-auth-library": "^10.5.0",
     "helius-sdk": "^2.2.2",
     "hono": "^4.10.4",
+    "nodemailer": "^8.0.10",
     "postgres": "^3.4.7",
     "puppeteer": "^24.40.0",
     "redis": "^5.11.0",
@@ -46,6 +47,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/nodemailer": "^8.0.0",
     "drizzle-kit": "^0.31.7",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.20.6"
