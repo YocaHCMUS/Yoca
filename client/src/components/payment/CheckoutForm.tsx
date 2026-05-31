@@ -317,7 +317,7 @@ export function CheckoutForm({
               options={{
                 layout: "accordion",
                 paymentMethodOrder: ["us_bank_account"],
-                wallets: { link: "never" },
+                wallets: { link: "auto" },
               }}
             />
           </div>

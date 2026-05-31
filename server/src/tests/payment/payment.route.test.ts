@@ -132,8 +132,18 @@ import { db } from "@sv/db/index.js";
  * NOTE: For a full integration test against the real route, you would import
  * the route directly. The approach here prioritises speed and determinism.
  */
+// Mutable variable that callRoute() populates before each request.
+// The middleware below reads from this closure, keeping Hono<BlankEnv> clean.
+let _testJwtPayload: Record<string, unknown> = { id: "user-123" };
+
 function buildTestApp() {
   const app = new Hono();
+
+  // Closure-based test middleware — no Bindings generic required
+  app.use("*", async (c, next) => {
+    c.set("jwtPayload", _testJwtPayload);
+    await next();
+  });
 
   app.post("/verify-solana", async (c) => {
     const payload = c.get("jwtPayload") as { id?: string } | undefined;
@@ -249,16 +259,16 @@ async function callRoute(
   body: Record<string, unknown>,
   jwtPayload: Record<string, unknown> = { id: "user-123" }
 ) {
+  // Write into the closure variable so the test middleware picks it up
+  _testJwtPayload = jwtPayload;
+
   const req = new Request("http://localhost/verify-solana", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 
-  // Inject jwtPayload manually (bypassing the JWT middleware mock)
-  return app.request(req, {}, {
-    jwtPayload,
-  } as any);
+  return app.request(req);
 }
 
 // ---------------------------------------------------------------------------
