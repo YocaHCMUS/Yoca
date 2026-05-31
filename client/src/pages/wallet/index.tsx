@@ -4,7 +4,8 @@ import { WalletTopbar } from "@/components/wallet/WalletTopbar/WalletTopbar.tsx"
 import { WalletHero } from "@/components/wallet/WalletHero/WalletHero.tsx";
 import { WalletHoldingsPanel } from "@/components/wallet/WalletHoldingsPanel/WalletHoldingsPanel.tsx";
 import { TabContainer } from "@/components/tabContainer/tabContainer.tsx";
-import { WalletAiAnalysisPopup } from "@/components/wallet/WalletAiAnalysisPopup/WalletAiAnalysisPopup.tsx";
+import { RightSidebar } from "./RightSidebar.tsx";
+import { AiAnalysisModal } from "@/components/wallet/AiAnalysisModal/AiAnalysisModal.tsx";
 import {
   FilterType,
   type FilterConfig,
@@ -36,7 +37,6 @@ import {
   fetchWalletPortfolio,
   fetchWalletOverview,
   fetchWalletIntelligence,
-  fetchWalletAiAnalysis,
   type WalletSwap,
   type WalletTransfer,
   type WalletPortfolioItem,
@@ -45,8 +45,6 @@ import {
   type WalletPageInfo,
   type WalletSwapTokenChange,
   type WalletSwapTokenInfo,
-  type WalletAiAnalysisLanguage,
-  type WalletAiAnalysisResponse,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import {
@@ -82,7 +80,6 @@ import { AiSwapSummaryModal } from "@/components/wallet/AiSwapSummaryModal";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
 import type { WalletOverviewPeriodKey } from "@/services/wallet/walletApi.ts";
 import { TimePeriod } from "@/types/chart-filters.types.ts";
-import { RightSidebar } from "./RightSidebar.tsx";
 
 function chunkArray<T>(items: T[], size: number): T[][] {
   if (size <= 0 || items.length === 0) {
@@ -143,8 +140,6 @@ export default function WalletPage() {
   const bcp47 = locale[lang].langCode;
   const { address } = useParams<{ address: string }>();
   const walletAddress = address ?? "";
-  const aiAnalysisLanguage: WalletAiAnalysisLanguage =
-    lang === "vi" ? "vn" : "en";
 
   const [swapPages, setSwapPages] = useState<Record<number, WalletSwap[]>>({});
   const [swapPageInfoByPage, setSwapPageInfoByPage] = useState<
@@ -175,29 +170,12 @@ export default function WalletPage() {
   const [activeActivityTab, setActiveActivityTab] = useState<number>(0);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
 
-  const [aiAnalysisReport, setAiAnalysisReport] =
-    useState<WalletAiAnalysisResponse | null>(null);
-  const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
-  const [aiAnalysisError, setAiAnalysisError] = useState<string | null>(null);
-  const [aiAnalysisWaitingReason, setAiAnalysisWaitingReason] = useState<
-    string | null
-  >(null);
-  const [, setAiAnalysisLastUpdated] = useState<string | null>(null);
   const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isDataExporting, setIsDataExporting] = useState(false);
   const [isChartsExporting, setIsChartsExporting] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
   const reportTemplateRef = useRef<HTMLDivElement | null>(null);
-  const aiAnalysisRequestedRef = useRef(false);
-  const aiAnalysisLoadedRef = useRef(false);
-  const aiAnalysisRequestIdRef = useRef(0);
-  const aiAnalysisCacheRef = useRef<Record<string, WalletAiAnalysisResponse>>(
-    {},
-  );
-  const aiAnalysisInFlightRef = useRef<
-    Partial<Record<string, Promise<WalletAiAnalysisResponse | null>>>
-  >({});
 
   const [selectedToken, setSelectedToken] = useState<{
     address: string;
@@ -730,147 +708,6 @@ export default function WalletPage() {
     }
   }, [address]);
 
-  const loadAiAnalysisData = useCallback(
-    async (forceRefresh = false): Promise<WalletAiAnalysisResponse | null> => {
-      if (!address || address === "null") {
-        return null;
-      }
-
-      const aiAnalysisCacheKey = `${address}:${aiAnalysisLanguage}`;
-
-      if (!forceRefresh && aiAnalysisCacheRef.current[aiAnalysisCacheKey]) {
-        const cached = aiAnalysisCacheRef.current[aiAnalysisCacheKey];
-        setAiAnalysisReport(cached);
-        setAiAnalysisError(null);
-        setAiAnalysisWaitingReason(null);
-        aiAnalysisLoadedRef.current = true;
-        return cached;
-      }
-
-      if (aiAnalysisInFlightRef.current[aiAnalysisCacheKey]) {
-        return aiAnalysisInFlightRef.current[aiAnalysisCacheKey];
-      }
-
-      const requestId = ++aiAnalysisRequestIdRef.current;
-      const run = (async () => {
-        setAiAnalysisLoading(true);
-        setAiAnalysisError(null);
-        setAiAnalysisWaitingReason(null);
-
-        try {
-          let intelligence = intelligenceReport ?? null;
-          if (!intelligence) {
-            setIntelligenceLoading(true);
-            try {
-              intelligence = await fetchWalletIntelligence(address);
-              if (!intelligenceReport) {
-                setIntelligenceReport(intelligence ?? null);
-              }
-            } finally {
-              setIntelligenceLoading(false);
-            }
-          }
-
-          let portfolioRows = portfolio;
-          if (portfolioRows.length === 0) {
-            portfolioRows = await loadPortfolioData();
-          }
-
-          let activitySwaps = loadedSwaps;
-          if (activitySwaps.length === 0) {
-            const activity = await loadActivityData();
-            activitySwaps = activity.swaps;
-          }
-
-          const missingDependencies: string[] = [];
-
-          if (intelligence?.identity?.status === "unavailable") {
-            missingDependencies.push("identity");
-          }
-
-          if (!intelligence?.analysis?.firstFund) {
-            missingDependencies.push("first_fund");
-          }
-
-          if (!Array.isArray(portfolioRows) || portfolioRows.length === 0) {
-            missingDependencies.push("portfolio");
-          }
-
-          if (!Array.isArray(activitySwaps) || activitySwaps.length === 0) {
-            missingDependencies.push("swaps");
-          }
-
-          if (missingDependencies.length > 0) {
-            if (requestId === aiAnalysisRequestIdRef.current) {
-              setAiAnalysisReport(null);
-              setAiAnalysisWaitingReason(
-                `AI analysis waiting for dependencies: ${missingDependencies.join(", ")}`,
-              );
-            }
-            return null;
-          }
-
-          const response = await fetchWalletAiAnalysis(
-            address,
-            aiAnalysisLanguage,
-          );
-          if (requestId !== aiAnalysisRequestIdRef.current) {
-            return null;
-          }
-
-          aiAnalysisCacheRef.current[aiAnalysisCacheKey] = response;
-          setAiAnalysisReport(response);
-          setAiAnalysisLastUpdated(new Date().toISOString());
-          aiAnalysisLoadedRef.current = true;
-          return response;
-        } catch (error) {
-          if (requestId !== aiAnalysisRequestIdRef.current) {
-            return null;
-          }
-
-          aiAnalysisLoadedRef.current = false;
-          setAiAnalysisReport(null);
-          setAiAnalysisError(
-            error instanceof Error
-              ? error.message
-              : tr("walletPage.aiAnalysisFailed"),
-          );
-          return null;
-        } finally {
-          delete aiAnalysisInFlightRef.current[aiAnalysisCacheKey];
-          if (requestId === aiAnalysisRequestIdRef.current) {
-            setAiAnalysisLoading(false);
-          }
-        }
-      })();
-
-      aiAnalysisInFlightRef.current[aiAnalysisCacheKey] = run;
-      return run;
-    },
-    [
-      address,
-      intelligenceReport,
-      intelligenceLoading,
-      portfolio,
-      loadedSwaps,
-      loadActivityData,
-      loadPortfolioData,
-      aiAnalysisLanguage,
-      tr,
-    ],
-  );
-
-  useEffect(() => {
-    aiAnalysisRequestIdRef.current += 1;
-    aiAnalysisRequestedRef.current = false;
-    aiAnalysisLoadedRef.current = false;
-    setAiAnalysisReport(null);
-    setAiAnalysisError(null);
-    setAiAnalysisWaitingReason(null);
-    setAiAnalysisLastUpdated(null);
-    setAiAnalysisLoading(false);
-  }, [address, aiAnalysisLanguage]);
-
   useEffect(() => {
     if (!address || address === "null") {
       setPortfolio([]);
@@ -880,11 +717,6 @@ export default function WalletPage() {
       setTransferPageInfoByPage({});
       setOverviewReport(null);
       setIntelligenceReport(null);
-      setAiAnalysisReport(null);
-      setAiAnalysisError(null);
-      setAiAnalysisWaitingReason(null);
-      setAiAnalysisLastUpdated(null);
-      setAiAnalysisLoading(false);
       return;
     }
 
@@ -1616,11 +1448,11 @@ export default function WalletPage() {
         walletAddress={walletAddress}
       />
 
-      <WalletAiAnalysisPopup
+      <AiAnalysisModal
         isOpen={aiAnalysisOpen}
         onClose={() => setAiAnalysisOpen(false)}
         walletAddress={walletAddress}
-        lang={lang}
+        language={lang === "vi" ? "vi" : "en"}
       />
 
       {auditOpen && (

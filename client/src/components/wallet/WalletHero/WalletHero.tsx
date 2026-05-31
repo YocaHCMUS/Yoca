@@ -68,7 +68,7 @@ export function WalletHero({ overview, selectedPeriod }: WalletHeroProps) {
         <div className={styles.mainValue}>
           <TrendNum
             value={totalPnL}
-            prefixes="plus-minus"
+            prefixes="arrow"
             formatter={(v) => fmt.num.currency(v ?? 0)}
           />
         </div>
@@ -77,14 +77,14 @@ export function WalletHero({ overview, selectedPeriod }: WalletHeroProps) {
           <span className={styles.footerLabel}>{tr("wallet.realizedPnL")}</span>
           <TrendNum
             value={pnlRealized}
-            prefixes="none"
+            prefixes="arrow"
             formatter={formatVal}
           />
           <span className={styles.dot}>·</span>
           <span className={styles.footerLabel}>{tr("wallet.unrealizedPnL")}</span>
           <TrendNum
             value={pnlUnrealized}
-            prefixes="none"
+            prefixes="arrow"
             formatter={formatVal}
           />
         </div>
@@ -101,10 +101,10 @@ export function WalletHero({ overview, selectedPeriod }: WalletHeroProps) {
         </div>
         <div className={styles.spacer} />
         <div className={styles.footer}>
-          <TrendNumWithSign forceSign="positive" value={buyTxCount} prefixes="none" formatter={formatCount} />
-          <span className={styles.dot}>/</span>
-          <TrendNumWithSign forceSign="negative" value={sellTxCount} prefixes="none" formatter={formatCount} />
-          <span className={styles.subLabel}>{tr("walletPage.transaction")}</span>
+          <span className={styles.subLabel}>{tr("walletPage.transaction")}: </span>
+          <TrendNumWithSign forceSign="positive" value={buyTxCount} prefixes="none" formatter={formatCount} /> <span>{tr("walletPage.buy")}</span>
+          <span className={styles.dot}>·</span>
+          <TrendNumWithSign forceSign="negative" value={sellTxCount} prefixes="none" formatter={formatCount} /> <span>{tr("walletPage.sell")}</span>
         </div>
       </div>
     </div>

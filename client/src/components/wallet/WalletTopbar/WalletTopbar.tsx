@@ -293,7 +293,7 @@ export function WalletTopbar({
                 <AiGenerate size={16} />
               </button>
             </Tooltip>
-            <Tooltip label="Forensic Audit" align="bottom-left">
+            {/* <Tooltip label="Forensic Audit" align="bottom-left">
               <button type="button" className={styles.iconBtn} onClick={onAuditOpen}>
                 <Report size={16} />
               </button>
@@ -325,7 +325,7 @@ export function WalletTopbar({
                   </button>
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
