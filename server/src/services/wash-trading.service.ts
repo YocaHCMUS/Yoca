@@ -1,5 +1,5 @@
-import { db } from '@/db';
-import { transactions, wallets } from '@/db/schema';
+import { db } from '../db';
+import { transactions, wallets } from '../db/schema';
 import { eq, and, gte, lte, inArray } from 'drizzle-orm';
 
 export interface WashTradePattern {

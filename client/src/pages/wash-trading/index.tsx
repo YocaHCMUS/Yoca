@@ -152,10 +152,24 @@ const WashTradingPage: React.FC = () => {
           </p>
           
           <div className="max-w-3xl">
-            <SearchBar 
-              placeholder="Nhập Token Mint Address (vd: EPjFWaJY44r3XfCH2E6FSLCjwMifrRN5P7qXFrmFkR2)"
-              onSearch={handleAnalyze}
-            />
+            <div className="flex items-center w-full max-w-2xl bg-white border border-gray-200 rounded-lg px-4 py-2">
+               <input 
+               type="text" 
+               className="w-full outline-none text-sm text-gray-700 bg-transparent"
+               placeholder="Nhập địa chỉ Token Mint hoặc Pool Address..."
+               value={targetAddress}
+               onChange={(e) => setTargetAddress(e.target.value)}
+               onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAnalyze(targetAddress);
+               }}
+               />
+               <button 
+               onClick={() => handleAnalyze(targetAddress)}
+               className="ml-2 text-blue-600 font-medium hover:text-blue-800"
+               >
+               Phân tích
+               </button>
+               </div>
           </div>
         </div>
 

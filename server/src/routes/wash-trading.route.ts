@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { washTradingService } from '@/services/wash-trading.service';
-import { validateTokenAddress } from '@/middlewares/validation';
+import { washTradingService } from '../services/wash-trading.service';
+import { validateTokenAddress } from '../middlewares/validation';
 
 const router = Router();
 
