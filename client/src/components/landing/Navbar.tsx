@@ -33,10 +33,18 @@ export function LandingNavbar() {
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 48);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const container = document.querySelector(".landing-page");
+    if (container) {
+      setScrolled(container.scrollTop > 48);
+    }
+    const onScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target && target.classList && target.classList.contains("landing-page")) {
+        setScrolled(target.scrollTop > 48);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    return () => window.removeEventListener("scroll", onScroll, { capture: true });
   }, []);
 
   useEffect(() => {

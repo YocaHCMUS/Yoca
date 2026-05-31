@@ -20,11 +20,7 @@ import { AuthGuard } from "./components/auth";
 import AlertsDemo from "./pages/alerts/demo";
 
 function LandingRoute() {
-  return (
-    <PageWrapper noMarketTickers>
-      <Index />
-    </PageWrapper>
-  );
+  return <Index />;
 }
 
 /** Catches render errors inside route elements so a silent crash does not

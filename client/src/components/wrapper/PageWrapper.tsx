@@ -40,7 +40,7 @@ import {
   Wikis,
 } from "@carbon/react/icons";
 import { useEffect, useState, type ReactNode } from "react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { SignInModal } from "../auth/SignInModal";
 import MarketTicker from "../MarketTicker";
 import { Divider } from "../partials/Divider/Divider";
@@ -114,6 +114,7 @@ export function PageWrapper({
   const [openPanel, setOpenPanel] = useState<
     "lang" | "account" | "notifications" | null
   >(null);
+  const location = useLocation();
   const [isExtraPanelOpen, setIsExtraHeaderPanelOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -139,6 +140,14 @@ export function PageWrapper({
       setTimeout(() => setIsExtraHeaderPanelOpen(true), 0);
     }
   }, [extraHeaderPanel?.isOpen]);
+
+  // Reset scroll position on route change
+  useEffect(() => {
+    const content = document.getElementById("main-content");
+    if (content) {
+      content.scrollTop = 0;
+    }
+  }, [location.pathname]);
 
   const toggleSideNav = () => {
     setIsSideNavExpanded((prev) => !prev);
