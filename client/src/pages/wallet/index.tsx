@@ -890,7 +890,7 @@ export default function WalletPage() {
     void loadPortfolioData();
     void loadActivityData();
 
-    fetchWalletOverview(address, "solana")
+    fetchWalletOverview(address)
       .then(setOverviewReport)
       .catch((err) => console.error("[WalletPage] Failed to load overview:", err));
 
@@ -982,7 +982,7 @@ export default function WalletPage() {
     try {
       await ensurePortfolioAndActivityForExport();
       const [ov, intel] = await Promise.all([
-        fetchWalletOverview(address, "solana"),
+        fetchWalletOverview(address),
         fetchWalletIntelligence(address, "solana"),
       ]);
       flushSync(() => {

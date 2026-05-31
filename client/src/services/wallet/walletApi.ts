@@ -700,7 +700,6 @@ export function fetchWalletAudit(
 ): Promise<WalletAuditReport> {
   return client.api.wallets[":address"].audit.$get({
     param: { address },
-    query: { force: options?.force ? "true" : "false" },
   }).then(resp => {
     if (resp.ok) return resp.json();
     throw new Error(`API Error: ${resp.status}`);
