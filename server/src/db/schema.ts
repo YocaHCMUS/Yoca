@@ -16,7 +16,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { users } from "./users.js";
+import { users } from "./users";
 export * from "./alerts";
 export * from "./users";
 export * from "./payment";
@@ -128,7 +128,9 @@ export const tokenPoolData = pgTable("token_pool_data", {
   poolName: varchar("name"),
 
   baseAddress: varchar("base_address", { length: 44 }).notNull(),
+  baseImageUrl: varchar("base_image_url"),
   quoteAddress: varchar("quote_address", { length: 44 }).notNull(),
+  quoteImageUrl: varchar("quote_image_url"),
 
   dexId: varchar("dex_id"),
   dexImageUrl: varchar("dex_image_url"),

@@ -5,7 +5,7 @@ import { InlineLoading } from "@carbon/react";
 import styles from "./DexTable.module.scss";
 import { TknImg } from "@/components/TknImg";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { ArrowUp, ArrowDown, SettingsAdjust, ChevronDown, Checkmark, Close, Trophy } from "@carbon/icons-react";
+import { CaretUp, CaretDown, SettingsAdjust, ChevronDown, Checkmark, Close, Trophy } from "@carbon/icons-react";
 
 export interface DexTableItem {
   id: string;
@@ -37,6 +37,7 @@ interface DexTableProps {
   sortKey?: SortKey | "none";
   sortDirection?: "asc" | "desc";
   filters?: TableFilters;
+  onSort?: (key: SortKey) => void;
 }
 
 export type SortKey = "marketCap" | "price" | "age" | "txns" | "volume" | "5m" | "1h" | "6h" | "24h" | "liquidity";
@@ -111,9 +112,10 @@ function getSortValue(item: DexTableItem, key: SortKey): number {
 export function DexTable({ 
   data = [], 
   loading = false, 
-  sortKey = "none", 
+  sortKey = "5m", 
   sortDirection = "desc",
-  filters = INITIAL_FILTERS
+  filters = INITIAL_FILTERS,
+  onSort
 }: DexTableProps) {
   const { fmt } = useLocalization();
   const navigate = useNavigate();
@@ -145,8 +147,6 @@ export function DexTable({
     });
 
     // Apply Sorting
-    if (sortKey === "none") return filtered;
-
     return filtered.sort((a, b) => {
       const valA = getSortValue(a, sortKey as SortKey);
       const valB = getSortValue(b, sortKey as SortKey);
@@ -206,16 +206,86 @@ export function DexTable({
         <thead>
           <tr>
             <th className={styles.alignLeft}>TOKEN</th>
-            <th>MCAP</th>
-            <th>PRICE</th>
-            <th>AGE</th>
-            <th>TXNS</th>
-            <th>VOLUME</th>
-            <th>5M</th>
-            <th>1H</th>
-            <th>6H</th>
-            <th>24H</th>
-            <th>LIQUIDITY</th>
+            <th onClick={() => onSort && onSort("marketCap")}>
+              MCAP
+              {sortKey === "marketCap" && (
+                <span className={classNames(styles.sortIndicator, styles.active)}>
+                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                </span>
+              )}
+            </th>
+            <th onClick={() => onSort && onSort("price")}>
+              PRICE
+              {sortKey === "price" && (
+                <span className={classNames(styles.sortIndicator, styles.active)}>
+                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                </span>
+              )}
+            </th>
+            <th onClick={() => onSort && onSort("age")}>
+              AGE
+              {sortKey === "age" && (
+                <span className={classNames(styles.sortIndicator, styles.active)}>
+                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                </span>
+              )}
+            </th>
+            <th onClick={() => onSort && onSort("txns")}>
+              TXNS
+              {sortKey === "txns" && (
+                <span className={classNames(styles.sortIndicator, styles.active)}>
+                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                </span>
+              )}
+            </th>
+            <th onClick={() => onSort && onSort("volume")}>
+              VOLUME
+              {sortKey === "volume" && (
+                <span className={classNames(styles.sortIndicator, styles.active)}>
+                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                </span>
+              )}
+            </th>
+            <th onClick={() => onSort && onSort("5m")}>
+              5M
+              {sortKey === "5m" && (
+                <span className={classNames(styles.sortIndicator, styles.active)}>
+                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                </span>
+              )}
+            </th>
+            <th onClick={() => onSort && onSort("1h")}>
+              1H
+              {sortKey === "1h" && (
+                <span className={classNames(styles.sortIndicator, styles.active)}>
+                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                </span>
+              )}
+            </th>
+            <th onClick={() => onSort && onSort("6h")}>
+              6H
+              {sortKey === "6h" && (
+                <span className={classNames(styles.sortIndicator, styles.active)}>
+                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                </span>
+              )}
+            </th>
+            <th onClick={() => onSort && onSort("24h")}>
+              24H
+              {sortKey === "24h" && (
+                <span className={classNames(styles.sortIndicator, styles.active)}>
+                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                </span>
+              )}
+            </th>
+            <th onClick={() => onSort && onSort("liquidity")}>
+              LIQUIDITY
+              {sortKey === "liquidity" && (
+                <span className={classNames(styles.sortIndicator, styles.active)}>
+                  {sortDirection === "asc" ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+                </span>
+              )}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -231,11 +301,13 @@ export function DexTable({
             return (
               <tr 
                 key={pool.poolAddress} 
-                onClick={() => navigate(`/tokens/${pool.baseAddress}/${pool.poolAddress}`)}
-                style={{ cursor: "pointer" }}
               >
                 <td className={styles.alignLeft}>
-                  <div className={styles.tokenCell}>
+                  <div 
+                    className={styles.tokenCell}
+                    onClick={() => navigate(`/tokens/${pool.baseAddress}/${pool.poolAddress}`)}
+                    style={{ cursor: "pointer" }}
+                  >
                     <span className={styles.rank}>#{idx + 1}</span>
                     <div className={styles.doubleImage}>
                       <div className={styles.baseImgWrapper}>

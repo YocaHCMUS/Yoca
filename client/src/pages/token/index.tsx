@@ -103,6 +103,7 @@ function useTokenPageData(address: string, poolAddress: string) {
         ? metaFromApi.symbol
         : fallbackSymbol,
     address: metaFromApi?.address ?? address,
+    imageUrl: metaFromApi?.imageUrl ?? pool?.baseImageUrl ?? undefined,
   };
 
   const normalizedTopPools = (topPools.data ?? []).filter((p) => !!p?.data);

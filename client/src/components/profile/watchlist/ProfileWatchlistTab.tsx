@@ -17,6 +17,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useWalletLabels } from "@/hooks/profile/useWalletLabels";
 import styles from "@/components/profile/shared/profile.module.scss";
+import { useProfileOverviewData } from "@/hooks/profile/useProfileOverviewData";
 
 interface LinkedWalletsResponse {
   userId: string;
@@ -80,19 +81,13 @@ export function ProfileWatchlistTab() {
 
   const linkedWallets = useGet(client.api.profile["linked-wallets"], 200);
 
-  const linkedWalletIdentity = useMemo(() => {
-    const rows =
-      (linkedWallets.data as LinkedWalletsResponse | undefined)?.rows ?? [];
+  const { walletOverviews, loading: overviewLoading } = useProfileOverviewData({
+    walletAddresses: walletWatchlist,
+  });
 
-    return Object.fromEntries(
-      rows.map((row) => [
-        row.walletAddress,
-        row.isAuthWallet
-          ? tr("profileTabs.portfolio.authWalletLabel")
-          : tr("profileTabs.portfolio.linkedWalletLabel"),
-      ]),
-    );
-  }, [linkedWallets.data, tr]);
+  const walletOverviewMap = useMemo(() => {
+    return new Map(walletOverviews.map((overview) => [overview.address, overview]));
+  }, [walletOverviews]);
 
   const tokenHeaders = [
     { header: "", align: "center" as const, minWidth: "3.5rem" },
@@ -135,8 +130,18 @@ export function ProfileWatchlistTab() {
       minWidth: "14rem",
     },
     {
-      header: tr("profileTabs.watchlist.walletIdentity"),
-      align: "start" as const,
+      header: "Asset",
+      align: "end" as const,
+      minWidth: "10rem",
+    },
+    {
+      header: "Trading Volume 24h",
+      align: "end" as const,
+      minWidth: "10rem",
+    },
+    {
+      header: "Total PnL",
+      align: "end" as const,
       minWidth: "10rem",
     },
   ];
@@ -280,22 +285,27 @@ export function ProfileWatchlistTab() {
   const walletTableData = useMemo(
     () =>
       walletWatchlist
-        .map((walletAddress) => ({
-          id: walletAddress,
-          row: [
-            {
-              walletAddress,
-              pending: Boolean(walletPending[walletAddress]),
-            },
-            {
-              walletAddress,
-              label: labels[walletAddress] ?? ""
-            },
-            linkedWalletIdentity[walletAddress] ?? "-",
-          ],
-        }))
+        .map((walletAddress) => {
+          const overview = walletOverviewMap.get(walletAddress);
+          return {
+            id: walletAddress,
+            row: [
+              {
+                walletAddress,
+                pending: Boolean(walletPending[walletAddress]),
+              },
+              {
+                walletAddress,
+                label: labels[walletAddress] ?? "",
+              },
+              overview?.totalAssetValueUsd ?? null,
+              overview?.tradingVolumeUsd24h ?? null,
+              overview?.pnlUsdTotal ?? null,
+            ],
+          };
+        })
         .map((entry) => entry.row),
-    [walletWatchlist, linkedWalletIdentity, walletPending, labels],
+    [walletWatchlist, walletOverviewMap, walletPending, labels],
   );
 
   const walletCellRenderers = useMemo(
@@ -380,13 +390,26 @@ export function ProfileWatchlistTab() {
 
         return <EditableLabelCell />;
       },
-      (value: unknown) => (typeof value === "string" ? value : "-"),
-    ],
+        (value: unknown) =>
+          typeof value === "number" && Number.isFinite(value)
+            ? fmt.num.compact.currency(value)
+            : "-",
+        (value: unknown) =>
+          typeof value === "number" && Number.isFinite(value)
+            ? fmt.num.compact.currency(value)
+            : "-",
+        (value: unknown) =>
+          typeof value === "number" && Number.isFinite(value) ? (
+            <TrendNum value={value} formatter={fmt.num.compact.currency} />
+          ) : (
+            "-"
+          ),
+      ],
     [fmt, toggleWallet, tr, setLabel],
   );
 
   const tokenLoading = isLoading || tokenMeta.isLoading || marketData.isLoading;
-  const walletLoading = isLoading || linkedWallets.isLoading;
+  const walletLoading = isLoading || linkedWallets.isLoading || overviewLoading;
 
   const tokenTable =
     tokenTableData.length === 0 && !tokenLoading ? (
@@ -453,9 +476,11 @@ export function ProfileWatchlistTab() {
         filterSchema={{}}
         cellRenderers={walletCellRenderers}
         dataEntries={walletTableData}
-        isSortable={[false, false, true]}
+        isSortable={[false, false, true, true, true]}
         sortConfigs={{
-          2: { type: SortType.String },
+          2: { type: SortType.Number },
+          3: { type: SortType.Number },
+          4: { type: SortType.Number },
         }}
         loading={walletLoading}
         maxHeight={520}

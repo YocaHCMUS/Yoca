@@ -1,4 +1,5 @@
 import client from "@/api/main";
+import { ProfitableTradersView } from "@/components/market/ProfitableTradersView";
 import {
   DexTable,
   INITIAL_FILTERS,
@@ -25,24 +26,27 @@ import classNames from "classnames";
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./index.module.scss";
 
-type PoolMainTab = "trending" | "top" | "gainers" | "newPairs";
+type PoolMainTab = "trending" | "top" | "gainers" | "newPairs" | "profitableTraders";
 type PoolDuration = "5m" | "1h" | "6h" | "24h";
 type TopSort = "volume" | "txns";
+type TraderType = "today" | "1W" | "30d" | "90d";
 
 const MAIN_TABS: Array<{ key: PoolMainTab; label: string }> = [
   { key: "trending", label: "Trending" },
   { key: "top", label: "Top" },
   { key: "gainers", label: "Top Gainers" },
   { key: "newPairs", label: "New Pairs" },
+  { key: "profitableTraders", label: "Profitable Traders" },
 ];
 
 export default function MarketPage() {
   const [activeTabIndex, setActiveTabIndex] = useState(0);
   const [trendingDuration, setTrendingDuration] = useState<PoolDuration>("5m");
   const [topSort, setTopSort] = useState<TopSort>("volume");
+  const [traderType, setTraderType] = useState<TraderType>("1W");
 
   // Sorting & Filtering States (Lifting from DexTable)
-  const [sortKey, setSortKey] = useState<SortKey | "none">("none");
+  const [sortKey, setSortKey] = useState<SortKey>("5m");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [filters, setFilters] = useState<TableFilters>(INITIAL_FILTERS);
   const [tempFilters, setTempFilters] = useState<TableFilters>(INITIAL_FILTERS);
@@ -71,11 +75,28 @@ export default function MarketPage() {
 
   // Sync sortKey with duration for Gainers tab
   useEffect(() => {
-    if (activeTab === "gainers") {
+    if (activeTab === "gainers" || activeTab === "trending") {
       setSortKey(trendingDuration as SortKey);
       setSortDirection("desc");
     }
   }, [trendingDuration, activeTab]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection((prev) => (prev === "desc" ? "asc" : "desc"));
+    } else {
+      setSortKey(key);
+      setSortDirection("desc");
+    }
+
+    // Sync tabs
+    if (["5m", "1h", "6h", "24h"].includes(key)) {
+      setTrendingDuration(key as PoolDuration);
+    }
+    if (["volume", "txns"].includes(key)) {
+      setTopSort(key as TopSort);
+    }
+  };
 
   const handleApplyFilters = () => {
     setFilters(tempFilters);
@@ -106,6 +127,7 @@ export default function MarketPage() {
     { key: "txns", label: "Txns" },
     { key: "volume", label: "Volume" },
     { key: "marketCap", label: "Market Cap" },
+    { key: "price", label: "Price" },
     { key: "liquidity", label: "Liquidity" },
     { key: "age", label: "Pair Age" },
   ];
@@ -145,8 +167,13 @@ export default function MarketPage() {
         };
       case "newPairs":
         return {
-          title: "New Pair Pools",
-          subtitle: "Các pool mới được tạo gần đây trên hệ Solana.",
+          title: "New Pairs",
+          subtitle: "Các pool mới tạo gần đây.",
+        };
+      case "profitableTraders":
+        return {
+          title: "Profitable Traders",
+          subtitle: "Top các ví giao dịch có lợi nhuận (PnL) cao nhất và thấp nhất.",
         };
       default:
         return {
@@ -155,6 +182,16 @@ export default function MarketPage() {
         };
     }
   }, [activeTab]);
+
+  const dataToRender = useMemo(() => {
+    switch (activeTab) {
+      case "trending": return trendingPools.data;
+      case "top": return topPools.data;
+      case "gainers": return topGainerPools.data;
+      case "newPairs": return newPairs.data;
+      default: return [];
+    }
+  }, [activeTab, trendingPools.data, topPools.data, topGainerPools.data, newPairs.data]);
 
   return (
     <PageWrapper>
@@ -177,7 +214,8 @@ export default function MarketPage() {
                     const hasSubfilters =
                       tab.key === "trending" ||
                       tab.key === "top" ||
-                      tab.key === "gainers";
+                      tab.key === "gainers" ||
+                      tab.key === "profitableTraders";
                     return (
                       <div
                         key={tab.key}
@@ -188,17 +226,36 @@ export default function MarketPage() {
                           {tab.key === "top" && <ChartBar size={16} />}
                           {tab.key === "gainers" && <ArrowUp size={16} />}
                           {tab.key === "newPairs" && <Star size={16} />}
+                          {tab.key === "profitableTraders" && <Trophy size={16} />}
                           {tab.label}
                         </span>
+                        {tab.key === "profitableTraders" && (
+                          <div className={styles.inlineFilters}>
+                            {(["today", "1W", "30d", "90d"] as TraderType[]).map((t) => {
+                              const label = t === "today" ? "1D" : t === "1W" ? "7D" : t === "30d" ? "30D" : "90D";
+                              return (
+                                <button
+                                  key={t}
+                                  className={`${styles.inlineFilterBtn} ${traderType === t ? styles.active : ""}`}
+                                  onClick={() => setTraderType(t)}
+                                >
+                                  {label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                         {(tab.key === "trending" || tab.key === "gainers") && (
                           <div className={styles.inlineFilters}>
                             {["5m", "1h", "6h", "24h"].map((d) => (
                               <button
                                 key={d}
                                 className={`${styles.inlineFilterBtn} ${trendingDuration === d ? styles.active : ""}`}
-                                onClick={() =>
-                                  setTrendingDuration(d as PoolDuration)
-                                }
+                                onClick={() => {
+                                  setTrendingDuration(d as PoolDuration);
+                                  setSortKey(d as SortKey);
+                                  setSortDirection("desc");
+                                }}
                               >
                                 {d}
                               </button>
@@ -211,7 +268,11 @@ export default function MarketPage() {
                               <button
                                 key={s}
                                 className={`${styles.inlineFilterBtn} ${topSort === s ? styles.active : ""}`}
-                                onClick={() => setTopSort(s as TopSort)}
+                                onClick={() => {
+                                  setTopSort(s as TopSort);
+                                  setSortKey(s as SortKey);
+                                  setSortDirection("desc");
+                                }}
                               >
                                 {s === "volume" ? "Volume" : "Txns"}
                               </button>
@@ -233,12 +294,14 @@ export default function MarketPage() {
                         setActiveTabIndex(newIndex);
 
                         // Reset or set specific sort when switching tabs
-                        if (tab.key === "gainers") {
+                        if (tab.key === "gainers" || tab.key === "trending") {
                           setSortKey(trendingDuration as SortKey);
                           setSortDirection("desc");
-                        } else {
-                          // Reset sort to default for other tabs to avoid conflicts
-                          setSortKey("none");
+                        } else if (tab.key === "top") {
+                          setSortKey(topSort as SortKey);
+                          setSortDirection("desc");
+                        } else if (tab.key === "newPairs") {
+                          setSortKey("age");
                           setSortDirection("desc");
                         }
                       }}
@@ -248,232 +311,201 @@ export default function MarketPage() {
                   );
                 })}
 
-                {/* Toolbar moved here */}
                 <div className={styles.toolbarWrapper}>
-                  <div className={styles.rankContainer} ref={rankRef}>
-                    <button
-                      className={classNames(styles.toolbarBtn, {
-                        [styles.active]: isRankOpen,
-                      })}
-                      onClick={() => setIsRankOpen(!isRankOpen)}
-                    >
-                      <Trophy size={16} />
-                      <span>
-                        Rank by:{" "}
-                        {sortKey === "none"
-                          ? "None"
-                          : `${sortDirection === "desc" ? "↓" : "↑"} ${SORT_OPTIONS.find((o) => o.key === sortKey)?.label}`}
-                      </span>
-                      <ChevronDown size={16} />
-                    </button>
+                  {activeTab !== "profitableTraders" && (
+                    <>
+                      <div className={styles.rankContainer} ref={rankRef}>
+                        <button
+                          className={classNames(styles.toolbarBtn, {
+                            [styles.active]: isRankOpen,
+                          })}
+                          onClick={() => setIsRankOpen(!isRankOpen)}
+                        >
+                          <Trophy size={16} />
+                          <span>
+                            Rank by:{" "}
+                            {`${sortDirection === "desc" ? "↓" : "↑"} ${SORT_OPTIONS.find((o) => o.key === sortKey)?.label}`}
+                          </span>
+                          <ChevronDown size={16} />
+                        </button>
 
-                    {isRankOpen && (
-                      <div className={styles.dropdown}>
-                        <div className={styles.dropdownSection}>
-                          <div className={styles.sectionTitle}>Order</div>
-                          <div
-                            className={styles.option}
-                            onClick={() => {
-                              setSortDirection("desc");
-                              setIsRankOpen(false);
-                            }}
-                          >
-                            {sortDirection === "desc" && (
-                              <Checkmark size={14} />
-                            )}
-                            <span>Descending</span>
-                          </div>
-                          <div
-                            className={styles.option}
-                            onClick={() => {
-                              setSortDirection("asc");
-                              setIsRankOpen(false);
-                            }}
-                          >
-                            {sortDirection === "asc" && <Checkmark size={14} />}
-                            <span>Ascending</span>
-                          </div>
-                        </div>
-                        <div className={styles.dropdownSection}>
-                          <div className={styles.sectionTitle}>Rank by</div>
-                          <div
-                            className={styles.option}
-                            onClick={() => {
-                              setSortKey("none");
-                              setIsRankOpen(false);
-                            }}
-                          >
-                            {sortKey === "none" && <Checkmark size={14} />}
-                            <span>Default (No Sort)</span>
-                          </div>
-                          {SORT_OPTIONS.map((opt) => (
-                            <div
-                              key={opt.key}
-                              className={styles.option}
-                              onClick={() => {
-                                setSortKey(opt.key);
-                                setIsRankOpen(false);
-                              }}
-                            >
-                              {sortKey === opt.key && <Checkmark size={14} />}
-                              <span>{opt.label}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className={styles.filterContainer} ref={filterRef}>
-                    <button
-                      className={classNames(styles.toolbarBtn, {
-                        [styles.active]: isFilterOpen,
-                      })}
-                      onClick={() => {
-                        setIsFilterOpen(!isFilterOpen);
-                        setTempFilters(filters);
-                      }}
-                    >
-                      <SettingsAdjust size={16} />
-                      <span>Filters</span>
-                    </button>
-
-                    {isFilterOpen && (
-                      <div className={styles.filterPopup}>
-                        <div className={styles.popupHeader}>
-                          <span>Customize Filters</span>
-                          <Close
-                            size={20}
-                            className={styles.closeIcon}
-                            onClick={() => setIsFilterOpen(false)}
-                          />
-                        </div>
-                        <div className={styles.popupContent}>
-                          {[
-                            { label: "Liquidity", key: "liquidity", unit: "$" },
-                            { label: "Market cap", key: "mcap", unit: "$" },
-                            { label: "Volume (24h)", key: "volume", unit: "$" },
-                            { label: "Txns (24h)", key: "txns", unit: "" },
-                            { label: "Pair age (h)", key: "age", unit: "" },
-                            {
-                              label: "24h change",
-                              key: "change24h",
-                              unit: "%",
-                            },
-                          ].map((f) => (
-                            <div key={f.key} className={styles.filterRow}>
-                              <label>{f.label}:</label>
-                              <div className={styles.inputGroup}>
-                                <div className={styles.inputWithUnit}>
-                                  {f.unit && (
-                                    <span className={styles.unit}>
-                                      {f.unit}
-                                    </span>
-                                  )}
-                                  <input
-                                    type="number"
-                                    placeholder="Min"
-                                    value={
-                                      tempFilters[f.key as keyof TableFilters]
-                                        .min || ""
-                                    }
-                                    onChange={(e) =>
-                                      updateTempFilter(
-                                        f.key as keyof TableFilters,
-                                        "min",
-                                        e.target.value,
-                                      )
-                                    }
-                                  />
-                                </div>
-                                <div className={styles.inputWithUnit}>
-                                  {f.unit && (
-                                    <span className={styles.unit}>
-                                      {f.unit}
-                                    </span>
-                                  )}
-                                  <input
-                                    type="number"
-                                    placeholder="Max"
-                                    value={
-                                      tempFilters[f.key as keyof TableFilters]
-                                        .max || ""
-                                    }
-                                    onChange={(e) =>
-                                      updateTempFilter(
-                                        f.key as keyof TableFilters,
-                                        "max",
-                                        e.target.value,
-                                      )
-                                    }
-                                  />
-                                </div>
+                        {isRankOpen && (
+                          <div className={styles.dropdown}>
+                            <div className={styles.dropdownSection}>
+                              <div className={styles.sectionTitle}>Order</div>
+                              <div
+                                className={styles.option}
+                                onClick={() => {
+                                  setSortDirection("desc");
+                                  setIsRankOpen(false);
+                                }}
+                              >
+                                {sortDirection === "desc" && (
+                                  <Checkmark size={14} />
+                                )}
+                                <span>Descending</span>
+                              </div>
+                              <div
+                                className={styles.option}
+                                onClick={() => {
+                                  setSortDirection("asc");
+                                  setIsRankOpen(false);
+                                }}
+                              >
+                                {sortDirection === "asc" && <Checkmark size={14} />}
+                                <span>Ascending</span>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                        <div className={styles.popupFooter}>
-                          <button
-                            className={styles.resetBtn}
-                            onClick={handleResetFilters}
-                          >
-                            Reset
-                          </button>
-                          <button
-                            className={styles.applyBtn}
-                            onClick={handleApplyFilters}
-                          >
-                            Apply
-                          </button>
-                        </div>
+                            <div className={styles.dropdownSection}>
+                              <div className={styles.sectionTitle}>Rank by</div>
+                              {SORT_OPTIONS.map((opt) => (
+                                <div
+                                  key={opt.key}
+                                  className={styles.option}
+                                  onClick={() => {
+                                    handleSort(opt.key);
+                                    setIsRankOpen(false);
+                                  }}
+                                >
+                                  {sortKey === opt.key && <Checkmark size={14} />}
+                                  <span>{opt.label}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+
+                      <div className={styles.filterContainer} ref={filterRef}>
+                        <button
+                          className={classNames(styles.toolbarBtn, {
+                            [styles.active]: isFilterOpen,
+                          })}
+                          onClick={() => {
+                            setIsFilterOpen(!isFilterOpen);
+                            setTempFilters(filters);
+                          }}
+                        >
+                          <SettingsAdjust size={16} />
+                          <span>Filters</span>
+                        </button>
+
+                        {isFilterOpen && (
+                          <div className={styles.filterPopup}>
+                            <div className={styles.popupHeader}>
+                              <span>Customize Filters</span>
+                              <Close
+                                size={20}
+                                className={styles.closeIcon}
+                                onClick={() => setIsFilterOpen(false)}
+                              />
+                            </div>
+                            <div className={styles.popupContent}>
+                              {[
+                                { label: "Liquidity", key: "liquidity", unit: "$" },
+                                { label: "Market cap", key: "mcap", unit: "$" },
+                                { label: "Volume (24h)", key: "volume", unit: "$" },
+                                { label: "Txns (24h)", key: "txns", unit: "" },
+                                { label: "Pair age (h)", key: "age", unit: "" },
+                                {
+                                  label: "24h change",
+                                  key: "change24h",
+                                  unit: "%",
+                                },
+                              ].map((f) => (
+                                <div key={f.key} className={styles.filterRow}>
+                                  <label>{f.label}:</label>
+                                  <div className={styles.inputGroup}>
+                                    <div className={styles.inputWithUnit}>
+                                      {f.unit && (
+                                        <span className={styles.unit}>
+                                          {f.unit}
+                                        </span>
+                                      )}
+                                      <input
+                                        type="number"
+                                        placeholder="Min"
+                                        value={
+                                          tempFilters[f.key as keyof TableFilters]
+                                            .min || ""
+                                        }
+                                        onChange={(e) =>
+                                          updateTempFilter(
+                                            f.key as keyof TableFilters,
+                                            "min",
+                                            e.target.value,
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                    <div className={styles.inputWithUnit}>
+                                      {f.unit && (
+                                        <span className={styles.unit}>
+                                          {f.unit}
+                                        </span>
+                                      )}
+                                      <input
+                                        type="number"
+                                        placeholder="Max"
+                                        value={
+                                          tempFilters[f.key as keyof TableFilters]
+                                            .max || ""
+                                        }
+                                        onChange={(e) =>
+                                          updateTempFilter(
+                                            f.key as keyof TableFilters,
+                                            "max",
+                                            e.target.value,
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className={styles.popupFooter}>
+                              <button
+                                className={styles.resetBtn}
+                                onClick={handleResetFilters}
+                              >
+                                Reset
+                              </button>
+                              <button
+                                className={styles.applyBtn}
+                                onClick={handleApplyFilters}
+                              >
+                                Apply
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
-              {activeTab === "trending" && (
-                <DexTable
-                  loading={
-                    trendingPools.isLoading || trendingPools.isValidating
-                  }
-                  data={trendingPools.data as any}
-                  sortKey={sortKey}
-                  sortDirection={sortDirection}
-                  filters={filters}
-                />
-              )}
-              {activeTab === "top" && (
-                <DexTable
-                  loading={topPools.isLoading || topPools.isValidating}
-                  data={topPools.data as any}
-                  sortKey={sortKey}
-                  sortDirection={sortDirection}
-                  filters={filters}
-                />
-              )}
-              {activeTab === "gainers" && (
-                <DexTable
-                  loading={
-                    trendingPools.isLoading || trendingPools.isValidating
-                  }
-                  data={trendingPools.data as any}
-                  sortKey={
-                    sortKey === "none" ? (trendingDuration as SortKey) : sortKey
-                  }
-                  sortDirection={sortDirection}
-                  filters={filters}
-                />
-              )}
-              {activeTab === "newPairs" && (
-                <DexTable
-                  loading={newPairs.isLoading}
-                  data={newPairs.data as any}
-                  sortKey={sortKey}
-                  sortDirection={sortDirection}
-                  filters={filters}
-                />
-              )}
+              <Section className={styles.tableSection}>
+                {activeTab === "profitableTraders" ? (
+                  <ProfitableTradersView traderType={traderType} />
+                ) : (
+                  <DexTable
+                    loading={
+                      trendingPools.isLoading || 
+                      trendingPools.isValidating || 
+                      topPools.isLoading || 
+                      topPools.isValidating ||
+                      newPairs.isLoading
+                    }
+                    data={dataToRender as any}
+                    sortKey={sortKey}
+                    sortDirection={sortDirection}
+                    filters={filters}
+                    onSort={handleSort}
+                  />
+                )}
+              </Section>
             </Stack>
           </Column>
         </Grid>

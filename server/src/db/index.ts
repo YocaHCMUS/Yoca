@@ -2,7 +2,7 @@
 // import { DefaultLogger } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import * as dbSchema from "./schema.js";
+import * as dbSchema from "./schema";
 
 const client = postgres(process.env.POSTGRES_DB_URL!);
 export const db = drizzle({

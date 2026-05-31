@@ -154,6 +154,13 @@ async function fetchTokenTopPools(tokenAddress: string) {
 
   const res = (await resp.json()) as CG_TopPoolData;
   const dexLogos = await getDexLogos();
+  const tokenLookup = new Map<string, string | null>();
+  for (const item of res.included ?? []) {
+    if (item.type === "token") {
+      tokenLookup.set(item.id, item.attributes.image_url ?? null);
+    }
+  }
+
   const poolDataList = res.data.map(
     (
       raw,
@@ -169,7 +176,9 @@ async function fetchTokenTopPools(tokenAddress: string) {
         poolName: raw.attributes.name,
 
         baseAddress: trimIdPrefix(raw.relationships.base_token.data.id),
+        baseImageUrl: tokenLookup.get(raw.relationships.base_token.data.id) ?? null,
         quoteAddress: trimIdPrefix(raw.relationships.quote_token.data.id),
+        quoteImageUrl: tokenLookup.get(raw.relationships.quote_token.data.id) ?? null,
 
         dexId: raw.relationships.dex.data.id,
   dexImageUrl: resolveDexLogo(raw.relationships.dex.data.id, dexLogos),
@@ -353,13 +362,22 @@ async function fetchPoolData(poolAddress: string) {
 
   const res = (await resp.json()) as CG_PoolData;
   const dexLogos = await getDexLogos();
+  const tokenLookup = new Map<string, string | null>();
+  for (const item of res.included ?? []) {
+    if (item.type === "token") {
+      tokenLookup.set(item.id, item.attributes.image_url ?? null);
+    }
+  }
+
   const raw = res.data;
   const poolData: TokenPoolDataInsert = {
     poolAddress: raw.attributes.address,
     poolName: raw.attributes.name,
 
     baseAddress: trimIdPrefix(raw.relationships.base_token.data.id),
+    baseImageUrl: tokenLookup.get(raw.relationships.base_token.data.id) ?? null,
     quoteAddress: trimIdPrefix(raw.relationships.quote_token.data.id),
+    quoteImageUrl: tokenLookup.get(raw.relationships.quote_token.data.id) ?? null,
 
     dexId: raw.relationships.dex.data.id,
   dexImageUrl: resolveDexLogo(raw.relationships.dex.data.id, dexLogos),
