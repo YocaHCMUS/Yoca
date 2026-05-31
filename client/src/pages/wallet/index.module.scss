@@ -2,17 +2,26 @@
 @use '@carbon/react/scss/theme' as *;
 
 // ===== Page Layout (outer flex for shell + sidebar) =====
+:global(.cds--content:has(.pageLayout)) {
+  overflow: hidden !important;
+}
+
 .pageLayout {
   display: flex;
+  flex-direction: row;
   width: 100%;
-  height: 100%;
+  height: calc(100vh - 3.5rem);
+  min-height: 0;
+  overflow: hidden;
 }
 
 // ===== Shell (outer wrapper) =====
 .shell {
+  flex: 1;
+  min-width: 0;
   background: $background;
-  // border: 1px solid var(--cds-border-subtle-03);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -264,8 +273,10 @@
   display: flex;
   flex-direction: row;
   gap: 0;
-  min-height: 0;
-  flex: 1;
+}
+
+.tokenDetailsWrapper {
+  flex-shrink: 0;
 }
 
 .mainCol {
@@ -273,7 +284,7 @@
   border-right: 1px solid var(--cds-border-subtle-03);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  // overflow-y: auto;
   min-height: 0;
 }
 
@@ -282,7 +293,7 @@
   // background: $layer-01;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  // overflow-y: auto;
   min-height: 0;
 }
 
