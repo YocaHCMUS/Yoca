@@ -9,9 +9,9 @@ import { CpyBtn } from "@/components/CpyBtn";
 import { Launch } from "@carbon/icons-react";
 import { useNavigate } from "react-router";
 import {
-    fetchTxDetail,
-    type WalletSwap,
-    type WalletTxDetail,
+  fetchTxDetail,
+  type WalletSwap,
+  type WalletTxDetail,
 } from "@/services/wallet/walletApi";
 import styles from "./SwapDetailModal.module.scss";
 
@@ -456,7 +456,7 @@ export function SwapDetailModal({
                                 {truncateAddr(leftTA)}
                                 <CpyBtn size="xs" copyWhat={leftTA} align="top" />
                               </span>
-                              <span className={styles.transferSpacer} />
+                              <span className={styles.transferArrow}>{isOut ? "→" : "←"}</span>
                               <span className={styles.transferTokenAddr} title={rightTA}
                                 onClick={(e) => {
                                   e.stopPropagation();
