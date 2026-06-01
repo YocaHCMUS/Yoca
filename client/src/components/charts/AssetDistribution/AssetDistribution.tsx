@@ -279,10 +279,12 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       tooltip: {
         ...baseOption.tooltip,
         trigger: 'item',
+        appendToBody: true,
+        confine: true,
         backgroundColor: tooltipBackground,
         borderColor: tooltipBorder,
         borderWidth: 1,
-        extraCssText: 'box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16); max-width: 260px;',
+        extraCssText: 'box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16); max-width: 260px; z-index: 10000;',
         textStyle: { color: tooltipText, fontSize: 12 },
         formatter: (p: any) => {
           const isOthers = p.name === othersLabel;
@@ -294,12 +296,16 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           if (isOthers && p.data.hiddenNames?.length > 0) {
             const hiddenNames = p.data.hiddenNames as string[];
             const visibleHiddenNames = hiddenNames.slice(0, MAX_VISIBLE_OTHERS);
-            html += `<div style="max-height:160px;overflow-y:auto;margin-bottom:6px;padding-top:2px;">`;
+            const hiddenSummary = hiddenNames.length > MAX_VISIBLE_OTHERS
+              ? `${tr('charts.assetDistributionChart.filters.top')} ${MAX_VISIBLE_OTHERS} / ${hiddenNames.length}`
+              : `${hiddenNames.length}`;
+            html += `<div style="margin-bottom:8px;padding-top:2px;">`;
+            html += `<div style="padding-bottom:3px;font-size:11px;font-weight:600;color:${tooltipText}">${hiddenSummary}</div>`;
             html += visibleHiddenNames
-              .map(n => `<div style="padding:1px 0;font-size:11px;line-height:1.35;color:${tooltipSecondaryText}">• ${n}</div>`)
+              .map((n, index) => `<div style="padding:1px 0;font-size:11px;line-height:1.35;color:${tooltipSecondaryText}">${index + 1}. ${n}</div>`)
               .join('');
             if (hiddenNames.length > MAX_VISIBLE_OTHERS) {
-              html += `<div style="padding:1px 0;font-size:11px;line-height:1.35;color:${tooltipSecondaryText}">...</div>`;
+              html += `<div style="padding:2px 0 0;font-size:11px;line-height:1.35;color:${tooltipSecondaryText}">...</div>`;
             }
             html += `</div>`;
           }
@@ -415,14 +421,18 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     return Array.from(uniqueAssets.values());
   }, [data]);
 
-  /**
-   * Initialize selected assets when data changes
-   */
   useEffect(() => {
-    if (aggregatedLegendData) {
-      setSelectedAssets(new Set(aggregatedLegendData.map(a => a.name)));
+    if (!aggregatedLegendData || selectedAssets.size === 0) return;
+
+    const availableAssets = new Set(aggregatedLegendData.map(asset => asset.name));
+    const nextSelectedAssets = new Set(
+      Array.from(selectedAssets).filter(assetName => availableAssets.has(assetName))
+    );
+
+    if (nextSelectedAssets.size !== selectedAssets.size) {
+      setSelectedAssets(nextSelectedAssets);
     }
-  }, [aggregatedLegendData]);
+  }, [aggregatedLegendData, selectedAssets]);
 
   const selectedLegendItems = useMemo(() => {
     if (!aggregatedLegendData) return [];
@@ -520,12 +530,12 @@ export const AssetDistribution: React.FC<ChartProps> = ({
                 <FilterableMultiSelect<LegendAsset>
                   id="asset-distribution-token-selector"
                   titleText={tr('charts.balanceChart.selectTokenLabel')}
-                  placeholder={tr('charts.balanceChart.selectTokenLabel')}
+                  placeholder={tr('charts.allTokens')}
                   items={aggregatedLegendData}
                   selectedItems={selectedLegendItems}
                   itemToString={(asset) => asset?.name ?? ''}
                   itemToElement={(asset) => (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0 }}>
                       <span
                         aria-hidden="true"
                         style={{
@@ -536,13 +546,12 @@ export const AssetDistribution: React.FC<ChartProps> = ({
                           backgroundColor: asset.color,
                         }}
                       />
-                      <span>{asset.name}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.name}</span>
                     </span>
                   )}
-                  selectionFeedback="top-after-reopen"
+                  selectionFeedback="fixed"
                   size="lg"
                   onChange={({ selectedItems }) => {
-                    if (selectedItems.length === 0) return;
                     setSelectedAssets(new Set(selectedItems.map(asset => asset.name)));
                   }}
                 />
