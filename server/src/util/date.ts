@@ -15,44 +15,21 @@ export const periodToDayCount: Record<DayPeriodLike, number> = {
   All: -1,
 };
 
-export function getStartOfUtcDatesFromNow(dayPeriod: DayPeriodLike): string[] {
-  const nowUtc = dayjs.utc();
-  const todayStart = nowUtc.startOf("day");
-  const results: string[] = [];
-
-  for (let i = 0; i < periodToDayCount[dayPeriod]; i++) {
-    const date = todayStart.subtract(i, "day");
-    results.push(date.toISOString());
-  }
-  return results;
-}
-
-export function getStartOfUtcDatesFromNowMs(
+export function getDateMsFromNow(
   dayPeriod: DayPeriodLike,
 ): number[] {
   const nowUtc = dayjs.utc();
-  const todayStart = nowUtc.startOf("day");
-  const results: number[] = [];
-
-  for (let i = 0; i < periodToDayCount[dayPeriod]; i++) {
-    const date = todayStart.subtract(i, "day");
-    results.push(date.valueOf());
-  }
-  return results;
-}
-
-export function getEndOfUtcDatesFromNowMs(
-  dayPeriod: DayPeriodLike,
-): number[] {
-  const nowUtc = dayjs.utc();
+  const dayCount = periodToDayCount[dayPeriod];
   const todayStart = nowUtc.endOf("day");
-  const results: number[] = [];
+  const res : number[] = [];
 
-  for (let i = 0; i < periodToDayCount[dayPeriod]; i++) {
+  for (let i = dayCount - 1; i >= 1; i--) {
     const date = todayStart.subtract(i, "day");
-    results.push(date.valueOf());
+    res.push(date.valueOf());
   }
-  return results;
+  res.push(nowUtc.valueOf());
+
+  return res;
 }
 
 // end date is exclusive, start date is inclusive

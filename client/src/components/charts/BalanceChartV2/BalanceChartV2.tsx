@@ -151,12 +151,15 @@ export function BalanceChartV2({
               label={tr("charts.balanceChart.selectTokenLabel")}
               size="lg"
               itemToElement={(account) => (
-                <TokenIdentityCell
-                  symbol={account.symbol || account.tokenAddress}
-                  fullName={account.name}
-                  imageUrl={account.logoUri}
-                  imageSize={20}
-                />
+                <Txt secondary>
+                  {account.symbol || account.tokenAddress}
+                </Txt>
+                // <TokenIdentityCell
+                //   symbol={account.symbol || account.tokenAddress}
+                //   fullName={account.name}
+                //   imageUrl={account.logoUri}
+                //   imageSize={20}
+                // />
               )}
               selectionFeedback="top-after-reopen"
               onChange={(v) =>
@@ -213,8 +216,8 @@ export function BalanceChartV2({
         <MultiTimeSeriesLineChart
           series={balanceSeries}
           height={minHeight}
-          loading={tokenBalances.isLoading && portfolio.isLoading}
-          valueFormatter={(val) => fmt.num.currency(val)}
+          loading={totalBalance.isLoading || tokenBalances.isLoading || portfolio.isLoading}
+          valueFormatter={fmt.num.currency}
           onClickDay={onClickDay}
         />
       </Flex>

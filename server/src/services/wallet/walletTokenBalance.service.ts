@@ -1,21 +1,21 @@
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import type { WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import * as bds from "@sv/util/util-birdeye.js";
-import { bds_WalletNetAssetsSchema } from "../_types/wallet-raw-responses.js";
+import {
+  BDS_WalletNetAssets,
+  bds_WalletNetAssetsSchema,
+} from "../_types/wallet-raw-responses.js";
 
 import { db } from "@sv/db/index.js";
 import {
   walletTokenBalanceHistory,
   WalletTokenBalanceHistoryInsert,
 } from "@sv/db/schema.js";
-import {
-  getEndOfUtcDatesFromNowMs,
-  getStartOfUtcDatesFromNow,
-  getStartOfUtcDatesFromNowMs,
-} from "@sv/util/date.js";
+import { getDateMsFromNow } from "@sv/util/date.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
 import dayjs from "dayjs";
 import { and, between, eq, inArray } from "drizzle-orm";
+import { WALLET_BALANCE_HISTORY_CACHE_TTL_MS } from "@sv/config/constants.js";
 
 type WalletTokenBalanceHistory = Record<
   string,
@@ -35,18 +35,34 @@ function groupTokenHistory(
   }[],
 ): WalletTokenBalanceHistory {
   const grouped: NonNullable<WalletTokenBalanceHistory> = {};
-
+  // Group by address first
+  const addressMap = new Map<string, Record<string, (typeof rows)[0]>>();
   for (const row of rows) {
-    if (!grouped[row.tokenAddress]) {
-      grouped[row.tokenAddress] = [];
+    if (!addressMap.has(row.tokenAddress)) {
+      addressMap.set(row.tokenAddress, {});
     }
-
-    grouped[row.tokenAddress].push({
-      value: row.value,
-      usdValue: row.usdValue,
-      timestampMs: row.timestampMs,
-    });
+    const tokenDays = addressMap.get(row.tokenAddress)!;
+    // Create a date key (e.g., "2026-06-01")
+    const dateKey = dayjs.utc(row.timestampMs).format("YYYY-MM-DD");
+    // Only keep the latest timestamp for that specific day
+    if (
+      !tokenDays[dateKey] ||
+      row.timestampMs > tokenDays[dateKey].timestampMs
+    ) {
+      tokenDays[dateKey] = row;
+    }
   }
+  // Convert the collapsed day-map back into the expected array format
+  addressMap.forEach((tokenDays, tokenAddress) => {
+    grouped[tokenAddress] = Object.values(tokenDays)
+      .map((row) => ({
+        value: row.value,
+        usdValue: row.usdValue,
+        timestampMs: row.timestampMs,
+      }))
+      // Sort to ensure the timeline is chronological
+      .sort((a, b) => a.timestampMs - b.timestampMs);
+  });
 
   return Object.keys(grouped).length > 0 ? grouped : null;
 }
@@ -56,12 +72,13 @@ export async function getWalletTokenBalanceHistory(
   tokenAddresses: string[],
   timePeriod: WalletTimePeriod = "30D",
 ): Promise<WalletTokenBalanceHistory> {
-  const expectedDatesMs = getEndOfUtcDatesFromNowMs(timePeriod);
-  const start = expectedDatesMs[expectedDatesMs.length - 1];
-  const end = expectedDatesMs[0];
+  const expectedDates = getDateMsFromNow(timePeriod);
+  const start = expectedDates[0];
+  const end = expectedDates[expectedDates.length - 1];
+  const now = dayjs.utc().valueOf();
 
   // Get existing records from DB
-  const existingRecords = await db
+  const existing = await db
     .select()
     .from(walletTokenBalanceHistory)
     .where(
@@ -76,31 +93,76 @@ export async function getWalletTokenBalanceHistory(
       walletTokenBalanceHistory.timestampMs,
     );
 
-  // Build set of existing timestamps
-  const existingTimestamps = new Set(existingRecords.map((r) => r.timestampMs));
+  if (existing.length == 0) {
+    return fetchWalletTokenBalanceHistory(address, tokenAddresses, timePeriod);
+  }
 
-  // Detect missing dates
-  const missingTimestampsMs = expectedDatesMs.filter(
-    (timestampMs) => !existingTimestamps.has(timestampMs),
-  );
+  // Group existing data by token address
+  const tokenDataMap = new Map<string, typeof existing>();
 
-  // If there are gaps, fetch only those dates
-  if (missingTimestampsMs.length > 0) {
-    // Convert ms timestamps back to ISO strings for API calls
-    const missingDates = missingTimestampsMs.map((ms) =>
-      dayjs(ms).toISOString(),
-    );
+  for (const row of existing) {
+    if (!tokenDataMap.has(row.tokenAddress)) {
+      tokenDataMap.set(row.tokenAddress, []);
+    }
+    tokenDataMap.get(row.tokenAddress)!.push(row);
+  }
 
+  // Collect all missing timestamps across all tokens
+  const missingTimestamps = new Set<number>();
+  for (const token of tokenAddresses) {
+    const tokenData = tokenDataMap.get(token) || [];
+
+    // Check each expected date per token
+    for (let i = 0; i < expectedDates.length; i++) {
+      const expectedDate = expectedDates[i];
+      const isCurrentDay = i == expectedDates.length - 1;
+
+      if (isCurrentDay) {
+        // For current day, check if we have data within cache TTL of now
+        const todayData = tokenData.find((r) => {
+          const dayOfRecord = dayjs.utc(r.timestampMs).endOf("day").valueOf();
+          const dayOfNow = dayjs.utc(now).endOf("day").valueOf();
+          return dayOfRecord == dayOfNow;
+        });
+
+        if (
+          !todayData ||
+          now - todayData.timestampMs > WALLET_BALANCE_HISTORY_CACHE_TTL_MS
+        ) {
+          missingTimestamps.add(now);
+        }
+      } else {
+        // For historical dates, check if we have data for that day (end of day)
+        const dayEndOfDay = dayjs.utc(expectedDate).endOf("day").valueOf();
+        const hasDataForDay = tokenData.some((r) => {
+          const recordDayEndOfDay = dayjs
+            .utc(r.timestampMs)
+            .endOf("day")
+            .valueOf();
+          return recordDayEndOfDay == dayEndOfDay;
+        });
+
+        if (!hasDataForDay) {
+          missingTimestamps.add(expectedDate);
+        }
+      }
+    }
+  }
+
+  // If there are gaps, fetch only those timestamps
+  if (missingTimestamps.size > 0) {
     const resArray = await Promise.all(
-      missingDates.map((date) => bdsFetchAssetsAt(address, date)),
+      Array.from(missingTimestamps).map((timestamp) =>
+        bdsFetchAssetsAt(address, timestamp, tokenAddresses),
+      ),
     );
 
     const insertValues = resArray.flatMap(
       (res) =>
-        res?.net_assets.map(
+        res?.allAssets.map(
           (tokenBalance): WalletTokenBalanceHistoryInsert => ({
             address: address,
-            timestampMs: dayjs(res.date).valueOf(),
+            timestampMs: dayjs.utc(res.timestampMs).valueOf(),
             tokenAddress: tokenBalance.token_address,
             tokenBalance: Number(tokenBalance.balance),
             usdValue: tokenBalance.value,
@@ -123,7 +185,7 @@ export async function getWalletTokenBalanceHistory(
     }
 
     // Combine existing and new data
-    const combinedRecords = [...existingRecords, ...(newData || [])];
+    const combinedRecords = [...existing, ...(newData || [])];
 
     return groupTokenHistory(
       combinedRecords.map((row) => ({
@@ -135,10 +197,9 @@ export async function getWalletTokenBalanceHistory(
     );
   }
 
-  // All dates found in DB
-  if (existingRecords.length > 0) {
+  if (existing.length > 0) {
     return groupTokenHistory(
-      existingRecords.map((row) => ({
+      existing.map((row) => ({
         tokenAddress: row.tokenAddress,
         value: row.tokenBalance,
         usdValue: row.usdValue,
@@ -156,18 +217,18 @@ export async function fetchWalletTokenBalanceHistory(
   tokenAddresses: string[] = [],
   timePeriod: WalletTimePeriod = "30D",
 ): Promise<WalletTokenBalanceHistory> {
-  const dates = getStartOfUtcDatesFromNow(timePeriod);
+  const dates = getDateMsFromNow(timePeriod);
 
   const resArray = await Promise.all(
-    dates.map((date) => bdsFetchAssetsAt(address, date)),
+    dates.map((date) => bdsFetchAssetsAt(address, date, tokenAddresses)),
   );
 
   const insertValues = resArray.flatMap(
     (res) =>
-      res?.net_assets.map(
+      res?.allAssets.map(
         (tokenBalance): WalletTokenBalanceHistoryInsert => ({
           address: address,
-          timestampMs: dayjs(res.date).valueOf(),
+          timestampMs: dayjs.utc(res.timestampMs).valueOf(),
           tokenAddress: tokenBalance.token_address,
           tokenBalance: Number(tokenBalance.balance),
           usdValue: tokenBalance.value,
@@ -200,31 +261,69 @@ export async function fetchWalletTokenBalanceHistory(
   );
 }
 
-async function bdsFetchAssetsAt(walletAddress: string, timeIsoUtc: string) {
-  const formattedTime = dayjs.utc(timeIsoUtc).format("YYYY-MM-DD HH:mm:ss");
-  console.log("date: ", formattedTime);
-  const url = bds.getEndpoint("/wallet/v2/net-worth-details");
+async function bdsFetchAssetsAt(
+  walletAddress: string,
+  timestampMs: number,
+  tokenAddresses: string[],
+) {
+  const formattedTime = dayjs.utc(timestampMs).format("YYYY-MM-DD HH:mm:ss");
 
-  url.search = new URLSearchParams({
-    wallet: walletAddress,
-    type: "1d",
-    sort_type: "desc",
-    limit: "100",
-    offset: "0",
-    time: formattedTime,
-  }).toString();
+  const requestedTokens = new Set(tokenAddresses);
 
-  const resp = await rlFetch(url, {
-    method: "GET",
-    headers: bds.getRequiredHeaders(),
-    rlLimiter: bds.limiter,
-  });
+  const allAssets: BDS_WalletNetAssets["data"]["net_assets"] = [];
+  const matchAssets = new Map<
+    string,
+    BDS_WalletNetAssets["data"]["net_assets"][number]
+  >();
 
-  const res = await getTrackedApiResult(bds_WalletNetAssetsSchema, resp, true);
+  const limit = 100;
+  let offset = 0;
+  let total = Infinity;
 
-  if (!res || !res.data) {
-    return null;
+  while (offset < total) {
+    const url = bds.getEndpoint("/wallet/v2/net-worth-details");
+
+    url.search = new URLSearchParams({
+      wallet: walletAddress,
+      type: "1d",
+      sort_type: "desc",
+      limit: String(limit),
+      offset: String(offset),
+      time: formattedTime,
+    }).toString();
+
+    const resp = await rlFetch(url, {
+      method: "GET",
+      headers: bds.getRequiredHeaders(),
+      rlLimiter: bds.limiter,
+    });
+
+    const res = await getTrackedApiResult(bds_WalletNetAssetsSchema, resp);
+
+    if (!res) {
+      return null;
+    }
+
+    total = res.pagination.total;
+
+    for (const asset of res.data.net_assets) {
+      const address = asset.token_address;
+      if (requestedTokens.has(address) && !matchAssets.has(address)) {
+        matchAssets.set(address, asset);
+      }
+      allAssets.push(asset);
+    }
+
+    // Stop early once we've found everything requested
+    if (matchAssets.size == requestedTokens.size) {
+      break;
+    }
+
+    offset += limit;
   }
 
-  return { ...res.data, date: timeIsoUtc };
+  return {
+    allAssets,
+    timestampMs,
+  };
 }

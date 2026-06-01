@@ -15,7 +15,7 @@ import * as bds from "@sv/util/util-birdeye.js";
 import { bds_WalletNetworthHistorySchema } from "../_types/wallet-raw-responses.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import {
-  getEndOfUtcDatesFromNowMs,
+  getDateMsFromNow,
   periodToDayCount,
 } from "@sv/util/date.js";
 import { DAY_MS } from "./wallet.constants.js";
@@ -150,7 +150,7 @@ export async function getWalletBalanceHistory(
 ): Promise<WalletBalanceHistory> {
   // TODO: Limit the day ("ALL" is not possible)
   const dayCount = periodToDayCount[timePeriod];
-  const [start, end] = getEndOfUtcDatesFromNowMs(timePeriod);
+  const [start, end] = getDateMsFromNow(timePeriod);
 
   const res = await db
     .select()
