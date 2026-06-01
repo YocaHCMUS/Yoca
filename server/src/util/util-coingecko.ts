@@ -42,10 +42,8 @@ export async function safeClient<T, S extends z.ZodTypeAny>(
   try {
     const { data, response: resp } = await request.withResponse();
 
-    const jsonResp = await resp.json();
-
     if (!resp.ok) {
-      console.error("Coingecko API error: Failed response:\n", jsonResp);
+      console.error("Coingecko API error: Failed response:\n", data);
       return null;
     }
 
