@@ -40,15 +40,12 @@ import {
   Wikis,
 } from "@carbon/react/icons";
 import { useEffect, useState, type ReactNode } from "react";
-<<<<<<< HEAD
-=======
-import { Link, useLocation } from "react-router";
->>>>>>> development/0.3.0
 import { SignInModal } from "../auth/SignInModal";
 import MarketTicker from "../MarketTicker";
 import { Divider } from "../partials/Divider/Divider";
 import { SearchBar } from "../search/SearchBar";
 import styles from "./PageWrapper.module.scss";
+import { useLocation } from "react-router";
 
 function ThemeToggleGlobalAction() {
   const { theme, toggleTheme } = useUserTheme();
@@ -229,11 +226,7 @@ export function PageWrapper({
           onClick={toggleSideNav}
         />
 
-<<<<<<< HEAD
-        <HeaderName href="/market" prefix="">
-=======
         <HeaderName href="/market" prefix="" style={{ textDecoration: "none" }}>
->>>>>>> development/0.3.0
           <Stack
             gap={3}
             orientation="horizontal"
