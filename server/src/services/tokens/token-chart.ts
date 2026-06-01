@@ -1,6 +1,7 @@
 import {
     DAY_MS,
     TOKEN_CHART_24H_UPDATE_THRESHOLD,
+    TOKEN_CHART_DAILY_INTERVAL_MS,
     TOKEN_CHART_HOURLY_INTERVAL_MS,
     TOKEN_CHART_HOURLY_MIN_POINTS,
     TOKEN_CHART_HOURLY_MIN_SPAN_MS,
@@ -30,6 +31,41 @@ import {
 } from "../_types/token-raw-responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
+type TokenChartCacheRow = {
+  unixTimestampMs: number;
+};
+
+function toUnixSecondsString(timestampMs: number): string {
+  return Math.floor(timestampMs / 1000).toString();
+}
+
+function getChartBucket(timestampMs: number, intervalMs: number): number {
+  return Math.floor(timestampMs / intervalMs);
+}
+
+function isRangeCacheIncomplete(
+  rows: TokenChartCacheRow[],
+  fromMs: number,
+  toMs: number,
+  intervalMs: number,
+): boolean {
+  if (rows.length === 0) return true;
+
+  const startBucket = getChartBucket(fromMs, intervalMs);
+  const currentOpenBucket = getChartBucket(toMs, intervalMs);
+  const endBucket = Math.max(startBucket, currentOpenBucket - 1);
+  const expectedBucketCount = endBucket - startBucket + 1;
+
+  const availableBuckets = new Set(
+    rows
+      .map((row) => getChartBucket(row.unixTimestampMs, intervalMs))
+      .filter((bucket) => bucket >= startBucket && bucket <= endBucket),
+  );
+
+  const minimumCoverage = Math.max(1, Math.floor(expectedBucketCount * 0.8));
+  return availableBuckets.size < minimumCoverage;
+}
+
 // https://docs.coingecko.com/v3.0.1/reference/coins-id-market-chart-range
 export async function fetch24hTokenMarketChart(
   tokenAddress: string,
@@ -55,12 +91,11 @@ export async function fetch24hTokenMarketChart(
     from = latestUpdateUnixMs;
   }
 
-  // "from" and "to" can either be in seconds or miliseconds.
-  // Using miliseconds here
+  // CoinGecko accepts UNIX timestamps for range parameters.
   cgEndpoint.search = new URLSearchParams({
     vs_currency: "usd",
-    from: from.toString(),
-    to: to.toString(),
+    from: toUnixSecondsString(from),
+    to: toUnixSecondsString(to),
   }).toString();
   const resp = await trackedFetch({
     provider: "unknown",
@@ -155,11 +190,13 @@ async function fetchAndCacheChartRange(
   table: typeof tokenMarketChartHourly | typeof tokenMarketChartDaily,
   fromMs: number,
   toMs: number,
+  interval: "hourly" | "daily",
 ): Promise<void> {
   const res = await cg.safeClient(
     cg.client.coins.marketChart.getRange(cgId, {
-      from: dayjs(fromMs).utc().toISOString(),
-      to: dayjs(toMs).utc().toISOString(),
+      from: toUnixSecondsString(fromMs),
+      to: toUnixSecondsString(toMs),
+      interval,
       vs_currency: "usd",
     }),
     cg_TokenMarketChartSchema,
@@ -227,20 +264,12 @@ export async function getHourlyTokenMarketChart(
     )
     .orderBy(tokenMarketChartHourly.unixTimestampMs);
 
-  const existingSet = new Set(existing.map((r) => r.unixTimestampMs));
-
-  let hasGaps = false;
-
-  for (
-    let ts = requestedFromMs;
-    ts < now;
-    ts += TOKEN_CHART_HOURLY_INTERVAL_MS
-  ) {
-    if (!existingSet.has(ts)) {
-      hasGaps = true;
-      break;
-    }
-  }
+  const hasGaps = isRangeCacheIncomplete(
+    existing,
+    requestedFromMs,
+    now,
+    TOKEN_CHART_HOURLY_INTERVAL_MS,
+  );
 
   // If gaps detected or no data exists, fetch the missing range
   if (hasGaps || existing.length == 0) {
@@ -251,6 +280,7 @@ export async function getHourlyTokenMarketChart(
       tokenMarketChartHourly,
       requestedFromMs,
       now,
+      "hourly",
     );
 
     // Re-query after fetch to return combined data
@@ -300,20 +330,12 @@ export async function getDailyTokenMarketChart(
     )
     .orderBy(tokenMarketChartDaily.unixTimestampMs);
 
-  const existingSet = new Set(existing.map((r) => r.unixTimestampMs));
-
-  let hasGaps = false;
-
-  for (
-    let ts = requestedFromMs;
-    ts < now;
-    ts += TOKEN_CHART_HOURLY_INTERVAL_MS
-  ) {
-    if (!existingSet.has(ts)) {
-      hasGaps = true;
-      break;
-    }
-  }
+  const hasGaps = isRangeCacheIncomplete(
+    existing,
+    requestedFromMs,
+    now,
+    TOKEN_CHART_DAILY_INTERVAL_MS,
+  );
 
   // If gaps detected or no data exists, fetch the missing range
   if (hasGaps || existing.length == 0) {
@@ -324,6 +346,7 @@ export async function getDailyTokenMarketChart(
       tokenMarketChartDaily,
       requestedFromMs,
       now,
+      "daily",
     );
 
     // Re-query after fetch to return combined data
