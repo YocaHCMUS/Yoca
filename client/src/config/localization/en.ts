@@ -441,6 +441,9 @@ export const translation = {
     received: "Received",
     transfersInTransaction: "Transfers in This Transaction ({{count}})",
     internal: "Internal",
+    list: "List",
+    timeline: "Timeline",
+    mixed: "Mixed",
   },
   dictionary: {
     tradingStrategy: {
