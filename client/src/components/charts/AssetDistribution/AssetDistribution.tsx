@@ -46,6 +46,7 @@ import { SettingsAdjust } from '@carbon/icons-react';
 // ── Types ─────────────────────────────────────────────────────────────────
 type TopNOption = 5 | 10 | 0; // 0 = All
 type MinPctOption = 0 | 1 | 5 | 10;
+const MAX_VISIBLE_OTHERS = 10;
 
 interface AssetItem {
   name: string;
@@ -126,7 +127,13 @@ export const AssetDistribution: React.FC<ChartProps> = ({
 
   const chartRef = useRef<ReactECharts>(null);
   const baseOption = useCarbonChartBaseOption();
-  const tokens = useCarbonTokens({ background: cds.background });
+  const tokens = useCarbonTokens({
+    background: cds.background,
+    layer: cds.layer01,
+    borderSubtle: cds.borderSubtle01,
+    textPrimary: cds.textPrimary,
+    textSecondary: cds.textSecondary,
+  });
   const { selectedTimezone: timezone } = useChartContext();
 
   // Track selected assets for legend filtering
@@ -245,6 +252,10 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     const grouped = applyGrouping(preGrouped as AssetItem[], topN, minPct, othersLabel);
 
     const displayTotal = grouped.reduce((s, a) => s + a.value, 0);
+    const tooltipBackground = tokens.layer || cds.layer01;
+    const tooltipBorder = tokens.borderSubtle || cds.borderSubtle01;
+    const tooltipText = tokens.textPrimary || cds.textPrimary;
+    const tooltipSecondaryText = tokens.textSecondary || cds.textSecondary;
 
     return {
       ...baseOption,
@@ -263,6 +274,11 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       tooltip: {
         ...baseOption.tooltip,
         trigger: 'item',
+        backgroundColor: tooltipBackground,
+        borderColor: tooltipBorder,
+        borderWidth: 1,
+        extraCssText: 'box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16); max-width: 260px;',
+        textStyle: { color: tooltipText, fontSize: 12 },
         formatter: (p: any) => {
           const isOthers = p.name === othersLabel;
           const logoUri: string | undefined = p.data.logoUri;
@@ -271,10 +287,15 @@ export const AssetDistribution: React.FC<ChartProps> = ({
             : '';
           let html = createTooltipHeader(`${logoHtml}${p.name}`);
           if (isOthers && p.data.hiddenNames?.length > 0) {
-            html += `<div style="max-height:160px;overflow-y:auto;margin-bottom:4px;">`;
-            html += (p.data.hiddenNames as string[])
-              .map(n => `<div style="padding:1px 0;font-size:11px;color:var(--cds-text-secondary)">• ${n}</div>`)
+            const hiddenNames = p.data.hiddenNames as string[];
+            const visibleHiddenNames = hiddenNames.slice(0, MAX_VISIBLE_OTHERS);
+            html += `<div style="max-height:160px;overflow-y:auto;margin-bottom:6px;padding-top:2px;">`;
+            html += visibleHiddenNames
+              .map(n => `<div style="padding:1px 0;font-size:11px;line-height:1.35;color:${tooltipSecondaryText}">• ${n}</div>`)
               .join('');
+            if (hiddenNames.length > MAX_VISIBLE_OTHERS) {
+              html += `<div style="padding:1px 0;font-size:11px;line-height:1.35;color:${tooltipSecondaryText}">...</div>`;
+            }
             html += `</div>`;
           }
           html += createTooltipRow(
@@ -365,7 +386,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         },
       ],
     };
-  }, [baseOption, tokens, tr, selectedAssets, topN, minPct, fmt]);
+  }, [baseOption, tokens, tr, selectedAssets, topN, minPct, othersLabel, fmt]);
 
   /**
    * Extract unique assets across all wallets for aggregated legend
