@@ -39,7 +39,7 @@ import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import type { ChartProps } from '../shared/ChartProp';
 import { runChartExport } from '@/services/chart/chartExportService';
-import { Dropdown } from '@carbon/react';
+import { Dropdown, FilterableMultiSelect, Layer } from '@carbon/react';
 import { SettingsAdjust } from '@carbon/icons-react';
 
 
@@ -47,6 +47,11 @@ import { SettingsAdjust } from '@carbon/icons-react';
 type TopNOption = 5 | 10 | 0; // 0 = All
 type MinPctOption = 0 | 1 | 5 | 10;
 const MAX_VISIBLE_OTHERS = 10;
+
+interface LegendAsset {
+  name: string;
+  color: string;
+}
 
 interface AssetItem {
   name: string;
@@ -394,7 +399,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   const aggregatedLegendData = useMemo(() => {
     if (!data || !('wallets' in data) || !data.wallets || data.wallets.length <= 1) return null;
 
-    const uniqueAssets = new Map<string, { name: string; color: string }>();
+    const uniqueAssets = new Map<string, LegendAsset>();
 
     data.wallets.forEach((wallet: any, walletIndex: number) => {
       wallet.data.forEach((asset: any, assetIndex: number) => {
@@ -419,23 +424,10 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     }
   }, [aggregatedLegendData]);
 
-  /**
-   * Toggle asset selection for legend filtering
-   */
-  const toggleAssetSelection = useCallback((assetName: string) => {
-    setSelectedAssets(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(assetName)) {
-        // Don't allow deselecting all assets
-        if (newSet.size > 1) {
-          newSet.delete(assetName);
-        }
-      } else {
-        newSet.add(assetName);
-      }
-      return newSet;
-    });
-  }, []);
+  const selectedLegendItems = useMemo(() => {
+    if (!aggregatedLegendData) return [];
+    return aggregatedLegendData.filter(asset => selectedAssets.has(asset.name));
+  }, [aggregatedLegendData, selectedAssets]);
 
   /**
    * ECharts options - multiple charts for per-wallet view
@@ -512,57 +504,49 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     >
       {chartOptions.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-          {/* Aggregated Legend for Multi-Wallet View */}
+          {/* Token selector for Multi-Wallet View */}
           {aggregatedLegendData && chartOptions.length > 1 && (
             <div
               data-html2canvas-ignore="true"
               style={{
                 display: 'flex',
-                flexWrap: 'wrap',
-                gap: '1rem',
-                padding: '1rem',
-                justifyContent: 'center',
+                justifyContent: 'flex-start',
+                padding: '1rem 0',
                 borderBottom: '1px solid var(--cds-border-subtle)',
                 marginBottom: '1rem',
               }}
             >
-              {aggregatedLegendData.map((asset) => {
-                const isSelected = selectedAssets.has(asset.name);
-                return (
-                  <div
-                    key={asset.name}
-                    onClick={() => toggleAssetSelection(asset.name)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      cursor: 'pointer',
-                      opacity: isSelected ? 1 : 0.3,
-                      transition: 'opacity 0.2s ease',
-                      userSelect: 'none',
-                    }}
-                    title={isSelected ? tr('charts.assetDistributionChart.legend.clickToHide').replace('{name}', asset.name) : tr('charts.assetDistributionChart.legend.clickToShow').replace('{name}', asset.name)}
-                  >
-                    <span
-                      style={{
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
-                        backgroundColor: asset.color,
-                        opacity: isSelected ? 1 : 0.5,
-                      }}
-                    />
-                    <span
-                      style={{
-                        fontSize: '14px',
-                        color: baseOption.textStyle.color,
-                      }}
-                    >
-                      {asset.name}
+              <Layer style={{ width: 'min(100%, 360px)' }}>
+                <FilterableMultiSelect<LegendAsset>
+                  id="asset-distribution-token-selector"
+                  titleText={tr('charts.balanceChart.selectTokenLabel')}
+                  placeholder={tr('charts.balanceChart.selectTokenLabel')}
+                  items={aggregatedLegendData}
+                  selectedItems={selectedLegendItems}
+                  itemToString={(asset) => asset?.name ?? ''}
+                  itemToElement={(asset) => (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          width: 10,
+                          height: 10,
+                          flex: '0 0 10px',
+                          borderRadius: '50%',
+                          backgroundColor: asset.color,
+                        }}
+                      />
+                      <span>{asset.name}</span>
                     </span>
-                  </div>
-                );
-              })}
+                  )}
+                  selectionFeedback="top-after-reopen"
+                  size="lg"
+                  onChange={({ selectedItems }) => {
+                    if (selectedItems.length === 0) return;
+                    setSelectedAssets(new Set(selectedItems.map(asset => asset.name)));
+                  }}
+                />
+              </Layer>
             </div>
           )}
 
