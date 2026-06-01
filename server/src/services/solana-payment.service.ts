@@ -11,18 +11,32 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 
 /**
- * Merchant public key that receives Devnet SOL payments.
- * This should match the frontend VITE_SOLANA_MERCHANT_ADDRESS.
+ * Merchant public key that receives SOL payments.
+ * Loaded from SOLANA_MERCHANT_ADDRESS in server/.env.
+ * Must match the client's VITE_SOLANA_MERCHANT_ADDRESS in client/.env.
+ * The server is the AUTHORITATIVE source — client value is only used to build the tx.
  */
 const MERCHANT_ADDRESS = process.env.SOLANA_MERCHANT_ADDRESS || "YourMerchantAddressHere";
 
 /**
- * Tier pricing in SOL for Devnet payments
+ * The Solana network this server is configured to accept payments on.
+ * Loaded from SOLANA_NETWORK in server/.env.
+ * Used to cross-validate the network field sent by the client.
+ * Valid values: devnet | testnet | mainnet-beta
+ */
+const CONFIGURED_NETWORK = (process.env.SOLANA_NETWORK as "devnet" | "testnet" | "mainnet-beta" | undefined) ?? "devnet";
+
+/**
+ * Tier pricing in SOL.
+ *
+ * ⚠️  MUST stay in sync with `TIER_SOL_AMOUNTS` in
+ *     `client/src/components/payment/SolanaPaymentFlow.tsx`.
+ *     If you change a value here, update the client constant too, and vice versa.
  */
 const TIER_SOL_AMOUNTS: Record<"Lite" | "Plus" | "Pro", number> = {
-  Lite: 0.0001, // 0.0001 SOL
-  Plus: 0.0005, // 0.0005 SOL
-  Pro: 0.001, // 0.001 SOL
+  Lite: 0.001,  // 0.001 SOL
+  Plus: 0.005,  // 0.005 SOL
+  Pro:  0.01,   // 0.01 SOL
 };
 
 // Convert SOL to lamports
@@ -133,18 +147,36 @@ export async function verifySolanaTransaction(
   network: "devnet" | "testnet" | "mainnet-beta" = "devnet"
 ): Promise<TransactionVerification> {
   try {
-    // Validate merchant address
+    // ── Guard 0: Network mismatch between client claim and server config ─────
+    // The client sends the network it signed on. The server must only accept
+    // transactions on the network it is configured for (SOLANA_NETWORK in .env).
+    // This prevents a client from spoofing the network field to bypass verification.
+    if (network !== CONFIGURED_NETWORK) {
+      console.warn(
+        `[verifySolanaTransaction] Network mismatch: client sent "${network}" ` +
+        `but server is configured for "${CONFIGURED_NETWORK}".`
+      );
+      return {
+        valid: false,
+        reason:
+          `Network mismatch: server expects "${CONFIGURED_NETWORK}" transactions, ` +
+          `but received a claim for "${network}". ` +
+          `Ensure VITE_SOLANA_NETWORK (client) and SOLANA_NETWORK (server) match.`,
+      };
+    }
+
+    // ── Guard 1: Validate merchant address is a valid Solana public key ─────
     try {
       new PublicKey(MERCHANT_ADDRESS);
     } catch (err) {
       console.error("[verifySolanaTransaction] Invalid merchant address:", MERCHANT_ADDRESS);
       return {
         valid: false,
-        reason: "Merchant address is not configured properly",
+        reason: "Merchant address is not configured properly on the server",
       };
     }
 
-    // TODO: Hardcoded small amounts for Devnet testing. Replace with actual SOL conversion logic for Mainnet.
+    // TODO: Replace hardcoded amounts with real USD→SOL conversion for Mainnet.
     const expectedAmountSol = TIER_SOL_AMOUNTS[tier];
     const expectedAmountLamports = Math.floor(expectedAmountSol * LAMPORTS_PER_SOL);
 

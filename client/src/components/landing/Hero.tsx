@@ -98,7 +98,7 @@ export function LandingHero() {
 
             <motion.h1
               variants={item}
-              className="text-4xl font-bold tracking-tight text-[#f8fafc] sm:text-5xl md:text-6xl"
+              className="text-4xl font-bold tracking-tight text-(--landing-foreground) sm:text-5xl md:text-6xl"
               style={{ lineHeight: 1.08, maxWidth: "700px" }}
             >
               Make onchain data
@@ -107,7 +107,7 @@ export function LandingHero() {
 
             <motion.p
               variants={item}
-              className="mt-7 text-lg text-[#94a3b8] sm:text-xl"
+              className="mt-7 text-lg text-(--landing-muted) sm:text-xl"
               style={{
                 lineHeight: 1.65,
                 maxWidth: "600px",

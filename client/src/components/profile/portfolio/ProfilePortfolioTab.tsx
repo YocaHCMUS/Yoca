@@ -211,10 +211,9 @@ export function ProfilePortfolioTab({
           enableExport={false}
           actions={
             <div className={styles.inlineActions}>
+              {/* // TODO: UX, user have to press twice to connect (first select wallet then sign) */}
               <WalletActionButton<string>
                 label="Link wallet"
-                kind="ghost"
-                renderIcon={AddLarge}
                 className={styles.triggerButton}
                 onError={(message) => {
                   console.error(

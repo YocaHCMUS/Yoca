@@ -1,0 +1,345 @@
+@use "@carbon/react/scss/theme" as *;
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px 24px;
+  background: $background;
+  border-top: 1px solid $border-subtle;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+
+  h2 {
+    margin: 0;
+    color: $text-primary;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  p {
+    margin: 0;
+    color: $text-secondary;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+}
+
+.cacheMeta {
+  color: $text-helper;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+
+  :global(.cds--select-input) {
+    min-width: 86px;
+    height: 2rem;
+    background: $background;
+    border-color: $border-subtle;
+  }
+}
+
+.loading,
+.eventsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.summaryActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.summaryError {
+  color: $text-error;
+  font-size: 12px;
+}
+
+.summaryBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  background: $layer-01;
+}
+
+.summaryLabel {
+  color: $text-secondary;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.summaryHeadline {
+  margin: 0;
+  color: $text-primary;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.summaryBullets {
+  margin: 0;
+  padding-left: 18px;
+  color: $text-primary;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.summaryRiskNote,
+.summaryProvider {
+  margin: 0;
+  color: $text-secondary;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.summaryProvider {
+  font-size: 11px;
+}
+
+.loadingEvent,
+.eventCard {
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  background: $background;
+}
+
+.loadingEvent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+.eventCard {
+  padding: 14px;
+}
+
+.eventHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.eventSummary {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.severityDot {
+  width: 9px;
+  height: 9px;
+  margin-top: 6px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.medium {
+  background: #f1c21b;
+}
+
+.low {
+  background: #c6c6c6;
+}
+
+.high {
+  background: #ff832b;
+}
+
+.extreme {
+  background: #fa4d56;
+}
+
+.eventTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  color: $text-primary;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+
+  strong {
+    color: #fa4d56;
+    font-weight: 700;
+  }
+}
+
+.eventMeta {
+  margin-top: 3px;
+  color: $text-secondary;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.priceMove {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0 19px;
+  color: $text-primary;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.arrow {
+  color: $text-secondary;
+  font-weight: 400;
+}
+
+.relatedNews {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 14px 0 0 19px;
+  padding-top: 12px;
+  border-top: 1px solid $border-subtle;
+}
+
+.relatedNewsLabel {
+  color: $text-secondary;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.relatedNewsItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid $border-subtle;
+  border-radius: 6px;
+  color: $text-primary;
+  text-decoration: none;
+  background: $layer-01;
+
+  &:hover {
+    border-color: $border-strong;
+    background: $layer-02;
+  }
+}
+
+.relatedNewsMain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.relatedNewsTitle {
+  overflow: hidden;
+  color: $text-primary;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relatedNewsMeta {
+  overflow: hidden;
+  color: $text-secondary;
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.confidenceBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: #161616;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.linkIcon {
+  color: $text-secondary;
+}
+
+.noRelatedNews,
+.empty,
+.error {
+  color: $text-secondary;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.noRelatedNews {
+  margin: 12px 0 0 19px;
+}
+
+.empty,
+.error {
+  padding: 18px;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  background: $background;
+}
+
+.error {
+  color: $text-error;
+}
+
+@media (max-width: 768px) {
+  .panel {
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+  }
+
+  .controls {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .relatedNewsItem {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .linkIcon {
+    display: none;
+  }
+
+  .relatedNews,
+  .noRelatedNews,
+  .priceMove {
+    margin-left: 0;
+  }
+}

@@ -48,6 +48,8 @@ export const ChartGridItem: React.FC<ChartGridItemProps> = ({
         minWidth: 0,
         border: '1px solid var(--cds-border-subtle)',
         borderRadius: '4px',
+        // border: '1px solid var(--cds-border-subtle)',
+        // borderRadius: '4px',
         padding: '0.5rem',
         ...(aspectRatio && { aspectRatio }),
         ...style,

@@ -237,6 +237,140 @@ export interface WalletIntelligenceResponse {
 
 export type WalletAiAnalysisLanguage = "en" | "vn";
 
+export interface WalletAiSwapSummaryTokenPnl {
+  address: string;
+  symbol: string | null;
+  name: string | null;
+  logoUri: string | null;
+  pnlUsd: number;
+  trades: number;
+  wins: number;
+  exits: number;
+  buyCount: number;
+  sellCount: number;
+  totalEntered: number;
+  totalExited: number;
+  totalEnteredAmount: number;
+  totalExitedAmount: number;
+  entryPrices: number[] | null;
+  exitPrices: number[] | null;
+  totalBoughtVolumeUsd: number;
+  totalSoldVolumeUsd: number;
+  longestHoldingTimeMs: number | null;
+  maxTolerableLossPercent: number;
+}
+
+export interface WalletAiSwapSummaryResponse {
+  address: string;
+  language: "en" | "vn";
+  tradeCount: number;
+  realizedPnlUsd: number;
+  winningPercentage: number;
+  totalBoughtUsd: number;
+  totalSoldUsd: number;
+  topProfitable: WalletAiSwapSummaryTokenPnl | null;
+  topLoser: WalletAiSwapSummaryTokenPnl | null;
+  allTokenBreakdowns: WalletAiSwapSummaryTokenPnl[];
+  riskNotes: string[];
+  summary: string;
+  model: string;
+  fetchedAt: string;
+  cached: boolean;
+}
+
+export async function fetchWalletAiSwapSummary(
+  address: string,
+  language?: WalletAiAnalysisLanguage,
+): Promise<WalletAiSwapSummaryResponse> {
+  const response = await client.api.wallets["ai-swap-summary"].$post({
+    json: { address, language },
+  });
+
+  if (!response.ok) {
+    let message = `Failed to fetch wallet AI swap summary (${response.status})`;
+    try {
+      const errorData = await response.json() as { error?: string; message?: string; code?: string };
+      if (typeof errorData?.message === "string" && errorData.message.trim()) {
+        message = errorData.message;
+      } else if (typeof errorData?.error === "string" && errorData.error.trim()) {
+        message = errorData.error;
+      }
+    } catch {
+      // ignore parse failure
+    }
+    throw new Error(message);
+  }
+
+  const data = await response.json();
+  return data as WalletAiSwapSummaryResponse;
+}
+
+export interface WalletTokenTradeEvent {
+  timestampMs: number;
+  type: "buy" | "sell";
+  price: number;
+  amount: number;
+  valueUsd: number;
+  pnlUsd?: number;
+  pnlPercent?: number;
+  holdingTimeMs?: number;
+}
+
+export interface WalletTokenPnlDistribution {
+  extremeProfit: number;
+  highProfit: number;
+  profit: number;
+  lowLoss: number;
+  highLoss: number;
+}
+
+export interface TokenDeepAnalysisResponse {
+  address: string;
+  tokenAddress: string;
+  symbol: string | null;
+  name: string | null;
+  logoUri: string | null;
+  analysis: string;
+  riskNotes: string[];
+  tradeCount: number;
+  realizedPnlUsd: number;
+  totalBoughtUsd: number;
+  totalSoldUsd: number;
+  tradeTimeline: WalletTokenTradeEvent[];
+  pnlDistribution: WalletTokenPnlDistribution;
+  winningPercentage: number;
+  model: string;
+  cached: boolean;
+}
+
+export async function fetchTokenDeepAnalysis(
+  walletAddress: string,
+  tokenAddress: string,
+  language?: WalletAiAnalysisLanguage,
+): Promise<TokenDeepAnalysisResponse> {
+  const response = await client.api.wallets["ai-swap-summary"]["token"].$post({
+    json: { address: walletAddress, tokenAddress, language },
+  });
+
+  if (!response.ok) {
+    let message = `Failed to fetch token deep analysis (${response.status})`;
+    try {
+      const errorData = await response.json() as { error?: string; message?: string; code?: string };
+      if (typeof errorData?.message === "string" && errorData.message.trim()) {
+        message = errorData.message;
+      } else if (typeof errorData?.error === "string" && errorData.error.trim()) {
+        message = errorData.error;
+      }
+    } catch {
+      // ignore parse failure
+    }
+    throw new Error(message);
+  }
+
+  const data = await response.json();
+  return data as TokenDeepAnalysisResponse;
+}
+
 export interface WalletAiReferenceEntry {
   ref_id: number;
   type: "wallet" | "exchange" | "token";
@@ -576,7 +710,6 @@ export function fetchWalletAudit(
 ): Promise<WalletAuditReport> {
   return client.api.wallets[":address"].audit.$get({
     param: { address },
-    query: { force: options?.force ? "true" : "false" },
   }).then(resp => {
     if (resp.ok) return resp.json();
     console.error(`API Error: ${resp.status}`);

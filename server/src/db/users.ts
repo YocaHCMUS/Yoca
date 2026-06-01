@@ -2,6 +2,8 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  index,
+  integer,
   pgEnum,
   pgTable,
   primaryKey,
@@ -126,6 +128,29 @@ export const authAccounts = pgTable(
   ],
 );
 
+export const passwordResetCodes = pgTable(
+  "password_reset_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    email: varchar("email").notNull(),
+    codeHash: varchar("code_hash", { length: 255 }).notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    usedAt: timestamp("used_at"),
+    attempts: integer("attempts").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("password_reset_codes_email_created_at_idx").on(
+      table.email,
+      table.createdAt,
+    ),
+    index("password_reset_codes_user_id_idx").on(table.userId),
+  ],
+);
+
 // #region Types
 export type UserInsert = typeof users.$inferInsert;
 export type UserSelect = typeof users.$inferSelect;
@@ -139,4 +164,6 @@ export type UserWalletLabelInsert = typeof userWalletLabels.$inferInsert;
 export type UserWalletLabelSelect = typeof userWalletLabels.$inferSelect;
 export type AuthAccountInsert = typeof authAccounts.$inferInsert;
 export type AuthAccountSelect = typeof authAccounts.$inferSelect;
+export type PasswordResetCodeInsert = typeof passwordResetCodes.$inferInsert;
+export type PasswordResetCodeSelect = typeof passwordResetCodes.$inferSelect;
 // #endregion

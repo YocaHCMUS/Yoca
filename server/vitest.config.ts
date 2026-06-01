@@ -12,7 +12,7 @@ export default defineConfig({
     },
     test: {
         environment: "node",
-        include: ["tests/**/*.test.ts"],
+        include: ["tests/**/*.test.ts", "src/tests/**/*.test.ts"],
         clearMocks: true,
         restoreMocks: true,
     },

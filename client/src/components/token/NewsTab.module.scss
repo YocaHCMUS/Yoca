@@ -106,6 +106,12 @@
     color: $text-secondary;
 }
 
+.paginationControls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 @media (max-width: 1024px) {
     .articlesGrid {
         grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -134,5 +140,10 @@
     .pagination {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .paginationControls {
+        align-self: stretch;
+        justify-content: flex-end;
     }
 }

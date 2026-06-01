@@ -1,11 +1,12 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useCarbonTokens } from "@/hooks/useCarbonToken";
 import { cds } from "@/util/carbon-theme";
+import { attachChartDayClick } from "@/util/chart-click";
 import { hashColor } from "@/util/color";
 import { InlineLoading, Stack } from "@carbon/react";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 export type TimeSeriesDataPoint = { unixTimeMs: number; value: number };
 
@@ -24,6 +25,7 @@ export interface MultiTimeSeriesChartProps {
   className?: string;
   valueFormatter?: (v: number | null) => string;
   showLegend?: boolean;
+  onClickDay?: (timestamp: number) => void;
 }
 
 export function MultiTimeSeriesLineChart({
@@ -33,8 +35,10 @@ export function MultiTimeSeriesLineChart({
   className,
   valueFormatter,
   showLegend = true,
+  onClickDay,
 }: MultiTimeSeriesChartProps) {
   const { fmt, tr } = useLocalization();
+  const chartRef = useRef<ReactECharts>(null);
   const tokens = useCarbonTokens({
     textPrimary: cds.textPrimary,
     textSecondary: cds.textSecondary,
@@ -180,6 +184,24 @@ export function MultiTimeSeriesLineChart({
     };
   }, [prepared, allPoints, fmt, tokens, valueFormatter, showLegend]);
 
+  const allTimestamps = useMemo(
+    () =>
+      series
+        ? [...new Set(series.flatMap((s) => s.data.map((p) => p.unixTimeMs)))].sort(
+            (a, b) => a - b,
+          )
+        : [],
+    [series],
+  );
+
+  useEffect(() => {
+    if (!onClickDay || !chartRef.current) return;
+    if (allTimestamps.length === 0) return;
+
+    const chartInstance = chartRef.current.getEchartsInstance();
+    return attachChartDayClick(chartInstance, allTimestamps, onClickDay, "time");
+  }, [onClickDay, allTimestamps]);
+
   if (loading)
     return (
       <Stack style={{ height, alignItems: "center", justifyContent: "center" }}>
@@ -205,6 +227,7 @@ export function MultiTimeSeriesLineChart({
   return (
     <div className={className}>
       <ReactECharts
+        ref={chartRef}
         option={option}
         style={{ height }}
         notMerge

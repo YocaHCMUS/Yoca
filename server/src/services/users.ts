@@ -9,10 +9,29 @@ import {
 
 import { SOLANA_LOGIN_NOUNCE_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
-import { authAccounts, userLinkedWallets, users } from "@sv/db/schema.js";
+import {
+  authAccounts,
+  passwordResetCodes,
+  userLinkedWallets,
+  users,
+} from "@sv/db/schema.js";
+import { PasswordResetError } from "@sv/services/password-reset-errors.js";
+import { sendPasswordResetCodeEmail } from "@sv/services/password-reset-email.service.js";
 import { doesWalletLinked } from "@sv/services/profile/linkedWallet.service.js";
 import bcrypt from "bcryptjs";
-import { and, eq, ne } from "drizzle-orm";
+import { and, desc, eq, isNull, ne } from "drizzle-orm";
+import { randomInt } from "node:crypto";
+
+const PASSWORD_RESET_CODE_TTL_MS = 10 * 60 * 1000;
+const PASSWORD_RESET_MAX_ATTEMPTS = 5;
+
+function normalizePasswordResetEmail(email: string) {
+  return email.trim();
+}
+
+function generateResetCode() {
+  return randomInt(0, 1_000_000).toString().padStart(6, "0");
+}
 
 export async function findUserByEmail(email: string) {
   const [user] = await db
@@ -76,6 +95,119 @@ export async function verifyUserPassword(email: string, password: string) {
   const passwordMatched = await bcrypt.compare(password, user.hashedPassword!);
   if (!passwordMatched) return null;
   return user;
+}
+
+export async function requestPasswordReset(email: string) {
+  const resetEmail = normalizePasswordResetEmail(email);
+  const passwordUser = await findUserByEmail(resetEmail);
+
+  if (!passwordUser) {
+    return;
+  }
+
+  const code = generateResetCode();
+  const codeHash = await bcrypt.hash(code, 10);
+  const expiresAt = new Date(Date.now() + PASSWORD_RESET_CODE_TTL_MS);
+
+  const [resetCode] = await db
+    .insert(passwordResetCodes)
+    .values({
+      userId: passwordUser.account.userId,
+      email: resetEmail,
+      codeHash,
+      expiresAt,
+    })
+    .returning();
+
+  const sent = await sendPasswordResetCodeEmail({
+    to: resetEmail,
+    code,
+  });
+
+  if (!sent && resetCode) {
+    await db
+      .update(passwordResetCodes)
+      .set({ usedAt: new Date() })
+      .where(eq(passwordResetCodes.id, resetCode.id));
+  } else if (sent && resetCode) {
+    await db
+      .update(passwordResetCodes)
+      .set({ usedAt: new Date() })
+      .where(
+        and(
+          eq(passwordResetCodes.email, resetEmail),
+          isNull(passwordResetCodes.usedAt),
+          ne(passwordResetCodes.id, resetCode.id),
+        ),
+      );
+  }
+}
+
+export async function resetPasswordWithCode(input: {
+  email: string;
+  code: string;
+  newPassword: string;
+}) {
+  const resetEmail = normalizePasswordResetEmail(input.email);
+  const [resetCode] = await db
+    .select()
+    .from(passwordResetCodes)
+    .where(
+      and(
+        eq(passwordResetCodes.email, resetEmail),
+        isNull(passwordResetCodes.usedAt),
+      ),
+    )
+    .orderBy(desc(passwordResetCodes.createdAt))
+    .limit(1);
+
+  if (!resetCode) {
+    throw new PasswordResetError("INVALID_CODE");
+  }
+
+  const now = new Date();
+
+  if (resetCode.expiresAt <= now) {
+    throw new PasswordResetError("EXPIRED_CODE");
+  }
+
+  if (resetCode.attempts >= PASSWORD_RESET_MAX_ATTEMPTS) {
+    throw new PasswordResetError("TOO_MANY_ATTEMPTS");
+  }
+
+  const codeMatched = await bcrypt.compare(input.code, resetCode.codeHash);
+
+  if (!codeMatched) {
+    await db
+      .update(passwordResetCodes)
+      .set({ attempts: resetCode.attempts + 1 })
+      .where(eq(passwordResetCodes.id, resetCode.id));
+    throw new PasswordResetError("INVALID_CODE");
+  }
+
+  const hashedPassword = await bcrypt.hash(input.newPassword, 10);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(authAccounts)
+      .set({ hashedPassword })
+      .where(
+        and(
+          eq(authAccounts.provider, "password"),
+          eq(authAccounts.userId, resetCode.userId),
+        ),
+      );
+
+    await tx
+      .update(passwordResetCodes)
+      .set({ usedAt: now })
+      .where(
+        and(
+          eq(passwordResetCodes.email, resetEmail),
+          isNull(passwordResetCodes.usedAt),
+        ),
+      );
+  });
 }
 
 export async function findUserByGoogleId(googleId: string) {

@@ -3,6 +3,7 @@ import { serve } from "@hono/node-server";
 import { clientDomains } from "@sv/config/security.js";
 import { requestContextMiddleware } from "@sv/middlewares/request-context.js";
 import users, { type UsersAppType } from "@sv/routes/users.js";
+import auth, { type AuthAppType } from "@sv/routes/auth.js";
 import tokens, { type TokenAppType } from "@sv/routes/tokens.js";
 import balances, { type BalancesAppType } from "@sv/routes/balances.js";
 import alerts, { type AlertsRouteAppType } from "@sv/routes/alerts.route.js";
@@ -10,6 +11,16 @@ import alertsHp, { type AlertsAppType } from "@sv/routes/alerts.js";
 import chartRoutes, { type ChartRouteAppType } from "@sv/routes/chart.route.js";
 import misc, { type MiscAppType } from "@sv/routes/misc.js";
 import news, { type NewsAppType } from "@sv/routes/news.js";
+import tokenNews, { type TokenNewsAppType } from "@sv/routes/token-news.js";
+import tokenChartNewsEvents, {
+  type TokenChartNewsEventsAppType,
+} from "@sv/routes/token-chart-news-events.js";
+import tokenVolatility, {
+  type TokenVolatilityAppType,
+} from "@sv/routes/token-volatility.js";
+import tokenVolatilityNews, {
+  type TokenVolatilityNewsAppType,
+} from "@sv/routes/token-volatility-news.js";
 import profile, { type ProfileAppType } from "@sv/routes/profile.js";
 import search, { type SearchAppType } from "@sv/routes/search.js";
 import trades, { type TradesAppType } from "@sv/routes/trades.js";
@@ -21,6 +32,9 @@ import wallets, { type WalletsAppType } from "@sv/routes/wallets.route.js";
 import walletTags, {
     type WalletTagsAppType,
 } from "@sv/routes/walletTags.route.js";
+import walletAnalysis, {
+  type WalletAnalysisAppType,
+} from "@sv/modules/wallet-analysis/routes/walletAnalysis.routes.js";
 import webhook, { type WebhookAppType } from "@sv/routes/webhook.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -56,6 +70,7 @@ serve(
 // Define here first
 export type AppRoutes = {
   "/api/users": UsersAppType;
+  "/api/auth": AuthAppType;
   "/api/tokens": TokenAppType;
   "/api/misc": MiscAppType;
   "/api/search": SearchAppType;
@@ -66,10 +81,15 @@ export type AppRoutes = {
   "/api/profile": ProfileAppType;
   "/api/wallets": WalletsAppType;
   "/api/walletTags": WalletTagsAppType;
+  "/api/wallet-analysis": WalletAnalysisAppType;
   "/api/alerts": AlertsRouteAppType;
   "/api/trades": TradesAppType;
   "/api/alertsHp": AlertsAppType;
   "/api/news": NewsAppType;
+  "/api/token-news": TokenNewsAppType;
+  "/api/token-chart-news-events": TokenChartNewsEventsAppType;
+  "/api/token-volatility": TokenVolatilityAppType;
+  "/api/token-volatility-news": TokenVolatilityNewsAppType;
   "/webhook": WebhookAppType;
   "/api/payment": PaymentAppType;
 };
@@ -77,6 +97,7 @@ export type AppRoutes = {
 // Then here
 const routes: AppRoutes = {
   "/api/users": users,
+  "/api/auth": auth,
   "/api/tokens": tokens,
   "/api/misc": misc,
   "/api/search": search,
@@ -87,10 +108,15 @@ const routes: AppRoutes = {
   "/api/profile": profile,
   "/api/wallets": wallets,
   "/api/walletTags": walletTags,
+  "/api/wallet-analysis": walletAnalysis,
   "/api/alerts": alerts,
   "/api/trades": trades,
   "/api/alertsHp": alertsHp,
   "/api/news": news,
+  "/api/token-news": tokenNews,
+  "/api/token-chart-news-events": tokenChartNewsEvents,
+  "/api/token-volatility": tokenVolatility,
+  "/api/token-volatility-news": tokenVolatilityNews,
   "/api/payment": payment,
   "/webhook": webhook,
 };

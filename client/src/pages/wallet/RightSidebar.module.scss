@@ -10,6 +10,7 @@
   overflow: hidden;
   transition: width 0.3s ease;
   flex-shrink: 0;
+  padding-bottom: 3rem;
 }
 
 .panel {
@@ -19,7 +20,8 @@
   background-color: var(--cds-background);
   border-right: 1px solid var(--cds-border-subtle, #e0e0e0);
   overflow-y: auto;
-  width: 260px; /* fixed width for expanded panel */
+  width: 260px;
+  /* fixed width for expanded panel */
 }
 
 .toolbar {
@@ -32,6 +34,7 @@
   align-items: center;
   padding: 12px 0;
   justify-content: space-between;
+
 }
 
 .toolbarTop {
@@ -119,7 +122,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   &:hover {
     color: var(--cds-icon-primary, #333333);
   }
@@ -158,7 +161,7 @@
   border-bottom: 1px solid var(--cds-border-subtle, #f8f8f8);
   cursor: pointer;
   position: relative;
-  
+
   &:hover {
     background-color: var(--cds-layer-hover, #f4f6f8);
   }
@@ -224,7 +227,7 @@
   text-decoration: none;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 13px;
-  
+
   &:hover {
     text-decoration: underline;
   }
@@ -276,7 +279,7 @@
 .copyIcon {
   color: var(--cds-icon-secondary, #888888);
   cursor: pointer;
-  
+
   &:hover {
     color: var(--cds-icon-primary, #333333);
   }

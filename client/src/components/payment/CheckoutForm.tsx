@@ -255,15 +255,6 @@ export function CheckoutForm({
             >
               Wallet
             </p>
-            <p
-              className={`text-xs ${
-                activeMethod === "solana"
-                  ? "text-[#0a0a0f]/70"
-                  : "text-[#64748b]"
-              }`}
-            >
-              Devnet Wallet
-            </p>
           </div>
         </button>
       </div>
@@ -326,7 +317,7 @@ export function CheckoutForm({
               options={{
                 layout: "accordion",
                 paymentMethodOrder: ["us_bank_account"],
-                wallets: { link: "never" },
+                wallets: { link: "auto" },
               }}
             />
           </div>

@@ -96,29 +96,15 @@ export default function TokenOverviewPage() {
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
-    let targetRef: any = null;
-    switch (tabId) {
-      case "overview":
-        targetRef = overviewRef;
-        break;
-      case "markets":
-        targetRef = marketsRef;
-        break;
-      case "news":
-        targetRef = newsRef;
-        break;
-    }
-    if (targetRef?.current) {
-      const container = document.getElementById("main-content");
-      if (container) {
-        const containerTop = container.getBoundingClientRect().top;
-        const targetTop = targetRef.current.getBoundingClientRect().top;
-        container.scrollBy({
-          top: targetTop - containerTop - 120, // Adjust for the header height + padding
-          behavior: "smooth",
-        });
-      }
-    }
+    const sectionRefs = {
+      overview: overviewRef,
+      markets: marketsRef,
+      news: newsRef,
+    };
+    sectionRefs[tabId as keyof typeof sectionRefs]?.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
   };
 
   if (!address) {
@@ -203,11 +189,16 @@ export default function TokenOverviewPage() {
           </div>
 
           <div className={styles.rightContent}>
-            <div ref={overviewRef} className={styles.scrollAnchor}>
+            <div
+              id="token-overview"
+              ref={overviewRef}
+              className={styles.scrollAnchor}
+            >
               {address && (
                 <TokenOverviewChart
                   address={address}
                   symbol={details?.symbol ?? ""}
+                  name={details?.name ?? ""}
                   onPriceChangeUpdate={setCustomPriceChange}
                 />
               )}
@@ -230,6 +221,7 @@ export default function TokenOverviewPage() {
             </div>
 
             <div
+              id="token-markets"
               ref={marketsRef}
               className={`${styles.marketsSection} ${styles.scrollAnchor}`}
             >
@@ -268,6 +260,7 @@ export default function TokenOverviewPage() {
             )}
 
             <div
+              id="token-news"
               ref={newsRef}
               className={`${styles.marketsSection} ${styles.scrollAnchor}`}
             >

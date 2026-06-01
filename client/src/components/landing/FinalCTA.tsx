@@ -27,8 +27,8 @@ export function LandingFinalCTA() {
             gridColumn: "1 / -1",
             borderRadius: CARD_RADIUS,
             padding: CARD_PADDING,
-            backgroundColor: "#111118",
-            border: "1px solid rgba(255,255,255,0.08)",
+            backgroundColor: "var(--landing-panel-bg)",
+            border: "1px solid var(--landing-card-border)",
             maxWidth: "56rem",
             marginLeft: "auto",
             marginRight: "auto",
@@ -50,13 +50,13 @@ export function LandingFinalCTA() {
 
           <div className="relative">
             <h2
-              className="text-3xl font-bold tracking-tight text-[#f8fafc] sm:text-4xl md:text-5xl"
+              className="text-3xl font-bold tracking-tight text-(--landing-foreground) sm:text-4xl md:text-5xl"
               style={{ lineHeight: 1.15 }}
             >
               Create off-the-chart growth
             </h2>
             <p
-              className="mx-auto mt-5 max-w-lg text-[#94a3b8]"
+              className="mx-auto mt-5 max-w-lg text-(--landing-muted)"
               style={{ lineHeight: 1.65 }}
             >
               Join teams who use Yoca to see wallets, tokens, and markets in

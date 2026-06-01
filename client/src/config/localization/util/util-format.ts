@@ -236,12 +236,23 @@ export function defineNumberFormat(
     return strategy.readableCompactCurrency.format(v, opts);
   }
 
+  function percentagePoint(value: NumberLike, abs: boolean = false): string {
+    if (value == null || value == undefined || value == "") return nullDisplay;
+    const numValue = typeof value == "string" ? Number(value) : value;
+    if (!Number.isFinite(numValue)) return nullDisplay;
+    const v = abs ? Math.abs(numValue) : numValue;
+    const sign = v >= 0 ? "+" : "";
+    const decimals = strategy.decimalResolution.resolvePercent(v / 100);
+    return `${sign}${v.toFixed(decimals)}%`;
+  }
+
   return {
     ...createNotation("standard"),
     compact: createNotation("compact"),
     readableCompact: {
       currency: readableCompactCurrency,
     },
+    percentagePoint,
   };
 }
 
@@ -291,6 +302,17 @@ export function defineDateTimeFormat(
     return dayjs.utc(value).local().locale(shortLocaleCode);
   }
 
+  function duration(ms: number | null): string {
+    if (ms == null) return nullDisplay;
+    const seconds = Math.floor(ms / 1000);
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  }
+
   return {
     date: (value: DayJsConfig) =>
       value ? toLocal(value).format(fmtInfo.datePattern) : nullDisplay,
@@ -318,5 +340,6 @@ export function defineDateTimeFormat(
         : nullDisplay,
     fromUnixMilliseconds: (ms: number | null) =>
       ms ? toLocal(dayjs(ms)).format(fmtInfo.dateTimePattern) : nullDisplay,
+    duration,
   };
 }

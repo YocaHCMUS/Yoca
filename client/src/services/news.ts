@@ -1,7 +1,6 @@
 /**
  * News API Service
  * Provides functions to fetch news for a specific token from the backend.
- * The backend handles n8n integration, caching, and article storage.
  */
 
 import client from '@/api/main';
@@ -9,42 +8,39 @@ import type {
     NewsArticleExpansion,
     NewsArticleExpansionResult,
     NewsFilterResult,
+    TokenNewsApiResponse,
     TokenNewsQuery,
 } from '@/types/news';
 
 /**
- * Fetch filtered news for a token.
- * Calls POST /api/news/webhook which:
- * - Checks cache in DB
- * - Fetches from n8n if stale/missing
- * - Stores results
- * - Returns entries
+ * Fetch RSS-filtered news for a token from GET /api/token-news.
  */
-export async function getNewsForToken(query: TokenNewsQuery): Promise<NewsFilterResult> {
-    try {
-        const resp = await client.api.news.webhook.$post({
-            json: {
-                address: query.address,
-                symbol: query.symbol,
-                name: query.name,
-                entries: [],
-            },
-        });
+export async function getTokenNews(query: TokenNewsQuery): Promise<NewsFilterResult> {
+    const resp = await client.api.tokenNews.index.$get({
+        query: {
+            address: query.address,
+            symbol: query.symbol,
+            name: query.name,
+        },
+    });
 
-        if (!resp.ok) {
-            console.error('[news service] failed to fetch news:', resp.status);
-            return { cached: false, entries: [] };
-        }
-
-        const data = (await resp.json());
-        return {
-            cached: data.cached ?? false,
-            entries: data.entries ?? [],
-        };
-    } catch (err) {
-        console.error('[news service] error fetching news:', err);
-        return { cached: false, entries: [] };
+    if (!resp.ok) {
+        throw new Error(`Failed to fetch token news: ${resp.status}`);
     }
+
+    const payload = (await resp.json()) as TokenNewsApiResponse;
+    if (!payload.success) {
+        throw new Error('Failed to fetch token news');
+    }
+
+    return {
+        source: payload.data.source,
+        updatedAt: payload.data.updatedAt,
+        entries: payload.data.articles.map((article) => ({
+            ...article,
+            sourceName: article.source,
+        })),
+    };
 }
 
 export async function getExpandedNewsArticle(contentHash: string): Promise<NewsArticleExpansion | null> {

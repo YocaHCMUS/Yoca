@@ -1,0 +1,209 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
+
+.card {
+  position: fixed;
+  z-index: 8000;
+  background-color: $layer-01;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  max-height: 72vh;
+  width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transition: box-shadow 0.15s;
+
+  &.dragging {
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+    opacity: 0.92;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  cursor: grab;
+  user-select: none;
+  padding: $spacing-04 $spacing-05;
+  border-bottom: 1px solid $border-subtle;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-01;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-02;
+}
+
+.dragIcon {
+  color: $icon-secondary;
+  flex-shrink: 0;
+}
+
+.title {
+  @include type-style('heading-03');
+  color: $text-primary;
+  margin: 0;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: $icon-primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-02;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    background-color: $layer-hover-01;
+  }
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: $spacing-05;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+}
+
+.loadingOverlay {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-04;
+}
+
+.errorContainer {
+  text-align: center;
+  padding: $spacing-05 0;
+}
+
+.errorText {
+  @include type-style('body-01');
+  color: $support-error;
+  margin-bottom: $spacing-03;
+}
+
+.emptyContainer {
+  text-align: center;
+  padding: $spacing-05 0;
+}
+
+.emptyText {
+  @include type-style('body-01');
+  color: $text-secondary;
+  margin-bottom: $spacing-03;
+}
+
+.retryBtn {
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid $border-subtle;
+  background: transparent;
+  color: $text-primary;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  &:hover {
+    background: $layer-hover-01;
+  }
+}
+
+.reportContent {
+  font-size: 13px;
+  color: $text-primary;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+}
+
+.reportSection {
+  h3 {
+    @include type-style('heading-02');
+    color: $text-primary;
+    margin: 0 0 $spacing-03 0;
+    font-size: 14px;
+  }
+
+  p {
+    margin: 0;
+    color: $text-secondary;
+    line-height: 1.5;
+  }
+}
+
+.kvGrid {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-03;
+
+  div {
+    color: $text-secondary;
+
+    strong {
+      color: $text-primary;
+      font-weight: 600;
+    }
+  }
+}
+
+.reportContent {
+  font-size: 13px;
+  color: $text-primary;
+  line-height: 1.6;
+
+  h1, h2, h3, h4 {
+    color: $text-primary;
+    margin-top: $spacing-05;
+    margin-bottom: $spacing-03;
+  }
+
+  h1 { font-size: 18px; }
+  h2 { font-size: 16px; }
+  h3 { font-size: 14px; }
+
+  p {
+    margin-bottom: $spacing-03;
+  }
+
+  ul, ol {
+    margin-bottom: $spacing-03;
+    padding-left: $spacing-05;
+  }
+
+  li {
+    margin-bottom: $spacing-02;
+  }
+
+  strong {
+    font-weight: 600;
+  }
+
+  code {
+    background: $layer-02;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.9em;
+  }
+}

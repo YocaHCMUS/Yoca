@@ -24,7 +24,16 @@
 
 :global(.cds--content) {
   --page-content-top-offset: 3.5rem;
-  padding-top: var(--page-content-top-offset) !important;
+  /* Override Carbon's default margin-top to avoid pushing the container down */
+  margin-top: 0 !important;
+  /* Total top padding: Carbon Header (3rem) + our dynamic offset */
+  padding-top: calc(3rem + var(--page-content-top-offset, 0rem)) !important;
+  
+  overflow-y: auto;
+  box-sizing: border-box;
+  height: 100vh;
+  /* Override Carbon's min-height that forces 100vh on the content height (ignoring padding) */
+  min-height: 0 !important;
 }
 
 .extraHeaderPanelContent {

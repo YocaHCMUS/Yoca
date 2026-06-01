@@ -68,12 +68,25 @@ export const userVerificationSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
-const strongPasswordSchema = z
+export const strongPasswordSchema = z
   .string()
   .min(8, "Password must be at least 8 characters")
   .regex(/[A-Z]/, "Password must include at least one uppercase letter")
   .regex(/[a-z]/, "Password must include at least one lowercase letter")
   .regex(/[0-9]/, "Password must include at least one number");
+
+export const forgotPasswordSchema = z.object({
+  email: z.email("Invalid email format").transform((value) => value.trim()),
+});
+
+export const resetPasswordSchema = z.object({
+  email: z.email("Invalid email format").transform((value) => value.trim()),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "Reset code must be 6 digits"),
+  newPassword: strongPasswordSchema,
+});
 
 export const authProviderSchema = z.enum([
   "password",
@@ -365,9 +378,17 @@ export const envSchema = z.object({
     .url()
     .default("http://localhost:5678/webhook/analyse-wallet"),
   N8N_ANALYSIS_TIMEOUT_MS: z.coerce.number().int().positive().default(200000),
+  BRAVE_SEARCH_API_KEY: z.string().optional().default(""),
 
   // Stripe
   STRIPE_SECRET_KEY: z.string().default(""),
+
+  // SMTP password reset email
+  SMTP_HOST: z.string().optional().default(""),
+  SMTP_PORT: z.coerce.number().int().positive().optional().default(465),
+  SMTP_USER: z.string().optional().default(""),
+  SMTP_PASS: z.string().optional().default(""),
+  APP_NAME: z.string().optional().default("Yoca"),
 
   // Client domains
   CLIENT_LOCAL_DOMAIN: z.url().default("http://localhost:3000"),

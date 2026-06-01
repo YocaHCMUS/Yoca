@@ -69,3 +69,148 @@
   font-size: 14px;
   color: $text-helper;
 }
+
+.newsMarkerStatus {
+  min-height: 28px;
+  padding: 0 14px 10px;
+  font-size: 12px;
+  color: $text-helper;
+}
+
+.newsPopup {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 20;
+  width: min(420px, calc(100% - 36px));
+  max-height: calc(100% - 36px);
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  color: $text-primary;
+  background: $background;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+  scrollbar-color: $border-strong $layer-01;
+}
+
+.newsPopupHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.newsPopupEyebrow {
+  margin-bottom: 2px;
+  font-size: 11px;
+  color: $text-helper;
+}
+
+.newsPopupTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+.newsPopupClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid $border-subtle;
+  border-radius: 4px;
+  color: $text-primary;
+  background: $layer-01;
+  cursor: pointer;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+}
+
+.newsPopupMeta {
+  margin-top: 8px;
+  font-size: 12px;
+  color: $text-helper;
+}
+
+.newsSummary {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid $border-subtle;
+}
+
+.newsSummaryTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+.newsSummaryBullets {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: $text-secondary;
+}
+
+.newsSummaryProvider,
+.newsSummaryLoading {
+  margin-top: 8px;
+  font-size: 11px;
+  color: $text-helper;
+}
+
+.newsArticleList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.newsArticle {
+  display: block;
+  padding: 10px;
+  border: 1px solid $border-subtle;
+  border-radius: 6px;
+  color: $text-primary;
+  text-decoration: none;
+  background: $layer-01;
+
+  &:hover {
+    border-color: $border-strong;
+    background: $layer-hover-01;
+  }
+}
+
+.newsArticleTitle {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: $text-primary;
+}
+
+.newsArticleMeta {
+  margin-top: 5px;
+  font-size: 11px;
+  color: $text-helper;
+}
+
+.newsArticleDescription {
+  display: -webkit-box;
+  margin-top: 6px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 12px;
+  line-height: 1.4;
+  color: $text-secondary;
+}
+
+:global([data-carbon-theme="g100"]) {
+  .newsPopup {
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  }
+}

@@ -1,16 +1,15 @@
 /**
  * NewsTab Component
- * Displays news articles for a token with refresh, filtering, pagination, and inline expansion.
+ * Displays RSS news articles for a token with refresh and pagination.
  */
 
 import { useEffect, useState } from 'react';
-import { Download, Renew } from '@carbon/icons-react';
+import { ChevronLeft, ChevronRight, Download, Renew } from '@carbon/icons-react';
 import { Button, SkeletonText } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { NewsCard } from './NewsCard';
 import { useNewsFeed } from '@/hooks/useNewsFeed';
-import { getExpandedNewsArticle } from '@/services/news';
-import type { NewsArticle, NewsArticleExpansion, TokenNewsQuery } from '@/types/news';
+import type { NewsArticle, TokenNewsQuery } from '@/types/news';
 import styles from './NewsTab.module.scss';
 
 interface NewsTabProps {
@@ -19,67 +18,54 @@ interface NewsTabProps {
     name: string;
 }
 
-const ARTICLES_PER_PAGE = 10;
+const NEWS_PAGE_SIZE = 10;
+
+function getPublishedTimestamp(article: NewsArticle) {
+    if (!article.publishedAt) return 0;
+
+    const timestamp = Date.parse(article.publishedAt);
+    return Number.isNaN(timestamp) ? 0 : timestamp;
+}
 
 export function NewsTab({ address, symbol, name }: NewsTabProps) {
     const { tr } = useLocalization();
     const query: TokenNewsQuery = { address, symbol, name };
     const news = useNewsFeed(query);
-    const [page, setPage] = useState(0);
-    const [filteredEntries, setFilteredEntries] = useState(news.entries);
-    const [expandedContentHash, setExpandedContentHash] = useState<string | null>(null);
-    const [expandedArticles, setExpandedArticles] = useState<Record<string, NewsArticleExpansion | null>>({});
-    const [loadingContentHash, setLoadingContentHash] = useState<string | null>(null);
+    const [currentNewsPage, setCurrentNewsPage] = useState(0);
+    const [sortedArticles, setSortedArticles] = useState<NewsArticle[]>([]);
 
     useEffect(() => {
-        setFilteredEntries(news.entries);
-        setPage(0);
+        const nextArticles = [...news.entries].sort(
+            (a, b) => getPublishedTimestamp(b) - getPublishedTimestamp(a),
+        );
+
+        setSortedArticles(nextArticles);
+        setCurrentNewsPage(0);
     }, [news.entries]);
 
     useEffect(() => {
-        setExpandedContentHash(null);
-        setExpandedArticles({});
-        setLoadingContentHash(null);
-    }, [address, symbol, name]);
+        if (address && symbol && name) {
+            news.fetchNews();
+        }
+    }, [address, symbol, name, news.fetchNews]);
 
-    const totalPages = Math.ceil(filteredEntries.length / ARTICLES_PER_PAGE);
-    const paginatedEntries = filteredEntries.slice(
-        page * ARTICLES_PER_PAGE,
-        (page + 1) * ARTICLES_PER_PAGE,
+    const totalPages = Math.ceil(sortedArticles.length / NEWS_PAGE_SIZE);
+    const visibleArticles = sortedArticles.slice(
+        currentNewsPage * NEWS_PAGE_SIZE,
+        currentNewsPage * NEWS_PAGE_SIZE + NEWS_PAGE_SIZE,
     );
 
-    const handleLoadMore = () => {
-        if (page < totalPages - 1) {
-            setPage(page + 1);
-        }
+    const handlePreviousPage = () => {
+        setCurrentNewsPage((page) => Math.max(0, page - 1));
     };
 
-    const handleToggleExpand = async (article: NewsArticle) => {
-        if (!article.contentHash) return;
-
-        if (expandedContentHash === article.contentHash) {
-            setExpandedContentHash(null);
-            setLoadingContentHash(null);
-            return;
-        }
-
-        setExpandedContentHash(article.contentHash);
-
-        if (!expandedArticles[article.contentHash]) {
-            setLoadingContentHash(article.contentHash);
-            const expansion = await getExpandedNewsArticle(article.contentHash);
-            setExpandedArticles((prev) => ({
-                ...prev,
-                [article.contentHash as string]: expansion,
-            }));
-            setLoadingContentHash(null);
-        }
+    const handleNextPage = () => {
+        setCurrentNewsPage((page) => Math.min(totalPages - 1, page + 1));
     };
 
-    const start = String(filteredEntries.length === 0 ? 0 : page * ARTICLES_PER_PAGE + 1);
-    const end = String(Math.min((page + 1) * ARTICLES_PER_PAGE, filteredEntries.length));
-    const count = String(filteredEntries.length);
-    const actionLabel = news.hasLoaded ? tr('token.news.refresh') : tr('token.news.fetch');
+    const start = String(sortedArticles.length === 0 ? 0 : currentNewsPage * NEWS_PAGE_SIZE + 1);
+    const end = String(Math.min(currentNewsPage * NEWS_PAGE_SIZE + NEWS_PAGE_SIZE, sortedArticles.length));
+    const count = String(sortedArticles.length);
     const actionIconDescription = news.hasLoaded
         ? tr('token.news.refreshTooltip')
         : tr('token.news.fetchTooltip');
@@ -107,7 +93,7 @@ export function NewsTab({ address, symbol, name }: NewsTabProps) {
 
             {news.error && (
                 <div className={styles.error}>
-                    <p>{tr('token.news.errorPrefix')} {news.error}</p>
+                    <p>{tr('token.news.error')}</p>
                 </div>
             )}
 
@@ -126,7 +112,7 @@ export function NewsTab({ address, symbol, name }: NewsTabProps) {
                 </div>
             )}
 
-            {news.hasLoaded && !news.isLoading && filteredEntries.length === 0 && (
+            {news.hasLoaded && !news.isLoading && !news.error && sortedArticles.length === 0 && (
                 <div className={styles.empty}>
                     <p>{tr('token.news.empty', { name })}</p>
                     <Button
@@ -139,17 +125,13 @@ export function NewsTab({ address, symbol, name }: NewsTabProps) {
                 </div>
             )}
 
-            {filteredEntries.length > 0 && (
+            {sortedArticles.length > 0 && (
                 <>
                     <div className={styles.articlesGrid}>
-                        {paginatedEntries.map((article, idx) => (
+                        {visibleArticles.map((article, idx) => (
                             <NewsCard
-                                key={article.contentHash || idx}
+                                key={article.url || idx}
                                 article={article}
-                                isExpanded={expandedContentHash === article.contentHash}
-                                isLoadingExpansion={loadingContentHash === article.contentHash}
-                                expansion={article.contentHash ? expandedArticles[article.contentHash] ?? null : null}
-                                onToggleExpand={handleToggleExpand}
                             />
                         ))}
                     </div>
@@ -157,18 +139,32 @@ export function NewsTab({ address, symbol, name }: NewsTabProps) {
                     {totalPages > 1 && (
                         <div className={styles.pagination}>
                             <div className={styles.paginationInfo}>
-                                {tr('token.news.showing')} {start}–{end} {tr('token.news.of')} {count}
+                                {tr('token.news.showing')} {start}-{end} {tr('token.news.of')} {count}
                             </div>
 
-                            {page < totalPages - 1 && (
+                            <div className={styles.paginationControls}>
                                 <Button
-                                    kind="secondary"
+                                    kind="tertiary"
                                     size="sm"
-                                    onClick={handleLoadMore}
+                                    onClick={handlePreviousPage}
+                                    disabled={currentNewsPage === 0}
+                                    iconDescription={tr('token.news.previousPage')}
+                                    hasIconOnly
                                 >
-                                    {tr('token.news.loadMore')}
+                                    <ChevronLeft />
                                 </Button>
-                            )}
+
+                                <Button
+                                    kind="tertiary"
+                                    size="sm"
+                                    onClick={handleNextPage}
+                                    disabled={currentNewsPage >= totalPages - 1}
+                                    iconDescription={tr('token.news.nextPage')}
+                                    hasIconOnly
+                                >
+                                    <ChevronRight />
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </>

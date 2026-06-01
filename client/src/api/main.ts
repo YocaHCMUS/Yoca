@@ -19,6 +19,7 @@ type ClientTypeOf<Route extends keyof AppRoutes> = ReturnType<
 >;
 
 type UsersClient = ClientTypeOf<"/api/users">;
+type AuthClient = ClientTypeOf<"/api/auth">;
 type TokenClient = ClientTypeOf<"/api/tokens">;
 type MiscClient = ClientTypeOf<"/api/misc">;
 type ProfileClient = ClientTypeOf<"/api/profile">;
@@ -33,11 +34,15 @@ type WalletTagsRouteClient = ClientTypeOf<"/api/walletTags">;
 type AlertsClient = ClientTypeOf<"/api/alerts">;
 type AlertsHpClient = ClientTypeOf<"/api/alertsHp">;
 type NewsClient = ClientTypeOf<"/api/news">;
+type TokenNewsClient = ClientTypeOf<"/api/token-news">;
+type TokenChartNewsEventsClient = ClientTypeOf<"/api/token-chart-news-events">;
+type TokenVolatilityNewsClient = ClientTypeOf<"/api/token-volatility-news">;
 type PaymentClient = ClientTypeOf<"/api/payment">;
 
 export type ApiClient = {
   api: {
     users: UsersClient;
+    auth: AuthClient;
     tokens: TokenClient;
     misc: MiscClient;
     profile: ProfileClient;
@@ -52,6 +57,9 @@ export type ApiClient = {
     alerts: AlertsClient;
     alertsHp: AlertsHpClient;
     news: NewsClient;
+    tokenNews: TokenNewsClient;
+    tokenChartNewsEvents: TokenChartNewsEventsClient;
+    tokenVolatilityNews: TokenVolatilityNewsClient;
     payment: PaymentClient;
   };
 };
@@ -59,6 +67,7 @@ export type ApiClient = {
 const client: ApiClient = {
   api: {
     users: hcc("/api/users"),
+    auth: hcc("/api/auth"),
     tokens: hcc("/api/tokens"),
     misc: hcc("/api/misc"),
     profile: hcc("/api/profile"),
@@ -73,6 +82,9 @@ const client: ApiClient = {
     alerts: hcc("/api/alerts"),
     alertsHp: hcc("/api/alertsHp"),
     news: hcc("/api/news"),
+    tokenNews: hcc("/api/token-news"),
+    tokenChartNewsEvents: hcc("/api/token-chart-news-events"),
+    tokenVolatilityNews: hcc("/api/token-volatility-news"),
     payment: hcc("/api/payment"),
   },
 };

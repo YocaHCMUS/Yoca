@@ -49,7 +49,15 @@ function compute24hChange(points: TimeSeriesDataPoint[]): ChangeMetric | null {
   };
 }
 
-export function BalanceChartV2({ address }: { address: string }) {
+export function BalanceChartV2({
+  address,
+  onClickDay,
+  minHeight = 500,
+}: {
+  address: string;
+  onClickDay?: (timestamp: number) => void;
+  minHeight?: number;
+}) {
   const { tr, fmt } = useLocalization();
 
   const [timePeriod, setTimePeriod] = useState<"7D" | "30D">("7D");
@@ -111,18 +119,15 @@ export function BalanceChartV2({ address }: { address: string }) {
     },
   );
 
-  const balanceSeries = useMemo(
-    () =>
-      selectedTokens == null
-        ? totalBalance.data
-          ? [totalBalance.data]
-          : []
-        : [
-            ...(tokenBalances.data ?? []),
-            ...(totalBalance.data ? [totalBalance.data] : []),
-          ],
-    [selectedTokens, totalBalance.data, tokenBalances.data],
-  );
+  const balanceSeries =
+    selectedTokens == null
+      ? totalBalance.data
+        ? [totalBalance.data]
+        : []
+      : [
+        ...(tokenBalances.data ?? []),
+        // ...(totalBalance.data ? [totalBalance.data] : []),
+      ];
 
   const series24hChanges = useMemo(() => {
     return balanceSeries.reduce<Record<string, ChangeMetric | null>>(
@@ -135,7 +140,7 @@ export function BalanceChartV2({ address }: { address: string }) {
   }, [balanceSeries]);
 
   return (
-    <ChartWrapper title={tr("charts.balanceChart.title")}>
+    <ChartWrapper title={tr("charts.balanceChart.title")} wrapperMinHeight={minHeight} enableExport={false} enableFullscreen={false} enableMiniPlayer={false}>
       <Flex dir="column" gap={8}>
         <Flex justify="between" align="end">
           <Layer style={{ width: 300 }}>
@@ -185,7 +190,11 @@ export function BalanceChartV2({ address }: { address: string }) {
 
               return (
                 <Tag key={series.key} size="lg" title={series.label}>
-                  <Flex align="center" justify="between" gap={2}>
+                  <Flex
+                    align="center"
+                    justify="between"
+                    gap={2}
+                  >
                     <Txt size="sm" secondary>
                       {series.label}
                     </Txt>
@@ -203,13 +212,10 @@ export function BalanceChartV2({ address }: { address: string }) {
 
         <MultiTimeSeriesLineChart
           series={balanceSeries}
-          height={500}
-          loading={
-            tokenBalances.isLoading ||
-            portfolio.isLoading ||
-            totalBalance.isLoading
-          }
+          height={minHeight}
+          loading={tokenBalances.isLoading && portfolio.isLoading}
           valueFormatter={(val) => fmt.num.currency(val)}
+          onClickDay={onClickDay}
         />
       </Flex>
     </ChartWrapper>

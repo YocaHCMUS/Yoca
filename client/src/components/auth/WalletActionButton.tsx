@@ -1,6 +1,5 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useSolanaContext } from "@/contexts/SolanaWalletContext";
-import { Button, type ButtonBaseProps } from "@carbon/react";
 import { Wallet } from "@carbon/react/icons";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
@@ -16,116 +15,113 @@ interface WalletActionPayload<TResult> {
 }
 
 type WalletActionButtonProps<TResult> = {
-  disabled?: boolean;
-  onError: (error: string) => void;
-  onSuccess: (result: TResult) => void;
-  action: (payload: WalletActionPayload<TResult>) => Promise<void>;
-  label?: string;
-  kind?: ButtonBaseProps["kind"];
-  renderIcon?: ButtonBaseProps["renderIcon"];
-  className?: string;
-  style?: React.CSSProperties;
+    disabled?: boolean;
+    onError: (error: string) => void;
+    onSuccess: (result: TResult) => void;
+    action: (payload: WalletActionPayload<TResult>) => Promise<void>;
+    label?: string;
+    className?: string;
 };
 
 export function WalletActionButton<TResult>({
-  disabled = false,
-  onError,
-  onSuccess,
-  action,
-  label,
-  kind = "tertiary",
-  renderIcon = Wallet,
-  className,
-  style,
+    disabled = false,
+    onError,
+    onSuccess,
+    action,
+    label,
+    className,
 }: WalletActionButtonProps<TResult>) {
-  const { tr } = useLocalization();
-  const { publicKey, signMessage, connected, connecting, wallet } = useWallet();
-  const { isModalOpen, openModal, closeModal } = useSolanaContext();
-  const walletConnectBtnRef = useRef<HTMLDivElement>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+    const { tr } = useLocalization();
+    const { publicKey, signMessage, connected, connecting, wallet } = useWallet();
+    const { isModalOpen, openModal, closeModal } = useSolanaContext();
+    const walletConnectBtnRef = useRef<HTMLDivElement>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+    
+    // Thêm state ghi nhớ ý định Sign sau khi Connect
+    const [pendingAuth, setPendingAuth] = useState(false);
 
-  useEffect(() => {
-    if (connected && isModalOpen) {
-      closeModal();
+    // Xử lý đóng modal khi connect thành công
+    useEffect(() => {
+        if (connected && isModalOpen) {
+            closeModal();
+        }
+    }, [connected, isModalOpen, closeModal]);
+
+    // TỰ ĐỘNG GỌI HÀM KÝ KHI VÍ CONNECT THÀNH CÔNG
+    useEffect(() => {
+        if (connected && pendingAuth && publicKey && signMessage && wallet) {
+            setPendingAuth(false);
+            executeAction();
+        }
+    }, [connected, pendingAuth, publicKey, signMessage, wallet]);
+
+    const triggerWalletMultiBtn = () => {
+        const container = walletConnectBtnRef.current;
+        if (!container) return;
+
+        const btn = container.querySelector("button");
+        if (btn instanceof HTMLElement) {
+            btn.click();
+        }
+    };
+
+    // Tách logic Sign ra một hàm riêng để tái sử dụng
+    const executeAction = async () => {
+        if (!publicKey || !signMessage || !wallet) {
+            onError(tr("ERROR.WALLET_VERIFICATION_FAILED"));
+            return;
+        }
+
+        setIsProcessing(true);
+        try {
+            await action({
+                publicKey: publicKey.toBase58(),
+                signMessage,
+                closeModal,
+                walletName: wallet.adapter.name,
+                onSuccess,
+                onError,
+            });
+        } catch (error) {
+            console.error("[WalletActionButton] action failed", error);
+            onError(tr("ERROR.WALLET_VERIFICATION_FAILED"));
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    async function onBtnClick() {
+        if (!connected) {
+            setPendingAuth(true); // Đánh dấu là người dùng muốn Đăng nhập/Ký
+            triggerWalletMultiBtn(); // Mở popup connect của ví
+            openModal();
+            return;
+        }
+
+        // Nếu đã connect sẵn rồi thì chạy thẳng xuống executeAction
+        executeAction();
     }
-  }, [connected, isModalOpen, closeModal]);
 
-  const triggerWalletMultiBtn = () => {
-    const container = walletConnectBtnRef.current;
-    if (!container) {
-      return;
-    }
+    const defaultLabel = wallet ? wallet.adapter.name : "Wallet";
+    const buttonLabel = label ?? (connecting ? tr("auth.connectingWithWallet") : defaultLabel);
 
-    const btn = container.querySelector("button");
-    if (btn instanceof HTMLElement) {
-      btn.click();
-    }
-  };
+    return (
+        <>
+            <button
+                type="button"
+                disabled={disabled || isModalOpen || connecting || isProcessing}
+                onClick={onBtnClick}
+                className={className}
+            >
+                <Wallet size={20} />
+                <span>{buttonLabel}</span>
+            </button>
 
-  async function onBtnClick() {
-    if (!connected) {
-      triggerWalletMultiBtn();
-      console.log("model opened: ", isModalOpen);
-      openModal();
-      return;
-    }
-
-    if (!publicKey || !signMessage || !wallet) {
-      onError(tr("ERROR.WALLET_VERIFICATION_FAILED"));
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      await action({
-        publicKey: publicKey.toBase58(),
-        signMessage,
-        closeModal,
-        walletName: wallet.adapter.name,
-        onSuccess,
-        onError,
-      });
-    } catch (error) {
-      console.error("[WalletActionButton] action failed", error);
-      onError(tr("ERROR.WALLET_VERIFICATION_FAILED"));
-    } finally {
-      setIsProcessing(false);
-    }
-  }
-
-  const buttonLabel =
-    label ??
-    (wallet
-      ? connected
-        ? tr("auth.continueWithConnectedWallet", {
-            connectedWalletAddress: publicKey?.toString() || "",
-            connectedWalletName: wallet.adapter.name,
-          })
-        : connecting
-          ? tr("auth.connectingWithWallet")
-          : tr("auth.continueWithSelectedWallet", {
-              walletName: wallet.adapter.name,
-            })
-      : tr("auth.continueWithWallet"));
-
-  return (
-    <>
-      <Button
-        kind={kind}
-        renderIcon={renderIcon}
-        disabled={disabled || isModalOpen || connecting || isProcessing}
-        onClick={onBtnClick}
-        className={className}
-        style={style}
-      >
-        {buttonLabel}
-      </Button>
-
-      <div ref={walletConnectBtnRef}>
-        <WalletMultiButton style={{ display: "none" }} />
-      </div>
-    </>
-  );
+            <div ref={walletConnectBtnRef} style={{ display: "none" }}>
+                <WalletMultiButton />
+            </div>
+        </>
+    );
 }
 
 export default WalletActionButton;

@@ -239,7 +239,7 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
                           {fmt.text.address(leftTA)}
                           <CpyBtn size="xs" copyWhat={leftTA} align="top" />
                         </span>
-                        <span className={styles.transferSpacer} />
+                        <span className={styles.transferArrow}>{isOut ? "→" : "←"}</span>
                         <span className={styles.transferTokenAddr} title={rightTA}
                           onClick={(e) => {
                             e.stopPropagation();

@@ -7,7 +7,6 @@ import {
 
 import { Loading } from "@carbon/react";
 import "./App.css";
-
 import Index from "@/pages";
 import AlertsPage from "@/pages/alerts";
 import HistoricalDataPage from "@/pages/historical-data";

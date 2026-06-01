@@ -1,5 +1,4 @@
 import { SignInModal } from "@/components/auth/SignInModal";
-import { SignUpModal } from "@/components/auth/SignUpModal";
 import { useState, useEffect } from "react";
 
 type AuthReminderModalProps = {
@@ -7,6 +6,7 @@ type AuthReminderModalProps = {
   onClose: () => void;
 };
 
+// TODO: Open sign up/ sign in modal from PageWrapper instead
 /**
  * A lightweight modal that intercepts unauthenticated users trying to
  * purchase a plan.  Reuses the project's dark-UI patterns and opens the
@@ -15,9 +15,12 @@ type AuthReminderModalProps = {
 export function AuthReminderModal({ open, onClose }: AuthReminderModalProps) {
   const [activeView, setActiveView] = useState<"reminder" | "signin" | "signup">("reminder");
 
-  // Reset view when modal opens
+  // Reset view whenever the modal opens OR closes to prevent stale state flash.
+  // Without this, if a user opens SignIn and then closes the modal ("Maybe Later"),
+  // the next time the modal opens it briefly flashes the SignIn view before this
+  // effect fires and resets it back to "reminder".
   useEffect(() => {
-    if (open) setActiveView("reminder");
+    setActiveView("reminder");
   }, [open]);
 
   if (!open) return null;
@@ -105,21 +108,11 @@ export function AuthReminderModal({ open, onClose }: AuthReminderModalProps) {
         </div>
       )}
 
-      {/* Auth Modals */}
+      {/* Auth Modal — SignInModal already handles Login ↔ Register toggle internally */}
       <SignInModal
         open={activeView === "signin"}
-        onClose={() => {
-          onClose();
-        }}
-        onToggleSignUp={() => setActiveView("signup")}
+        onClose={onClose}
         redirectUrl="/pricing"
-      />
-
-      <SignUpModal
-        open={activeView === "signup"}
-        onClose={() => {
-          onClose();
-        }}
       />
     </>
   );
