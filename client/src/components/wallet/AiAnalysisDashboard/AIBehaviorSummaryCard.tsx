@@ -1,11 +1,8 @@
 import styles from "./AiAnalysisDashboard.module.scss";
 import { ExplanationDetails, HelpTooltip, LabelWithTooltip } from "./HelpTooltip";
+import { useAiAnalysisI18n } from "./i18n";
 import {
-  formatEnumLabel,
   formatPercent,
-  getPersonaExplanation,
-  getRiskLevelExplanation,
-  normalizeRiskLanguage,
   uniqueStrings,
 } from "./utils";
 
@@ -15,8 +12,15 @@ type AIBehaviorSummaryCardProps = {
 };
 
 export function AIBehaviorSummaryCard({ aiSummary, profile }: AIBehaviorSummaryCardProps) {
+  const {
+    tr,
+    labelForCode,
+    personaExplanation: getLocalizedPersonaExplanation,
+    normalizeUserText,
+    riskLevelExplanation,
+  } = useAiAnalysisI18n();
   const persona = profile?.persona?.primaryPersona ?? aiSummary?.walletPersona;
-  const personaExplanation = getPersonaExplanation(persona);
+  const personaExplanation = getLocalizedPersonaExplanation(persona);
   const confidence = profile?.persona?.confidence ?? profile?.persona?.primaryPersonaScore;
   const reasoning = uniqueStrings(profile?.persona?.reasoning ?? []).slice(0, 4);
   const evidenceIds = uniqueStrings(profile?.persona?.evidenceIds ?? []);
@@ -27,74 +31,77 @@ export function AIBehaviorSummaryCard({ aiSummary, profile }: AIBehaviorSummaryC
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div>
-          <h3 className={styles.sectionTitle}>AI Wallet Behavior Summary</h3>
-          <p className={styles.sectionDescription}>Plain-language interpretation of the computed wallet profile.</p>
+          <h3 className={styles.sectionTitle}>{tr("aiAnalysisDashboard.summary.title")}</h3>
+          <p className={styles.sectionDescription}>{tr("aiAnalysisDashboard.summary.description")}</p>
         </div>
       </div>
 
       <div className={styles.summaryStack}>
         {aiSummary?.shortSummary ? (
-          <p className={styles.summaryText}>{normalizeRiskLanguage(aiSummary.shortSummary)}</p>
+          <p className={styles.summaryText}>{normalizeUserText(aiSummary.shortSummary)}</p>
         ) : (
-          <p className={styles.bodyText}>No summary was generated for this wallet.</p>
+          <p className={styles.bodyText}>{tr("aiAnalysisDashboard.summary.noSummary")}</p>
         )}
 
         <div className={styles.summaryMetaGrid}>
           <div className={styles.summaryMetaCard}>
             <LabelWithTooltip
               className={styles.cardMetaLabel}
-              tooltip="Persona explains what behavior the wallet most resembles. It is separate from Risk Level."
+              tooltip={String(tr("aiAnalysisDashboard.summary.walletPersonaTooltip"))}
             >
-              Wallet Persona
+              {tr("aiAnalysisDashboard.summary.walletPersona")}
             </LabelWithTooltip>
-            <div className={styles.cardMetaValue}>{formatEnumLabel(aiSummary?.walletPersona)}</div>
+            <div className={styles.cardMetaValue}>{labelForCode(aiSummary?.walletPersona)}</div>
           </div>
           <div className={styles.summaryMetaCard}>
             <LabelWithTooltip
               className={styles.cardMetaLabel}
-              tooltip={getRiskLevelExplanation(riskScore, txCount)}
+              tooltip={riskLevelExplanation(riskScore, txCount)}
             >
-              Risk Summary
+              {tr("aiAnalysisDashboard.summary.riskSummary")}
             </LabelWithTooltip>
-            <div className={styles.cardMetaValue}>{normalizeRiskLanguage(aiSummary?.riskSummary) || "-"}</div>
+            <div className={styles.cardMetaValue}>{normalizeUserText(aiSummary?.riskSummary) || "-"}</div>
           </div>
           <div className={styles.summaryMetaCard}>
             <LabelWithTooltip
               className={styles.cardMetaLabel}
-              tooltip="PnL summary is based on closed positions and available price data in the analyzed window. It may not include all wallet value changes."
+              tooltip={String(tr("aiAnalysisDashboard.summary.pnlSummaryTooltip"))}
             >
-              PnL Summary
+              {tr("aiAnalysisDashboard.summary.pnlSummary")}
             </LabelWithTooltip>
-            <div className={styles.cardMetaValue}>{normalizeRiskLanguage(aiSummary?.pnlSummary) || "-"}</div>
+            <div className={styles.cardMetaValue}>{normalizeUserText(aiSummary?.pnlSummary) || "-"}</div>
           </div>
         </div>
 
-        <ExplanationDetails summary="Why this persona?">
+        <ExplanationDetails summary={tr("aiAnalysisDashboard.summary.whyPersona")}>
           <p className={styles.inlineHelpText}>
-            Persona explains what behavior the wallet most resembles. Risk Level explains how strong the overall risk signals are.
+            {tr("aiAnalysisDashboard.summary.personaVsRisk")}
           </p>
           <div className={styles.explanationGrid}>
             <div className={styles.explanationBlock}>
               <div className={styles.cardMetaLabel}>
-                Selected Persona <HelpTooltip text={personaExplanation.caution ?? "This is a behavioral classification, not an identity claim."} />
+                {tr("aiAnalysisDashboard.summary.selectedPersona")}{" "}
+                <HelpTooltip text={personaExplanation.caution ?? String(tr("aiAnalysisDashboard.summary.selectedPersonaFallbackTooltip"))} />
               </div>
               <div className={styles.cardMetaValue}>{personaExplanation.label}</div>
               <p className={styles.inlineHelpText}>{personaExplanation.meaning}</p>
             </div>
             <div className={styles.explanationBlock}>
-              <div className={styles.cardMetaLabel}>Common Signals</div>
+              <div className={styles.cardMetaLabel}>{tr("aiAnalysisDashboard.summary.commonSignals")}</div>
               <p className={styles.inlineHelpText}>{personaExplanation.commonSignals}</p>
             </div>
           </div>
           <div className={styles.explanationBlock}>
-            <div className={styles.cardMetaLabel}>Observed Support</div>
+            <div className={styles.cardMetaLabel}>{tr("aiAnalysisDashboard.summary.observedSupport")}</div>
             <p className={styles.inlineHelpText}>
-              Persona confidence is {formatPercent(confidence)} based on how strongly available metrics support this persona compared with alternatives.
+              {tr("aiAnalysisDashboard.summary.personaConfidenceSentence", {
+                confidence: formatPercent(confidence),
+              })}
             </p>
             {reasoning.length > 0 ? (
               <ul className={styles.compactList}>
                 {reasoning.map((item) => (
-                  <li key={item}>{normalizeRiskLanguage(item)}</li>
+                  <li key={item}>{normalizeUserText(item)}</li>
                 ))}
               </ul>
             ) : null}
@@ -104,7 +111,9 @@ export function AIBehaviorSummaryCard({ aiSummary, profile }: AIBehaviorSummaryC
                   <span key={id} className={styles.chip}>{id}</span>
                 ))}
                 {evidenceIds.length > 6 ? (
-                  <span className={`${styles.chip} ${styles.moreChip}`}>+{evidenceIds.length - 6} more</span>
+                  <span className={`${styles.chip} ${styles.moreChip}`}>
+                    {tr("aiAnalysisDashboard.summary.more", { count: evidenceIds.length - 6 })}
+                  </span>
                 ) : null}
               </div>
             ) : null}

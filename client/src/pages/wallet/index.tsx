@@ -1448,9 +1448,9 @@ export default function WalletPage() {
         <div className={styles.aiAnalysisShell}>
           {aiAnalysisLoading ? (
             <div className={styles.aiLoadingPanel} aria-live="polite">
-              <h3 className={styles.sectionTitle}>Analyzing wallet behavior...</h3>
+              <h3 className={styles.sectionTitle}>{tr("aiAnalysisDashboard.loading.title")}</h3>
               <p className={styles.sectionDescription}>
-                Building evidence-backed persona, risk, and activity summaries.
+                {tr("aiAnalysisDashboard.loading.description")}
               </p>
               <div className={styles.summaryGrid}>
                 <div className={styles.summaryCard} style={{ minHeight: 96 }} />
