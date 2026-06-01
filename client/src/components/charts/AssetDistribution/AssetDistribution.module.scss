@@ -1,0 +1,21 @@
+.tokenSelector {
+  :global(.cds--list-box__menu-item--highlighted),
+  :global(.cds--list-box__menu-item:first-child.cds--list-box__menu-item--highlighted) {
+    outline: none !important;
+  }
+
+  :global(.cds--list-box__menu-item--highlighted::before),
+  :global(.cds--list-box__menu-item:first-child.cds--list-box__menu-item--highlighted::before) {
+    content: none !important;
+  }
+
+  :global(.cds--list-box__menu-item--highlighted .cds--list-box__menu-item__option) {
+    background: var(--cds-layer-hover);
+    color: var(--cds-text-primary);
+  }
+
+  :global(.cds--list-box__menu-item__option:focus),
+  :global(.cds--checkbox:focus + .cds--checkbox-label::before) {
+    outline: none !important;
+  }
+}

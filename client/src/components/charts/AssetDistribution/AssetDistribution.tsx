@@ -41,6 +41,7 @@ import type { ChartProps } from '../shared/ChartProp';
 import { runChartExport } from '@/services/chart/chartExportService';
 import { Dropdown, FilterableMultiSelect, Layer } from '@carbon/react';
 import { SettingsAdjust } from '@carbon/icons-react';
+import styles from './AssetDistribution.module.scss';
 
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -51,6 +52,7 @@ const MAX_VISIBLE_OTHERS = 10;
 interface LegendAsset {
   name: string;
   color: string;
+  value: number;
 }
 
 interface AssetItem {
@@ -407,22 +409,32 @@ export const AssetDistribution: React.FC<ChartProps> = ({
 
     const uniqueAssets = new Map<string, LegendAsset>();
 
-    data.wallets.forEach((wallet: any, walletIndex: number) => {
+    data.wallets.forEach((wallet: any) => {
       wallet.data.forEach((asset: any, assetIndex: number) => {
-        if (!uniqueAssets.has(asset.name)) {
+        const existingAsset = uniqueAssets.get(asset.name);
+
+        if (existingAsset) {
+          existingAsset.value += Number(asset.value ?? 0);
+        } else {
           uniqueAssets.set(asset.name, {
             name: asset.name,
             color: (asset as any).color ?? CHART_COLOR_PALETTE[assetIndex % CHART_COLOR_PALETTE.length],
+            value: Number(asset.value ?? 0),
           });
         }
       });
     });
 
-    return Array.from(uniqueAssets.values());
+    return Array.from(uniqueAssets.values()).sort((a, b) => b.value - a.value);
   }, [data]);
 
   useEffect(() => {
-    if (!aggregatedLegendData || selectedAssets.size === 0) return;
+    if (!aggregatedLegendData) return;
+
+    if (selectedAssets.size === 0) {
+      setSelectedAssets(new Set(aggregatedLegendData.map(asset => asset.name)));
+      return;
+    }
 
     const availableAssets = new Set(aggregatedLegendData.map(asset => asset.name));
     const nextSelectedAssets = new Set(
@@ -430,7 +442,11 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     );
 
     if (nextSelectedAssets.size !== selectedAssets.size) {
-      setSelectedAssets(nextSelectedAssets);
+      setSelectedAssets(
+        nextSelectedAssets.size > 0
+          ? nextSelectedAssets
+          : new Set(aggregatedLegendData.map(asset => asset.name))
+      );
     }
   }, [aggregatedLegendData, selectedAssets]);
 
@@ -528,30 +544,18 @@ export const AssetDistribution: React.FC<ChartProps> = ({
             >
               <Layer style={{ width: 'min(100%, 360px)' }}>
                 <FilterableMultiSelect<LegendAsset>
+                  className={styles.tokenSelector}
                   id="asset-distribution-token-selector"
                   titleText={tr('charts.balanceChart.selectTokenLabel')}
-                  placeholder={tr('charts.allTokens')}
+                  placeholder={tr('charts.balanceChart.selectTokenLabel')}
                   items={aggregatedLegendData}
                   selectedItems={selectedLegendItems}
                   itemToString={(asset) => asset?.name ?? ''}
-                  itemToElement={(asset) => (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0 }}>
-                      <span
-                        aria-hidden="true"
-                        style={{
-                          width: 10,
-                          height: 10,
-                          flex: '0 0 10px',
-                          borderRadius: '50%',
-                          backgroundColor: asset.color,
-                        }}
-                      />
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.name}</span>
-                    </span>
-                  )}
+                  sortItems={(items) => [...items]}
                   selectionFeedback="fixed"
                   size="lg"
                   onChange={({ selectedItems }) => {
+                    if (selectedItems.length === 0) return;
                     setSelectedAssets(new Set(selectedItems.map(asset => asset.name)));
                   }}
                 />
