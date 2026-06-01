@@ -192,6 +192,26 @@
   }
 }
 
+.priceSpike {
+  .severityDot {
+    background: #24a148;
+  }
+
+  .eventTitle strong {
+    color: #24a148;
+  }
+}
+
+.priceDrop {
+  .severityDot {
+    background: #fa4d56;
+  }
+
+  .eventTitle strong {
+    color: #fa4d56;
+  }
+}
+
 .eventMeta {
   margin-top: 3px;
   color: $text-secondary;
