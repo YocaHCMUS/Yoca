@@ -39,6 +39,7 @@ export async function getTokenNews(query: TokenNewsQuery): Promise<NewsFilterRes
         entries: payload.data.articles.map((article) => ({
             ...article,
             sourceName: article.source,
+            faviconUrl: article.favicon ?? null,
         })),
     };
 }

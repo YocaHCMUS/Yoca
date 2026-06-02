@@ -11,6 +11,8 @@ export interface RelatedNewsArticle {
   description: string;
   score: number;
   matchedBy: string[];
+  imageUrl?: string | null;
+  favicon?: string | null;
   timeDistanceHours: number | null;
   confidence: RelatedNewsConfidence;
 }

@@ -546,18 +546,39 @@ export function TokenOverviewChart({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  <div className={styles.newsArticleTitle}>{article.title}</div>
-                  <div className={styles.newsArticleMeta}>
-                    {article.source}
-                    {article.publishedAt
-                      ? ` | ${formatArticleDate(article.publishedAt)}`
-                      : ""}
+                  <div className={styles.newsArticleThumbnail}>
+                    {article.imageUrl || article.favicon ? (
+                      <img
+                        src={article.imageUrl || article.favicon || undefined}
+                        alt=""
+                        loading="lazy"
+                        onError={(event) => {
+                          event.currentTarget.style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <span aria-hidden="true">
+                        {article.source.trim().slice(0, 1).toUpperCase() ||
+                          "N"}
+                      </span>
+                    )}
                   </div>
-                  {article.description && (
-                    <div className={styles.newsArticleDescription}>
-                      {article.description}
+                  <div className={styles.newsArticleContent}>
+                    <div className={styles.newsArticleTitle}>
+                      {article.title}
                     </div>
-                  )}
+                    <div className={styles.newsArticleMeta}>
+                      {article.source}
+                      {article.publishedAt
+                        ? ` | ${formatArticleDate(article.publishedAt)}`
+                        : ""}
+                    </div>
+                    {article.description && (
+                      <div className={styles.newsArticleDescription}>
+                        {article.description}
+                      </div>
+                    )}
+                  </div>
                 </a>
               ))}
             </div>

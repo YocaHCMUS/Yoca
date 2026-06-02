@@ -14,11 +14,19 @@ interface BraveSearchItem {
   age?: string;
   page_age?: string;
   page_fetched?: string;
+  thumbnail?: {
+    src?: string;
+    url?: string;
+  };
   profile?: {
     name?: string;
+    img?: string;
+    image?: string;
+    favicon?: string;
   };
   meta_url?: {
     hostname?: string;
+    favicon?: string;
   };
 }
 
@@ -46,6 +54,32 @@ function getHostname(value: string) {
     return new URL(value).hostname.replace(/^www\./, "");
   } catch {
     return "Brave Search";
+  }
+}
+
+function normalizeImageUrl(value: unknown, articleUrl: string) {
+  if (typeof value !== "string") return null;
+
+  const trimmed = value.trim();
+  if (!trimmed || /^(data|javascript):/i.test(trimmed)) return null;
+
+  try {
+    const url = new URL(trimmed, articleUrl);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function getFallbackFavicon(articleUrl: string) {
+  try {
+    const url = new URL(articleUrl);
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(
+      url.hostname,
+    )}&sz=32`;
+  } catch {
+    return null;
   }
 }
 
@@ -207,6 +241,18 @@ function normalizeBraveItem(item: BraveSearchItem): RawNewsArticle | null {
     item.profile?.name?.trim() ||
     item.meta_url?.hostname?.replace(/^www\./, "") ||
     getHostname(url);
+  const imageUrl = normalizeImageUrl(
+    item.thumbnail?.src ?? item.thumbnail?.url,
+    url,
+  );
+  const favicon =
+    normalizeImageUrl(
+      item.profile?.favicon ??
+        item.profile?.img ??
+        item.profile?.image ??
+        item.meta_url?.favicon,
+      url,
+    ) ?? getFallbackFavicon(url);
 
   return {
     title,
@@ -215,6 +261,8 @@ function normalizeBraveItem(item: BraveSearchItem): RawNewsArticle | null {
     publishedAt: parsePublishedAt(item),
     description,
     content: "",
+    imageUrl,
+    favicon,
   };
 }
 

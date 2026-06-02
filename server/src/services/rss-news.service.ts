@@ -9,6 +9,8 @@ export interface TokenNewsArticle {
   description: string;
   score: number;
   matchedBy: string[];
+  imageUrl?: string | null;
+  favicon?: string | null;
 }
 
 export type RelatedNewsConfidence = "high" | "medium" | "low";
@@ -51,6 +53,25 @@ interface RssFeedConfig {
 interface RssItem extends Parser.Item {
   contentEncoded?: string;
   description?: string;
+  itunes?: {
+    image?: string;
+  };
+  mediaContent?: Array<{
+    $?: {
+      url?: string;
+      medium?: string;
+      type?: string;
+    };
+    url?: string;
+    medium?: string;
+    type?: string;
+  }>;
+  mediaThumbnail?: Array<{
+    $?: {
+      url?: string;
+    };
+    url?: string;
+  }>;
 }
 
 export interface RawNewsArticle {
@@ -60,6 +81,8 @@ export interface RawNewsArticle {
   publishedAt: string | null;
   description: string;
   content: string;
+  imageUrl?: string | null;
+  favicon?: string | null;
 }
 
 interface WrappedTokenAlias {
@@ -129,13 +152,26 @@ const RSS_FEEDS: RssFeedConfig[] = [
 ];
 
 const RSS_FETCH_TIMEOUT_MS = 12_000;
+const OPEN_GRAPH_FETCH_TIMEOUT_MS = 4_000;
+const MAX_OPEN_GRAPH_IMAGE_FETCHES = 10;
+const OPEN_GRAPH_IMAGE_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const MIN_RELEVANCE_SCORE = 4;
 const MIN_ARTICLES_BEFORE_SEARCH_FALLBACK = 5;
+const openGraphImageCache = new Map<
+  string,
+  { imageUrl: string | null; expiresAt: number }
+>();
 
 const parser = new Parser<unknown, RssItem>({
   timeout: 12_000,
   customFields: {
-    item: [["content:encoded", "contentEncoded"], "description"] as never,
+    item: [
+      ["content:encoded", "contentEncoded"],
+      ["media:content", "mediaContent", { keepArray: true }],
+      ["media:thumbnail", "mediaThumbnail", { keepArray: true }],
+      ["itunes:image", "itunes"],
+      "description",
+    ] as never,
   },
 });
 
@@ -329,6 +365,222 @@ function stripHtml(value: string) {
     .replace(/&#39;/gi, "'")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function isHttpUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function normalizeImageUrl(value: unknown, articleUrl: string) {
+  if (typeof value !== "string") return null;
+
+  const trimmed = value.trim();
+  if (!trimmed || /^(data|javascript):/i.test(trimmed)) return null;
+
+  try {
+    const url = new URL(trimmed, articleUrl);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function getFallbackFavicon(articleUrl: string) {
+  try {
+    const url = new URL(articleUrl);
+    if (!isHttpUrl(url.toString())) return null;
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(
+      url.hostname,
+    )}&sz=32`;
+  } catch {
+    return null;
+  }
+}
+
+function looksLikeImageUrl(value: string) {
+  return /\.(avif|gif|jpe?g|png|webp)(\?|#|$)/i.test(value);
+}
+
+function isImageMimeType(value: unknown) {
+  return typeof value === "string" && value.toLowerCase().startsWith("image/");
+}
+
+function getRssNodeUrl(node: unknown) {
+  if (!node || typeof node !== "object") return null;
+  const record = node as Record<string, unknown>;
+  const attrs =
+    record.$ && typeof record.$ === "object"
+      ? (record.$ as Record<string, unknown>)
+      : {};
+
+  return record.url ?? attrs.url ?? null;
+}
+
+function getRssNodeType(node: unknown) {
+  if (!node || typeof node !== "object") return null;
+  const record = node as Record<string, unknown>;
+  const attrs =
+    record.$ && typeof record.$ === "object"
+      ? (record.$ as Record<string, unknown>)
+      : {};
+
+  return record.type ?? attrs.type ?? record.medium ?? attrs.medium ?? null;
+}
+
+function extractFirstContentImage(html: string, articleUrl: string) {
+  const match = html.match(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/i);
+  return normalizeImageUrl(match?.[1], articleUrl);
+}
+
+function getRssItemImageUrl(item: RssItem, articleUrl: string) {
+  const enclosureUrl = normalizeImageUrl(item.enclosure?.url, articleUrl);
+  if (
+    enclosureUrl &&
+    (isImageMimeType(item.enclosure?.type) || looksLikeImageUrl(enclosureUrl))
+  ) {
+    return enclosureUrl;
+  }
+
+  for (const media of item.mediaContent ?? []) {
+    const url = normalizeImageUrl(getRssNodeUrl(media), articleUrl);
+    const type = getRssNodeType(media);
+    if (
+      url &&
+      (isImageMimeType(type) ||
+        String(type ?? "").toLowerCase() === "image" ||
+        looksLikeImageUrl(url))
+    ) {
+      return url;
+    }
+  }
+
+  for (const media of item.mediaThumbnail ?? []) {
+    const url = normalizeImageUrl(getRssNodeUrl(media), articleUrl);
+    if (url) return url;
+  }
+
+  const itunes = item.itunes as unknown;
+  const itunesImage =
+    typeof itunes === "string"
+      ? itunes
+      : itunes && typeof itunes === "object"
+        ? ((itunes as Record<string, unknown>).image ??
+          (itunes as Record<string, unknown>).href ??
+          getRssNodeUrl(itunes))
+        : null;
+  const itunesImageUrl = normalizeImageUrl(itunesImage, articleUrl);
+  if (itunesImageUrl) return itunesImageUrl;
+
+  return extractFirstContentImage(
+    `${item.contentEncoded ?? ""} ${item.content ?? ""}`,
+    articleUrl,
+  );
+}
+
+function extractMetaImage(html: string, articleUrl: string) {
+  const patterns = [
+    /<meta\b[^>]*property=["']og:image(?::secure_url)?["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+    /<meta\b[^>]*content=["']([^"']+)["'][^>]*property=["']og:image(?::secure_url)?["'][^>]*>/i,
+    /<meta\b[^>]*name=["']twitter:image(?::src)?["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+    /<meta\b[^>]*content=["']([^"']+)["'][^>]*name=["']twitter:image(?::src)?["'][^>]*>/i,
+  ];
+
+  for (const pattern of patterns) {
+    const imageUrl = normalizeImageUrl(html.match(pattern)?.[1], articleUrl);
+    if (imageUrl) return imageUrl;
+  }
+
+  return null;
+}
+
+async function fetchOpenGraphImage(articleUrl: string) {
+  if (!isHttpUrl(articleUrl)) return null;
+
+  const cached = openGraphImageCache.get(articleUrl);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.imageUrl;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    OPEN_GRAPH_FETCH_TIMEOUT_MS,
+  );
+
+  try {
+    const response = await fetch(articleUrl, {
+      headers: {
+        "User-Agent": "Yoca News Image Fetcher/1.0",
+        Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      openGraphImageCache.set(articleUrl, {
+        imageUrl: null,
+        expiresAt: Date.now() + OPEN_GRAPH_IMAGE_CACHE_TTL_MS,
+      });
+      return null;
+    }
+
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.toLowerCase().includes("html")) {
+      openGraphImageCache.set(articleUrl, {
+        imageUrl: null,
+        expiresAt: Date.now() + OPEN_GRAPH_IMAGE_CACHE_TTL_MS,
+      });
+      return null;
+    }
+
+    const html = await response.text();
+    const imageUrl = extractMetaImage(html, articleUrl);
+    openGraphImageCache.set(articleUrl, {
+      imageUrl,
+      expiresAt: Date.now() + OPEN_GRAPH_IMAGE_CACHE_TTL_MS,
+    });
+    return imageUrl;
+  } catch {
+    openGraphImageCache.set(articleUrl, {
+      imageUrl: null,
+      expiresAt: Date.now() + OPEN_GRAPH_IMAGE_CACHE_TTL_MS,
+    });
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function enrichArticleImages<T extends TokenNewsArticle>(articles: T[]) {
+  const candidates = articles
+    .slice(0, MAX_OPEN_GRAPH_IMAGE_FETCHES)
+    .filter((article) => !article.imageUrl);
+
+  if (candidates.length === 0) return articles;
+
+  const fetchedImages = await Promise.all(
+    candidates.map(async (article) => ({
+      url: article.url,
+      imageUrl: await fetchOpenGraphImage(article.url),
+    })),
+  );
+  const imageByUrl = new Map(
+    fetchedImages
+      .filter((item) => item.imageUrl)
+      .map((item) => [item.url, item.imageUrl] as const),
+  );
+
+  return articles.map((article) => ({
+    ...article,
+    imageUrl: article.imageUrl ?? imageByUrl.get(article.url) ?? null,
+    favicon: article.favicon ?? getFallbackFavicon(article.url),
+  }));
 }
 
 function normalizeUrl(value: string) {
@@ -583,6 +835,7 @@ async function fetchFeed(feed: RssFeedConfig) {
         item.contentSnippet ?? item.description ?? item.summary ?? "",
       );
       const content = stripHtml(item.contentEncoded ?? item.content ?? "");
+      const imageUrl = getRssItemImageUrl(item, url);
 
       return {
         title,
@@ -591,6 +844,8 @@ async function fetchFeed(feed: RssFeedConfig) {
         publishedAt: parsePublishedAt(item),
         description,
         content,
+        imageUrl,
+        favicon: getFallbackFavicon(url),
       };
     })
     .filter((article): article is RawNewsArticle => article != null);
@@ -728,6 +983,8 @@ function scoreAndFilterArticles(
       description: article.description,
       score: relevance.score,
       matchedBy: relevance.matchedBy,
+      imageUrl: article.imageUrl ?? null,
+      favicon: article.favicon ?? getFallbackFavicon(article.url),
     }));
 
   return { scoredArticles, matchedArticles };
@@ -888,7 +1145,8 @@ export async function getRssTokenNews(
       return b.score - a.score;
     },
   );
-  const contextualArticles = applyEventContext(sortedArticles, options);
+  const imageEnrichedArticles = await enrichArticleImages(sortedArticles);
+  const contextualArticles = applyEventContext(imageEnrichedArticles, options);
   const articles = limitArticles(contextualArticles, options.maxArticles);
 
   console.info("[rss-news] token news fetch", {

@@ -8,6 +8,8 @@ export interface TokenChartNewsArticle {
   description: string;
   score: number;
   matchedBy: string[];
+  imageUrl?: string | null;
+  favicon?: string | null;
 }
 
 export interface TokenChartNewsEventSummary {

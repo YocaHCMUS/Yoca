@@ -29,6 +29,8 @@ export interface NewsArticle {
     publishedAt?: string | null;
     sourceName?: string | null;
     faviconUrl?: string | null;
+    imageUrl?: string | null;
+    favicon?: string | null;
     contentHash?: string;
     extraSnippets?: string[] | null;
     context?: NewsTokenContext | null;
@@ -45,6 +47,8 @@ export interface TokenNewsArticle {
     description: string;
     score: number;
     matchedBy: string[];
+    imageUrl?: string | null;
+    favicon?: string | null;
 }
 
 export interface TokenNewsResponseData {
