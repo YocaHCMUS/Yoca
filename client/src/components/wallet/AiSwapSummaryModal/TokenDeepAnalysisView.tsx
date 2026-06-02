@@ -40,10 +40,6 @@ function groupTradesByDay(timeline: TokenDeepAnalysisResponse["tradeTimeline"]):
   return new Map([...dayMap.entries()].sort(([a], [b]) => a - b));
 }
 
-function formatDate(ms: number): string {
-  const d = new Date(ms);
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
 
 const PIE_COLORS = ["#13692a", "#2e7d32", "#66bb6a", "#eb5b5b", "#c21e1e"];
 
@@ -268,27 +264,6 @@ export function TokenDeepAnalysisView({
 
       {/* ── Right Column: Charts ── */}
       <div className={styles.rightColumn}>
-        {tradeDays.size > 0 && (
-          <div className={styles.chartSection}>
-            <h4 className={styles.sectionTitle}>{tr("walletPage.aiSwapSummary.tradeTimeline")}</h4>
-            <div className={styles.chartRow}>
-              {[...tradeDays.entries()].map(([dayStart, dayTrades]) => (
-                <div key={dayStart} className={styles.chartCard}>
-                  <span className={styles.chartDateLabel}>{formatDate(dayStart)}</span>
-                  <TokenPriceChart
-                    tokenAddress={tokenAddress}
-                    tokenSymbol={data.symbol ?? tokenAddress}
-                    tokenLogoUri={data.logoUri}
-                    dayMs={dayStart}
-                    trades={dayTrades}
-                    onRemove={() => { }}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div className={styles.chartsGrid}>
           <div className={styles.echartCard}>
             <h4 className={styles.sectionTitle}>{tr("walletPage.aiSwapSummary.pnlDistribution")}</h4>
@@ -301,6 +276,32 @@ export function TokenDeepAnalysisView({
             />
           </div>
         </div>
+
+        {tradeDays.size > 0 && (
+          <div className={styles.chartSection}>
+            <h4 className={styles.sectionTitle}>{tr("walletPage.aiSwapSummary.tradeTimeline")}</h4>
+            <div className={styles.timeline}>
+              {[...tradeDays.entries()].map(([dayStart, dayTrades]) => (
+                <div key={dayStart} className={styles.timelineNode}>
+                  <span className={styles.dateLabel}>{fmt.datetime.date(dayStart)}</span>
+                  <div className={styles.dotColumn}>
+                    <div className={styles.dot} />
+                  </div>
+                  <div className={styles.nodeContent}>
+                    <TokenPriceChart
+                      tokenAddress={tokenAddress}
+                      tokenSymbol={data.symbol ?? tokenAddress}
+                      tokenLogoUri={data.logoUri}
+                      dayMs={dayStart}
+                      trades={dayTrades}
+                      onRemove={() => { }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

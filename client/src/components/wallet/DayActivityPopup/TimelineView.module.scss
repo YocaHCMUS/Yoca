@@ -1,0 +1,151 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+@use '@carbon/react/scss/type' as *;
+
+.timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 82px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: $border-subtle;
+    z-index: 0;
+  }
+}
+
+.timelineNode {
+  display: flex;
+  align-items: flex-start;
+}
+
+.timeLabel {
+  width: 70px;
+  flex-shrink: 0;
+  @include type-style('label-01');
+  color: $text-secondary;
+  text-align: right;
+  padding: $spacing-03 $spacing-02 0 0;
+}
+
+.dotColumn {
+  width: 24px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding-top: $spacing-03;
+  position: relative;
+  z-index: 1;
+}
+
+.dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background-color: $border-subtle;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px $layer-01;
+}
+
+.dotBuy {
+  background-color: #24a148;
+}
+
+.dotSell {
+  background-color: #da1e28;
+}
+
+.dotMixed {
+  background: linear-gradient(135deg, #24a148 50%, #da1e28 50%);
+}
+
+.nodeContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-03;
+  padding: $spacing-03 $spacing-04 $spacing-03 0;
+  border-bottom: 1px solid $border-subtle-00;
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background-color: $layer-hover-01;
+  }
+}
+
+.summaryAction {
+  @include type-style('body-compact-01');
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.actionBuy {
+  color: #24a148;
+}
+
+.actionSell {
+  color: #da1e28;
+}
+
+.summaryMixed {
+  @include type-style('body-compact-01');
+  font-weight: 600;
+  color: $text-secondary;
+  flex-shrink: 0;
+}
+
+.summaryAmount {
+  @include type-style('body-compact-01');
+  color: $text-primary;
+  font-weight: 500;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summaryCount {
+  @include type-style('label-01');
+  color: $text-secondary;
+  background-color: $layer-02;
+  padding: 1px $spacing-02;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.summarySpacer {
+  flex: 1;
+}
+
+.summaryVolume {
+  @include type-style('body-compact-01');
+  color: $text-primary;
+  font-weight: 600;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: $icon-secondary;
+}
+
+.expandedDetail {
+  padding-left: $spacing-04;
+  border-left: 2px solid $border-subtle;
+  margin-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-02;
+  padding-bottom: $spacing-02;
+}
