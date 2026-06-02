@@ -4,17 +4,14 @@ import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { PeriodSelector } from '@/components/common/PeriodSelector/PeriodSelector';
-import {
-  CHART_COLOR_PALETTE,
-  useCarbonChartBaseOption,
-} from '@/util/carbon-chart-base';
+import { useCarbonChartBaseOption } from '@/util/carbon-chart-base';
+import { useCarbonTokens } from '@/hooks/useCarbonToken';
+import { cds } from '@/util/carbon-theme';
 import { useChartContext } from '@/contexts/ChartContext';
 import { fetchTradingVolumeDistribution, type InferFetcherData } from '@/services/chart/chartApi';
 import { isChartSuccess } from '@/util/chart-helpers';
 import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
 import type { TradingVolumeDistributionRequestParams } from '@/types/chart-api.types';
-
-type TradingVolumeDistributionData = InferFetcherData<typeof fetchTradingVolumeDistribution>;
 import { useStandardChartController } from '@/hooks/useChartController';
 import { ChartWrapper, ChartGrid, ChartGridItem } from '@/components/charts/shared';
 import { useChartExport } from '@/hooks/useChartExport';
@@ -22,6 +19,10 @@ import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import type { ChartProps } from '../shared/ChartProp';
 import { runChartExport } from '@/services/chart/chartExportService';
+
+type TradingVolumeDistributionData = InferFetcherData<typeof fetchTradingVolumeDistribution>;
+const DEFAULT_BUY_COLOR = '#24a148';
+const DEFAULT_SELL_COLOR = '#da1e28';
 
 export const TradingVolumeDistribution: React.FC<ChartProps> = ({
   minHeight = 400,
@@ -38,6 +39,10 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
 
   const chartRef = useRef<ReactECharts>(null);
   const baseOption = useCarbonChartBaseOption();
+  const tradeColors = useCarbonTokens({
+    buy: cds.supportSuccess,
+    sell: cds.supportError,
+  });
   const { selectedTimezone: timezone } = useChartContext();
 
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
@@ -162,14 +167,12 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
           type: 'pie',
           radius: ['22%', '48%'],
           center: ['50%', '50%'],
-          data: dataWithRecalculatedPercentages.map((a, i) => ({
+          data: dataWithRecalculatedPercentages.map((a) => ({
             name: a.name,
             value: a.value,
             percentage: a.percentage,
             itemStyle: {
-              color:
-                (a as any).color ??
-                CHART_COLOR_PALETTE[i % CHART_COLOR_PALETTE.length],
+              color: (a as any).color,
               borderColor: baseOption.backgroundColor as string,
               borderWidth: 2,
               borderRadius: 6,
@@ -209,17 +212,20 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
 
   const aggregatedLegendData = useMemo(() => {
     if (!data || !data.wallets || !Array.isArray(data.wallets) || data.wallets.length <= 1) return null;
+    const buyColor = tradeColors.buy || DEFAULT_BUY_COLOR;
+    const sellColor = tradeColors.sell || DEFAULT_SELL_COLOR;
+
     return [
       {
         name: buyLabel,
-        color: CHART_COLOR_PALETTE[0],
+        color: buyColor,
       },
       {
         name: sellLabel,
-        color: CHART_COLOR_PALETTE[1],
+        color: sellColor,
       },
     ];
-  }, [data, buyLabel, sellLabel]);
+  }, [data, buyLabel, sellLabel, tradeColors]);
 
   useEffect(() => {
     if (aggregatedLegendData) {
@@ -250,9 +256,11 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
       const buy = wallet.buyVolume ?? 0;
       const sell = wallet.sellVolume ?? 0;
       const total = wallet.totalVolume ?? (buy + sell);
+      const buyColor = tradeColors.buy || DEFAULT_BUY_COLOR;
+      const sellColor = tradeColors.sell || DEFAULT_SELL_COLOR;
       const pieData = [
-        { name: buyLabel, value: buy, percentage: total > 0 ? (buy / total) * 100 : 0 },
-        { name: sellLabel, value: sell, percentage: total > 0 ? (sell / total) * 100 : 0 },
+        { name: buyLabel, value: buy, percentage: total > 0 ? (buy / total) * 100 : 0, color: buyColor },
+        { name: sellLabel, value: sell, percentage: total > 0 ? (sell / total) * 100 : 0, color: sellColor },
       ];
       return {
         walletAddress: wallet.walletAddress,
@@ -264,7 +272,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
         ),
       };
     });
-  }, [data, createChartOption, buyLabel, sellLabel]);
+  }, [data, createChartOption, buyLabel, sellLabel, tradeColors]);
 
   const isEmpty = !isChartSuccess(data, 'wallets') || data.wallets.length === 0 || (filters.wallets && filters.wallets.length === 0);
 
