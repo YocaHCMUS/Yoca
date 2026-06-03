@@ -77,6 +77,7 @@ import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailM
 import { TransferDetailModal } from "@/components/wallet/TransferDetailModal/TransferDetailModal.tsx";
 import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup.tsx";
 import { AiSwapSummaryModal } from "@/components/wallet/AiSwapSummaryModal";
+import { WalletChat } from "@/components/wallet/WalletChat";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
 import type { WalletOverviewPeriodKey } from "@/services/wallet/walletApi.ts";
 import { TimePeriod } from "@/types/chart-filters.types.ts";
@@ -1481,6 +1482,11 @@ export default function WalletPage() {
           </div>
         </div>
       )}
+
+      <WalletChat
+        address={walletAddress}
+        lang={lang}
+      />
     </PageWrapper>
   );
 }

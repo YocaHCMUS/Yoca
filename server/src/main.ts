@@ -36,6 +36,7 @@ import walletAnalysis, {
   type WalletAnalysisAppType,
 } from "@sv/modules/wallet-analysis/routes/walletAnalysis.routes.js";
 import webhook, { type WebhookAppType } from "@sv/routes/webhook.js";
+import chat, { type ChatAppType } from "@sv/routes/chat.route.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
@@ -92,6 +93,7 @@ export type AppRoutes = {
   "/api/token-volatility-news": TokenVolatilityNewsAppType;
   "/webhook": WebhookAppType;
   "/api/payment": PaymentAppType;
+  "/api/chat": ChatAppType;
 };
 
 // Then here
@@ -118,6 +120,7 @@ const routes: AppRoutes = {
   "/api/token-volatility": tokenVolatility,
   "/api/token-volatility-news": tokenVolatilityNews,
   "/api/payment": payment,
+  "/api/chat": chat,
   "/webhook": webhook,
 };
 

@@ -1,4 +1,3 @@
-import { AUTH_COOKIE_NAME } from "@sv/config/constants.js";
 import {
   userAlertConditionOps,
   userAlertPeriods,
@@ -285,7 +284,7 @@ export const honoJwt = async (c: Context, next: Next) => {
   const options = {
     secret: env.JWT_SECRET,
     alg: "HS256",
-    cookie: AUTH_COOKIE_NAME,
+    cookie: "auth_token",
   } as const;
   const token = getCookie(c, options.cookie);
   if (!token) {
@@ -383,6 +382,7 @@ export const envSchema = z.object({
     .default("http://localhost:5678/webhook/analyse-wallet"),
   N8N_ANALYSIS_TIMEOUT_MS: z.coerce.number().int().positive().default(200000),
   BRAVE_SEARCH_API_KEY: z.string().optional().default(""),
+  GOOGLE_AI_KEY: z.string().optional().default(""),
 
   // Stripe
   STRIPE_SECRET_KEY: z.string().default(""),
