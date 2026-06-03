@@ -356,6 +356,42 @@ export const tokenChartNewsEventsCache = pgTable(
   ],
 );
 
+export const tokenAiChatCache = pgTable(
+  "token_ai_chat_cache",
+  {
+    id: serial("id").primaryKey(),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    normalizedQuestionHash: varchar("normalized_question_hash", {
+      length: 64,
+    }).notNull(),
+    timeframe: varchar("timeframe", { length: 16 }).notNull(),
+    language: varchar("language", { length: 8 }).notNull(),
+    promptVersion: varchar("prompt_version", { length: 32 }).notNull(),
+    model: varchar("model", { length: 128 }).notNull(),
+    responseJson: jsonb("response_json")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    evidenceHash: varchar("evidence_hash", { length: 64 }).notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+    expiresAt: timestamp("expires_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("token_ai_chat_cache_key_uq").on(
+      table.tokenAddress,
+      table.normalizedQuestionHash,
+      table.timeframe,
+      table.language,
+      table.promptVersion,
+      table.model,
+      table.evidenceHash,
+    ),
+  ],
+);
+
 // {
 //     "signature": "5wHu1qwD7Jsj3xqWjdSEJmYr3Q5f5RjXqjqQJ7jqEj7jqEj7jqEj7jqEj7jqEj7jqE",
 //     "timestamp": 1704067200,

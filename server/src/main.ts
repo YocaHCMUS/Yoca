@@ -21,6 +21,9 @@ import tokenVolatility, {
 import tokenVolatilityNews, {
   type TokenVolatilityNewsAppType,
 } from "@sv/routes/token-volatility-news.js";
+import tokenAiChat, {
+  type TokenAiChatAppType,
+} from "@sv/routes/token-ai-chat.js";
 import profile, { type ProfileAppType } from "@sv/routes/profile.js";
 import search, { type SearchAppType } from "@sv/routes/search.js";
 import trades, { type TradesAppType } from "@sv/routes/trades.js";
@@ -90,6 +93,7 @@ export type AppRoutes = {
   "/api/token-chart-news-events": TokenChartNewsEventsAppType;
   "/api/token-volatility": TokenVolatilityAppType;
   "/api/token-volatility-news": TokenVolatilityNewsAppType;
+  "/api/token-ai-chat": TokenAiChatAppType;
   "/webhook": WebhookAppType;
   "/api/payment": PaymentAppType;
 };
@@ -117,6 +121,7 @@ const routes: AppRoutes = {
   "/api/token-chart-news-events": tokenChartNewsEvents,
   "/api/token-volatility": tokenVolatility,
   "/api/token-volatility-news": tokenVolatilityNews,
+  "/api/token-ai-chat": tokenAiChat,
   "/api/payment": payment,
   "/webhook": webhook,
 };
