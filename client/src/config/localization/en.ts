@@ -1367,6 +1367,7 @@ export const translation = {
     recentTransactions: {
       transactions: "Transactions",
       bubblemaps: "Bubblemaps",
+      all: "ALL",
       time: "Time",
       type: "Type",
       price: "Price",
@@ -1383,6 +1384,7 @@ export const translation = {
     },
     topHolders: {
       rank: "Rank",
+      amount: "Amount",
       address: "Address",
       percent: "Percentage",
       noData: "No holders data found for this token.",

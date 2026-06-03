@@ -1365,6 +1365,7 @@ export const translation = defineTranslation({
     recentTransactions: {
       transactions: "Giao dịch",
       bubblemaps: "Bubblemaps",
+      all: "TẤT CẢ",
       time: "Thời gian",
       type: "Loại",
       price: "Giá",
@@ -1381,6 +1382,7 @@ export const translation = defineTranslation({
     },
     topHolders: {
       rank: "Thứ hạng",
+      amount: "Số lượng",
       address: "Địa chỉ",
       percent: "Phần trăm",
       noData: "Không tìm thấy dữ liệu người nắm giữ.",

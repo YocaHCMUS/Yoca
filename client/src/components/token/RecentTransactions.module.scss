@@ -19,9 +19,17 @@ $color-sell: #f43f5e;
 .tabsHeader {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   border-bottom: 1px solid $border-subtle;
   background: $background;
   padding: 0;
+  gap: 12px;
+}
+
+.tabsGroup {
+  display: flex;
+  align-items: center;
+  min-width: 0;
 }
 
 .tab {
@@ -42,6 +50,86 @@ $color-sell: #f43f5e;
     color: $text-primary;
     border-bottom-color: $focus;
     background: $background;
+  }
+}
+
+.typeFilters {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 12px;
+  padding: 3px;
+  border: 1px solid $border-subtle;
+  border-radius: 4px;
+  background: $layer-01;
+  flex: 0 0 auto;
+}
+
+.filterButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 68px;
+  height: 28px;
+  padding: 0 9px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: $text-secondary;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $text-primary;
+  }
+}
+
+.filterButtonActive {
+  background: $background;
+  color: $text-primary;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.buyFilter.filterButtonActive {
+  color: $color-buy;
+}
+
+.sellFilter.filterButtonActive {
+  color: $color-sell;
+}
+
+.filterCount {
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: $layer-accent-01;
+  color: inherit;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .tabsHeader {
+    flex-wrap: wrap;
+    padding-bottom: 8px;
+  }
+
+  .typeFilters {
+    margin: 0 12px;
+    width: calc(100% - 24px);
+  }
+
+  .filterButton {
+    flex: 1 1 0;
+    min-width: 0;
   }
 }
 

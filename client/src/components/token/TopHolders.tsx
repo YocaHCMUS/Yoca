@@ -1,18 +1,24 @@
 import client from "@/api/main";
-import { SOLSCAN_ACCOUNT_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { ChevronDown, ChevronUp, Copy } from "@carbon/icons-react";
+import { ChevronDown, ChevronUp } from "@carbon/icons-react";
 import classNames from "classnames";
 import { useNavigate } from "react-router";
 import type { InferResponseType } from "hono/client";
 import { useState } from "react";
 import Tble from "../Tble";
 import styles from "./TopHolders.module.scss";
+import { WalletLabel } from "./WalletLabel";
 
 type TopHoldersData = InferResponseType<
   (typeof client.api.tokens.holders)[":address"]["$get"],
   200
 >;
+
+type TopHolder = TopHoldersData[number] & {
+  amount?: number | string | null;
+  balance?: number | string | null;
+  tokenAmount?: number | string | null;
+};
 
 type HoldersInfo =
   | InferResponseType<
@@ -24,15 +30,20 @@ type HoldersInfo =
 interface TopHoldersProps {
   holders: TopHoldersData;
   holdersInfo?: HoldersInfo | null;
+  currentTokenPriceUsd?: number;
+  tokenSymbol?: string;
+  holderAmounts?: Record<string, number>;
+  totalSupply?: number | null;
 }
 
-// Rút gọn địa chỉ ví
-const shortenAddress = (address: string) => {
-  if (!address || address.length < 10) return address;
-  return address.slice(0, 10);
-};
-
-export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
+export const TopHolders = ({
+  holders,
+  holdersInfo,
+  currentTokenPriceUsd = 0,
+  tokenSymbol = "",
+  holderAmounts,
+  totalSupply,
+}: TopHoldersProps) => {
   const { tr, fmt } = useLocalization();
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(true);
@@ -52,14 +63,12 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
   // Ưu tiên lấy từ API (holdersInfo), nếu không có thì tính tổng từ danh sách holders
   const totalPercentage = holdersInfo?.top10Percent
     ? Number(holdersInfo.top10Percent)
-    : holders.reduce((acc: number, curr: any) => acc + curr.percentage, 0);
+    : holders.reduce(
+        (acc: number, curr: TopHolder) => acc + Number(curr.percentage),
+        0,
+      );
 
   const toggleExpand = () => setIsExpanded(!isExpanded);
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    // Có thể thêm toast notification nếu cần
-  };
 
   return (
     <div className={styles.container}>
@@ -86,6 +95,7 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
             title=""
             headers={[
               { key: "rank", header: "#" },
+              { key: "amount", header: tr("token.topHolders.amount") },
               { key: "address", header: tr("token.topHolders.address") },
               {
                 key: "percentage",
@@ -95,38 +105,55 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
             ]}
             loading={false}
             height="auto"
-            rows={holders.map((holder: any, index: number) => ({
-              id: holder.holderAddress,
-              rank: <span className={styles.rank}>{index + 1}</span>,
-              address: (
-                <div className={styles.addressWrapper}>
+            rows={holders.map((holder: TopHolder, index: number) => {
+              const percentage = Number(holder.percentage);
+              const rawApiAmount =
+                holder.amount ?? holder.balance ?? holder.tokenAmount;
+              const apiAmount =
+                rawApiAmount == null ? null : Number(rawApiAmount);
+              const mappedAmount = holderAmounts?.[holder.holderAddress];
+              const derivedAmount =
+                totalSupply != null && Number.isFinite(percentage)
+                  ? (Number(totalSupply) * percentage) / 100
+                  : 0;
+              const amount = apiAmount != null && Number.isFinite(apiAmount)
+                ? apiAmount
+                : mappedAmount != null
+                  ? mappedAmount
+                  : derivedAmount;
+
+              return {
+                id: holder.holderAddress,
+                rank: <span className={styles.rank}>{index + 1}</span>,
+                amount: (
+                  <div>
+                    <span className={styles.amountPrimary}>
+                      {fmt.num.compact.decimal(amount)} {tokenSymbol}
+                    </span>
+                    <span className={styles.amountUsd}>
+                      ~{" "}
+                      {fmt.num.compact.currency(
+                        amount * currentTokenPriceUsd,
+                      )}
+                    </span>
+                  </div>
+                ),
+                address: (
                   <div
                     onClick={() => navigate(`/wallets/${holder.holderAddress}`)}
                     className={styles.addressLink}
                     style={{ cursor: "pointer" }}
                   >
-                    {fmt.text.address(holder.holderAddress)}
+                    <WalletLabel address={holder.holderAddress} />
                   </div>
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e: React.MouseEvent) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      copyToClipboard(holder.holderAddress);
-                    }}
-                    className={styles.copyButton}
-                  >
-                    <Copy size={16} />
+                ),
+                percentage: (
+                  <div className={styles.percentage}>
+                    {percentage.toFixed(2)}%
                   </div>
-                </div>
-              ),
-              percentage: (
-                <div className={styles.percentage}>
-                  {holder.percentage.toFixed(2)}%
-                </div>
-              ),
-            }))}
+                ),
+              };
+            })}
           />
         </div>
       )}

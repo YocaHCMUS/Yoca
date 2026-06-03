@@ -16,12 +16,18 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import styles from "./index.module.scss";
 
-function useTokenPageData(address: string, poolAddress: string) {
+function useTokenPageData(
+  address: string | undefined,
+  poolAddress: string | undefined,
+) {
+  const resolvedAddress = address ?? "";
+  const resolvedPoolAddress = poolAddress ?? "";
+
   const baseMeta = useGet(
     client.api.tokens.details[":addresses"],
     200,
     {
-      param: { addresses: address },
+      param: { addresses: resolvedAddress },
     },
     {
       select: (dataArr) =>
@@ -29,37 +35,76 @@ function useTokenPageData(address: string, poolAddress: string) {
           ...data.meta,
           ...data.details,
         })),
+      enabled: Boolean(address),
     },
   );
 
-  const topPools = useGet(client.api.tokens[":address"].pools, 200, {
-    param: { address },
-  });
+  const topPools = useGet(
+    client.api.tokens[":address"].pools,
+    200,
+    {
+      param: { address: resolvedAddress },
+    },
+    {
+      enabled: Boolean(address),
+    },
+  );
 
-  const holders = useGet(client.api.tokens.holders[":address"], 200, {
-    param: { address },
-  });
+  const holders = useGet(
+    client.api.tokens.holders[":address"],
+    200,
+    {
+      param: { address: resolvedAddress },
+    },
+    {
+      enabled: Boolean(address),
+    },
+  );
 
   const holdersStats = useGet(
     client.api.tokens.holders.stats[":addresses"],
     200,
     {
-      param: { addresses: address },
+      param: { addresses: resolvedAddress },
+    },
+    {
+      enabled: Boolean(address),
     },
   );
 
-  const marketData = useGet(client.api.tokens.markets[":addresses"], 200, {
-    param: { addresses: address },
-  });
+  const marketData = useGet(
+    client.api.tokens.markets[":addresses"],
+    200,
+    {
+      param: { addresses: resolvedAddress },
+    },
+    {
+      enabled: Boolean(address),
+    },
+  );
 
-  const trades = useGet(client.api.tokens.pools.trades[":address"], 200, {
-    param: { address: poolAddress },
-  });
+  const trades = useGet(
+    client.api.tokens.pools.trades[":address"],
+    200,
+    {
+      param: { address: resolvedPoolAddress },
+    },
+    {
+      enabled: Boolean(poolAddress),
+    },
+  );
 
-  const poolData = useGet(client.api.tokens.pools[":addresses"], 200, {
-    param: { addresses: poolAddress },
-    query: { refresh: "true" },
-  });
+  const poolData = useGet(
+    client.api.tokens.pools[":addresses"],
+    200,
+    {
+      param: { addresses: resolvedPoolAddress },
+      query: { refresh: "true" },
+    },
+    {
+      enabled: Boolean(poolAddress),
+    },
+  );
 
   const isLoading = baseMeta.isLoading || topPools.isLoading || marketData.isLoading;
   const pairLoading = trades.isLoading || poolData.isLoading;
@@ -103,7 +148,7 @@ function useTokenPageData(address: string, poolAddress: string) {
       metaFromApi?.symbol && metaFromApi.symbol !== "UNKNOWN"
         ? metaFromApi.symbol
         : fallbackSymbol,
-    address: metaFromApi?.address ?? address,
+    address: metaFromApi?.address ?? resolvedAddress,
     imageUrl: metaFromApi?.imageUrl ?? pool?.baseImageUrl ?? undefined,
   };
 
@@ -119,7 +164,7 @@ function useTokenPageData(address: string, poolAddress: string) {
       topPools: normalizedTopPools,
       holders: holders.data ?? [],
       holdersInfo,
-      market: marketData.data?.[address] ?? null,
+      market: marketData.data?.[resolvedAddress] ?? null,
       trades: trades.data ?? [],
       pool,
     },
@@ -133,10 +178,6 @@ export default function TokenPage() {
     address: string;
     poolAddress: string;
   }>();
-
-  if (!address || !poolAddress) {
-    return <>Forgot to add address!</>;
-  }
 
   const result = useTokenPageData(address, poolAddress);
 
@@ -158,6 +199,10 @@ export default function TokenPage() {
       setPairData(nextPool);
     }
   }, [poolAddress, result.data?.pool]);
+
+  if (!address || !poolAddress) {
+    return <>Forgot to add address!</>;
+  }
 
   if (poolAddress && !result.error && (result.pairLoading || !pairData)) {
     return (
@@ -252,7 +297,19 @@ export default function TokenPage() {
               marketsCount={topPools.length}
             />
 
-            <TopHolders holders={holders} holdersInfo={holdersInfo} />
+            <TopHolders
+              holders={holders}
+              holdersInfo={holdersInfo}
+              currentTokenPriceUsd={
+                pool?.baseTokenPriceUsd != null
+                  ? Number(pool.baseTokenPriceUsd)
+                  : market?.priceUsd != null
+                    ? Number(market.priceUsd)
+                    : 0
+              }
+              tokenSymbol={meta.symbol}
+              totalSupply={market?.totalSupply ?? null}
+            />
 
             <NewsTab address={address} symbol={meta.symbol} name={meta.name} />
           </div>

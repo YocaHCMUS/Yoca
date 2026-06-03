@@ -98,3 +98,19 @@
         opacity: 0.85;
     }
 }
+
+.amountPrimary {
+    display: block;
+    color: $text-primary;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.amountUsd {
+    display: block;
+    margin-top: 2px;
+    color: $text-helper;
+    font-size: 11px;
+    line-height: 1.2;
+}

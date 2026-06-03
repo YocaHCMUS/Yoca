@@ -382,7 +382,13 @@ export function TokenInsightTabs({
         <div className={styles.tabContent} key="holders">
           <div className={styles.holdersLayout}>
             <div className={styles.holdersTable}>
-              <TopHoldersTable holders={holders} loading={holdersLoading} />
+              <TopHoldersTable
+                holders={holders}
+                loading={holdersLoading}
+                currentTokenPriceUsd={market?.priceUsd ?? 0}
+                tokenSymbol={symbol}
+                totalSupply={market?.totalSupply ?? null}
+              />
             </div>
             <div className={styles.holdersChart}>
               <div className={styles.chartHeader}>

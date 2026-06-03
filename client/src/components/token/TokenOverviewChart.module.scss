@@ -21,6 +21,14 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+.toolbarControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 // ===== Range buttons =====
 .rangeButtons {
   display: flex;
@@ -57,6 +65,12 @@
   height: 520px;
   position: relative;
   padding: 12px 0 4px;
+
+  iframe {
+    display: block;
+    height: 100% !important;
+    border-radius: 0 !important;
+  }
 }
 
 .loading,
@@ -75,6 +89,20 @@
   padding: 0 14px 10px;
   font-size: 12px;
   color: $text-helper;
+}
+
+.candleSource {
+  position: absolute;
+  left: 14px;
+  bottom: 10px;
+  z-index: 2;
+  padding: 3px 7px;
+  border: 1px solid $border-subtle;
+  border-radius: 4px;
+  background: $background;
+  color: $text-helper;
+  font-size: 11px;
+  pointer-events: none;
 }
 
 .newsPopup {

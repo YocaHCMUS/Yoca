@@ -95,8 +95,13 @@
           padding-right: 0;
         }
 
-        // Address column
+        // Amount column
         &:nth-child(2) {
+          padding-left: 12px;
+        }
+
+        // Address column
+        &:nth-child(3) {
           padding-left: 12px;
         }
 
@@ -153,8 +158,13 @@
               padding-right: 0;
             }
 
-            // Address cell
+            // Amount cell
             &:nth-child(2) {
+              padding-left: 12px;
+            }
+
+            // Address cell
+            &:nth-child(3) {
               padding-left: 12px;
             }
 
@@ -208,6 +218,22 @@
   &:hover {
     color: $text-secondary;
   }
+}
+
+.amountPrimary {
+  display: block;
+  color: $text-primary;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.amountUsd {
+  display: block;
+  margin-top: 2px;
+  color: $text-helper;
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 .percentage {

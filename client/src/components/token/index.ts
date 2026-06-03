@@ -10,6 +10,7 @@ export * from "./TokenOverviewChart";
 export * from "./TokenOverviewStats";
 export * from "./TopHolders";
 export * from "./TopHoldersTable";
+export * from "./WalletLabel";
 
 export * from "./TokenTabs";
 export * from "./NewsTab";

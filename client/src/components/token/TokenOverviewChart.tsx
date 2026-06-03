@@ -1,5 +1,6 @@
 import client from "@/api/main";
 import { FilterSwitch } from "@/components/FilterSwitch";
+import { GeckoTerminalChart } from "@/components/charts/GeckoTerminalChart";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { getTokenChartNewsEvents } from "@/services/tokenChartNewsEvents";
 import type {
@@ -13,6 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./TokenOverviewChart.module.scss";
 
 type ChartMode = "price" | "marketcap";
+type ChartView = "line" | "candle";
 type TimeRange = { label: string; days: number };
 
 type ChartPoint = InferResponseType<
@@ -24,6 +26,8 @@ interface TokenOverviewChartProps {
   address: string;
   symbol: string;
   name: string;
+  candlePoolAddress?: string | null;
+  candlePoolLabel?: string | null;
   onPriceChangeUpdate?: (data: {
     percentage: number | null;
     label: string;
@@ -62,6 +66,8 @@ export function TokenOverviewChart({
   address,
   symbol,
   name,
+  candlePoolAddress,
+  candlePoolLabel,
   onPriceChangeUpdate,
 }: TokenOverviewChartProps) {
   const { tr, fmt, lang } = useLocalization();
@@ -78,6 +84,7 @@ export function TokenOverviewChart({
   );
 
   const [mode, setMode] = useState<ChartMode>("price");
+  const [chartView, setChartView] = useState<ChartView>("line");
   const [range, setRange] = useState<TimeRange>(TIME_RANGES[0]);
   const [prices, setPrices] = useState<[number, number][]>([]);
   const [marketCaps, setMarketCaps] = useState<[number, number][]>([]);
@@ -439,33 +446,58 @@ export function TokenOverviewChart({
     <div className={styles.container}>
       {/* Toggle: Price / Market Cap */}
       <div className={styles.toolbar}>
-        <FilterSwitch
-          width="lg"
-          options={[
-            { value: "price", label: tr("token.overviewChart.price") },
-            { value: "marketcap", label: tr("token.overviewChart.marketCap") },
-          ]}
-          value={mode}
-          onChange={(v) => setMode(v as ChartMode)}
-        />
+        <div className={styles.toolbarControls}>
+          <FilterSwitch
+            width="md"
+            options={[
+              { value: "line", label: "Line" },
+              { value: "candle", label: "Candle" },
+            ]}
+            value={chartView}
+            onChange={(v) => setChartView(v as ChartView)}
+          />
+
+          {chartView === "line" && (
+            <FilterSwitch
+              width="lg"
+              options={[
+                { value: "price", label: tr("token.overviewChart.price") },
+                {
+                  value: "marketcap",
+                  label: tr("token.overviewChart.marketCap"),
+                },
+              ]}
+              value={mode}
+              onChange={(v) => setMode(v as ChartMode)}
+            />
+          )}
+        </div>
 
         {/* Time range buttons */}
-        <div className={styles.rangeButtons}>
-          {TIME_RANGES.map((r) => (
-            <button
-              key={r.label}
-              className={`${styles.rangeBtn} ${range.label === r.label ? styles.active : ""}`}
-              onClick={() => setRange(r)}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
+        {chartView === "line" && (
+          <div className={styles.rangeButtons}>
+            {TIME_RANGES.map((r) => (
+              <button
+                key={r.label}
+                className={`${styles.rangeBtn} ${range.label === r.label ? styles.active : ""}`}
+                onClick={() => setRange(r)}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Chart */}
       <div className={styles.chartWrapper}>
-        {loading && seriesData.length === 0 ? (
+        {chartView === "candle" ? (
+          candlePoolAddress ? (
+            <GeckoTerminalChart poolAddress={candlePoolAddress} height="520" />
+          ) : (
+            <div className={styles.empty}>No token/USD pool available.</div>
+          )
+        ) : loading && seriesData.length === 0 ? (
           <div className={styles.loading}>{tr("common.loading")}</div>
         ) : seriesData.length === 0 ? (
           <div className={styles.empty}>
@@ -485,7 +517,11 @@ export function TokenOverviewChart({
           />
         )}
 
-        {selectedNewsEvent && (
+        {chartView === "candle" && candlePoolLabel && (
+          <div className={styles.candleSource}>{candlePoolLabel}</div>
+        )}
+
+        {chartView === "line" && selectedNewsEvent && (
           <div className={styles.newsPopup}>
             <div className={styles.newsPopupHeader}>
               <div>
@@ -565,7 +601,7 @@ export function TokenOverviewChart({
         )}
       </div>
 
-      {!loading && seriesData.length > 0 && (
+      {chartView === "line" && !loading && seriesData.length > 0 && (
         <div className={styles.newsMarkerStatus}>
           {newsLoading
             ? "Loading news markers..."

@@ -16,13 +16,65 @@ import { useRef, useState } from "react";
 import { useParams } from "react-router";
 import styles from "./index.module.scss";
 
-function useTokenOverviewData(address: string) {
+type OverviewPool = {
+  data?: {
+    poolAddress?: string | null;
+    poolName?: string | null;
+    quoteAddress?: string | null;
+    liquidityUsd?: number | string | null;
+    volumeUsd24h?: number | string | null;
+  } | null;
+};
+
+const USD_QUOTE_ADDRESSES = new Set([
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkYDPG5oH37KnfiT",
+]);
+
+function getUsdPoolScore(pool: OverviewPool): number {
+  const data = pool.data;
+  if (!data?.poolAddress) return -1;
+
+  const quoteAddress = data.quoteAddress ?? "";
+  const poolName = data.poolName?.toUpperCase() ?? "";
+  const hasUsdQuote =
+    USD_QUOTE_ADDRESSES.has(quoteAddress) ||
+    /\/\s*(USD|USDC|USDT)\b/.test(poolName);
+
+  if (!hasUsdQuote) return 0;
+
+  return (
+    1 +
+    Number(data.volumeUsd24h ?? 0) / 1_000_000_000 +
+    Number(data.liquidityUsd ?? 0) / 1_000_000_000_000
+  );
+}
+
+function selectCandlePool(pools: OverviewPool[]) {
+  if (pools.length === 0) return null;
+
+  const rankedPools = pools
+    .filter((pool) => !!pool.data?.poolAddress)
+    .map((pool, index) => ({
+      pool,
+      index,
+      score: getUsdPoolScore(pool),
+    }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score || a.index - b.index);
+
+  return rankedPools[0]?.pool.data ?? null;
+}
+
+function useTokenOverviewData(address: string | undefined) {
+  const resolvedAddress = address ?? "";
+
   const tokenDetails = useGet(
     client.api.tokens.details[":addresses"],
     200,
     {
       param: {
-        addresses: address,
+        addresses: resolvedAddress,
       },
     },
     {
@@ -30,24 +82,53 @@ function useTokenOverviewData(address: string) {
         ...data[0].meta,
         ...data[0].details,
       }),
+      enabled: Boolean(address),
     },
   );
 
-  const holders = useGet(client.api.tokens.holders[":address"], 200, {
-    param: { address },
-  });
+  const holders = useGet(
+    client.api.tokens.holders[":address"],
+    200,
+    {
+      param: { address: resolvedAddress },
+    },
+    {
+      enabled: Boolean(address),
+    },
+  );
 
   const holdersStats = useGet(
     client.api.tokens.holders.stats[":addresses"],
     200,
     {
-      param: { addresses: address },
+      param: { addresses: resolvedAddress },
+    },
+    {
+      enabled: Boolean(address),
     },
   );
 
-  const marketData = useGet(client.api.tokens.markets[":addresses"], 200, {
-    param: { addresses: address },
-  });
+  const marketData = useGet(
+    client.api.tokens.markets[":addresses"],
+    200,
+    {
+      param: { addresses: resolvedAddress },
+    },
+    {
+      enabled: Boolean(address),
+    },
+  );
+
+  const topPools = useGet(
+    client.api.tokens[":address"].pools,
+    200,
+    {
+      param: { address: resolvedAddress },
+    },
+    {
+      enabled: Boolean(address),
+    },
+  );
 
   const isLoading = tokenDetails.isLoading || marketData.isLoading;
   const error = tokenDetails.error || marketData.error;
@@ -73,7 +154,8 @@ function useTokenOverviewData(address: string) {
       details,
       holders: holders.data ?? [],
       holdersInfo,
-      market: marketData.data?.[address] ?? null,
+      market: marketData.data?.[resolvedAddress] ?? null,
+      topPools: topPools.data ?? [],
     },
   };
 }
@@ -107,16 +189,17 @@ export default function TokenOverviewPage() {
     });
   };
 
-  if (!address) {
-    return <>Missing token address</>;
-  }
-
   const result = useTokenOverviewData(address);
 
   const { tr } = useLocalization();
 
+  if (!address) {
+    return <>Missing token address</>;
+  }
+
   const details = result.data?.details;
   const market = result.data?.market;
+  const candlePool = selectCandlePool(result.data?.topPools ?? []);
 
   return (
     <PageWrapper>
@@ -199,6 +282,8 @@ export default function TokenOverviewPage() {
                   address={address}
                   symbol={details?.symbol ?? ""}
                   name={details?.name ?? ""}
+                  candlePoolAddress={candlePool?.poolAddress ?? null}
+                  candlePoolLabel={candlePool?.poolName ?? null}
                   onPriceChangeUpdate={setCustomPriceChange}
                 />
               )}

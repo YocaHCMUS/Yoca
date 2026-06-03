@@ -5,7 +5,7 @@ import {
   SOLSCAN_TX_URL,
 } from "@/config/constants";
 import { Launch } from "@carbon/icons-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import styles from "./RecentTransactions.module.scss";
 
 type PoolTrade = {
@@ -19,6 +19,8 @@ type PoolTrade = {
   timestamp: string;
   txHash: string;
 };
+
+type TradeFilter = "all" | "buy" | "sell";
 
 interface RecentTransactionsProps {
   trades: PoolTrade[];
@@ -43,19 +45,75 @@ export const RecentTransactions = ({
 }: RecentTransactionsProps) => {
   void quoteMeta;
   const [showBubbleMapModal, setShowBubbleMapModal] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<TradeFilter>("all");
   const { tr, fmt } = useLocalization();
+
+  const tradeCounts = useMemo(
+    () =>
+      trades.reduce(
+        (counts, trade) => ({
+          ...counts,
+          [trade.kind]: counts[trade.kind] + 1,
+        }),
+        { all: trades.length, buy: 0, sell: 0 },
+      ),
+    [trades],
+  );
+
+  const filteredTrades = useMemo(
+    () =>
+      typeFilter === "all"
+        ? trades
+        : trades.filter((trade) => trade.kind === typeFilter),
+    [trades, typeFilter],
+  );
+
+  const filterOptions: Array<{ value: TradeFilter; label: string }> = [
+    { value: "all", label: tr("token.recentTransactions.all") },
+    { value: "buy", label: tr("token.recentTransactions.buy") },
+    { value: "sell", label: tr("token.recentTransactions.sell") },
+  ];
 
   return (
     <div className={styles.container}>
       <div className={styles.tabsHeader}>
-        <div
-          className={`${styles.tab} ${styles.active}`}
-          // Always active since it's the main view now
-        >
-          {tr("token.recentTransactions.transactions")}
+        <div className={styles.tabsGroup}>
+          <div
+            className={`${styles.tab} ${styles.active}`}
+            // Always active since it's the main view now
+          >
+            {tr("token.recentTransactions.transactions")}
+          </div>
+          <div
+            className={styles.tab}
+            onClick={() => setShowBubbleMapModal(true)}
+          >
+            {tr("token.recentTransactions.bubblemaps")}
+          </div>
         </div>
-        <div className={styles.tab} onClick={() => setShowBubbleMapModal(true)}>
-          {tr("token.recentTransactions.bubblemaps")}
+
+        <div className={styles.typeFilters} aria-label="Transaction type">
+          {filterOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={`${styles.filterButton} ${
+                typeFilter === option.value ? styles.filterButtonActive : ""
+              } ${
+                option.value === "buy"
+                  ? styles.buyFilter
+                  : option.value === "sell"
+                    ? styles.sellFilter
+                    : ""
+              }`}
+              onClick={() => setTypeFilter(option.value)}
+            >
+              <span>{option.label}</span>
+              <span className={styles.filterCount}>
+                {tradeCounts[option.value]}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -73,14 +131,14 @@ export const RecentTransactions = ({
             </tr>
           </thead>
           <tbody>
-            {trades.length === 0 ? (
+            {filteredTrades.length === 0 ? (
               <tr>
                 <td colSpan={7} className={styles.emptyState}>
                   {tr("token.recentTransactions.empty")}
                 </td>
               </tr>
             ) : (
-              trades.map((trade) => (
+              filteredTrades.map((trade) => (
                 <tr key={trade.id}>
                   <td>
                     <span className={styles.timeText}>
