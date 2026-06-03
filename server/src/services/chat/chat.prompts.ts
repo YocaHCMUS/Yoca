@@ -27,14 +27,15 @@ export function buildToolSelectionPrompt(
     JSON.stringify(
       {
         type: "tool_use",
-        name: "tool_name",
-        input: { param1: "value1" },
+        tools: [
+          { name: "tool_name1", input: { param1: "value1" } },
+        ],
       },
       null,
       2,
     ),
     "",
-    "If the query requires multiple data sources, pick the single most relevant tool.",
+    "If the query requires multiple data sources, include all relevant tools in the tools array.",
     "If no tool is relevant, respond with: { \"type\": \"no_tool\", \"message\": \"explanation\" }",
     "If the query is about something that can be answered with general knowledge, respond with: { \"type\": \"general\", \"message\": \"answer\" }",
   ].join("\n");
