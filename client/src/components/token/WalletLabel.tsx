@@ -16,8 +16,9 @@ function truncateAddress(address: string): string {
 export function WalletLabel({ address }: WalletLabelProps) {
   const { label, isSolDomain, isLoading } = useWalletIdentity(address);
   const [copied, setCopied] = useState(false);
-  const fallbackLabel = useMemo(() => truncateAddress(address), [address]);
-  const isFallback = label === fallbackLabel;
+  const fallbackAddress = useMemo(() => truncateAddress(address), [address]);
+  const isFallback = label === fallbackAddress;
+  const showSecondaryAddress = !isFallback;
 
   const handleCopy = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -43,7 +44,10 @@ export function WalletLabel({ address }: WalletLabelProps) {
               : styles.label
         }
       >
-        {label}
+        <span>{label}</span>
+        {showSecondaryAddress && (
+          <span className={styles.secondaryAddress}>{fallbackAddress}</span>
+        )}
       </span>
 
       {isSolDomain ? (
@@ -68,4 +72,3 @@ export function WalletLabel({ address }: WalletLabelProps) {
 }
 
 export default WalletLabel;
-
