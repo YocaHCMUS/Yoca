@@ -294,7 +294,7 @@ export const honoJwt = async (c: Context, next: Next) => {
   let payload;
   try {
     payload = await verify(token, options.secret, { alg: options.alg });
-  } catch (e) {}
+  } catch (e) { }
 
   if (!payload) {
     return c.json(setErr("UNAUTHORIZED"), statusCode.Unauthorized);
@@ -348,7 +348,7 @@ export async function validateResponseDataSchema<T extends z.ZodType>(
     if (safeStr.length > maxLog) {
       console.log(
         safeStr.slice(0, maxLog) +
-          `\n... (truncated ${safeStr.length - maxLog} chars)`,
+        `\n... (truncated ${safeStr.length - maxLog} chars)`,
       );
     } else {
       console.log(safeStr);
@@ -399,6 +399,12 @@ export const envSchema = z.object({
   CLIENT_DEV_DOMAIN: z.url().default("http://localhost:3000"),
   CLIENT_DEV_PREVIEW_DOMAIN: z.url().default("http://localhost:4173"),
   CLIENT_PROD_DOMAIN: z.url(),
+
+  // AI
+  GEMINI_API_KEY: z.string().optional().default(""),
+  GEMINI_MODAL: z.string().optional().default("gemini-3.1-flash-lite"),
+  GEMINI_SWAP_SUMMARY_MODEL: z.string().optional().default("gemini-3.1-flash-lite"),
+  CHAT_MODEL: z.string().optional().default("gemini-3.1-flash-lite"),
 });
 
 export type Env = z.infer<typeof envSchema>;
