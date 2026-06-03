@@ -40,8 +40,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
-import payment, { PaymentAppType } from "./routes/payment.route";
-
+import payment, { PaymentAppType } from "./routes/payment.route.js";
+import washTradingRoutes, { type WashTradingAppType } from './routes/wash-trading.route.js';
 const app = new Hono()
   .use("*", logger())
   .use("*", requestContextMiddleware)
@@ -92,6 +92,7 @@ export type AppRoutes = {
   "/api/token-volatility-news": TokenVolatilityNewsAppType;
   "/webhook": WebhookAppType;
   "/api/payment": PaymentAppType;
+  "/api/v1/wash-trading": WashTradingAppType;
 };
 
 // Then here
@@ -119,6 +120,7 @@ const routes: AppRoutes = {
   "/api/token-volatility-news": tokenVolatilityNews,
   "/api/payment": payment,
   "/webhook": webhook,
+  "/api/v1/wash-trading": washTradingRoutes,
 };
 
 Object.entries(routes).forEach(([path, route]) => {

@@ -1,6 +1,6 @@
 import { db } from '../db';
-import { transactions, wallets } from '../db/schema';
-import { eq, and, gte, lte, inArray } from 'drizzle-orm';
+import { walletTransactions } from '../db/schema';
+import { eq, and, gte, lte, inArray, desc } from 'drizzle-orm';
 
 export interface WashTradePattern {
   circularTrades: number;
@@ -29,7 +29,14 @@ export interface WashTradeAnalysis {
   };
   patterns: WashTradePattern;
 }
-
+export interface TokenTransaction {
+  signature: string;
+  from: string;
+  to: string;
+  amount: number;
+  blockTime: number; // unix timestamp
+  tokenMint: string;
+}
 class WashTradingService {
   /**
    * Detect circular trade patterns: A → B → C → A
@@ -40,13 +47,13 @@ class WashTradingService {
   ): Promise<any[]> {
     try {
       // Query transactions for the token within time window
-      const recentTxs = await db.query.transactions.findMany({
-        where: and(
-          eq(transactions.tokenMint, mint),
-          gte(transactions.blockTime, new Date(Date.now() - timeWindow))
-        ),
-        limit: 1000,
-      });
+      const recentTxs = await db
+        .select()
+        .from(walletTransactions)
+        .where(
+          gte(walletTransactions.blockTimestamp, new Date(Date.now() - timeWindow))
+        )
+        .limit(1000);
 
       const circularPatterns: any[] = [];
       
@@ -56,27 +63,27 @@ class WashTradingService {
         
         // Find next transaction from tx1.to
         const tx2 = recentTxs.find(
-          t => t.fromAddress === tx1.toAddress && 
-               t.blockTime > tx1.blockTime &&
-               Math.abs(t.amount - tx1.amount) < tx1.amount * 0.01 // Within 1%
+          (t: typeof recentTxs[0]) => t.fromAddress === tx1.toAddress && 
+               t.blockTimestamp > tx1.blockTimestamp &&
+               Math.abs((t.primaryTokenAmount || 0) - (tx1.primaryTokenAmount || 0)) < (tx1.primaryTokenAmount || 0) * 0.01 // Within 1%
         );
         
         if (!tx2) continue;
         
         // Find cycle back to original
         const tx3 = recentTxs.find(
-          t => t.fromAddress === tx2.toAddress && 
+          (t: typeof recentTxs[0]) => t.fromAddress === tx2.toAddress && 
                t.toAddress === tx1.fromAddress &&
-               t.blockTime > tx2.blockTime &&
-               Math.abs(t.amount - tx1.amount) < tx1.amount * 0.01
+               t.blockTimestamp > tx2.blockTimestamp &&
+               Math.abs((t.primaryTokenAmount || 0) - (tx1.primaryTokenAmount || 0)) < (tx1.primaryTokenAmount || 0) * 0.01
         );
         
         if (tx3) {
           circularPatterns.push({
             cycle: [tx1.fromAddress, tx2.fromAddress, tx3.fromAddress],
-            amounts: [tx1.amount, tx2.amount, tx3.amount],
-            timestamps: [tx1.blockTime, tx2.blockTime, tx3.blockTime],
-            avgTime: (tx3.blockTime.getTime() - tx1.blockTime.getTime()) / 2,
+            amounts: [tx1.primaryTokenAmount, tx2.primaryTokenAmount, tx3.primaryTokenAmount],
+            timestamps: [tx1.blockTimestamp, tx2.blockTimestamp, tx3.blockTimestamp],
+            avgTime: (tx3.blockTimestamp.getTime() - tx1.blockTimestamp.getTime()) / 2,
             confidence: 0.95
           });
         }
@@ -97,15 +104,17 @@ class WashTradingService {
     tolerance: number = 0.02 // 2%
   ): Promise<Map<number, any[]>> {
     try {
-      const txs = await db.query.transactions.findMany({
-        where: eq(transactions.tokenMint, mint),
-        limit: 5000,
-      });
+      const txs = await db
+        .select()
+        .from(walletTransactions)
+        .where(eq(walletTransactions.primaryTokenAddress, mint))
+        .limit(5000);
 
       const sameAmountClusters = new Map<number, any[]>();
       
       for (const tx of txs) {
-        const rounded = Math.round(tx.amount / (tx.amount * tolerance));
+        const amount = tx.primaryTokenAmount || 0;
+        const rounded = Math.round(amount / (amount * tolerance));
         if (!sameAmountClusters.has(rounded)) {
           sameAmountClusters.set(rounded, []);
         }
@@ -132,10 +141,11 @@ class WashTradingService {
    */
   async detectStarTopology(mint: string): Promise<any> {
     try {
-      const txs = await db.query.transactions.findMany({
-        where: eq(transactions.tokenMint, mint),
-        limit: 10000,
-      });
+      const txs = await db
+        .select()
+        .from(walletTransactions)
+        .where(eq(walletTransactions.primaryTokenAddress, mint))
+        .limit(10000);
 
       // Count interactions per wallet
       const walletDegrees = new Map<string, { in: number; out: number }>();
@@ -179,24 +189,26 @@ class WashTradingService {
    */
   async detectVolumeAnomalies(mint: string): Promise<any[]> {
     try {
-      const txs = await db.query.transactions.findMany({
-        where: eq(transactions.tokenMint, mint),
-        limit: 5000,
-      });
+      const txs = await db
+        .select()
+        .from(walletTransactions)
+        .where(eq(walletTransactions.primaryTokenAddress, mint))
+        .limit(5000);
 
-      const amounts = txs.map(t => t.amount);
-      const mean = amounts.reduce((a, b) => a + b, 0) / amounts.length;
-      const variance = amounts.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / amounts.length;
+      const amounts = txs.map((t: typeof txs[0]) => t.primaryTokenAmount || 0);
+      const mean = amounts.reduce((a: number, b: number) => a + b, 0) / amounts.length;
+      const variance = amounts.reduce((a: number, b: number) => a + Math.pow(b - mean, 2), 0) / amounts.length;
       const stdDev = Math.sqrt(variance);
 
       // Z-score > 3 is very anomalous
       const anomalies: any[] = [];
       for (const tx of txs) {
-        const zScore = Math.abs((tx.amount - mean) / stdDev);
+        const amount = tx.primaryTokenAmount || 0;
+        const zScore = Math.abs((amount - mean) / stdDev);
         if (zScore > 2.5) {
           anomalies.push({
             hash: tx.hash,
-            amount: tx.amount,
+            amount,
             zScore,
             anomalyScore: Math.min(1, zScore / 5)
           });
@@ -224,7 +236,8 @@ class WashTradingService {
 
       if (!response.ok) throw new Error('GNN service unavailable');
       
-      const { scores } = await response.json();
+      const data = await response.json() as { scores?: Record<string, number> };
+      const scores = data.scores || {};
       return new Map(Object.entries(scores) as [string, number][]);
     } catch (error) {
       console.error('GNN scoring error:', error);
