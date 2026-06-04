@@ -801,11 +801,14 @@ export async function fetchBirdeyePortfolio(
   address: string,
 ): Promise<WalletPortfolio> {
   const json = await fetchBirdeyeJson(
-    "/v1/wallet/token_list",
+    "/wallet/v2/current-net-worth",
     "GET",
     {
       searchParams: {
         wallet: address,
+        sort_type: "desc",
+        sort_by: "value",
+        limit: 100,
       },
     },
   );
@@ -863,7 +866,7 @@ export async function fetchBirdeyePortfolio(
   return {
     address,
     items: pageItems,
-    totalAssetValueUsd: calculatedTotal > 0 ? calculatedTotal : toFiniteNumber(json.data.totalUsd, 0),
+    totalAssetValueUsd: calculatedTotal > 0 ? calculatedTotal : toFiniteNumber(json.data.total_value, 0),
   };
 }
 

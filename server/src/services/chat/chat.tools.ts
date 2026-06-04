@@ -25,7 +25,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_wallet_swaps",
     description:
-      "Fetch recent swap transactions for a wallet. Returns list of trades with bought/sold token details, USD value, timestamps, and DEX info.",
+      "Fetch recent swap transactions for a wallet. Returns list of trades with bought/sold token details, USD value, and timestamps.",
     input_schema: {
       type: "object",
       properties: {
@@ -58,30 +58,30 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
         address: { type: "string", description: "Solana wallet address (base58)" },
         timePeriod: {
           type: "string",
-          enum: ["7D", "30D", "60D", "90D", "1Y"],
+          enum: ["7D", "30D"],
           description: "Time period for balance history (default 30D)",
         },
       },
       required: ["address"],
     },
   },
-  {
-    name: "get_trading_volume",
-    description:
-      "Fetch daily trading volume (USD) for a wallet. Returns volume data series by date. Useful for volume trend charts.",
-    input_schema: {
-      type: "object",
-      properties: {
-        address: { type: "string", description: "Solana wallet address (base58)" },
-        period: {
-          type: "string",
-          enum: ["7D", "30D", "60D", "90D", "1Y"],
-          description: "Time period for volume data (default 30D)",
-        },
-      },
-      required: ["address"],
-    },
-  },
+  // {
+  //   name: "get_trading_volume",
+  //   description:
+  //     "Fetch daily trading volume (USD) for a wallet. Returns volume data series by date. Useful for volume trend charts.",
+  //   input_schema: {
+  //     type: "object",
+  //     properties: {
+  //       address: { type: "string", description: "Solana wallet address (base58)" },
+  //       period: {
+  //         type: "string",
+  //         enum: ["7D", "30D", "60D", "90D", "1Y"],
+  //         description: "Time period for volume data (default 30D)",
+  //       },
+  //     },
+  //     required: ["address"],
+  //   },
+  // },
   {
     name: "get_wallet_pnl",
     description:
@@ -104,7 +104,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
         address: { type: "string", description: "Solana wallet address (base58)" },
         timePeriod: {
           type: "string",
-          enum: ["7D", "30D", "60D", "90D", "1Y"],
+          enum: ["7D", "30D"],
           description: "Time period for PnL data (default 30D)",
         },
       },
@@ -112,9 +112,9 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
     },
   },
   {
-    name: "get_top_tokens",
+    name: "get_wallet_portfolio",
     description:
-      "Fetch top token holdings for a wallet. Returns current portfolio items with token address, symbol, amount, USD value, and 24h change.",
+      "Fetch current token holdings for a wallet. Returns list of tokens with amount, USD value, and token metadata.",
     input_schema: {
       type: "object",
       properties: {
@@ -124,17 +124,31 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
     },
   },
   {
-    name: "get_wallet_audit",
+    name: "get_historical_portfolio",
     description:
-      "Run an AI forensic audit on a wallet. Returns behavioral persona classification, trust score, summary, observations, and red flags.",
+      "Fetch historical token holdings for a wallet. Returns list of tokens with amount, USD value, and token metadata at a past date.",
     input_schema: {
       type: "object",
       properties: {
         address: { type: "string", description: "Solana wallet address (base58)" },
+        date: { type: "string", description: "Historical date for portfolio snapshot (YYYY-MM-DD)" },
       },
-      required: ["address"],
+      required: ["address", "date"],
     },
-  },
+  }
+
+  // {
+  //   name: "get_wallet_audit",
+  //   description:
+  //     "Run an AI forensic audit on a wallet. Returns behavioral persona classification, trust score, summary, observations, and red flags.",
+  //   input_schema: {
+  //     type: "object",
+  //     properties: {
+  //       address: { type: "string", description: "Solana wallet address (base58)" },
+  //     },
+  //     required: ["address"],
+  //   },
+  // },
 ];
 
 // ─── Tool Execution ─────────────────────────────────────────────────────────
@@ -217,15 +231,15 @@ function extractPnLForLLM(data: unknown): unknown {
   return {
     dailyPnL: Array.isArray(p.dailyPnL)
       ? (p.dailyPnL as Array<Record<string, unknown>>).map((d) => ({
-          date: new Date(d.timestamp as number).toISOString().slice(0, 10),
-          pnl: d.value,
-        }))
+        date: new Date(d.timestamp as number).toISOString().slice(0, 10),
+        pnl: d.value,
+      }))
       : [],
     cumulativePnL: Array.isArray(p.cumulativePnL)
       ? (p.cumulativePnL as Array<Record<string, unknown>>).map((d) => ({
-          date: new Date(d.timestamp as number).toISOString().slice(0, 10),
-          pnl: d.value,
-        }))
+        date: new Date(d.timestamp as number).toISOString().slice(0, 10),
+        pnl: d.value,
+      }))
       : [],
     startBalance: p.startBalance,
     endBalance: p.endBalance,
@@ -237,14 +251,14 @@ function extractSwapSummaryForLLM(data: unknown): unknown {
   const s = data as Record<string, unknown>;
   const breakdowns = Array.isArray(s.allTokenBreakdowns)
     ? (s.allTokenBreakdowns as Array<Record<string, unknown>>).map((b) => ({
-        token: b.symbol,
-        name: b.name,
-        pnlUsd: b.pnlUsd,
-        trades: b.trades,
-        wins: b.wins,
-        totalEntered: b.totalEntered,
-        totalExited: b.totalExited,
-      }))
+      token: b.symbol,
+      name: b.name,
+      pnlUsd: b.pnlUsd,
+      trades: b.trades,
+      wins: b.wins,
+      totalEntered: b.totalEntered,
+      totalExited: b.totalExited,
+    }))
     : [];
   return {
     tradeCount: s.tradeCount,
@@ -342,11 +356,11 @@ export const TOOL_HANDLERS: Record<
     return { data, llmData: extractPnLForLLM(data) };
   },
 
-  get_top_tokens: async (input) => {
-    const { address } = addressOnlySchema.parse(input);
-    const data = await getWalletPortfolio(address);
-    return { data, llmData: extractPortfolioForLLM(data) };
-  },
+  // get_top_tokens: async (input) => {
+  //   const { address } = addressOnlySchema.parse(input);
+  //   const data = await getWalletPortfolio(address);
+  //   return { data, llmData: extractPortfolioForLLM(data) };
+  // },
 
   get_wallet_audit: async (input) => {
     const { address } = addressOnlySchema.parse(input);
@@ -356,6 +370,24 @@ export const TOOL_HANDLERS: Record<
     const data = await getWalletAudit(address);
     return { data, llmData: extractAuditForLLM(data) };
   },
+
+  get_wallet_portfolio: async (input) => {
+    const { address } = addressOnlySchema.parse(input);
+    const data = await getWalletPortfolio(address);
+    return { data, llmData: extractPortfolioForLLM(data) };
+  },
+
+  get_historical_portfolio: async (input) => {
+    const { address, date } = z.object({
+      address: z.string().min(1),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    }).parse(input);
+    const { getHistoricalPortfolio } = await import(
+      "@sv/services/wallet/walletHistoricalPortfolio.service.js"
+    );
+    const data = await getHistoricalPortfolio(address, date);
+    return { data, llmData: extractPortfolioForLLM(data) };
+  }
 };
 
 // ─── Router ─────────────────────────────────────────────────────────────────

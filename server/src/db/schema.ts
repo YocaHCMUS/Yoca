@@ -654,6 +654,30 @@ export const walletPortfolioCache = pgTable(
   (t) => [primaryKey({ columns: [t.address] })],
 );
 
+export const walletHistoricalPortfolioCache = pgTable(
+  "wallet_historical_portfolio_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    date: varchar("date", { length: 10 }).notNull(),
+    data: jsonb("data")
+      .$type<
+        Array<{
+          tokenAddress: string;
+          symbol: string;
+          name?: string;
+          logoUri?: string;
+          amount: number;
+          priceUsd?: number;
+          valueUsd: number;
+          change24hPercent?: number;
+        }>
+      >()
+      .notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.date] })],
+);
+
 export const walletTransactionsMeta = pgTable(
   "wallet_transactions_meta",
   {
@@ -1324,6 +1348,8 @@ export type TopLoserInsert = typeof topLosers.$inferInsert;
 export type WalletOverviewCacheInsert = typeof walletOverviewCache.$inferInsert;
 export type WalletPortfolioCacheInsert =
   typeof walletPortfolioCache.$inferInsert;
+export type WalletHistoricalPortfolioCacheInsert =
+  typeof walletHistoricalPortfolioCache.$inferInsert;
 export type WalletTransactionsMetaInsert =
   typeof walletTransactionsMeta.$inferInsert;
 export type WalletTransactionInsert = typeof walletTransactions.$inferInsert;
