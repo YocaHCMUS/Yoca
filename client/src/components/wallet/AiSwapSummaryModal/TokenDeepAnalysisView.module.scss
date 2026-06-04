@@ -21,7 +21,7 @@
 }
 
 .rightColumn {
-  width: 400px;
+  width: 480px;
   flex-shrink: 0;
   overflow-y: auto;
   border-left: 1px solid $border-subtle;
@@ -182,33 +182,59 @@
   gap: $spacing-02;
 }
 
-/* Horizontally scrollable chart row */
-.chartRow {
-  display: flex;
-  gap: $spacing-03;
-  overflow-x: auto;
-  padding-bottom: $spacing-02;
-}
-
-.chartCard {
+.timeline {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: $spacing-01;
-  flex-shrink: 0;
-  background-color: $layer-01;
-  border: 1px solid $border-subtle;
-  border-radius: 6px;
-  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 82px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: $border-subtle;
+    z-index: 0;
+  }
 }
 
-.chartDateLabel {
+.timelineNode {
+  display: flex;
+  align-items: flex-start;
+}
+
+.dateLabel {
+  width: 70px;
+  flex-shrink: 0;
   @include type-style('label-01');
   color: $text-secondary;
-  text-align: center;
-  padding: $spacing-01 0;
-  border-bottom: 1px solid $border-subtle;
-  font-weight: 600;
-  font-size: 10px;
+  text-align: right;
+  padding: $spacing-03 $spacing-02 0 0;
+}
+
+.dotColumn {
+  width: 24px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding-top: $spacing-03;
+  position: relative;
+  z-index: 1;
+}
+
+.dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background-color: $border-subtle;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px $layer-01;
+}
+
+.nodeContent {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Grid for cumulative + pie charts */

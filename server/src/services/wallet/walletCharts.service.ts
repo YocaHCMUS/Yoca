@@ -212,6 +212,9 @@ export async function getCumulativePnL(
     try {
         // Get balance history and build daily anchors
         const balanceHistory = await getWalletBalanceHistory(address, timePeriod);
+        const rangedBalanceHistory = (balanceHistory ?? []).filter(
+            (point) => point.timestampMs >= fromMs && point.timestampMs <= toMs,
+        );
 
         // get Current balance
         const currentBalance = (await getWalletOverview(address)).holdings
@@ -222,11 +225,11 @@ export async function getCumulativePnL(
             date: "", // this value is not used to calculate so can be left as ''
         };
         const fullBalanceHistory = [
-            ...(balanceHistory?.map((point) => ({
+            ...rangedBalanceHistory.map((point) => ({
                 timestamp: point.timestampMs,
                 value: point.usdValue,
                 date: dayjs.utc(point.timestampMs).toISOString(),
-            })) || []),
+            })),
             historyPoint,
         ];
 

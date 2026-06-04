@@ -9,6 +9,7 @@ import { Close, Draggable, ChevronDown, ChevronUp } from "@carbon/icons-react";
 import { SkeletonText, TextAreaSkeleton } from "@carbon/react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TokenStack } from "./TokenStack";
+import { TimelineView } from "./TimelineView";
 import { TxRow } from "./TxRow";
 import { WalletSelector } from "./WalletSelector";
 import styles from "./DayActivityPopup.module.scss";
@@ -55,11 +56,13 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
 
   const [chartTokens, setChartTokens] = useState<WalletDayToken[]>([]);
   const [expandedTxGroup, setExpandedTxGroup] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "timeline">("list");
 
   useEffect(() => {
     if (!isOpen) {
       setChartTokens([]);
       setExpandedTxGroup(null);
+      setViewMode("list");
       return;
     }
     if (wallets.length > 0 && !wallets.includes(selectedWallet)) {
@@ -138,6 +141,15 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
   const clearCharts = useCallback(() => {
     setChartTokens([]);
   }, []);
+
+  const tokenLogoMap = useMemo(() => {
+    if (!summary) return {};
+    const map: Record<string, string | null> = {};
+    for (const t of summary.allTokens) {
+      map[t.address] = t.logoUri;
+    }
+    return map;
+  }, [summary]);
 
   const aggregatedTxs = useMemo((): AggregatedTxGroup[] => {
     if (!summary) return [];
@@ -340,66 +352,89 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
               </div>
 
               <div className={styles.section}>
-                <h3 className={styles.sectionTitle}>{tr("walletPage.transactions")}</h3>
-                <div className={styles.txList}>
-                  {aggregatedTxs.length === 0 ? (
-                    <p className={styles.emptyText}>{tr("common.noData")}</p>
-                  ) : (
-                    aggregatedTxs.map((group) => {
-                      const groupKey = `${group.action}-${group.tokenSymbol}`;
-                      const isExpanded = expandedTxGroup === groupKey;
-                      const actionLabel = group.action === "buy" ? tr("walletPage.buy") : tr("walletPage.sell");
-                      const actionClass = group.action === "buy" ? styles.aggregatedTxActionBuy : styles.aggregatedTxActionSell;
-
-                      return (
-                        <React.Fragment key={groupKey}>
-                          <div
-                            className={styles.aggregatedTxRow}
-                            onClick={() => setExpandedTxGroup(isExpanded ? null : groupKey)}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                setExpandedTxGroup(isExpanded ? null : groupKey);
-                              }
-                            }}
-                          >
-                            {/* {group.tokenLogoUri && (
-                              <img src={group.tokenLogoUri} alt={group.tokenSymbol} className={styles.aggregatedTxIcon} />
-                            )} */}
-                            <span className={`${styles.aggregatedTxAction} ${actionClass}`}>
-                              {actionLabel}
-                            </span>
-                            <span className={styles.aggregatedTxAmount}>
-                              {fmt.num.compact.decimal(group.totalAmount)}
-                            </span>
-                            <TokenIdentityCell symbol={group.tokenSymbol} imageUrl={group.tokenLogoUri} imageSize={18} tooltipAlign="right" />
-                            <span className={styles.aggregatedTxCount}>
-                              {tr("walletPage.trade", { count: group.tradeCount })}
-                            </span>
-                            <span className={styles.aggregatedTxSpacer} />
-                            <span className={styles.aggregatedTxVolume}>
-                              {fmt.num.compact.currency(group.totalVolumeUsd)}
-                            </span>
-                            {isExpanded ? <ChevronUp size={16} className={styles.aggregatedTxChevron} /> : <ChevronDown size={16} className={styles.aggregatedTxChevron} />}
-                          </div>
-                          {isExpanded && (
-                            <div className={styles.aggregatedTxDetail}>
-                              {group.swaps.map((swap) => (
-                                <TxRow
-                                  key={swap.transactionHash}
-                                  walletAddress={selectedWallet}
-                                  swap={swap}
-                                />
-                              ))}
-                            </div>
-                          )}
-                        </React.Fragment>
-                      );
-                    })
-                  )}
+                <div className={styles.sectionHeaderRow}>
+                  <h3 className={styles.sectionTitle}>{tr("walletPage.transactions")}</h3>
+                  <div className={styles.viewToggle}>
+                    <button
+                      className={`${styles.toggleBtn} ${viewMode === "list" ? styles.toggleBtnActive : ""}`}
+                      onClick={() => setViewMode("list")}
+                    >
+                      {tr("walletPage.list")}
+                    </button>
+                    <button
+                      className={`${styles.toggleBtn} ${viewMode === "timeline" ? styles.toggleBtnActive : ""}`}
+                      onClick={() => setViewMode("timeline")}
+                    >
+                      {tr("walletPage.timeline")}
+                    </button>
+                  </div>
                 </div>
+
+                {viewMode === "list" ? (
+                  <div className={styles.txList}>
+                    {aggregatedTxs.length === 0 ? (
+                      <p className={styles.emptyText}>{tr("common.noData")}</p>
+                    ) : (
+                      aggregatedTxs.map((group) => {
+                        const groupKey = `${group.action}-${group.tokenSymbol}`;
+                        const isExpanded = expandedTxGroup === groupKey;
+                        const actionLabel = group.action === "buy" ? tr("walletPage.buy") : tr("walletPage.sell");
+                        const actionClass = group.action === "buy" ? styles.aggregatedTxActionBuy : styles.aggregatedTxActionSell;
+
+                        return (
+                          <React.Fragment key={groupKey}>
+                            <div
+                              className={styles.aggregatedTxRow}
+                              onClick={() => setExpandedTxGroup(isExpanded ? null : groupKey)}
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  setExpandedTxGroup(isExpanded ? null : groupKey);
+                                }
+                              }}
+                            >
+                              <span className={`${styles.aggregatedTxAction} ${actionClass}`}>
+                                {actionLabel}
+                              </span>
+                              <span className={styles.aggregatedTxAmount}>
+                                {fmt.num.compact.decimal(group.totalAmount)}
+                              </span>
+                              <TokenIdentityCell symbol={group.tokenSymbol} imageUrl={group.tokenLogoUri} imageSize={18} tooltipAlign="right" />
+                              <span className={styles.aggregatedTxCount}>
+                                {tr("walletPage.trade", { count: group.tradeCount })}
+                              </span>
+                              <span className={styles.aggregatedTxSpacer} />
+                              <span className={styles.aggregatedTxVolume}>
+                                {fmt.num.compact.currency(group.totalVolumeUsd)}
+                              </span>
+                              {isExpanded ? <ChevronUp size={16} className={styles.aggregatedTxChevron} /> : <ChevronDown size={16} className={styles.aggregatedTxChevron} />}
+                            </div>
+                            {isExpanded && (
+                              <div className={styles.aggregatedTxDetail}>
+                                {group.swaps.map((swap) => (
+                                  <TxRow
+                                    key={swap.transactionHash}
+                                    walletAddress={selectedWallet}
+                                    swap={swap}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </React.Fragment>
+                        );
+                      })
+                    )}
+                  </div>
+                ) : (
+                  <TimelineView
+                    swaps={summary.swaps}
+                    walletAddress={selectedWallet}
+                    dayTimestamp={dayTimestamp}
+                    tokenLogoMap={tokenLogoMap}
+                  />
+                )}
               </div>
             </div>
           )}
