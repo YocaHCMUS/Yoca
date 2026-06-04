@@ -65,10 +65,11 @@ export async function getCachedResponse(
   address: string,
   query: string,
   model: string,
+  historyHash?: string,
 ): Promise<ChatResponse | null> {
   const fingerprint = await computeDataFingerprint(address);
   const key = createHash("sha256")
-    .update(`${address}|${query.trim().toLowerCase()}|${model}|${fingerprint}`)
+    .update(`${address}|${query.trim().toLowerCase()}|${model}|${fingerprint}|${historyHash ?? ""}`)
     .digest("hex");
 
   const rows = await db
@@ -97,10 +98,11 @@ export async function setCachedResponse(
   query: string,
   response: ChatResponse,
   model: string,
+  historyHash?: string,
 ): Promise<void> {
   const fingerprint = await computeDataFingerprint(address);
   const key = createHash("sha256")
-    .update(`${address}|${query.trim().toLowerCase()}|${model}|${fingerprint}`)
+    .update(`${address}|${query.trim().toLowerCase()}|${model}|${fingerprint}|${historyHash ?? ""}`)
     .digest("hex");
 
   await db

@@ -72,10 +72,16 @@ export interface ChatMessage {
   tables?: TableSpec[];
 }
 
+export interface HistoryMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export interface ChatRequest {
   address: string;
   query: string;
   language?: string;
+  history?: HistoryMessage[];
 }
 
 export interface ChatCacheEntry {

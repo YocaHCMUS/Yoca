@@ -2,10 +2,16 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { answerChatQuery } from "@sv/services/chat/index.js";
 
+const historyMessageSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  content: z.string().max(2000),
+});
+
 const chatRequestSchema = z.object({
   address: z.string().min(32).max(48),
   query: z.string().min(1).max(2000),
   language: z.string().optional(),
+  history: z.array(historyMessageSchema).max(20).optional(),
 });
 
 const app = new Hono().post("/", async (c) => {
@@ -20,8 +26,8 @@ const app = new Hono().post("/", async (c) => {
       );
     }
 
-    const { address, query } = parsed.data;
-    const response = await answerChatQuery(address, query);
+    const { address, query, history } = parsed.data;
+    const response = await answerChatQuery(address, query, history);
 
     return c.json(response, 200);
   } catch (err) {

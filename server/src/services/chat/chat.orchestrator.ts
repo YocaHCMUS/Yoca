@@ -3,10 +3,12 @@ import {
   GOOGLE_AI_KEY,
   CHAT_MODEL,
 } from "@sv/config/constants.js";
+import { createHash } from "node:crypto";
 import type {
   ChatResponse,
   ChatToolCall,
   ChatToolResult,
+  HistoryMessage,
   PriorContext,
 } from "./chat.types.js";
 import { TOOL_DEFINITIONS, TOOL_HANDLERS, hasTool } from "./chat.tools.js";
@@ -97,8 +99,9 @@ async function selectTool(
   query: string,
   address: string,
   context?: PriorContext,
+  history?: HistoryMessage[],
 ): Promise<ChatToolCall[] | { type: "no_tool" | "general"; message: string }> {
-  const prompt = buildToolSelectionPrompt(query, TOOL_DEFINITIONS, address, context);
+  const prompt = buildToolSelectionPrompt(query, TOOL_DEFINITIONS, address, context, history);
   const raw = await callGemini(prompt);
 
   if (!raw) {
@@ -185,6 +188,7 @@ async function executeTools(tools: ChatToolCall[]): Promise<ChatToolResult[]> {
 async function generateResponse(
   query: string,
   allResults: ChatToolResult[],
+  history?: HistoryMessage[],
 ): Promise<ChatResponse> {
   const allFailed = allResults.every((r) => r.error);
   if (allFailed) {
@@ -198,7 +202,7 @@ async function generateResponse(
     };
   }
 
-  const prompt = buildResponseGenerationPrompt(query, allResults);
+  const prompt = buildResponseGenerationPrompt(query, allResults, history);
   chatDebug("generateResponse: prompt built", { resultCount: allResults.length });
 
   const raw = await callGemini(prompt, CHAT_SYSTEM_INSTRUCTION);
@@ -247,11 +251,16 @@ async function generateResponse(
 export async function answerChatQuery(
   address: string,
   query: string,
+  history?: HistoryMessage[],
 ): Promise<ChatResponse> {
   const model = CHAT_MODEL;
-  chatInfo("answerChatQuery: entry", { address, query: trunc(query, 200) });
+  const historyHash = history?.length
+    ? createHash("sha256").update(JSON.stringify(history)).digest("hex").slice(0, 8)
+    : undefined;
 
-  const cached = await getCachedResponse(address, query, model);
+  chatInfo("answerChatQuery: entry", { address, query: trunc(query, 200), historyTurns: history?.length ?? 0 });
+
+  const cached = await getCachedResponse(address, query, model, historyHash);
   if (cached) {
     chatInfo("answerChatQuery: cache hit", {
       textLength: cached.text.length,
@@ -271,7 +280,7 @@ export async function answerChatQuery(
       ? { previousResults: allResults.map((r) => ({ name: r.name, input: r.input ?? {}, data: r.data, error: r.error })) }
       : undefined;
 
-    const toolSelection = await selectTool(query, address, context);
+    const toolSelection = await selectTool(query, address, context, history);
 
     if (!Array.isArray(toolSelection)) {
       if (i === 0) {
@@ -332,10 +341,10 @@ export async function answerChatQuery(
     });
   }
 
-  const response = await generateResponse(query, allResults);
+  const response = await generateResponse(query, allResults, history);
 
   try {
-    await setCachedResponse(address, query, response, model);
+    await setCachedResponse(address, query, response, model, historyHash);
     chatDebug("answerChatQuery: cache write succeeded");
   } catch {
     chatWarn("answerChatQuery: cache write failed");

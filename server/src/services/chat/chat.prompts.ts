@@ -1,10 +1,36 @@
-import type { ChatToolDefinition, ChatToolResult, PriorContext } from "./chat.types.js";
+import type { ChatToolDefinition, ChatToolResult, HistoryMessage, PriorContext } from "./chat.types.js";
+
+const MAX_HISTORY_TURNS = 10;
+const MAX_HISTORY_CHARS = 4000;
+
+function buildHistoryBlock(history?: HistoryMessage[]): string {
+  if (!history?.length) return "";
+
+  const turns: string[] = [];
+  const recent = history.slice(-MAX_HISTORY_TURNS);
+
+  for (const msg of recent) {
+    const label = msg.role === "user" ? "User" : "Assistant";
+    const trimmed = msg.content.length > 1000
+      ? msg.content.slice(0, 1000) + "... (truncated)"
+      : msg.content;
+    turns.push(`${label}: ${trimmed}`);
+  }
+
+  let block = turns.join("\n");
+  if (block.length > MAX_HISTORY_CHARS) {
+    block = block.slice(0, MAX_HISTORY_CHARS) + "\n... (history truncated)";
+  }
+
+  return block ? `Conversation so far:\n${block}\n` : "";
+}
 
 export function buildToolSelectionPrompt(
   query: string,
   tools: ChatToolDefinition[],
   address: string,
   context?: PriorContext,
+  history?: HistoryMessage[],
 ): string {
   const toolList = tools
     .map(
@@ -21,6 +47,11 @@ export function buildToolSelectionPrompt(
     "Available tools:",
     toolList,
   ];
+
+  const historyBlock = buildHistoryBlock(history);
+  if (historyBlock) {
+    lines.push("", historyBlock);
+  }
 
   if (context?.previousResults?.length) {
     lines.push(
@@ -61,6 +92,7 @@ export function buildToolSelectionPrompt(
 export function buildResponseGenerationPrompt(
   query: string,
   allResults: ChatToolResult[],
+  history?: HistoryMessage[],
 ): string {
   return [
     "You are a blockchain data analyst assistant. Given the user's question and the tool result data, generate a helpful response.",
@@ -108,6 +140,7 @@ export function buildResponseGenerationPrompt(
     "If the tool result is empty or an error, explain that to the user.",
     "",
     "---",
+    buildHistoryBlock(history),
     `User query: ${query}`,
     "",
     "Tool results:",

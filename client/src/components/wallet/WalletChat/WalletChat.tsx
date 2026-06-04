@@ -42,8 +42,12 @@ export function WalletChat({ address, lang }: Props) {
       setError(null);
 
       try {
+        const history = messages.slice(-10).map((m) => ({
+          role: m.role,
+          content: m.content.length > 2000 ? m.content.slice(0, 2000) : m.content,
+        }));
         const res = await client.api.chat.index.$post({
-          json: { address, query: query.trim(), language: lang },
+          json: { address, query: query.trim(), language: lang, history },
         });
 
         if (!res.ok) {
