@@ -7,6 +7,7 @@ import type {
   ChatResponse,
   ChatToolCall,
   ChatToolResult,
+  PriorContext,
 } from "./chat.types.js";
 import { TOOL_DEFINITIONS, TOOL_HANDLERS, hasTool } from "./chat.tools.js";
 import {
@@ -15,11 +16,21 @@ import {
   CHAT_SYSTEM_INSTRUCTION,
 } from "./chat.prompts.js";
 import { getCachedResponse, setCachedResponse } from "./chat.cache.js";
+import { chatInfo, chatWarn, chatError, chatDebug } from "./chat.logger.js";
+
+const MAX_ITERATIONS = 3;
 
 let cachedClient: GoogleGenAI | null = null;
 
+function trunc(v: unknown, max = 500): string {
+  const s = typeof v === "string" ? v : JSON.stringify(v);
+  if (s.length <= max) return s;
+  return s.slice(0, max) + `... (truncated, ${s.length} total)`;
+}
+
 function getClient(): GoogleGenAI {
   if (!GOOGLE_AI_KEY) {
+    chatError("GOOGLE_AI_KEY not configured");
     throw new Error("GOOGLE_AI_KEY is not configured");
   }
   if (!cachedClient) {
@@ -46,6 +57,8 @@ function extractJsonObject(text: string): unknown {
 
 async function callGemini(prompt: string, systemInstruction?: string): Promise<string | null> {
   const client = getClient();
+  chatDebug("Gemini call start", { promptLength: prompt.length, hasSystemInstruction: !!systemInstruction });
+  const start = performance.now();
   try {
     const response = await client.models.generateContent({
       model: CHAT_MODEL,
@@ -56,36 +69,53 @@ async function callGemini(prompt: string, systemInstruction?: string): Promise<s
         ...(systemInstruction ? { systemInstruction } : {}),
       },
     });
-    return response.text ?? null;
+    const duration = Math.round(performance.now() - start);
+    const text = response.text ?? null;
+    chatDebug("Gemini call success", { durationMs: duration, responseLength: text?.length ?? 0 });
+    return text;
   } catch (err) {
-    console.error("[chat] Gemini call failed:", err);
+    const duration = Math.round(performance.now() - start);
+    chatError("Gemini call failed", { durationMs: duration, error: err instanceof Error ? err.message : String(err) });
     return null;
   }
 }
 
-/**
- * Step 1: Send query + tool definitions to Gemini, parse tool selection.
- * Returns an array of tool calls when tools are needed.
- */
+function makeCallKey(call: ChatToolCall): string {
+  return `${call.name}:${JSON.stringify(call.input)}`;
+}
+
+function allDuplicates(
+  tools: ChatToolCall[],
+  previousResults: PriorContext["previousResults"],
+): boolean {
+  if (!previousResults.length) return false;
+  const seen = new Set(previousResults.map((r) => `${r.name}:${JSON.stringify(r.input)}`));
+  return tools.length > 0 && tools.every((t) => seen.has(makeCallKey(t)));
+}
+
 async function selectTool(
   query: string,
   address: string,
+  context?: PriorContext,
 ): Promise<ChatToolCall[] | { type: "no_tool" | "general"; message: string }> {
-  const prompt = buildToolSelectionPrompt(query, TOOL_DEFINITIONS, address);
+  const prompt = buildToolSelectionPrompt(query, TOOL_DEFINITIONS, address, context);
   const raw = await callGemini(prompt);
 
   if (!raw) {
+    chatWarn("selectTool: Gemini returned null", { address });
     return { type: "general", message: "I'm sorry, I couldn't process your request at this time." };
   }
 
   const parsed = extractJsonObject(raw);
   if (!parsed || typeof parsed !== "object") {
+    chatWarn("selectTool: failed to parse JSON from Gemini", { raw: trunc(raw, 300) });
     return { type: "general", message: "I'm sorry, I couldn't understand your question." };
   }
 
   const p = parsed as Record<string, unknown>;
 
   if (p.type === "no_tool" || p.type === "general") {
+    chatInfo("selectTool: no more tools needed", { type: p.type, message: trunc(p.message as string ?? "", 200) });
     return {
       type: p.type as "no_tool" | "general",
       message: (p.message as string) ?? "",
@@ -106,49 +136,60 @@ async function selectTool(
         }
       }
       if (tools.length > 0) {
+        chatInfo("selectTool: tools selected", {
+          count: tools.length,
+          names: tools.map((t) => t.name),
+          inputs: tools.map((t) => trunc(t.input, 200)),
+        });
         return tools;
       }
+      chatWarn("selectTool: tool_use declared but no valid tools parsed", { raw: trunc(p, 300) });
     }
   }
 
+  chatWarn("selectTool: unrecognized response shape", { raw: trunc(p, 300) });
   return { type: "general", message: "I'm sorry, I couldn't determine how to answer that." };
 }
 
-/**
- * Step 2: Execute all selected tools in parallel.
- */
 async function executeTools(tools: ChatToolCall[]): Promise<ChatToolResult[]> {
   const results = await Promise.all(
     tools.map(async (tool) => {
       const handler = TOOL_HANDLERS[tool.name];
+      const start = performance.now();
+
       if (!handler) {
-        return { name: tool.name, data: null, error: `Tool '${tool.name}' not found` };
+        chatWarn("executeTool: handler not found", { tool: tool.name });
+        return { name: tool.name, input: tool.input, data: null, error: `Tool '${tool.name}' not found` };
       }
+
       try {
         const { llmData } = await handler(tool.input);
-        return { name: tool.name, data: llmData };
+        const duration = Math.round(performance.now() - start);
+        chatInfo("executeTool: success", {
+          tool: tool.name,
+          durationMs: duration,
+          dataSize: trunc(JSON.stringify(llmData), 100).length,
+        });
+        return { name: tool.name, input: tool.input, data: llmData };
       } catch (err) {
+        const duration = Math.round(performance.now() - start);
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[chat] Tool '${tool.name}' failed:`, msg);
-        return { name: tool.name, data: null, error: msg };
+        chatError("executeTool: failed", { tool: tool.name, durationMs: duration, error: msg });
+        return { name: tool.name, input: tool.input, data: null, error: msg };
       }
     }),
   );
   return results;
 }
 
-/**
- * Step 3: Send tool results + original query to Gemini for response generation.
- * When multiple tools were used, all results are combined into a single prompt.
- */
 async function generateResponse(
   query: string,
-  tools: ChatToolCall[],
-  results: ChatToolResult[],
+  allResults: ChatToolResult[],
 ): Promise<ChatResponse> {
-  const allFailed = results.every((r) => r.error);
+  const allFailed = allResults.every((r) => r.error);
   if (allFailed) {
-    const firstError = results.find((r) => r.error)!.error;
+    const firstError = allResults.find((r) => r.error)!.error;
+    chatWarn("generateResponse: all tools failed", { firstError, resultCount: allResults.length });
     return {
       text: `I tried to look up the data but ran into an issue: ${firstError}. Please try again or ask a different question.`,
       data: {},
@@ -157,15 +198,12 @@ async function generateResponse(
     };
   }
 
-  const prompt = buildResponseGenerationPrompt(
-    query,
-    tools.map((t) => t.name).join(", "),
-    Object.fromEntries(tools.map((t) => [t.name, t.input])),
-    Object.fromEntries(results.map((r) => [r.name, r.data])),
-  );
+  const prompt = buildResponseGenerationPrompt(query, allResults);
+  chatDebug("generateResponse: prompt built", { resultCount: allResults.length });
 
   const raw = await callGemini(prompt, CHAT_SYSTEM_INSTRUCTION);
   if (!raw) {
+    chatWarn("generateResponse: Gemini returned null");
     return {
       text: "I found the data but couldn't generate a proper response. Please try again.",
       data: {},
@@ -174,8 +212,11 @@ async function generateResponse(
     };
   }
 
+  chatDebug("generateResponse: raw response", { raw: trunc(raw, 500) });
+
   const parsed = extractJsonObject(raw);
   if (!parsed || typeof parsed !== "object") {
+    chatWarn("generateResponse: failed to parse JSON, using raw text", { raw: trunc(raw, 300) });
     return {
       text: String(raw),
       data: {},
@@ -186,52 +227,126 @@ async function generateResponse(
 
   const p = parsed as Record<string, unknown>;
 
-  return {
+  const response: ChatResponse = {
     text: (p.text as string) ?? "Here's the data you requested.",
     data: (p.data as Record<string, unknown>) ?? {},
     charts: Array.isArray(p.charts) ? (p.charts as ChatResponse["charts"]) : [],
     tables: Array.isArray(p.tables) ? (p.tables as ChatResponse["tables"]) : [],
   };
-}
 
-// ─── Public API ─────────────────────────────────────────────────────────────
+  chatInfo("generateResponse: success", {
+    textLength: response.text.length,
+    chartsCount: response.charts.length,
+    tablesCount: response.tables.length,
+    dataKeys: Object.keys(response.data),
+  });
+
+  return response;
+}
 
 export async function answerChatQuery(
   address: string,
   query: string,
 ): Promise<ChatResponse> {
   const model = CHAT_MODEL;
+  chatInfo("answerChatQuery: entry", { address, query: trunc(query, 200) });
 
-  // 1. Check cache
   const cached = await getCachedResponse(address, query, model);
   if (cached) {
+    chatInfo("answerChatQuery: cache hit", {
+      textLength: cached.text.length,
+      chartsCount: cached.charts.length,
+      tablesCount: cached.tables.length,
+    });
     return cached;
   }
+  chatDebug("answerChatQuery: cache miss");
 
-  // 2. Select tool(s)
-  const toolSelection = await selectTool(query, address);
-  if (!Array.isArray(toolSelection)) {
-    const response: ChatResponse = {
-      text: toolSelection.message || "I can only help with questions about this wallet's on-chain data.",
-      data: {},
-      charts: [],
-      tables: [],
-    };
-    return response;
+  const allResults: ChatToolResult[] = [];
+
+  for (let i = 0; i < MAX_ITERATIONS; i++) {
+    chatInfo("answerChatQuery: iteration start", { iteration: i + 1, max: MAX_ITERATIONS, accumulatedResults: allResults.length });
+
+    const context: PriorContext | undefined = allResults.length
+      ? { previousResults: allResults.map((r) => ({ name: r.name, input: r.input ?? {}, data: r.data, error: r.error })) }
+      : undefined;
+
+    const toolSelection = await selectTool(query, address, context);
+
+    if (!Array.isArray(toolSelection)) {
+      if (i === 0) {
+        chatInfo("answerChatQuery: no tools needed, responding directly", { type: toolSelection.type, message: trunc(toolSelection.message, 200) });
+        const response: ChatResponse = {
+          text: toolSelection.message || "I can only help with questions about this wallet's on-chain data.",
+          data: {},
+          charts: [],
+          tables: [],
+        };
+        return response;
+      }
+      chatInfo("answerChatQuery: LLM signaled enough data", { iteration: i + 1 });
+      break;
+    }
+
+    if (toolSelection.length === 0) {
+      chatWarn("answerChatQuery: empty tool list, breaking", { iteration: i + 1 });
+      break;
+    }
+
+    if (allDuplicates(toolSelection, context?.previousResults ?? [])) {
+      chatWarn("answerChatQuery: duplicate tool calls detected, breaking loop", {
+        iteration: i + 1,
+        tools: toolSelection.map((t) => t.name),
+      });
+      allResults.push({
+        name: "_loop_guard",
+        input: {},
+        data: null,
+        error: "Loop detected: same tools requested again",
+      });
+      break;
+    }
+
+    const results = await executeTools(toolSelection);
+    allResults.push(...results);
+
+    if (results.length > 0 && results.every((r) => r.error)) {
+      chatWarn("answerChatQuery: all tools in batch failed, breaking", {
+        iteration: i + 1,
+        errors: results.map((r) => r.error),
+      });
+      break;
+    }
+
+    chatInfo("answerChatQuery: iteration complete", {
+      iteration: i + 1,
+      newResults: results.length,
+      totalResults: allResults.length,
+    });
   }
 
-  // 3. Execute all selected tools in parallel
-  const results = await executeTools(toolSelection);
+  if (allResults.length >= MAX_ITERATIONS * 2) {
+    chatWarn("answerChatQuery: max iterations reached", {
+      iterations: MAX_ITERATIONS,
+      totalResults: allResults.length,
+    });
+  }
 
-  // 4. Generate final response from all tool results
-  const response = await generateResponse(query, toolSelection, results);
+  const response = await generateResponse(query, allResults);
 
-  // 5. Cache response (even on error to avoid repeated failures)
   try {
     await setCachedResponse(address, query, response, model);
+    chatDebug("answerChatQuery: cache write succeeded");
   } catch {
-    // non-critical
+    chatWarn("answerChatQuery: cache write failed");
   }
+
+  chatInfo("answerChatQuery: return", {
+    textLength: response.text.length,
+    chartsCount: response.charts.length,
+    tablesCount: response.tables.length,
+    totalResults: allResults.length,
+  });
 
   return response;
 }

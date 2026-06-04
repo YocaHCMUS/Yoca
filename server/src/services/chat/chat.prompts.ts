@@ -1,9 +1,10 @@
-import type { ChatToolDefinition } from "./chat.types.js";
+import type { ChatToolDefinition, ChatToolResult, PriorContext } from "./chat.types.js";
 
 export function buildToolSelectionPrompt(
   query: string,
   tools: ChatToolDefinition[],
   address: string,
+  context?: PriorContext,
 ): string {
   const toolList = tools
     .map(
@@ -12,13 +13,26 @@ export function buildToolSelectionPrompt(
     )
     .join("\n\n");
 
-  return [
+  const lines = [
     "You are a blockchain data analyst assistant. Your task is to select the right tool to answer the user's question about a Solana wallet.",
-    "",
+    "Today's date: " + new Date().toISOString(),
     `Wallet address: ${address}`,
     "",
     "Available tools:",
     toolList,
+  ];
+
+  if (context?.previousResults?.length) {
+    lines.push(
+      "",
+      "Previously fetched data (use these to decide if more data is needed):",
+      ...context.previousResults.map(
+        (r) => `  - ${r.name} (input: ${JSON.stringify(r.input)}): ${r.error ? `ERROR: ${r.error}` : JSON.stringify(r.data)}`,
+      ),
+    );
+  }
+
+  lines.push(
     "",
     "User query:",
     query,
@@ -36,16 +50,17 @@ export function buildToolSelectionPrompt(
     ),
     "",
     "If the query requires multiple data sources, include all relevant tools in the tools array.",
+    "If you already have enough data to answer, respond with: { \"type\": \"no_tool\", \"message\": \"ready\" }",
     "If no tool is relevant, respond with: { \"type\": \"no_tool\", \"message\": \"explanation\" }",
     "If the query is about something that can be answered with general knowledge, respond with: { \"type\": \"general\", \"message\": \"answer\" }",
-  ].join("\n");
+  );
+
+  return lines.join("\n");
 }
 
 export function buildResponseGenerationPrompt(
   query: string,
-  toolName: string,
-  toolInput: Record<string, unknown>,
-  toolData: unknown,
+  allResults: ChatToolResult[],
 ): string {
   return [
     "You are a blockchain data analyst assistant. Given the user's question and the tool result data, generate a helpful response.",
@@ -90,9 +105,11 @@ export function buildResponseGenerationPrompt(
     "",
     "---",
     `User query: ${query}`,
-    `Tool used: ${toolName}`,
-    `Tool input: ${JSON.stringify(toolInput)}`,
-    `Tool result data: ${JSON.stringify(toolData)}`,
+    "",
+    "Tool results:",
+    ...allResults.map(
+      (r) => `  - ${r.name}: ${r.error ? `ERROR: ${r.error}` : JSON.stringify(r.data)}`,
+    ),
   ].join("\n");
 }
 

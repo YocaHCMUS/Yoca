@@ -22,8 +22,20 @@ export interface ChatToolCall {
 
 export interface ChatToolResult {
   name: string;
+  input: Record<string, unknown>;
   data: unknown;
   error?: string;
+}
+
+export interface PriorToolResult {
+  name: string;
+  input: Record<string, unknown>;
+  data: unknown;
+  error?: string;
+}
+
+export interface PriorContext {
+  previousResults: PriorToolResult[];
 }
 
 export interface ChartSpec {
