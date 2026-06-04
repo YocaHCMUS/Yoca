@@ -165,7 +165,7 @@ export function PageWrapper({
   function NavHeaderItems() {
     return (
       <>
-        <HeaderMenuItem href="/market">{tr("nav.dashboard")}</HeaderMenuItem>
+        <HeaderMenuItem href="/market">{tr("nav.market")}</HeaderMenuItem>
         <HeaderMenuItem href="/alerts">{tr("nav.alerts")}</HeaderMenuItem>
       </>
     );

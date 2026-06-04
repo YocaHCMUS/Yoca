@@ -61,7 +61,8 @@ function useTokenPageData(address: string, poolAddress: string) {
     query: { refresh: "true" },
   });
 
-  const isLoading = baseMeta.isLoading || topPools.isLoading || marketData.isLoading;
+  const isLoading =
+    baseMeta.isLoading || topPools.isLoading || marketData.isLoading;
   const pairLoading = trades.isLoading || poolData.isLoading;
 
   // Only block on critical data errors, not holders (which depends on Moralis API)
@@ -78,20 +79,27 @@ function useTokenPageData(address: string, poolAddress: string) {
     };
   }
 
-  const [metaFromApi] = baseMeta.data ?? [];
-  const [holdersInfo] = holdersStats.data ?? [null];
+  const metaFromApi = Array.isArray(baseMeta.data)
+    ? (baseMeta.data[0] ?? null)
+    : (baseMeta.data ?? null);
+  const holdersInfo = Array.isArray(holdersStats.data)
+    ? (holdersStats.data[0] ?? null)
+    : (holdersStats.data ?? null);
   const pool = poolData.data?.[0] ?? null;
 
   if (!pool || !baseMeta.data) {
     return {
       isLoading: false,
-      error: new Error(!pool ? "Pool data is unavailable" : "Token metadata is unavailable"),
+      error: new Error(
+        !pool ? "Pool data is unavailable" : "Token metadata is unavailable",
+      ),
       data: null as null,
     };
   }
 
   const fallbackSymbol = pool?.poolName?.split(" / ")[0] || "UNKNOWN";
-  const fallbackName = fallbackSymbol !== "UNKNOWN" ? fallbackSymbol : "Unknown Token";
+  const fallbackName =
+    fallbackSymbol !== "UNKNOWN" ? fallbackSymbol : "Unknown Token";
 
   const meta = {
     ...metaFromApi,
@@ -161,8 +169,16 @@ export default function TokenPage() {
 
   if (poolAddress && !result.error && (result.pairLoading || !pairData)) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', width: '100%' }}>
-        <div style={{ width: 'fit-content' }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          width: "100%",
+        }}
+      >
+        <div style={{ width: "fit-content" }}>
           <InlineLoading status="active" description="Loading token data..." />
         </div>
       </div>
@@ -171,8 +187,16 @@ export default function TokenPage() {
 
   if (result.isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', width: '100%' }}>
-        <div style={{ width: 'fit-content' }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          width: "100%",
+        }}
+      >
+        <div style={{ width: "fit-content" }}>
           <InlineLoading status="active" description="Loading token data..." />
         </div>
       </div>
@@ -194,14 +218,21 @@ export default function TokenPage() {
     );
   }
 
-  const { meta, topPools, holders, holdersInfo, market, trades } =
-    result.data;
+  const { meta, topPools, holders, holdersInfo, market, trades } = result.data;
   const pool = pairData;
 
   if (!pool) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', width: '100%' }}>
-        <div style={{ width: 'fit-content' }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          width: "100%",
+        }}
+      >
+        <div style={{ width: "fit-content" }}>
           <InlineLoading status="active" description="Loading token data..." />
         </div>
       </div>
