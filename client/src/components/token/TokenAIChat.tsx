@@ -1,4 +1,4 @@
-import { Send } from "@carbon/icons-react";
+import { ChevronDown, ChevronUp, Send } from "@carbon/icons-react";
 import { Button, TextArea, Tag } from "@carbon/react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
@@ -21,12 +21,22 @@ interface TokenAIChatProps {
 
 const SUGGESTED_QUESTIONS = [
   "Why is this token moving?",
-  "What are the bullish and bearish signals?",
   "What is the latest news?",
+  "What are the bullish and bearish signals?",
   "Is this token risky?",
+  "Should I buy this token now?",
   "What should I watch next?",
   "Explain this token simply.",
 ];
+
+const EVIDENCE_PRIORITY: Record<string, number> = {
+  market: 0,
+  chart: 1,
+  volatility: 2,
+  holders: 3,
+  pool: 4,
+  news: 5,
+};
 
 function formatDateTime(value?: string | null) {
   if (!value) return "";
@@ -44,6 +54,15 @@ function getTokenLabel(data: TokenAiChatData) {
   const symbol = data.token.symbol ? data.token.symbol.toUpperCase() : null;
   if (data.token.name && symbol) return `${data.token.name} (${symbol})`;
   return data.token.name || symbol || data.token.address;
+}
+
+function sortEvidenceByUsefulness(data: TokenAiChatData) {
+  return [...data.evidence].sort((a, b) => {
+    const left = EVIDENCE_PRIORITY[a.type] ?? 99;
+    const right = EVIDENCE_PRIORITY[b.type] ?? 99;
+    if (left !== right) return left - right;
+    return a.label.localeCompare(b.label);
+  });
 }
 
 function SectionTable({
@@ -117,6 +136,8 @@ export function TokenAIChat({
   const [answer, setAnswer] = useState<TokenAiChatData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAllEvidence, setShowAllEvidence] = useState(false);
+  const [showAllSources, setShowAllSources] = useState(false);
 
   const trimmedQuestion = question.trim();
   const validationError =
@@ -125,6 +146,16 @@ export function TokenAIChat({
       : trimmedQuestion.length > 500
         ? "Question must be 500 characters or fewer."
         : null;
+  const sortedEvidence = useMemo(
+    () => (answer ? sortEvidenceByUsefulness(answer) : []),
+    [answer],
+  );
+  const visibleEvidence = showAllEvidence
+    ? sortedEvidence
+    : sortedEvidence.slice(0, 6);
+  const visibleSources = showAllSources
+    ? answer?.sources ?? []
+    : answer?.sources.slice(0, 5) ?? [];
 
   const submitQuestion = async (nextQuestion = trimmedQuestion) => {
     const finalQuestion = nextQuestion.trim();
@@ -145,6 +176,8 @@ export function TokenAIChat({
         includeVolatility: true,
       });
       setAnswer(data);
+      setShowAllEvidence(false);
+      setShowAllSources(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Token AI chat failed.");
     } finally {
@@ -241,10 +274,15 @@ export function TokenAIChat({
         <div className={styles.answer}>
           <div className={styles.answerHeader}>
             <div>
-              <div className={styles.answerEyebrow}>{answer.intent.replace(/_/g, " ")}</div>
-              <Link to={answer.token.yocaUrl} className={styles.tokenLink}>
-                {getTokenLabel(answer)}
-              </Link>
+              <div className={styles.answerEyebrow}>
+                {answer.intent.replace(/_/g, " ")}
+              </div>
+              <h3 className={styles.answerTitle}>
+                Yoca AI answer for{" "}
+                <Link to={answer.token.yocaUrl} className={styles.tokenLink}>
+                  {getTokenLabel(answer)}
+                </Link>
+              </h3>
             </div>
             <div className={styles.asOf}>
               As of {formatDateTime(answer.asOf)}, using Yoca market, news,
@@ -267,11 +305,39 @@ export function TokenAIChat({
             ))}
           </div>
 
-          {answer.evidence.length > 0 && (
+          {answer.warnings.length > 0 && (
+            <div className={styles.warnings}>
+              <h3>Warnings</h3>
+              <ul>
+                {answer.warnings.map((warning, idx) => (
+                  <li key={idx}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {sortedEvidence.length > 0 && (
             <div className={styles.referenceBlock}>
-              <h3>Evidence Used</h3>
+              <div className={styles.referenceHeader}>
+                <div>
+                  <h3>Key Evidence</h3>
+                  <p>
+                    Showing {visibleEvidence.length} of {sortedEvidence.length}
+                  </p>
+                </div>
+                {sortedEvidence.length > 6 && (
+                  <Button
+                    kind="ghost"
+                    size="sm"
+                    renderIcon={showAllEvidence ? ChevronUp : ChevronDown}
+                    onClick={() => setShowAllEvidence((current) => !current)}
+                  >
+                    {showAllEvidence ? "Show key evidence" : "Show all evidence"}
+                  </Button>
+                )}
+              </div>
               <div className={styles.evidenceGrid}>
-                {answer.evidence.map((item, idx) => (
+                {visibleEvidence.map((item, idx) => (
                   <div key={`${item.label}-${idx}`} className={styles.evidenceCard}>
                     <div className={styles.evidenceTop}>
                       <span>{item.type}</span>
@@ -295,9 +361,26 @@ export function TokenAIChat({
 
           {answer.sources.length > 0 && (
             <div className={styles.referenceBlock}>
-              <h3>Sources</h3>
+              <div className={styles.referenceHeader}>
+                <div>
+                  <h3>Sources</h3>
+                  <p>
+                    Showing {visibleSources.length} of {answer.sources.length}
+                  </p>
+                </div>
+                {answer.sources.length > 5 && (
+                  <Button
+                    kind="ghost"
+                    size="sm"
+                    renderIcon={showAllSources ? ChevronUp : ChevronDown}
+                    onClick={() => setShowAllSources((current) => !current)}
+                  >
+                    {showAllSources ? "Show top sources" : "Show all sources"}
+                  </Button>
+                )}
+              </div>
               <div className={styles.sourcesList}>
-                {answer.sources.map((source) => (
+                {visibleSources.map((source) => (
                   <a
                     key={source.url}
                     href={source.url}
@@ -321,23 +404,15 @@ export function TokenAIChat({
             </div>
           )}
 
-          {answer.warnings.length > 0 && (
-            <div className={styles.warnings}>
-              <h3>Warnings</h3>
-              <ul>
-                {answer.warnings.map((warning, idx) => (
-                  <li key={idx}>{warning}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
           <div className={styles.footer}>
             <p>{answer.disclaimer}</p>
             <span>
-              {answer.provider}
+              Provider: {answer.provider}
               {answer.cache
                 ? ` | cache ${answer.cache.hit ? "hit" : "miss"}`
+                : ""}
+              {answer.fallbackReason
+                ? ` | fallback: ${answer.fallbackReason.replace(/_/g, " ")}`
                 : ""}
             </span>
           </div>

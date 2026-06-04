@@ -120,10 +120,17 @@
   text-transform: uppercase;
 }
 
+.answerTitle {
+  margin: 0;
+  color: $text-primary;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .tokenLink {
   color: $link-primary;
-  font-size: 16px;
-  font-weight: 700;
+  font: inherit;
   text-decoration: none;
 
   &:hover {
@@ -149,6 +156,16 @@
   background: $layer-01;
 }
 
+.tldr {
+  border-color: $border-strong;
+  background: $layer-02;
+
+  li {
+    color: $text-primary;
+    font-size: 14px;
+  }
+}
+
 .tldr h3,
 .referenceBlock h3,
 .warnings h3 {
@@ -156,6 +173,25 @@
   font-size: 14px;
   font-weight: 700;
   color: $text-primary;
+}
+
+.referenceHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+
+  h3 {
+    margin-bottom: 2px;
+  }
+
+  p {
+    margin: 0;
+    color: $text-helper;
+    font-size: 12px;
+    line-height: 1.35;
+  }
 }
 
 .tldr ul,
@@ -234,16 +270,16 @@
 
 .evidenceGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .evidenceCard {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid $border-subtle;
   border-radius: 6px;
   background: $background;
@@ -290,7 +326,7 @@
 
 .evidenceValue {
   color: $text-primary;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -309,7 +345,7 @@
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid $border-subtle;
   border-radius: 6px;
   color: $text-primary;
@@ -344,7 +380,12 @@
 }
 
 .warnings {
-  border-color: $support-warning;
+  border-color: $border-subtle;
+  background: $layer-01;
+
+  h3 {
+    color: $text-primary;
+  }
 }
 
 .footer {
@@ -352,7 +393,7 @@
   justify-content: space-between;
   gap: 16px;
   color: $text-helper;
-  font-size: 12px;
+  font-size: 11px;
 
   p {
     margin: 0;
@@ -361,7 +402,7 @@
 
   span {
     flex-shrink: 0;
-    text-transform: capitalize;
+    color: $text-placeholder;
   }
 }
 
@@ -379,6 +420,7 @@
 
   .header,
   .answerHeader,
+  .referenceHeader,
   .footer,
   .sourceItem {
     flex-direction: column;

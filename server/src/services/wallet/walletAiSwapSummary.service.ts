@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import {
   GEMINI_MODEL,
-  GOOGLE_AI_KEY,
+  getGoogleAiKey,
   SWAPS_SAMPLE_SIZE,
   SYSTEM_PROMPT_EN,
   SYSTEM_PROMPT_VN,
@@ -297,9 +297,10 @@ async function writeCachedSummary(
 // ---------------------------------------------------------------------------
 
 let cachedGenAiClient: GoogleGenAI | null = null;
+let cachedGenAiClientKey: string | null = null;
 
 function getGenAiClient(): GoogleGenAI {
-  const key = GOOGLE_AI_KEY || process.env.GOOGLE_AI_KEY;
+  const key = getGoogleAiKey();
   if (!key) {
     throw new WalletAiSwapSummaryServiceError(
       "GOOGLE_AI_KEY is not configured on the server.",
@@ -307,8 +308,9 @@ function getGenAiClient(): GoogleGenAI {
       502,
     );
   }
-  if (!cachedGenAiClient) {
+  if (!cachedGenAiClient || cachedGenAiClientKey !== key) {
     cachedGenAiClient = new GoogleGenAI({ apiKey: key });
+    cachedGenAiClientKey = key;
   }
   return cachedGenAiClient;
 }

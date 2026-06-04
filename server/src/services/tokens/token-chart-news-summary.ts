@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { WALLET_AUDIT_MODEL } from "@sv/config/constants.js";
+import { getGoogleAiKey, WALLET_AUDIT_MODEL } from "@sv/config/constants.js";
 import type { TokenNewsArticle } from "@sv/services/rss-news.service.js";
 import { z } from "zod";
 
@@ -93,11 +93,7 @@ const BOILERPLATE_PATTERNS = [
 ];
 
 function getGeminiApiKey() {
-  return (
-    process.env.GOOGLE_AI_KEY?.trim() ||
-    process.env.GEMINI_API_KEY?.trim() ||
-    ""
-  );
+  return getGoogleAiKey();
 }
 
 function normalizeText(value: string | null | undefined, maxLength: number) {

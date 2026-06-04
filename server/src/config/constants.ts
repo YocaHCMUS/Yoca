@@ -64,7 +64,14 @@ export const WALLET_AUDIT_TX_SAMPLE_SIZE = 30;
 /** Gemini model id used by the AI Wallet Forensic Auditor. Override with GEMINI_AUDIT_MODEL. */
 export const WALLET_AUDIT_MODEL =
   process.env.GEMINI_AUDIT_MODEL?.trim() || "gemini-2.5-flash";
-export const GOOGLE_AI_KEY = process.env.GOOGLE_AI_KEY?.trim() || "AQ.Ab8RN6Im_RCp07Hk9ppbAHpbzSMHaQohmvh4yFtVnyYraYJqfA";
+
+export function getGoogleAiKey(): string {
+  return (
+    process.env.GOOGLE_AI_KEY?.trim() ||
+    process.env.GEMINI_API_KEY?.trim() ||
+    ""
+  );
+}
 
 
 function readBooleanEnv(name: string, fallback: boolean): boolean {

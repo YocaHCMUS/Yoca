@@ -92,6 +92,7 @@ export interface TokenAiChatData {
   disclaimer: string;
   generatedAt: string;
   provider: "gemini" | "deterministic";
+  fallbackReason?: string;
   cache?: {
     hit: boolean;
     expiresAt?: string;

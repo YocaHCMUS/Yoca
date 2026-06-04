@@ -4,6 +4,7 @@ import {
   NewsTab,
   PoolSelector,
   RecentTransactions,
+  TokenAIChat,
   TokenChart,
   TokenHeader,
   VolatilitySignals,
@@ -264,6 +265,13 @@ export default function TokenPage() {
             address={address}
             symbol={meta.symbol}
             name={meta.name}
+          />
+
+          <TokenAIChat
+            address={address}
+            symbol={meta.symbol}
+            name={meta.name}
+            timeframe="24h"
           />
 
           <RecentTransactions
