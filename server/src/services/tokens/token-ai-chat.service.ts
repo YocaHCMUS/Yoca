@@ -94,6 +94,29 @@ const TOKEN_AI_CHAT_MODEL =
 const TOKEN_AI_CHAT_PROMPT_VERSION =
   process.env.TOKEN_AI_CHAT_PROMPT_VERSION?.trim() || "v2";
 
+const TOKEN_AI_RESPONSE_LIMITS = {
+  tldrItems: 3,
+  tldrBulletChars: 280,
+  sectionItems: 6,
+  sectionTitleChars: 120,
+  sectionContentChars: 1200,
+  sectionBulletItems: 6,
+  sectionBulletChars: 700,
+  sectionTableRows: 8,
+  evidenceItems: 12,
+  evidenceLabelChars: 160,
+  evidenceValueChars: 240,
+  evidenceDetailChars: 500,
+  sourceItems: 8,
+  sourceTitleChars: 240,
+  sourceSnippetChars: 500,
+  warningItems: 5,
+  warningChars: 350,
+  disclaimerChars: 500,
+} as const;
+
+const TRUNCATION_ELLIPSIS = "…";
+
 const sectionKinds = [
   "market_snapshot",
   "key_drivers",
@@ -115,7 +138,7 @@ type TokenAiFallbackReason =
   | "missing_api_key"
   | "gemini_api_error"
   | "gemini_invalid_json"
-  | "gemini_zod_validation_error"
+  | "gemini_zod_validation_error_after_normalization"
   | "cached_deterministic_response"
   | "cached_deterministic_ignored_gemini_available"
   | "deterministic_fallback";
@@ -144,7 +167,11 @@ function logGeminiFallback(
 }
 
 const sectionSchema = z.object({
-  title: z.string().trim().min(1).max(120),
+  title: z
+    .string()
+    .trim()
+    .min(1)
+    .max(TOKEN_AI_RESPONSE_LIMITS.sectionTitleChars),
   kind: z.preprocess(
     (value) =>
       typeof value === "string" &&
@@ -153,20 +180,57 @@ const sectionSchema = z.object({
         : "custom",
     z.enum(sectionKinds),
   ),
-  content: z.string().trim().max(1600).optional(),
-  bullets: z.array(z.string().trim().min(1).max(320)).max(8).optional(),
+  content: z
+    .string()
+    .trim()
+    .max(TOKEN_AI_RESPONSE_LIMITS.sectionContentChars)
+    .optional(),
+  bullets: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1)
+        .max(TOKEN_AI_RESPONSE_LIMITS.sectionBulletChars),
+    )
+    .max(TOKEN_AI_RESPONSE_LIMITS.sectionBulletItems)
+    .optional(),
   table: z
     .array(z.record(z.string(), z.union([z.string(), z.number(), z.null()])))
-    .max(8)
+    .max(TOKEN_AI_RESPONSE_LIMITS.sectionTableRows)
     .optional(),
 });
 
 const geminiResponseSchema = z.object({
-  tldr: z.array(z.string().trim().min(1).max(260)).min(1).max(3),
-  sections: z.array(sectionSchema).min(1).max(6),
-  warnings: z.array(z.string().trim().min(1).max(280)).max(6),
+  tldr: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1)
+        .max(TOKEN_AI_RESPONSE_LIMITS.tldrBulletChars),
+    )
+    .min(1)
+    .max(TOKEN_AI_RESPONSE_LIMITS.tldrItems),
+  sections: z
+    .array(sectionSchema)
+    .min(1)
+    .max(TOKEN_AI_RESPONSE_LIMITS.sectionItems),
+  warnings: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1)
+        .max(TOKEN_AI_RESPONSE_LIMITS.warningChars),
+    )
+    .max(TOKEN_AI_RESPONSE_LIMITS.warningItems),
   confidence: z.enum(["Low", "Medium", "High"]),
-  disclaimer: z.string().trim().min(1).max(420),
+  disclaimer: z
+    .string()
+    .trim()
+    .min(1)
+    .max(TOKEN_AI_RESPONSE_LIMITS.disclaimerChars),
 });
 
 function getGeminiApiKey() {
@@ -1275,9 +1339,9 @@ function buildDeterministicAnswer(
     intent,
     tldr: buildFallbackTldr(context, intent, request.language).slice(0, 3),
     sections: buildImprovedFallbackSections(context, intent, request.language),
-    evidence: context.evidence,
-    sources: context.sources,
-    warnings,
+    evidence: normalizeEvidenceForResponse(context.evidence),
+    sources: normalizeSourcesForResponse(context.sources),
+    warnings: normalizeWarningsForResponse(warnings),
     confidence: confidenceFor(context, intent),
     asOf: context.builtAt,
     disclaimer: localizedDisclaimer(request.language),
@@ -1346,6 +1410,9 @@ function buildPrompt({
     "For investment-like questions, use scenario framing, risk framework, and watch-next items.",
     "Sound like a crypto analyst explaining the situation to a normal user. Be direct, concrete, and careful about uncertainty.",
     "Use intent-specific sections. Keep TLDR to 2-3 bullets. Include warnings for thin data, missing news, and missing security data.",
+    "Keep TLDR bullets under 280 characters.",
+    "Keep section bullets concise, ideally under 500 characters.",
+    "Use section content for longer explanations instead of oversized bullets.",
     "If language is vi, answer in Vietnamese.",
     "Return JSON only with keys: tldr, sections, warnings, confidence, disclaimer.",
     "",
@@ -1379,6 +1446,375 @@ function parseGeminiJsonText(text: string) {
       error: firstError instanceof Error ? firstError.message : String(firstError),
     };
   }
+}
+
+interface TokenAiNormalizationStats {
+  truncatedFields: number;
+  removedEmptySections: number;
+  removedEmptyBullets: number;
+}
+
+function createTokenAiNormalizationStats(): TokenAiNormalizationStats {
+  return {
+    truncatedFields: 0,
+    removedEmptySections: 0,
+    removedEmptyBullets: 0,
+  };
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function truncateText(
+  text: string,
+  maxLength: number,
+  stats?: TokenAiNormalizationStats,
+) {
+  const trimmed = text.trim();
+  if (trimmed.length <= maxLength) return trimmed;
+  stats && (stats.truncatedFields += 1);
+  if (maxLength <= TRUNCATION_ELLIPSIS.length) {
+    return TRUNCATION_ELLIPSIS.slice(0, maxLength);
+  }
+
+  return `${trimmed
+    .slice(0, maxLength - TRUNCATION_ELLIPSIS.length)
+    .trimEnd()}${TRUNCATION_ELLIPSIS}`;
+}
+
+function normalizeTextValue(
+  value: unknown,
+  maxLength: number,
+  stats?: TokenAiNormalizationStats,
+): string | undefined {
+  if (typeof value !== "string" && typeof value !== "number") return undefined;
+  const text = truncateText(String(value), maxLength, stats);
+  return text.length > 0 ? text : undefined;
+}
+
+function normalizeTextArray(
+  value: unknown,
+  maxItems: number,
+  maxLength: number,
+  stats?: TokenAiNormalizationStats,
+) {
+  const values = Array.isArray(value)
+    ? value
+    : typeof value === "string" || typeof value === "number"
+      ? [value]
+      : [];
+  const normalized: string[] = [];
+
+  for (const item of values) {
+    if (normalized.length >= maxItems) break;
+    const text = normalizeTextValue(item, maxLength, stats);
+    if (text) {
+      normalized.push(text);
+    } else if (stats) {
+      stats.removedEmptyBullets += 1;
+    }
+  }
+
+  return normalized;
+}
+
+function normalizeConfidence(value: unknown): "Low" | "Medium" | "High" {
+  if (typeof value !== "string") return "Low";
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "high") return "High";
+  if (normalized === "medium") return "Medium";
+  if (normalized === "low") return "Low";
+  return "Low";
+}
+
+function normalizeSectionKind(value: unknown): TokenAiSection["kind"] {
+  return typeof value === "string" &&
+    sectionKinds.includes(value as (typeof sectionKinds)[number])
+    ? (value as TokenAiSection["kind"])
+    : "custom";
+}
+
+function normalizeSectionTable(
+  value: unknown,
+  stats?: TokenAiNormalizationStats,
+): TokenAiSection["table"] | undefined {
+  if (!Array.isArray(value)) return undefined;
+
+  const rows: Array<Record<string, string | number | null>> = [];
+  for (const row of value.slice(0, TOKEN_AI_RESPONSE_LIMITS.sectionTableRows)) {
+    const rowRecord = toRecord(row);
+    const normalizedRow: Record<string, string | number | null> = {};
+
+    for (const [key, rawCell] of Object.entries(rowRecord).slice(0, 8)) {
+      const normalizedKey = truncateText(key, 80, stats);
+      if (typeof rawCell === "number" && Number.isFinite(rawCell)) {
+        normalizedRow[normalizedKey] = rawCell;
+      } else if (rawCell == null) {
+        normalizedRow[normalizedKey] = null;
+      } else if (typeof rawCell === "string" || typeof rawCell === "boolean") {
+        normalizedRow[normalizedKey] = truncateText(
+          String(rawCell),
+          TOKEN_AI_RESPONSE_LIMITS.sectionBulletChars,
+          stats,
+        );
+      }
+    }
+
+    if (Object.keys(normalizedRow).length > 0) rows.push(normalizedRow);
+  }
+
+  return rows.length > 0 ? rows : undefined;
+}
+
+function normalizeRawEvidenceForValidation(
+  value: unknown,
+  stats?: TokenAiNormalizationStats,
+) {
+  if (!Array.isArray(value)) return undefined;
+
+  const evidenceTypes = new Set<TokenAiEvidence["type"]>([
+    "market",
+    "chart",
+    "news",
+    "volatility",
+    "holders",
+    "pool",
+    "trades",
+    "metadata",
+    "internal",
+  ]);
+
+  const evidence: TokenAiEvidence[] = [];
+  for (const item of value.slice(0, TOKEN_AI_RESPONSE_LIMITS.evidenceItems)) {
+    const record = toRecord(item);
+    const label = normalizeTextValue(
+      record.label,
+      TOKEN_AI_RESPONSE_LIMITS.evidenceLabelChars,
+      stats,
+    );
+    if (!label) continue;
+
+    const type =
+      typeof record.type === "string" &&
+      evidenceTypes.has(record.type as TokenAiEvidence["type"])
+        ? (record.type as TokenAiEvidence["type"])
+        : "internal";
+    const evidenceValue = normalizeTextValue(
+      record.value,
+      TOKEN_AI_RESPONSE_LIMITS.evidenceValueChars,
+      stats,
+    );
+    const evidenceDetail = normalizeTextValue(
+      record.detail,
+      TOKEN_AI_RESPONSE_LIMITS.evidenceDetailChars,
+      stats,
+    );
+
+    evidence.push({
+      type,
+      label,
+      ...(evidenceValue ? { value: evidenceValue } : {}),
+      ...(evidenceDetail ? { detail: evidenceDetail } : {}),
+      ...(typeof record.url === "string" && record.url.trim()
+        ? { url: record.url.trim() }
+        : {}),
+      ...(typeof record.timestamp === "string" && record.timestamp.trim()
+        ? { timestamp: record.timestamp.trim() }
+        : {}),
+      ...(typeof record.source === "string" && record.source.trim()
+        ? { source: record.source.trim() }
+        : {}),
+    });
+  }
+
+  return evidence;
+}
+
+function normalizeRawSourcesForValidation(
+  value: unknown,
+  stats?: TokenAiNormalizationStats,
+) {
+  if (!Array.isArray(value)) return undefined;
+
+  const sources: TokenAiSource[] = [];
+  for (const item of value.slice(0, TOKEN_AI_RESPONSE_LIMITS.sourceItems)) {
+    const record = toRecord(item);
+    const title = normalizeTextValue(
+      record.title,
+      TOKEN_AI_RESPONSE_LIMITS.sourceTitleChars,
+      stats,
+    );
+    if (!title || typeof record.url !== "string" || !record.url.trim()) {
+      continue;
+    }
+    const snippet = normalizeTextValue(
+      record.snippet,
+      TOKEN_AI_RESPONSE_LIMITS.sourceSnippetChars,
+      stats,
+    );
+
+    sources.push({
+      title,
+      url: record.url.trim(),
+      ...(typeof record.publisher === "string" && record.publisher.trim()
+        ? { publisher: record.publisher.trim() }
+        : {}),
+      ...(typeof record.publishedAt === "string" && record.publishedAt.trim()
+        ? { publishedAt: record.publishedAt.trim() }
+        : {}),
+      ...(snippet ? { snippet } : {}),
+      ...(record.sourceType === "internal" || record.sourceType === "external"
+        ? { sourceType: record.sourceType }
+        : {}),
+    });
+  }
+
+  return sources;
+}
+
+function normalizeTokenAiResponseForValidation(
+  raw: unknown,
+  stats = createTokenAiNormalizationStats(),
+) {
+  const record = toRecord(raw);
+  const tldr = normalizeTextArray(
+    record.tldr,
+    TOKEN_AI_RESPONSE_LIMITS.tldrItems,
+    TOKEN_AI_RESPONSE_LIMITS.tldrBulletChars,
+    stats,
+  );
+  const warnings = normalizeTextArray(
+    record.warnings,
+    TOKEN_AI_RESPONSE_LIMITS.warningItems,
+    TOKEN_AI_RESPONSE_LIMITS.warningChars,
+    stats,
+  );
+  const rawSections = Array.isArray(record.sections) ? record.sections : [];
+  const sections: TokenAiSection[] = [];
+
+  for (const rawSection of rawSections) {
+    if (sections.length >= TOKEN_AI_RESPONSE_LIMITS.sectionItems) break;
+
+    const sectionRecord = toRecord(rawSection);
+    const content = normalizeTextValue(
+      sectionRecord.content,
+      TOKEN_AI_RESPONSE_LIMITS.sectionContentChars,
+      stats,
+    );
+    const bullets = normalizeTextArray(
+      sectionRecord.bullets,
+      TOKEN_AI_RESPONSE_LIMITS.sectionBulletItems,
+      TOKEN_AI_RESPONSE_LIMITS.sectionBulletChars,
+      stats,
+    );
+    const table = normalizeSectionTable(sectionRecord.table, stats);
+
+    if (!content && bullets.length === 0 && (!table || table.length === 0)) {
+      stats.removedEmptySections += 1;
+      continue;
+    }
+
+    sections.push({
+      title:
+        normalizeTextValue(
+          sectionRecord.title,
+          TOKEN_AI_RESPONSE_LIMITS.sectionTitleChars,
+          stats,
+        ) ?? "Analysis",
+      kind: normalizeSectionKind(sectionRecord.kind),
+      ...(content ? { content } : {}),
+      ...(bullets.length > 0 ? { bullets } : {}),
+      ...(table && table.length > 0 ? { table } : {}),
+    });
+  }
+
+  const evidence = normalizeRawEvidenceForValidation(record.evidence, stats);
+  const sources = normalizeRawSourcesForValidation(record.sources, stats);
+
+  return {
+    tldr,
+    sections,
+    ...(evidence ? { evidence } : {}),
+    ...(sources ? { sources } : {}),
+    warnings,
+    confidence: normalizeConfidence(record.confidence),
+    disclaimer:
+      normalizeTextValue(
+        record.disclaimer,
+        TOKEN_AI_RESPONSE_LIMITS.disclaimerChars,
+        stats,
+      ) ?? "For information only, not financial advice.",
+  };
+}
+
+function logGeminiNormalization(stats: TokenAiNormalizationStats) {
+  if (!shouldExposeTokenAiDiagnostics()) return;
+  if (stats.truncatedFields === 0 && stats.removedEmptySections === 0) return;
+
+  console.debug("[token-ai-chat] Gemini response normalized", {
+    truncatedFields: stats.truncatedFields,
+    removedEmptySections: stats.removedEmptySections,
+  });
+}
+
+function normalizeWarningsForResponse(warnings: string[]) {
+  return normalizeTextArray(
+    warnings,
+    TOKEN_AI_RESPONSE_LIMITS.warningItems,
+    TOKEN_AI_RESPONSE_LIMITS.warningChars,
+  );
+}
+
+function normalizeEvidenceForResponse(evidence: TokenAiEvidence[]) {
+  return evidence.slice(0, TOKEN_AI_RESPONSE_LIMITS.evidenceItems).map((item) => ({
+    ...item,
+    label:
+      normalizeTextValue(
+        item.label,
+        TOKEN_AI_RESPONSE_LIMITS.evidenceLabelChars,
+      ) ?? item.label,
+    ...(item.value
+      ? {
+          value:
+            normalizeTextValue(
+              item.value,
+              TOKEN_AI_RESPONSE_LIMITS.evidenceValueChars,
+            ) ?? item.value,
+        }
+      : {}),
+    ...(item.detail
+      ? {
+          detail:
+            normalizeTextValue(
+              item.detail,
+              TOKEN_AI_RESPONSE_LIMITS.evidenceDetailChars,
+            ) ?? item.detail,
+        }
+      : {}),
+  }));
+}
+
+function normalizeSourcesForResponse(sources: TokenAiSource[]) {
+  return sources.slice(0, TOKEN_AI_RESPONSE_LIMITS.sourceItems).map((source) => ({
+    ...source,
+    title:
+      normalizeTextValue(
+        source.title,
+        TOKEN_AI_RESPONSE_LIMITS.sourceTitleChars,
+      ) ?? source.title,
+    ...(source.snippet
+      ? {
+          snippet:
+            normalizeTextValue(
+              source.snippet,
+              TOKEN_AI_RESPONSE_LIMITS.sourceSnippetChars,
+            ) ?? source.snippet,
+        }
+      : {}),
+  }));
 }
 
 async function generateGeminiAnswer(
@@ -1446,9 +1882,16 @@ async function generateGeminiAnswer(
       return { data: null, fallbackReason: "gemini_invalid_json" };
     }
 
-    const parsed = geminiResponseSchema.safeParse(json.value);
+    const normalizationStats = createTokenAiNormalizationStats();
+    const normalized = normalizeTokenAiResponseForValidation(
+      json.value,
+      normalizationStats,
+    );
+    logGeminiNormalization(normalizationStats);
+
+    const parsed = geminiResponseSchema.safeParse(normalized);
     if (!parsed.success) {
-      logGeminiFallback("gemini_zod_validation_error", {
+      logGeminiFallback("gemini_zod_validation_error_after_normalization", {
         issues: parsed.error.issues
           .slice(0, 8)
           .map((issue) => ({
@@ -1456,7 +1899,10 @@ async function generateGeminiAnswer(
             message: issue.message,
           })),
       });
-      return { data: null, fallbackReason: "gemini_zod_validation_error" };
+      return {
+        data: null,
+        fallbackReason: "gemini_zod_validation_error_after_normalization",
+      };
     }
 
     return {
@@ -1466,14 +1912,14 @@ async function generateGeminiAnswer(
         intent,
         tldr: parsed.data.tldr,
         sections: parsed.data.sections,
-        evidence: context.evidence,
-        sources: context.sources,
-        warnings: [
+        evidence: normalizeEvidenceForResponse(context.evidence),
+        sources: normalizeSourcesForResponse(context.sources),
+        warnings: normalizeWarningsForResponse([
           ...new Set([
             ...parsed.data.warnings,
             ...localizedEvidenceWarning(context, request.language),
           ]),
-        ].slice(0, 6),
+        ]),
         confidence:
           intent === "risk_overview" && parsed.data.confidence === "High"
             ? "Medium"
