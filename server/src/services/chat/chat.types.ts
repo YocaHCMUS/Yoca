@@ -38,6 +38,11 @@ export interface PriorContext {
   previousResults: PriorToolResult[];
 }
 
+export interface ActionSpec {
+  label: string;
+  href: string;
+}
+
 export interface ChartSpec {
   id: string;
   type: "line" | "bar" | "area" | "pie";
@@ -56,6 +61,7 @@ export interface ChatResponse {
   data: Record<string, unknown>;
   charts: ChartSpec[];
   tables: TableSpec[];
+  actions?: ActionSpec[];
 }
 
 export interface ChatMessage {

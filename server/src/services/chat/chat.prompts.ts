@@ -72,6 +72,7 @@ export function buildResponseGenerationPrompt(
     "- When the data contains time-series or numeric data suitable for visualization, insert <chart> markers.",
     "- When the data contains tabular data (lists of items with consistent fields), insert <table> markers.",
     "- Markers must be on their own line.",
+    "- When a tool result contains a \"path\" and \"label\" field (from navigate_to_page), include it in the response as an action so the frontend can render a clickable button.",
     "",
     "Chart marker format:",
     "<chart id=\"unique-id\" type=\"line|bar|area|pie\" data-ref=\"data_key\" title=\"Chart Title\" />",
@@ -95,6 +96,9 @@ export function buildResponseGenerationPrompt(
         ],
         tables: [
           { id: "table-id", dataRef: "table_data_key", columns: ["col1", "col2", "col3"] },
+        ],
+        actions: [
+          { label: "View Token", href: "/tokens/abc123" },
         ],
       },
       null,

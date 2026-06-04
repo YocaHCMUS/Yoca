@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from "react";
+import { useNavigate } from "react-router";
 import type { ChatMessageItem } from "./types";
 import { ChartRenderer, TableRenderer } from "./WalletChatChartRenderer";
 
@@ -37,7 +38,19 @@ function parseMarkers(text: string): Array<{ type: "text" | "chart" | "table"; c
   return parts;
 }
 
+const actionButtonStyle: Record<string, string | number> = {
+  background: "transparent",
+  border: "1px solid #2a6df4",
+  color: "#2a6df4",
+  borderRadius: 8,
+  padding: "6px 14px",
+  fontSize: 12,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+};
+
 export function WalletChatMessage({ message }: Props) {
+  const navigate = useNavigate();
   const parsed = useMemo(() => parseMarkers(message.content), [message.content]);
 
   const elements: ReactNode[] = [];
@@ -103,6 +116,23 @@ export function WalletChatMessage({ message }: Props) {
         />,
       );
     }
+  }
+
+  if (message.actions?.length) {
+    elements.push(
+      <div key="actions" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+        {message.actions.map((a, i) => (
+          <button
+            key={`act-${i}`}
+            type="button"
+            style={actionButtonStyle}
+            onClick={() => navigate(a.href)}
+          >
+            {a.label}
+          </button>
+        ))}
+      </div>,
+    );
   }
 
   if (elements.length === 0) {

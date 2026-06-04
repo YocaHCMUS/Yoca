@@ -9,4 +9,5 @@ export type {
   ChatRequest,
   ChartSpec,
   TableSpec,
+  ActionSpec,
 } from "./chat.types.js";

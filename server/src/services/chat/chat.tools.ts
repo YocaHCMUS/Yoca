@@ -3,6 +3,8 @@ import { getWalletSwaps, getWalletTransfers } from "@sv/services/wallet/walletTr
 import { getWalletBalanceHistory, getCumulativePnL } from "@sv/services/wallet/walletCharts.service.js";
 import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
 import { getDailyTradingVolumeFromDb } from "@sv/services/charts/dailyTradingVolume.service.js";
+import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
+import { get24hTokenMarketChart, getHourlyTokenMarketChart, getDailyTokenMarketChart } from "@sv/services/tokens/token-chart.js";
 import type { DailyTradingVolumeResponse } from "@sv/services/charts/dailyTradingVolume.service.js";
 import type { ChatToolDefinition } from "./chat.types.js";
 import { z } from "zod";
@@ -135,20 +137,77 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
       },
       required: ["address", "date"],
     },
-  }
-
-  // {
-  //   name: "get_wallet_audit",
-  //   description:
-  //     "Run an AI forensic audit on a wallet. Returns behavioral persona classification, trust score, summary, observations, and red flags.",
-  //   input_schema: {
-  //     type: "object",
-  //     properties: {
-  //       address: { type: "string", description: "Solana wallet address (base58)" },
-  //     },
-  //     required: ["address"],
-  //   },
-  // },
+  },
+  {
+    name: "get_token_price",
+    description:
+      "Fetch current market data for a token: price in USD, 24h change percentage, market cap, 24h volume, and market cap rank.",
+    input_schema: {
+      type: "object",
+      properties: {
+        tokenAddress: { type: "string", description: "Token mint address (base58)" },
+      },
+      required: ["tokenAddress"],
+    },
+  },
+  {
+    name: "get_token_price_24h",
+    description:
+      "Fetch 24-hour intra-day price chart for a token. Returns timestamp-price points. Useful for showing today's price action.",
+    input_schema: {
+      type: "object",
+      properties: {
+        tokenAddress: { type: "string", description: "Token mint address (base58)" },
+      },
+      required: ["tokenAddress"],
+    },
+  },
+  {
+    name: "get_token_price_hourly",
+    description:
+      "Fetch hourly price chart for a token over a number of days (max 90). Returns hourly timestamp-price points. Useful for medium-term trend charts.",
+    input_schema: {
+      type: "object",
+      properties: {
+        tokenAddress: { type: "string", description: "Token mint address (base58)" },
+        days: { type: "number", description: "Number of days of hourly data (max 90)" },
+      },
+      required: ["tokenAddress"],
+    },
+  },
+  {
+    name: "get_token_price_daily",
+    description:
+      "Fetch daily price chart for a token over a number of days (max 365). Returns daily timestamp-price points. Useful for long-term trend charts.",
+    input_schema: {
+      type: "object",
+      properties: {
+        tokenAddress: { type: "string", description: "Token mint address (base58)" },
+        days: { type: "number", description: "Number of days of daily data (max 365)" },
+      },
+      required: ["tokenAddress"],
+    },
+  },
+  {
+    name: "navigate_to_page",
+    description:
+      "Suggest navigating the user to another page on the site. Call this when the user asks to 'go to', 'show me', 'open', or 'take me to' a wallet, token, market, or transactions page. Returns a suggested navigation action for the frontend to render as a clickable button.",
+    input_schema: {
+      type: "object",
+      properties: {
+        page: {
+          type: "string",
+          enum: ["wallet", "token", "token_history", "market", "transactions"],
+          description: "Target page type",
+        },
+        params: {
+          type: "object",
+          description: "Route parameters as JSON (e.g. {\"address\": \"...\"} for wallet/token pages, {\"txHash\": \"...\"} for transactions page)",
+        },
+      },
+      required: ["page"],
+    },
+  },
 ];
 
 // ─── Tool Execution ─────────────────────────────────────────────────────────
@@ -286,6 +345,49 @@ function extractAuditForLLM(data: unknown): unknown {
   };
 }
 
+function extractTokenPriceForLLM(data: unknown): unknown {
+  if (!data || typeof data !== "object") return null;
+  const record = data as Record<string, unknown>;
+  const keys = Object.keys(record);
+  if (keys.length === 0) return null;
+  const entry = record[keys[0]] as Record<string, unknown> | undefined;
+  if (!entry) return null;
+  return {
+    priceUsd: entry.priceUsd,
+    change24hPercent: entry.priceChangePercentage24h,
+    marketCap: entry.marketCap,
+    volume24hUsd: entry.volume24h,
+    marketCapRank: entry.marketCapRank,
+  };
+}
+
+function extractChartForLLM(data: unknown): unknown {
+  if (!Array.isArray(data)) return [];
+  return data.slice(0, 500).map((point: Record<string, unknown>) => ({
+    timestamp: point.unixTimestampMs,
+    price: point.price,
+    marketCap: point.marketCap,
+    volume: point.totalVolume,
+  }));
+}
+
+const ROUTE_MAP: Record<string, (params?: Record<string, string>) => { path: string; label: string }> = {
+  wallet: (params) => ({ path: `/wallets/${params?.address ?? ""}`, label: "View Wallet" }),
+  token: (params) => ({ path: `/tokens/${params?.address ?? ""}`, label: "View Token" }),
+  token_history: (params) => ({ path: `/historical-data/${params?.address ?? ""}`, label: "View Historical Data" }),
+  market: () => ({ path: "/market", label: "Go to Market" }),
+  transactions: (params) => ({
+    path: params?.txHash ? `/transactions/${params.txHash}` : "/transactions",
+    label: params?.txHash ? "View Transaction" : "View Transactions",
+  }),
+};
+
+function extractNavigationForLLM(data: unknown): unknown {
+  if (!data || typeof data !== "object") return null;
+  const d = data as { path?: string; label?: string };
+  return { path: d.path ?? "", label: d.label ?? "" };
+}
+
 // ─── Handler Map ────────────────────────────────────────────────────────────
 
 const limitSchema = z.object({
@@ -305,6 +407,23 @@ const periodVolSchema = z.object({
 
 const addressOnlySchema = z.object({
   address: z.string().min(1),
+});
+
+const tokenAddressSchema = z.object({
+  tokenAddress: z.string().min(1),
+});
+
+const tokenAddressDaysSchema = z.object({
+  tokenAddress: z.string().min(1),
+  days: z.number().int().positive().max(365).optional().default(7),
+});
+
+const navigatePageSchema = z.object({
+  page: z.enum(["wallet", "token", "token_history", "market", "transactions"]),
+  params: z.object({
+    address: z.string().optional(),
+    txHash: z.string().optional(),
+  }).optional().default({}),
 });
 
 export const TOOL_HANDLERS: Record<
@@ -387,6 +506,36 @@ export const TOOL_HANDLERS: Record<
     );
     const data = await getHistoricalPortfolio(address, date);
     return { data, llmData: extractPortfolioForLLM(data) };
+  },
+
+  get_token_price: async (input) => {
+    const { tokenAddress } = tokenAddressSchema.parse(input);
+    const data = await getTokenMarketData([tokenAddress]);
+    return { data, llmData: extractTokenPriceForLLM(data) };
+  },
+
+  get_token_price_24h: async (input) => {
+    const { tokenAddress } = tokenAddressSchema.parse(input);
+    const data = await get24hTokenMarketChart(tokenAddress);
+    return { data, llmData: extractChartForLLM(data) };
+  },
+
+  get_token_price_hourly: async (input) => {
+    const { tokenAddress, days } = tokenAddressDaysSchema.parse(input);
+    const data = await getHourlyTokenMarketChart(tokenAddress, days);
+    return { data, llmData: extractChartForLLM(data) };
+  },
+
+  get_token_price_daily: async (input) => {
+    const { tokenAddress, days } = tokenAddressDaysSchema.parse(input);
+    const data = await getDailyTokenMarketChart(tokenAddress, days);
+    return { data, llmData: extractChartForLLM(data) };
+  },
+
+  navigate_to_page: async (input) => {
+    const { page, params } = navigatePageSchema.parse(input);
+    const resolved = ROUTE_MAP[page](params);
+    return { data: resolved, llmData: extractNavigationForLLM(resolved) };
   }
 };
 

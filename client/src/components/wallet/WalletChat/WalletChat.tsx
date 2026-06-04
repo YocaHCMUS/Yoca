@@ -57,6 +57,7 @@ export function WalletChat({ address, lang }: Props) {
           data: data.data,
           charts: data.charts,
           tables: data.tables,
+          actions: data.actions,
         };
         setMessages((prev) => [...prev, assistantMsg]);
       } catch (err) {
