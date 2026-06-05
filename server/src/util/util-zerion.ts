@@ -1,6 +1,4 @@
-import { getTrackedApiResult } from "@sv/middlewares/validation";
 import env from "./load-env";
-import { zrn_WalletBalanceChartSchema } from "@sv/services/_types/wallet-raw-responses";
 import Bottleneck from "bottleneck";
 
 // For when u want a quick api test:
@@ -26,24 +24,7 @@ export function getRequiredHeaders(): Record<string, string> {
   return headers;
 }
 
-async function testZerion(walletAddress: string) {
-  const zEndpoint = getEndpoint(`/wallets/${walletAddress}/charts/day`);
-  const req = new URL(zEndpoint);
-  req.search = new URLSearchParams({
-    currency: "usd",
-  }).toString();
-
-  const resp = await fetch(req, {
-    method: "GET",
-    headers: getRequiredHeaders(),
-  });
-
-  const res = await getTrackedApiResult(zrn_WalletBalanceChartSchema, resp);
-  if (!res) {
-    return;
-  }
-}
-
+// Free plan: 1 rps, 300 reqs per day
 export const limiter = new Bottleneck({
   reservoir: 300, // 300 requests per day
   reservoirRefreshAmount: 300,

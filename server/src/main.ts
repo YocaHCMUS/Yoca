@@ -25,12 +25,12 @@ import profile, { type ProfileAppType } from "@sv/routes/profile.js";
 import search, { type SearchAppType } from "@sv/routes/search.js";
 import trades, { type TradesAppType } from "@sv/routes/trades.js";
 import transactions, {
-    type TransactionsAppType,
+  type TransactionsAppType,
 } from "@sv/routes/transactions.js";
 import transfers, { type TransfersAppType } from "@sv/routes/transfers.js";
 import wallets, { type WalletsAppType } from "@sv/routes/wallets.route.js";
 import walletTags, {
-    type WalletTagsAppType,
+  type WalletTagsAppType,
 } from "@sv/routes/walletTags.route.js";
 import walletAnalysis, {
   type WalletAnalysisAppType,
@@ -41,6 +41,7 @@ import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
 import payment, { PaymentAppType } from "./routes/payment.route";
+import "@sv/util/util-zerion";
 
 const app = new Hono()
   .use("*", logger())
