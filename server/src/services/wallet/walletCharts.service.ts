@@ -9,20 +9,16 @@ import { roundUsd } from "./walletNormalization.utils.js";
 import { getWalletTransfers } from "./walletTransfersSwaps.service.js";
 import { getWalletOverview } from "./walletOverview.service.js";
 import { db } from "@sv/db/index.js";
-import { walletBalanceHistory } from "@sv/db/schema.js";
-import { and, between, eq, gte, lte } from "drizzle-orm";
-import * as bds from "@sv/util/util-birdeye.js";
-import { bds_WalletNetworthHistorySchema } from "../_types/wallet-raw-responses.js";
+import {
+  walletBalanceMonthHistory,
+  walletBalanceWeekHistory,
+} from "@sv/db/schema.js";
+import { and, between, eq, gte } from "drizzle-orm";
+import * as zrn from "@sv/util/util-zerion.js";
+import { zrn_WalletBalanceChartSchema } from "../_types/wallet-raw-responses.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
-import { getDateMsFromNow, periodToDayCount } from "@sv/util/date.js";
-import { DAY_MS } from "./wallet.constants.js";
 import dayjs from "dayjs";
 import { WALLET_BALANCE_HISTORY_CACHE_TTL_MS } from "@sv/config/constants.js";
-
-function startOfUtcTodayMs(): number {
-  const d = new Date();
-  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-}
 
 /**
  * Get UTC start-of-day timestamp (ms) for a given timestamp.
@@ -43,11 +39,10 @@ function buildDailyBalanceAnchors(balanceHistory: BalanceDataPoint[]): Array<{
   balanceAtStart: number;
   balanceAtEnd: number;
 }> {
-  if (balanceHistory.length === 0) {
+  if (balanceHistory.length == 0) {
     return [];
   }
 
-  const DAY_MS = 24 * 60 * 60 * 1000;
   const anchors: Array<{
     dayStartMs: number;
     balanceAtStart: number;
@@ -110,8 +105,8 @@ async function computeDailyNetInflow(
       const dayStartMs = getUtcStartOfDayMs(tsMs);
 
       // Determine direction: inflow (+) or outflow (-)
-      const isInflow = transfer.to === address;
-      const isOutflow = transfer.from === address;
+      const isInflow = transfer.to == address;
+      const isOutflow = transfer.from == address;
 
       let flowAmount = 0;
       if (isInflow) {
@@ -145,95 +140,76 @@ export async function getWalletBalanceHistory(
   address: string,
   timePeriod: WalletTimePeriod = "30D",
 ): Promise<WalletBalanceHistory> {
-  // TODO: Limit the day ("ALL" is not possible)
-  const dayCount = periodToDayCount[timePeriod];
-  const [start, end] = getDateMsFromNow(timePeriod);
+  // TODO: enforce this
+  const toZrnChartPeriod: Record<any, "week" | "month"> = {
+    "7D": "week",
+    "30D": "month",
+  };
+  const zrnPeriod = toZrnChartPeriod[timePeriod];
+
+  const nowUtc = dayjs().utc();
+  const end = nowUtc.valueOf();
+  const start = nowUtc.subtract(1, zrnPeriod).valueOf();
+  const thresholdDateMs = end - WALLET_BALANCE_HISTORY_CACHE_TTL_MS;
+
+  const balanceTable =
+    zrnPeriod == "week" ? walletBalanceWeekHistory : walletBalanceMonthHistory;
 
   const res = await db
     .select()
-    .from(walletBalanceHistory)
+    .from(balanceTable)
     .where(
       and(
-        eq(walletBalanceHistory.address, address),
-        between(walletBalanceHistory.timestampMs, start, end),
+        eq(balanceTable.address, address),
+        between(balanceTable.timestampMs, start, end),
+        gte(balanceTable.updatedAtMs, thresholdDateMs),
       ),
     )
-    .orderBy(walletBalanceHistory.timestampMs);
+    .orderBy(balanceTable.timestampMs);
 
   if (res.length == 0) {
-    return fetchWalletBalanceHistory(address, timePeriod);
+    return fetchWalletBalanceHistory(address, zrnPeriod);
   }
 
-  // Latest time check, this can be that today data needs update
-  // or the data is too old (days or months ago)
-  const latestTimestamp = res[res.length - 1].timestampMs;
-  if (
-    dayjs.utc().valueOf() - latestTimestamp >
-    WALLET_BALANCE_HISTORY_CACHE_TTL_MS
-  ) {
-    return fetchWalletBalanceHistory(address, timePeriod);
-  }
-
-  // Group by day and keep only the latest data point per day
-  const latestPerDay = new Map<number, (typeof res)[0]>();
-  for (const row of res) {
-    const dayStart = dayjs.utc(row.timestampMs).startOf("day").valueOf();
-    const existing = latestPerDay.get(dayStart);
-    if (!existing || row.timestampMs > existing.timestampMs) {
-      latestPerDay.set(dayStart, row);
-    }
-  }
-
-  const uniqueDays = latestPerDay.size;
-
-  if (uniqueDays >= dayCount) {
-    return Array.from(latestPerDay.values()).map((row) => ({
-      usdValue: row.usdValue,
-      timestampMs: row.timestampMs,
-    }));
-  } else {
-    // The data has gap and need refetch
-    return fetchWalletBalanceHistory(address, timePeriod);
-  }
+  return res.map((point) => ({
+    timestampMs: point.timestampMs,
+    usdValue: point.usdValue,
+  }));
 }
 
 async function fetchWalletBalanceHistory(
   address: string,
-  timePeriod: WalletTimePeriod = "30D",
+  timePeriod: "week" | "month",
 ): Promise<WalletBalanceHistory> {
-  const url = bds.getEndpoint("/wallet/v2/net-worth");
-
-  url.search = new URLSearchParams({
-    wallet: address,
-    type: "1d",
-    sort_type: "desc",
-    direction: "back",
-    limit: "100",
-    offset: "0",
-    count: String(Math.min(periodToDayCount[timePeriod], 30)),
+  const url = zrn.getEndpoint(`/wallets/${address}/charts/${timePeriod}`);
+  const req = new URL(url);
+  req.search = new URLSearchParams({
+    currency: "usd",
+    "filter[positions]": "only_simple",
+    "filter[chain_ids]": "solana",
   }).toString();
 
-  const resp = await fetch(url, {
+  const resp = await fetch(req, {
     method: "GET",
-    headers: bds.getRequiredHeaders(),
+    headers: zrn.getRequiredHeaders(),
   });
 
-  const res = await getTrackedApiResult(bds_WalletNetworthHistorySchema, resp);
-
-  if (!res || !res.data || !res.success) {
+  const res = await getTrackedApiResult(zrn_WalletBalanceChartSchema, resp);
+  if (!res) {
     return null;
   }
 
-  const insertValues = res.data.history.map((point) => ({
+  const insertValues = res.data.attributes.points.map((point) => ({
     address: address,
-    usdValue: point.net_worth,
-    timestampMs: dayjs(point.timestamp).valueOf(),
+    // s -> ms
+    timestampMs: point[0] * 1000,
+    usdValue: point[1] * 1000,
   }));
 
-  await db
-    .insert(walletBalanceHistory)
-    .values(insertValues)
-    .onConflictDoNothing();
+  const balanceTable =
+    timePeriod == "week" ? walletBalanceWeekHistory : walletBalanceMonthHistory;
+
+  await db.insert(balanceTable).values(insertValues).onConflictDoNothing();
 
   return insertValues.map((point) => ({
     usdValue: point.usdValue,
@@ -271,7 +247,7 @@ export async function getCumulativePnL(
     ];
 
     const dailyAnchors = buildDailyBalanceAnchors(fullBalanceHistory);
-    if (dailyAnchors.length === 0) {
+    if (dailyAnchors.length == 0) {
       return emptyPnL();
     }
 

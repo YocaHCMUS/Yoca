@@ -371,8 +371,13 @@ export const envSchema = z.object({
   // API Keys and URLs
   COINGECKO_API_BASE_URL: z.url().default("https://api.coingecko.com/api/v3"),
   COINGECKO_API_KEY: z.string(),
+
   BIRDEYE_API_BASE_URL: z.url().default("https://public-api.birdeye.so"),
   BIRDEYE_API_KEY: z.string(),
+
+  ZERION_API_BASE_URL: z.url().default("https://api.zerion.io/v1"),
+  ZERION_API_KEY: z.string(),
+
   HELIUS_API_KEY: z.string(),
   HELIUS_WEBHOOK_AUTH_KEY: z.string(),
   HELIUS_WEBHOOK_ID: z.string(),

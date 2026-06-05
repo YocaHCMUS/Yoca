@@ -1,26 +1,27 @@
 import {
-    bigint,
-    boolean,
-    decimal as dec,
-    integer,
-    jsonb,
-    pgEnum,
-    pgTable,
-    primaryKey,
-    serial,
-    smallint,
-    text,
-    timestamp,
-    unique,
-    uniqueIndex,
-    uuid,
-    varchar,
+  bigint,
+  boolean,
+  decimal as dec,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  serial,
+  smallint,
+  text,
+  timestamp,
+  unique,
+  uniqueIndex,
+  uuid,
+  varchar,
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
 export * from "./alerts";
 export * from "./users";
 export * from "./payment";
 export * from "./wallets";
+export * from "./meta";
 
 // Decimal has "string" mode by default, due to how node-postgres saves
 // decimal numbers to keep precisions, this overrides that so you can pass
@@ -448,19 +449,6 @@ export const walletBalances = pgTable(
   },
   (table) => [primaryKey({ columns: [table.address, table.tokenAddress] })],
 );
-
-export const coinGeckoTokenListMeta = pgTable("coin_gecko_token_list_meta", {
-  key: text("key").primaryKey(),
-  lastRefresh: timestamp("last_refresh").notNull(),
-});
-
-// The point of cg token - id list is that it rarely changes, and when it does,
-// it'd be better that we update all at once
-export const coinGeckoTokenList = pgTable("coin_gecko_token_list", {
-  tokenAddress: varchar("token_address", { length: 44 }).primaryKey(),
-  // coinGeckId won't be unique during let's say an update that swaps two ids
-  coinGeckoId: text("coin_gecko_id").notNull(),
-});
 
 // Trending tokens
 export const trendingTokens = pgTable("trending_tokens", {
@@ -1200,9 +1188,7 @@ export const walletAiSwapSummaryCache = pgTable(
   {
     address: varchar("address", { length: 66 }).notNull(),
     language: varchar("language", { length: 10 }).notNull().default("en"),
-    response: jsonb("response")
-      .$type<WalletAiSwapSummaryPersisted>()
-      .notNull(),
+    response: jsonb("response").$type<WalletAiSwapSummaryPersisted>().notNull(),
     model: varchar("model", { length: 64 }).notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
   },
@@ -1308,7 +1294,6 @@ export type TokenMarketChartHourlyInsert =
   typeof tokenMarketChartHourly.$inferInsert;
 export type TokenMarketChartDailyInsert =
   typeof tokenMarketChartDaily.$inferInsert;
-export type CoingeckoTokenListInsert = typeof coinGeckoTokenList.$inferInsert;
 export type TokenTopPoolInsert = typeof tokenTopPools.$inferInsert;
 export type TrendingTokenInsert = typeof trendingTokens.$inferInsert;
 export type TokenPriceCacheInsert = typeof tokenPriceCache.$inferInsert;
