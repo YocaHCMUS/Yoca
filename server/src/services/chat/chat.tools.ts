@@ -465,7 +465,7 @@ function extractTokenDetailsForLLM(data: unknown): unknown {
 
 const limitSchema = z.object({
   address: z.string().min(1),
-  limit: z.number().optional().default(20),
+  limit: z.number().optional().default(3000),
 });
 
 const periodSchema = z.object({
