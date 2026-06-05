@@ -19,6 +19,8 @@ import {
 } from "./chat.prompts.js";
 import { getCachedResponse, setCachedResponse } from "./chat.cache.js";
 import { chatInfo, chatWarn, chatError, chatDebug } from "./chat.logger.js";
+import { DATA_TRANSFORMERS } from "./data-transformers.js";
+import { sanitizeText, sanitizeResponse } from "./chat-sanitizer.js";
 
 const MAX_ITERATIONS = 3;
 
@@ -121,7 +123,7 @@ async function selectTool(
     chatInfo("selectTool: no more tools needed", { type: p.type, message: trunc(p.message as string ?? "", 200) });
     return {
       type: p.type as "no_tool" | "general",
-      message: (p.message as string) ?? "",
+      message: sanitizeText((p.message as string) ?? ""),
     };
   }
 
@@ -166,14 +168,14 @@ async function executeTools(tools: ChatToolCall[]): Promise<ChatToolResult[]> {
       }
 
       try {
-        const { llmData } = await handler(tool.input);
+        const { data: fullData, llmData } = await handler(tool.input);
         const duration = Math.round(performance.now() - start);
         chatInfo("executeTool: success", {
           tool: tool.name,
           durationMs: duration,
           dataSize: trunc(JSON.stringify(llmData), 100).length,
         });
-        return { name: tool.name, input: tool.input, data: llmData };
+        return { name: tool.name, input: tool.input, data: llmData, fullData };
       } catch (err) {
         const duration = Math.round(performance.now() - start);
         const msg = err instanceof Error ? err.message : String(err);
@@ -216,11 +218,16 @@ async function generateResponse(
     };
   }
 
-  chatDebug("generateResponse: raw response", { raw: trunc(raw, 500) });
+  chatDebug("generateResponse: raw response", { raw: trunc(raw, 2000) });
 
-  const parsed = extractJsonObject(raw);
-  if (!parsed || typeof parsed !== "object") {
-    chatWarn("generateResponse: failed to parse JSON, using raw text", { raw: trunc(raw, 300) });
+  const sanitized = sanitizeResponse(raw);
+
+  const text = sanitized.text;
+  const charts = sanitized.charts;
+  const tables = sanitized.tables;
+
+  if (!text && charts.length === 0 && tables.length === 0) {
+    chatWarn("generateResponse: sanitizeResponse returned empty, using raw text", { raw: trunc(raw, 300) });
     return {
       text: String(raw),
       data: {},
@@ -229,13 +236,26 @@ async function generateResponse(
     };
   }
 
-  const p = parsed as Record<string, unknown>;
+  const resolvedData: Record<string, unknown> = {};
+  const allSpecs = [...charts, ...tables];
+  for (const spec of allSpecs) {
+    if (!spec.dataRef || resolvedData[spec.dataRef] !== undefined) continue;
+    const idx = parseInt(spec.dataRef, 10);
+    if (isNaN(idx) || idx < 0 || idx >= allResults.length) {
+      chatWarn("generateResponse: invalid dataRef", { dataRef: spec.dataRef });
+      continue;
+    }
+    const result = allResults[idx];
+    if (!result || result.error || result.fullData == null) continue;
+    const transformer = DATA_TRANSFORMERS[result.name];
+    resolvedData[spec.dataRef] = transformer ? transformer(result.fullData) : result.fullData;
+  }
 
   const response: ChatResponse = {
-    text: (p.text as string) ?? "Here's the data you requested.",
-    data: (p.data as Record<string, unknown>) ?? {},
-    charts: Array.isArray(p.charts) ? (p.charts as ChatResponse["charts"]) : [],
-    tables: Array.isArray(p.tables) ? (p.tables as ChatResponse["tables"]) : [],
+    text: text || "Here's the data you requested.",
+    data: resolvedData,
+    charts,
+    tables,
   };
 
   chatInfo("generateResponse: success", {

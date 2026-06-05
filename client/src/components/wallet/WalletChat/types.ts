@@ -8,12 +8,19 @@ export interface ChartSpec {
   type: "line" | "bar" | "area" | "pie";
   dataRef: string;
   title?: string;
+  limit?: number;
 }
 
 export interface TableSpec {
   id: string;
   dataRef: string;
   columns: string;
+  limit?: number;
+  sortBy?: string;
+  sortDesc?: boolean;
+  filterField?: string;
+  filterValue?: unknown;
+  filterOp?: "eq" | "gt" | "lt" | "contains";
 }
 
 export interface ChatResponse {

@@ -7,17 +7,37 @@ interface ChartRendererProps {
   data: Record<string, unknown>;
 }
 
+function applyChartLimit(
+  chartData: { labels?: string[]; datasets?: { name?: string; values?: number[] }[] },
+  limit?: number,
+): { labels: string[]; datasets: { name?: string; values: number[] }[] } {
+  if (!limit || limit <= 0 || !chartData.labels) {
+    return {
+      labels: chartData.labels ?? [],
+      datasets: (chartData.datasets ?? []).map((ds) => ({ name: ds.name, values: ds.values ?? [] })),
+    };
+  }
+  const labels = chartData.labels.slice(-limit);
+  const datasets = (chartData.datasets ?? []).map((ds) => ({
+    name: ds.name,
+    values: (ds.values ?? []).slice(-limit),
+  }));
+  return { labels, datasets };
+}
+
 function ChartRenderer({ spec, data }: ChartRendererProps) {
-  const chartData = data[spec.dataRef] as
+  const raw = data[spec.dataRef] as
     | { labels?: string[]; datasets?: { name?: string; values?: number[] }[] }
     | undefined;
 
   const option = useMemo(() => {
-    if (!chartData?.labels || !chartData?.datasets) return null;
+    if (!raw?.labels || !raw?.datasets) return null;
+
+    const { labels, datasets } = applyChartLimit(raw, spec.limit);
 
     const colors = ["#0f62fe", "#24a148", "#da1e28", "#8a3ffc", "#ff832b", "#f1c21b"];
 
-    const series = chartData.datasets.map((ds, i) => {
+    const series = datasets.map((ds, i) => {
       const base: Record<string, unknown> = {
         name: ds.name ?? `Series ${i + 1}`,
         type: spec.type === "area" ? "line" : spec.type,
@@ -55,7 +75,7 @@ function ChartRenderer({ spec, data }: ChartRendererProps) {
       },
       xAxis: {
         type: "category",
-        data: chartData.labels,
+        data: labels,
         axisLine: { show: false },
         axisTick: { show: false },
         axisLabel: { fontSize: 10, color: "#888" },
@@ -67,7 +87,7 @@ function ChartRenderer({ spec, data }: ChartRendererProps) {
       },
       series,
     };
-  }, [chartData, spec]);
+  }, [raw, spec]);
 
   if (!option) return null;
 
@@ -88,9 +108,62 @@ interface TableRendererProps {
   data: Record<string, unknown>;
 }
 
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+  const keys = path.split(".");
+  let val: unknown = obj;
+  for (const key of keys) {
+    if (val == null || typeof val !== "object") return undefined;
+    val = (val as Record<string, unknown>)[key];
+  }
+  return val;
+}
+
+function applyTableFilters(
+  rows: Record<string, unknown>[],
+  spec: TableSpec,
+): Record<string, unknown>[] {
+  let result = [...rows];
+
+  if (spec.filterField && spec.filterValue !== undefined && spec.filterValue !== null) {
+    const op = spec.filterOp ?? "eq";
+    result = result.filter((row) => {
+      const val = getNestedValue(row, spec.filterField!);
+      if (val === undefined || val === null) return false;
+      switch (op) {
+        case "eq": return String(val) === String(spec.filterValue);
+        case "gt": return Number(val) > Number(spec.filterValue);
+        case "lt": return Number(val) < Number(spec.filterValue);
+        case "contains": return String(val).toLowerCase().includes(String(spec.filterValue).toLowerCase());
+        default: return true;
+      }
+    });
+  }
+
+  if (spec.sortBy) {
+    const desc = spec.sortDesc !== false;
+    result.sort((a, b) => {
+      const va = getNestedValue(a, spec.sortBy!);
+      const vb = getNestedValue(b, spec.sortBy!);
+      if (va == null) return desc ? 1 : -1;
+      if (vb == null) return desc ? -1 : 1;
+      const cmp = typeof va === "number" && typeof vb === "number" ? va - vb : String(va).localeCompare(String(vb));
+      return desc ? -cmp : cmp;
+    });
+  }
+
+  if (spec.limit && spec.limit > 0) {
+    result = result.slice(0, spec.limit);
+  }
+
+  return result;
+}
+
 function TableRenderer({ spec, data }: TableRendererProps) {
-  const rows = data[spec.dataRef] as Record<string, unknown>[] | undefined;
-  if (!rows || rows.length === 0) return null;
+  const raw = data[spec.dataRef] as Record<string, unknown>[] | undefined;
+  if (!raw || raw.length === 0) return null;
+
+  const rows = applyTableFilters(raw, spec);
+  if (rows.length === 0) return null;
 
   const cols = spec.columns.split(",").map((c) => c.trim());
 
@@ -128,7 +201,7 @@ function TableRenderer({ spec, data }: TableRendererProps) {
                     color: "#ccc",
                   }}
                 >
-                  {formatCellValue(row[col])}
+                  {formatCellValue(getNestedValue(row, col))}
                 </td>
               ))}
             </tr>

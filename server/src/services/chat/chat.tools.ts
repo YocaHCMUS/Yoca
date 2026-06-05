@@ -4,6 +4,7 @@ import { getWalletBalanceHistory, getCumulativePnL } from "@sv/services/wallet/w
 import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
 import { getDailyTradingVolumeFromDb } from "@sv/services/charts/dailyTradingVolume.service.js";
 import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
+import { getTokenMeta, getTokenDetails } from "@sv/services/tokens/token-info.js";
 import { get24hTokenMarketChart, getHourlyTokenMarketChart, getDailyTokenMarketChart } from "@sv/services/tokens/token-chart.js";
 import type { DailyTradingVolumeResponse } from "@sv/services/charts/dailyTradingVolume.service.js";
 import type { ChatToolDefinition } from "./chat.types.js";
@@ -189,6 +190,36 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
     },
   },
   {
+    name: "get_token_meta",
+    description:
+      "Fetch token metadata (name, symbol, logo image URL) for a token mint address. Useful for resolving what a token address represents.",
+    input_schema: {
+      type: "object",
+      properties: {
+        tokenAddress: {
+          type: "string",
+          description: "Token mint address (base58)",
+        },
+      },
+      required: ["tokenAddress"],
+    },
+  },
+  {
+    name: "get_token_details",
+    description:
+      "Fetch detailed token information including description, links (homepage, discord, twitter, telegram), categories, decimals, and metadata (name, symbol, logo) for a token address.",
+    input_schema: {
+      type: "object",
+      properties: {
+        tokenAddress: {
+          type: "string",
+          description: "Token mint address (base58)",
+        },
+      },
+      required: ["tokenAddress"],
+    },
+  },
+  {
     name: "navigate_to_page",
     description:
       "Suggest navigating the user to another page on the site. Call this when the user asks to 'go to', 'show me', 'open', or 'take me to' a wallet, token, market, or transactions page. Returns a suggested navigation action for the frontend to render as a clickable button.",
@@ -236,6 +267,7 @@ function extractTransfersForLLM(transfers: unknown, limit: number): unknown {
     amount: tr.amount,
     amountUsd: tr.amountUsd,
     token: tr.tokenSymbol,
+    tokenAddress: tr.tokenAddress,
     timestamp: tr.timestamp,
   }));
 }
@@ -252,10 +284,11 @@ function extractPortfolioForLLM(portfolio: unknown): unknown {
   }));
 }
 
-function extractOverviewForLLM(overview: unknown): unknown {
+function extractOverviewForLLM(overview: unknown, address: string): unknown {
   if (!overview || typeof overview !== "object") return null;
   const o = overview as Record<string, unknown>;
   return {
+    address,
     totalBalance: o.totalAssetValueUsd,
     holdingsCount: o.tokensHoldingCount,
     tradingVolume24h: o.tradingVolumeUsd24h,
@@ -266,12 +299,15 @@ function extractOverviewForLLM(overview: unknown): unknown {
   };
 }
 
-function extractBalanceHistoryForLLM(data: unknown): unknown {
-  if (!Array.isArray(data)) return [];
-  return data.map((point: Record<string, unknown>) => ({
-    date: new Date(point.timestampMs as number).toISOString().slice(0, 10),
-    value: point.usdValue,
-  }));
+function extractBalanceHistoryForLLM(data: unknown, address: string): unknown {
+  if (!Array.isArray(data)) return { address, points: [] };
+  return {
+    address,
+    points: data.map((point: Record<string, unknown>) => ({
+      date: new Date(point.timestampMs as number).toISOString().slice(0, 10),
+      value: point.usdValue,
+    })),
+  };
 }
 
 function extractDailyVolumeForLLM(data: DailyTradingVolumeResponse | null, address: string): unknown {
@@ -350,9 +386,11 @@ function extractTokenPriceForLLM(data: unknown): unknown {
   const record = data as Record<string, unknown>;
   const keys = Object.keys(record);
   if (keys.length === 0) return null;
-  const entry = record[keys[0]] as Record<string, unknown> | undefined;
+  const tokenAddress = keys[0];
+  const entry = record[tokenAddress] as Record<string, unknown> | undefined;
   if (!entry) return null;
   return {
+    tokenAddress,
     priceUsd: entry.priceUsd,
     change24hPercent: entry.priceChangePercentage24h,
     marketCap: entry.marketCap,
@@ -361,14 +399,17 @@ function extractTokenPriceForLLM(data: unknown): unknown {
   };
 }
 
-function extractChartForLLM(data: unknown): unknown {
-  if (!Array.isArray(data)) return [];
-  return data.slice(0, 500).map((point: Record<string, unknown>) => ({
-    timestamp: point.unixTimestampMs,
-    price: point.price,
-    marketCap: point.marketCap,
-    volume: point.totalVolume,
-  }));
+function extractChartForLLM(data: unknown, tokenAddress?: string): unknown {
+  if (!Array.isArray(data)) return { tokenAddress, points: [] };
+  return {
+    tokenAddress,
+    points: data.slice(0, 500).map((point: Record<string, unknown>) => ({
+      timestamp: point.unixTimestampMs,
+      price: point.price,
+      marketCap: point.marketCap,
+      volume: point.totalVolume,
+    })),
+  };
 }
 
 const ROUTE_MAP: Record<string, (params?: Record<string, string>) => { path: string; label: string }> = {
@@ -386,6 +427,38 @@ function extractNavigationForLLM(data: unknown): unknown {
   if (!data || typeof data !== "object") return null;
   const d = data as { path?: string; label?: string };
   return { path: d.path ?? "", label: d.label ?? "" };
+}
+
+function extractTokenMetaForLLM(data: unknown): unknown {
+  if (!Array.isArray(data)) return [];
+  return data.map((m: Record<string, unknown>) => ({
+    address: m.address,
+    name: m.name,
+    symbol: m.symbol,
+    imageUrl: m.imageUrl,
+  }));
+}
+
+function extractTokenDetailsForLLM(data: unknown): unknown {
+  if (!Array.isArray(data) || data.length === 0) return null;
+  const item = data[0] as Record<string, unknown> | undefined;
+  if (!item) return null;
+  const meta = item.meta as Record<string, unknown> | undefined;
+  const details = item.details as Record<string, unknown> | undefined;
+  if (!meta || !details) return null;
+  return {
+    address: meta.address,
+    name: meta.name,
+    symbol: meta.symbol,
+    imageUrl: meta.imageUrl,
+    decimals: details.decimals,
+    description: details.description,
+    homepage: details.linkHomepage,
+    discord: details.linkDiscord,
+    twitter: details.twitterScreenName,
+    telegram: details.telegramChannel,
+    categories: details.categories,
+  };
 }
 
 // ─── Handler Map ────────────────────────────────────────────────────────────
@@ -433,7 +506,7 @@ export const TOOL_HANDLERS: Record<
   get_wallet_overview: async (input) => {
     const { address } = addressOnlySchema.parse(input);
     const data = await getWalletOverview(address);
-    return { data, llmData: extractOverviewForLLM(data) };
+    return { data, llmData: extractOverviewForLLM(data, address) };
   },
 
   get_wallet_swaps: async (input) => {
@@ -451,7 +524,7 @@ export const TOOL_HANDLERS: Record<
   get_balance_history: async (input) => {
     const { address, timePeriod } = periodSchema.parse(input);
     const data = await getWalletBalanceHistory(address, timePeriod);
-    return { data, llmData: extractBalanceHistoryForLLM(data) };
+    return { data, llmData: extractBalanceHistoryForLLM(data, address) };
   },
 
   get_trading_volume: async (input) => {
@@ -517,19 +590,31 @@ export const TOOL_HANDLERS: Record<
   get_token_price_24h: async (input) => {
     const { tokenAddress } = tokenAddressSchema.parse(input);
     const data = await get24hTokenMarketChart(tokenAddress);
-    return { data, llmData: extractChartForLLM(data) };
+    return { data, llmData: extractChartForLLM(data, tokenAddress) };
   },
 
   get_token_price_hourly: async (input) => {
     const { tokenAddress, days } = tokenAddressDaysSchema.parse(input);
     const data = await getHourlyTokenMarketChart(tokenAddress, days);
-    return { data, llmData: extractChartForLLM(data) };
+    return { data, llmData: extractChartForLLM(data, tokenAddress) };
   },
 
   get_token_price_daily: async (input) => {
     const { tokenAddress, days } = tokenAddressDaysSchema.parse(input);
     const data = await getDailyTokenMarketChart(tokenAddress, days);
-    return { data, llmData: extractChartForLLM(data) };
+    return { data, llmData: extractChartForLLM(data, tokenAddress) };
+  },
+
+  get_token_meta: async (input) => {
+    const { tokenAddress } = tokenAddressSchema.parse(input);
+    const data = await getTokenMeta([tokenAddress]);
+    return { data, llmData: extractTokenMetaForLLM(data) };
+  },
+
+  get_token_details: async (input) => {
+    const { tokenAddress } = tokenAddressSchema.parse(input);
+    const data = await getTokenDetails([tokenAddress]);
+    return { data, llmData: extractTokenDetailsForLLM(data) };
   },
 
   navigate_to_page: async (input) => {

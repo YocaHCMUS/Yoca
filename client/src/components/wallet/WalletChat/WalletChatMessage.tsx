@@ -7,20 +7,21 @@ interface Props {
   message: ChatMessageItem;
 }
 
-const CHART_RE = /<chart\s+id="([^"]+)"\s+type="([^"]+)"\s+data-ref="([^"]+)"(?:\s+title="([^"]*)")?\s*\/>/g;
-const TABLE_RE = /<table\s+id="([^"]+)"\s+data-ref="([^"]+)"\s+columns="([^"]+)"\s*\/>/g;
+const MARKER_RE = /<(chart|table)\s+id="([^"]+)"\s*\/>/g;
 
-function parseMarkers(text: string): Array<{ type: "text" | "chart" | "table"; content: string; match?: RegExpExecArray }> {
-  const parts: Array<{ type: "text" | "chart" | "table"; content: string; match?: RegExpExecArray }> = [];
+function normalizeMarkers(text: string): string {
+  return text.replace(/<(chart|table)>id="([^"]+)"<\/\1>/g, '<$1 id="$2" />');
+}
+
+function parseMarkers(text: string): Array<{ type: "text" | "chart" | "table"; content: string; id?: string }> {
+  const normalized = normalizeMarkers(text);
+  const parts: Array<{ type: "text" | "chart" | "table"; content: string; id?: string }> = [];
   let lastIndex = 0;
   const combined: Array<{ index: number; type: "chart" | "table"; match: RegExpExecArray }> = [];
 
   let m: RegExpExecArray | null;
-  while ((m = CHART_RE.exec(text)) !== null) {
-    combined.push({ index: m.index, type: "chart", match: [...m] as unknown as RegExpExecArray });
-  }
-  while ((m = TABLE_RE.exec(text)) !== null) {
-    combined.push({ index: m.index, type: "table", match: [...m] as unknown as RegExpExecArray });
+  while ((m = MARKER_RE.exec(normalized)) !== null) {
+    combined.push({ index: m.index, type: m[1] as "chart" | "table", match: [...m] as unknown as RegExpExecArray });
   }
   combined.sort((a, b) => a.index - b.index);
 
@@ -28,7 +29,7 @@ function parseMarkers(text: string): Array<{ type: "text" | "chart" | "table"; c
     if (item.index > lastIndex) {
       parts.push({ type: "text", content: text.slice(lastIndex, item.index) });
     }
-    parts.push({ type: item.type, content: "", match: item.match });
+    parts.push({ type: item.type, content: "", id: item.match[2] });
     lastIndex = item.index + item.match[0].length;
   }
   if (lastIndex < text.length) {
@@ -95,25 +96,21 @@ export function WalletChatMessage({ message }: Props) {
       );
     }
 
-    if (part.type === "chart" && message.data) {
-      const [, id, type, dataRef, title] = part.match as unknown as string[];
+    if (part.type === "chart" && message.data && part.id) {
+      const spec = message.charts?.find((c) => c.id === part.id) ?? {
+        id: part.id, type: "line" as const, dataRef: part.id,
+      };
       elements.push(
-        <ChartRenderer
-          key={`c-${id}`}
-          spec={{ id, type: type as "line" | "bar" | "area" | "pie", dataRef, title: title || undefined }}
-          data={message.data}
-        />,
+        <ChartRenderer key={`c-${part.id}`} spec={spec} data={message.data} />,
       );
     }
 
-    if (part.type === "table" && message.data) {
-      const [, id, dataRef, columns] = part.match as unknown as string[];
+    if (part.type === "table" && message.data && part.id) {
+      const spec = message.tables?.find((t) => t.id === part.id) ?? {
+        id: part.id, dataRef: part.id, columns: "",
+      };
       elements.push(
-        <TableRenderer
-          key={`t-${id}`}
-          spec={{ id, dataRef, columns }}
-          data={message.data}
-        />,
+        <TableRenderer key={`t-${part.id}`} spec={spec} data={message.data} />,
       );
     }
   }
