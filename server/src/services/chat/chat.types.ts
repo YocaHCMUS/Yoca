@@ -52,6 +52,12 @@ export interface ChartSpec {
   limit?: number;
 }
 
+export interface TableFilter {
+  field: string;
+  value: unknown;
+  op: "eq" | "gt" | "lt" | "contains";
+}
+
 export interface TableSpec {
   id: string;
   dataRef: string;
@@ -59,8 +65,13 @@ export interface TableSpec {
   limit?: number;
   sortBy?: string;
   sortDesc?: boolean;
+  filters?: TableFilter[];
+  filterMode?: "and" | "or";
+  /** @deprecated Use `filters` array instead */
   filterField?: string;
+  /** @deprecated Use `filters` array instead */
   filterValue?: unknown;
+  /** @deprecated Use `filters` array instead */
   filterOp?: "eq" | "gt" | "lt" | "contains";
 }
 

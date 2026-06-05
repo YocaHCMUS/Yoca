@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import ReactECharts from "echarts-for-react";
-import type { ChartSpec, TableSpec } from "./types";
+import { useLocalization } from "@/contexts/LocalizationContext";
+import type { ChartSpec, TableFilter, TableSpec } from "./types";
 
 interface ChartRendererProps {
   spec: ChartSpec;
@@ -103,6 +104,33 @@ function ChartRenderer({ spec, data }: ChartRendererProps) {
   );
 }
 
+type ColumnFormat = "currency" | "decimal" | "percent" | "address" | "datetime" | "date" | "time" | "relative" | "text";
+
+interface ParsedColumn {
+  field: string;
+  title: string;
+  format: ColumnFormat;
+}
+
+function detectFormat(field: string): ColumnFormat {
+  const lower = field.toLowerCase();
+  if (/usd|price|value|pnl|pn_l|volume|fee$/i.test(lower)) return "currency";
+  if (/percent|rate|change|winrate|win_rate|ratio$/i.test(lower)) return "percent";
+  if (/at$|time|date/i.test(lower)) return "datetime";
+  if (/address|hash|signature/i.test(lower)) return "address";
+  return "decimal";
+}
+
+function parseColumns(columns: string): ParsedColumn[] {
+  return columns.split(",").map((entry) => {
+    const parts = entry.trim().split(":");
+    const field = parts[0]!.trim();
+    const title = parts[1]?.trim() || field;
+    const format = (parts[2]?.trim() as ColumnFormat) || detectFormat(field);
+    return { field, title, format };
+  });
+}
+
 interface TableRendererProps {
   spec: TableSpec;
   data: Record<string, unknown>;
@@ -118,24 +146,39 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
   return val;
 }
 
+function matchFilter(val: unknown, filter: TableFilter): boolean {
+  if (val === undefined || val === null) return false;
+  switch (filter.op) {
+    case "eq": return String(val) === String(filter.value);
+    case "gt": return Number(val) > Number(filter.value);
+    case "lt": return Number(val) < Number(filter.value);
+    case "contains": return String(val).toLowerCase().includes(String(filter.value).toLowerCase());
+    default: return true;
+  }
+}
+
 function applyTableFilters(
   rows: Record<string, unknown>[],
   spec: TableSpec,
 ): Record<string, unknown>[] {
   let result = [...rows];
 
-  if (spec.filterField && spec.filterValue !== undefined && spec.filterValue !== null) {
+  if (spec.filters?.length) {
+    const mode = spec.filterMode ?? "and";
+    if (mode === "or") {
+      result = result.filter((row) =>
+        spec.filters!.some((f) => matchFilter(getNestedValue(row, f.field), f)),
+      );
+    } else {
+      for (const f of spec.filters) {
+        result = result.filter((row) => matchFilter(getNestedValue(row, f.field), f));
+      }
+    }
+  } else if (spec.filterField && spec.filterValue !== undefined && spec.filterValue !== null) {
     const op = spec.filterOp ?? "eq";
     result = result.filter((row) => {
       const val = getNestedValue(row, spec.filterField!);
-      if (val === undefined || val === null) return false;
-      switch (op) {
-        case "eq": return String(val) === String(spec.filterValue);
-        case "gt": return Number(val) > Number(spec.filterValue);
-        case "lt": return Number(val) < Number(spec.filterValue);
-        case "contains": return String(val).toLowerCase().includes(String(spec.filterValue).toLowerCase());
-        default: return true;
-      }
+      return matchFilter(val, { field: spec.filterField!, value: spec.filterValue, op });
     });
   }
 
@@ -158,14 +201,47 @@ function applyTableFilters(
   return result;
 }
 
+function formatCellValue(val: unknown, format: ColumnFormat, fmt: ReturnType<typeof useLocalization>["fmt"]): string {
+  if (val === null || val === undefined) return "-";
+  if (typeof val === "string") {
+    if (format === "address") return fmt.text.address(val);
+    if (format === "text") return val;
+    const num = Number(val);
+    if (!Number.isNaN(num) && val.trim() !== "") {
+      return formatCellValue(num, format, fmt);
+    }
+    if (format === "datetime" || format === "date" || format === "time" || format === "relative") {
+      const ms = Number(val);
+      if (!Number.isNaN(ms)) return formatCellValue(ms, format, fmt);
+    }
+    return val;
+  }
+  if (typeof val === "number") {
+    switch (format) {
+      case "currency": return fmt.num.currency(val);
+      case "percent": return fmt.num.percentagePoint(val);
+      case "decimal": return fmt.num.decimal(val);
+      case "datetime": return fmt.datetime.fromUnixMilliseconds(val);
+      case "date": return fmt.datetime.date(val);
+      case "time": return fmt.datetime.time(val);
+      case "relative": return fmt.datetime.relative(val);
+      case "address":
+      case "text":
+      default: return String(val);
+    }
+  }
+  return String(val);
+}
+
 function TableRenderer({ spec, data }: TableRendererProps) {
+  const { fmt } = useLocalization();
   const raw = data[spec.dataRef] as Record<string, unknown>[] | undefined;
   if (!raw || raw.length === 0) return null;
 
   const rows = applyTableFilters(raw, spec);
   if (rows.length === 0) return null;
 
-  const cols = spec.columns.split(",").map((c) => c.trim());
+  const cols = parseColumns(spec.columns);
 
   return (
     <div style={{ width: "100%", margin: "8px 0", overflowX: "auto" }}>
@@ -174,7 +250,7 @@ function TableRenderer({ spec, data }: TableRendererProps) {
           <tr>
             {cols.map((col) => (
               <th
-                key={col}
+                key={col.field}
                 style={{
                   textAlign: "left",
                   padding: "4px 8px",
@@ -184,7 +260,7 @@ function TableRenderer({ spec, data }: TableRendererProps) {
                   textTransform: "capitalize",
                 }}
               >
-                {col}
+                {col.title}
               </th>
             ))}
           </tr>
@@ -194,14 +270,14 @@ function TableRenderer({ spec, data }: TableRendererProps) {
             <tr key={i}>
               {cols.map((col) => (
                 <td
-                  key={col}
+                  key={col.field}
                   style={{
                     padding: "4px 8px",
                     borderBottom: "1px solid #222",
                     color: "#ccc",
                   }}
                 >
-                  {formatCellValue(getNestedValue(row, col))}
+                  {formatCellValue(getNestedValue(row, col.field), col.format, fmt)}
                 </td>
               ))}
             </tr>
@@ -210,17 +286,6 @@ function TableRenderer({ spec, data }: TableRendererProps) {
       </table>
     </div>
   );
-}
-
-function formatCellValue(val: unknown): string {
-  if (val === null || val === undefined) return "-";
-  if (typeof val === "number") {
-    if (Math.abs(val) >= 1_000_000) return `$${(val / 1_000_000).toFixed(2)}M`;
-    if (Math.abs(val) >= 1_000) return `$${(val / 1_000).toFixed(2)}K`;
-    if (Math.abs(val) >= 1) return `$${val.toFixed(2)}`;
-    return val.toFixed(4);
-  }
-  return String(val);
 }
 
 export { ChartRenderer, TableRenderer };
