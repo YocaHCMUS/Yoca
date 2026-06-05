@@ -1,11 +1,12 @@
 import { Link } from "react-router";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Sun, Moon } from "lucide-react";
 import { useEffect, useState } from "react";
 import appLogo from "../../assets/app-logo.png";
 import { GRID_MAX_WIDTH, btnPrimaryBase, btnPrimaryEnter, btnPrimaryLeave } from "./tokens";
 import { SignInModal } from "../auth/SignInModal";
 import { SignUpModal } from "../auth/SignUpModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserTheme } from "@/contexts/ThemeContext";
 import { LogOut } from "lucide-react";
 
 const navLinks = [
@@ -18,7 +19,7 @@ const navLinks = [
 const linkStyle = {
   fontSize: "0.875rem",
   fontWeight: 500,
-  color: "#94a3b8",
+  color: "var(--landing-muted)",
   textDecoration: "none",
   whiteSpace: "nowrap" as const,
   transition: "color 0.2s ease",
@@ -26,6 +27,7 @@ const linkStyle = {
 
 export function LandingNavbar() {
   const { user, signOut } = useAuth();
+  const { theme, toggleTheme } = useUserTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -67,10 +69,10 @@ export function LandingNavbar() {
         left: 0,
         right: 0,
         zIndex: 50,
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        borderBottom: "1px solid var(--landing-border)",
         backgroundColor: scrolled
-          ? "rgba(10, 10, 15, 0.94)"
-          : "rgba(10, 10, 15, 0.45)",
+          ? "var(--landing-surface-strong)"
+          : "var(--landing-surface)",
         backdropFilter: scrolled ? "blur(14px) saturate(180%)" : "blur(4px)",
         WebkitBackdropFilter: scrolled
           ? "blur(14px) saturate(180%)"
@@ -103,39 +105,42 @@ export function LandingNavbar() {
                 fontSize: "1.25rem",
                 fontWeight: 700,
                 letterSpacing: "-0.025em",
-                color: "#f8fafc",
+                color: "var(--landing-foreground)",
                 textDecoration: "none",
               }}
             >
               <img src={appLogo} alt="Yoca logo" width={28} height={28} style={{ display: "block" }} />
               <span>YOCA</span>
             </Link>
-            <button
-              type="button"
-              aria-expanded={mobileOpen}
-              aria-label="Toggle menu"
-              onClick={() => setMobileOpen((o) => !o)}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                color: "#f8fafc",
-                padding: "0.5rem",
-                borderRadius: "0.5rem",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <ThemeToggleBtn theme={theme} toggleTheme={toggleTheme} />
+              <button
+                type="button"
+                aria-expanded={mobileOpen}
+                aria-label="Toggle menu"
+                onClick={() => setMobileOpen((o) => !o)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--landing-foreground)",
+                  padding: "0.5rem",
+                  borderRadius: "0.5rem",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+              </button>
+            </div>
           </div>
 
           {mobileOpen && (
             <div
               style={{
-                borderTop: "1px solid rgba(255,255,255,0.06)",
+                borderTop: "1px solid var(--landing-border)",
                 padding: "1.25rem 1.5rem",
-                backgroundColor: "#0a0a0f",
+                backgroundColor: "var(--landing-bg)",
               }}
             >
               <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -171,10 +176,10 @@ export function LandingNavbar() {
                           width: "100%",
                           padding: "0.75rem",
                           borderRadius: "9999px",
-                          border: "1px solid rgba(255,255,255,0.15)",
+                          border: "1px solid var(--landing-border)",
                           fontSize: "0.875rem",
                           fontWeight: 500,
-                          color: "#f8fafc",
+                          color: "var(--landing-foreground)",
                           textDecoration: "none",
                           background: "none",
                           cursor: "pointer",
@@ -235,7 +240,7 @@ export function LandingNavbar() {
                 fontSize: "1.25rem",
                 fontWeight: 700,
                 letterSpacing: "-0.025em",
-                color: "#f8fafc",
+                color: "var(--landing-foreground)",
                 textDecoration: "none",
               }}
             >
@@ -262,8 +267,8 @@ export function LandingNavbar() {
                     <a
                       href={item.href}
                       style={linkStyle}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = "#f8fafc")}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = "var(--landing-foreground)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--landing-muted)")}
                     >
                       {item.label}
                     </a>
@@ -271,8 +276,8 @@ export function LandingNavbar() {
                     <Link
                       to={item.href}
                       style={linkStyle}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = "#f8fafc")}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = "var(--landing-foreground)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--landing-muted)")}
                     >
                       {item.label}
                     </Link>
@@ -284,6 +289,7 @@ export function LandingNavbar() {
 
           {/* RIGHT — Auth actions */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.5rem" }}>
+            <ThemeToggleBtn theme={theme} toggleTheme={toggleTheme} />
             {!user ? (
               <>
                 <LogInLink onOpen={() => setIsSignInOpen(true)} />
@@ -313,7 +319,7 @@ export function LandingNavbar() {
                   style={{
                     background: "none",
                     border: "none",
-                    color: "#94a3b8",
+                    color: "var(--landing-muted)",
                     cursor: "pointer",
                     padding: "8px",
                     borderRadius: "8px",
@@ -323,11 +329,11 @@ export function LandingNavbar() {
                     transition: "all 0.2s"
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.color = "#f8fafc";
-                    e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.05)";
+                    e.currentTarget.style.color = "var(--landing-foreground)";
+                    e.currentTarget.style.backgroundColor = "var(--landing-surface)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.color = "#94a3b8";
+                    e.currentTarget.style.color = "var(--landing-muted)";
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
                 >
@@ -361,7 +367,7 @@ function LogInLink({ onOpen }: { onOpen: () => void }) {
       style={{
         fontSize: "0.875rem",
         fontWeight: 500,
-        color: "#94a3b8",
+        color: "var(--landing-muted)",
         textDecoration: "none",
         whiteSpace: "nowrap",
         padding: "12px 20px",
@@ -370,11 +376,42 @@ function LogInLink({ onOpen }: { onOpen: () => void }) {
         border: "none",
         cursor: "pointer",
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.color = "#f8fafc")}
-      onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
+      onMouseEnter={(e) => (e.currentTarget.style.color = "var(--landing-foreground)")}
+      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--landing-muted)")}
       onClick={onOpen}
     >
       Log In
+    </button>
+  );
+}
+
+function ThemeToggleBtn({ theme, toggleTheme }: { theme: string; toggleTheme: () => void }) {
+  return (
+    <button
+      onClick={toggleTheme}
+      title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+      style={{
+        background: "none",
+        border: "none",
+        color: "var(--landing-muted)",
+        cursor: "pointer",
+        padding: "8px",
+        borderRadius: "8px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "all 0.2s"
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.color = "var(--landing-foreground)";
+        e.currentTarget.style.backgroundColor = "var(--landing-surface)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.color = "var(--landing-muted)";
+        e.currentTarget.style.backgroundColor = "transparent";
+      }}
+    >
+      {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
     </button>
   );
 }

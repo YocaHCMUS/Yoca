@@ -39,13 +39,21 @@ import type { ExportFormat } from '@/types/chart-filters.types';
 import type { ChartDataSeries } from '@/types/chart-data.types';
 import type { ChartProps } from '../shared/ChartProp';
 import { runChartExport } from '@/services/chart/chartExportService';
-import { Dropdown } from '@carbon/react';
+import { Dropdown, FilterableMultiSelect, Layer } from '@carbon/react';
 import { SettingsAdjust } from '@carbon/icons-react';
+import styles from './AssetDistribution.module.scss';
 
 
 // ── Types ─────────────────────────────────────────────────────────────────
 type TopNOption = 5 | 10 | 0; // 0 = All
 type MinPctOption = 0 | 1 | 5 | 10;
+const MAX_VISIBLE_OTHERS = 10;
+
+interface LegendAsset {
+  name: string;
+  color: string;
+  value: number;
+}
 
 interface AssetItem {
   name: string;
@@ -126,7 +134,13 @@ export const AssetDistribution: React.FC<ChartProps> = ({
 
   const chartRef = useRef<ReactECharts>(null);
   const baseOption = useCarbonChartBaseOption();
-  const tokens = useCarbonTokens({ background: cds.background });
+  const tokens = useCarbonTokens({
+    background: cds.background,
+    layer: cds.layer01,
+    borderSubtle: cds.borderSubtle01,
+    textPrimary: cds.textPrimary,
+    textSecondary: cds.textSecondary,
+  });
   const { selectedTimezone: timezone } = useChartContext();
 
   // Track selected assets for legend filtering
@@ -245,6 +259,10 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     const grouped = applyGrouping(preGrouped as AssetItem[], topN, minPct, othersLabel);
 
     const displayTotal = grouped.reduce((s, a) => s + a.value, 0);
+    const tooltipBackground = tokens.layer || cds.layer01;
+    const tooltipBorder = tokens.borderSubtle || cds.borderSubtle01;
+    const tooltipText = tokens.textPrimary || cds.textPrimary;
+    const tooltipSecondaryText = tokens.textSecondary || cds.textSecondary;
 
     return {
       ...baseOption,
@@ -263,6 +281,13 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       tooltip: {
         ...baseOption.tooltip,
         trigger: 'item',
+        appendToBody: true,
+        confine: true,
+        backgroundColor: tooltipBackground,
+        borderColor: tooltipBorder,
+        borderWidth: 1,
+        extraCssText: 'box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16); max-width: 260px; z-index: 10000;',
+        textStyle: { color: tooltipText, fontSize: 12 },
         formatter: (p: any) => {
           const isOthers = p.name === othersLabel;
           const logoUri: string | undefined = p.data.logoUri;
@@ -271,10 +296,19 @@ export const AssetDistribution: React.FC<ChartProps> = ({
             : '';
           let html = createTooltipHeader(`${logoHtml}${p.name}`);
           if (isOthers && p.data.hiddenNames?.length > 0) {
-            html += `<div style="max-height:160px;overflow-y:auto;margin-bottom:4px;">`;
-            html += (p.data.hiddenNames as string[])
-              .map(n => `<div style="padding:1px 0;font-size:11px;color:var(--cds-text-secondary)">• ${n}</div>`)
+            const hiddenNames = p.data.hiddenNames as string[];
+            const visibleHiddenNames = hiddenNames.slice(0, MAX_VISIBLE_OTHERS);
+            const hiddenSummary = hiddenNames.length > MAX_VISIBLE_OTHERS
+              ? `${tr('charts.assetDistributionChart.filters.top')} ${MAX_VISIBLE_OTHERS} / ${hiddenNames.length}`
+              : `${hiddenNames.length}`;
+            html += `<div style="margin-bottom:8px;padding-top:2px;">`;
+            html += `<div style="padding-bottom:3px;font-size:11px;font-weight:600;color:${tooltipText}">${hiddenSummary}</div>`;
+            html += visibleHiddenNames
+              .map((n, index) => `<div style="padding:1px 0;font-size:11px;line-height:1.35;color:${tooltipSecondaryText}">${index + 1}. ${n}</div>`)
               .join('');
+            if (hiddenNames.length > MAX_VISIBLE_OTHERS) {
+              html += `<div style="padding:2px 0 0;font-size:11px;line-height:1.35;color:${tooltipSecondaryText}">...</div>`;
+            }
             html += `</div>`;
           }
           html += createTooltipRow(
@@ -365,7 +399,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
         },
       ],
     };
-  }, [baseOption, tokens, tr, selectedAssets, topN, minPct, fmt]);
+  }, [baseOption, tokens, tr, selectedAssets, topN, minPct, othersLabel, fmt]);
 
   /**
    * Extract unique assets across all wallets for aggregated legend
@@ -373,48 +407,53 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   const aggregatedLegendData = useMemo(() => {
     if (!data || !('wallets' in data) || !data.wallets || data.wallets.length <= 1) return null;
 
-    const uniqueAssets = new Map<string, { name: string; color: string }>();
+    const uniqueAssets = new Map<string, LegendAsset>();
 
-    data.wallets.forEach((wallet: any, walletIndex: number) => {
+    data.wallets.forEach((wallet: any) => {
       wallet.data.forEach((asset: any, assetIndex: number) => {
-        if (!uniqueAssets.has(asset.name)) {
+        const existingAsset = uniqueAssets.get(asset.name);
+
+        if (existingAsset) {
+          existingAsset.value += Number(asset.value ?? 0);
+        } else {
           uniqueAssets.set(asset.name, {
             name: asset.name,
             color: (asset as any).color ?? CHART_COLOR_PALETTE[assetIndex % CHART_COLOR_PALETTE.length],
+            value: Number(asset.value ?? 0),
           });
         }
       });
     });
 
-    return Array.from(uniqueAssets.values());
+    return Array.from(uniqueAssets.values()).sort((a, b) => b.value - a.value);
   }, [data]);
 
-  /**
-   * Initialize selected assets when data changes
-   */
   useEffect(() => {
-    if (aggregatedLegendData) {
-      setSelectedAssets(new Set(aggregatedLegendData.map(a => a.name)));
-    }
-  }, [aggregatedLegendData]);
+    if (!aggregatedLegendData) return;
 
-  /**
-   * Toggle asset selection for legend filtering
-   */
-  const toggleAssetSelection = useCallback((assetName: string) => {
-    setSelectedAssets(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(assetName)) {
-        // Don't allow deselecting all assets
-        if (newSet.size > 1) {
-          newSet.delete(assetName);
-        }
-      } else {
-        newSet.add(assetName);
-      }
-      return newSet;
-    });
-  }, []);
+    if (selectedAssets.size === 0) {
+      setSelectedAssets(new Set(aggregatedLegendData.map(asset => asset.name)));
+      return;
+    }
+
+    const availableAssets = new Set(aggregatedLegendData.map(asset => asset.name));
+    const nextSelectedAssets = new Set(
+      Array.from(selectedAssets).filter(assetName => availableAssets.has(assetName))
+    );
+
+    if (nextSelectedAssets.size !== selectedAssets.size) {
+      setSelectedAssets(
+        nextSelectedAssets.size > 0
+          ? nextSelectedAssets
+          : new Set(aggregatedLegendData.map(asset => asset.name))
+      );
+    }
+  }, [aggregatedLegendData, selectedAssets]);
+
+  const selectedLegendItems = useMemo(() => {
+    if (!aggregatedLegendData) return [];
+    return aggregatedLegendData.filter(asset => selectedAssets.has(asset.name));
+  }, [aggregatedLegendData, selectedAssets]);
 
   /**
    * ECharts options - multiple charts for per-wallet view
@@ -491,57 +530,36 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     >
       {chartOptions.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-          {/* Aggregated Legend for Multi-Wallet View */}
+          {/* Token selector for Multi-Wallet View */}
           {aggregatedLegendData && chartOptions.length > 1 && (
             <div
               data-html2canvas-ignore="true"
               style={{
                 display: 'flex',
-                flexWrap: 'wrap',
-                gap: '1rem',
-                padding: '1rem',
-                justifyContent: 'center',
+                justifyContent: 'flex-start',
+                padding: '1rem 0',
                 borderBottom: '1px solid var(--cds-border-subtle)',
                 marginBottom: '1rem',
               }}
             >
-              {aggregatedLegendData.map((asset) => {
-                const isSelected = selectedAssets.has(asset.name);
-                return (
-                  <div
-                    key={asset.name}
-                    onClick={() => toggleAssetSelection(asset.name)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      cursor: 'pointer',
-                      opacity: isSelected ? 1 : 0.3,
-                      transition: 'opacity 0.2s ease',
-                      userSelect: 'none',
-                    }}
-                    title={isSelected ? tr('charts.assetDistributionChart.legend.clickToHide').replace('{name}', asset.name) : tr('charts.assetDistributionChart.legend.clickToShow').replace('{name}', asset.name)}
-                  >
-                    <span
-                      style={{
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
-                        backgroundColor: asset.color,
-                        opacity: isSelected ? 1 : 0.5,
-                      }}
-                    />
-                    <span
-                      style={{
-                        fontSize: '14px',
-                        color: baseOption.textStyle.color,
-                      }}
-                    >
-                      {asset.name}
-                    </span>
-                  </div>
-                );
-              })}
+              <Layer style={{ width: 'min(100%, 360px)' }}>
+                <FilterableMultiSelect<LegendAsset>
+                  className={styles.tokenSelector}
+                  id="asset-distribution-token-selector"
+                  titleText={tr('charts.balanceChart.selectTokenLabel')}
+                  placeholder={tr('charts.balanceChart.selectTokenLabel')}
+                  items={aggregatedLegendData}
+                  selectedItems={selectedLegendItems}
+                  itemToString={(asset) => asset?.name ?? ''}
+                  sortItems={(items) => [...items]}
+                  selectionFeedback="fixed"
+                  size="lg"
+                  onChange={({ selectedItems }) => {
+                    if (selectedItems.length === 0) return;
+                    setSelectedAssets(new Set(selectedItems.map(asset => asset.name)));
+                  }}
+                />
+              </Layer>
             </div>
           )}
 

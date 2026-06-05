@@ -57,6 +57,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
 }) => {
   const { tr, fmt } = useLocalization();
   const chartTitle = title || tr("charts.pnlChart.title");
+  const chartMinHeight = Math.max(minHeight, 360);
 
   const chartRefMap = useRef(new Map<number, ReactECharts>());
   const baseOption = useCarbonChartBaseOption();
@@ -247,7 +248,11 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           : undefined,
         grid: {
           ...baseOption.grid,
-          top: walletLabel ? "3rem" : "1.5rem",
+          top: walletLabel ? "3.5rem" : "2rem",
+          left: "1.25rem",
+          right: displayMode === "both" ? "2.75rem" : "1.5rem",
+          bottom: "2rem",
+          containLabel: true,
         },
         tooltip: {
           ...baseOption.tooltip,
@@ -395,7 +400,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       isEmpty={isEmpty}
       onRetry={() => refetch(false)}
       toolbarLayout="stacked"
-      wrapperMinHeight={minHeight}
+      wrapperMinHeight={chartMinHeight}
       actions={
         <Flex gap={8} align="center">
           <ContentSwitcher
@@ -431,7 +436,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
               <ChartGridItem
                 key={chartData.walletAddress}
                 itemKey={chartData.walletAddress}
-                minHeight={minHeight}
+                minHeight={chartMinHeight}
               >
                 <ReactECharts
                   ref={(el) => {
@@ -442,7 +447,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
                   style={{
                     height: "100%",
                     width: "100%",
-                    minHeight: `${minHeight}px`,
+                    minHeight: `${chartMinHeight}px`,
                   }}
                   notMerge
                   lazyUpdate

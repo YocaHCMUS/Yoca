@@ -17,6 +17,8 @@ import { StarFilled, Wallet } from "@carbon/react/icons";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useWalletLabels } from "@/hooks/profile/useWalletLabels";
+import styles from "@/components/profile/shared/profile.module.scss";
+import { useProfileOverviewData } from "@/hooks/profile/useProfileOverviewData";
 
 interface LinkedWalletsResponse {
   userId: string;
@@ -71,19 +73,15 @@ export function ProfileWatchlistTab() {
 
   const linkedWallets = useGet(client.api.profile["linked-wallets"], 200);
 
-  const linkedWalletIdentity = useMemo(() => {
-    const rows =
-      (linkedWallets.data as LinkedWalletsResponse | undefined)?.rows ?? [];
+  const { walletOverviews, loading: overviewLoading } = useProfileOverviewData({
+    walletAddresses: walletWatchlist,
+  });
 
-    return Object.fromEntries(
-      rows.map((row) => [
-        row.walletAddress,
-        row.isAuthWallet
-          ? tr("profileTabs.portfolio.authWalletLabel")
-          : tr("profileTabs.portfolio.linkedWalletLabel"),
-      ]),
+  const walletOverviewMap = useMemo(() => {
+    return new Map(
+      walletOverviews.map((overview) => [overview.address, overview]),
     );
-  }, [linkedWallets.data, tr]);
+  }, [walletOverviews]);
 
   const tokenHeaders = [
     { header: "", align: "center" as const, minWidth: "3.5rem" },
@@ -126,8 +124,18 @@ export function ProfileWatchlistTab() {
       minWidth: "14rem",
     },
     {
-      header: tr("profileTabs.watchlist.walletIdentity"),
-      align: "start" as const,
+      header: "Asset",
+      align: "end" as const,
+      minWidth: "10rem",
+    },
+    {
+      header: "Trading Volume 24h",
+      align: "end" as const,
+      minWidth: "10rem",
+    },
+    {
+      header: "Total PnL",
+      align: "end" as const,
       minWidth: "10rem",
     },
   ];
@@ -271,22 +279,27 @@ export function ProfileWatchlistTab() {
   const walletTableData = useMemo(
     () =>
       walletWatchlist
-        .map((walletAddress) => ({
-          id: walletAddress,
-          row: [
-            {
-              walletAddress,
-              pending: Boolean(walletPending[walletAddress]),
-            },
-            {
-              walletAddress,
-              label: labels[walletAddress] ?? ""
-            },
-            linkedWalletIdentity[walletAddress] ?? "-",
-          ],
-        }))
+        .map((walletAddress) => {
+          const overview = walletOverviewMap.get(walletAddress);
+          return {
+            id: walletAddress,
+            row: [
+              {
+                walletAddress,
+                pending: Boolean(walletPending[walletAddress]),
+              },
+              {
+                walletAddress,
+                label: labels[walletAddress] ?? "",
+              },
+              overview?.totalAssetValueUsd ?? null,
+              overview?.tradingVolumeUsd24h ?? null,
+              overview?.pnlUsdTotal ?? null,
+            ],
+          };
+        })
         .map((entry) => entry.row),
-    [walletWatchlist, linkedWalletIdentity, walletPending, labels],
+    [walletWatchlist, walletOverviewMap, walletPending, labels],
   );
 
   const walletCellRenderers = useMemo(
@@ -323,31 +336,58 @@ export function ProfileWatchlistTab() {
 
           if (isEditing) {
             return (
-              <div style={{ display: "flex", gap: "4px", alignItems: "center" }} onClick={(e) => e.stopPropagation()}>
-                <input 
-                  type="text" 
+              <div
+                style={{ display: "flex", gap: "4px", alignItems: "center" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="text"
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  style={{ width: "100px", padding: "2px", background: "var(--cds-layer-01)", color: "inherit", border: "1px solid var(--cds-border-strong)" }}
+                  style={{
+                    width: "100px",
+                    padding: "2px",
+                    background: "var(--cds-layer-01)",
+                    color: "inherit",
+                    border: "1px solid var(--cds-border-strong)",
+                  }}
                   autoFocus
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       setLabel(walletAddress, draft);
                       setIsEditing(false);
-                    } else if (e.key === 'Escape') {
+                    } else if (e.key === "Escape") {
                       setDraft(initialLabel);
                       setIsEditing(false);
                     }
                   }}
                 />
-                <div style={{ cursor: "pointer", color: "var(--cds-support-success)" }} onClick={() => {
-                   setLabel(walletAddress, draft);
-                   setIsEditing(false);
-                }}>✓</div>
-                <div style={{ cursor: "pointer", color: "var(--cds-support-error)", paddingLeft: 4, fontWeight: "bold" }} onClick={() => {
-                   setDraft(initialLabel);
-                   setIsEditing(false);
-                }}>✕</div>
+                <div
+                  style={{
+                    cursor: "pointer",
+                    color: "var(--cds-support-success)",
+                  }}
+                  onClick={() => {
+                    setLabel(walletAddress, draft);
+                    setIsEditing(false);
+                  }}
+                >
+                  ✓
+                </div>
+                <div
+                  style={{
+                    cursor: "pointer",
+                    color: "var(--cds-support-error)",
+                    paddingLeft: 4,
+                    fontWeight: "bold",
+                  }}
+                  onClick={() => {
+                    setDraft(initialLabel);
+                    setIsEditing(false);
+                  }}
+                >
+                  ✕
+                </div>
               </div>
             );
           }
@@ -361,7 +401,19 @@ export function ProfileWatchlistTab() {
               <Link href={`/wallets/${walletAddress}`}>
                 {initialLabel || fmt.text.address(walletAddress)}
               </Link>
-              <div style={{ cursor: "pointer", display: "flex", alignItems: "center", padding: "2px" }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditing(true); }}>
+              <div
+                style={{
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "2px",
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsEditing(true);
+                }}
+              >
                 <span style={{ fontSize: "10px", opacity: 0.5 }}>✏️</span>
               </div>
               <CpyBtn size="xs" copyWhat={walletAddress} />
@@ -371,13 +423,26 @@ export function ProfileWatchlistTab() {
 
         return <EditableLabelCell />;
       },
-      (value: unknown) => (typeof value === "string" ? value : "-"),
+      (value: unknown) =>
+        typeof value === "number" && Number.isFinite(value)
+          ? fmt.num.compact.currency(value)
+          : "-",
+      (value: unknown) =>
+        typeof value === "number" && Number.isFinite(value)
+          ? fmt.num.compact.currency(value)
+          : "-",
+      (value: unknown) =>
+        typeof value === "number" && Number.isFinite(value) ? (
+          <TrendNum value={value} formatter={fmt.num.compact.currency} />
+        ) : (
+          "-"
+        ),
     ],
     [fmt, toggleWallet, tr, setLabel],
   );
 
   const tokenLoading = isLoading || tokenMeta.isLoading || marketData.isLoading;
-  const walletLoading = isLoading || linkedWallets.isLoading;
+  const walletLoading = isLoading || linkedWallets.isLoading || overviewLoading;
 
   if (isLoading) {
     return <ProfileLoadingState />;
@@ -448,9 +513,11 @@ export function ProfileWatchlistTab() {
         filterSchema={{}}
         cellRenderers={walletCellRenderers}
         dataEntries={walletTableData}
-        isSortable={[false, false, true]}
+        isSortable={[false, false, true, true, true]}
         sortConfigs={{
-          2: { type: SortType.String },
+          2: { type: SortType.Number },
+          3: { type: SortType.Number },
+          4: { type: SortType.Number },
         }}
         loading={walletLoading}
         maxHeight={520}
@@ -468,18 +535,18 @@ export function ProfileWatchlistTab() {
 
   return (
     <TabContainer
-          activeTab={activeSubtab}
-          onTabChange={setActiveSubtab}
-          names={[
-            tr("profileTabs.watchlist.walletSubtab"),
-            tr("profileTabs.watchlist.tokenSubtab"),
-          ]}
-          tabIcons={[
-            <Wallet key="wallet" size={16} />,
-            <StarFilled key="token" size={16} fill={cds.iconPrimary} />,
-          ]}
-          tabs={[walletTable, tokenTable]}
-        />
+      activeTab={activeSubtab}
+      onTabChange={setActiveSubtab}
+      names={[
+        tr("profileTabs.watchlist.walletSubtab"),
+        tr("profileTabs.watchlist.tokenSubtab"),
+      ]}
+      tabIcons={[
+        <Wallet key="wallet" size={16} />,
+        <StarFilled key="token" size={16} fill={cds.iconPrimary} />,
+      ]}
+      tabs={[walletTable, tokenTable]}
+    />
   );
 }
 

@@ -403,6 +403,9 @@ export const translation = defineTranslation({
     received: "Đã nhận",
     transfersInTransaction: "Các lệnh chuyển trong giao dịch này ({{count}})",
     internal: "Nội bộ",
+    list: "Danh sách",
+    timeline: "Dòng thời gian",
+    mixed: "Hỗn hợp",
   },
   dictionary: {
     tradingStrategy: {

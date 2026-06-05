@@ -175,6 +175,10 @@ export const recentTradesQuerySchema = z.object({
   sortBy: z.enum(["volume", "time"]).default("volume"),
 });
 
+export const traderTypeQuerySchema = z.object({
+  type: z.enum(["today", "1W", "30d", "90d"]).default("1W").optional(),
+});
+
 export const walletTokenTradesSchema = z.object({
   walletAddress: solanaBase58Schema,
   tokenAddress: solanaBase58Schema,

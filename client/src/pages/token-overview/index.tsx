@@ -62,8 +62,12 @@ function useTokenOverviewData(address: string) {
     };
   }
 
-  const details = tokenDetails.data ?? [null];
-  const [holdersInfo] = holdersStats.data ?? [null];
+  const details = Array.isArray(tokenDetails.data)
+    ? (tokenDetails.data[0] ?? null)
+    : (tokenDetails.data ?? null);
+  const holdersInfo = Array.isArray(holdersStats.data)
+    ? (holdersStats.data[0] ?? null)
+    : (holdersStats.data ?? null);
 
   return {
     isLoading,

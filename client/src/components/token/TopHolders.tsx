@@ -3,6 +3,7 @@ import { SOLSCAN_ACCOUNT_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { ChevronDown, ChevronUp, Copy } from "@carbon/icons-react";
 import classNames from "classnames";
+import { useNavigate } from "react-router";
 import type { InferResponseType } from "hono/client";
 import { useState } from "react";
 import Tble from "../Tble";
@@ -33,6 +34,7 @@ const shortenAddress = (address: string) => {
 
 export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
   const { tr, fmt } = useLocalization();
+  const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(true);
 
   if (!holders || holders.length === 0) {
@@ -98,14 +100,13 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
               rank: <span className={styles.rank}>{index + 1}</span>,
               address: (
                 <div className={styles.addressWrapper}>
-                  <a
-                    href={`${SOLSCAN_ACCOUNT_URL}/${holder.holderAddress}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <div
+                    onClick={() => navigate(`/wallets/${holder.holderAddress}`)}
                     className={styles.addressLink}
+                    style={{ cursor: "pointer" }}
                   >
                     {fmt.text.address(holder.holderAddress)}
-                  </a>
+                  </div>
                   <div
                     role="button"
                     tabIndex={0}

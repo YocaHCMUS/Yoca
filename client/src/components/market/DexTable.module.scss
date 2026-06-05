@@ -21,7 +21,7 @@
 .dexTable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8125rem; /* ~13px */
+  font-size: 0.875rem; /* ~14px */
   text-align: right;
   white-space: nowrap;
 
@@ -62,14 +62,18 @@
       justify-content: flex-end;
     }
 
-    /* Target specific columns to save space */
+    /* Target specific columns to ensure proper width */
     &:nth-last-child(1) {
       /* Liquidity col */
-      max-width: 80px;
+      width: 90px;
+      min-width: 90px;
+      max-width: 90px;
     }
     &:nth-last-child(2) {
       /* 24h col */
-      max-width: 60px;
+      width: 65px;
+      min-width: 65px;
+      max-width: 65px;
     }
 
     &:hover {
@@ -84,6 +88,7 @@
       #ffffff
     ); /* Back to layer-02 (White/Pure) */
     transition: background-color 0.1s ease;
+    font-weight: 500;
     &:hover {
       background-color: var(--cds-layer-hover, #262626);
     }
@@ -148,7 +153,7 @@
 .baseSy {
   font-weight: 700;
   color: var(--cds-text-primary, #ffffff);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   transition: color 0.1s;
 
   white-space: nowrap;
@@ -160,7 +165,7 @@
 .quoteSy {
   color: var(--cds-text-secondary, #8d8d8d);
   font-weight: 400;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   flex-shrink: 0;
 }
 
@@ -180,6 +185,7 @@
   font-family: inherit;
   font-variant-numeric: tabular-nums;
   color: var(--cds-text-primary, #f4f4f4);
+  font-weight: 500;
 }
 
 .secondaryValue {
