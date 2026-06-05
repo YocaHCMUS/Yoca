@@ -53,18 +53,49 @@ const tokenPriceDailyTransformer: DataTransformer = (data) => {
   };
 };
 
+const swapFieldMap: Record<string, string> = {
+  transactionHash: "txHash",
+  blockTimestampIso: "timestamp",
+  subcategory: "dex",
+};
+
+const transferFieldMap: Record<string, string> = {
+  tokenSymbol: "token",
+};
+
+const portfolioFieldMap: Record<string, string> = {
+  symbol: "token",
+  change24hPercent: "change24h",
+  tokenAddress: "address",
+};
+
+function normalizeArray(arr: unknown[], fieldMap: Record<string, string>): unknown[] {
+  return (arr as Record<string, unknown>[]).map((item) => {
+    const copy = { ...item };
+    for (const [from, to] of Object.entries(fieldMap)) {
+      if (from in copy && !(to in copy)) {
+        copy[to] = copy[from];
+      }
+    }
+    return copy;
+  });
+}
+
 const swapsTransformer: DataTransformer = (data) => {
   const d = data as { swaps?: unknown[] } | null;
-  return d?.swaps ?? [];
+  const arr = d?.swaps ?? [];
+  return normalizeArray(arr, swapFieldMap);
 };
 
 const transfersTransformer: DataTransformer = (data) => {
   const d = data as { transfers?: unknown[] } | null;
-  return d?.transfers ?? [];
+  const arr = d?.transfers ?? [];
+  return normalizeArray(arr, transferFieldMap);
 };
 
 const portfolioTransformer: DataTransformer = (data) => {
-  return Array.isArray(data) ? data : [];
+  if (!Array.isArray(data)) return [];
+  return normalizeArray(data, portfolioFieldMap);
 };
 
 export const DATA_TRANSFORMERS: Record<string, DataTransformer> = {

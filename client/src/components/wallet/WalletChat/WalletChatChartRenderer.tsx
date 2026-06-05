@@ -211,7 +211,7 @@ function formatCellValue(val: unknown, format: ColumnFormat, fmt: ReturnType<typ
       return formatCellValue(num, format, fmt);
     }
     if (format === "datetime" || format === "date" || format === "time" || format === "relative") {
-      const ms = Number(val);
+      const ms = new Date(val).getTime();
       if (!Number.isNaN(ms)) return formatCellValue(ms, format, fmt);
     }
     return val;
@@ -221,10 +221,26 @@ function formatCellValue(val: unknown, format: ColumnFormat, fmt: ReturnType<typ
       case "currency": return fmt.num.currency(val);
       case "percent": return fmt.num.percentagePoint(val);
       case "decimal": return fmt.num.decimal(val);
-      case "datetime": return fmt.datetime.fromUnixMilliseconds(val);
-      case "date": return fmt.datetime.date(val);
-      case "time": return fmt.datetime.time(val);
-      case "relative": return fmt.datetime.relative(val);
+      case "datetime": {
+        const ms = typeof val === "string" ? new Date(val).getTime() : val;
+        if (Number.isNaN(ms)) return String(val);
+        return fmt.datetime.fromUnixMilliseconds(ms);
+      }
+      case "date": {
+        const d = typeof val === "string" ? new Date(val).getTime() : val;
+        if (Number.isNaN(d)) return String(val);
+        return fmt.datetime.date(d);
+      }
+      case "time": {
+        const t = typeof val === "string" ? new Date(val).getTime() : val;
+        if (Number.isNaN(t)) return String(val);
+        return fmt.datetime.time(t);
+      }
+      case "relative": {
+        const r = typeof val === "string" ? new Date(val).getTime() : val;
+        if (Number.isNaN(r)) return String(val);
+        return fmt.datetime.relative(r);
+      }
       case "address":
       case "text":
       default: return String(val);
