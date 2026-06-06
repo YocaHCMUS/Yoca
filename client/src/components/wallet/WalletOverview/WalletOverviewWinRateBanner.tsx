@@ -51,6 +51,9 @@ const WalletOverviewWinRateBanner: React.FC<Props> = ({ stats, selectedPeriod, l
                     <p>
                         * <strong>Win Rate</strong> là tỷ lệ số lượng token có lãi (Realized PnL &gt; 0) trên tổng số token đã giao dịch trong khoảng thời gian <strong>{selectedPeriod}</strong>.
                     </p>
+                    <p style={{ marginTop: '4px' }}>
+                        * <strong>Avg Win / Avg Loss</strong> là trung bình lợi nhuận/thua lỗ thực tế (Realized PnL USD) của mỗi token.
+                    </p>
                 </div>
             )}
 

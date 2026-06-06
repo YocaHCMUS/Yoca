@@ -142,17 +142,24 @@ function calculateWinrate(tokens: BirdeyeTokenPnlDetailsToken[]) {
   let totalTrades = 0;
   let winningTrades = 0;
   let losingTrades = 0;
-  
-  // THÊM CÁC BIẾN NÀY ĐỂ TÍNH TỔNG USD
   let totalWinUsd = 0;
   let totalLossUsd = 0;
 
   for (const token of tokens) {
     const pnlPercent = token.pnl?.total_percent;
-    // Giả sử Birdeye trả về giá trị PnL tuyệt đối (USD) trong token.pnl.realized_pnl hoặc tương tự
     const pnlUsd = token.pnl?.realized_profit_usd ?? 0; 
+    
+    // Tuỳ chọn: Lấy thêm volume để lọc các lệnh rác (ví dụ giao dịch < $1)
+    // const volumeUsd = token.pnl?.total_volume_usd ?? 0;
 
+    // Bỏ qua nếu data lỗi
     if (pnlPercent === null || pnlPercent === undefined || !isFinite(pnlPercent)) continue;
+    
+    // [BỘ LỌC SPAM] - Mở comment dòng dưới nếu muốn bỏ qua các token có khối lượng < 1 USD
+    // if (volumeUsd < 1) continue;
+
+    // Không tính các lệnh hoà vốn (0%) vào Win/Loss
+    if (pnlPercent === 0 && pnlUsd === 0) continue;
 
     totalTrades++;
 
@@ -160,10 +167,10 @@ function calculateWinrate(tokens: BirdeyeTokenPnlDetailsToken[]) {
       winningTrades++;
       winningPnLs.push(pnlPercent);
       totalWinUsd += pnlUsd;
-    } else {
+    } else if (pnlPercent < 0) {
       losingTrades++;
       losingPnLs.push(pnlPercent);
-      totalLossUsd += Math.abs(pnlUsd); // Lấy giá trị tuyệt đối cho avg loss
+      totalLossUsd += Math.abs(pnlUsd); 
     }
   }
 
@@ -183,72 +190,73 @@ async function calculateWalletWinrate(
   walletName: string,
   timePeriod: WalletTimePeriod
 ): Promise<WalletWinrateData> {
-  let winningPnLs: number[] = [];
-  let losingPnLs: number[] = [];
-  let totalTrades = 0;
-  let winningTrades = 0;
-  let losingTrades = 0;
+  let allTokens: BirdeyeTokenPnlDetailsToken[] = [];
+  let offset = 0;
+  const limit = 100;
+  let hasMore = true;
 
   try {
-    const pnlDetails = await fetchBirdeyeTokenPnLDetails(walletAddress, {
-      limit: 100,
-      offset: 0,
-      duration: "all",
-    });
+    // 1. Fetch toàn bộ token bằng vòng lặp Pagination
+    while (hasMore) {
+      const pnlDetails = await fetchBirdeyeTokenPnLDetails(walletAddress, {
+        limit,
+        offset,
+        duration: "all",
+      });
 
-    console.log("[WalletWinrate] RAW BIRDEYE RESPONSE:", JSON.stringify(pnlDetails, null, 2));
-
-    if (pnlDetails.tokens && Array.isArray(pnlDetails.tokens)) {
-      const filteredTokens = filterTokensByRange(pnlDetails.tokens, timePeriod);
-
-      console.log(`[WalletWinrate] Processing ${filteredTokens.length}/${pnlDetails.tokens.length} tokens from Birdeye for period ${timePeriod}`);
-
-      const winrateStats = calculateWinrate(filteredTokens);
-      winningPnLs = winrateStats.winningPnLs;
-      losingPnLs = winrateStats.losingPnLs;
-      totalTrades = winrateStats.totalTrades;
-      winningTrades = winrateStats.winningTrades;
-      losingTrades = winrateStats.losingTrades;
-
-      console.log(`[WalletWinrate] CALC INPUT (Birdeye items): totalTrades=${totalTrades}, winning=${winningTrades}, losing=${losingTrades}`);
-    } else {
-      console.log("[WalletWinrate] No tokens array in pnlDetails response");
+      if (pnlDetails.tokens && Array.isArray(pnlDetails.tokens) && pnlDetails.tokens.length > 0) {
+        allTokens = allTokens.concat(pnlDetails.tokens);
+        offset += limit;
+        
+        // Nếu số token trả về ít hơn limit, nghĩa là đã đến trang cuối
+        if (pnlDetails.tokens.length < limit) {
+          hasMore = false;
+        }
+      } else {
+        hasMore = false;
+      }
     }
+
+    console.log(`[WalletWinrate] Fetched Total ${allTokens.length} tokens for ${walletAddress}`);
+
   } catch (error) {
     console.error(`[WalletWinrate] Failed to fetch PnL details for ${walletAddress}:`, error);
   }
 
-  if (totalTrades === 0) {
-    console.log(`[WalletWinrate] No valid trades found for wallet ${walletAddress}`);
+  // Nếu không có token nào
+  if (allTokens.length === 0) {
     return {
-      walletAddress,
-      walletName,
-      winrate: 0,
-      totalTrades: 0,
-      winningTrades: 0,
-      losingTrades: 0,
-      winningDistribution: [],
-      losingDistribution: [],
-      avgWinUsd: 0,
-      avgLossUsd: 0,
+      walletAddress, walletName, winrate: 0, totalTrades: 0, winningTrades: 0, losingTrades: 0,
+      winningDistribution: [], losingDistribution: [], avgWinUsd: 0, avgLossUsd: 0,
     };
   }
 
-  const winrate = (winningTrades / totalTrades) * 100;
+  // 2. Lọc theo thời gian và tính toán
+  const filteredTokens = filterTokensByRange(allTokens, timePeriod);
+  const winrateStats = calculateWinrate(filteredTokens);
+
+  if (winrateStats.totalTrades === 0) {
+    return {
+      walletAddress, walletName, winrate: 0, totalTrades: 0, winningTrades: 0, losingTrades: 0,
+      winningDistribution: [], losingDistribution: [], avgWinUsd: 0, avgLossUsd: 0,
+    };
+  }
+
+  const winrate = (winrateStats.winningTrades / winrateStats.totalTrades) * 100;
+  
+  // 3. FIX LỖI LOGIC: Truyền đúng giá trị USD đã tính từ winrateStats
   const chartData = {
     walletAddress,
     walletName,
     winrate: Math.round(winrate * 100) / 100,
-    totalTrades,
-    winningTrades,
-    losingTrades,
-    winningDistribution: generateDistributionBins(winningPnLs),
-    losingDistribution: generateDistributionBins(losingPnLs),
-    avgWinUsd: winningTrades > 0 ? winningPnLs.reduce((sum, val) => sum + val, 0) / winningTrades : 0,
-    avgLossUsd: losingTrades > 0 ? losingPnLs.reduce((sum, val) => sum + val, 0) / losingTrades : 0,
+    totalTrades: winrateStats.totalTrades,
+    winningTrades: winrateStats.winningTrades,
+    losingTrades: winrateStats.losingTrades,
+    winningDistribution: generateDistributionBins(winrateStats.winningPnLs),
+    losingDistribution: generateDistributionBins(winrateStats.losingPnLs),
+    avgWinUsd: winrateStats.avgWinUsd,   // <-- Đã sửa: Không dùng mảng phần trăm nữa
+    avgLossUsd: winrateStats.avgLossUsd, // <-- Đã sửa: Không dùng mảng phần trăm nữa
   };
-
-  console.log(`[WalletWinrate] FINAL CHART DATA:`, JSON.stringify(chartData, null, 2));
 
   return chartData;
 }
