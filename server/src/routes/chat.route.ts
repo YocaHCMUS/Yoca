@@ -26,8 +26,8 @@ const app = new Hono().post("/", async (c) => {
       );
     }
 
-    const { address, query, history } = parsed.data;
-    const response = await answerChatQuery(address, query, history);
+    const { address, query, language, history } = parsed.data;
+    const response = await answerChatQuery(address, query, language, history);
 
     return c.json(response, 200);
   } catch (err) {

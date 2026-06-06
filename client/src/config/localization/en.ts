@@ -1243,6 +1243,28 @@ export const translation = {
       days: "Days",
     },
   },
+  // Chat / AI Wallet Assistant
+  chat: {
+    headerTitle: "AI Wallet Assistant",
+    inputPlaceholder: "Ask about this wallet...",
+    loadingLabel: "Analyzing...",
+    errorMessage: "Sorry, I encountered an error: {{error}}. Please try again.",
+    promptMenuTitle: "Choose a prompt",
+    quickQuestionsTitle: "Quick Questions",
+    sendButtonTitle: "Send",
+    promptMenuBtn: "Prompt menu",
+    fabTitle: "Open AI Chat",
+    prompt: {
+      overview: { label: "Overview", query: "Give me a portfolio overview of this wallet including total balance, 24h change, and trading volume." },
+      pnl: { label: "PnL Summary", query: "What is my profit and loss? Show per-token breakdown with realized PnL and win rate." },
+      trades: { label: "Recent Trades", query: "Show me my recent swap transactions with token details and USD values." },
+      risk: { label: "Risk Analysis", query: "Analyze the risk level of this wallet. What are the risk factors and trust score?" },
+      tokens: { label: "Top Tokens", query: "What are my current token holdings by USD value?" },
+      balance: { label: "Balance Trend", query: "Show me my balance history chart over the last 30 days." },
+      volume: { label: "Volume Trend", query: "What's my daily trading volume trend over the last 30 days?" },
+      audit: { label: "Forensic Audit", query: "Run a forensic audit on this wallet. What persona and behavior patterns do you see?" },
+    },
+  },
   token: {
     overviewSectionTitle: "Overview",
     historicalPriceSectionTitle: "Historical Price",

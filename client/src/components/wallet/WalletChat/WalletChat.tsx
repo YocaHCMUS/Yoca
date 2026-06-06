@@ -3,6 +3,8 @@ import { Playlist, Send } from "@carbon/icons-react";
 import client from "@/api/main";
 import { WalletChatMessage } from "./WalletChatMessage";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
+import { useLocalization } from "@/contexts/LocalizationContext";
+import type { LangKeys } from "@/config/localization";
 import type { ChatMessageItem, ChatResponse } from "./types";
 import styles from "./WalletChat.module.scss";
 
@@ -10,11 +12,12 @@ const MAX_QUICK_QUESTIONS = 5;
 
 interface Props {
   address: string;
-  lang?: string;
+  lang?: LangKeys;
   variant?: "widget" | "sidebar";
 }
 
 export function WalletChat({ address, lang, variant = "widget" }: Props) {
+  const { tr } = useLocalization();
   const [isOpen, setIsOpen] = useState(variant === "sidebar");
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
@@ -79,7 +82,7 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
           ...prev,
           {
             role: "assistant",
-            content: `Sorry, I encountered an error: ${msg}. Please try again.`,
+            content: tr("chat.errorMessage", { error: msg }),
           },
         ]);
       } finally {
@@ -98,6 +101,14 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
 
   const handlePredefined = (query: string) => {
     sendQuery(query);
+  };
+
+  const resolveQuery = (q: typeof PREDEFINED_QUESTIONS[number]): string => {
+    return q.queryKey ? tr(q.queryKey as "chat.prompt.overview.query") : q.query;
+  };
+
+  const resolveLabel = (q: typeof PREDEFINED_QUESTIONS[number]): string => {
+    return q.labelKey ? tr(q.labelKey as "chat.prompt.overview.label") : q.label;
   };
 
   const handleToggle = () => {
@@ -124,7 +135,7 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
       <button
         type="button"
         onClick={handleToggle}
-        title="Open AI Chat"
+        title={tr("chat.fabTitle")}
         className={styles.fab}
       >
         <span className={styles.fabText}>AI</span>
@@ -146,17 +157,17 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
 
   const renderPromptMenu = () => (
     <div className={styles.promptMenuOverlay}>
-      <div className={styles.promptMenuTitle}>Choose a prompt</div>
+      <div className={styles.promptMenuTitle}>{tr("chat.promptMenuTitle")}</div>
       <div className={styles.promptMenuList}>
         {PREDEFINED_QUESTIONS.map((q) => (
           <button
             key={q.id}
             type="button"
             className={styles.promptMenuItem}
-            onClick={() => handlePredefined(q.query)}
+            onClick={() => handlePredefined(resolveQuery(q))}
           >
-            <div className={styles.promptMenuItemLabel}>{q.label}</div>
-            <div className={styles.promptMenuItemQuery}>{q.query}</div>
+            <div className={styles.promptMenuItemLabel}>{resolveLabel(q)}</div>
+            <div className={styles.promptMenuItemQuery}>{resolveQuery(q)}</div>
           </button>
         ))}
       </div>
@@ -165,17 +176,17 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
 
   const renderQuickQuestions = () => (
     <div className={styles.messagesArea}>
-      <div className={styles.quickTitle}>QUICK QUESTIONS</div>
+      <div className={styles.quickTitle}>{tr("chat.quickQuestionsTitle")}</div>
       <div className={styles.quickList}>
         {quickItems.map((q) => (
           <button
             key={q.id}
             type="button"
-            onClick={() => handlePredefined(q.query)}
+            onClick={() => handlePredefined(resolveQuery(q))}
             disabled={isLoading}
             className={styles.quickBtn}
           >
-            {q.query}
+            {resolveLabel(q)}
           </button>
         ))}
       </div>
@@ -192,7 +203,7 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
           <div className={styles.dot} />
           <div className={styles.dot} />
           <div className={styles.dot} />
-          <span className={styles.loadingLabel}>Analyzing...</span>
+          <span className={styles.loadingLabel}>{tr("chat.loadingLabel")}</span>
         </div>
       )}
       {error && (
@@ -208,7 +219,7 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
       {/* Header */}
       <div className={styles.header}>
         <span className={styles.headerTitle}>
-          AI Wallet Assistant
+          {tr("chat.headerTitle")}
         </span>
         {variant === "widget" && (
           <div className={styles.headerActions}>
@@ -243,7 +254,7 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about this wallet..."
+            placeholder={tr("chat.inputPlaceholder")}
             disabled={isLoading}
             className={styles.inputField}
           />
@@ -252,7 +263,7 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
             onClick={() => setShowPromptMenu((v) => !v)}
             disabled={isLoading}
             className={styles.promptMenuBtn}
-            title="Prompt menu"
+            title={tr("chat.promptMenuBtn")}
           >
             <Playlist size={16} />
           </button>

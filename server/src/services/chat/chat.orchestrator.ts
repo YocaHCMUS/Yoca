@@ -21,6 +21,7 @@ import { getCachedResponse, setCachedResponse } from "./chat.cache.js";
 import { chatInfo, chatWarn, chatError, chatDebug } from "./chat.logger.js";
 import { DATA_TRANSFORMERS } from "./data-transformers.js";
 import { sanitizeText, sanitizeResponse } from "./chat-sanitizer.js";
+import { getMessage } from "./chat.localization.js";
 
 const MAX_ITERATIONS = 3;
 
@@ -100,21 +101,22 @@ function allDuplicates(
 async function selectTool(
   query: string,
   address: string,
+  language?: string,
   context?: PriorContext,
   history?: HistoryMessage[],
 ): Promise<ChatToolCall[] | { type: "no_tool" | "general"; message: string }> {
-  const prompt = buildToolSelectionPrompt(query, TOOL_DEFINITIONS, address, context, history);
+  const prompt = buildToolSelectionPrompt(query, TOOL_DEFINITIONS, address, context, history, language);
   const raw = await callGemini(prompt);
 
   if (!raw) {
     chatWarn("selectTool: Gemini returned null", { address });
-    return { type: "general", message: "I'm sorry, I couldn't process your request at this time." };
+    return { type: "general", message: getMessage(language, "noResponse") };
   }
 
   const parsed = extractJsonObject(raw);
   if (!parsed || typeof parsed !== "object") {
     chatWarn("selectTool: failed to parse JSON from Gemini", { raw: trunc(raw, 300) });
-    return { type: "general", message: "I'm sorry, I couldn't understand your question." };
+    return { type: "general", message: getMessage(language, "noUnderstand") };
   }
 
   const p = parsed as Record<string, unknown>;
@@ -153,7 +155,7 @@ async function selectTool(
   }
 
   chatWarn("selectTool: unrecognized response shape", { raw: trunc(p, 300) });
-  return { type: "general", message: "I'm sorry, I couldn't determine how to answer that." };
+  return { type: "general", message: getMessage(language, "noTool") };
 }
 
 async function executeTools(tools: ChatToolCall[]): Promise<ChatToolResult[]> {
@@ -190,6 +192,7 @@ async function executeTools(tools: ChatToolCall[]): Promise<ChatToolResult[]> {
 async function generateResponse(
   query: string,
   allResults: ChatToolResult[],
+  language?: string,
   history?: HistoryMessage[],
 ): Promise<ChatResponse> {
   const allFailed = allResults.every((r) => r.error);
@@ -197,21 +200,21 @@ async function generateResponse(
     const firstError = allResults.find((r) => r.error)!.error;
     chatWarn("generateResponse: all tools failed", { firstError, resultCount: allResults.length });
     return {
-      text: `I tried to look up the data but ran into an issue: ${firstError}. Please try again or ask a different question.`,
+      text: getMessage(language, "allToolsFailed", { error: firstError ?? "unknown" }),
       data: {},
       charts: [],
       tables: [],
     };
   }
 
-  const prompt = buildResponseGenerationPrompt(query, allResults, history);
+  const prompt = buildResponseGenerationPrompt(query, allResults, history, language);
   chatDebug("generateResponse: prompt built", { resultCount: allResults.length });
 
   const raw = await callGemini(prompt, CHAT_SYSTEM_INSTRUCTION);
   if (!raw) {
     chatWarn("generateResponse: Gemini returned null");
     return {
-      text: "I found the data but couldn't generate a proper response. Please try again.",
+      text: getMessage(language, "dataError"),
       data: {},
       charts: [],
       tables: [],
@@ -253,7 +256,7 @@ async function generateResponse(
   }
 
   const response: ChatResponse = {
-    text: text || "Here's the data you requested.",
+    text: text || getMessage(language, "hereData"),
     data: resolvedData,
     charts,
     tables,
@@ -273,14 +276,15 @@ async function generateResponse(
 export async function answerChatQuery(
   address: string,
   query: string,
+  language?: string,
   history?: HistoryMessage[],
 ): Promise<ChatResponse> {
   const model = CHAT_MODEL;
   const historyHash = history?.length
-    ? createHash("sha256").update(JSON.stringify(history)).digest("hex").slice(0, 8)
+    ? createHash("sha256").update(JSON.stringify(history)).update(language ?? "en").digest("hex").slice(0, 8)
     : undefined;
 
-  chatInfo("answerChatQuery: entry", { address, query: trunc(query, 200), historyTurns: history?.length ?? 0 });
+  chatInfo("answerChatQuery: entry", { address, query: trunc(query, 200), language: language ?? "en", historyTurns: history?.length ?? 0 });
 
   const cached = await getCachedResponse(address, query, model, historyHash);
   if (cached) {
@@ -302,13 +306,13 @@ export async function answerChatQuery(
       ? { previousResults: allResults.map((r) => ({ name: r.name, input: r.input ?? {}, data: r.data, error: r.error })) }
       : undefined;
 
-    const toolSelection = await selectTool(query, address, context, history);
+    const toolSelection = await selectTool(query, address, language, context, history);
 
     if (!Array.isArray(toolSelection)) {
       if (i === 0) {
         chatInfo("answerChatQuery: no tools needed, responding directly", { type: toolSelection.type, message: trunc(toolSelection.message, 200) });
         const response: ChatResponse = {
-          text: toolSelection.message || "I can only help with questions about this wallet's on-chain data.",
+          text: toolSelection.message || getMessage(language, "noData"),
           data: {},
           charts: [],
           tables: [],
@@ -363,7 +367,7 @@ export async function answerChatQuery(
     });
   }
 
-  const response = await generateResponse(query, allResults, history);
+  const response = await generateResponse(query, allResults, language, history);
 
   try {
     await setCachedResponse(address, query, response, model, historyHash);

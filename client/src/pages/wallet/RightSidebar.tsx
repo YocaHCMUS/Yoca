@@ -16,6 +16,7 @@ import TokenSearch from "@/components/TokenSearch/TokenSearch";
 import { useWatchlist } from "@/contexts/WatchlistContext";
 import { useWalletLabels } from "@/hooks/profile/useWalletLabels";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import type { LangKeys } from "@/config/localization";
 import { useNavigate } from "react-router";
 import styles from "./RightSidebar.module.scss";
 import { useGet } from "@/hooks/useGet";
@@ -28,7 +29,7 @@ interface RightSidebarProps {
   currentAddress: string;
   onToggle?: (isOpen: boolean) => void;
   address?: string;
-  lang?: string;
+  lang?: LangKeys;
 }
 
 const formatAddress = (addr: string) => {

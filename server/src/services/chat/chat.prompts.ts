@@ -31,6 +31,7 @@ export function buildToolSelectionPrompt(
   address: string,
   context?: PriorContext,
   history?: HistoryMessage[],
+  language?: string,
 ): string {
   const toolList = tools
     .map(
@@ -39,8 +40,13 @@ export function buildToolSelectionPrompt(
     )
     .join("\n\n");
 
+  const langInstruction = language && language !== "en"
+    ? `IMPORTANT: The user's language is ${language}. You MUST select tools and respond in that language. All reasoning, tool selection justification, and output must be in ${language}.`
+    : "The user's language is English. Respond in English.";
+
   const lines = [
     "You are a blockchain data analyst assistant. Your task is to select the right tool to answer the user's question about a Solana wallet.",
+    langInstruction,
     "Today's date: " + new Date().toISOString(),
     `Wallet address: ${address}`,
     "",
@@ -93,12 +99,18 @@ export function buildResponseGenerationPrompt(
   query: string,
   allResults: ChatToolResult[],
   history?: HistoryMessage[],
+  language?: string,
 ): string {
+  const langInstruction = language && language !== "en"
+    ? `IMPORTANT: The user's language is ${language}. Generate the 'text' field entirely in ${language}. Translate chart titles, table headers, and data labels into ${language}.`
+    : "The user's language is English. Generate the 'text' field in English.";
+
   const systemPrompt = [
     // ── CRITICAL: stated first so it anchors the whole response ──
     "You respond ONLY with a valid JSON object. No markdown, no code blocks, no text outside the JSON.",
     "",
     "You are a blockchain data analyst assistant.",
+    langInstruction,
     "Given the user's question and the tool result data, generate a helpful JSON response.",
     "",
     "RESPONSE STRUCTURE:",
@@ -223,4 +235,4 @@ export function buildResponseGenerationPrompt(
 }
 
 export const CHAT_SYSTEM_INSTRUCTION =
-  "You are a helpful blockchain wallet analyst. You provide concise, data-driven answers about Solana wallet activity, portfolio, and trading performance. Always base your answers on the provided tool data.";
+  "You are a helpful blockchain wallet analyst. You provide concise, data-driven answers about Solana wallet activity, portfolio, and trading performance. Always base your answers on the provided tool data. Generate all text in the user's language.";

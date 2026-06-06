@@ -63,4 +63,6 @@ export interface PredefinedQuestion {
   id: string;
   label: string;
   query: string;
+  labelKey?: string;
+  queryKey?: string;
 }
