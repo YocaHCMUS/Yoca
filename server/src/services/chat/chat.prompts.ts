@@ -203,7 +203,9 @@ export function buildResponseGenerationPrompt(
     buildHistoryBlock(history),
     `User query: ${query}`,
     "",
-    "Tool results (use [N] index as dataRef for charts/tables):",
+    "Tool results (use [N] index as dataRef for charts/tables).",
+    "IMPORTANT: Only create tables for results that contain arrays. Single-object results (e.g. token price, token details, overview) do not have tabular data.",
+    "Tool results:",
     ...allResults.map(
       (r, i) => `  [${i}] ${r.name}: ${r.error ? `ERROR: ${r.error}` : JSON.stringify(r.data)}`,
     ),

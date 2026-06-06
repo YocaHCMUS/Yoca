@@ -251,8 +251,8 @@ function formatCellValue(val: unknown, format: ColumnFormat, fmt: ReturnType<typ
 
 function TableRenderer({ spec, data }: TableRendererProps) {
   const { fmt } = useLocalization();
-  const raw = data[spec.dataRef] as Record<string, unknown>[] | undefined;
-  if (!raw || raw.length === 0) return null;
+  const raw = data[spec.dataRef];
+  if (!Array.isArray(raw) || raw.length === 0) return null;
 
   const rows = applyTableFilters(raw, spec);
   if (rows.length === 0) return null;

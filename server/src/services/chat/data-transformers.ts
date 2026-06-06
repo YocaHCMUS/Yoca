@@ -98,12 +98,47 @@ const portfolioTransformer: DataTransformer = (data) => {
   return normalizeArray(data, portfolioFieldMap);
 };
 
+const tokenPriceTransformer: DataTransformer = (data) => {
+  if (!data || typeof data !== "object") return [];
+  const record = data as Record<string, Record<string, unknown>>;
+  return Object.entries(record).map(([addr, entry]) => ({
+    tokenAddress: addr,
+    priceUsd: entry.priceUsd,
+    change24hPercent: entry.priceChangePercentage24h,
+    marketCap: entry.marketCap,
+    volume24hUsd: entry.volume24h,
+    marketCapRank: entry.marketCapRank,
+  }));
+};
+
+const tokenDetailsTransformer: DataTransformer = (data) => {
+  if (!Array.isArray(data)) return [];
+  return data
+    .map((item) => {
+      const meta = (item as Record<string, unknown>).meta as Record<string, unknown> | undefined;
+      const details = (item as Record<string, unknown>).details as Record<string, unknown> | undefined;
+      if (!meta) return null;
+      return {
+        address: meta.address,
+        name: meta.name,
+        symbol: meta.symbol,
+        imageUrl: meta.imageUrl,
+        decimals: details?.decimals,
+        description: details?.description,
+        homepage: details?.linkHomepage,
+      };
+    })
+    .filter(Boolean);
+};
+
 export const DATA_TRANSFORMERS: Record<string, DataTransformer> = {
   get_balance_history: balanceHistoryTransformer,
   get_pnl_chart: pnlChartTransformer,
+  get_token_price: tokenPriceTransformer,
   get_token_price_24h: tokenPrice24hTransformer,
   get_token_price_hourly: tokenPrice24hTransformer,
   get_token_price_daily: tokenPriceDailyTransformer,
+  get_token_details: tokenDetailsTransformer,
   get_wallet_swaps: swapsTransformer,
   get_wallet_transfers: transfersTransformer,
   get_wallet_portfolio: portfolioTransformer,
