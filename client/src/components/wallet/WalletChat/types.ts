@@ -4,12 +4,18 @@ export interface ActionSpec {
   index?: number | null;
 }
 
+export interface DataActionSpec {
+  label: string;
+  query: string;
+}
+
 export interface ChartSpec {
   id: string;
   type: "line" | "bar" | "area" | "pie";
   dataRef: string;
   title?: string;
   limit?: number;
+  pointActions?: DataActionSpec;
 }
 
 export interface TableFilter {
@@ -27,6 +33,7 @@ export interface TableSpec {
   sortDesc?: boolean;
   filters?: TableFilter[];
   filterMode?: "and" | "or";
+  rowActions?: DataActionSpec;
   /** @deprecated Use `filters` array instead */
   filterField?: string;
   /** @deprecated Use `filters` array instead */

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import ReactECharts from "echarts-for-react";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type { ChartSpec, TableFilter, TableSpec } from "./types";
@@ -6,6 +6,11 @@ import type { ChartSpec, TableFilter, TableSpec } from "./types";
 interface ChartRendererProps {
   spec: ChartSpec;
   data: Record<string, unknown>;
+  onAction?: (href: string) => void;
+}
+
+function interpolate(tpl: string, vars: Record<string, string>): string {
+  return tpl.replace(/\{(\w+)\}/g, (_, k: string) => vars[k] ?? `{${k}}`);
 }
 
 function applyChartLimit(
@@ -26,7 +31,7 @@ function applyChartLimit(
   return { labels, datasets };
 }
 
-function ChartRenderer({ spec, data }: ChartRendererProps) {
+function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
   const raw = data[spec.dataRef] as
     | { labels?: string[]; datasets?: { name?: string; values?: number[] }[] }
     | undefined;
@@ -64,16 +69,34 @@ function ChartRenderer({ spec, data }: ChartRendererProps) {
       return base;
     });
 
+    const tooltip: Record<string, unknown> = {
+      trigger: "axis",
+      backgroundColor: "rgba(22,22,22,0.95)",
+      borderColor: "#333",
+      textStyle: { color: "#fff", fontSize: 11 },
+    };
+
+    if (spec.pointActions) {
+      tooltip.formatter = (params: unknown) => {
+        const arr = Array.isArray(params) ? params : [params];
+        const p = arr[0] as { axisValueLabel?: string } | undefined;
+        const label = p?.axisValueLabel ?? "";
+        const query = interpolate(spec.pointActions!.query, { label });
+        const lines = arr.map((pt: unknown) => {
+          const seriesName = (pt as { seriesName?: string }).seriesName ?? "";
+          const value = (pt as { value?: number[] }).value;
+          const v = Array.isArray(value) ? value[1] ?? value[0] : value;
+          return `${seriesName}: ${v}`;
+        });
+        return `${lines.join("<br/>")}<br/><span style="color:#2a6df4;font-size:10px">Click to ask: ${query}</span>`;
+      };
+    }
+
     return {
       backgroundColor: "transparent",
       color: colors,
       grid: { left: 40, right: 8, top: 24, bottom: 24 },
-      tooltip: {
-        trigger: "axis",
-        backgroundColor: "rgba(22,22,22,0.95)",
-        borderColor: "#333",
-        textStyle: { color: "#fff", fontSize: 11 },
-      },
+      tooltip,
       xAxis: {
         type: "category",
         data: labels,
@@ -90,6 +113,19 @@ function ChartRenderer({ spec, data }: ChartRendererProps) {
     };
   }, [raw, spec]);
 
+  const onEvents = useMemo(() => {
+    if (!spec.pointActions || !onAction || !raw?.labels) return undefined;
+    return {
+      click: (params: { dataIndex?: number }) => {
+        const idx = params.dataIndex;
+        if (idx == null) return;
+        const label = raw.labels?.[idx] ?? "";
+        const query = interpolate(spec.pointActions!.query, { label });
+        onAction(query);
+      },
+    };
+  }, [spec.pointActions, onAction, raw?.labels]);
+
   if (!option) return null;
 
   return (
@@ -99,7 +135,11 @@ function ChartRenderer({ spec, data }: ChartRendererProps) {
           {spec.title}
         </div>
       )}
-      <ReactECharts option={option} style={{ height: 180 }} />
+      <ReactECharts
+        option={option}
+        style={{ height: 180 }}
+        onEvents={onEvents}
+      />
     </div>
   );
 }
@@ -134,6 +174,7 @@ function parseColumns(columns: string): ParsedColumn[] {
 interface TableRendererProps {
   spec: TableSpec;
   data: Record<string, unknown>;
+  onAction?: (href: string) => void;
 }
 
 function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
@@ -249,8 +290,9 @@ function formatCellValue(val: unknown, format: ColumnFormat, fmt: ReturnType<typ
   return String(val);
 }
 
-function TableRenderer({ spec, data }: TableRendererProps) {
+function TableRenderer({ spec, data, onAction }: TableRendererProps) {
   const { fmt } = useLocalization();
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const raw = data[spec.dataRef];
   if (!Array.isArray(raw) || raw.length === 0) return null;
 
@@ -258,6 +300,15 @@ function TableRenderer({ spec, data }: TableRendererProps) {
   if (rows.length === 0) return null;
 
   const cols = parseColumns(spec.columns);
+
+  function resolveRowVars(row: Record<string, unknown>): Record<string, string> {
+    const vars: Record<string, string> = {};
+    for (const col of cols) {
+      const val = getNestedValue(row, col.field);
+      vars[col.field] = val != null ? String(val) : "";
+    }
+    return vars;
+  }
 
   return (
     <div style={{ width: "100%", margin: "8px 0", overflowX: "auto" }}>
@@ -282,22 +333,41 @@ function TableRenderer({ spec, data }: TableRendererProps) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, i) => (
-            <tr key={i}>
-              {cols.map((col) => (
-                <td
-                  key={col.field}
-                  style={{
-                    padding: "4px 8px",
-                    borderBottom: "1px solid #222",
-                    color: "#ccc",
-                  }}
-                >
-                  {formatCellValue(getNestedValue(row, col.field), col.format, fmt)}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {rows.map((row, i) => {
+            const rowVars = spec.rowActions ? resolveRowVars(row) : undefined;
+            const rowQuery = rowVars && spec.rowActions
+              ? interpolate(spec.rowActions.query, rowVars)
+              : null;
+            const rowTooltip = rowQuery ? `Click to ask: ${rowQuery}` : undefined;
+
+            return (
+              <tr
+                key={i}
+                title={rowTooltip}
+                onClick={rowQuery && onAction ? () => onAction(rowQuery!) : undefined}
+                onMouseEnter={() => setHoveredIdx(i)}
+                onMouseLeave={() => setHoveredIdx(null)}
+                style={{
+                  cursor: rowQuery && onAction ? "pointer" : undefined,
+                  background: hoveredIdx === i && rowQuery ? "#2a2a2a" : undefined,
+                  transition: "background 0.15s",
+                }}
+              >
+                {cols.map((col) => (
+                  <td
+                    key={col.field}
+                    style={{
+                      padding: "4px 8px",
+                      borderBottom: "1px solid #222",
+                      color: "#ccc",
+                    }}
+                  >
+                    {formatCellValue(getNestedValue(row, col.field), col.format, fmt)}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

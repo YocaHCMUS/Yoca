@@ -150,7 +150,7 @@ export function WalletChatMessage({ message, onAction }: Props) {
         id: part.id, type: "line" as const, dataRef: part.id,
       };
       elements.push(
-        <ChartRenderer key={`c-${part.id}`} spec={spec} data={message.data} />,
+        <ChartRenderer key={`c-${part.id}`} spec={spec} data={message.data} onAction={onAction} />,
       );
     }
 
@@ -159,7 +159,7 @@ export function WalletChatMessage({ message, onAction }: Props) {
         id: part.id, dataRef: part.id, columns: "",
       };
       elements.push(
-        <TableRenderer key={`t-${part.id}`} spec={spec} data={message.data} />,
+        <TableRenderer key={`t-${part.id}`} spec={spec} data={message.data} onAction={onAction} />,
       );
     }
 
