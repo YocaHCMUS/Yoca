@@ -12,23 +12,19 @@ interface Props {
 const WalletOverviewWinRateBanner: React.FC<Props> = ({ stats, selectedPeriod, loading }) => {
     const [isDisclaimerOpen, setIsDisclaimerOpen] = useState(false);
 
-    if (loading) {
-        return <SkeletonPlaceholder className={styles.bannerSkeleton} />;
-    }
+    if (loading) return <SkeletonPlaceholder className={styles.bannerSkeleton} />;
 
-    // MOCK DATA: Đảm bảo luôn hiện UI để bạn xem thiết kế trước. Khi nối API xong, đổi thành displayStats = stats;
-    const displayStats = stats || {
-        winRate: 68.4,
-        winCount: 342,
-        lossCount: 158,
-        totalTraded: 500,
-        avgWinUsd: 1250,
-        avgLossUsd: -450
-    };
+    // NẾU KHÔNG CÓ DATA THẬT -> Không render hoặc hiển thị "N/A"
+    if (!stats || stats.totalTraded === 0) {
+        return (
+            <div className={styles.bannerContainer} style={{ textAlign: 'center', padding: '20px' }}>
+                <span className={styles.title}>Token Win Rate</span>
+                <p>No trade data available for this period.</p>
+            </div>
+        );
+    } 
 
-    if (!displayStats || displayStats.totalTraded === 0) return null; 
-
-    const { winRate, winCount, totalTraded, avgWinUsd, avgLossUsd } = displayStats;
+    const { winRate, winCount, totalTraded, avgWinUsd, avgLossUsd } = stats;
     const isHighWinRate = winRate >= 50;
 
     return (

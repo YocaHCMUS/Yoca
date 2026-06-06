@@ -43,7 +43,7 @@ export interface WalletOverviewPeriodStats {
         unrealizedUsd: number | null;
     };
     source: "birdeye-overall-pnl" | "overview-cache" | "none";
-    winRateStats?: WalletOverviewWinRateStats;
+    winRateStats?: WalletOverviewWinRateStats | null;
 }
 
 export interface WalletOverviewHoldingsStats {
@@ -536,6 +536,7 @@ export type OverviewActivitySnapshot = {
     pnlRealizedUsd: number | null;
     pnlUnrealizedUsd: number | null;
     source: "birdeye-overall-pnl" | "overview-cache" | "none";
+    winRateStats?: WalletOverviewWinRateStats | null;
 };
 
 export type SwapProviderSource = "helius" | "moralis";

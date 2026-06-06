@@ -726,6 +726,20 @@ export function mapBirdeyeSummaryToPeriodStats(summary: unknown): OverviewActivi
       ? (buyVolumeUsd ?? 0) + (sellVolumeUsd ?? 0)
       : null;
 
+  const winCount = toNullableFiniteNumber(counts?.total_win) ?? 0;
+  const lossCount = toNullableFiniteNumber(counts?.total_loss) ?? 0;
+  const totalTraded = winCount + lossCount;
+
+  let rawWinRate = toNullableFiniteNumber(counts?.win_rate) ?? 0;
+  const winRate = rawWinRate <= 1 && rawWinRate > 0 ? rawWinRate * 100 : rawWinRate;
+  const winRateStats = {
+      winRate,
+      winCount,
+      lossCount,
+      totalTraded,
+      avgWinUsd: 0, // Birdeye API Overall chưa hỗ trợ Avg/trade
+      avgLossUsd: 0
+  };
   return {
     tradingVolumeUsd,
     buyTransactionCount,
@@ -742,6 +756,7 @@ export function mapBirdeyeSummaryToPeriodStats(summary: unknown): OverviewActivi
     pnlRealizedUsd: toNullableFiniteNumber(pnl?.realized_profit_usd),
     pnlUnrealizedUsd: toNullableFiniteNumber(pnl?.unrealized_usd),
     source: "birdeye-overall-pnl",
+    winRateStats,
   };
 }
 
@@ -758,6 +773,7 @@ function mapPeriodStatsToActivitySnapshot(stats: WalletOverviewPeriodStats): Ove
     pnlRealizedUsd: stats.pnl.realizedUsd,
     pnlUnrealizedUsd: stats.pnl.unrealizedUsd,
     source: stats.source,
+    winRateStats: stats.winRateStats,
   };
 }
 
@@ -792,6 +808,7 @@ export function buildOverviewResponse(input: {
         unrealizedUsd: snapshot.pnlUnrealizedUsd,
       },
       source: snapshot.source,
+      winRateStats: snapshot.winRateStats,
     };
     return acc;
   }, {} as Record<WalletOverviewPeriodKey, WalletOverviewPeriodStats>);

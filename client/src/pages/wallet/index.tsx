@@ -1273,14 +1273,10 @@ export default function WalletPage() {
           />
           <div style={{ padding: "20px 24px 0 24px" }}>
             <WalletOverviewWinRateBanner 
-                stats={(overviewReport?.periods?.[selectedPeriod] as any)?.winRateStats || {
-                    winRate: 68.4,
-                    winCount: 342,
-                    lossCount: 158,
-                    totalTraded: 500,
-                    avgWinUsd: 1250,
-                    avgLossUsd: -450
-                }}
+                stats={
+                  overviewReport?.periods?.[selectedPeriod]?.winRateStats || 
+                  { winRate: 0, winCount: 0, lossCount: 0, totalTraded: 0, avgWinUsd: 0, avgLossUsd: 0 } 
+                }
                 selectedPeriod={selectedPeriod}
                 loading={!overviewReport}
             />

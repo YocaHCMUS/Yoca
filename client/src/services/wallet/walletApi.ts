@@ -443,7 +443,7 @@ export interface WalletOverviewPeriodStats {
     unrealizedUsd: number | null;
   };
   source: "birdeye-overall-pnl" | "overview-cache" | "none";
-  winRateStats?: WalletOverviewWinRateStats;
+  winRateStats?: WalletOverviewWinRateStats | null;
 }
 
 export interface WalletOverviewHoldingsStats {
