@@ -1,8 +1,8 @@
 import type { ApiErrCode } from "@/api/main";
 import {
-    defineDateTimeFormat,
-    defineNumberFormat,
-    defineTextFormat,
+  defineDateTimeFormat,
+  defineNumberFormat,
+  defineTextFormat,
 } from "./util/util-format";
 import { defineTranslationWithBase } from "./util/util-translation";
 
@@ -434,8 +434,7 @@ export const translation = {
     transferDetails: "Transfer Details",
     sold: "Sold",
     bought: "Bought",
-    swapped: "Swapped",
-    forSwap: "for",
+    swappedFor: "Swapped {{$fromAmount}} for {{$toAmount}}",
     totalValue: "Total Value",
     transactionFee: "Transaction Fee",
     sent: "Sent",
@@ -1621,7 +1620,7 @@ export const translation = {
         "The page you requested does not exist or may have moved to another location.",
       backToHome: "Back to Home",
       goToMarket: "Go to Market",
-    }
+    },
   },
   ERROR,
 } as const;

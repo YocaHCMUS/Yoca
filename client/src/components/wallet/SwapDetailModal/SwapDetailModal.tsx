@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
-import { ArrowRight, Close, Wallet } from "@carbon/react/icons";
-import { Loading } from "@carbon/react";
+import { ArrowRight, Close, Launch } from "@carbon/react/icons";
+import { Link, Loading } from "@carbon/react";
 import { ID_MODAL_ROOT } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import { CpyBtn } from "@/components/CpyBtn";
-import { Launch } from "@carbon/icons-react";
+import { TrendNum } from "@/components/TrendNum";
+import { Flex } from "@/components/Flex";
+import { Txt } from "@/components/Txt";
 import { useNavigate } from "react-router";
 import {
   fetchTxDetail,
@@ -14,6 +16,8 @@ import {
   type WalletTxDetail,
 } from "@/services/wallet/walletApi";
 import styles from "./SwapDetailModal.module.scss";
+import { Divider } from "@/components/partials/Divider/Divider";
+import { ArrowLeft } from "lucide-react";
 
 const WSOL_MINT = "So11111111111111111111111111111111111111112";
 const BASE_FEE_LAMPORTS = 5_000;
@@ -23,57 +27,47 @@ const BASE_FEE_LAMPORTS = 5_000;
 function resolveTokenMetaLookupAddress(tokenAddress: string): string {
   const normalized = tokenAddress.trim().toLowerCase();
   if (
-    normalized === "native" ||
-    normalized === "sol" ||
-    normalized === "11111111111111111111111111111111"
+    normalized == "native" ||
+    normalized == "sol" ||
+    normalized == "11111111111111111111111111111111"
   ) {
     return WSOL_MINT;
   }
   return tokenAddress;
 }
 
-function truncateSig(sig: string): string {
-  if (!sig || sig.length <= 8) return sig;
-  return `${sig.slice(0, 4)}...${sig.slice(-4)}`;
+function AddressLinkWithCopy({
+  address,
+  className,
+}: {
+  address: string;
+  internal?: boolean; // use react-router link instead of external
+  className?: string;
+}) {
+  const { fmt } = useLocalization();
+  return (
+    <Flex align="center" gap={2}>
+      <Link href={`/wallets/${encodeURIComponent(address)}`} target="_blank">
+        <Txt mono className={className}>
+          {fmt.text.address(address)}
+        </Txt>
+      </Link>
+      <CpyBtn size="xs" copyWhat={address} align="top" />
+    </Flex>
+  );
 }
 
-function truncateAddr(addr: string): string {
-  if (!addr || addr.length <= 8) return addr;
-  return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
+function TrendAmount({
+  value,
+  formatter,
+}: {
+  value: number | null;
+  formatter: (value: number | null) => string;
+}) {
+  return <TrendNum value={value} prefixes="none" formatter={formatter} />;
 }
 
-function formatTimestamp(isoTimestamp: string): string {
-  const parsed = new Date(isoTimestamp);
-  if (Number.isNaN(parsed.getTime())) {
-    return isoTimestamp;
-  }
-
-  return parsed.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
-function formatFeeLabel(swap: WalletSwap): string {
-  if (!swap.baseQuotePrice || !Number.isFinite(swap.baseQuotePrice)) {
-    return "—";
-  }
-
-  return `${swap.baseQuotePrice * 10 ** (-9)} SOL`;
-}
-
-// ── Props ──────────────────────────────────────────────────────────────────
-
-interface SwapDetailModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  swap: WalletSwap | null;
-  walletAddress: string;
-}
+// ── Token meta map type ──────────────────────────────────────────────────
 
 interface TokenMetaEntry {
   symbol: string;
@@ -81,7 +75,14 @@ interface TokenMetaEntry {
   logoUri: string | null;
 }
 
-// ── Component ──────────────────────────────────────────────────────────────
+// ── Main Modal ────────────────────────────────────────────────────────────
+
+interface SwapDetailModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  swap: WalletSwap | null;
+  walletAddress: string;
+}
 
 export function SwapDetailModal({
   isOpen,
@@ -94,8 +95,11 @@ export function SwapDetailModal({
 
   const [txDetail, setTxDetail] = useState<WalletTxDetail | null>(null);
   const [loading, setLoading] = useState(false);
-  const [tokenMetaMap, setTokenMetaMap] = useState<Record<string, TokenMetaEntry>>({});
+  const [tokenMetaMap, setTokenMetaMap] = useState<
+    Record<string, TokenMetaEntry>
+  >({});
 
+  // Fetch transaction details
   useEffect(() => {
     if (!isOpen || !swap) {
       setTxDetail(null);
@@ -108,19 +112,13 @@ export function SwapDetailModal({
 
     fetchTxDetail(walletAddress, swap.transactionHash)
       .then((data) => {
-        if (!cancelled) {
-          setTxDetail(data);
-        }
+        if (!cancelled) setTxDetail(data);
       })
       .catch(() => {
-        if (!cancelled) {
-          setTxDetail(null);
-        }
+        if (!cancelled) setTxDetail(null);
       })
       .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       });
 
     return () => {
@@ -128,19 +126,22 @@ export function SwapDetailModal({
     };
   }, [isOpen, swap, walletAddress]);
 
+  // Fetch token metadata for transfers
   useEffect(() => {
-    if (!txDetail || txDetail.transfers.length === 0) return;
+    if (!txDetail || txDetail.transfers.length == 0) return;
 
     const mintsToFetch = txDetail.transfers
       .map((t) => resolveTokenMetaLookupAddress(t.mint))
       .filter((mint, i, arr) => {
         if (!mint) return false;
-        const existing = txDetail.transfers.find((t) => resolveTokenMetaLookupAddress(t.mint) === mint);
+        const existing = txDetail.transfers.find(
+          (t) => resolveTokenMetaLookupAddress(t.mint) == mint,
+        );
         if (existing?.symbol && existing?.logoUri) return false;
-        return arr.indexOf(mint) === i;
+        return arr.indexOf(mint) == i;
       });
 
-    if (mintsToFetch.length === 0) return;
+    if (mintsToFetch.length == 0) return;
 
     let cancelled = false;
     import("@/api/main").then(({ default: client }) => {
@@ -162,7 +163,7 @@ export function SwapDetailModal({
             }
           }
         })
-        .catch(() => { /* ignore */ });
+        .catch(() => {});
     });
 
     return () => {
@@ -170,10 +171,11 @@ export function SwapDetailModal({
     };
   }, [txDetail]);
 
+  // Keyboard escape
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key == "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -185,8 +187,12 @@ export function SwapDetailModal({
   if (!modalRoot) return null;
 
   const signature = swap.transactionHash;
-  const timestamp = swap.blockTimestampIso;
-  const priorityFee = txDetail ? Math.max(0, txDetail.feePaid - BASE_FEE_LAMPORTS) : 0;
+  const priorityFee = txDetail
+    ? Math.max(0, txDetail.feePaid - BASE_FEE_LAMPORTS)
+    : 0;
+  const feeInSol = txDetail ? txDetail.feePaid / 1e9 : 0;
+  const baseFeeSol = BASE_FEE_LAMPORTS / 1e9;
+  const priorityFeeSol = priorityFee / 1e9;
 
   return ReactDOM.createPortal(
     <div
@@ -197,9 +203,9 @@ export function SwapDetailModal({
       aria-label="Swap details"
     >
       <div className={styles.card} onClick={(e) => e.stopPropagation()}>
-        {/* ── Header ── */}
-        <div className={styles.header}>
-          <span className={styles.title}>{tr("walletPage.swapDetails")}</span>
+        {/* Header */}
+        <Flex justify="between" align="center">
+          <Txt size="lg">{tr("walletPage.swapDetails")}</Txt>
           <button
             className={styles.closeBtn}
             onClick={onClose}
@@ -207,7 +213,7 @@ export function SwapDetailModal({
           >
             <Close size={20} />
           </button>
-        </div>
+        </Flex>
 
         {loading ? (
           <div className={styles.loadingContainer}>
@@ -215,44 +221,56 @@ export function SwapDetailModal({
           </div>
         ) : (
           <div className={styles.twoColumnLayout}>
-            {/* ── Left column: swap info ── */}
+            {/* Left column: swap info */}
             <div>
-              {/* ── Swap visual ── */}
-              <div className={styles.swapRow}>
-                <div className={styles.tokenCard}>
-                  <span className={styles.dirLabel}>{tr("walletPage.sold")}</span>
+              {/* Swap visual */}
+              <Flex dir="row" align="center" gap={6}>
+                <Flex
+                  dir="column"
+                  align="center"
+                  gap={3}
+                  className={styles.tokenCard}
+                >
+                  <Txt size="sm" secondary uppercase>
+                    {tr("walletPage.sold")}
+                  </Txt>
                   {swap.sold ? (
                     <>
-                      <span className={styles.tokenAmt} title={String(swap.sold.amount)}>
+                      <Txt size="lg" mono>
                         {fmt.num.compact.decimal(swap.sold.amount)}
-                      </span>
-                      <span className={styles.tokenIdentity} title={swap.sold.symbol ?? swap.sold.address}>
-                        <TokenIdentityCell
-                          symbol={swap.sold.symbol ?? swap.sold.address}
-                          fullName={swap.sold.name ?? swap.sold.address}
-                          imageUrl={swap.sold.logoUri ?? undefined}
-                          imageSize={30}
-                          tooltipAlign="right"
-                        />
-                      </span>
+                      </Txt>
+                      <TokenIdentityCell
+                        symbol={swap.sold.symbol ?? swap.sold.address}
+                        fullName={swap.sold.name ?? swap.sold.address}
+                        imageUrl={swap.sold.logoUri ?? undefined}
+                        imageSize={30}
+                        tooltipAlign="right"
+                      />
                     </>
                   ) : (
-                    <span className={styles.tokenAmt}>—</span>
+                    <Txt size="lg">—</Txt>
                   )}
-                </div>
+                </Flex>
 
                 <div className={styles.arrow}>
                   <ArrowRight size={28} />
                 </div>
 
-                <div className={styles.tokenCard}>
-                  <span className={styles.dirLabel}>{tr("walletPage.bought")}</span>
+                <Flex
+                  dir="column"
+                  align="center"
+                  gap={3}
+                  className={styles.tokenCard}
+                >
+                  <Txt size="sm" secondary uppercase>
+                    {tr("walletPage.bought")}
+                  </Txt>
                   {swap.bought ? (
                     <>
-                      <span className={styles.tokenAmt} title={String(swap.bought.amount)}>
+                      <Txt size="lg" mono>
                         {fmt.num.compact.decimal(swap.bought.amount)}
-                      </span>
-                      <span className={styles.tokenIdentity} title={swap.bought.symbol ?? swap.bought.address}>
+                      </Txt>
+                      <span className={styles.tokenIdentity}>
                         <TokenIdentityCell
                           symbol={swap.bought.symbol ?? swap.bought.address}
                           fullName={swap.bought.name ?? swap.bought.address}
@@ -263,219 +281,179 @@ export function SwapDetailModal({
                       </span>
                     </>
                   ) : (
-                    <span className={styles.tokenAmt}>—</span>
+                    <Txt size="lg">—</Txt>
                   )}
-                </div>
-              </div>
+                </Flex>
+              </Flex>
 
-              {/* ── Summary ── */}
+              {/* Summary */}
               {swap.sold && swap.bought && (
-                <p className={styles.summary}>
-                  {tr("walletPage.swapped")}{" "}
-                  <strong>
-                    {fmt.num.compact.decimal(Math.abs(swap.sold.amount))} {swap.sold.symbol ?? tr("walletPage.unknown")}
-                  </strong>{" "}
-                  {tr("walletPage.forSwap")}{" "}
-                  <strong>
-                    {fmt.num.compact.decimal(Math.abs(swap.bought.amount))} {swap.bought.symbol ?? tr("walletPage.unknown")}
-                  </strong>
-                </p>
+                <div className={styles.summary}>
+                  <Txt>
+                    {tr("walletPage.swappedFor", {
+                      $fromAmount: (
+                        <strong>
+                          {fmt.num.compact.unit(
+                            swap.sold.amount,
+                            swap.sold.symbol ?? tr("walletPage.unknown"),
+                          )}
+                        </strong>
+                      ),
+                      $toAmount: (
+                        <strong>
+                          {fmt.num.compact.unit(
+                            swap.bought.amount,
+                            swap.bought.symbol ?? tr("walletPage.unknown"),
+                          )}
+                        </strong>
+                      ),
+                    })}
+                  </Txt>
+                </div>
               )}
 
-              {/* ── Detail rows ── */}
-              <div className={styles.details}>
-                <div className={styles.detailRow}>
-                  <span className={styles.detailKey}>{tr("walletPage.signature")}</span>
-                  <span className={styles.txSigGroup}>
-                    <a
-                      className={styles.detailLink}
+              {/* Detail rows */}
+              <Flex dir="column" gap={6}>
+                <Divider />
+
+                <Flex justify="between" align="center">
+                  <Txt>{tr("walletPage.signature")}</Txt>
+                  <Flex align="center" gap={2}>
+                    <Link
                       href={`https://solscan.io/tx/${signature}`}
                       target="_blank"
-                      rel="noopener noreferrer"
-                      title={signature}
                     >
-                      {truncateSig(signature)}
-                      <Launch size={12} />
-                    </a>
-                  </span>
-                </div>
+                      <Txt mono>{fmt.text.txHash(signature)}</Txt>
+                    </Link>
+                    <Launch size={16} />
+                  </Flex>
+                </Flex>
 
-                <div className={styles.detailRow}>
-                  <span className={styles.detailKey}>{tr("walletPage.time")}</span>
-                  <span className={styles.detailVal}>{formatTimestamp(timestamp)}</span>
-                </div>
+                <Flex justify="between" align="center" gap={5}>
+                  <Txt>{tr("walletPage.time")}</Txt>
+                  <Txt mono>
+                    {fmt.datetime.datetime(swap.blockTimestampIso)}
+                  </Txt>
+                </Flex>
 
                 {swap.transactionType && (
-                  <div className={styles.detailRow}>
-                    <span className={styles.detailKey}>{tr("walletPage.type")}</span>
-                    <span className={styles.detailVal}>{swap.transactionType}</span>
-                  </div>
+                  <Flex justify="between" align="center" gap={5}>
+                    <Txt>{tr("walletPage.type")}</Txt>
+                    <Txt mono>{swap.transactionType}</Txt>
+                  </Flex>
                 )}
 
                 {swap.tokensInvolved && (
-                  <div className={styles.detailRow}>
-                    <span className={styles.detailKey}>{tr("walletPage.pair")}</span>
-                    <span className={styles.detailVal} title={swap.tokensInvolved ?? undefined}>
-                      {swap.tokensInvolved}
-                    </span>
-                  </div>
+                  <Flex justify="between" align="center" gap={5}>
+                    <Txt>{tr("walletPage.pair")}</Txt>
+                    <Txt mono>{swap.tokensInvolved}</Txt>
+                  </Flex>
                 )}
 
                 {swap.totalValueUsd != null && (
-                  <div className={styles.detailRow}>
-                    <span className={styles.detailKey}>{tr("walletPage.totalValue")}</span>
-                    <span className={styles.detailVal}>{fmt.num.currency(swap.totalValueUsd)}</span>
-                  </div>
+                  <Flex justify="between" align="center" gap={5}>
+                    <Txt>{tr("walletPage.totalValue")}</Txt>
+                    <Txt mono>{fmt.num.currency(swap.totalValueUsd)}</Txt>
+                  </Flex>
                 )}
 
-                {Number.isFinite(swap.baseQuotePrice) && (
-                  <div className={styles.detailRow}>
-                    <span className={styles.detailKey}>{tr("walletPage.transactionFee")}</span>
-                    <span className={styles.detailVal}>{formatFeeLabel(swap)}</span>
-                  </div>
-                )}
+                <Divider />
+
+                {swap.baseQuotePrice != null &&
+                  Number.isFinite(swap.baseQuotePrice) && (
+                    <Flex justify="between" align="center" gap={5}>
+                      <Txt>{tr("walletPage.transactionFee")}</Txt>
+                      <Txt mono>
+                        {fmt.num.unit(swap.baseQuotePrice * 1e-9, "SOL")}
+                      </Txt>
+                    </Flex>
+                  )}
 
                 {txDetail && (
-                  <div className={styles.feeSection}>
-                    <div className={styles.feeRow}>
-                      <span className={styles.feeLabel}>{tr("walletPage.feeInLamports")}</span>
-                      <span className={styles.feeValue}>{txDetail.feePaid / 1e9} SOL</span>
-                    </div>
-                    <div className={styles.feeRow}>
-                      <span className={styles.feeLabel}>{tr("walletPage.baseFee")}</span>
-                      <span className={styles.feeValue}>{(BASE_FEE_LAMPORTS / 1e9).toFixed(9)} SOL</span>
-                    </div>
-                    <div className={styles.feeRow}>
-                      <span className={styles.feeLabel}>{tr("walletPage.priorityFee")}</span>
-                      <span className={styles.feeValue}>{(priorityFee / 1e9).toFixed(9)} SOL</span>
-                    </div>
-                    <div className={styles.feeRow}>
-                      <span className={styles.feeLabel}>{tr("walletPage.feePayer")}</span>
-                      <span className={styles.addressWithCopy}>
-                        <span
-                          className={`${styles.feeValue} ${styles.feeValueLink}`}
-                          title={txDetail.feePayer}
-                          role="button"
-                          tabIndex={0}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/wallets/${encodeURIComponent(txDetail.feePayer)}`);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.stopPropagation();
-                              e.preventDefault();
-                              navigate(`/wallets/${encodeURIComponent(txDetail.feePayer)}`);
-                            }
-                          }}
-                        >
-                          {truncateAddr(txDetail.feePayer)}
-                        </span>
-                        <CpyBtn size="sm" copyWhat={txDetail.feePayer} align="top" />
-                      </span>
-                    </div>
-                  </div>
+                  <Flex dir="column" gap={5}>
+                    <Flex justify="between" align="center">
+                      <Txt>{tr("walletPage.feeInLamports")}</Txt>
+                      <Txt mono>{fmt.num.unit(baseFeeSol, "SOL")}</Txt>
+                    </Flex>
+                    <Flex justify="between" align="center">
+                      <Txt>{tr("walletPage.baseFee")}</Txt>
+                      <Txt mono>{fmt.num.unit(baseFeeSol, "SOL")}</Txt>
+                    </Flex>
+                    <Flex justify="between" align="center">
+                      <Txt>{tr("walletPage.priorityFee")}</Txt>
+                      <Txt mono>{fmt.num.unit(priorityFeeSol, "SOL")}</Txt>
+                    </Flex>
+                    <Flex justify="between" align="center">
+                      <Txt>{tr("walletPage.feePayer")}</Txt>
+                      <AddressLinkWithCopy
+                        address={txDetail.feePayer}
+                        internal
+                      />
+                    </Flex>
+                  </Flex>
                 )}
-              </div>
+              </Flex>
             </div>
 
-            {/* ── Right column: transfers + fees ── */}
+            {/* Right column: transfers */}
             <div className={styles.rightColumn}>
               {txDetail && txDetail.transfers.length > 0 && (
                 <div className={styles.transfersSection}>
-                  <h4 className={styles.transferSectionTitle}>
-                    {tr("walletPage.transfersInTransaction", { count: txDetail.transfers.length })}
-                  </h4>
+                  <Txt secondary uppercase>
+                    {tr("walletPage.transfersInTransaction", {
+                      count: txDetail.transfers.length,
+                    })}
+                  </Txt>
                   <div className={styles.transferList}>
                     {txDetail.transfers.map((t, i) => {
-                      const isOut = t.from === walletAddress;
+                      const isOut = t.from == walletAddress;
                       const otherAddr = isOut ? t.to : t.from;
-                      const isInternal = t.from === t.to;
+                      const isInternal = t.from == t.to;
                       const lookupMint = resolveTokenMetaLookupAddress(t.mint);
                       const meta = tokenMetaMap[lookupMint];
-                      const symbol = meta?.symbol || t.symbol || t.mint.slice(0, 8);
+                      const symbol =
+                        meta?.symbol || t.symbol || t.mint.slice(0, 8);
                       const name = meta?.name ?? t.name;
                       const logoUri = meta?.logoUri ?? t.logoUri;
-                      const leftTA = isOut ? t.fromTokenAccount : t.toTokenAccount;
-                      const rightTA = isOut ? t.toTokenAccount : t.fromTokenAccount;
 
                       return (
                         <div key={i} className={styles.transferGroup}>
-                          <div className={styles.transferItem}>
-                            <span className={styles.transferDir}>{isOut ? "→" : "←"}</span>
-                            <span className={`${styles.transferAmount} ${isOut ? styles.transferAmountOut : styles.transferAmountIn}`}>
-                              {fmt.num.compact.decimal(t.amount)}
-                            </span>
-                            <TokenIdentityCell
-                              symbol={symbol.toUpperCase()}
-                              fullName={name}
-                              imageUrl={logoUri}
-                              imageSize={16}
-                            />
-                            <span className={styles.transferSpacer} />
-                            <span className={styles.transferAddrLabel}>{isOut ? tr("walletPage.to") : tr("walletPage.from")}</span>
-                            <span className={styles.addressWithCopy}>
-                              <span
-                                className={styles.transferAddress}
-                                title={otherAddr}
-                                role="button"
-                                tabIndex={0}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/wallets/${encodeURIComponent(otherAddr)}`);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" || e.key === " ") {
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                    navigate(`/wallets/${encodeURIComponent(otherAddr)}`);
-                                  }
-                                }}
-                              >
-                                {isInternal ? tr("walletPage.internal") : truncateAddr(otherAddr)}
-                              </span>
-                              {!isInternal && <CpyBtn size="sm" copyWhat={otherAddr} align="top" />}
-                            </span>
-                          </div>
-                          {!isInternal && leftTA && rightTA && (
-                            <div className={styles.transferSubRow}>
-                              <span className={styles.transferTokenAddr} title={leftTA}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/wallets/${encodeURIComponent(leftTA)}`);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" || e.key === " ") {
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                    navigate(`/wallets/${encodeURIComponent(leftTA)}`);
-                                  }
-                                }}
-                              >
-                                <Wallet size={12} />
-                                {truncateAddr(leftTA)}
-                                <CpyBtn size="xs" copyWhat={leftTA} align="top" />
-                              </span>
-                              <span className={styles.transferArrow}>{isOut ? "→" : "←"}</span>
-                              <span className={styles.transferTokenAddr} title={rightTA}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/wallets/${encodeURIComponent(rightTA)}`);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" || e.key === " ") {
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                    navigate(`/wallets/${encodeURIComponent(rightTA)}`);
-                                  }
-                                }}
-                              >
-                                <Wallet size={12} />
-                                {truncateAddr(rightTA)}
-                                <CpyBtn size="xs" copyWhat={rightTA} align="top" />
-                              </span>
-                            </div>
-                          )}
+                          <Flex justify="between" align="center">
+                            <Flex align="center" gap={3}>
+                              {isOut ? (
+                                <ArrowRight size={16} />
+                              ) : (
+                                <ArrowLeft size={16} />
+                              )}
+                              <TrendAmount
+                                value={isOut ? -t.amount : t.amount}
+                                formatter={(value) =>
+                                  fmt.num.compact.decimal(value, true)
+                                }
+                              />
+                              <TokenIdentityCell
+                                symbol={symbol.toUpperCase()}
+                                fullName={name}
+                                imageUrl={logoUri}
+                                imageSize={16}
+                              />
+                            </Flex>
+                            <Flex align="center" gap={3}>
+                              <Txt secondary uppercase>
+                                {isOut
+                                  ? tr("walletPage.to")
+                                  : tr("walletPage.from")}
+                              </Txt>
+                              {isInternal ? (
+                                <Txt mono>{tr("walletPage.internal")}</Txt>
+                              ) : (
+                                <AddressLinkWithCopy
+                                  address={otherAddr}
+                                  internal
+                                />
+                              )}
+                            </Flex>
+                          </Flex>
                         </div>
                       );
                     })}

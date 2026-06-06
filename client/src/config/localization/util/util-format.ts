@@ -92,15 +92,14 @@ function toSubscript(num: number): string {
 }
 
 function formatSmallCompact(value: number): string {
-  if (value == 0){
+  if (value == 0) {
     return "0";
   }
-  if (value < 1e-16){
+  if (value < 1e-16) {
     return "> 0.0₁₆1";
   }
 
   const str = value.toPrecision(16);
-
 
   const match = str.match(/^0\.0+/);
   if (!match) return value.toString();
@@ -198,16 +197,17 @@ export function defineNumberFormat(
       .get(key)!
       .format(abs ? Math.abs(exchangedValue) : exchangedValue);
 
-    if (style == "unit" && unit) {
-      return `${formatted} ${unit}`;
-    }
-
-    // small number override for compact
+    // Apply small-number override first
     if (notation == "compact" && absValue < strategy.smallCompactThreshold) {
-      return replaceNumbers(
+      const overridden = replaceNumbers(
         formatted,
         formatSmallCompact(abs ? absValue : exchangedValue),
       );
+      return style == "unit" && unit ? `${overridden} ${unit}` : overridden;
+    }
+
+    if (style == "unit" && unit) {
+      return `${formatted} ${unit}`;
     }
 
     return formatted;
