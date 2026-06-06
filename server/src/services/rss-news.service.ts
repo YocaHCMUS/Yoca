@@ -1,5 +1,8 @@
 import Parser from "rss-parser";
-import { fetchBraveTokenNews } from "./brave-news.service.js";
+import {
+  fetchBraveTokenNews,
+  getBraveSearchUnavailableReason,
+} from "./brave-news.service.js";
 
 export interface TokenNewsArticle {
   title: string;
@@ -33,6 +36,7 @@ export interface TokenNewsOptions {
   maxArticles?: number;
   strictMode?: boolean;
   searchMode?: "token" | "event" | "chart";
+  allowBrave?: boolean;
 }
 
 export interface TokenNewsIdentity {
@@ -156,7 +160,7 @@ const OPEN_GRAPH_FETCH_TIMEOUT_MS = 4_000;
 const MAX_OPEN_GRAPH_IMAGE_FETCHES = 10;
 const OPEN_GRAPH_IMAGE_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const MIN_RELEVANCE_SCORE = 4;
-const MIN_ARTICLES_BEFORE_SEARCH_FALLBACK = 5;
+export const BRAVE_MIN_ARTICLES_BEFORE_FALLBACK = 5;
 const openGraphImageCache = new Map<
   string,
   { imageUrl: string | null; expiresAt: number }
@@ -1089,29 +1093,48 @@ export async function getRssTokenNews(
 
   const rssArticles = dedupeArticles(matchedRssArticles);
   let braveArticles: TokenNewsArticle[] = [];
-  let fallbackUsed = false;
+  let braveFallbackUsed = false;
+  const providersUsed = new Set<"rss" | "brave">(["rss"]);
+  const braveFallbackReason = options.eventAt
+    ? `${options.searchMode ?? "event"}-rss-below-threshold`
+    : "token-rss-below-threshold";
+  const braveUnavailableReason = getBraveSearchUnavailableReason();
+  const braveSkipReason =
+    options.allowBrave === false
+      ? "disabled-by-options"
+      : rssArticles.length >= BRAVE_MIN_ARTICLES_BEFORE_FALLBACK
+        ? "rss-threshold-met"
+        : braveUnavailableReason;
 
   if (
-    (options.preferSearch ||
-      rssArticles.length < MIN_ARTICLES_BEFORE_SEARCH_FALLBACK) &&
-    process.env.BRAVE_SEARCH_API_KEY?.trim()
+    options.allowBrave !== false &&
+    rssArticles.length < BRAVE_MIN_ARTICLES_BEFORE_FALLBACK &&
+    !braveUnavailableReason
   ) {
-    fallbackUsed = true;
+    braveFallbackUsed = true;
     try {
       const braveResult = await fetchBraveTokenNews({
         identity,
         isSolanaEcosystem: isSolanaEcosystemIdentity(identity),
         eventAt: options.eventAt,
         searchMode: options.searchMode,
+        reason: braveFallbackReason,
       });
       const { scoredArticles, matchedArticles } = scoreAndFilterArticles(
         braveResult.articles,
         identity,
       );
       braveArticles = dedupeArticles(matchedArticles);
+      providersUsed.add("brave");
 
       console.info("[rss-news] brave fallback", {
         used: true,
+        token: {
+          symbol: identity.normalizedSymbol,
+          name: identity.originalName,
+          address: identity.address,
+        },
+        reason: braveFallbackReason,
         query: braveResult.query,
         queries: braveResult.queries,
         endpointUsed: braveResult.endpointUsed,
@@ -1121,19 +1144,28 @@ export async function getRssTokenNews(
       });
       logContentOnlyRejectedSample(scoredArticles, identity, "brave");
     } catch (err) {
+      braveFallbackUsed = false;
       console.warn("[rss-news] brave fallback failed", {
+        token: {
+          symbol: identity.normalizedSymbol,
+          name: identity.originalName,
+          address: identity.address,
+        },
+        reason: braveFallbackReason,
         error: err instanceof Error ? err.message : String(err),
       });
     }
   } else {
     console.info("[rss-news] brave fallback", {
       used: false,
-      reason:
-        !options.preferSearch &&
-        rssArticles.length >= MIN_ARTICLES_BEFORE_SEARCH_FALLBACK
-          ? "rss-threshold-met"
-          : "missing-api-key",
+      token: {
+        symbol: identity.normalizedSymbol,
+        name: identity.originalName,
+        address: identity.address,
+      },
+      reason: braveSkipReason ?? "unavailable",
       rssArticles: rssArticles.length,
+      threshold: BRAVE_MIN_ARTICLES_BEFORE_FALLBACK,
     });
   }
 
@@ -1156,7 +1188,8 @@ export async function getRssTokenNews(
     articlesMatched: articles.length,
     rssArticles: rssArticles.length,
     braveArticles: braveArticles.length,
-    fallbackUsed,
+    braveFallbackUsed,
+    providersUsed: [...providersUsed],
     failedFeeds: failedFeeds.map((feed) => feed.source),
   });
 
@@ -1170,13 +1203,17 @@ export async function getRssTokenNews(
       symbol: identity.normalizedSymbol,
       name: identity.originalName,
     },
-    source: fallbackUsed ? ("rss+brave" as const) : ("rss" as const),
+    source: braveFallbackUsed ? ("rss+brave" as const) : ("rss" as const),
     updatedAt: new Date().toISOString(),
+    providersUsed: [...providersUsed],
+    braveFallbackUsed,
     articles,
     meta: {
       rssArticles: rssArticles.length,
       braveArticles: braveArticles.length,
-      fallbackUsed,
+      fallbackUsed: braveFallbackUsed,
+      braveFallbackUsed,
+      providersUsed: [...providersUsed],
     },
   };
 }

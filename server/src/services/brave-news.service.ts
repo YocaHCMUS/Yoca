@@ -5,6 +5,7 @@ interface BraveNewsSearchOptions {
   isSolanaEcosystem: boolean;
   eventAt?: string;
   searchMode?: "token" | "event" | "chart";
+  reason?: string;
 }
 
 interface BraveSearchItem {
@@ -36,7 +37,75 @@ const BRAVE_WEB_SEARCH_ENDPOINT =
   "https://api.search.brave.com/res/v1/web/search";
 const BRAVE_SEARCH_TIMEOUT_MS = 10_000;
 const BRAVE_RESULT_COUNT = 10;
-const MAX_BRAVE_QUERIES = 3;
+const MAX_BRAVE_QUERIES = 2;
+export const BRAVE_MONTHLY_SOFT_LIMIT = parseOptionalPositiveInt(
+  process.env.BRAVE_MONTHLY_SOFT_LIMIT,
+);
+export const BRAVE_MONTHLY_USED_OFFSET =
+  parseOptionalNonNegativeInt(process.env.BRAVE_MONTHLY_USED_OFFSET) ?? 0;
+
+let braveRequestsThisProcess = 0;
+
+class BraveSearchError extends Error {
+  constructor(
+    message: string,
+    public readonly status?: number,
+  ) {
+    super(message);
+    this.name = "BraveSearchError";
+  }
+}
+
+function parseOptionalPositiveInt(value: string | undefined) {
+  if (!value?.trim()) return null;
+
+  const parsed = Number.parseInt(value.trim(), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
+function parseOptionalNonNegativeInt(value: string | undefined) {
+  if (!value?.trim()) return null;
+
+  const parsed = Number.parseInt(value.trim(), 10);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
+}
+
+function isBraveSearchExplicitlyEnabled() {
+  return process.env.BRAVE_SEARCH_ENABLED?.trim().toLowerCase() === "true";
+}
+
+function getBraveEffectiveUsage() {
+  return BRAVE_MONTHLY_USED_OFFSET + braveRequestsThisProcess;
+}
+
+function isBraveSoftLimitReached() {
+  return (
+    BRAVE_MONTHLY_SOFT_LIMIT != null &&
+    getBraveEffectiveUsage() >= BRAVE_MONTHLY_SOFT_LIMIT
+  );
+}
+
+export function getBraveSearchUnavailableReason() {
+  if (!isBraveSearchExplicitlyEnabled()) return "disabled";
+  if (!process.env.BRAVE_SEARCH_API_KEY?.trim()) return "missing-api-key";
+  console.info("[brave-news] usage guard", {
+    offset: BRAVE_MONTHLY_USED_OFFSET,
+    processCalls: braveRequestsThisProcess,
+    effectiveUsage: getBraveEffectiveUsage(),
+    softLimit: BRAVE_MONTHLY_SOFT_LIMIT,
+  });
+  if (isBraveSoftLimitReached()) return "soft-limit-reached";
+  return null;
+}
+
+function shouldTryWebFallback(error: unknown) {
+  if (!(error instanceof BraveSearchError)) return true;
+  if (error.status == null) return true;
+
+  return ![401, 403, 429].includes(error.status);
+}
 
 function stripHtml(value: string) {
   return value
@@ -271,6 +340,9 @@ async function fetchBraveEndpoint(endpoint: string, query: string) {
   if (!apiKey) {
     throw new Error("BRAVE_SEARCH_API_KEY is not set");
   }
+  if (isBraveSoftLimitReached()) {
+    throw new Error("BRAVE_MONTHLY_SOFT_LIMIT reached");
+  }
 
   const url = new URL(endpoint);
   url.searchParams.set("q", query);
@@ -282,6 +354,8 @@ async function fetchBraveEndpoint(endpoint: string, query: string) {
   const timeout = setTimeout(() => controller.abort(), BRAVE_SEARCH_TIMEOUT_MS);
 
   try {
+    braveRequestsThisProcess += 1;
+
     const response = await fetch(url, {
       headers: {
         Accept: "application/json",
@@ -291,7 +365,10 @@ async function fetchBraveEndpoint(endpoint: string, query: string) {
     });
 
     if (!response.ok) {
-      throw new Error(`Brave responded ${response.status}`);
+      throw new BraveSearchError(
+        `Brave responded ${response.status}`,
+        response.status,
+      );
     }
 
     return (await response.json()) as {
@@ -306,6 +383,11 @@ async function fetchBraveEndpoint(endpoint: string, query: string) {
 }
 
 export async function fetchBraveTokenNews(options: BraveNewsSearchOptions) {
+  const unavailableReason = getBraveSearchUnavailableReason();
+  if (unavailableReason) {
+    throw new Error(`Brave Search is unavailable: ${unavailableReason}`);
+  }
+
   const queries = buildBraveNewsQueries(options);
   const endpointUsed = new Set<string>();
   const articles: RawNewsArticle[] = [];
@@ -320,14 +402,33 @@ export async function fetchBraveTokenNews(options: BraveNewsSearchOptions) {
       endpointUsed.add(BRAVE_NEWS_SEARCH_ENDPOINT);
       const results = payload.results ?? [];
       rawResultCount += results.length;
+      console.info("[brave-news] query completed", {
+        query,
+        token: options.identity.normalizedSymbol,
+        reason: options.reason ?? options.searchMode ?? "token-news",
+        endpoint: "news",
+        resultCount: results.length,
+      });
       articles.push(
         ...results
           .map(normalizeBraveItem)
           .filter((article): article is RawNewsArticle => article != null),
       );
     } catch (err) {
+      if (!shouldTryWebFallback(err)) {
+        console.warn("[brave-news] news search failed without web fallback", {
+          query,
+          token: options.identity.normalizedSymbol,
+          reason: options.reason ?? options.searchMode ?? "token-news",
+          error: err instanceof Error ? err.message : String(err),
+        });
+        break;
+      }
+
       console.warn("[brave-news] news search failed, trying web search", {
         query,
+        token: options.identity.normalizedSymbol,
+        reason: options.reason ?? options.searchMode ?? "token-news",
         error: err instanceof Error ? err.message : String(err),
       });
 
@@ -339,6 +440,13 @@ export async function fetchBraveTokenNews(options: BraveNewsSearchOptions) {
         endpointUsed.add(BRAVE_WEB_SEARCH_ENDPOINT);
         const results = payload.web?.results ?? [];
         rawResultCount += results.length;
+        console.info("[brave-news] query completed", {
+          query,
+          token: options.identity.normalizedSymbol,
+          reason: options.reason ?? options.searchMode ?? "token-news",
+          endpoint: "web",
+          resultCount: results.length,
+        });
         articles.push(
           ...results
             .map(normalizeBraveItem)
@@ -347,6 +455,8 @@ export async function fetchBraveTokenNews(options: BraveNewsSearchOptions) {
       } catch (webErr) {
         console.warn("[brave-news] web search failed", {
           query,
+          token: options.identity.normalizedSymbol,
+          reason: options.reason ?? options.searchMode ?? "token-news",
           error: webErr instanceof Error ? webErr.message : String(webErr),
         });
       }

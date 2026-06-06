@@ -35,6 +35,10 @@ interface TokenChartNewsEventsData {
   };
   timeframe: TokenChartNewsTimeframe;
   updatedAt: string;
+  meta?: {
+    providersUsed: Array<"rss" | "brave">;
+    braveFallbackUsed: boolean;
+  };
   events: TokenChartNewsEvent[];
 }
 
@@ -153,9 +157,11 @@ function getDateMidpoint(date: string) {
 async function expandEventArticlesForSummary({
   event,
   token,
+  allowBrave = true,
 }: {
   event: TokenChartNewsEvent;
   token: { address: string; symbol: string; name: string };
+  allowBrave?: boolean;
 }) {
   try {
     const expandedNews = await getRssTokenNews(token, {
@@ -165,6 +171,7 @@ async function expandEventArticlesForSummary({
       maxArticles: MAX_ARTICLES_PER_EVENT,
       strictMode: true,
       searchMode: "chart",
+      allowBrave,
     });
 
     const articles = dedupeTokenNewsArticles([
@@ -200,6 +207,7 @@ async function expandEventArticlesForSummary({
 async function addSummaries(
   data: TokenChartNewsEventsData,
   summaryDate?: string,
+  options: { expandForSummary?: boolean } = {},
 ): Promise<TokenChartNewsEventsData> {
   const events: TokenChartNewsEvent[] = [];
   const eventsToSummarize = summaryDate
@@ -218,7 +226,7 @@ async function addSummaries(
       continue;
     }
 
-    const expandedEvent = summaryDate
+    const expandedEvent = summaryDate && options.expandForSummary !== false
       ? await expandEventArticlesForSummary({ event, token })
       : event;
 
@@ -310,6 +318,10 @@ async function buildFreshChartNewsEvents({
     },
     timeframe,
     updatedAt: new Date().toISOString(),
+    meta: {
+      providersUsed: news.meta.providersUsed,
+      braveFallbackUsed: news.meta.braveFallbackUsed,
+    },
     events: groupArticlesByDate(news.articles, timeframe, date),
   };
 
@@ -422,7 +434,9 @@ const app = new Hono().get("/", async (c) => {
                 ),
               }
             : baseCached.data;
-          const summarized = await addSummaries(baseData, date);
+          const summarized = await addSummaries(baseData, date, {
+            expandForSummary: false,
+          });
           const expiresAt = getTokenChartNewsEventsCacheExpiresAt(timeframe);
           await writeTokenChartNewsEventsCache(cacheKey, summarized, expiresAt);
 

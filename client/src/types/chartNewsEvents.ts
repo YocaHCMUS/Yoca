@@ -39,6 +39,10 @@ export interface TokenChartNewsEventsData {
   };
   timeframe: TokenChartNewsTimeframe;
   updatedAt: string;
+  meta?: {
+    providersUsed: Array<"rss" | "brave">;
+    braveFallbackUsed: boolean;
+  };
   events: TokenChartNewsEvent[];
 }
 

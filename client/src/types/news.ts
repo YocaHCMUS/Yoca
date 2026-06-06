@@ -59,11 +59,15 @@ export interface TokenNewsResponseData {
     };
     source: 'rss' | 'rss+brave';
     updatedAt: string;
+    providersUsed?: Array<'rss' | 'brave'>;
+    braveFallbackUsed?: boolean;
     articles: TokenNewsArticle[];
     meta?: {
         rssArticles: number;
         braveArticles: number;
         fallbackUsed: boolean;
+        braveFallbackUsed?: boolean;
+        providersUsed?: Array<'rss' | 'brave'>;
     };
 }
 
