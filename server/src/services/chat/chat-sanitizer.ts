@@ -56,13 +56,35 @@ export function sanitizeResponse(raw: string): {
 
   const text = sanitizeText((parsed.text as string) ?? "");
 
-  const charts: ChartSpec[] = (Array.isArray(parsed.charts) ? parsed.charts : []).filter(
-    (c): c is ChartSpec => c && typeof c === "object" && typeof (c as Record<string, unknown>).id === "string" && typeof (c as Record<string, unknown>).dataRef === "string",
-  );
+  function normalizeAction(a: unknown): Record<string, unknown> | undefined {
+    if (!a || typeof a !== "object") return undefined;
+    if (Array.isArray(a)) return a.length > 0 && typeof a[0] === "object" && !Array.isArray(a[0]) ? (a[0] as Record<string, unknown>) : undefined;
+    return a as Record<string, unknown>;
+  }
 
-  const tables: TableSpec[] = (Array.isArray(parsed.tables) ? parsed.tables : []).filter(
-    (t): t is TableSpec => t && typeof t === "object" && typeof (t as Record<string, unknown>).id === "string" && typeof (t as Record<string, unknown>).dataRef === "string",
-  );
+  const rawCharts: unknown[] = Array.isArray(parsed.charts) ? parsed.charts : [];
+  const charts: ChartSpec[] = rawCharts
+    .filter((c): c is Record<string, unknown> =>
+      c !== null && typeof c === "object" && typeof (c as Record<string, unknown>).id === "string" && typeof (c as Record<string, unknown>).dataRef === "string",
+    )
+    .map((c) => {
+      if (c.pointActions != null) {
+        c.pointActions = normalizeAction(c.pointActions);
+      }
+      return c as unknown as ChartSpec;
+    });
+
+  const rawTables: unknown[] = Array.isArray(parsed.tables) ? parsed.tables : [];
+  const tables: TableSpec[] = rawTables
+    .filter((t): t is Record<string, unknown> =>
+      t !== null && typeof t === "object" && typeof (t as Record<string, unknown>).id === "string" && typeof (t as Record<string, unknown>).dataRef === "string",
+    )
+    .map((t) => {
+      if (t.rowActions != null) {
+        t.rowActions = normalizeAction(t.rowActions);
+      }
+      return t as unknown as TableSpec;
+    });
 
   const actions: ActionSpec[] = (Array.isArray(parsed.actions) ? parsed.actions : []).filter(
     (a): a is ActionSpec =>

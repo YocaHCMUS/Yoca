@@ -1254,6 +1254,9 @@ export const translation = {
     sendButtonTitle: "Send",
     promptMenuBtn: "Prompt menu",
     fabTitle: "Open AI Chat",
+    seriesLabel: "Series {{count}}",
+    clickToAsk: "Click to ask: {{query}}",
+    tableNullValue: "-",
     prompt: {
       overview: { label: "Overview", query: "Give me a portfolio overview of this wallet including total balance, 24h change, and trading volume." },
       pnl: { label: "PnL Summary", query: "What is my profit and loss? Show per-token breakdown with realized PnL and win rate." },

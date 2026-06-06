@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import { useNavigate } from "react-router";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import type { ActionSpec, ChatMessageItem } from "./types";
 import { ChartRenderer, TableRenderer } from "./WalletChatChartRenderer";
 import styles from "./WalletChat.module.scss";
@@ -76,6 +77,7 @@ function actionButtonGroup(actions: ActionSpec[], navigate: ReturnType<typeof us
 
 export function WalletChatMessage({ message, onAction }: Props) {
   const navigate = useNavigate();
+  const { tr } = useLocalization();
   const parsed = useMemo(() => parseMarkers(message.content), [message.content]);
 
   const { inlineByIndex, endActions } = useMemo(() => {
@@ -149,7 +151,7 @@ export function WalletChatMessage({ message, onAction }: Props) {
   if (elements.length === 0) {
     elements.push(
       <div key="empty" className={styles.emptyPart}>
-        No data available.
+        {tr("common.noData")}
       </div>,
     );
   }

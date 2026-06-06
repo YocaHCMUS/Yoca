@@ -38,6 +38,7 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
   const raw = data[spec.dataRef] as
     | { labels?: string[]; datasets?: { name?: string; values?: number[] }[] }
     | undefined;
+  const { tr } = useLocalization();
 
   const option = useMemo(() => {
     if (!raw?.labels || !raw?.datasets) return null;
@@ -48,7 +49,7 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
 
     const series = datasets.map((ds, i) => {
       const base: Record<string, unknown> = {
-        name: ds.name ?? `Series ${i + 1}`,
+        name: ds.name ?? tr("chat.seriesLabel", { count: i + 1 }),
         type: spec.type === "area" ? "line" : spec.type,
         data: ds.values ?? [],
         smooth: true,
@@ -91,7 +92,7 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
           const v = Array.isArray(value) ? value[1] ?? value[0] : value;
           return `${seriesName}: ${v}`;
         });
-        return `${lines.join("<br/>")}<br/><span style="color:#2a6df4;font-size:10px">Click to ask: ${query}</span>`;
+        return `${lines.join("<br/>")}<br/><span style="color:#2a6df4;font-size:10px">${tr("chat.clickToAsk", { query })}</span>`;
       };
     }
 
@@ -243,18 +244,18 @@ function applyTableFilters(
   return result;
 }
 
-function formatCellValue(val: unknown, format: ColumnFormat, fmt: ReturnType<typeof useLocalization>["fmt"]): string {
-  if (val === null || val === undefined) return "-";
+function formatCellValue(val: unknown, format: ColumnFormat, fmt: ReturnType<typeof useLocalization>["fmt"], tr: ReturnType<typeof useLocalization>["tr"]): string {
+  if (val === null || val === undefined) return tr("chat.tableNullValue");
   if (typeof val === "string") {
     if (format === "address") return fmt.text.address(val);
     if (format === "text") return val;
     const num = Number(val);
     if (!Number.isNaN(num) && val.trim() !== "") {
-      return formatCellValue(num, format, fmt);
+      return formatCellValue(num, format, fmt, tr);
     }
     if (format === "datetime" || format === "date" || format === "time" || format === "relative") {
       const ms = new Date(val).getTime();
-      if (!Number.isNaN(ms)) return formatCellValue(ms, format, fmt);
+      if (!Number.isNaN(ms)) return formatCellValue(ms, format, fmt, tr);
     }
     return val;
   }
@@ -292,7 +293,7 @@ function formatCellValue(val: unknown, format: ColumnFormat, fmt: ReturnType<typ
 }
 
 function TableRenderer({ spec, data, onAction }: TableRendererProps) {
-  const { fmt } = useLocalization();
+  const { fmt, tr } = useLocalization();
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const raw = data[spec.dataRef];
@@ -330,11 +331,12 @@ function TableRenderer({ spec, data, onAction }: TableRendererProps) {
         </thead>
         <tbody>
           {pageRows.map((row, i) => {
-            const rowVars = spec.rowActions ? resolveRowVars(row) : undefined;
-            const rowQuery = rowVars && spec.rowActions
-              ? interpolate(spec.rowActions.query, rowVars)
+            const rowActions = Array.isArray(spec.rowActions) ? spec.rowActions[0] : spec.rowActions;
+            const rowVars = rowActions ? resolveRowVars(row) : undefined;
+            const rowQuery = rowVars && rowActions
+              ? interpolate(rowActions.query, rowVars)
               : null;
-            const rowTooltip = rowQuery ? `Click to ask: ${rowQuery}` : undefined;
+            const rowTooltip = rowQuery ? tr("chat.clickToAsk", { query: rowQuery }) : undefined;
             const globalIdx = pageStart + i;
 
             return (
@@ -350,7 +352,7 @@ function TableRenderer({ spec, data, onAction }: TableRendererProps) {
               >
                 {cols.map((col) => (
                   <td key={col.field} className={styles.tableTd}>
-                    {formatCellValue(getNestedValue(row, col.field), col.format, fmt)}
+                    {formatCellValue(getNestedValue(row, col.field), col.format, fmt, tr)}
                   </td>
                 ))}
               </tr>
@@ -364,17 +366,19 @@ function TableRenderer({ spec, data, onAction }: TableRendererProps) {
             type="button"
             className={styles.pageBtn}
             disabled={safePage <= 1}
+            aria-label={tr("table.previousPage")}
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
           >
             &lt;
           </button>
           <span className={styles.pageInfo}>
-            Page {safePage} of {totalPages}
+            {tr("table.pageRangeText", { count: safePage, total: totalPages })}
           </span>
           <button
             type="button"
             className={styles.pageBtn}
             disabled={safePage >= totalPages}
+            aria-label={tr("table.nextPage")}
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
           >
             &gt;
