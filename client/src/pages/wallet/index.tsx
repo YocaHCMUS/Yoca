@@ -80,7 +80,7 @@ import { AiSwapSummaryModal } from "@/components/wallet/AiSwapSummaryModal";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
 import type { WalletOverviewPeriodKey } from "@/services/wallet/walletApi.ts";
 import { TimePeriod } from "@/types/chart-filters.types.ts";
-
+import WalletOverviewWinRateBanner from "@/components/wallet/WalletOverview/WalletOverviewWinRateBanner";
 function chunkArray<T>(items: T[], size: number): T[][] {
   if (size <= 0 || items.length === 0) {
     return [];
@@ -1271,6 +1271,20 @@ export default function WalletPage() {
             currentPeriod={selectedPeriod}
             onPeriodChange={(period) => setSelectedPeriod(period)}
           />
+          <div style={{ padding: "20px 24px 0 24px" }}>
+            <WalletOverviewWinRateBanner 
+                stats={(overviewReport?.periods?.[selectedPeriod] as any)?.winRateStats || {
+                    winRate: 68.4,
+                    winCount: 342,
+                    lossCount: 158,
+                    totalTraded: 500,
+                    avgWinUsd: 1250,
+                    avgLossUsd: -450
+                }}
+                selectedPeriod={selectedPeriod}
+                loading={!overviewReport}
+            />
+          </div>
 
           <WalletHero
             overview={overviewReport}

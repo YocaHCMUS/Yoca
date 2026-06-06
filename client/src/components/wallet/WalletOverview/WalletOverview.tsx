@@ -22,6 +22,7 @@ import { PERIOD_OPTIONS } from '@/config/periodOptions';
 import WalletOverviewValueSection from './WalletOverviewValueSection';
 import WalletOverviewTradingSection from './WalletOverviewTradingSection';
 import WalletOverviewPnLSection from './WalletOverviewPnLSection';
+import WalletOverviewWinRateBanner from './WalletOverviewWinRateBanner';
 
 function shortenWalletAddress(address: string): string {
     const normalized = address.trim();
@@ -226,7 +227,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
             console.error('[WalletOverview] Failed to save tags:', err);
         }
     };
-
+    
     const identityStatus = intelligence?.identity?.status ?? null;
     const identityName = intelligence?.identity?.name ?? null;
     const identityCategory = intelligence?.identity?.category ?? null;
@@ -249,6 +250,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         : walletAddress;
 
     const selectedStats = overview?.periods?.[selectedPeriod] ?? null;
+    const winRateStats = selectedStats?.winRateStats ?? null; // Lấy stats cho banner
     const holdings = overview?.holdings ?? null;
 
     const totalAssetValue = holdings?.totalAssetValueUsd ?? overview?.totalAssetValueUsd ?? null;
@@ -427,6 +429,8 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                                 <TagIcon size={16} />
                             </button>
                         </Tooltip>
+                        
+
                     </div>
                 </div>
 
@@ -551,6 +555,14 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                     </div>
                 </div>
 
+                
+                
+                <WalletOverviewWinRateBanner 
+                    stats={(selectedStats as any)?.winRateStats} // Khi Backend update xong API, xóa "(as any)"
+                    selectedPeriod={selectedPeriod}
+                    loading={loading}
+                />
+                {/* ==================================================================== */}
                 {/* Stats rows (vertical, like TokenOverviewStats) */}
                 <div className={styles.statsSection}>
                     <div className={styles.statColumn}>
@@ -559,6 +571,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                             unrealizedPnlInPeriod={selectedStats?.pnl?.unrealizedUsd}
                             loading={loading}
                         />
+                      
                     </div>
 
                     <WalletOverviewPnLSection
@@ -598,6 +611,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 walletLabel={label || undefined}
                 initialTags={tags}
             />
+            
         </>
     );
 };
