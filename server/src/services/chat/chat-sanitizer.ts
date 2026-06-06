@@ -1,4 +1,4 @@
-import type { ChartSpec, TableSpec } from "./chat.types.js";
+import type { ActionSpec, ChartSpec, TableSpec } from "./chat.types.js";
 
 export function sanitizeText(text: string): string {
   let s = text;
@@ -47,10 +47,11 @@ export function sanitizeResponse(raw: string): {
   text: string;
   charts: ChartSpec[];
   tables: TableSpec[];
+  actions: ActionSpec[];
 } {
   const parsed = extractJsonObject(raw) as Record<string, unknown> | null;
   if (!parsed) {
-    return { rawText: raw, text: raw, charts: [], tables: [] };
+    return { rawText: raw, text: raw, charts: [], tables: [], actions: [] };
   }
 
   const text = sanitizeText((parsed.text as string) ?? "");
@@ -63,5 +64,12 @@ export function sanitizeResponse(raw: string): {
     (t): t is TableSpec => t && typeof t === "object" && typeof (t as Record<string, unknown>).id === "string" && typeof (t as Record<string, unknown>).dataRef === "string",
   );
 
-  return { rawText: raw, text, charts, tables };
+  const actions: ActionSpec[] = (Array.isArray(parsed.actions) ? parsed.actions : []).filter(
+    (a): a is ActionSpec =>
+      a && typeof a === "object" &&
+      typeof (a as Record<string, unknown>).label === "string" &&
+      typeof (a as Record<string, unknown>).href === "string",
+  );
+
+  return { rawText: raw, text, charts, tables, actions };
 }

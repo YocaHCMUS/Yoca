@@ -256,7 +256,7 @@ export function WalletChat({ address, lang }: Props) {
         }}
       >
         {messages.map((msg, i) => (
-          <WalletChatMessage key={i} message={msg} />
+          <WalletChatMessage key={i} message={msg} onAction={sendQuery} />
         ))}
         {isLoading && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 0", color: "#888" }}>

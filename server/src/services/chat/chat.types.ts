@@ -42,6 +42,7 @@ export interface PriorContext {
 export interface ActionSpec {
   label: string;
   href: string;
+  index?: number | null;
 }
 
 export interface ChartSpec {

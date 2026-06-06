@@ -225,8 +225,9 @@ async function generateResponse(
   const text = sanitized.text;
   const charts = sanitized.charts;
   const tables = sanitized.tables;
+  const actions = sanitized.actions;
 
-  if (!text && charts.length === 0 && tables.length === 0) {
+  if (!text && charts.length === 0 && tables.length === 0 && actions.length === 0) {
     chatWarn("generateResponse: sanitizeResponse returned empty, using raw text", { raw: trunc(raw, 300) });
     return {
       text: String(raw),
@@ -256,6 +257,7 @@ async function generateResponse(
     data: resolvedData,
     charts,
     tables,
+    actions: actions.length > 0 ? actions : undefined,
   };
 
   chatInfo("generateResponse: success", {
