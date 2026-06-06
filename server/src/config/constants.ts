@@ -54,7 +54,7 @@ export const WALLET_IDENTITY_KNOWN_TTL_MS = 6 * 60 * 60 * 1000; // 72 hours
 export const WALLET_IDENTITY_UNKNOWN_TTL_MS = 2 * 60 * 60 * 1000; // 24 hours
 
 export const WALLET_TOKEN_DETAILS_TTL_MS = 60 * 60 * 1000; // 1 hour
-export const WALLET_BALANCE_HISTORY_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+export const WALLET_BALANCE_HISTORY_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // AI Wallet Forensic Audit
 export const WALLET_AUDIT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -124,14 +124,14 @@ const apiCallTrackerRedactFields = readListEnv(
 export const API_CALL_TRACKER_REDACT_FIELDS = apiCallTrackerRedactFields.length
   ? apiCallTrackerRedactFields
   : [
-    "apikey",
-    "api_key",
-    "authorization",
-    "token",
-    "password",
-    "secret",
-    "signature",
-  ];
+      "apikey",
+      "api_key",
+      "authorization",
+      "token",
+      "password",
+      "secret",
+      "signature",
+    ];
 export const API_CALL_TRACKER_PROVIDER_ALLOWLIST = readListEnv(
   "API_CALL_TRACKER_PROVIDER_ALLOWLIST",
 );
@@ -165,7 +165,8 @@ export const TRANSACTION_FETCH_MAX_ITEM_COUNT = readNumberEnv(
 ); // get 500 earliest txs
 
 export const SWAPS_SAMPLE_SIZE = 200;
-export const GEMINI_MODEL = process.env.GEMINI_SWAP_SUMMARY_MODEL?.trim() || "gemini-3.1-flash-lite";
+export const GEMINI_MODEL =
+  process.env.GEMINI_SWAP_SUMMARY_MODEL?.trim() || "gemini-3.1-flash-lite";
 
 export const SYSTEM_PROMPT_EN =
   "You are a crypto trading analyst. Given the wallet's per-token PnL breakdown, " +

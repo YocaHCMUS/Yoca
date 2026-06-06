@@ -147,7 +147,7 @@ export async function getWalletBalanceHistory(
   };
   const zrnPeriod = toZrnChartPeriod[timePeriod];
 
-  const nowUtc = dayjs().utc();
+  const nowUtc = dayjs.utc();
   const end = nowUtc.valueOf();
   const start = nowUtc.subtract(1, zrnPeriod).valueOf();
   const thresholdDateMs = end - WALLET_BALANCE_HISTORY_CACHE_TTL_MS;
@@ -162,19 +162,20 @@ export async function getWalletBalanceHistory(
       and(
         eq(balanceTable.address, address),
         between(balanceTable.timestampMs, start, end),
-        gte(balanceTable.updatedAtMs, thresholdDateMs),
       ),
     )
     .orderBy(balanceTable.timestampMs);
 
-  if (res.length == 0) {
+  if (res.length == 0 || res[res.length - 1].timestampMs < thresholdDateMs) {
     return fetchWalletBalanceHistory(address, zrnPeriod);
   }
 
-  return res.map((point) => ({
-    timestampMs: point.timestampMs,
-    usdValue: point.usdValue,
-  }));
+  return normalizeByDay(
+    res.map((point) => ({
+      timestampMs: point.timestampMs,
+      usdValue: point.usdValue,
+    })),
+  );
 }
 
 async function fetchWalletBalanceHistory(
@@ -211,10 +212,29 @@ async function fetchWalletBalanceHistory(
 
   await db.insert(balanceTable).values(insertValues).onConflictDoNothing();
 
-  return insertValues.map((point) => ({
-    usdValue: point.usdValue,
-    timestampMs: point.timestampMs,
-  }));
+  return normalizeByDay(
+    insertValues.map((point) => ({
+      usdValue: point.usdValue,
+      timestampMs: point.timestampMs,
+    })),
+  );
+}
+
+// Group data points by UTC day, keeping only the latest point per day.
+function normalizeByDay(
+  dataPoints: NonNullable<WalletBalanceHistory>,
+): NonNullable<WalletBalanceHistory> {
+  const normalized = dataPoints
+    .reduce((acc, point) => {
+      const dayMs = dayjs.utc(point.timestampMs).startOf("day").valueOf();
+      if (!acc.has(dayMs) || acc.get(dayMs)!.timestampMs < point.timestampMs) {
+        acc.set(dayMs, point);
+      }
+      return acc;
+    }, new Map<number, NonNullable<WalletBalanceHistory>[number]>())
+    .values();
+
+  return [...normalized];
 }
 
 export async function getCumulativePnL(

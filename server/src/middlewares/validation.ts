@@ -312,7 +312,15 @@ export async function getTrackedApiResult<T extends z.ZodType>(
   logSuccessResponse: boolean = false,
 ) {
   try {
-    const jsonResp = await resp.json();
+    const text = await resp.text();
+    if (!text) {
+      console.error("External API returned empty response", {
+        status: resp.status,
+        url: resp.url,
+      });
+      return;
+    }
+    const jsonResp = JSON.parse(text);
     return validateResponseDataSchema(
       resp.status,
       jsonResp,
@@ -320,7 +328,11 @@ export async function getTrackedApiResult<T extends z.ZodType>(
       logSuccessResponse,
     );
   } catch (err) {
-    console.error("Unexpected Error:", err);
+    console.error("External API Error:", {
+      error: err instanceof Error ? err.message : String(err),
+      url: resp?.url,
+      status: resp?.status,
+    });
     return;
   }
 }

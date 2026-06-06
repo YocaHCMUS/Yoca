@@ -1,4 +1,5 @@
 import env from "@sv/util/load-env.js";
+import "@sv/util/date.js";
 import { serve } from "@hono/node-server";
 import { clientDomains } from "@sv/config/security.js";
 import { requestContextMiddleware } from "@sv/middlewares/request-context.js";

@@ -28,9 +28,10 @@ export function getRequiredHeaders(): Record<string, string> {
 export const limiter = new Bottleneck({
   reservoir: 300, // 300 requests per day
   reservoirRefreshAmount: 300,
-  reservoirRefreshInterval: 24 * 60 * 60 * 1000, // 24 hours (86400000 ms)
-  maxConcurrent: 1, // only one request at a time
-  minTime: 1000, // at least 1 second between requests
+  reservoirRefreshInterval: 24 * 60 * 60 * 1000, // 24h
+  maxConcurrent: 1, // only one at a time
+  minTime: 1100, // 1.1 seconds → safe margin
+  waitForReservoir: true, // wait if daily limit is exhausted
 });
 
 export type ZRN_ChartPeriod =

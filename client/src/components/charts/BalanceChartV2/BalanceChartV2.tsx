@@ -119,15 +119,12 @@ export function BalanceChartV2({
     },
   );
 
-  const balanceSeries =
-    selectedTokens == null
-      ? totalBalance.data
-        ? [totalBalance.data]
-        : []
-      : [
-        ...(tokenBalances.data ?? []),
-        // ...(totalBalance.data ? [totalBalance.data] : []),
-      ];
+  const balanceSeries = useMemo(() => {
+    if (selectedTokens == null || selectedTokens.length == 0) {
+      return totalBalance.data ? [totalBalance.data] : [];
+    }
+    return tokenBalances.data ?? [];
+  }, [selectedTokens, totalBalance.data, tokenBalances.data]);
 
   const series24hChanges = useMemo(() => {
     return balanceSeries.reduce<Record<string, ChangeMetric | null>>(
@@ -140,7 +137,13 @@ export function BalanceChartV2({
   }, [balanceSeries]);
 
   return (
-    <ChartWrapper title={tr("charts.balanceChart.title")} wrapperMinHeight={minHeight} enableExport={false} enableFullscreen={false} enableMiniPlayer={false}>
+    <ChartWrapper
+      title={tr("charts.balanceChart.title")}
+      wrapperMinHeight={minHeight}
+      enableExport={false}
+      enableFullscreen={false}
+      enableMiniPlayer={false}
+    >
       <Flex dir="column" gap={8}>
         <Flex justify="between" align="end">
           <Layer style={{ width: 300 }}>
@@ -151,9 +154,7 @@ export function BalanceChartV2({
               label={tr("charts.balanceChart.selectTokenLabel")}
               size="lg"
               itemToElement={(account) => (
-                <Txt secondary>
-                  {account.symbol || account.tokenAddress}
-                </Txt>
+                <Txt secondary>{account.symbol || account.tokenAddress}</Txt>
                 // <TokenIdentityCell
                 //   symbol={account.symbol || account.tokenAddress}
                 //   fullName={account.name}
@@ -193,11 +194,7 @@ export function BalanceChartV2({
 
               return (
                 <Tag key={series.key} size="lg" title={series.label}>
-                  <Flex
-                    align="center"
-                    justify="between"
-                    gap={2}
-                  >
+                  <Flex align="center" justify="between" gap={2}>
                     <Txt size="sm" secondary>
                       {series.label}
                     </Txt>
@@ -216,7 +213,11 @@ export function BalanceChartV2({
         <MultiTimeSeriesLineChart
           series={balanceSeries}
           height={minHeight}
-          loading={totalBalance.isLoading || tokenBalances.isLoading || portfolio.isLoading}
+          loading={
+            totalBalance.isLoading ||
+            tokenBalances.isLoading ||
+            portfolio.isLoading
+          }
           valueFormatter={fmt.num.currency}
           onClickDay={onClickDay}
         />

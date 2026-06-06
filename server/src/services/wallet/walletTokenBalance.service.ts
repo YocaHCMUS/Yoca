@@ -10,7 +10,7 @@ import {
 } from "@sv/db/schema.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
 import dayjs from "dayjs";
-import { and, between, eq, gte, inArray } from "drizzle-orm";
+import { and, between, eq, inArray } from "drizzle-orm";
 import { WALLET_BALANCE_HISTORY_CACHE_TTL_MS } from "@sv/config/constants.js";
 import * as zrn from "@sv/util/util-zerion.js";
 import { zrn_FungiblesResponseSchema } from "../_types/token-raw-responses.js";
@@ -43,13 +43,15 @@ async function fetchZerionId(
   tokenAddresses: string[],
 ): Promise<Record<string, string>> {
   // TODO: warn about token addresses limit of 25
-  const url = zrn.getEndpoint("/v1/fungibles/");
+  const url = zrn.getEndpoint("/fungibles/");
   const req = new URL(url);
 
   // Filter by chain and addresses (comma-separated)
   req.search = new URLSearchParams({
     "filter[chain_ids]": "solana",
-    "filter[addresses]": tokenAddresses.join(","),
+    "filter[fungible_implementations]": tokenAddresses
+      .map((addr) => `solana:${addr}`)
+      .join(","),
   }).toString();
 
   const resp = await fetch(req, {
@@ -117,42 +119,65 @@ export async function getWalletTokenBalanceHistory(
         between(balanceTable.timestampMs, start, end),
         eq(balanceTable.walletAddress, address),
         inArray(balanceTable.tokenAddress, tokenAddresses),
-        gte(balanceTable.timestampMs, thresholdDateMs),
       ),
     )
     .orderBy(balanceTable.tokenAddress, balanceTable.timestampMs);
 
   if (res.length == 0) {
-    return await fetchWalletTokenBalanceHistory(
+    const fetched = await fetchWalletTokenBalanceHistory(
       address,
       tokenAddresses,
       zrnPeriod,
     );
+    if (!fetched) {
+      return null;
+    }
+    const normalizedGrouped = normalizeByDay(fetched);
+    return alignAllTokenSeriesToSameStartTime(normalizedGrouped);
   }
 
-  const grouped = res.reduce((acc, value) => {
-    if (!acc[value.tokenAddress]) {
-      acc[value.tokenAddress] = [];
+  const grouped = {} as NonNullable<WalletTokenBalanceHistory>;
+  const latestUpdateByToken = new Map<string, number | null>();
+
+  for (const value of res) {
+    if (!grouped[value.tokenAddress]) {
+      grouped[value.tokenAddress] = [];
     }
-    acc[value.tokenAddress].push({
+
+    grouped[value.tokenAddress].push({
       timestampMs: value.timestampMs,
       usdValue: value.usdValue,
     });
-    return acc;
-  }, {} as NonNullable<WalletTokenBalanceHistory>);
 
-  // Check for missing token
-  const missingTokens = tokenAddresses.filter((addr) => !grouped[addr]);
+    const currentUpdatedAtMs = latestUpdateByToken.get(value.tokenAddress);
+    const nextUpdatedAtMs = value.updatedAtMs;
+
+    if (
+      currentUpdatedAtMs == null ||
+      (nextUpdatedAtMs != null && nextUpdatedAtMs > currentUpdatedAtMs)
+    ) {
+      latestUpdateByToken.set(value.tokenAddress, nextUpdatedAtMs);
+    }
+  }
+
+  const missingTokens = tokenAddresses.filter((addr) => {
+    const latestUpdatedAtMs = latestUpdateByToken.get(addr);
+    return latestUpdatedAtMs == null || latestUpdatedAtMs < thresholdDateMs;
+  });
+
   if (missingTokens.length > 0) {
     const fetched = await fetchWalletTokenBalanceHistory(
       address,
       missingTokens,
       zrnPeriod,
     );
-    return { ...grouped, ...fetched };
+    const merged = { ...grouped, ...fetched };
+    const normalizedGrouped = normalizeByDay(merged);
+    return alignAllTokenSeriesToSameStartTime(normalizedGrouped);
   }
 
-  return grouped;
+  const normalizedGrouped = normalizeByDay(grouped);
+  return alignAllTokenSeriesToSameStartTime(normalizedGrouped);
 }
 
 export async function fetchWalletTokenBalanceHistory(
@@ -232,4 +257,58 @@ export async function fetchWalletTokenBalanceHistory(
   }, {} as NonNullable<WalletTokenBalanceHistory>);
 
   return grouped;
+}
+
+// Group data points by UTC day, keeping only the latest point per day.
+function normalizeByDay(
+  grouped: NonNullable<WalletTokenBalanceHistory>,
+): NonNullable<WalletTokenBalanceHistory> {
+  const normalized: NonNullable<WalletTokenBalanceHistory> = {};
+
+  for (const [tokenAddress, points] of Object.entries(grouped)) {
+    const groupedByDay = new Map<
+      number,
+      { usdValue: number; timestampMs: number }
+    >();
+
+    for (const point of points) {
+      const dayStartMs = dayjs.utc(point.timestampMs).startOf("day").valueOf();
+      const existing = groupedByDay.get(dayStartMs);
+
+      if (!existing || point.timestampMs > existing.timestampMs) {
+        groupedByDay.set(dayStartMs, point);
+      }
+    }
+
+    normalized[tokenAddress] = Array.from(groupedByDay.values()).sort(
+      (a, b) => a.timestampMs - b.timestampMs,
+    );
+  }
+
+  return normalized;
+}
+
+// Align all token series to the same oldest timestamp.
+// Truncates newer data points so all tokens have data from the same time window.
+function alignAllTokenSeriesToSameStartTime(
+  grouped: NonNullable<WalletTokenBalanceHistory>,
+): NonNullable<WalletTokenBalanceHistory> {
+  const allMinTimestamps = Object.values(grouped)
+    .filter((points) => points.length > 0)
+    .map((points) => Math.min(...points.map((p) => p.timestampMs)));
+
+  if (allMinTimestamps.length == 0) {
+    return grouped;
+  }
+
+  const maxMinTimestamp = Math.max(...allMinTimestamps);
+
+  const aligned: NonNullable<WalletTokenBalanceHistory> = {};
+  for (const [tokenAddress, points] of Object.entries(grouped)) {
+    aligned[tokenAddress] = points.filter(
+      (p) => p.timestampMs >= maxMinTimestamp,
+    );
+  }
+
+  return aligned;
 }
