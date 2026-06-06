@@ -21,6 +21,7 @@ import {
   renderTokenCell,
 } from "@/components/tables/TableCellRenderer.tsx";
 import { SwapPairCell } from "@/components/wallet/SwapPairCell/SwapPairCell.tsx";
+import { useWalletWinrate } from "@/hooks/useWalletWinrate";
 import {
   WalletReportTemplate,
   type WalletReportSection,
@@ -176,7 +177,8 @@ export default function WalletPage() {
   const [isChartsExporting, setIsChartsExporting] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
   const reportTemplateRef = useRef<HTMLDivElement | null>(null);
-
+  
+  const { stats, loading } = useWalletWinrate(walletAddress, selectedPeriod);
   const [selectedToken, setSelectedToken] = useState<{
     address: string;
     symbol: string;
@@ -628,7 +630,7 @@ export default function WalletPage() {
         setWalletTags([]);
       });
   }, [address]);
-
+  
   const loadPortfolioData = useCallback(async (): Promise<
     WalletPortfolioItem[]
   > => {
@@ -764,7 +766,7 @@ export default function WalletPage() {
     loadPortfolioData,
     loadActivityData,
   ]);
-
+  const { stats: winRateStats, loading: winRateLoading } = useWalletWinrate(walletAddress, selectedPeriod);
   const activeReportSection = useMemo<WalletReportSection>(() => {
     return "overview";
   }, []);
@@ -1273,16 +1275,9 @@ export default function WalletPage() {
           />
           <div style={{ padding: "20px 24px 0 24px" }}>
             <WalletOverviewWinRateBanner 
-                stats={(overviewReport?.periods?.[selectedPeriod] as any)?.winRateStats || {
-                    winRate: 68.4,
-                    winCount: 342,
-                    lossCount: 158,
-                    totalTraded: 500,
-                    avgWinUsd: 1250,
-                    avgLossUsd: -450
-                }}
+                stats={stats} // Nhận từ hook useWalletWinrate
                 selectedPeriod={selectedPeriod}
-                loading={!overviewReport}
+                loading={loading} // Nhận từ hook useWalletWinrate
             />
           </div>
 

@@ -19,6 +19,8 @@ interface WalletWinrateData {
   losingTrades: number;
   winningDistribution: WinrateBin[];
   losingDistribution: WinrateBin[];
+  avgWinUsd: number; // Thêm trường này
+  avgLossUsd: number; 
 }
 
 interface WinrateResponse {
@@ -135,29 +137,33 @@ function filterTokensByRange(
 }
 
 function calculateWinrate(tokens: BirdeyeTokenPnlDetailsToken[]) {
-  const winningPnLs: number[] = [];
-  const losingPnLs: number[] = [];
+  let winningPnLs: number[] = [];
+  let losingPnLs: number[] = [];
   let totalTrades = 0;
   let winningTrades = 0;
   let losingTrades = 0;
+  
+  // THÊM CÁC BIẾN NÀY ĐỂ TÍNH TỔNG USD
+  let totalWinUsd = 0;
+  let totalLossUsd = 0;
 
   for (const token of tokens) {
     const pnlPercent = token.pnl?.total_percent;
+    // Giả sử Birdeye trả về giá trị PnL tuyệt đối (USD) trong token.pnl.realized_pnl hoặc tương tự
+    const pnlUsd = token.pnl?.realized_profit_usd ?? 0; 
 
-    if (pnlPercent === null || pnlPercent === undefined || !isFinite(pnlPercent)) {
-      console.log(`[WalletWinrate] Skipping token ${token.symbol}: pnlPercent is not a valid number (${pnlPercent})`);
-      continue;
-    }
+    if (pnlPercent === null || pnlPercent === undefined || !isFinite(pnlPercent)) continue;
 
     totalTrades++;
-    console.log(`[WalletWinrate] Token ${token.symbol} PnL: ${pnlPercent}%`);
 
     if (pnlPercent > 0) {
       winningTrades++;
       winningPnLs.push(pnlPercent);
+      totalWinUsd += pnlUsd;
     } else {
       losingTrades++;
       losingPnLs.push(pnlPercent);
+      totalLossUsd += Math.abs(pnlUsd); // Lấy giá trị tuyệt đối cho avg loss
     }
   }
 
@@ -167,6 +173,8 @@ function calculateWinrate(tokens: BirdeyeTokenPnlDetailsToken[]) {
     totalTrades,
     winningTrades,
     losingTrades,
+    avgWinUsd: winningTrades > 0 ? totalWinUsd / winningTrades : 0,
+    avgLossUsd: losingTrades > 0 ? totalLossUsd / losingTrades : 0
   };
 }
 
@@ -221,6 +229,8 @@ async function calculateWalletWinrate(
       losingTrades: 0,
       winningDistribution: [],
       losingDistribution: [],
+      avgWinUsd: 0,
+      avgLossUsd: 0,
     };
   }
 
@@ -234,6 +244,8 @@ async function calculateWalletWinrate(
     losingTrades,
     winningDistribution: generateDistributionBins(winningPnLs),
     losingDistribution: generateDistributionBins(losingPnLs),
+    avgWinUsd: winningTrades > 0 ? winningPnLs.reduce((sum, val) => sum + val, 0) / winningTrades : 0,
+    avgLossUsd: losingTrades > 0 ? losingPnLs.reduce((sum, val) => sum + val, 0) / losingTrades : 0,
   };
 
   console.log(`[WalletWinrate] FINAL CHART DATA:`, JSON.stringify(chartData, null, 2));

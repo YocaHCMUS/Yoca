@@ -17,18 +17,19 @@ const WalletOverviewWinRateBanner: React.FC<Props> = ({ stats, selectedPeriod, l
     }
 
     // MOCK DATA: Đảm bảo luôn hiện UI để bạn xem thiết kế trước. Khi nối API xong, đổi thành displayStats = stats;
-    const displayStats = stats || {
-        winRate: 68.4,
-        winCount: 342,
-        lossCount: 158,
-        totalTraded: 500,
-        avgWinUsd: 1250,
-        avgLossUsd: -450
-    };
+    const displayStats = stats;
 
-    if (!displayStats || displayStats.totalTraded === 0) return null; 
-
-    const { winRate, winCount, totalTraded, avgWinUsd, avgLossUsd } = displayStats;
+    if (loading) {
+        return <SkeletonPlaceholder className={styles.bannerSkeleton} />;
+    }
+    if (!stats) return <div>No data available</div>;
+    const { 
+        winRate, 
+        winCount, 
+        totalTraded, 
+        avgWinUsd = 0, 
+        avgLossUsd = 0 
+    } = displayStats;
     const isHighWinRate = winRate >= 50;
 
     return (
