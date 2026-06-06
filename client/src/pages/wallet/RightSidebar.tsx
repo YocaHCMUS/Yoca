@@ -8,7 +8,8 @@ import {
     ChevronDown,
     ChartLine,
     TrashCan,
-    Add
+    Add,
+    AiGenerate,
 } from "@carbon/icons-react";
 import { TknImg } from "@/components/TknImg";
 import TokenSearch from "@/components/TokenSearch/TokenSearch";
@@ -21,10 +22,13 @@ import { useGet } from "@/hooks/useGet";
 import client from "@/api/main";
 
 import { fetchWalletOverview } from "@/services/wallet/walletApi";
+import { WalletChat } from "@/components/wallet/WalletChat";
 
 interface RightSidebarProps {
   currentAddress: string;
   onToggle?: (isOpen: boolean) => void;
+  address?: string;
+  lang?: string;
 }
 
 const formatAddress = (addr: string) => {
@@ -158,8 +162,8 @@ function WalletWatchlistRow({ wallet }: { wallet: string }) {
   );
 }
 
-export function RightSidebar({ currentAddress, onToggle }: RightSidebarProps) {
-  const [activeTab, setActiveTab] = useState<"watchlist" | "labels" | null>(null);
+export function RightSidebar({ currentAddress, onToggle, address: chatAddress, lang }: RightSidebarProps) {
+  const [activeTab, setActiveTab] = useState<"watchlist" | "labels" | "ai-chat" | null>(null);
   const [isAddingToken, setIsAddingToken] = useState(false);
 
   useEffect(() => {
@@ -181,11 +185,10 @@ export function RightSidebar({ currentAddress, onToggle }: RightSidebarProps) {
   };
 
   return (
-    <div className={styles.container} style={{ width: activeTab ? "308px" : "48px" }}>
+    <div className={styles.container} style={{ width: activeTab ? (activeTab === "ai-chat" ? "360px" : "308px") : "48px" }}>
       {/* Expanded Panel Area */}
       {activeTab && (
-        <div className={styles.panel}>
-          
+        <div className={styles.panel} style={activeTab === "ai-chat" ? { width: "312px", overflow: "hidden", padding: 0 } : undefined}>
           {/* WATCHLIST TAB */}
           {activeTab === "watchlist" && (
             <>
@@ -312,6 +315,15 @@ export function RightSidebar({ currentAddress, onToggle }: RightSidebarProps) {
               </div>
             </>
           )}
+
+          {/* AI CHAT TAB */}
+          {activeTab === "ai-chat" && chatAddress && (
+            <WalletChat
+              address={chatAddress}
+              lang={lang}
+              variant="sidebar"
+            />
+          )}
         </div>
       )}
 
@@ -329,6 +341,13 @@ export function RightSidebar({ currentAddress, onToggle }: RightSidebarProps) {
             onClick={() => setActiveTab(activeTab === "labels" ? null : "labels")}
           >
             <Tag size={20} />
+          </button>
+          <button 
+            className={`${styles.toolBtn} ${activeTab === "ai-chat" ? styles.toolBtnActive : ""}`}
+            onClick={() => setActiveTab(activeTab === "ai-chat" ? null : "ai-chat")}
+            title="AI Chat"
+          >
+            <AiGenerate size={20} />
           </button>
         </div>
         

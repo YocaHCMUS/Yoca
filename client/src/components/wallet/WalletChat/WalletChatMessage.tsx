@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import type { ActionSpec, ChatMessageItem } from "./types";
 import { ChartRenderer, TableRenderer } from "./WalletChatChartRenderer";
+import styles from "./WalletChat.module.scss";
 
 interface Props {
   message: ChatMessageItem;
@@ -52,21 +53,12 @@ function parseMarkers(text: string): PartType[] {
 
 function actionButtonGroup(actions: ActionSpec[], navigate: ReturnType<typeof useNavigate>, onAction?: (href: string) => void): ReactNode {
   return (
-    <div key={`actg-${actions[0]?.index ?? "end"}`} style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4, marginBottom: 4 }}>
+    <div key={`actg-${actions[0]?.index ?? "end"}`} className={styles.actionGroup}>
       {actions.map((a, i) => (
         <button
           key={`act-${a.index ?? "end"}-${i}`}
           type="button"
-          style={{
-            background: "transparent",
-            border: "1px solid #2a6df4",
-            color: "#2a6df4",
-            borderRadius: 8,
-            padding: "6px 14px",
-            fontSize: 12,
-            cursor: "pointer",
-            whiteSpace: "nowrap",
-          }}
+          className={styles.actionBtn}
           onClick={() => {
             if (a.href.startsWith("#ask:") && onAction) {
               onAction(a.href.slice(5));
@@ -107,19 +99,8 @@ export function WalletChatMessage({ message, onAction }: Props) {
 
   if (message.role === "user") {
     return (
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-        <div
-          style={{
-            maxWidth: "80%",
-            background: "#2a6df4",
-            color: "#fff",
-            borderRadius: "12px 12px 4px 12px",
-            padding: "8px 14px",
-            fontSize: 13,
-            lineHeight: 1.5,
-            wordBreak: "break-word",
-          }}
-        >
+      <div className={styles.userBubbleRow}>
+        <div className={styles.userBubble}>
           {message.content}
         </div>
       </div>
@@ -129,17 +110,7 @@ export function WalletChatMessage({ message, onAction }: Props) {
   for (const part of parsed) {
     if (part.type === "text" && part.content.trim()) {
       elements.push(
-        <div
-          key={`t-${elements.length}`}
-          style={{
-            fontSize: 13,
-            lineHeight: 1.6,
-            color: "#e0e0e0",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            marginBottom: 4,
-          }}
-        >
+        <div key={`t-${elements.length}`} className={styles.textPart}>
           {part.content}
         </div>,
       );
@@ -177,23 +148,15 @@ export function WalletChatMessage({ message, onAction }: Props) {
 
   if (elements.length === 0) {
     elements.push(
-      <div key="empty" style={{ fontSize: 13, color: "#888" }}>
+      <div key="empty" className={styles.emptyPart}>
         No data available.
       </div>,
     );
   }
 
   return (
-    <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 12 }}>
-      <div
-        style={{
-          maxWidth: "85%",
-          background: "#1e1e1e",
-          border: "1px solid #2a2a2a",
-          borderRadius: "12px 12px 12px 4px",
-          padding: "10px 14px",
-        }}
-      >
+    <div className={styles.assistantBubbleRow}>
+      <div className={styles.assistantBubble}>
         {elements}
       </div>
     </div>

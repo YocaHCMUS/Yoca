@@ -2,6 +2,9 @@ import { useMemo, useState } from "react";
 import ReactECharts from "echarts-for-react";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type { ChartSpec, TableFilter, TableSpec } from "./types";
+import styles from "./WalletChat.module.scss";
+
+const TABLE_PAGE_SIZE = 10;
 
 interface ChartRendererProps {
   spec: ChartSpec;
@@ -129,11 +132,9 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
   if (!option) return null;
 
   return (
-    <div style={{ width: "100%", height: 200, margin: "8px 0" }}>
+    <div className={styles.chartContainer}>
       {spec.title && (
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#ccc", marginBottom: 4 }}>
-          {spec.title}
-        </div>
+        <div className={styles.chartTitle}>{spec.title}</div>
       )}
       <ReactECharts
         option={option}
@@ -293,11 +294,18 @@ function formatCellValue(val: unknown, format: ColumnFormat, fmt: ReturnType<typ
 function TableRenderer({ spec, data, onAction }: TableRendererProps) {
   const { fmt } = useLocalization();
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const raw = data[spec.dataRef];
   if (!Array.isArray(raw) || raw.length === 0) return null;
 
   const rows = applyTableFilters(raw, spec);
   if (rows.length === 0) return null;
+
+  const totalPages = Math.ceil(rows.length / TABLE_PAGE_SIZE);
+  const safePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const pageStart = (safePage - 1) * TABLE_PAGE_SIZE;
+  const pageEnd = pageStart + TABLE_PAGE_SIZE;
+  const pageRows = rows.slice(pageStart, pageEnd);
 
   const cols = parseColumns(spec.columns);
 
@@ -311,57 +319,37 @@ function TableRenderer({ spec, data, onAction }: TableRendererProps) {
   }
 
   return (
-    <div style={{ width: "100%", margin: "8px 0", overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+    <div className={styles.tableWrapper}>
+      <table className={styles.table}>
         <thead>
           <tr>
             {cols.map((col) => (
-              <th
-                key={col.field}
-                style={{
-                  textAlign: "left",
-                  padding: "4px 8px",
-                  borderBottom: "1px solid #333",
-                  color: "#888",
-                  fontWeight: 600,
-                  textTransform: "capitalize",
-                }}
-              >
-                {col.title}
-              </th>
+              <th key={col.field} className={styles.tableTh}>{col.title}</th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, i) => {
+          {pageRows.map((row, i) => {
             const rowVars = spec.rowActions ? resolveRowVars(row) : undefined;
             const rowQuery = rowVars && spec.rowActions
               ? interpolate(spec.rowActions.query, rowVars)
               : null;
             const rowTooltip = rowQuery ? `Click to ask: ${rowQuery}` : undefined;
+            const globalIdx = pageStart + i;
 
             return (
               <tr
-                key={i}
+                key={globalIdx}
                 title={rowTooltip}
+                data-clickable={!!(rowQuery && onAction)}
                 onClick={rowQuery && onAction ? () => onAction(rowQuery!) : undefined}
-                onMouseEnter={() => setHoveredIdx(i)}
+                onMouseEnter={() => setHoveredIdx(globalIdx)}
                 onMouseLeave={() => setHoveredIdx(null)}
-                style={{
-                  cursor: rowQuery && onAction ? "pointer" : undefined,
-                  background: hoveredIdx === i && rowQuery ? "#2a2a2a" : undefined,
-                  transition: "background 0.15s",
-                }}
+                className={styles.tableRow}
+                style={{ background: hoveredIdx === globalIdx && rowQuery ? "var(--cds-layer-hover)" : undefined }}
               >
                 {cols.map((col) => (
-                  <td
-                    key={col.field}
-                    style={{
-                      padding: "4px 8px",
-                      borderBottom: "1px solid #222",
-                      color: "#ccc",
-                    }}
-                  >
+                  <td key={col.field} className={styles.tableTd}>
                     {formatCellValue(getNestedValue(row, col.field), col.format, fmt)}
                   </td>
                 ))}
@@ -370,6 +358,29 @@ function TableRenderer({ spec, data, onAction }: TableRendererProps) {
           })}
         </tbody>
       </table>
+      {totalPages > 1 && (
+        <div className={styles.pagination}>
+          <button
+            type="button"
+            className={styles.pageBtn}
+            disabled={safePage <= 1}
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          >
+            &lt;
+          </button>
+          <span className={styles.pageInfo}>
+            Page {safePage} of {totalPages}
+          </span>
+          <button
+            type="button"
+            className={styles.pageBtn}
+            disabled={safePage >= totalPages}
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          >
+            &gt;
+          </button>
+        </div>
+      )}
     </div>
   );
 }
