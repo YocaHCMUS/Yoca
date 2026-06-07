@@ -54,12 +54,15 @@ export async function createAlertRule(
   return row;
 }
 
-export async function deleteAlertRule(id: number, userId: string): Promise<boolean> {
-  const deleted = await db
+export async function deleteAlertRule(
+  id: number,
+  userId: string,
+): Promise<AlertRuleRow | null> {
+  const [deleted] = await db
     .delete(alertRules)
     .where(and(eq(alertRules.id, id), eq(alertRules.userId, userId)))
-    .returning({ id: alertRules.id });
-  return deleted.length > 0;
+    .returning();
+  return deleted ?? null;
 }
 
 /**

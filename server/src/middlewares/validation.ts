@@ -372,6 +372,13 @@ export const envSchema = z.object({
   HELIUS_API_KEY: z.string(),
   HELIUS_WEBHOOK_AUTH_KEY: z.string(),
   HELIUS_WEBHOOK_ID: z.string(),
+  HELIUS_WEBHOOK_IDS: z.string().optional().default(""),
+  HELIUS_API_BASE: z
+    .url()
+    .optional()
+    .default("https://api-mainnet.helius-rpc.com"),
+  WEBHOOK_PUBLIC_URL: z.string().optional().default(""),
+  WEBHOOK_SOL_PRICE_USD: z.coerce.number().positive().optional().default(150),
   MORALIS_API_BASE_URL: z.url().default("https://solana-gateway.moralis.io"),
   MORALIS_API_KEY: z.string(),
   N8N_ANALYSE_WALLET_URL: z
@@ -396,6 +403,8 @@ export const envSchema = z.object({
   SMTP_USER: z.string().optional().default(""),
   SMTP_PASS: z.string().optional().default(""),
   APP_NAME: z.string().optional().default("Yoca"),
+  RESEND_API_KEY: z.string().optional().default(""),
+  RESEND_FROM: z.string().optional().default(""),
 
   // Client domains
   CLIENT_LOCAL_DOMAIN: z.url().default("http://localhost:3000"),

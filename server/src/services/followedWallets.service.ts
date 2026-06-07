@@ -1,19 +1,10 @@
 import { alertRules, followedWallets, users } from "@sv/db/schema.js";
 import { db } from "@sv/db/index.js";
 import { and, asc, eq, isNotNull } from "drizzle-orm";
-
-const DEFAULT_HELIUS_WEBHOOK_ID = "2b2123ed-ae76-4fcc-beaa-25e0fb3f5c48";
-const HELIUS_API_BASE =
-  process.env.HELIUS_API_BASE || "https://api-mainnet.helius-rpc.com";
-const HELIUS_WEBHOOK_ID =
-  process.env.HELIUS_WEBHOOK_ID || DEFAULT_HELIUS_WEBHOOK_ID;
-const HELIUS_API_KEY = process.env.HELIUS_API_KEY || "";
-const WEBHOOK_PUBLIC_URL = process.env.WEBHOOK_PUBLIC_URL || "";
-const WEBHOOK_AUTH_HEADER = "thisisphuonglekey";
-
-function heliusWebhookUrl(): string {
-  return `${HELIUS_API_BASE}/v0/webhooks/${HELIUS_WEBHOOK_ID}?api-key=${encodeURIComponent(HELIUS_API_KEY)}`;
-}
+import {
+  syncAllHeliusWebhookShards,
+  type HeliusSyncResult,
+} from "./heliusWebhookShards.service.js";
 
 // ── Per-user CRUD ──────────────────────────────────────────────────
 
@@ -44,12 +35,12 @@ export async function addFollowedWallet(
 export async function removeFollowedWallet(
   id: number,
   userId: string,
-): Promise<boolean> {
-  const deleted = await db
+): Promise<{ id: number; address: string } | null> {
+  const [deleted] = await db
     .delete(followedWallets)
     .where(and(eq(followedWallets.id, id), eq(followedWallets.userId, userId)))
-    .returning({ id: followedWallets.id });
-  return deleted.length > 0;
+    .returning({ id: followedWallets.id, address: followedWallets.address });
+  return deleted ?? null;
 }
 
 // ── Global address list (for Helius sync) ──────────────────────────
@@ -163,62 +154,8 @@ export async function setUserEmailAlertSettings(
 
 // ── Helius webhook sync ────────────────────────────────────────────
 
-export type HeliusSyncResult =
-  | { ok: true; status: number }
-  | { ok: false; status?: number; error: string };
-
 export async function syncHeliusWebhookAccountAddresses(): Promise<HeliusSyncResult> {
-  if (!HELIUS_API_KEY) {
-    return { ok: false, error: "HELIUS_API_KEY is not set" };
-  }
-  if (!WEBHOOK_PUBLIC_URL) {
-    return { ok: false, error: "WEBHOOK_PUBLIC_URL is not set" };
-  }
-
-  const accountAddresses = await getFollowedWalletAddresses();
-  const url = heliusWebhookUrl();
-
-  const baseBody: Record<string, unknown> = {
-    webhookURL: WEBHOOK_PUBLIC_URL,
-    transactionTypes: ["ANY"],
-    accountAddresses,
-    webhookType: "enhanced",
-    authHeader: WEBHOOK_AUTH_HEADER,
-  };
-
-  try {
-    const getResp = await fetch(url, { method: "GET" });
-    if (getResp.ok) {
-      const existing = (await getResp.json()) as {
-        encoding?: string;
-        txnStatus?: string;
-      };
-      if (existing.encoding) baseBody.encoding = existing.encoding;
-      if (existing.txnStatus) baseBody.txnStatus = existing.txnStatus;
-    }
-  } catch {
-    // ignore GET failures
-  }
-
-  try {
-    const putResp = await fetch(url, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(baseBody),
-    });
-    if (!putResp.ok) {
-      const text = await putResp.text();
-      return {
-        ok: false,
-        status: putResp.status,
-        error: text || `Helius PUT failed with status ${putResp.status}`,
-      };
-    }
-    return { ok: true, status: putResp.status };
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    return { ok: false, error: message };
-  }
+  return syncAllHeliusWebhookShards();
 }
 
 /** Postgres unique_violation (direct or wrapped by postgres.js) */

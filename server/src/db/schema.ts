@@ -1006,6 +1006,34 @@ export const alertRules = pgTable("alert_rules", {
     .$onUpdate(() => new Date()),
 });
 
+export const heliusWebhookShards = pgTable("helius_webhook_shards", {
+  id: serial("id").primaryKey(),
+  heliusWebhookId: text("helius_webhook_id").notNull().unique(),
+  authSecret: text("auth_secret"),
+  webhookUrl: text("webhook_url").notNull(),
+  addressCount: integer("address_count").notNull().default(0),
+  maxAddresses: integer("max_addresses").notNull().default(25),
+  status: varchar("status", { length: 32 }).notNull().default("active"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const watchedAddresses = pgTable("watched_addresses", {
+  address: text("address").primaryKey(),
+  heliusWebhookShardId: integer("helius_webhook_shard_id")
+    .notNull()
+    .references(() => heliusWebhookShards.id, { onDelete: "restrict" }),
+  refCount: integer("ref_count").notNull().default(1),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
 export const walletTokenDetails = pgTable(
   "wallet_token_details",
   {
@@ -1387,6 +1415,11 @@ export type FollowedWalletInsert = typeof followedWallets.$inferInsert;
 export type FollowedWalletRow = typeof followedWallets.$inferSelect;
 export type AlertRuleInsert = typeof alertRules.$inferInsert;
 export type AlertRuleRow = typeof alertRules.$inferSelect;
+export type HeliusWebhookShardInsert =
+  typeof heliusWebhookShards.$inferInsert;
+export type HeliusWebhookShardRow = typeof heliusWebhookShards.$inferSelect;
+export type WatchedAddressInsert = typeof watchedAddresses.$inferInsert;
+export type WatchedAddressRow = typeof watchedAddresses.$inferSelect;
 export type WalletAuditCacheInsert = typeof walletAuditCache.$inferInsert;
 export type WalletAuditCacheRow = typeof walletAuditCache.$inferSelect;
 export type WalletPnlDataCacheInsert = typeof walletPnlDataCache.$inferInsert;

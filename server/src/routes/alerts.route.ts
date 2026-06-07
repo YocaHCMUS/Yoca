@@ -17,8 +17,11 @@ import {
   removeFollowedWallet,
   setUserDiscordUrl,
   setUserEmailAlertSettings,
-  syncHeliusWebhookAccountAddresses,
 } from "@sv/services/followedWallets.service.js";
+import {
+  ensureWatchedAddress,
+  releaseWatchedAddress,
+} from "@sv/services/heliusWebhookShards.service.js";
 import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -160,7 +163,7 @@ const app = new Hono()
           discordWebhookOverride: body.discordWebhookOverride ?? null,
           emailOverride: body.emailOverride ?? null,
         });
-        const heliusSync = await syncHeliusWebhookAccountAddresses();
+        const heliusSync = await ensureWatchedAddress(body.walletAddress);
         return c.json({ rule, heliusSync }, statusCode.Created);
       } catch (err) {
         console.error("[alerts] POST /rules failed:", err);
@@ -175,11 +178,11 @@ const app = new Hono()
       return c.json({ error: "Invalid rule id" }, 400);
     }
     try {
-      const deleted = await deleteAlertRule(ruleId, userId);
-      if (!deleted) {
+      const deletedRule = await deleteAlertRule(ruleId, userId);
+      if (!deletedRule) {
         return c.json({ error: "Rule not found" }, 404);
       }
-      const heliusSync = await syncHeliusWebhookAccountAddresses();
+      const heliusSync = await releaseWatchedAddress(deletedRule.walletAddress);
       return c.json({ deleted: true, heliusSync }, statusCode.Ok);
     } catch (err) {
       console.error("[alerts] DELETE /rules/:ruleId failed:", err);
@@ -211,7 +214,7 @@ const app = new Hono()
           address,
           label ?? undefined,
         );
-        const heliusSync = await syncHeliusWebhookAccountAddresses();
+        const heliusSync = await ensureWatchedAddress(address);
         return c.json({ wallet, heliusSync }, statusCode.Created);
       } catch (err) {
         if (isUniqueViolation(err)) {
@@ -232,11 +235,11 @@ const app = new Hono()
       return c.json({ error: "Invalid wallet ID" }, 400);
     }
     try {
-      const deleted = await removeFollowedWallet(id, userId);
-      if (!deleted) {
+      const deletedWallet = await removeFollowedWallet(id, userId);
+      if (!deletedWallet) {
         return c.json({ error: "Wallet not found" }, 404);
       }
-      const heliusSync = await syncHeliusWebhookAccountAddresses();
+      const heliusSync = await releaseWatchedAddress(deletedWallet.address);
       return c.json({ deleted: true, heliusSync }, statusCode.Ok);
     } catch (err) {
       console.error("[alerts] DELETE failed:", err);

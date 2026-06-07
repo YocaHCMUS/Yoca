@@ -8,8 +8,12 @@ import {
   markRuleOneShotFired,
   resolveRuleDelivery,
 } from "@sv/services/alertRules.service.js";
+import {
+  isValidHeliusWebhookAuthorization,
+  releaseWatchedAddress,
+} from "@sv/services/heliusWebhookShards.service.js";
 import type { AlertRuleRow } from "@sv/db/schema.js";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 
 interface HeliusTokenTransfer {
   mint?: string;
@@ -62,7 +66,6 @@ interface StructuredAlert {
   displayTitle?: string;
 }
 
-const WEBHOOK_AUTH_KEY = "thisisphuonglekey";
 const WSOL_MINT = "So11111111111111111111111111111111111111112";
 const LAMPORTS_PER_SOL = 1_000_000_000;
 /** Implied USD/SOL for converting Helius native amounts to USD when rules use `volumeUnit: USD`. */
@@ -326,9 +329,10 @@ async function dispatchRuleAlert(
   return ok;
 }
 
-const app = new Hono().post("/", async (c) => {
+async function handleHeliusWebhook(c: Context) {
   const authorization = c.req.header("Authorization");
-  if (authorization !== WEBHOOK_AUTH_KEY) {
+  const shardId = c.req.param("shardId") || c.req.query("shardId");
+  if (!(await isValidHeliusWebhookAuthorization(authorization, shardId))) {
     return c.text("Unauthorized", 401);
   }
 
@@ -348,6 +352,8 @@ const app = new Hono().post("/", async (c) => {
 
         console.log(
           "[helius-webhook]",
+          "shardId:",
+          shardId || "unspecified",
           "signature:",
           tx.signature,
           "type:",
@@ -383,6 +389,14 @@ const app = new Hono().post("/", async (c) => {
 
           if (delivered && rule.triggerType === "ONCE") {
             await markRuleOneShotFired(rule.id);
+            const sync = await releaseWatchedAddress(rule.walletAddress);
+            if (!sync.ok) {
+              console.error(
+                "[helius-webhook] failed to release fired ONCE rule address",
+                rule.walletAddress,
+                sync.error,
+              );
+            }
           }
         }
       }
@@ -392,7 +406,11 @@ const app = new Hono().post("/", async (c) => {
   }
 
   return c.text("Webhook received", 200);
-});
+}
+
+const app = new Hono()
+  .post("/", handleHeliusWebhook)
+  .post("/helius/:shardId", handleHeliusWebhook);
 
 export default app;
 
