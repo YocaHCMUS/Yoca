@@ -25,7 +25,10 @@ function sortSwapsByTimestampDesc(swaps: WalletSwap[]): WalletSwap[] {
 export async function getWalletTransfers(
     address: string,
     from?: number,
-    to?: number
+    to?: number,
+    tokenAddress?: string,
+    direction?: "in" | "out",
+    minAmountUsd?: number
 ): Promise<WalletTransfersResponse> {
     const metaRows = await getCachedWalletTransfersMeta(address);
     const walletTransferMeta = metaRows.length > 0 ? metaRows[0] : null;
@@ -52,6 +55,9 @@ export async function getWalletTransfers(
                 address,
                 cachedRange.fromMs,
                 cachedRange.toMs,
+                tokenAddress,
+                direction,
+                minAmountUsd,
             )) ?? []
             : [];
 
@@ -96,10 +102,23 @@ export async function getWalletTransfers(
         }
     }
 
-    const combinedTransfers = sortTransfersByTimestampDesc([
+    let combinedTransfers = sortTransfersByTimestampDesc([
         ...cachedTransfers,
         ...fetchedTransfers,
     ]);
+
+    if (tokenAddress != null || direction != null || minAmountUsd != null) {
+        combinedTransfers = combinedTransfers.filter((tr) => {
+            if (tokenAddress != null && tr.tokenAddress !== tokenAddress) return false;
+            if (direction === "in" && tr.to !== address) return false;
+            if (direction === "out" && tr.from !== address) return false;
+            if (minAmountUsd != null) {
+                const usd = tr.amountUsd;
+                if (usd == null || usd < minAmountUsd) return false;
+            }
+            return true;
+        });
+    }
 
     if (combinedTransfers.length === 0) {
         return {
@@ -147,7 +166,8 @@ export async function getWalletTransfers(
 export async function getWalletSwaps(
     address: string,
     from?: number,
-    to?: number
+    to?: number,
+    tokenAddress?: string
 ): Promise<WalletSwapsResponse> {
     const metaRows = await getCachedWalletSwapsMeta(address);
     const walletSwapMeta = metaRows.length > 0 ? metaRows[0] : null;
@@ -172,6 +192,7 @@ export async function getWalletSwaps(
                 address,
                 cachedRange.fromMs,
                 cachedRange.toMs,
+                tokenAddress,
             )) ?? []
             : [];
 
@@ -216,10 +237,17 @@ export async function getWalletSwaps(
         }
     }
 
-    const combinedSwaps = sortSwapsByTimestampDesc([
+    let combinedSwaps = sortSwapsByTimestampDesc([
         ...cachedSwaps,
         ...fetchedSwaps,
     ]);
+
+    if (tokenAddress != null) {
+        combinedSwaps = combinedSwaps.filter((s) => {
+            if (s.bought.address === tokenAddress || s.sold.address === tokenAddress) return true;
+            return false;
+        });
+    }
 
     if (combinedSwaps.length === 0) {
         return {

@@ -1412,6 +1412,8 @@ export default function WalletPage() {
         <RightSidebar
           currentAddress={address || ""}
           onToggle={setIsRightSidebarOpen}
+          address={walletAddress}
+          lang={lang}
         />
       </div>
 
@@ -1492,6 +1494,7 @@ export default function WalletPage() {
           </div>
         </div>
       )}
+
     </PageWrapper>
   );
 }

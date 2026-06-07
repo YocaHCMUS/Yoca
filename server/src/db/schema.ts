@@ -678,6 +678,30 @@ export const walletPortfolioCache = pgTable(
   (t) => [primaryKey({ columns: [t.address] })],
 );
 
+export const walletHistoricalPortfolioCache = pgTable(
+  "wallet_historical_portfolio_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    date: varchar("date", { length: 10 }).notNull(),
+    data: jsonb("data")
+      .$type<
+        Array<{
+          tokenAddress: string;
+          symbol: string;
+          name?: string;
+          logoUri?: string;
+          amount: number;
+          priceUsd?: number;
+          valueUsd: number;
+          change24hPercent?: number;
+        }>
+      >()
+      .notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.date] })],
+);
+
 export const walletTransactionsMeta = pgTable(
   "wallet_transactions_meta",
   {
@@ -1345,6 +1369,8 @@ export type TopLoserInsert = typeof topLosers.$inferInsert;
 export type WalletOverviewCacheInsert = typeof walletOverviewCache.$inferInsert;
 export type WalletPortfolioCacheInsert =
   typeof walletPortfolioCache.$inferInsert;
+export type WalletHistoricalPortfolioCacheInsert =
+  typeof walletHistoricalPortfolioCache.$inferInsert;
 export type WalletTransactionsMetaInsert =
   typeof walletTransactionsMeta.$inferInsert;
 export type WalletTransactionInsert = typeof walletTransactions.$inferInsert;
@@ -1384,4 +1410,29 @@ export type NewsBatchInsert = typeof newsBatches.$inferInsert;
 export type NewsArticleInsert = typeof newsArticles.$inferInsert;
 export type UserSourceInsert = typeof userSources.$inferInsert;
 
+// #region Chatbot
+export const chatAnalysisCache = pgTable(
+  "chat_analysis_cache",
+  {
+    key: varchar("key", { length: 64 }).primaryKey(),
+    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+    query: text("query").notNull(),
+    response: jsonb("response").$type<Record<string, unknown>>().notNull(),
+    dataFingerprint: varchar("data_fingerprint", { length: 64 }).notNull(),
+    model: varchar("model", { length: 64 }).notNull(),
+    ttlMs: integer("ttl_ms").notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+);
+
+export const chatSessions = pgTable(
+  "chat_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+    messages: jsonb("messages").$type<Record<string, unknown>[]>().notNull().default([]),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+);
 // #endregion
