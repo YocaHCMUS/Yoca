@@ -1245,7 +1245,7 @@ export const translation = {
   },
   // Chat / AI Wallet Assistant
   chat: {
-    headerTitle: "AI Wallet Assistant",
+    headerTitle: "YOCA AI",
     inputPlaceholder: "Ask about this wallet...",
     loadingLabel: "Analyzing...",
     errorMessage: "Sorry, I encountered an error: {{error}}. Please try again.",

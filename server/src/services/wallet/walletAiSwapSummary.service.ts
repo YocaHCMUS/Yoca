@@ -420,10 +420,9 @@ export async function getWalletAiSwapSummary(
   const cached = await readCachedSummary(normalizedAddress, language);
   if (cached) return cached;
 
-  const swapsResult = await getWalletSwaps(normalizedAddress);
-  const recent = (swapsResult.swaps ?? []).slice(0, SWAPS_SAMPLE_SIZE);
+  const computed = await getWalletPnLComputed(normalizedAddress);
 
-  if (recent.length < 2) {
+  if (computed.tradeCount < 2) {
     throw new WalletAiSwapSummaryServiceError(
       "Not enough swap data to generate a summary (need at least 2 swaps).",
       "no_data",
@@ -431,43 +430,27 @@ export async function getWalletAiSwapSummary(
     );
   }
 
-  const accumulators = computePerTokenPnl(recent);
-  const breakdowns = accumulators.map(buildBreakdown);
-
-  let totalBoughtUsd = 0;
-  let totalSoldUsd = 0;
-  for (const swap of recent) {
-    if (swap.bought?.valueUsd) totalBoughtUsd += swap.bought.valueUsd;
-    if (swap.sold?.valueUsd) totalSoldUsd += swap.sold.valueUsd;
-  }
-
-  const sortedByPnl = [...breakdowns].sort((a, b) => b.pnlUsd - a.pnlUsd);
-  const topProfitable = sortedByPnl.find((t) => t.pnlUsd > 0) ?? null;
-  const topLoser = [...sortedByPnl].reverse().find((t) => t.pnlUsd < 0) ?? null;
-  const allTokenBreakdowns = sortedByPnl;
-
-  const totalExits = accumulators.reduce((s, a) => s + a.exits, 0);
-  const totalWins = accumulators.reduce((s, a) => s + a.wins, 0);
-  const winningPercentage = totalExits > 0 ? round2((totalWins / totalExits) * 100) : 0;
-
-  const aggregated = {
-    tradeCount: recent.length,
-    realizedPnlUsd: round2(accumulators.reduce((s, a) => s + a.realizedPnl, 0)),
-    winningPercentage,
-    totalBoughtUsd: round2(totalBoughtUsd),
-    totalSoldUsd: round2(totalSoldUsd),
-  };
-  const { summary, riskNotes } = await callGemini(breakdowns, aggregated, language);
+  const { summary, riskNotes } = await callGemini(
+    computed.allTokenBreakdowns,
+    {
+      tradeCount: computed.tradeCount,
+      realizedPnlUsd: computed.realizedPnlUsd,
+      winningPercentage: computed.winningPercentage,
+      totalBoughtUsd: computed.totalBoughtUsd,
+      totalSoldUsd: computed.totalSoldUsd,
+    },
+    language,
+  );
 
   const persisted: WalletAiSwapSummaryPersisted = {
-    tradeCount: aggregated.tradeCount,
-    realizedPnlUsd: aggregated.realizedPnlUsd,
-    winningPercentage: aggregated.winningPercentage,
-    totalBoughtUsd: aggregated.totalBoughtUsd,
-    totalSoldUsd: aggregated.totalSoldUsd,
-    topProfitable,
-    topLoser,
-    allTokenBreakdowns,
+    tradeCount: computed.tradeCount,
+    realizedPnlUsd: computed.realizedPnlUsd,
+    winningPercentage: computed.winningPercentage,
+    totalBoughtUsd: computed.totalBoughtUsd,
+    totalSoldUsd: computed.totalSoldUsd,
+    topProfitable: computed.topProfitable,
+    topLoser: computed.topLoser,
+    allTokenBreakdowns: computed.allTokenBreakdowns,
     riskNotes,
     summary,
   };
@@ -493,4 +476,122 @@ export async function getWalletAiSwapSummary(
   }
 
   return schemaValidation.data;
+}
+
+// ---------------------------------------------------------------------------
+// Lean PnL — computed data only, no Gemini
+// ---------------------------------------------------------------------------
+
+export interface PnLFilterOptions {
+  fromMs?: number;
+  toMs?: number;
+  tokenAddress?: string;
+}
+
+export interface PnLComputedResult {
+  tradeCount: number;
+  realizedPnlUsd: number;
+  winningPercentage: number;
+  totalBoughtUsd: number;
+  totalSoldUsd: number;
+  topProfitable: TokenPnlBreakdownPersisted | null;
+  topLoser: TokenPnlBreakdownPersisted | null;
+  allTokenBreakdowns: TokenPnlBreakdownPersisted[];
+}
+
+export async function getWalletPnLComputed(
+  address: string,
+  filters?: PnLFilterOptions,
+): Promise<PnLComputedResult> {
+  const normalizedAddress = address.trim();
+
+  if (!normalizedAddress || !isValidSolanaAddress(normalizedAddress)) {
+    throw new WalletAiSwapSummaryServiceError(
+      "Invalid Solana wallet address",
+      "invalid_address",
+      400,
+    );
+  }
+
+  const swapsResult = await getWalletSwaps(
+    normalizedAddress,
+    filters?.fromMs,
+    filters?.toMs,
+  );
+  const recent = (swapsResult.swaps ?? []).slice(0, SWAPS_SAMPLE_SIZE);
+
+  if (recent.length < 2) {
+    return {
+      tradeCount: 0,
+      realizedPnlUsd: 0,
+      winningPercentage: 0,
+      totalBoughtUsd: 0,
+      totalSoldUsd: 0,
+      topProfitable: null,
+      topLoser: null,
+      allTokenBreakdowns: [],
+    };
+  }
+
+  const accumulators = computePerTokenPnl(recent);
+  const breakdowns = accumulators.map(buildBreakdown);
+
+  let totalBoughtUsd = 0;
+  let totalSoldUsd = 0;
+  for (const swap of recent) {
+    if (swap.bought?.valueUsd) totalBoughtUsd += swap.bought.valueUsd;
+    if (swap.sold?.valueUsd) totalSoldUsd += swap.sold.valueUsd;
+  }
+
+  const sortedByPnl = [...breakdowns].sort((a, b) => b.pnlUsd - a.pnlUsd);
+  let allTokenBreakdowns = sortedByPnl;
+
+  if (filters?.tokenAddress) {
+    const tokenAddr = filters.tokenAddress;
+    const matching = sortedByPnl.filter((b) => b.address === tokenAddr);
+    if (matching.length > 0) {
+      const breakdown = matching[0];
+      const singleExits = breakdown.exits;
+      const singleWins = breakdown.wins;
+      const swp = singleExits > 0 ? round2((singleWins / singleExits) * 100) : 0;
+      return {
+        tradeCount: breakdown.trades,
+        realizedPnlUsd: round2(breakdown.pnlUsd),
+        winningPercentage: swp,
+        totalBoughtUsd: round2(breakdown.totalEntered),
+        totalSoldUsd: round2(breakdown.totalExited),
+        topProfitable: breakdown.pnlUsd > 0 ? breakdown : null,
+        topLoser: breakdown.pnlUsd < 0 ? breakdown : null,
+        allTokenBreakdowns: [breakdown],
+      };
+    }
+    return {
+      tradeCount: 0,
+      realizedPnlUsd: 0,
+      winningPercentage: 0,
+      totalBoughtUsd: 0,
+      totalSoldUsd: 0,
+      topProfitable: null,
+      topLoser: null,
+      allTokenBreakdowns: [],
+    };
+  }
+
+  const topProfitable = sortedByPnl.find((t) => t.pnlUsd > 0) ?? null;
+  const topLoser = [...sortedByPnl].reverse().find((t) => t.pnlUsd < 0) ?? null;
+
+  const totalExits = accumulators.reduce((s, a) => s + a.exits, 0);
+  const totalWins = accumulators.reduce((s, a) => s + a.wins, 0);
+  const winningPercentage = totalExits > 0 ? round2((totalWins / totalExits) * 100) : 0;
+
+  return {
+    tradeCount: recent.length,
+    realizedPnlUsd: round2(accumulators.reduce((s, a) => s + a.realizedPnl, 0)),
+    winningPercentage,
+    totalBoughtUsd: round2(totalBoughtUsd),
+    totalSoldUsd: round2(totalSoldUsd),
+    topProfitable,
+    topLoser,
+    allTokenBreakdowns,
+  };
 }

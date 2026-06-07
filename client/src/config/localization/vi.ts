@@ -1205,7 +1205,7 @@ export const translation = defineTranslation({
   },
   // Chat / AI Wallet Assistant
   chat: {
-    headerTitle: "AI Trợ lý Ví",
+    headerTitle: "YOCA AI",
     inputPlaceholder: "Hỏi về ví này...",
     loadingLabel: "Đang phân tích...",
     errorMessage: "Xin lỗi, đã xảy ra lỗi: {{error}}. Vui lòng thử lại.",
