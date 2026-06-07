@@ -5,7 +5,17 @@ import { InlineLoading } from "@carbon/react";
 import styles from "./DexTable.module.scss";
 import { TknImg } from "@/components/TknImg";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { CaretUp, CaretDown, SettingsAdjust, ChevronDown, Checkmark, Close, Trophy } from "@carbon/icons-react";
+import {
+  CaretUp,
+  CaretDown,
+  SettingsAdjust,
+  ChevronDown,
+  Checkmark,
+  Close,
+  Trophy,
+  ArrowUp,
+  ArrowDown,
+} from "@carbon/icons-react";
 
 export interface DexTableItem {
   id: string;
@@ -40,7 +50,17 @@ interface DexTableProps {
   onSort?: (key: SortKey) => void;
 }
 
-export type SortKey = "marketCap" | "price" | "age" | "txns" | "volume" | "5m" | "1h" | "6h" | "24h" | "liquidity";
+export type SortKey =
+  | "marketCap"
+  | "price"
+  | "age"
+  | "txns"
+  | "volume"
+  | "5m"
+  | "1h"
+  | "6h"
+  | "24h"
+  | "liquidity";
 
 export interface RangeFilter {
   min?: string;
@@ -69,16 +89,16 @@ function formatAge(dateStr: string | null): string {
   if (!dateStr) return "-";
   const ms = Date.now() - new Date(dateStr).getTime();
   if (ms < 0) return "-";
-  
+
   const days = Math.floor(ms / 86400000);
   if (days > 0) return `${days}d`;
-  
+
   const hours = Math.floor(ms / 3600000);
   if (hours > 0) return `${hours}h`;
-  
+
   const mins = Math.floor(ms / 60000);
   if (mins > 0) return `${mins}m`;
-  
+
   return "just now";
 }
 
@@ -109,24 +129,24 @@ function getSortValue(item: DexTableItem, key: SortKey): number {
   }
 }
 
-export function DexTable({ 
-  data = [], 
-  loading = false, 
-  sortKey = "5m", 
+export function DexTable({
+  data = [],
+  loading = false,
+  sortKey = "5m",
   sortDirection = "desc",
   filters = INITIAL_FILTERS,
-  onSort
+  onSort,
 }: DexTableProps) {
   const { fmt } = useLocalization();
   const navigate = useNavigate();
 
   const sortedData = useMemo(() => {
     if (!data.length) return [];
-    
+
     let filtered = [...data];
 
     // Apply Filters
-    filtered = filtered.filter(item => {
+    filtered = filtered.filter((item) => {
       const checkRange = (val: number | null, range: RangeFilter) => {
         if (val === null) return true;
         const min = range.min ? parseFloat(range.min) : -Infinity;
@@ -134,7 +154,9 @@ export function DexTable({
         return val >= min && val <= max;
       };
 
-      const ageHours = item.poolCreatedAt ? (Date.now() - new Date(item.poolCreatedAt).getTime()) / 3600000 : null;
+      const ageHours = item.poolCreatedAt
+        ? (Date.now() - new Date(item.poolCreatedAt).getTime()) / 3600000
+        : null;
 
       return (
         checkRange(item.liquidityUsd, filters.liquidity) &&
@@ -150,9 +172,9 @@ export function DexTable({
     return filtered.sort((a, b) => {
       const valA = getSortValue(a, sortKey as SortKey);
       const valB = getSortValue(b, sortKey as SortKey);
-      
+
       if (valA === valB) return 0;
-      
+
       const comparison = valA > valB ? 1 : -1;
       return sortDirection === "desc" ? -comparison : comparison;
     });
@@ -164,28 +186,40 @@ export function DexTable({
       return `${Number(absVal.toFixed(2))}%`;
     } else if (absVal < 100000) {
       const truncated = Math.trunc(absVal);
-      return `${Intl.NumberFormat('en-US').format(truncated)}%`;
+      return `${Intl.NumberFormat("en-US").format(truncated)}%`;
     } else {
-      const compact = Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(absVal);
+      const compact = Intl.NumberFormat("en-US", {
+        notation: "compact",
+        maximumFractionDigits: 1,
+      }).format(absVal);
       return `${compact}%`;
     }
   };
 
   const renderTrend = (val: number | null) => {
     if (val == null) return "-";
-    const clz = val > 0 ? styles.positive : val < 0 ? styles.negative : styles.neutral;
+    const clz =
+      val > 0 ? styles.positive : val < 0 ? styles.negative : styles.neutral;
     const sign = val > 0 ? "+" : val < 0 ? "-" : "";
     return (
       <span className={clz}>
-        {sign}{formatCompactPercentText(val)}
+        {sign}
+        {formatCompactPercentText(val)}
       </span>
     );
   };
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 250px)' }}>
-        <div style={{ width: 'fit-content' }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "calc(100vh - 250px)",
+        }}
+      >
+        <div style={{ width: "fit-content" }}>
           <InlineLoading status="active" description="Loading market data..." />
         </div>
       </div>
@@ -209,80 +243,140 @@ export function DexTable({
             <th onClick={() => onSort && onSort("marketCap")}>
               MCAP
               {sortKey === "marketCap" && (
-                <span className={classNames(styles.sortIndicator, styles.active)}>
-                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                <span
+                  className={classNames(styles.sortIndicator, styles.active)}
+                >
+                  {sortDirection === "asc" ? (
+                    <CaretUp size={14} />
+                  ) : (
+                    <CaretDown size={14} />
+                  )}
                 </span>
               )}
             </th>
             <th onClick={() => onSort && onSort("price")}>
               PRICE
               {sortKey === "price" && (
-                <span className={classNames(styles.sortIndicator, styles.active)}>
-                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                <span
+                  className={classNames(styles.sortIndicator, styles.active)}
+                >
+                  {sortDirection === "asc" ? (
+                    <CaretUp size={14} />
+                  ) : (
+                    <CaretDown size={14} />
+                  )}
                 </span>
               )}
             </th>
             <th onClick={() => onSort && onSort("age")}>
               AGE
               {sortKey === "age" && (
-                <span className={classNames(styles.sortIndicator, styles.active)}>
-                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                <span
+                  className={classNames(styles.sortIndicator, styles.active)}
+                >
+                  {sortDirection === "asc" ? (
+                    <CaretUp size={14} />
+                  ) : (
+                    <CaretDown size={14} />
+                  )}
                 </span>
               )}
             </th>
             <th onClick={() => onSort && onSort("txns")}>
               TXNS
               {sortKey === "txns" && (
-                <span className={classNames(styles.sortIndicator, styles.active)}>
-                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                <span
+                  className={classNames(styles.sortIndicator, styles.active)}
+                >
+                  {sortDirection === "asc" ? (
+                    <CaretUp size={14} />
+                  ) : (
+                    <CaretDown size={14} />
+                  )}
                 </span>
               )}
             </th>
             <th onClick={() => onSort && onSort("volume")}>
               VOLUME
               {sortKey === "volume" && (
-                <span className={classNames(styles.sortIndicator, styles.active)}>
-                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                <span
+                  className={classNames(styles.sortIndicator, styles.active)}
+                >
+                  {sortDirection === "asc" ? (
+                    <CaretUp size={14} />
+                  ) : (
+                    <CaretDown size={14} />
+                  )}
                 </span>
               )}
             </th>
             <th onClick={() => onSort && onSort("5m")}>
               5M
               {sortKey === "5m" && (
-                <span className={classNames(styles.sortIndicator, styles.active)}>
-                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                <span
+                  className={classNames(styles.sortIndicator, styles.active)}
+                >
+                  {sortDirection === "asc" ? (
+                    <CaretUp size={14} />
+                  ) : (
+                    <CaretDown size={14} />
+                  )}
                 </span>
               )}
             </th>
             <th onClick={() => onSort && onSort("1h")}>
               1H
               {sortKey === "1h" && (
-                <span className={classNames(styles.sortIndicator, styles.active)}>
-                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                <span
+                  className={classNames(styles.sortIndicator, styles.active)}
+                >
+                  {sortDirection === "asc" ? (
+                    <CaretUp size={14} />
+                  ) : (
+                    <CaretDown size={14} />
+                  )}
                 </span>
               )}
             </th>
             <th onClick={() => onSort && onSort("6h")}>
               6H
               {sortKey === "6h" && (
-                <span className={classNames(styles.sortIndicator, styles.active)}>
-                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                <span
+                  className={classNames(styles.sortIndicator, styles.active)}
+                >
+                  {sortDirection === "asc" ? (
+                    <CaretUp size={14} />
+                  ) : (
+                    <CaretDown size={14} />
+                  )}
                 </span>
               )}
             </th>
             <th onClick={() => onSort && onSort("24h")}>
               24H
               {sortKey === "24h" && (
-                <span className={classNames(styles.sortIndicator, styles.active)}>
-                  {sortDirection === "asc" ? <CaretUp size={14} /> : <CaretDown size={14} />}
+                <span
+                  className={classNames(styles.sortIndicator, styles.active)}
+                >
+                  {sortDirection === "asc" ? (
+                    <CaretUp size={14} />
+                  ) : (
+                    <CaretDown size={14} />
+                  )}
                 </span>
               )}
             </th>
             <th onClick={() => onSort && onSort("liquidity")}>
               LIQUIDITY
               {sortKey === "liquidity" && (
-                <span className={classNames(styles.sortIndicator, styles.active)}>
-                  {sortDirection === "asc" ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+                <span
+                  className={classNames(styles.sortIndicator, styles.active)}
+                >
+                  {sortDirection === "asc" ? (
+                    <ArrowUp size={14} />
+                  ) : (
+                    <ArrowDown size={14} />
+                  )}
                 </span>
               )}
             </th>
@@ -291,37 +385,51 @@ export function DexTable({
         <tbody>
           {sortedData.map((pool, idx) => {
             const mcap = pool.marketCapUsd || pool.fdvUsd;
-            
+
             const baseSymbol = pool.baseSymbol?.toUpperCase() || "UNK";
             const quoteSymbol = pool.quoteSymbol?.toUpperCase() || "UNK";
-            const baseDescription = (pool.baseName && pool.baseName.toUpperCase() !== baseSymbol)
-              ? pool.baseName 
-              : null;
-            
+            const baseDescription =
+              pool.baseName && pool.baseName.toUpperCase() !== baseSymbol
+                ? pool.baseName
+                : null;
+
             return (
-              <tr 
-                key={pool.poolAddress} 
-              >
+              <tr key={pool.poolAddress}>
                 <td className={styles.alignLeft}>
-                  <div 
+                  <div
                     className={styles.tokenCell}
-                    onClick={() => navigate(`/tokens/${pool.baseAddress}/${pool.poolAddress}`)}
+                    onClick={() =>
+                      navigate(
+                        `/tokens/${pool.baseAddress}/${pool.poolAddress}`,
+                      )
+                    }
                     style={{ cursor: "pointer" }}
                   >
                     <span className={styles.rank}>#{idx + 1}</span>
                     <div className={styles.doubleImage}>
                       <div className={styles.baseImgWrapper}>
-                        <TknImg src={pool.baseImageUrl} alt={baseDescription || baseSymbol} size={28} />
+                        <TknImg
+                          src={pool.baseImageUrl}
+                          alt={baseDescription || baseSymbol}
+                          size={28}
+                        />
                       </div>
                       <div className={styles.quoteImgWrapper}>
-                        <TknImg src={pool.quoteImageUrl || null} alt={pool.quoteSymbol} size={14} />
+                        <TknImg
+                          src={pool.quoteImageUrl || null}
+                          alt={pool.quoteSymbol}
+                          size={14}
+                        />
                       </div>
                     </div>
                     <div className={styles.pairNamesText}>
                       <span className={styles.baseSy}>{baseSymbol}</span>
                       <span className={styles.quoteSy}>/{quoteSymbol}</span>
                       {baseDescription && (
-                        <span className={styles.poolDescription} title={baseDescription}>
+                        <span
+                          className={styles.poolDescription}
+                          title={baseDescription}
+                        >
                           {baseDescription}
                         </span>
                       )}
@@ -334,12 +442,16 @@ export function DexTable({
                   </span>
                 </td>
                 <td>
-                  <span className={classNames(styles.numberValue, styles.positive)}>
+                  <span
+                    className={classNames(styles.numberValue, styles.positive)}
+                  >
                     {pool.priceUsd ? fmt.num.currency(pool.priceUsd) : "-"}
                   </span>
                 </td>
                 <td>
-                  <span className={styles.secondaryValue}>{formatAge(pool.poolCreatedAt)}</span>
+                  <span className={styles.secondaryValue}>
+                    {formatAge(pool.poolCreatedAt)}
+                  </span>
                 </td>
                 <td>
                   <span className={styles.numberValue}>
@@ -348,16 +460,28 @@ export function DexTable({
                 </td>
                 <td>
                   <span className={styles.numberValue}>
-                    {pool.volume24h ? `$${fmt.num.compact.decimal(pool.volume24h)}` : "-"}
+                    {pool.volume24h
+                      ? `$${fmt.num.compact.decimal(pool.volume24h)}`
+                      : "-"}
                   </span>
                 </td>
-                <td className={styles.numberValue}>{renderTrend(pool.priceChange5m)}</td>
-                <td className={styles.numberValue}>{renderTrend(pool.priceChange1h)}</td>
-                <td className={styles.numberValue}>{renderTrend(pool.priceChange6h)}</td>
-                <td className={styles.numberValue}>{renderTrend(pool.priceChange24h)}</td>
+                <td className={styles.numberValue}>
+                  {renderTrend(pool.priceChange5m)}
+                </td>
+                <td className={styles.numberValue}>
+                  {renderTrend(pool.priceChange1h)}
+                </td>
+                <td className={styles.numberValue}>
+                  {renderTrend(pool.priceChange6h)}
+                </td>
+                <td className={styles.numberValue}>
+                  {renderTrend(pool.priceChange24h)}
+                </td>
                 <td>
                   <span className={styles.numberValue}>
-                    {pool.liquidityUsd ? `$${fmt.num.compact.decimal(pool.liquidityUsd)}` : "-"}
+                    {pool.liquidityUsd
+                      ? `$${fmt.num.compact.decimal(pool.liquidityUsd)}`
+                      : "-"}
                   </span>
                 </td>
               </tr>
