@@ -4,7 +4,7 @@ import { GoogleGenAI } from "@google/genai";
 import { WalletBehaviorProfileSchema } from "../../modules/wallet-analysis/schemas/walletBehaviorProfile.schema.js";
 import type { EvidenceBundle, WalletBehaviorProfile } from "../../modules/wallet-analysis/types/walletBehaviorProfile.js";
 import {
-    GOOGLE_AI_KEY,
+    getGoogleAiKey,
     WALLET_AUDIT_MODEL,
 } from "@sv/config/constants.js";
 
@@ -390,7 +390,7 @@ export function isEvidenceSubset(
 }
 
 function createDefaultGeminiClient(): WalletAiGeminiClientLike | null {
-    const apiKey = GOOGLE_AI_KEY?.trim();
+    const apiKey = getGoogleAiKey();
     if (!apiKey) {
         return null;
     }

@@ -438,7 +438,14 @@ export function VolatilitySignals({
             const isExpanded = expandedEvents.has(event.id);
 
             return (
-              <article key={event.id} className={styles.eventCard}>
+              <article
+                key={event.id}
+                className={`${styles.eventCard} ${
+                  event.type === "price_spike"
+                    ? styles.priceSpike
+                    : styles.priceDrop
+                }`}
+              >
                 <div className={styles.eventHeader}>
                   <div className={styles.eventSummary}>
                     <span

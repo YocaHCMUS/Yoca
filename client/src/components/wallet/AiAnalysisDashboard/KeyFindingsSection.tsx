@@ -1,25 +1,26 @@
 import styles from "./AiAnalysisDashboard.module.scss";
 import { LabelWithTooltip } from "./HelpTooltip";
+import { useAiAnalysisI18n } from "./i18n";
 import { SeverityBadge } from "./SeverityBadge";
 import { SignatureChip } from "./SignatureChip";
 import type { FindingLike } from "./types";
-import { getRiskFactorExplanation, normalizeRiskLanguage, uniqueStrings } from "./utils";
+import { uniqueStrings } from "./utils";
 
 type KeyFindingsSectionProps = {
   suspiciousFindings?: FindingLike[];
   behaviorInsights?: FindingLike[];
 };
 
-function evidenceChips(ids: string[] | undefined) {
+function evidenceChips(ids: string[] | undefined, labels: { label: string; tooltip: string }) {
   const uniqueIds = uniqueStrings(ids ?? []);
   if (uniqueIds.length === 0) return null;
   return (
-    <div className={styles.chipRow} aria-label="Evidence IDs">
+    <div className={styles.chipRow} aria-label={labels.label}>
       <LabelWithTooltip
         className={styles.chipLabel}
-        tooltip="Evidence IDs connect this finding to supporting evidence cards and risk factors."
+        tooltip={labels.tooltip}
       >
-        Evidence
+        {labels.label}
       </LabelWithTooltip>
       {uniqueIds.map((id) => (
         <span key={id} className={styles.chip}>{id}</span>
@@ -28,28 +29,31 @@ function evidenceChips(ids: string[] | undefined) {
   );
 }
 
-function signatureChips(signatures: string[] | undefined) {
+function signatureChips(signatures: string[] | undefined, labels: { label: string; tooltip: string; more: (count: number) => string }) {
   const uniqueSignatures = uniqueStrings(signatures ?? []);
   if (uniqueSignatures.length === 0) return null;
   return (
-    <div className={styles.chipRow} aria-label="Related signatures">
+    <div className={styles.chipRow} aria-label={labels.label}>
       <LabelWithTooltip
         className={styles.chipLabel}
-        tooltip="Signature chips are representative transactions that support this finding and open in Solscan."
+        tooltip={labels.tooltip}
       >
-        Signatures
+        {labels.label}
       </LabelWithTooltip>
       {uniqueSignatures.slice(0, 5).map((signature) => (
         <SignatureChip key={signature} signature={signature} />
       ))}
       {uniqueSignatures.length > 5 ? (
-        <span className={`${styles.chip} ${styles.moreChip}`}>+{uniqueSignatures.length - 5} more</span>
+        <span className={`${styles.chip} ${styles.moreChip}`}>{labels.more(uniqueSignatures.length - 5)}</span>
       ) : null}
     </div>
   );
 }
 
-function inferWhyItMatters(finding: FindingLike): string | null {
+function inferWhyItMatters(
+  finding: FindingLike,
+  getRiskFactorExplanation: ReturnType<typeof useAiAnalysisI18n>["riskFactorExplanation"],
+): string | null {
   const searchable = [
     finding.title,
     finding.explanation,
@@ -69,6 +73,7 @@ function inferWhyItMatters(finding: FindingLike): string | null {
 }
 
 export function KeyFindingsSection({ suspiciousFindings, behaviorInsights }: KeyFindingsSectionProps) {
+  const { tr, riskFactorExplanation, normalizeUserText } = useAiAnalysisI18n();
   const findings: FindingLike[] = [
     ...(suspiciousFindings ?? []),
     ...(behaviorInsights ?? []),
@@ -78,29 +83,41 @@ export function KeyFindingsSection({ suspiciousFindings, behaviorInsights }: Key
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div>
-          <h3 className={styles.sectionTitle}>Key Findings</h3>
-          <p className={styles.sectionDescription}>Evidence-backed observations generated from the wallet profile.</p>
+          <h3 className={styles.sectionTitle}>{tr("aiAnalysisDashboard.findings.title")}</h3>
+          <p className={styles.sectionDescription}>{tr("aiAnalysisDashboard.findings.description")}</p>
         </div>
       </div>
 
       {findings.length === 0 ? (
-        <p className={styles.bodyText}>No major evidence-backed findings were generated for this wallet.</p>
+        <p className={styles.bodyText}>{tr("aiAnalysisDashboard.findings.empty")}</p>
       ) : (
         <div className={styles.findingList}>
           {findings.map((finding, index) => (
             <article key={`${finding.title ?? "finding"}-${index}`} className={styles.findingCard}>
               <div className={styles.cardTitleRow}>
-                <h4 className={styles.cardTitle}>{normalizeRiskLanguage(finding.title) || "Finding"}</h4>
+                <h4 className={styles.cardTitle}>
+                  {normalizeUserText(finding.title) || tr("aiAnalysisDashboard.findings.fallbackTitle")}
+                </h4>
                 <SeverityBadge severity={finding.severity} />
               </div>
-              <p className={styles.findingText}>{normalizeRiskLanguage(finding.explanation) || "No explanation was provided."}</p>
-              {inferWhyItMatters(finding) ? (
+              <p className={styles.findingText}>
+                {normalizeUserText(finding.explanation) || tr("aiAnalysisDashboard.findings.fallbackExplanation")}
+              </p>
+              {inferWhyItMatters(finding, riskFactorExplanation) ? (
                 <p className={styles.inlineHelpText}>
-                  <strong>Why it matters:</strong> {inferWhyItMatters(finding)}
+                  <strong>{tr("aiAnalysisDashboard.findings.whyItMatters")}</strong>{" "}
+                  {inferWhyItMatters(finding, riskFactorExplanation)}
                 </p>
               ) : null}
-              {evidenceChips(finding.evidenceIds)}
-              {signatureChips(finding.relatedSignatures)}
+              {evidenceChips(finding.evidenceIds, {
+                label: String(tr("aiAnalysisDashboard.findings.evidence")),
+                tooltip: String(tr("aiAnalysisDashboard.findings.evidenceTooltip")),
+              })}
+              {signatureChips(finding.relatedSignatures, {
+                label: String(tr("aiAnalysisDashboard.findings.signatures")),
+                tooltip: String(tr("aiAnalysisDashboard.findings.signaturesTooltip")),
+                more: (count) => String(tr("aiAnalysisDashboard.summary.more", { count })),
+              })}
             </article>
           ))}
         </div>

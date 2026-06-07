@@ -11,7 +11,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import {
-  GOOGLE_AI_KEY,
+  getGoogleAiKey,
   WALLET_AUDIT_MODEL,
   WALLET_AUDIT_TTL_MS,
   WALLET_AUDIT_TX_SAMPLE_SIZE,
@@ -82,15 +82,18 @@ const geminiResponseSchema = z.object({
 });
 
 let cachedClient: GoogleGenAI | null = null;
+let cachedClientKey: string | null = null;
 function getGeminiClient(): GoogleGenAI {
-  if (!GOOGLE_AI_KEY) {
+  const apiKey = getGoogleAiKey();
+  if (!apiKey) {
     throw new WalletAuditServiceError(
       "missing_api_key",
       "GOOGLE_AI_KEY is not configured on the server.",
     );
   }
-  if (!cachedClient) {
-    cachedClient = new GoogleGenAI({ apiKey: GOOGLE_AI_KEY });
+  if (!cachedClient || cachedClientKey !== apiKey) {
+    cachedClient = new GoogleGenAI({ apiKey });
+    cachedClientKey = apiKey;
   }
   return cachedClient;
 }

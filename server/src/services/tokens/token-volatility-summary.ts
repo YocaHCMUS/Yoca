@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { z } from "zod";
 
-import { WALLET_AUDIT_MODEL } from "@sv/config/constants.js";
+import { getGoogleAiKey, WALLET_AUDIT_MODEL } from "@sv/config/constants.js";
 
 export interface TokenVolatilityNewsSummary {
   headline: string;
@@ -60,11 +60,7 @@ const summarySchema = z.object({
 });
 
 function getGeminiApiKey() {
-  return (
-    process.env.GOOGLE_AI_KEY?.trim() ||
-    process.env.GEMINI_API_KEY?.trim() ||
-    ""
-  );
+  return getGoogleAiKey();
 }
 
 function formatPercent(value: number) {

@@ -207,6 +207,371 @@ export const translation = defineTranslation({
     unrealizedPnL: "PnL chưa chốt",
     change24hPercent: "Biến động 24H",
   },
+  aiAnalysisDashboard: {
+    header: {
+      eyebrow: "Phân tích AI",
+      title: "Phân tích hành vi ví bằng AI",
+      subtitle:
+        "Phân tích ví dựa trên bằng chứng, gồm kiểu hành vi, mức rủi ro và các phát hiện có chữ ký giao dịch hỗ trợ.",
+      refresh: "Làm mới phân tích",
+      notGenerated: "Chưa tạo phân tích",
+      generatedUnavailable: "Không có thời điểm tạo",
+      generated: "Đã tạo {{time}}",
+    },
+    loading: {
+      title: "Đang phân tích hành vi ví...",
+      description:
+        "Đang xây dựng kiểu hành vi, rủi ro và tóm tắt hoạt động dựa trên bằng chứng.",
+    },
+    metrics: {
+      ariaLabel: "Chỉ số phân tích AI",
+      trustScore: "Điểm tin cậy",
+      trustScoreHelper: "Càng cao nghĩa là càng ít tín hiệu rủi ro quan sát được",
+      trustScoreTooltip:
+        "Điểm tin cậy được tính bằng 100 trừ Điểm rủi ro. Điểm cao hơn nghĩa là có ít tín hiệu rủi ro hơn trong khoảng giao dịch được phân tích.",
+      riskLevel: "Mức rủi ro",
+      riskLevelHelper: "Dựa trên các tín hiệu hành vi đã tính toán",
+      riskLevelTooltip:
+        "Mức rủi ro được gán từ tổng Điểm rủi ro: LOW 0-19, MEDIUM 20-44, HIGH 45-74, CRITICAL 75-100. UNKNOWN được dùng khi có quá ít giao dịch.",
+      persona: "Kiểu hành vi",
+      personaHelper: "Mẫu hành vi chính",
+      personaTooltip:
+        "Kiểu hành vi là mẫu hành vi chính quan sát được của ví. Nó mô tả hành vi trong khoảng phân tích, không phải danh tính hay ý định của chủ ví.",
+      personaConfidence: "Độ tin cậy kiểu hành vi",
+      personaConfidenceHelper: "Mức hỗ trợ cho phân loại kiểu hành vi",
+      personaConfidenceTooltip:
+        "Độ tin cậy kiểu hành vi ước tính các chỉ số hiện có hỗ trợ kiểu hành vi đã chọn mạnh đến đâu so với các lựa chọn khác. Đây không phải sự chắc chắn pháp lý hay danh tính.",
+      dataCompleteness: "Độ đầy đủ dữ liệu",
+      dataCompletenessHelper: "Chất lượng dữ liệu đầu vào có thể dùng để phân tích",
+      dataCompletenessTooltip:
+        "Độ đầy đủ dữ liệu ước tính mức dữ liệu phân tích có thể sử dụng. Chỉ số này giảm khi thiếu giá, có giao dịch chưa hỗ trợ, cảnh báo phân tích cú pháp hoặc giao dịch thất bại.",
+      analyzedTransactions: "Giao dịch đã phân tích",
+      analyzedTransactionsHelper: "Số giao dịch trong khoảng phân tích",
+      analyzedTransactionsTooltip:
+        "Đây là số giao dịch được đưa vào khoảng phân tích AI. Kết quả có thể không đại diện cho toàn bộ lịch sử ví.",
+      unsupported: "{{count}} chưa hỗ trợ",
+      missingPrices: "{{count}} thiếu giá",
+      outOfAnalyzed: "{{items}} trên {{txCount}} giao dịch đã phân tích",
+      unsupportedOutOfAnalyzed:
+        "{{unsupported}} giao dịch chưa hỗ trợ trên {{txCount}} giao dịch đã phân tích.",
+    },
+    summary: {
+      title: "Tóm tắt hành vi ví bằng AI",
+      description: "Diễn giải dễ hiểu về hồ sơ ví đã tính toán.",
+      noSummary: "Không có tóm tắt nào được tạo cho ví này.",
+      walletPersona: "Kiểu hành vi ví",
+      walletPersonaTooltip:
+        "Kiểu hành vi giải thích ví giống mẫu hành vi nào nhất. Mục này tách biệt với Mức rủi ro.",
+      riskSummary: "Tóm tắt rủi ro",
+      pnlSummary: "Tóm tắt PnL",
+      pnlSummaryTooltip:
+        "Tóm tắt PnL dựa trên các vị thế đã đóng và dữ liệu giá có sẵn trong khoảng phân tích. Nó có thể không bao gồm mọi thay đổi giá trị của ví.",
+      whyPersona: "Vì sao là kiểu hành vi này?",
+      personaVsRisk:
+        "Kiểu hành vi giải thích ví giống mẫu hành vi nào nhất. Mức rủi ro giải thích các tín hiệu rủi ro tổng thể mạnh đến đâu.",
+      selectedPersona: "Kiểu hành vi được chọn",
+      selectedPersonaFallbackTooltip:
+        "Đây là phân loại hành vi, không phải khẳng định danh tính.",
+      commonSignals: "Tín hiệu thường gặp",
+      observedSupport: "Bằng chứng hỗ trợ quan sát được",
+      personaConfidenceSentence:
+        "Độ tin cậy kiểu hành vi là {{confidence}}, dựa trên mức các chỉ số hiện có hỗ trợ kiểu hành vi này so với các lựa chọn khác.",
+      more: "+{{count}} nữa",
+    },
+    findings: {
+      title: "Phát hiện chính",
+      description:
+        "Các quan sát có bằng chứng hỗ trợ, được tạo từ hồ sơ ví.",
+      empty: "Không có phát hiện lớn có bằng chứng hỗ trợ cho ví này.",
+      fallbackTitle: "Phát hiện",
+      fallbackExplanation: "Không có giải thích được cung cấp.",
+      whyItMatters: "Vì sao quan trọng:",
+      evidence: "Bằng chứng",
+      evidenceTooltip:
+        "ID bằng chứng kết nối phát hiện này với các thẻ bằng chứng và yếu tố rủi ro hỗ trợ.",
+      signatures: "Chữ ký",
+      signaturesTooltip:
+        "Chip chữ ký là các giao dịch đại diện hỗ trợ phát hiện này và mở trên Solscan.",
+    },
+    riskBreakdown: {
+      title: "Phân rã rủi ro",
+      description: "Các yếu tố rủi ro đã tính toán đóng góp vào điểm ví.",
+      empty: "Không có yếu tố rủi ro nào được tạo cho ví này.",
+      fallbackDescription: "Không có mô tả được cung cấp.",
+      whyItMatters: "Vì sao quan trọng:",
+      pointsAdded: "{{points}} cộng vào Điểm rủi ro",
+      pointsTooltip:
+        "Đây là số điểm yếu tố này cộng vào tổng Điểm rủi ro. Điểm tác động càng cao thì yếu tố đó đóng góp càng mạnh vào mức rủi ro.",
+      unsupportedOutOfTotal:
+        "Giao dịch chưa hỗ trợ: {{unsupported}} trên {{txTotal}} giao dịch đã phân tích. Thiếu dữ liệu là điều chỉnh độ tin cậy, không phải hành vi đáng ngờ của ví.",
+      evidence: "Bằng chứng",
+      evidenceTooltip:
+        "ID bằng chứng kết nối yếu tố rủi ro này với các thẻ bằng chứng và phát hiện chính.",
+    },
+    evidence: {
+      sectionTitle: "Bằng chứng nổi bật",
+      sectionDescription:
+        "Các tín hiệu và chữ ký giao dịch đại diện dùng để hỗ trợ phân tích.",
+      howToRead: "Cách đọc thẻ bằng chứng",
+      valueAndThreshold: "Giá trị và ngưỡng",
+      valueAndThresholdDescription:
+        "Giá trị là kết quả đo được cho ví này. Ngưỡng là mức quy tắc khiến tín hiệu được hiển thị.",
+      traceability: "Khả năng truy vết",
+      traceabilityDescription:
+        "ID bằng chứng kết nối phát hiện, yếu tố rủi ro và bằng chứng. Chữ ký là các giao dịch đại diện người dùng có thể kiểm tra trên Solscan.",
+      empty: "Không có bằng chứng nổi bật cho ví này.",
+      fallbackTitle: "Bằng chứng",
+      evidenceId: "ID bằng chứng",
+      evidenceIdTooltip:
+        "Tham chiếu nội bộ dùng để kết nối phát hiện, yếu tố rủi ro và bằng chứng.",
+      fallbackDescription: "Không có mô tả bằng chứng được cung cấp.",
+      value: "Giá trị",
+      valueTooltip:
+        "Giá trị đo được từ khoảng giao dịch đã phân tích của ví này.",
+      threshold: "Ngưỡng",
+      thresholdTooltip:
+        "Ngưỡng quy tắc dùng để quyết định tín hiệu này có nên được hiển thị hay không.",
+      relatedSignatures: "Chữ ký liên quan",
+      relatedSignaturesTooltip:
+        "Các giao dịch đại diện dùng làm bằng chứng hỗ trợ. Mở trên Solscan.",
+      relatedTokenMints: "Token mint liên quan",
+      relatedTokenMintsTooltip: "Địa chỉ token liên quan đến tín hiệu này.",
+      signatureTooltip:
+        "Giao dịch đại diện dùng làm bằng chứng hỗ trợ. Mở trên Solscan.",
+      tokenMintTooltip: "Địa chỉ token liên quan đến tín hiệu này.",
+    },
+    howToRead: {
+      title: "Cách đọc phân tích này",
+      description: "Hướng dẫn ngắn về nhãn, điểm số và bằng chứng.",
+      open: "Mở giải thích",
+      personaVsRiskTitle: "Kiểu hành vi và rủi ro",
+      personaVsRiskText:
+        "Kiểu hành vi mô tả hành vi quan sát được. Mức rủi ro mô tả độ mạnh tổng thể của các tín hiệu rủi ro.",
+      scoresTitle: "Điểm số",
+      scoresText:
+        "Điểm tin cậy bằng 100 trừ Điểm rủi ro. Điểm số chỉ dựa trên khoảng giao dịch đã phân tích.",
+      evidenceTitle: "Bằng chứng",
+      evidenceText:
+        "Chữ ký bằng chứng là các ví dụ đại diện người dùng có thể kiểm tra trên Solscan.",
+      limitationsTitle: "Giới hạn",
+      limitationsText:
+        "Đây không phải lời khuyên tài chính hay bằng chứng về hành vi đáng ngờ. Giao dịch thiếu dữ liệu hoặc chưa hỗ trợ có thể làm giảm độ tin cậy.",
+    },
+    caution: {
+      title: "Lưu ý thận trọng",
+      description: "Cách diễn giải phân tích này một cách có trách nhiệm.",
+      defaultDisclaimer:
+        "Điểm rủi ro phản ánh hành vi quan sát được trong khoảng giao dịch đã phân tích. Đây không phải lời khuyên tài chính, kết luận pháp lý hay bằng chứng gian lận.",
+      labelDisclaimer:
+        "Các nhãn như Nhà giao dịch giống bot, Nhà đầu cơ rủi ro cao hoặc Nghi vấn wash trading là phân loại hành vi, không phải cáo buộc.",
+      backendRiskVerdict:
+        "Điểm rủi ro phản ánh hành vi quan sát được trong khoảng giao dịch đã phân tích. Đây không phải kết luận pháp lý, tài chính hay kết luận về hành vi đáng ngờ.",
+      backendFullHistory:
+        "Không nên xem phân tích này là đại diện cho toàn bộ lịch sử ví, trừ khi khoảng phân tích là FULL_HISTORY.",
+      backendNoConfirmedSuspicious:
+        "Không khẳng định có hành vi đáng ngờ đã được xác nhận hoặc wash trading.",
+      backendNoIntent:
+        "Không suy diễn ý định vượt quá các chỉ số đã tính toán.",
+    },
+    empty: {
+      title: "Không tìm thấy hoạt động có thể phân tích cho ví này.",
+      description:
+        "Dữ liệu giao dịch đã được tải thành công, nhưng không có sự kiện ví nào đủ điều kiện cho phân tích dựa trên bằng chứng.",
+    },
+    error: {
+      title: "Không thể tải phân tích AI",
+      fallback: "Vui lòng thử lại phân tích.",
+      retry: "Thử lại phân tích AI",
+    },
+    labels: {
+      unknown: "Không xác định",
+      low: "THẤP",
+      medium: "TRUNG BÌNH",
+      high: "CAO",
+      critical: "NGHIÊM TRỌNG",
+      neutral: "TRUNG LẬP",
+      highRiskSpeculator: "Nhà đầu cơ rủi ro cao",
+      botLikeTrader: "Nhà giao dịch giống bot",
+      defiTrader: "Nhà giao dịch DeFi",
+      memecoinTrader: "Nhà giao dịch memecoin",
+      smartMoneyLike: "Giống smart money",
+      washTradingSuspect: "Nghi vấn wash trading",
+      longTermHolder: "Người nắm giữ dài hạn",
+      casualUser: "Người dùng thông thường",
+      airdropFarmer: "Người săn airdrop",
+      nftCollector: "Người sưu tầm NFT",
+      highFrequencyActivity: "Hoạt động tần suất cao",
+      shortHoldingPeriod: "Thời gian nắm giữ ngắn",
+      negativePnl: "PnL âm",
+      lowWinRate: "Tỷ lệ thắng thấp",
+      highTokenDiversity: "Đa dạng token cao",
+      highPortfolioConcentration: "Tập trung danh mục cao",
+      washTradingSuspected: "Nghi vấn wash trading",
+      missingData: "Thiếu dữ liệu",
+    },
+    severityTooltips: {
+      findingHigh:
+        "Tín hiệu mạnh. Nên xem trước. Đây không phải bằng chứng về hành vi sai phạm.",
+      findingMedium:
+        "Tín hiệu có ý nghĩa, đóng góp vào phần diễn giải.",
+      findingLow: "Tín hiệu bối cảnh, hữu ích nhưng không quyết định nếu đứng riêng lẻ.",
+      findingNeutral:
+        "Mức độ cho biết tín hiệu này quan trọng thế nào trong phân tích hiện tại.",
+      riskHigh:
+        "Mức cao nghĩa là yếu tố này cộng từ 15 điểm trở lên vào Điểm rủi ro.",
+      riskMedium:
+        "Mức trung bình nghĩa là yếu tố này cộng từ 8 đến 14 điểm vào Điểm rủi ro.",
+      riskLow:
+        "Mức thấp nghĩa là yếu tố này cộng từ 1 đến 7 điểm vào Điểm rủi ro.",
+      riskNeutral:
+        "Mức độ dựa trên số điểm rủi ro mà yếu tố này cộng thêm.",
+    },
+    personaExplanations: {
+      unknown: {
+        meaning: "Không có đủ hành vi rõ ràng để gán một kiểu hành vi cụ thể.",
+        commonSignals: "Số giao dịch thấp, dữ liệu chưa đầy đủ hoặc tín hiệu lẫn lộn.",
+        caution: "Không xác định không nên được hiểu riêng lẻ là an toàn hay rủi ro.",
+      },
+      longTermHolder: {
+        meaning: "Hành vi ví giống việc nắm giữ tài sản trong thời gian dài hơn.",
+        commonSignals:
+          "Số swap thấp, thời gian nắm giữ dài hơn, tỷ lệ giao dịch ngắn hạn thấp, tài sản tập trung.",
+        caution: "Mục này chỉ mô tả hành vi quan sát được trong khoảng phân tích.",
+      },
+      casualUser: {
+        meaning: "Hành vi ví giống việc sử dụng không thường xuyên, cường độ thấp hơn.",
+        commonSignals:
+          "Hoạt động thấp hoặc trung bình, ít swap hơn, ít đa dạng token, ít vị thế đã đóng.",
+        caution:
+          "Nhãn người dùng thông thường không đảm bảo rủi ro thấp ngoài khoảng phân tích.",
+      },
+      defiTrader: {
+        meaning:
+          "Ví thường xuyên tương tác với các giao thức giao dịch phi tập trung.",
+        commonSignals:
+          "Nhiều swap, sử dụng DEX nhiều, giao dịch nhiều token, khối lượng giao dịch đáng kể.",
+        caution: "Nhãn này mô tả việc dùng giao thức và hành vi giao dịch, không phải kỹ năng giao dịch.",
+      },
+      memecoinTrader: {
+        meaning:
+          "Hành vi ví giống giao dịch đầu cơ trên các token biến động mạnh hoặc theo câu chuyện thị trường.",
+        commonSignals:
+          "Đa dạng token cao, giao dịch ngắn hạn, dùng DEX nhiều, quy mô giao dịch trung bình nhỏ hơn.",
+        caution:
+          "Metadata danh mục token có thể chưa đầy đủ, nên nhãn này có thể dựa trên tín hiệu hành vi thay thế.",
+      },
+      nftCollector: {
+        meaning: "Hành vi ví có hoạt động NFT đáng kể.",
+        commonSignals:
+          "Nắm giữ NFT, dùng marketplace NFT, lặp lại các sự kiện chuyển, mua hoặc bán NFT.",
+        caution:
+          "Hoạt động NFT có thể chưa đầy đủ nếu thiếu metadata marketplace hoặc collection.",
+      },
+      airdropFarmer: {
+        meaning:
+          "Hành vi ví giống hoạt động nhằm nhận hoặc claim phân phối token.",
+        commonSignals:
+          "Claim airdrop lặp lại, nhiều chuyển khoản token vào, phạm vi token rộng, hoạt động theo cụm.",
+        caution: "Điều này không chứng minh ý định; nó chỉ mô tả hành vi giống claim.",
+      },
+      botLikeTrader: {
+        meaning:
+          "Hoạt động ví giống hành vi giao dịch tự động hoặc cường độ cao.",
+        commonSignals:
+          "Cụm giao dịch dày, khoảng cách giao dịch ngắn, số swap cao, mức hoạt động cực lớn.",
+        caution: "Điều này không chứng minh ví được vận hành bởi bot.",
+      },
+      highRiskSpeculator: {
+        meaning: "Hành vi ví giống giao dịch đầu cơ mạnh và rủi ro cao.",
+        commonSignals:
+          "Thời gian nắm giữ ngắn, đa dạng token cao, tỷ lệ thắng thấp, PnL âm, dùng DEX nhiều.",
+        caution: "Mục này mô tả hành vi, không phải danh tính hay ý định.",
+      },
+      smartMoneyLike: {
+        meaning:
+          "Ví cho thấy kết quả giao dịch tốt hơn trong khoảng phân tích.",
+        commonSignals:
+          "PnL đã chốt dương, tỷ lệ thắng cao hơn, profit factor vượt ngưỡng, có đủ vị thế đã đóng.",
+        caution: "Điều này không đảm bảo hiệu suất trong tương lai.",
+      },
+      washTradingSuspect: {
+        meaning:
+          "Ví có các mẫu hành vi có thể liên quan đến hành vi thị trường đáng ngờ.",
+        commonSignals:
+          "Điểm nghi vấn cao, đối tác lặp lại, tín hiệu dòng tiền vòng tròn hoặc qua lại.",
+        caution:
+          "Đây không phải bằng chứng wash trading hay hành vi đáng ngờ.",
+      },
+    },
+    riskFactorExplanations: {
+      highFrequencyActivity: {
+        meaning:
+          "Hoạt động tập trung thành các cụm giao dịch dày hoặc nhanh bất thường.",
+        whyItMatters:
+          "Cụm giao dịch dày có thể cho thấy giao dịch tự động hoặc cường độ cao.",
+      },
+      shortHoldingPeriod: {
+        meaning: "Nhiều vị thế dường như được mở và đóng nhanh.",
+        whyItMatters:
+          "Nắm giữ ngắn có thể cho thấy hành vi đầu cơ hoặc giao dịch nhanh.",
+      },
+      negativePnl: {
+        meaning:
+          "Các vị thế đã đóng trong khoảng phân tích tạo ra PnL đã chốt âm.",
+        whyItMatters:
+          "PnL đã chốt âm nghĩa là các vị thế đã đóng bị giảm giá trị trong khoảng phân tích này.",
+      },
+      lowWinRate: {
+        meaning:
+          "Ví có đủ vị thế đã đóng để ước tính tỷ lệ thắng, và tỷ lệ đó thấp.",
+        whyItMatters:
+          "Tỷ lệ thắng thấp chỉ có ý nghĩa khi có đủ vị thế đã đóng.",
+      },
+      highTokenDiversity: {
+        meaning: "Ví đã giao dịch nhiều token khác nhau trong khoảng phân tích.",
+        whyItMatters:
+          "Giao dịch nhiều token khác nhau có thể cho thấy hành vi đầu cơ rộng.",
+      },
+      highPortfolioConcentration: {
+        meaning:
+          "Phần lớn giá trị danh mục có vẻ tập trung vào một hoặc vài tài sản.",
+        whyItMatters:
+          "Tập trung có thể làm tăng mức phơi nhiễm với một tài sản hoặc chủ đề.",
+      },
+      washTradingSuspected: {
+        meaning:
+          "Ví có các mẫu hành vi có thể liên quan đến hành vi thị trường đáng ngờ.",
+        whyItMatters:
+          "Đây có thể là tín hiệu ưu tiên xem xét, nhưng không phải bằng chứng wash trading.",
+      },
+      missingData: {
+        meaning: "Một phần dữ liệu không thể được phân tích hoặc định giá đầy đủ.",
+        whyItMatters:
+          "Điều này ảnh hưởng đến độ tin cậy, không phải bản thân hành vi ví.",
+      },
+      fallbackMeaning:
+        "Yếu tố rủi ro này được tạo từ hành vi đã phân tích của ví.",
+      fallbackWhy:
+        "Nó đóng góp vào tổng Điểm rủi ro dựa trên quy tắc đã tạo ra yếu tố này.",
+    },
+    dataCompleteness: {
+      summary:
+        "Độ đầy đủ dữ liệu là {{completeness}}. Điều này nghĩa là {{usability}} dữ liệu đã phân tích có thể sử dụng.",
+      most: "phần lớn",
+      some: "một phần",
+      unsupported:
+        "{{unsupported}} giao dịch chưa hỗ trợ trên {{txTotal}} giao dịch đã phân tích.",
+      missingPrices: "{{count}} giao dịch bị thiếu dữ liệu giá.",
+      none:
+        "Không phát hiện thiếu giá hoặc giao dịch chưa hỗ trợ trong khoảng phân tích này.",
+    },
+    riskLevelExplanation: {
+      unknown:
+        "Mức rủi ro là UNKNOWN vì có ít hơn 10 giao dịch được phân tích.",
+      known:
+        "Mức rủi ro được gán từ tổng Điểm rủi ro. Điểm rủi ro hiện tại là {{score}} / 100: LOW 0-19, MEDIUM 20-44, HIGH 45-74, CRITICAL 75-100.",
+    },
+  },
   // Wallet Page
   walletPage: {
     addressNotFound: "Không tìm thấy địa chỉ",

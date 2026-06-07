@@ -195,6 +195,8 @@ const app = new Hono().get("/", async (c) => {
     });
 
     const eventsWithRelatedNews = [];
+    const providersUsed = new Set<"rss" | "brave">(["rss"]);
+    let braveFallbackUsed = false;
 
     for (const [index, event] of volatility.events.entries()) {
       if (index >= maxEventsWithNews) {
@@ -219,8 +221,13 @@ const app = new Hono().get("/", async (c) => {
           eventId: event.id,
           eventTimestamp: event.timestamp,
           relatedNewsCount: related.articles.length,
-          braveFallbackUsed: related.meta.fallbackUsed,
+          braveFallbackUsed: related.meta.braveFallbackUsed,
+          providersUsed: related.meta.providersUsed,
         });
+        for (const provider of related.meta.providersUsed) {
+          providersUsed.add(provider);
+        }
+        braveFallbackUsed = braveFallbackUsed || related.meta.braveFallbackUsed;
 
         eventsWithRelatedNews.push({
           ...event,
@@ -240,6 +247,10 @@ const app = new Hono().get("/", async (c) => {
       ...volatility,
       window,
       relatedNewsWindowHours,
+      meta: {
+        providersUsed: [...providersUsed],
+        braveFallbackUsed,
+      },
       events: eventsWithRelatedNews,
     };
     const summary = includeSummary

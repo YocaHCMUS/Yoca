@@ -383,6 +383,13 @@ export const envSchema = z.object({
     .default("http://localhost:5678/webhook/analyse-wallet"),
   N8N_ANALYSIS_TIMEOUT_MS: z.coerce.number().int().positive().default(200000),
   BRAVE_SEARCH_API_KEY: z.string().optional().default(""),
+  BRAVE_SEARCH_ENABLED: z.enum(["true", "false"]).optional().default("false"),
+  BRAVE_MONTHLY_SOFT_LIMIT: z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional(),
+  BRAVE_MONTHLY_USED_OFFSET: z.coerce.number().int().min(0).default(0),
 
   // Stripe
   STRIPE_SECRET_KEY: z.string().default(""),

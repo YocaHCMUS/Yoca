@@ -1,8 +1,10 @@
 import styles from "./AiAnalysisDashboard.module.scss";
 import { HelpTooltip } from "./HelpTooltip";
+import { useAiAnalysisI18n } from "./i18n";
 import { truncateMiddle } from "./utils";
 
 export function SignatureChip({ signature }: { signature: string }) {
+  const { tr } = useAiAnalysisI18n();
   return (
     <span className={styles.labelWithTooltip}>
       <a
@@ -14,12 +16,13 @@ export function SignatureChip({ signature }: { signature: string }) {
       >
         {truncateMiddle(signature)}
       </a>
-      <HelpTooltip text="Representative transaction used as supporting evidence. Opens in Solscan." />
+      <HelpTooltip text={String(tr("aiAnalysisDashboard.evidence.signatureTooltip"))} />
     </span>
   );
 }
 
 export function TokenMintChip({ mint }: { mint: string }) {
+  const { tr } = useAiAnalysisI18n();
   return (
     <span className={styles.labelWithTooltip}>
       <a
@@ -31,7 +34,7 @@ export function TokenMintChip({ mint }: { mint: string }) {
       >
         {truncateMiddle(mint)}
       </a>
-      <HelpTooltip text="Token address involved in this signal." />
+      <HelpTooltip text={String(tr("aiAnalysisDashboard.evidence.tokenMintTooltip"))} />
     </span>
   );
 }
