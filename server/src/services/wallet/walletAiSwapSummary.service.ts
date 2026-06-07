@@ -4,7 +4,6 @@ import { z } from "zod";
 
 import {
   GEMINI_MODEL,
-  getGoogleAiKey,
   SWAPS_SAMPLE_SIZE,
   SYSTEM_PROMPT_EN,
   SYSTEM_PROMPT_VN,
@@ -23,6 +22,7 @@ import {
 } from "./dtos/walletAiSwapSummaryObjects.js";
 import type { WalletAiSwapSummaryPersisted, TokenPnlBreakdownPersisted } from "@sv/db/schema.js";
 import { isBaseAsset } from "./walletDayActivity.service.js";
+import env from "@sv/util/load-env.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -300,7 +300,7 @@ let cachedGenAiClient: GoogleGenAI | null = null;
 let cachedGenAiClientKey: string | null = null;
 
 function getGenAiClient(): GoogleGenAI {
-  const key = getGoogleAiKey();
+  const key = env.GOOGLE_AI_KEY;
   if (!key) {
     throw new WalletAiSwapSummaryServiceError(
       "GOOGLE_AI_KEY is not configured on the server.",

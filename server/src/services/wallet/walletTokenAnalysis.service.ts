@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import {
   GEMINI_MODEL,
-  getGoogleAiKey,
   SWAPS_SAMPLE_SIZE,
   SYSTEM_PROMPT_TOKEN_EN,
   SYSTEM_PROMPT_TOKEN_VN,
@@ -19,6 +18,7 @@ import {
   type TokenTradeEvent,
   type TokenPnlDistribution,
 } from "./dtos/walletTokenAnalysisObjects.js";
+import env from "@sv/util/load-env.js";
 // ---------------------------------------------------------------------------
 // Error
 // ---------------------------------------------------------------------------
@@ -214,7 +214,7 @@ let cachedGenAiClient: GoogleGenAI | null = null;
 let cachedGenAiClientKey: string | null = null;
 
 function getGenAiClient(): GoogleGenAI {
-  const key = getGoogleAiKey();
+  const key = env.GOOGLE_AI_KEY;
   if (!key) {
     throw new WalletTokenAnalysisServiceError("GOOGLE_AI_KEY is not configured on the server.", "model_error", 502);
   }

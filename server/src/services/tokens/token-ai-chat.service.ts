@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { getGoogleAiKey, WALLET_AUDIT_MODEL } from "@sv/config/constants.js";
+import { WALLET_AUDIT_MODEL } from "@sv/config/constants.js";
 import { z } from "zod";
 
 import {
@@ -19,6 +19,7 @@ import {
   readTokenAiChatCache,
   writeTokenAiChatCache,
 } from "./token-ai-chat-cache.js";
+import env from "@sv/util/load-env.js";
 
 export type {
   TokenAiEvidence,
@@ -234,7 +235,7 @@ const geminiResponseSchema = z.object({
 });
 
 function getGeminiApiKey() {
-  return getGoogleAiKey();
+  return env.GOOGLE_AI_KEY;
 }
 
 function hashQuestion(question: string) {
