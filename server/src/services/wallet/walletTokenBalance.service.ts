@@ -1,7 +1,6 @@
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import type { WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { zrn_WalletBalanceChartSchema } from "../_types/wallet-raw-responses.js";
-
 import { db } from "@sv/db/index.js";
 import {
   walletTokenBalanceMonthHistory,
@@ -133,7 +132,7 @@ export async function getWalletTokenBalanceHistory(
       return null;
     }
     const normalizedGrouped = normalizeByDay(fetched);
-    return alignAllTokenSeriesToSameStartTime(normalizedGrouped);
+    return alignEndTimestamps(normalizedGrouped);
   }
 
   const grouped = {} as NonNullable<WalletTokenBalanceHistory>;
@@ -171,13 +170,14 @@ export async function getWalletTokenBalanceHistory(
       missingTokens,
       zrnPeriod,
     );
+    console.log("Fetch new tokens: ", missingTokens);
     const merged = { ...grouped, ...fetched };
     const normalizedGrouped = normalizeByDay(merged);
-    return alignAllTokenSeriesToSameStartTime(normalizedGrouped);
+    return alignEndTimestamps(normalizedGrouped);
   }
 
   const normalizedGrouped = normalizeByDay(grouped);
-  return alignAllTokenSeriesToSameStartTime(normalizedGrouped);
+  return alignEndTimestamps(normalizedGrouped);
 }
 
 export async function fetchWalletTokenBalanceHistory(
@@ -288,27 +288,36 @@ function normalizeByDay(
   return normalized;
 }
 
-// Align all token series to the same oldest timestamp.
+// Align all token series to the same oldest common timestamp.
 // Truncates newer data points so all tokens have data from the same time window.
-function alignAllTokenSeriesToSameStartTime(
+function alignEndTimestamps(
   grouped: NonNullable<WalletTokenBalanceHistory>,
-): NonNullable<WalletTokenBalanceHistory> {
-  const allMinTimestamps = Object.values(grouped)
-    .filter((points) => points.length > 0)
-    .map((points) => Math.min(...points.map((p) => p.timestampMs)));
+): WalletTokenBalanceHistory {
+  // Get all timestamp sets per token
+  const tokenTimestamps = Object.values(grouped).map(
+    (points) => new Set(points.map((p) => p.timestampMs)),
+  );
 
-  if (allMinTimestamps.length == 0) {
-    return grouped;
+  if (tokenTimestamps.length == 0) return grouped;
+
+  // Find the largest timestamp that exists in every token
+  let commonMax: number | null = null;
+  const firstSet = tokenTimestamps[0];
+  for (const ts of firstSet) {
+    if (tokenTimestamps.every((set) => set.has(ts))) {
+      if (commonMax == null || ts > commonMax) commonMax = ts;
+    }
   }
 
-  const maxMinTimestamp = Math.max(...allMinTimestamps);
+  if (commonMax == null) {
+    // No common timestamp – you may want to return empty or throw
+    return null;
+  }
 
+  // Keep only points up to that common max (including it)
   const aligned: NonNullable<WalletTokenBalanceHistory> = {};
   for (const [tokenAddress, points] of Object.entries(grouped)) {
-    aligned[tokenAddress] = points.filter(
-      (p) => p.timestampMs >= maxMinTimestamp,
-    );
+    aligned[tokenAddress] = points.filter((p) => p.timestampMs <= commonMax);
   }
-
   return aligned;
 }
