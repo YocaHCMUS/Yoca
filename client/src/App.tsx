@@ -71,16 +71,17 @@ const router = createBrowserRouter([
         element: <MarketPage />,
       },
 
-      {
-        path: "alerts",
-        element: <AlertsPage />,
-      },
+      // {
+      //   path: "alerts",
+      //   element: <AlertsPage />,
+        
+      // },
 
       {
-        path: "alerts/demo",
+        path: "alerts",
         element: (
           <AuthGuard>
-            <AlertsDemo />
+            <AlertsPage />
           </AuthGuard>
         ),
       },
