@@ -57,11 +57,17 @@ function compute24hChange(points: TimeSeriesDataPoint[]): ChangeMetric | null {
   };
 }
 
+type MultiWalletBalanceChartProps = {
+  addresses: string[];
+  showTotal?: boolean;
+  show24Change?: boolean;
+};
+
 export function MultiWalletBalanceChart({
   addresses,
-}: {
-  addresses: string[];
-}) {
+  showTotal = true,
+  show24Change = true,
+}: MultiWalletBalanceChartProps) {
   const { fmt } = useLocalization();
 
   const [timePeriod, setTimePeriod] = useState<"7D" | "30D">("30D");
@@ -85,39 +91,35 @@ export function MultiWalletBalanceChart({
       return [];
     }
 
-    const totalMap = new Map<number, number>();
-
     const walletSeries = Object.entries(balanceHistory.data).map(
-      ([wallet, points]) => {
-        const data =
-          points?.map((point) => {
-            const prev = totalMap.get(point.timestampMs) ?? 0;
-
-            totalMap.set(point.timestampMs, prev + point.usdValue);
-
-            return {
-              unixTimeMs: point.timestampMs,
-              value: point.usdValue,
-            };
-          }) ?? [];
-
+      ([wallet, points]): ChartSeries => {
         return {
           key: wallet,
-          label: wallet,
-          data,
+          label: fmt.text.address(wallet),
+          data:
+            points?.map((p) => ({
+              unixTimeMs: p.timestampMs,
+              value: p.usdValue,
+            })) || [],
         };
       },
     );
 
-    const totalSeries: ChartSeries = {
+    if (!showTotal) {
+      return walletSeries;
+    }
+
+    const totalSeries = {
       key: "total",
       label: "Total",
-      data: Array.from(totalMap.entries())
-        .sort((a, b) => a[0] - b[0])
-        .map(([timestamp, value]) => ({
-          unixTimeMs: timestamp,
-          value,
-        })),
+      data:
+        walletSeries[0]?.data.map((_, idx) => ({
+          unixTimeMs: walletSeries[0].data[idx].unixTimeMs,
+          value: walletSeries.reduce(
+            (sum, series) => sum + (series.data[idx]?.value ?? 0),
+            0,
+          ),
+        })) ?? [],
     };
 
     return [totalSeries, ...walletSeries];
@@ -150,35 +152,38 @@ export function MultiWalletBalanceChart({
         </Flex>
 
         <Flex dir="row" gap={4} align="center" wrap="wrap">
-          <Txt size="md" secondary>
-            24h Change:
-          </Txt>
+          {show24Change && (
+            <>
+              <Txt size="md" secondary>
+                24h Change:
+              </Txt>
+              <Flex dir="row" gap={2} wrap="wrap">
+                {balanceSeries.map((series) => {
+                  const change = series24hChanges[series.label];
 
-          <Flex dir="row" gap={2} wrap="wrap">
-            {balanceSeries.map((series) => {
-              const change = series24hChanges[series.label];
+                  if (!change) {
+                    return null;
+                  }
 
-              if (!change) {
-                return null;
-              }
+                  return (
+                    <Tag key={series.key} size="lg" title={series.label}>
+                      <Flex align="center" justify="between" gap={2}>
+                        <Txt size="sm" secondary>
+                          {series.label}
+                        </Txt>
 
-              return (
-                <Tag key={series.key} size="lg" title={series.label}>
-                  <Flex align="center" justify="between" gap={2}>
-                    <Txt size="sm" secondary>
-                      {series.label}
-                    </Txt>
-
-                    <TrendNum
-                      value={change.pct}
-                      prefixes="plus-minus"
-                      formatter={fmt.num.percent}
-                    />
-                  </Flex>
-                </Tag>
-              );
-            })}
-          </Flex>
+                        <TrendNum
+                          value={change.pct}
+                          prefixes="plus-minus"
+                          formatter={fmt.num.percent}
+                        />
+                      </Flex>
+                    </Tag>
+                  );
+                })}
+              </Flex>
+            </>
+          )}
         </Flex>
 
         <MultiTimeSeriesLineChart

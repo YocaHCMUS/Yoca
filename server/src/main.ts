@@ -1,4 +1,5 @@
 import env from "@sv/util/load-env.js";
+import "@sv/util/date.js";
 import { serve } from "@hono/node-server";
 import { clientDomains } from "@sv/config/security.js";
 import { requestContextMiddleware } from "@sv/middlewares/request-context.js";
@@ -44,6 +45,7 @@ import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
 import payment, { PaymentAppType } from "./routes/payment.route";
+import "@sv/util/util-zerion";
 
 const app = new Hono()
   .use("*", logger())

@@ -78,13 +78,6 @@
     gap: $spacing-06;
 }
 
-.watchlistTabContainer {
-    border: 1px solid $border-subtle-01;
-    border-radius: 8px;
-    overflow: hidden;
-    min-height: 580px;
-}
-
 .sectionHeader {
     display: flex;
     align-items: center;
@@ -266,6 +259,11 @@
 
 .unavailableState {
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100%;
 }
 
 .unavailableTitle {

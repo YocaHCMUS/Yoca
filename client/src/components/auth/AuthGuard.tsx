@@ -1,4 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocalization } from "@/contexts/LocalizationContext";
+import { Loading } from "@carbon/react";
 import React from "react";
 import { Navigate, useLocation } from "react-router";
 
@@ -6,17 +8,18 @@ interface AuthGuardProps {
   children: React.ReactNode;
 }
 
-const UNAUTHORIZED_ROUTE = "/unauthorized";
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const { user } = useAuth();
+  const { user, isUserLoading } = useAuth();
+  const {tr} = useLocalization();
   const location = useLocation();
   const attemptedPath = `${location.pathname}${location.search}${location.hash}`;
-
-  if (!user) {
+  if (isUserLoading) {
+    return <Loading withOverlay description={tr("auth.authenticating")}/>
+  } else if (!user) {
     return (
       <Navigate
-        to={UNAUTHORIZED_ROUTE}
+        to="/unauthorized"
         replace
         state={{ from: attemptedPath }}
       />

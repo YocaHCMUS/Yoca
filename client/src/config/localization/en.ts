@@ -154,6 +154,7 @@ export const translation = {
   },
   // Authentication
   auth: {
+    authenticating: "Authenticating...",
     or: "Or continue with",
     signIn: "Sign In",
     signUp: "Sign Up",
@@ -798,8 +799,7 @@ export const translation = {
     transferDetails: "Transfer Details",
     sold: "Sold",
     bought: "Bought",
-    swapped: "Swapped",
-    forSwap: "for",
+    swappedFor: "Swapped {{$fromAmount}} for {{$toAmount}}",
     totalValue: "Total Value",
     transactionFee: "Transaction Fee",
     sent: "Sent",
@@ -1967,6 +1967,24 @@ export const translation = {
     unavailableState: {
       defaultTitle: "Data unavailable",
       defaultDescription: "No profile data is available right now.",
+    },
+  },
+  errorPages: {
+    unauthorized: {
+      error401: "401 Error",
+      accessDenied: "Access Denied",
+      description: "You need to log in before accessing this page.",
+      protectedPath: "Protected path: {{$path}}",
+      login: "Login",
+      backToHome: "Back to Home",
+    },
+    notFound: {
+      error404: "404 Error",
+      title: "We're sorry!",
+      description:
+        "The page you requested does not exist or may have moved to another location.",
+      backToHome: "Back to Home",
+      goToMarket: "Go to Market",
     },
   },
   ERROR,

@@ -5,6 +5,7 @@ import styles from "@/components/profile/shared/profile.module.scss";
 import { useProfileWalletTabData } from "@/hooks/profile/useProfileWalletTabData";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
+import ProfileLoadingState from "@/components/profile/shared/ProfileLoadingState";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { Select, SelectItem } from "@carbon/react";
 import { useEffect, useMemo, useState } from "react";
@@ -18,7 +19,7 @@ interface ProfileWalletTabProps {
 
 export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabProps) {
     const { tr } = useLocalization();
-    const { data, error } = useProfileWalletTabData({ walletAddresses, period });
+    const { data, error, loading } = useProfileWalletTabData({ walletAddresses, period });
     const [selectedWalletId, setSelectedWalletId] = useState<string>("");
 
     const walletOptions = useMemo(
@@ -49,6 +50,10 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
                 description={tr("profileTabs.wallet.unavailableDescription")}
             />
         );
+    }
+
+    if (loading) {
+        return <ProfileLoadingState />;
     }
 
     if (walletAddresses.length === 0 || data.linkedWalletRows.length === 0) {

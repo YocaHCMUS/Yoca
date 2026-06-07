@@ -115,6 +115,7 @@ export const translation = defineTranslation({
   },
   // Authentication
   auth: {
+    authenticating: "Đang xác thực...",
     or: "Hoặc tiếp tục với",
     signIn: "Đăng nhập",
     signUp: "Đăng ký",
@@ -759,8 +760,7 @@ export const translation = defineTranslation({
     transferDetails: "Chi tiết chuyển",
     sold: "Đã bán",
     bought: "Đã mua",
-    swapped: "Đã hoán đổi",
-    forSwap: "sang",
+    swappedFor: "Đã hoán đổi {{$fromAmount}} sang {{$toAmount}}",
     totalValue: "Tổng giá trị",
     transactionFee: "Phí giao dịch",
     sent: "Đã gửi",
@@ -1172,7 +1172,7 @@ export const translation = defineTranslation({
       "Đã lưu quy tắc cảnh báo và cập nhật danh sách địa chỉ tới Helius.",
   },
   lang: {
-    vi: "Vietnam - Tiếng Việt (Vietnamese)",
+    vi: "Tiếng Việt - Tiếng Việt (Vietnamese)",
     en: "Mỹ - English (English)",
   },
   // Validation errors
@@ -1968,6 +1968,24 @@ export const translation = defineTranslation({
     unavailableState: {
       defaultTitle: "Dữ liệu không có sẵn",
       defaultDescription: "Không có dữ liệu hồ sơ nào có sẵn ngay bây giờ.",
+    },
+  },
+  errorPages: {
+    unauthorized: {
+      error401: "Lỗi 401",
+      accessDenied: "Truy cập bị từ chối",
+      description: "Bạn cần đăng nhập trước khi truy cập trang này.",
+      protectedPath: "Đường dẫn được bảo vệ: {{$path}}",
+      login: "Đăng nhập",
+      backToHome: "Quay lại trang chủ",
+    },
+    notFound: {
+      error404: "Lỗi 404",
+      title: "Xin lỗi bạn!",
+      description:
+        "Trang bạn yêu cầu không tồn tại hoặc có thể đã được chuyển đến vị trí khác.",
+      backToHome: "Quay lại trang chủ",
+      goToMarket: "Đi đến thị trường",
     },
   },
 });

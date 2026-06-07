@@ -392,3 +392,26 @@ export const bds_HistoryPriceSchema = z.object({
 });
 
 export type BDS_HistoryPrice = z.infer<typeof bds_HistoryPriceSchema>;
+
+export const zrn_FungiblesResponseSchema = z.object({
+  links: z.object({ self: z.string() }).optional(),
+  data: z.array(
+    z.object({
+      type: z.literal("fungibles"),
+      id: z.string(), // Zerion fungible_id (UUID)
+      attributes: z.object({
+        name: z.string(),
+        symbol: z.string(),
+        implementations: z.array(
+          z.object({
+            chain_id: z.string(),
+            address: z.string().nullable(),
+            decimals: z.number(),
+          }),
+        ),
+      }),
+    }),
+  ),
+});
+
+export type ZRN_FungiblesResponse = z.infer<typeof zrn_FungiblesResponseSchema>;

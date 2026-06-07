@@ -112,13 +112,13 @@ export default function Tble({
       ...(header?.width != null ? { width: header.width } : {}),
       ...(minW != null ? { minWidth: minW } : {}),
       ...(header?.maxWidth != null ? { maxWidth: header.maxWidth } : {}),
-      verticalAlign: stickyHeader ? undefined : "middle",
+      verticalAlign: "middle",
       ...header?.style,
     };
 
     return {
-      bodyClassName: `${alignmentClass} ${stickyHeader ? overwriteStyles.stickyCell : ""}`,
-      headerClassName: `${alignmentClass} ${stickyHeader ? overwriteStyles.stickyHeaderCell : ""}`,
+      bodyClassName: alignmentClass,
+      headerClassName: `${alignmentClass}`,
       style,
     };
   };
@@ -175,7 +175,8 @@ export default function Tble({
         <DataTable
           rows={rowsToRender}
           headers={headers}
-          stickyHeader={stickyHeader}
+          // We will implement our own sticky headers through scss
+          stickyHeader={false}
           {...dataTableProps}
         >
           {({
@@ -190,12 +191,17 @@ export default function Tble({
               style={{
                 height,
                 width: "100%",
-                overflow: "auto",
+                overflowX: stickyHeader ? "visible" : "auto",
+                overflowY: "auto",
               }}
             >
               <Table {...getTableProps()}>
                 <TableHead hidden={hideHeaders}>
-                  <TableRow>
+                  <TableRow
+                    className={
+                      stickyHeader ? overwriteStyles.stickyHeaderRow : undefined
+                    }
+                  >
                     {internalHeaders.map((header) => {
                       const config = getCellConfiguration(header.key);
                       return (
@@ -224,14 +230,14 @@ export default function Tble({
                       onClick={
                         onRowClick
                           ? () => {
-                            const rowIndex = rowsToRender.findIndex(
-                              (item) => item.id === row.id,
-                            );
+                              const rowIndex = rowsToRender.findIndex(
+                                (item) => item.id === row.id,
+                              );
 
-                            if (rowIndex >= 0) {
-                              onRowClick(rowsToRender[rowIndex], rowIndex);
+                              if (rowIndex >= 0) {
+                                onRowClick(rowsToRender[rowIndex], rowIndex);
+                              }
                             }
-                          }
                           : undefined
                       }
                       style={onRowClick ? { cursor: "pointer" } : undefined}

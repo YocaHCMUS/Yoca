@@ -1246,22 +1246,25 @@ export default function WalletPage() {
       extraHeaderPanel={{
         isOpen: !!selectedToken,
         content: selectedToken && (
-          <TokenAverageTradePrice
-            walletAddress={address}
-            tokenAddress={selectedToken.address}
-            tokenImgUrl={
-              tokenMeta.data?.[selectedToken.address]?.imageUrl || null
-            }
-            tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
-            tokenSymbol={
-              tokenMeta.data?.[selectedToken.address]?.symbol || null
-            }
-            tokenCurrentPrice={
-              tokenMarket.data?.[selectedToken.address]?.priceUsd || null
-            }
-            avgBuyPrice={selectedToken.avgBuyCost}
-            avgSellPrice={selectedToken.avgSellCost}
-          />
+          <>
+            <TokenAverageTradePrice
+              walletAddress={address}
+              tokenAddress={selectedToken.address}
+              tokenImgUrl={
+                tokenMeta.data?.[selectedToken.address]?.imageUrl || null
+              }
+              tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
+              tokenSymbol={
+                tokenMeta.data?.[selectedToken.address]?.symbol || null
+              }
+              tokenCurrentPrice={
+                tokenMarket.data?.[selectedToken.address]?.priceUsd || null
+              }
+              avgBuyPrice={selectedToken.avgBuyCost}
+              avgSellPrice={selectedToken.avgSellCost}
+            />
+           
+          </>
         ),
         size: "lg",
         onClose: () => setSelectedToken(null),

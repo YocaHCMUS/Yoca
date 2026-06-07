@@ -4,11 +4,12 @@ import ProfileDashboardTab from "@/components/profile/dashboard/ProfileDashboard
 import ProfilePortfolioTab from "@/components/profile/portfolio/ProfilePortfolioTab";
 import { ProfileSubscriptionsTab } from "@/components/profile/ProfileSubscriptionsTab";
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
+import ProfileLoadingState from "@/components/profile/shared/ProfileLoadingState";
 import ProfileWalletTab from "@/components/profile/wallets/ProfileWalletTab";
 import ProfileWatchlistTab from "@/components/profile/watchlist/ProfileWatchlistTab";
 import {
-  PROFILE_TABS,
-  type ProfileTabId,
+    PROFILE_TABS,
+    type ProfileTabId,
 } from "@/components/profile/shared/profile.constants";
 import ProfileSettingsTab from "@/components/profile/settings";
 import TabContainer from "@/components/tabContainer/tabContainer";
@@ -16,24 +17,17 @@ import { PageWrapper } from "@/components/wrapper";
 import { useProfilePageData } from "@/hooks/profile/useProfilePageData";
 import { useProfileSharedData } from "@/hooks/profile/useProfileSharedData";
 import type { TimePeriod } from "@/types/chart-filters.types";
-import { InlineLoading } from "@carbon/react";
 import {
-  Activity,
-  ChartLine,
-  Notification,
-  Receipt,
-  Settings,
-  StarFilled,
-  User,
-  Wallet,
+    Activity,
+    ChartLine,
+    Notification,
+    Receipt,
+    Settings,
+    StarFilled,
+    User,
+    Wallet,
 } from "@carbon/react/icons";
-import { useEffect, useMemo, useState } from "react";
-import styles from "./index.module.scss";
-
-const DASHBOARD_ENABLED =
-  String(
-    import.meta.env.VITE_PROFILE_ENABLE_DASHBOARD ?? "true",
-  ).toLowerCase() !== "false";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 
 export default function ProfilePage() {
   const [period, setPeriod] = useState<TimePeriod>("30D");
@@ -42,16 +36,12 @@ export default function ProfilePage() {
     period,
   });
   const [loading, setLoading] = useState(false);
-  const {
-    walletAddresses,
-    linkedWallets,
-    error: sharedError,
-  } = useProfileSharedData({
+  const { walletAddresses, linkedWallets, error } = useProfileSharedData({
     setLoading,
   });
 
   const tabsConfig = useMemo(() => {
-    const allTabs: Array<{ id: ProfileTabId; node: React.ReactNode }> = [
+    const allTabs: Array<{ id: ProfileTabId; node: ReactNode }> = [
       {
         id: "overview",
         node: (
@@ -108,24 +98,19 @@ export default function ProfilePage() {
 
     let visibleTabs = allTabs;
 
-    // Filter dashboard tab if disabled
-    if (!DASHBOARD_ENABLED) {
-      visibleTabs = allTabs.filter((tab) => tab.id !== "dashboard");
-    }
-
     return {
       names: visibleTabs.map(
         (tab) =>
-          PROFILE_TABS.find((item) => item.id === tab.id)?.label ?? tab.id,
+          PROFILE_TABS.find((item) => item.id == tab.id)?.label ?? tab.id,
       ),
       icons: visibleTabs.map((tab) => {
-        if (tab.id === "overview") return <User size={16} />;
-        if (tab.id === "dashboard") return <ChartLine size={16} />;
-        if (tab.id === "alerts") return <Notification size={16} />;
-        if (tab.id === "wallets") return <Wallet size={16} />;
-        if (tab.id === "watchlist") return <StarFilled size={16} />;
-        if (tab.id === "subscriptions") return <Receipt size={16} />;
-        if (tab.id === "settings") return <Settings size={16} />;
+        if (tab.id == "overview") return <User size={16} />;
+        if (tab.id == "dashboard") return <ChartLine size={16} />;
+        if (tab.id == "alerts") return <Notification size={16} />;
+        if (tab.id == "wallets") return <Wallet size={16} />;
+        if (tab.id == "watchlist") return <StarFilled size={16} />;
+        if (tab.id == "subscriptions") return <Receipt size={16} />;
+        if (tab.id == "settings") return <Settings size={16} />;
         return <Activity size={16} />;
       }),
       nodes: visibleTabs.map((tab) => tab.node),
@@ -138,25 +123,20 @@ export default function ProfilePage() {
   }, [activeTab, tabsConfig.names.length]);
 
   return (
-    <PageWrapper>
-      <main className={styles.page}>
-        {loading || profileLoading ? (
-          <div className={styles.loadingState}>
-            <InlineLoading description="Loading profile page" status="active" />
-          </div>
-        ) : null}
-
-        <div className={styles.tabSection}>
-          <TabContainer
-            activeTab={activeTab}
-            names={tabsConfig.names}
-            tabIcons={tabsConfig.icons}
-            tabs={tabsConfig.nodes}
-            onTabChange={setActiveTab}
-            orientation="vertical"
-          />
-        </div>
-      </main>
+    <PageWrapper wideContent>
+      {loading || profileLoading ? (
+        <ProfileLoadingState />
+      ) : (
+        <TabContainer
+          activeTab={activeTab}
+          names={tabsConfig.names}
+          tabIcons={tabsConfig.icons}
+          tabs={tabsConfig.nodes}
+          onTabChange={setActiveTab}
+          orientation="vertical"
+          style={{ height: "100vh" }}
+        />
+      )}
     </PageWrapper>
   );
 }

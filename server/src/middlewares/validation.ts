@@ -312,7 +312,15 @@ export async function getTrackedApiResult<T extends z.ZodType>(
   logSuccessResponse: boolean = false,
 ) {
   try {
-    const jsonResp = await resp.json();
+    const text = await resp.text();
+    if (!text) {
+      console.error("External API returned empty response", {
+        status: resp.status,
+        url: resp.url,
+      });
+      return;
+    }
+    const jsonResp = JSON.parse(text);
     return validateResponseDataSchema(
       resp.status,
       jsonResp,
@@ -320,7 +328,11 @@ export async function getTrackedApiResult<T extends z.ZodType>(
       logSuccessResponse,
     );
   } catch (err) {
-    console.error("Unexpected Error:", err);
+    console.error("External API Error:", {
+      error: err instanceof Error ? err.message : String(err),
+      url: resp?.url,
+      status: resp?.status,
+    });
     return;
   }
 }
@@ -371,8 +383,13 @@ export const envSchema = z.object({
   // API Keys and URLs
   COINGECKO_API_BASE_URL: z.url().default("https://api.coingecko.com/api/v3"),
   COINGECKO_API_KEY: z.string(),
+
   BIRDEYE_API_BASE_URL: z.url().default("https://public-api.birdeye.so"),
   BIRDEYE_API_KEY: z.string(),
+
+  ZERION_API_BASE_URL: z.url().default("https://api.zerion.io/v1"),
+  ZERION_API_KEY: z.string(),
+
   HELIUS_API_KEY: z.string(),
   HELIUS_WEBHOOK_AUTH_KEY: z.string(),
   HELIUS_WEBHOOK_ID: z.string(),

@@ -178,7 +178,7 @@ export const bds_WalletNetAssetsSchema = z.object({
 
 export type BDS_WalletNetAssets = z.infer<typeof bds_WalletNetAssetsSchema>;
 
-export const schema = z.object({
+export const bds_WalletNetworthHistorySchema = z.object({
   success: z.boolean(),
   data: z.object({
     wallet_address: z.string(),
@@ -196,7 +196,23 @@ export const schema = z.object({
   }),
 });
 
-export const bds_WalletNetworthHistorySchema = schema;
 export type BDS_WalletNetworthHistory = z.infer<
   typeof bds_WalletNetworthHistorySchema
+>;
+
+export const zrn_WalletBalanceChartSchema = z.object({
+  links: z.object({ self: z.string() }),
+  data: z.object({
+    type: z.string(),
+    id: z.string(),
+    attributes: z.object({
+      begin_at: z.string(),
+      end_at: z.string(),
+      points: z.array(z.tuple([z.number(), z.number()])),
+    }),
+  }),
+});
+
+export type ZRN_WalletBalanceChart = z.output<
+  typeof zrn_WalletBalanceChartSchema
 >;

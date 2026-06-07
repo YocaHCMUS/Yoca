@@ -1,6 +1,7 @@
 import client from "@/api/main";
 import { CpyBtn } from "@/components/CpyBtn";
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
+import ProfileLoadingState from "@/components/profile/shared/ProfileLoadingState";
 import TabContainer from "@/components/tabContainer/tabContainer";
 import { SortType, Table } from "@/components/tables/Table";
 import { renderSparkline } from "@/components/tables/TableCellRenderer";
@@ -61,15 +62,6 @@ export function ProfileWatchlistTab() {
     { enabled: Boolean(tokenAddresses) },
   );
 
-  const marketByAddress = useMemo(() => {
-    const data = marketData.data;
-    if (!data) return {} as Record<string, any>;
-    if (Array.isArray(data)) {
-      return Object.fromEntries(data.map((item: any) => [item.address, item]));
-    }
-    return data as Record<string, any>;
-  }, [marketData.data]);
-
   const tokenMetaByAddress = useMemo(() => {
     const data = tokenMeta.data;
     if (!data) return {} as Record<string, any>;
@@ -86,7 +78,9 @@ export function ProfileWatchlistTab() {
   });
 
   const walletOverviewMap = useMemo(() => {
-    return new Map(walletOverviews.map((overview) => [overview.address, overview]));
+    return new Map(
+      walletOverviews.map((overview) => [overview.address, overview]),
+    );
   }, [walletOverviews]);
 
   const tokenHeaders = [
@@ -149,7 +143,7 @@ export function ProfileWatchlistTab() {
   const tokenTableData = useMemo(() => {
     return tokenWatchlist.map((tokenAddress) => {
       const meta = tokenMetaByAddress[tokenAddress];
-      const market = marketByAddress[tokenAddress];
+      const market = marketData.data?.[tokenAddress];
       const symbol =
         meta?.symbol?.toUpperCase() ?? fmt.text.address(tokenAddress);
       const name = meta?.name ?? tokenAddress;
@@ -178,7 +172,7 @@ export function ProfileWatchlistTab() {
         },
       ];
     });
-  }, [tokenWatchlist, tokenMetaByAddress, marketByAddress, fmt, tokenPending]);
+  }, [tokenWatchlist, tokenMetaByAddress, marketData.data, fmt, tokenPending]);
 
   const tokenCellRenderers = useMemo(
     () => [
@@ -342,31 +336,58 @@ export function ProfileWatchlistTab() {
 
           if (isEditing) {
             return (
-              <div style={{ display: "flex", gap: "4px", alignItems: "center" }} onClick={(e) => e.stopPropagation()}>
-                <input 
-                  type="text" 
+              <div
+                style={{ display: "flex", gap: "4px", alignItems: "center" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="text"
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  style={{ width: "100px", padding: "2px", background: "var(--cds-layer-01)", color: "inherit", border: "1px solid var(--cds-border-strong)" }}
+                  style={{
+                    width: "100px",
+                    padding: "2px",
+                    background: "var(--cds-layer-01)",
+                    color: "inherit",
+                    border: "1px solid var(--cds-border-strong)",
+                  }}
                   autoFocus
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       setLabel(walletAddress, draft);
                       setIsEditing(false);
-                    } else if (e.key === 'Escape') {
+                    } else if (e.key === "Escape") {
                       setDraft(initialLabel);
                       setIsEditing(false);
                     }
                   }}
                 />
-                <div style={{ cursor: "pointer", color: "var(--cds-support-success)" }} onClick={() => {
-                   setLabel(walletAddress, draft);
-                   setIsEditing(false);
-                }}>✓</div>
-                <div style={{ cursor: "pointer", color: "var(--cds-support-error)", paddingLeft: 4, fontWeight: "bold" }} onClick={() => {
-                   setDraft(initialLabel);
-                   setIsEditing(false);
-                }}>✕</div>
+                <div
+                  style={{
+                    cursor: "pointer",
+                    color: "var(--cds-support-success)",
+                  }}
+                  onClick={() => {
+                    setLabel(walletAddress, draft);
+                    setIsEditing(false);
+                  }}
+                >
+                  ✓
+                </div>
+                <div
+                  style={{
+                    cursor: "pointer",
+                    color: "var(--cds-support-error)",
+                    paddingLeft: 4,
+                    fontWeight: "bold",
+                  }}
+                  onClick={() => {
+                    setDraft(initialLabel);
+                    setIsEditing(false);
+                  }}
+                >
+                  ✕
+                </div>
               </div>
             );
           }
@@ -380,7 +401,19 @@ export function ProfileWatchlistTab() {
               <Link href={`/wallets/${walletAddress}`}>
                 {initialLabel || fmt.text.address(walletAddress)}
               </Link>
-              <div style={{ cursor: "pointer", display: "flex", alignItems: "center", padding: "2px" }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditing(true); }}>
+              <div
+                style={{
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "2px",
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsEditing(true);
+                }}
+              >
                 <span style={{ fontSize: "10px", opacity: 0.5 }}>✏️</span>
               </div>
               <CpyBtn size="xs" copyWhat={walletAddress} />
@@ -390,26 +423,30 @@ export function ProfileWatchlistTab() {
 
         return <EditableLabelCell />;
       },
-        (value: unknown) =>
-          typeof value === "number" && Number.isFinite(value)
-            ? fmt.num.compact.currency(value)
-            : "-",
-        (value: unknown) =>
-          typeof value === "number" && Number.isFinite(value)
-            ? fmt.num.compact.currency(value)
-            : "-",
-        (value: unknown) =>
-          typeof value === "number" && Number.isFinite(value) ? (
-            <TrendNum value={value} formatter={fmt.num.compact.currency} />
-          ) : (
-            "-"
-          ),
-      ],
+      (value: unknown) =>
+        typeof value === "number" && Number.isFinite(value)
+          ? fmt.num.compact.currency(value)
+          : "-",
+      (value: unknown) =>
+        typeof value === "number" && Number.isFinite(value)
+          ? fmt.num.compact.currency(value)
+          : "-",
+      (value: unknown) =>
+        typeof value === "number" && Number.isFinite(value) ? (
+          <TrendNum value={value} formatter={fmt.num.compact.currency} />
+        ) : (
+          "-"
+        ),
+    ],
     [fmt, toggleWallet, tr, setLabel],
   );
 
   const tokenLoading = isLoading || tokenMeta.isLoading || marketData.isLoading;
   const walletLoading = isLoading || linkedWallets.isLoading || overviewLoading;
+
+  if (isLoading) {
+    return <ProfileLoadingState />;
+  }
 
   const tokenTable =
     tokenTableData.length === 0 && !tokenLoading ? (
@@ -497,23 +534,19 @@ export function ProfileWatchlistTab() {
     );
 
   return (
-    <section className={styles.contentStack}>
-      <div className={styles.watchlistTabContainer}>
-        <TabContainer
-          activeTab={activeSubtab}
-          onTabChange={setActiveSubtab}
-          names={[
-            tr("profileTabs.watchlist.walletSubtab"),
-            tr("profileTabs.watchlist.tokenSubtab"),
-          ]}
-          tabIcons={[
-            <Wallet key="wallet" size={16} />,
-            <StarFilled key="token" size={16} fill={cds.iconPrimary} />,
-          ]}
-          tabs={[walletTable, tokenTable]}
-        />
-      </div>
-    </section>
+    <TabContainer
+      activeTab={activeSubtab}
+      onTabChange={setActiveSubtab}
+      names={[
+        tr("profileTabs.watchlist.walletSubtab"),
+        tr("profileTabs.watchlist.tokenSubtab"),
+      ]}
+      tabIcons={[
+        <Wallet key="wallet" size={16} />,
+        <StarFilled key="token" size={16} fill={cds.iconPrimary} />,
+      ]}
+      tabs={[walletTable, tokenTable]}
+    />
   );
 }
 
