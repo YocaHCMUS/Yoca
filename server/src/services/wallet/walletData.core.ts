@@ -30,6 +30,7 @@ import type {
   OverviewHoldingsSnapshot,
   OverviewActivitySnapshot,
   WalletProviderPolicy,
+  WalletOverviewWinRateStats,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import {
   DAY_MS,
@@ -1220,3 +1221,40 @@ export function resolvePnLAggregationByGap(
   return aggregation;
 }
 
+// Thêm hàm helper tính Win Rate
+export function calculateWinRateStats(tokenPnls: Array<{ realizedPnl: number }>): WalletOverviewWinRateStats {
+  let winCount = 0;
+  let lossCount = 0;
+  let totalWinUsd = 0;
+  let totalLossUsd = 0;
+
+  for (const token of tokenPnls) {
+      // Chỉ xét các token có PnL đã chốt (Realized PnL khác 0)
+      if (token.realizedPnl > 0) {
+          winCount++;
+          totalWinUsd += token.realizedPnl;
+      } else if (token.realizedPnl < 0) {
+          lossCount++;
+          // Lấy giá trị tuyệt đối để tính trung bình lỗ
+          totalLossUsd += Math.abs(token.realizedPnl); 
+      }
+  }
+
+  const totalTraded = winCount + lossCount;
+  const winRate = totalTraded > 0 ? (winCount / totalTraded) * 100 : 0;
+  const avgWinUsd = winCount > 0 ? totalWinUsd / winCount : 0;
+  const avgLossUsd = lossCount > 0 ? totalLossUsd / lossCount : 0;
+
+  return {
+      winRate,
+      winCount,
+      lossCount,
+      totalTraded,
+      avgWinUsd,
+      avgLossUsd
+  };
+}
+
+// Khi build WalletOverviewPeriodStats, bạn gọi hàm này và gán vào winRateStats:
+// const periodWinRate = calculateWinRateStats(periodTokenPnls);
+// return { ...stats, winRateStats: periodWinRate }
