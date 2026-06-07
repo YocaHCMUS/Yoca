@@ -5,11 +5,14 @@ import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.
 import { getDailyTradingVolumeFromDb } from "@sv/services/charts/dailyTradingVolume.service.js";
 import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
 import { getTokenMeta, getTokenDetails } from "@sv/services/tokens/token-info.js";
+import { searchToken } from "./chat-token-search.js";
 import { get24hTokenMarketChart, getHourlyTokenMarketChart, getDailyTokenMarketChart } from "@sv/services/tokens/token-chart.js";
 import type { DailyTradingVolumeResponse } from "@sv/services/charts/dailyTradingVolume.service.js";
 import type { ChatToolDefinition } from "./chat.types.js";
 import { isBaseAsset } from "@sv/services/wallet/walletDayActivity.service.js";
 import { z } from "zod";
+
+const BASE58_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 // ─── Tool Definitions ───────────────────────────────────────────────────────
 
@@ -35,7 +38,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
       properties: {
         address: { type: "string", description: "Solana wallet address (base58)" },
         limit: { type: "number", description: "Max number of swaps to return (default 20)" },
-        tokenAddress: { type: "string", description: "Filter to swaps involving this token (bought or sold side)" },
+        tokenAddress: { type: "string", description: "Token mint address (base58) to filter swaps. NOT the symbol/name. Example: 'So11111111111111111111111111111111111111112' for SOL. Call search_token first if you only have a symbol." },
         type: { type: "string", enum: ["buy", "sell"], description: "Filter by swap direction: buy = token enters wallet, sell = token leaves wallet" },
         fromMs: { type: "number", description: "Start of time window (milliseconds since epoch). Defaults to 30 days ago." },
         toMs: { type: "number", description: "End of time window (milliseconds since epoch). Defaults to now." },
@@ -52,7 +55,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
       properties: {
         address: { type: "string", description: "Solana wallet address (base58)" },
         limit: { type: "number", description: "Max number of transfers to return (default 20)" },
-        tokenAddress: { type: "string", description: "Filter to transfers of this specific token" },
+        tokenAddress: { type: "string", description: "Token mint address (base58) to filter transfers. NOT the symbol/name. Example: 'So11111111111111111111111111111111111111112' for SOL. Call search_token first if you only have a symbol." },
         direction: { type: "string", enum: ["in", "out"], description: "Filter by transfer direction: in = funds arriving, out = funds leaving" },
         fromMs: { type: "number", description: "Start of time window (milliseconds since epoch). Defaults to 30 days ago." },
         toMs: { type: "number", description: "End of time window (milliseconds since epoch). Defaults to now." },
@@ -105,7 +108,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
         address: { type: "string", description: "Solana wallet address (base58)" },
         fromMs: { type: "number", description: "Start time (epoch ms) — only swaps after this time are included in PnL computation" },
         toMs: { type: "number", description: "End time (epoch ms) — only swaps before this time are included in PnL computation" },
-        tokenAddress: { type: "string", description: "Filter PnL breakdown to a specific token address only. Returns single-token PnL, trade count, and win rate." },
+        tokenAddress: { type: "string", description: "Token mint address (base58) to filter PnL. NOT the symbol/name. Example: 'So11111111111111111111111111111111111111112' for SOL. Call search_token first if you only have a symbol." },
       },
       required: ["address"],
     },
@@ -235,6 +238,18 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
     },
   },
   {
+    name: "search_token",
+    description:
+      "Search for a Solana token by symbol or name (case-insensitive). Returns matching tokens with their base58 mint address, symbol, name, and image URL. Use this when you need to resolve a token symbol (e.g. 'SOL', 'USDC', 'BONK') to a base58 mint address before calling other tools.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Token symbol or name to search for (e.g. 'SOL', 'USDC', 'BONK', 'Wojak'). Case-insensitive." },
+      },
+      required: ["query"],
+    },
+  },
+  {
     name: "navigate_to_page",
     description:
       "Suggest navigating the user to another page on the site. Call this when the user asks to 'go to', 'show me', 'open', or 'take me to' a wallet, token, market, or transactions page. Returns a suggested navigation action for the frontend to render as a clickable button.",
@@ -261,42 +276,22 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
 function extractSwapsForLLM(
   swaps: unknown,
   limit: number,
-  filters?: {
-    tokenAddress?: string;
-    type?: "buy" | "sell";
-    fromMs?: number;
-    toMs?: number;
-  },
+  type?: "buy" | "sell",
 ): unknown {
   if (!swaps || typeof swaps !== "object") return [];
   const s = swaps as { swaps?: unknown[] };
   if (!Array.isArray(s.swaps)) return [];
 
   let filtered = s.swaps as Record<string, unknown>[];
-  const fromTs = filters?.fromMs;
-  const toTs = filters?.toMs;
 
-  if (filters?.tokenAddress || filters?.type || fromTs != null || toTs != null) {
+  if (type) {
     filtered = filtered.filter((swap) => {
-      if (fromTs != null || toTs != null) {
-        const ts = new Date(swap.blockTimestampIso as string).getTime();
-        if (fromTs != null && ts < fromTs) return false;
-        if (toTs != null && ts > toTs) return false;
-      }
-      if (filters?.tokenAddress) {
-        const addr = filters.tokenAddress;
-        const boughtAddr = (swap.bought as Record<string, unknown> | undefined)?.address;
-        const soldAddr = (swap.sold as Record<string, unknown> | undefined)?.address;
-        if (boughtAddr !== addr && soldAddr !== addr) return false;
-      }
-      if (filters?.type) {
-        const boughtAddr = (swap.bought as Record<string, unknown> | undefined)?.address as string | undefined;
-        const soldAddr = (swap.sold as Record<string, unknown> | undefined)?.address as string | undefined;
-        const isBuy = !isBaseAsset(boughtAddr) && isBaseAsset(soldAddr);
-        const isSell = isBaseAsset(boughtAddr) && !isBaseAsset(soldAddr);
-        if (filters.type === "buy" && !isBuy) return false;
-        if (filters.type === "sell" && !isSell) return false;
-      }
+      const boughtAddr = (swap.bought as Record<string, unknown> | undefined)?.address as string | undefined;
+      const soldAddr = (swap.sold as Record<string, unknown> | undefined)?.address as string | undefined;
+      const isBuy = !isBaseAsset(boughtAddr) && isBaseAsset(soldAddr);
+      const isSell = isBaseAsset(boughtAddr) && !isBaseAsset(soldAddr);
+      if (type === "buy" && !isBuy) return false;
+      if (type === "sell" && !isSell) return false;
       return true;
     });
   }
@@ -314,53 +309,19 @@ function extractSwapsForLLM(
 function extractTransfersForLLM(
   transfers: unknown,
   limit: number,
-  walletAddress: string,
-  filters?: {
-    tokenAddress?: string;
-    direction?: "in" | "out";
-    fromMs?: number;
-    toMs?: number;
-    minAmountUsd?: number;
-  },
 ): unknown {
   if (!transfers || typeof transfers !== "object") return [];
   const t = transfers as { transfers?: unknown[] };
   if (!Array.isArray(t.transfers)) return [];
 
-  let filtered = t.transfers as Record<string, unknown>[];
-  const fromTs = filters?.fromMs;
-  const toTs = filters?.toMs;
-
-  if (filters?.tokenAddress || filters?.direction || fromTs != null || toTs != null || filters?.minAmountUsd != null) {
-    filtered = filtered.filter((tr) => {
-      if (fromTs != null || toTs != null) {
-        const ts = new Date(tr.timestamp as string).getTime();
-        if (fromTs != null && ts < fromTs) return false;
-        if (toTs != null && ts > toTs) return false;
-      }
-      if (filters?.tokenAddress) {
-        if ((tr.tokenAddress as string) !== filters.tokenAddress) return false;
-      }
-      if (filters?.direction) {
-        if (filters.direction === "in" && (tr.to as string) !== walletAddress) return false;
-        if (filters.direction === "out" && (tr.from as string) !== walletAddress) return false;
-      }
-      if (filters?.minAmountUsd != null) {
-        const usd = tr.amountUsd as number | undefined;
-        if (usd == null || usd < filters.minAmountUsd) return false;
-      }
-      return true;
-    });
-  }
-
-  return filtered.slice(0, limit).map((tr) => ({
-    from: tr.from,
-    to: tr.to,
-    amount: tr.amount,
-    amountUsd: tr.amountUsd,
-    token: tr.tokenSymbol,
-    tokenAddress: tr.tokenAddress,
-    timestamp: tr.timestamp,
+  return t.transfers.slice(0, limit).map((tr) => ({
+    from: (tr as Record<string, unknown>).from,
+    to: (tr as Record<string, unknown>).to,
+    amount: (tr as Record<string, unknown>).amount,
+    amountUsd: (tr as Record<string, unknown>).amountUsd,
+    token: (tr as Record<string, unknown>).tokenSymbol,
+    tokenAddress: (tr as Record<string, unknown>).tokenAddress,
+    timestamp: (tr as Record<string, unknown>).timestamp,
   }));
 }
 
@@ -581,7 +542,7 @@ function extractTokenDetailsForLLM(data: unknown): unknown {
 const swapsFilterSchema = z.object({
   address: z.string().min(1),
   limit: z.number().optional().default(3000),
-  tokenAddress: z.string().optional(),
+  tokenAddress: z.string().regex(BASE58_REGEX, "Must be a valid base58 token mint address").optional(),
   type: z.enum(["buy", "sell"]).optional(),
   fromMs: z.number().optional(),
   toMs: z.number().optional(),
@@ -590,7 +551,7 @@ const swapsFilterSchema = z.object({
 const transfersFilterSchema = z.object({
   address: z.string().min(1),
   limit: z.number().optional().default(3000),
-  tokenAddress: z.string().optional(),
+  tokenAddress: z.string().regex(BASE58_REGEX, "Must be a valid base58 token mint address").optional(),
   direction: z.enum(["in", "out"]).optional(),
   fromMs: z.number().optional(),
   toMs: z.number().optional(),
@@ -618,11 +579,11 @@ const addressOnlySchema = z.object({
 });
 
 const tokenAddressSchema = z.object({
-  tokenAddress: z.string().min(1),
+  tokenAddress: z.string().regex(BASE58_REGEX, "Must be a valid base58 token mint address"),
 });
 
 const tokenAddressDaysSchema = z.object({
-  tokenAddress: z.string().min(1),
+  tokenAddress: z.string().regex(BASE58_REGEX, "Must be a valid base58 token mint address"),
   days: z.number().int().positive().max(365).optional().default(7),
 });
 
@@ -646,14 +607,14 @@ export const TOOL_HANDLERS: Record<
 
   get_wallet_swaps: async (input) => {
     const { address, limit, tokenAddress, type, fromMs, toMs } = swapsFilterSchema.parse(input);
-    const data = await getWalletSwaps(address, fromMs, toMs);
-    return { data, llmData: extractSwapsForLLM(data, limit, { tokenAddress, type, fromMs, toMs }) };
+    const data = await getWalletSwaps(address, fromMs, toMs, tokenAddress);
+    return { data, llmData: extractSwapsForLLM(data, limit, type) };
   },
 
   get_wallet_transfers: async (input) => {
     const { address, limit, tokenAddress, direction, fromMs, toMs, minAmountUsd } = transfersFilterSchema.parse(input);
-    const data = await getWalletTransfers(address, fromMs, toMs);
-    return { data, llmData: extractTransfersForLLM(data, limit, address, { tokenAddress, direction, fromMs, toMs, minAmountUsd }) };
+    const data = await getWalletTransfers(address, fromMs, toMs, tokenAddress, direction, minAmountUsd);
+    return { data, llmData: extractTransfersForLLM(data, limit) };
   },
 
   get_balance_history: async (input) => {
@@ -673,7 +634,7 @@ export const TOOL_HANDLERS: Record<
       address: z.string().min(1),
       fromMs: z.number().optional(),
       toMs: z.number().optional(),
-      tokenAddress: z.string().optional(),
+      tokenAddress: z.string().regex(BASE58_REGEX, "Must be a valid base58 token mint address").optional(),
     }).parse(input);
     const { getWalletPnLComputed } = await import(
       "@sv/services/wallet/walletAiSwapSummary.service.js"
@@ -755,6 +716,14 @@ export const TOOL_HANDLERS: Record<
     const { tokenAddress } = tokenAddressSchema.parse(input);
     const data = await getTokenDetails([tokenAddress]);
     return { data, llmData: extractTokenDetailsForLLM(data) };
+  },
+
+  search_token: async (input) => {
+    const { query } = z.object({
+      query: z.string().min(1, "Search query is required"),
+    }).parse(input);
+    const data = await searchToken(query);
+    return { data, llmData: data };
   },
 
   navigate_to_page: async (input) => {

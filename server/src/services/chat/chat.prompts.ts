@@ -50,6 +50,11 @@ export function buildToolSelectionPrompt(
     "Today's date: " + new Date().toISOString(),
     `Wallet address: ${address}`,
     "",
+    "PARAMETER RULES:",
+    "- 'tokenAddress' fields ALWAYS require the Solana token mint address (base58), NEVER the token symbol or name.",
+    "- If the user gives a token symbol/name (e.g. 'SOL', 'USDC'), call search_token first to resolve it to a base58 mint address.",
+    "- 'address' fields refer to the Solana wallet address (base58).",
+    "",
     "Available tools:",
     toolList,
   ];
