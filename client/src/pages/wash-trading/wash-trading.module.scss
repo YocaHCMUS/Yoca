@@ -1,18 +1,89 @@
 // wash-trading.module.scss
-// Dark theme — matches UI screenshot
 
-// ── Page layout ────────────────────────────────────────────────────────────────
+// ── Variables & Theming ────────────────────────────────────────────────────────
 .page {
-  background: #0e0e0e;
-  color: #e8e6e0;
+  /* DARK THEME (DEFAULT) */
+  --bg-page: #0e0e0e;
+  --text-primary: #e8e6e0;
+  --text-secondary: #888;
+  --text-muted: #666;
+  --text-title: #f0ede6;
+
+  --bg-card: #141414;
+  --border-card: #252525;
+  --border-light: #1e1e1e;
+  --hover-bg: rgba(255, 255, 255, 0.04);
+
+  --bg-btn-sec: #1a1a1a;
+  --border-btn-sec: #2e2e2e;
+  --bg-btn-sec-hover: #242424;
+
+  --bg-btn-pri: #1a3a5c;
+  --text-btn-pri: #85b7eb;
+  
+  --bg-tab-active: #1a3a5c;
+  --text-tab-active: #85b7eb;
+
+  /* Graph Variables */
+  --graph-bg: #0c0c0c;
+  --graph-node-normal: #2a2a2a;
+  --graph-node-stroke: #555;
+  --graph-line: #444;
+  --graph-text: #aaa;
+
+  /* LIGHT THEME (OVERRIDE) */
+  &.light {
+    --bg-page: #f9f9fb;
+    --text-primary: #1d1d1f;
+    --text-secondary: #6e6e73;
+    --text-muted: #86868b;
+    --text-title: #111111;
+
+    --bg-card: #ffffff;
+    --border-card: #d2d2d7;
+    --border-light: #e5e5ea;
+    --hover-bg: rgba(0, 0, 0, 0.04);
+
+    --bg-btn-sec: #ffffff;
+    --border-btn-sec: #c7c7cc;
+    --bg-btn-sec-hover: #f2f2f7;
+
+    --bg-btn-pri: #e8f0fe;
+    --text-btn-pri: #0b57d0;
+
+    --bg-tab-active: #0b57d0;
+    --text-tab-active: #ffffff;
+
+    --graph-bg: #f5f5f7;
+    --graph-node-normal: #ffffff;
+    --graph-node-stroke: #c7c7cc;
+    --graph-line: #d2d2d7;
+    --graph-text: #6e6e73;
+  }
+
+  // Apply variables to base wrapper
+  background: var(--bg-page);
+  color: var(--text-primary);
   font-family: 'SF Pro Display', 'Inter', system-ui, sans-serif;
   padding: 20px 24px 40px;
-  
-  height: 100vh;       /* Ép chiều cao bằng đúng 1 màn hình viewport */
+  height: 100vh;
   overflow-y: auto; 
-  
   max-width: 1400px;
   margin: 0 auto;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: var(--bg-page);
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--border-card);
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+  }
 }
 
 // ── Top bar ────────────────────────────────────────────────────────────────────
@@ -39,7 +110,7 @@
 .pageTitle {
   font-size: 18px;
   font-weight: 500;
-  color: #f0ede6;
+  color: var(--text-title);
   margin: 0;
 }
 
@@ -63,27 +134,27 @@
   font-size: 13px;
   padding: 7px 12px;
   border-radius: 8px;
-  border: 0.5px solid #2e2e2e;
-  background: #1a1a1a;
-  color: #e8e6e0;
+  border: 0.5px solid var(--border-btn-sec);
+  background: var(--bg-btn-sec);
+  color: var(--text-primary);
   cursor: pointer;
   outline: none;
 
-  &:hover { border-color: #444; }
+  &:hover { border-color: var(--text-secondary); }
 }
-/* Container chính chứa khu vực biểu đồ đồ thị và thanh phân tích AI bên phải */
+
 .mainContent {
   display: grid;
-  grid-template-columns: 2fr 1fr; /* Chia tỉ lệ biểu đồ chiếm 2 phần, AI Panel chiếm 1 phần */
+  grid-template-columns: 2fr 1fr;
   gap: 20px;
   margin-top: 20px;
   align-items: start;
 
-  /* Responsive: Chuyển thành 1 cột trên màn hình dọc/máy tính bảng */
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
   }
 }
+
 .btnSecondary {
   display: flex;
   align-items: center;
@@ -91,13 +162,13 @@
   font-size: 13px;
   padding: 7px 14px;
   border-radius: 8px;
-  border: 0.5px solid #2e2e2e;
-  background: #1a1a1a;
-  color: #e8e6e0;
+  border: 0.5px solid var(--border-btn-sec);
+  background: var(--bg-btn-sec);
+  color: var(--text-primary);
   cursor: pointer;
   transition: background .15s;
 
-  &:hover { background: #242424; }
+  &:hover { background: var(--bg-btn-sec-hover); }
 }
 
 .btnPrimary {
@@ -109,8 +180,8 @@
   padding: 7px 16px;
   border-radius: 8px;
   border: none;
-  background: #1a3a5c;
-  color: #85b7eb;
+  background: var(--bg-btn-pri);
+  color: var(--text-btn-pri);
   cursor: pointer;
   transition: opacity .15s;
 
@@ -135,15 +206,15 @@
 }
 
 .metricCard {
-  background: #141414;
-  border: 0.5px solid #252525;
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-card);
   border-radius: 10px;
   padding: 14px 16px;
 }
 
 .metricLabel {
   font-size: 11px;
-  color: #888;
+  color: var(--text-secondary);
   margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: .4px;
@@ -152,7 +223,7 @@
 .metricValue {
   font-size: 26px;
   font-weight: 500;
-  color: #f0ede6;
+  color: var(--text-title);
   line-height: 1.1;
 }
 
@@ -164,7 +235,7 @@
 // ── Main two-column grid ───────────────────────────────────────────────────────
 .mainGrid {
   display: grid;
-  grid-template-columns: 1fr 310px; /* Đổi 320px thành 310px giống chuẩn HTML */
+  grid-template-columns: 1fr 310px;
   gap: 14px;
   align-items: start;
 
@@ -181,10 +252,10 @@
 
 // ── Card base ──────────────────────────────────────────────────────────────────
 .card {
-  background: #141414;
-  border: 0.5px solid #252525; /* Viền mảnh và nhạt giống bản html */
-  border-radius: 12px;         /* Bo góc 12px */
-  padding: 16px 18px;          /* Padding nhỏ hơn */
+  background: var(--bg-card);
+  border: 0.5px solid var(--border-card);
+  border-radius: 12px;
+  padding: 16px 18px;
 }
 
 .cardHeader {
@@ -202,7 +273,7 @@
 .cardTitle {
   font-size: 13px;
   font-weight: 500;
-  color: #d4d1c8;
+  color: var(--text-title);
   margin: 0;
   flex: 1;
 }
@@ -218,24 +289,24 @@
   font-size: 11px;
   padding: 3px 10px;
   border-radius: 99px;
-  border: 0.5px solid #2e2e2e;
+  border: 0.5px solid var(--border-btn-sec);
   background: transparent;
-  color: #888;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all .15s;
 
-  &:hover { background: #1e1e1e; color: #ccc; }
+  &:hover { background: var(--border-light); color: var(--text-primary); }
 }
 
 .algoTabActive {
-  background: #1a3a5c;
-  color: #85b7eb;
+  background: var(--bg-tab-active);
+  color: var(--text-tab-active);
   border-color: transparent;
 }
 
 // ── Network graph ──────────────────────────────────────────────────────────────
 .graphContainer {
-  background: #0c0c0c;
+  background: var(--graph-bg);
   border-radius: 8px;
   padding: 10px;
   overflow: hidden;
@@ -255,7 +326,7 @@
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: #888;
+  color: var(--text-secondary);
 }
 
 .legendDot {
@@ -284,18 +355,18 @@
   font-size: 11px;
   padding: 3px 10px;
   border-radius: 99px;
-  border: 0.5px solid #2e2e2e;
+  border: 0.5px solid var(--border-btn-sec);
   background: transparent;
-  color: #888;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all .15s;
 
-  &:hover { color: #ccc; }
+  &:hover { color: var(--text-primary); }
 }
 
 .walletTabActive {
-  background: #1a3a5c;
-  color: #85b7eb;
+  background: var(--bg-tab-active);
+  color: var(--text-tab-active);
   border-color: transparent;
 }
 
@@ -311,12 +382,12 @@
   justify-content: space-between;
   gap: 10px;
   padding: 10px 0;
-  border-bottom: 0.5px solid #1e1e1e;
+  border-bottom: 0.5px solid var(--border-light);
   cursor: pointer;
   transition: background .12s;
 
   &:last-child { border-bottom: none; }
-  &:hover { background: rgba(255,255,255,.025); margin: 0 -4px; padding-left: 4px; padding-right: 4px; border-radius: 6px; }
+  &:hover { background: var(--hover-bg); margin: 0 -4px; padding-left: 4px; padding-right: 4px; border-radius: 6px; }
 }
 
 .walletInfo {
@@ -330,12 +401,12 @@
 .walletAddr {
   font-size: 13px;
   font-family: 'SF Mono', 'Fira Code', monospace;
-  color: #d4d1c8;
+  color: var(--text-title);
 }
 
 .walletDesc {
   font-size: 11px;
-  color: #666;
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -343,7 +414,7 @@
 
 .walletGnn {
   font-size: 11px;
-  color: #666;
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -370,7 +441,7 @@
 
 .gaugeLabel {
   font-size: 12px;
-  color: #888;
+  color: var(--text-secondary);
   margin-top: 2px;
   text-align: center;
 }
@@ -382,7 +453,7 @@
   gap: 9px;
   margin-top: 14px;
   padding-top: 14px;
-  border-top: 0.5px solid #1e1e1e;
+  border-top: 0.5px solid var(--border-light);
 }
 
 .featureRow {
@@ -393,14 +464,14 @@
 
 .featureLabel {
   font-size: 12px;
-  color: #888;
+  color: var(--text-secondary);
   min-width: 110px;
 }
 
 .featureBarBg {
   flex: 1;
   height: 5px;
-  background: #1e1e1e;
+  background: var(--border-light);
   border-radius: 99px;
   overflow: hidden;
 }
@@ -430,14 +501,14 @@
   align-items: flex-start;
   gap: 10px;
   padding: 8px 0;
-  border-bottom: 0.5px solid #1e1e1e;
+  border-bottom: 0.5px solid var(--border-light);
 
   &:last-child { border-bottom: none; }
 }
 
 .logTime {
   font-size: 11px;
-  color: #555;
+  color: var(--text-secondary);
   min-width: 34px;
   font-family: 'SF Mono', 'Fira Code', monospace;
   margin-top: 1px;
@@ -453,7 +524,7 @@
 
 .logText {
   font-size: 12px;
-  color: #b0ada6;
+  color: var(--text-primary);
   line-height: 1.45;
   flex: 1;
 }
@@ -464,18 +535,4 @@
   .metricsGrid { grid-template-columns: repeat(2, 1fr); }
   .mainGrid { grid-template-columns: 1fr; }
   .algoTabs { display: none; }
-}
-
-.page::-webkit-scrollbar {
-  width: 8px;
-}
-.page::-webkit-scrollbar-track {
-  background: #0e0e0e;
-}
-.page::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 4px;
-}
-.page::-webkit-scrollbar-thumb:hover {
-  background: #555;
 }

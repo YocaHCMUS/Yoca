@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import styles from './wash-trading.module.scss';
-import { LandingNavbar } from '@/components/landing/Navbar';
+import { PageWrapper } from '@/components/wrapper/PageWrapper';
+import { useUserTheme } from '@/contexts/ThemeContext';
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const MOCK_RESULT = {
@@ -42,19 +43,15 @@ interface WashTradeResult {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-/** Circular arc risk-score gauge */
 const RiskGauge: React.FC<{ score: number; label: string }> = ({ score, label }) => {
-  // Trả lại cấu trúc path và text y hệt HTML
   return (
     <div className={styles.gaugeWrap}>
       <svg width="140" height="82" viewBox="0 0 140 82">
-        <path d="M16,70 A54,54 0 0,1 124,70" fill="none" stroke="#1e1e1e" strokeWidth="10" strokeLinecap="round"/>
-        {/* Tạm thời set tĩnh giá trị dash để giống hệt HTML cho W2 */}
+        <path d="M16,70 A54,54 0 0,1 124,70" fill="none" stroke="var(--border-light)" strokeWidth="10" strokeLinecap="round"/>
         <path d="M16,70 A54,54 0 0,1 124,70" fill="none" stroke="#e24b4a" strokeWidth="10" strokeLinecap="round" strokeDasharray="170" strokeDashoffset="17"/>
         <text x="70" y="62" textAnchor="middle" fontSize="24" fontWeight="500" fill="#e24b4a">{score}</text>
-        <text x="70" y="76" textAnchor="middle" fontSize="10" fill="#555">/100</text>
+        <text x="70" y="76" textAnchor="middle" fontSize="10" fill="var(--text-secondary)">/100</text>
       </svg>
-      {/* Thay thế gaugeLabel bằng riskBadge để có nền đỏ */}
       <span className={`${styles.riskBadge} ${styles.riskHigh}`} style={{ fontSize: '12px', padding: '4px 14px', marginTop: '4px' }}>
         {label}
       </span>
@@ -62,7 +59,6 @@ const RiskGauge: React.FC<{ score: number; label: string }> = ({ score, label })
   );
 };
 
-/** Feature score bar row */
 const FeatureBar: React.FC<{ label: string; value: number }> = ({ label, value }) => {
   const color = value >= 0.85 ? '#e24b4a' : value >= 0.7 ? '#ef9f27' : '#639922';
   return (
@@ -76,7 +72,6 @@ const FeatureBar: React.FC<{ label: string; value: number }> = ({ label, value }
   );
 };
 
-/** Transaction network graph (pure SVG) */
 const NetworkGraph: React.FC = () => (
   <div className={styles.graphContainer}>
     <svg viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
@@ -85,15 +80,13 @@ const NetworkGraph: React.FC = () => (
           <path d="M0,0 L6,3 L0,6 Z" fill="#e24b4a" opacity=".85" />
         </marker>
         <marker id="arr-gray" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-          <path d="M0,0 L6,3 L0,6 Z" fill="#555" opacity=".7" />
+          <path d="M0,0 L6,3 L0,6 Z" fill="var(--graph-node-stroke)" opacity=".7" />
         </marker>
       </defs>
 
-      {/* Cluster highlight */}
       <ellipse cx="190" cy="130" rx="95" ry="75" fill="rgba(226,75,74,0.07)" stroke="#e24b4a" strokeWidth="1" strokeDasharray="5,3" opacity=".8" />
       <text x="190" y="218" textAnchor="middle" fontSize="10" fill="#a32d2d">Wash Cluster A</text>
 
-      {/* Wash edges */}
       {[
         ['M128,100','Q158,78','190,88'],
         ['M190,88','Q232,82','252,112'],
@@ -105,18 +98,15 @@ const NetworkGraph: React.FC = () => (
       ))}
       <line x1="190" y1="88" x2="222" y2="170" stroke="#e24b4a" strokeWidth="1.2" strokeDasharray="4,3" opacity=".45" />
 
-      {/* Bridge edge */}
       <line x1="252" y1="112" x2="330" y2="148" stroke="#ef9f27" strokeWidth="1.5" strokeDasharray="5,3" markerEnd="url(#arr-gray)" />
 
-      {/* Normal edges */}
       {[
         [370,110,430,88],[430,88,484,115],[484,115,462,168],[462,168,370,110],
         [330,148,370,110],[330,148,462,168],
       ].map(([x1,y1,x2,y2],i) => (
-        <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#444" strokeWidth="1.2" opacity=".8" markerEnd="url(#arr-gray)" />
+        <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--graph-line)" strokeWidth="1.2" opacity=".8" markerEnd="url(#arr-gray)" />
       ))}
 
-      {/* Wash nodes */}
       {[
         [128,100,'W1','#f0958b','#e24b4a','#501313'],
         [190,88,'W2','#e24b4a','#a32d2d','#fcebeb'],
@@ -130,25 +120,23 @@ const NetworkGraph: React.FC = () => (
         </g>
       ))}
 
-      {/* Bridge node */}
       <circle cx="330" cy="148" r="12" fill="#fac775" stroke="#ba7517" strokeWidth="1.5" />
       <text x="330" y="152" textAnchor="middle" fontSize="9" fill="#412402">B</text>
 
-      {/* Normal nodes */}
       {[[370,110,'N1'],[430,88,'N2'],[484,115,'N3'],[462,168,'N4']].map(([cx,cy,lbl])=>(
         <g key={String(lbl)}>
-          <circle cx={Number(cx)} cy={Number(cy)} r="12" fill="#2a2a2a" stroke="#555" strokeWidth="1.5"/>
-          <text x={Number(cx)} y={Number(cy)+4} textAnchor="middle" fontSize="9" fill="#aaa">{String(lbl)}</text>
+          <circle cx={Number(cx)} cy={Number(cy)} r="12" fill="var(--graph-node-normal)" stroke="var(--graph-node-stroke)" strokeWidth="1.5"/>
+          <text x={Number(cx)} y={Number(cy)+4} textAnchor="middle" fontSize="9" fill="var(--graph-text)">{String(lbl)}</text>
         </g>
       ))}
 
-      <text x="14" y="250" fontSize="10" fill="#666">⏱ Giao dịch vòng tròn phát hiện lúc 14:32:18 UTC</text>
+      <text x="14" y="250" fontSize="10" fill="var(--text-muted)">⏱ Giao dịch vòng tròn phát hiện lúc 14:32:18 UTC</text>
     </svg>
     <div className={styles.graphLegend}>
       {[
         { color: '#e24b4a', label: 'Ví wash trading' },
         { color: '#ef9f27', label: 'Ví trung gian' },
-        { color: '#555',    label: 'Ví bình thường' },
+        { color: 'var(--graph-node-stroke)', label: 'Ví bình thường' },
       ].map(({ color, label }) => (
         <span key={label} className={styles.legendItem}>
           <span className={styles.legendDot} style={{ background: color }} />
@@ -163,7 +151,6 @@ const NetworkGraph: React.FC = () => (
   </div>
 );
 
-/** Suspicious wallet row */
 const WalletRow: React.FC<{ wallet: string; txns: number; desc: string; gnnScore: number; risk: 'High' | 'Medium' | 'Low' }> = ({ wallet, txns, desc, gnnScore, risk }) => (
   <div className={styles.walletRow}>
     <div className={styles.walletInfo}>
@@ -175,7 +162,6 @@ const WalletRow: React.FC<{ wallet: string; txns: number; desc: string; gnnScore
   </div>
 );
 
-/** Detection log item */
 const LogItem: React.FC<{ time: string; text: string; color: string }> = ({ time, text, color }) => (
   <div className={styles.logItem}>
     <span className={styles.logTime}>{time}</span>
@@ -186,6 +172,9 @@ const LogItem: React.FC<{ time: string; text: string; color: string }> = ({ time
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 const WashTradingPage: React.FC = () => {
+  const { theme } = useUserTheme(); // Lấy theme từ Context
+  const isLight = theme === 'light';
+
   const [token, setToken] = useState<string>('BONK');
   const [timeframe, setTimeframe] = useState<'Last 24h' | 'Last 7d' | 'Last 30d'>('Last 24h');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -195,7 +184,7 @@ const WashTradingPage: React.FC = () => {
 
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
-    await new Promise(r => setTimeout(r, 1400)); // simulate fetch
+    await new Promise(r => setTimeout(r, 1400));
     setResult(MOCK_RESULT);
     setIsAnalyzing(false);
   };
@@ -207,9 +196,9 @@ const WashTradingPage: React.FC = () => {
   });
 
   return (
-    <div className={styles.page} style={{ paddingTop: '4rem' }}>
-      <LandingNavbar />
-      {/* ── Top bar ── */}
+    <PageWrapper> 
+      <div className={`${styles.page} ${isLight ? styles.light : ''}`} style={{ paddingTop: '1rem' }}>
+      
       <div className={styles.topbar}>
         <div className={styles.topbarLeft}>
           <span className={styles.pageIcon}>◎</span>
@@ -231,7 +220,6 @@ const WashTradingPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Metric cards ── */}
       <div className={styles.metricsGrid}>
         {[
           { label: 'Total Transactions', value: '14,832', sub: '↑ +38% so với hôm qua', subColor: '#e24b4a' },
@@ -247,11 +235,8 @@ const WashTradingPage: React.FC = () => {
         ))}
       </div>
 
-      {/* ── Main content grid ── */}
       <div className={styles.mainGrid}>
-        {/* Left column */}
         <div className={styles.leftCol}>
-          {/* Network graph card */}
           <div className={styles.card}>
             <div className={styles.cardHeader}>
               <span className={styles.cardIcon}>🔗</span>
@@ -268,7 +253,6 @@ const WashTradingPage: React.FC = () => {
             <NetworkGraph />
           </div>
 
-          {/* Suspicious wallets card */}
           <div className={styles.card}>
             <div className={styles.cardHeader}>
               <span className={styles.cardIcon}>🔍</span>
@@ -301,9 +285,7 @@ const WashTradingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right column */}
         <div className={styles.rightCol}>
-          {/* Risk score card */}
           <div className={styles.card}>
             <div className={styles.cardHeader}>
               <span className={styles.cardIcon}>🛡</span>
@@ -321,7 +303,6 @@ const WashTradingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Detection log card */}
           <div className={styles.card}>
             <div className={styles.cardHeader}>
               <span className={styles.cardIcon}>⏱</span>
@@ -332,7 +313,7 @@ const WashTradingPage: React.FC = () => {
                 { time:'14:32', text:'GNN phát hiện circular flow 6 hop — Cluster A',       color:'#e24b4a' },
                 { time:'14:28', text:'Volume spike bất thường +340% trong 2 phút',           color:'#ef9f27' },
                 { time:'14:15', text:'Ví W2 tạo 23 giao dịch với interval đều 3.2s',         color:'#e24b4a' },
-                { time:'13:58', text:'Cluster B — false positive, đã dismiss',               color:'#555' },
+                { time:'13:58', text:'Cluster B — false positive, đã dismiss',               color:'var(--text-muted)' },
                 { time:'13:41', text:'Model retrain hoàn tất — F1: 0.89',                    color:'#639922' },
               ].map(item => <LogItem key={item.time} {...item} />)}
             </div>
@@ -340,6 +321,7 @@ const WashTradingPage: React.FC = () => {
         </div>
       </div>
     </div>
+    </PageWrapper>
   );
 };
 
