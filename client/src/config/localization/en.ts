@@ -1624,7 +1624,7 @@ export const translation = {
     fabTitle: "Open AI Chat",
     seriesLabel: "Series {{count}}",
     tldr: "TLDR",
-    warnings: "Data Limitations",
+    warnings: "Warnings",
     evidence: "Evidence",
     confidence: "Confidence",
     showAll: "Show all ({{count}})",

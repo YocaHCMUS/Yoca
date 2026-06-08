@@ -1584,7 +1584,7 @@ export const translation = defineTranslation({
     fabTitle: "Mở AI Chat",
     seriesLabel: "Series thứ {{count}}",
     tldr: "TLDR",
-    warnings: "Hạn chế dữ liệu",
+    warnings: "Cảnh báo",
     evidence: "Bằng chứng",
     confidence: "Độ tin cậy",
     showAll: "Hiển thị tất cả ({{count}})",
