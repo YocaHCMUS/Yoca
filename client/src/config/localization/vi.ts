@@ -1593,6 +1593,10 @@ export const translation = defineTranslation({
     inputOverLimit: "Câu hỏi phải dưới {{max}} ký tự.",
     clickToAsk: "Nhấp để hỏi: {{query}}",
     tableNullValue: "-",
+    newChat: "Chat mới",
+    copy: "Sao chép",
+    copied: "Đã sao chép!",
+    tellMeMore: "Tìm hiểu thêm về",
     prompt: {
       overview: { label: "Tổng quan", query: "Cung cấp tổng quan về danh mục đầu tư của ví này bao gồm tổng số dư, biến động 24h và khối lượng giao dịch." },
       pnl: { label: "Tổng lãi/lỗ", query: "Lãi và lỗ của tôi là gì? Hiển thị phân tích theo token với PnL đã thực hiện và tỷ lệ thắng." },

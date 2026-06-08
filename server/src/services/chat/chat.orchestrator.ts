@@ -198,7 +198,7 @@ async function executeTools(tools: ChatToolCall[]): Promise<ChatToolResult[]> {
 
 const walletSectionSchema = z.object({
   title: z.string().trim().min(1).max(L.sectionTitleChars),
-  kind: z.enum(["market_snapshot","key_findings","pnl_summary","trading_activity","top_holdings","risk_factors","what_to_watch","conclusion","custom"]),
+  kind: z.enum(["market_snapshot", "key_findings", "pnl_summary", "trading_activity", "top_holdings", "risk_factors", "what_to_watch", "conclusion", "custom"]),
   content: z.string().trim().max(L.sectionContentChars).optional(),
   bullets: z.array(z.string().trim().min(1).max(L.sectionBulletChars)).max(L.sectionBulletItems).optional(),
   table: z.array(z.record(z.string(), z.union([z.string(), z.number(), z.null()]))).max(8).optional(),
@@ -208,7 +208,7 @@ const walletResponseSchema = z.object({
   text: z.string(),
   tldr: z.array(z.string().trim().min(1).max(L.tldrBulletChars)).min(1).max(L.tldrItems).optional(),
   sections: z.array(walletSectionSchema).min(1).max(L.sectionItems).optional(),
-  warnings: z.array(z.object({ text: z.string(), severity: z.enum(["info","warning","error"]) })).max(L.warningItems).optional(),
+  warnings: z.array(z.object({ text: z.string(), severity: z.enum(["info", "warning", "error"]) })).max(L.warningItems).optional(),
   confidence: z.enum(["Low", "Medium", "High"]).optional(),
 });
 

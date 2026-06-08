@@ -1,6 +1,7 @@
 import classNames from "classnames";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
+import { Copy, Checkmark } from "@carbon/icons-react";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type {
   ActionSpec,
@@ -245,24 +246,47 @@ const SECTION_KIND_META: Record<WalletSectionKind, { label: string; icon: string
 
 // ─── Section Renderer ───────────────────────────────────────────────────
 
-function WalletChatSectionRenderer({ section }: { section: WalletChatSection }) {
+function WalletChatSectionRenderer({ section, onBulletClick, onCopySection, copiedSectionId: copiedId }: {
+  section: WalletChatSection;
+  onBulletClick?: (text: string) => void;
+  onCopySection?: (id: string, text: string) => void;
+  copiedSectionId?: string | null;
+}) {
   const meta = SECTION_KIND_META[section.kind] ?? SECTION_KIND_META.custom;
+  const sectionId = `section-${section.title || section.kind}`;
+  const isCopied = copiedId === sectionId;
+  const sectionCopyText = [section.content, ...(section.bullets ?? [])].filter(Boolean).join("\n");
+  const contentText = section.content;
 
   return (
-    <div className={classNames(styles[meta.className])}>
+    <div className={classNames(styles.sectionBlock, styles[meta.className])}>
+      <button
+        type="button"
+        className={classNames(styles.sectionCopyBtn, { [styles.sectionCopyBtnVisible]: isCopied })}
+        onClick={() => onCopySection?.(sectionId, sectionCopyText)}
+        title="Copy section"
+      >
+        {isCopied ? <Checkmark size={12} /> : <Copy size={12} />}
+        {isCopied ? "Copied" : "Copy"}
+      </button>
       <div className={styles.sectionHeader}>
         <span className={styles.sectionIcon} aria-hidden="true">{meta.icon}</span>
-        <span className={styles.sectionKind}>{meta.label}</span>
+        <div className={styles.sectionHeaderInner}>
+          <span className={styles.sectionKind}>{meta.label}</span>
+          {section.title && <div className={styles.sectionTitle}>{section.title}</div>}
+        </div>
       </div>
-      {section.content && (
-        <div className={styles.sectionContent}>
-          <WalletRichText text={section.content} />
+      {contentText && (
+        <div className={styles.clickableContent} onClick={() => onBulletClick?.(contentText)}>
+          <div className={styles.sectionContent}>
+            <WalletRichText text={contentText} />
+          </div>
         </div>
       )}
       {section.bullets && section.bullets.length > 0 && (
         <ul className={styles.sectionBulletList}>
           {section.bullets.map((bullet, idx) => (
-            <li key={idx}>
+            <li key={idx} className={styles.clickableBullet} onClick={() => onBulletClick?.(bullet)}>
               <WalletRichText text={bullet} inline />
             </li>
           ))}
@@ -306,6 +330,22 @@ export function WalletChatMessage({ message, onAction }: Props) {
   const navigate = useNavigate();
   const { tr } = useLocalization();
   const [showAllEvidence, setShowAllEvidence] = useState(false);
+  const [copiedSectionId, setCopiedSectionId] = useState<string | null>(null);
+
+  const handleCopySection = useCallback(async (_id: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedSectionId(_id);
+      setTimeout(() => setCopiedSectionId(null), 2000);
+    } catch {
+      // clipboard write failed
+    }
+  }, []);
+
+  const handleBulletClick = useCallback((text: string) => {
+    const query = `${tr("chat.tellMeMore")}: ${text}`;
+    onAction?.(query);
+  }, [tr, onAction]);
 
   const parsed = useMemo(() => parseMarkers(message.content), [message.content]);
 
@@ -327,9 +367,21 @@ export function WalletChatMessage({ message, onAction }: Props) {
   }, [message.actions]);
 
   if (message.role === "user") {
+    const userCopyId = "user-copy";
+    const isUserCopied = copiedSectionId === userCopyId;
     return (
       <div className={styles.userBubbleRow}>
         <div className={styles.userBubble}>{message.content}</div>
+        <div className={styles.bubbleActions}>
+          <button
+            type="button"
+            className={classNames(styles.copyBtn, { [styles.copyBtnCopied]: isUserCopied })}
+            onClick={() => handleCopySection(userCopyId, message.content)}
+          >
+            {isUserCopied ? <Checkmark size={12} /> : <Copy size={12} />}
+            {isUserCopied ? tr("chat.copied") : tr("chat.copy")}
+          </button>
+        </div>
       </div>
     );
   }
@@ -338,20 +390,33 @@ export function WalletChatMessage({ message, onAction }: Props) {
 
   // TLDR
   if (message.tldr && message.tldr.length > 0) {
+    const tldrId = "tldr";
+    const tldrCopied = copiedSectionId === tldrId;
+    const tldrCopyText = message.tldr.map((item) => item).join("\n");
     elements.push(
-      <div key="tldr" className={styles.tldr}>
-        <div className={styles.tldrHeader}>
-          <span className={styles.tldrIcon}>AI</span>
-          <h3>{tr("chat.tldr")}</h3>
+      <div key="tldr" className={styles.sectionCopyWrapper}>
+        <button
+          type="button"
+          className={classNames(styles.sectionCopyBtn, { [styles.sectionCopyBtnVisible]: tldrCopied })}
+          onClick={() => handleCopySection(tldrId, tldrCopyText)}
+        >
+          {tldrCopied ? <Checkmark size={12} /> : <Copy size={12} />}
+          {tldrCopied ? "Copied" : "Copy"}
+        </button>
+        <div className={styles.tldr}>
+          <div className={styles.tldrHeader}>
+            <span className={styles.tldrIcon}>AI</span>
+            <h3>{tr("chat.tldr")}</h3>
+          </div>
+          <ol>
+            {message.tldr.map((item, idx) => (
+              <li key={idx}>
+                <span className={styles.tldrNumber}>{idx + 1}</span>
+                <WalletRichText text={item} inline />
+              </li>
+            ))}
+          </ol>
         </div>
-        <ol>
-          {message.tldr.map((item, idx) => (
-            <li key={idx}>
-              <span className={styles.tldrNumber}>{idx + 1}</span>
-              <WalletRichText text={item} inline />
-            </li>
-          ))}
-        </ol>
       </div>,
     );
   }
@@ -409,7 +474,13 @@ export function WalletChatMessage({ message, onAction }: Props) {
     elements.push(
       <div key="sections">
         {message.sections.map((section, idx) => (
-          <WalletChatSectionRenderer key={`s-${idx}`} section={section} />
+          <WalletChatSectionRenderer
+            key={`s-${idx}`}
+            section={section}
+            onBulletClick={handleBulletClick}
+            onCopySection={handleCopySection}
+            copiedSectionId={copiedSectionId}
+          />
         ))}
       </div>,
     );
@@ -417,19 +488,32 @@ export function WalletChatMessage({ message, onAction }: Props) {
 
   // Warnings
   if (message.warnings && message.warnings.length > 0) {
+    const warnId = "warnings";
+    const warnCopied = copiedSectionId === warnId;
+    const warnCopyText = message.warnings.map((w) => w.text).join("\n");
     elements.push(
-      <div key="warnings" className={styles.warnings}>
-        <div className={styles.warnHeader}>
-          <span className={styles.warnIcon}>!</span>
-          <h3>{tr("chat.warnings")}</h3>
+      <div key="warnings" className={styles.sectionCopyWrapper}>
+        <button
+          type="button"
+          className={classNames(styles.sectionCopyBtn, { [styles.sectionCopyBtnVisible]: warnCopied })}
+          onClick={() => handleCopySection(warnId, warnCopyText)}
+        >
+          {warnCopied ? <Checkmark size={12} /> : <Copy size={12} />}
+          {warnCopied ? "Copied" : "Copy"}
+        </button>
+        <div className={styles.warnings}>
+          <div className={styles.warnHeader}>
+            <span className={styles.warnIcon}>!</span>
+            <h3>{tr("chat.warnings")}</h3>
+          </div>
+          <ul>
+            {message.warnings.map((w, i) => (
+              <li key={i} className={styles[`warn${w.severity === "error" ? "Error" : w.severity === "warning" ? "Warning" : "Info"}`]}>
+                <WalletRichText text={w.text} inline />
+              </li>
+            ))}
+          </ul>
         </div>
-        <ul>
-          {message.warnings.map((w, i) => (
-            <li key={i} className={styles[`warn${w.severity === "error" ? "Error" : w.severity === "warning" ? "Warning" : "Info"}`]}>
-              <WalletRichText text={w.text} inline />
-            </li>
-          ))}
-        </ul>
       </div>,
     );
   }
@@ -440,26 +524,39 @@ export function WalletChatMessage({ message, onAction }: Props) {
     : message.evidence?.slice(0, 6);
 
   if (message.evidence && message.evidence.length > 0) {
+    const evId = "evidence";
+    const evCopied = copiedSectionId === evId;
+    const evCopyText = message.evidence.map((e) => [e.label, e.value, e.detail].filter(Boolean).join(": ")).join("\n");
     elements.push(
-      <div key="evidence" className={styles.evidenceBlock}>
-        <h3>{tr("chat.evidence")}</h3>
-        <div className={styles.evidenceGrid}>
-          {visibleEvidence?.map((item, idx) => (
-            <div key={idx} className={styles.evidenceCard}>
-              <span className={classNames(styles.evidenceTypeBadge, styles[`evidenceType${item.type.charAt(0).toUpperCase() + item.type.slice(1)}`])}>
-                {item.type}
-              </span>
-              <strong><WalletRichText text={item.label} inline /></strong>
-              {item.value && <div className={styles.evidenceValue}><WalletRichText text={item.value} inline /></div>}
-              {item.detail && <div className={styles.evidenceDetail}><WalletRichText text={item.detail} /></div>}
-            </div>
-          ))}
+      <div key="evidence" className={styles.sectionBlock}>
+        <button
+          type="button"
+          className={classNames(styles.sectionCopyBtn, { [styles.sectionCopyBtnVisible]: evCopied })}
+          onClick={() => handleCopySection(evId, evCopyText)}
+        >
+          {evCopied ? <Checkmark size={12} /> : <Copy size={12} />}
+          {evCopied ? "Copied" : "Copy"}
+        </button>
+        <div className={styles.evidenceBlock}>
+          <h3>{tr("chat.evidence")}</h3>
+          <div className={styles.evidenceGrid}>
+            {visibleEvidence?.map((item, idx) => (
+              <div key={idx} className={styles.evidenceCard}>
+                <span className={classNames(styles.evidenceTypeBadge, styles[`evidenceType${item.type.charAt(0).toUpperCase() + item.type.slice(1)}`])}>
+                  {item.type}
+                </span>
+                <strong><WalletRichText text={item.label} inline /></strong>
+                {item.value && <div className={styles.evidenceValue}><WalletRichText text={item.value} inline /></div>}
+                {item.detail && <div className={styles.evidenceDetail}><WalletRichText text={item.detail} /></div>}
+              </div>
+            ))}
+          </div>
+          {message.evidence.length > 6 && (
+            <button type="button" className={styles.evidenceShowBtn} onClick={() => setShowAllEvidence((v) => !v)}>
+              {showAllEvidence ? tr("chat.showLess") : tr("chat.showAll", { count: message.evidence.length })}
+            </button>
+          )}
         </div>
-        {message.evidence.length > 6 && (
-          <button type="button" className={styles.evidenceShowBtn} onClick={() => setShowAllEvidence((v) => !v)}>
-            {showAllEvidence ? tr("chat.showLess") : tr("chat.showAll", { count: message.evidence.length })}
-          </button>
-        )}
       </div>,
     );
   }

@@ -362,7 +362,7 @@
 }
 
 .assistantBubble {
-  max-width: 85%;
+  max-width: 100%;
   background: $layer-02;
   border: 1px solid var(--cds-border-subtle-03);
   border-radius: 12px 12px 12px 4px;
@@ -522,7 +522,7 @@
   font-size: 13px;
   line-height: 1.55;
 
-  > span:first-child {
+  >span:first-child {
     width: 5px;
     height: 5px;
     margin-top: 9px;
@@ -656,9 +656,11 @@
 // ===== Section Rendering =====
 .sectionHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--cds-border-subtle-03);
 }
 
 .sectionIcon {
@@ -675,15 +677,33 @@
 }
 
 .sectionKind {
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #6f6f6f;
+  // background: $layer-01;
+  // padding: 1px 6px;
+  // border-radius: 4px;
+  display: inline-block;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: $text-primary;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.sectionHeaderInner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .sectionContent {
   margin-bottom: 0.5rem;
-  max-width: 72ch;
 }
 
 .sectionBulletList {
@@ -699,15 +719,41 @@
 }
 
 // Kind-specific icon colors
-.kindMarket .sectionIcon { background: #0f62fe; }
-.kindDrivers .sectionIcon { background: #8a3ffc; }
-.kindRisk .sectionIcon { background: #da1e28; }
-.kindWatch .sectionIcon { background: #ff832b; }
-.kindBullish .sectionIcon { background: #24a148; }
-.kindNews .sectionIcon { background: #1192e8; }
-.kindDeepDive .sectionIcon { background: #009d9a; }
-.kindConclusion .sectionIcon { background: #6f6f6f; }
-.kindSimple .sectionIcon { background: #525252; }
+.kindMarket .sectionIcon {
+  background: #0f62fe;
+}
+
+.kindDrivers .sectionIcon {
+  background: #8a3ffc;
+}
+
+.kindRisk .sectionIcon {
+  background: #da1e28;
+}
+
+.kindWatch .sectionIcon {
+  background: #ff832b;
+}
+
+.kindBullish .sectionIcon {
+  background: #24a148;
+}
+
+.kindNews .sectionIcon {
+  background: #1192e8;
+}
+
+.kindDeepDive .sectionIcon {
+  background: #009d9a;
+}
+
+.kindConclusion .sectionIcon {
+  background: #6f6f6f;
+}
+
+.kindSimple .sectionIcon {
+  background: #525252;
+}
 
 // ===== Section Table =====
 .tableWrap {
@@ -738,7 +784,7 @@
 
 // ===== Warnings Block =====
 .warnings {
-  background: rgba(218, 30, 40, 0.06);
+  background: rgba(218, 30, 40, 0.16);
   border-left: 3px solid #da1e28;
   border-radius: 4px;
   padding: 0.75rem;
@@ -773,7 +819,6 @@
 }
 
 .warnIcon {
-  color: #da1e28;
   font-weight: 700;
   font-size: 14px;
   width: 20px;
@@ -782,11 +827,26 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  background: rgba(218, 30, 39, 0.692);
+
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
 }
 
-.warnError { color: #da1e28; }
-.warnWarning { color: #f1c21b; }
-.warnInfo { color: #8d8d8d; }
+
+
+.warnError {
+  color: #da1e28;
+}
+
+.warnWarning {
+  color: #f1c21b;
+}
+
+.warnInfo {
+  color: #8d8d8d;
+}
 
 // ===== Confidence Badge =====
 .confidenceBadge {
@@ -874,15 +934,50 @@
   text-transform: uppercase;
 }
 
-.evidenceTypeOverview { background: #0f62fe20; color: #0f62fe; }
-.evidenceTypePortfolio { background: #8a3ffc20; color: #8a3ffc; }
-.evidenceTypeSwap { background: #1192e820; color: #1192e8; }
-.evidenceTypeTransfer { background: #009d9a20; color: #009d9a; }
-.evidenceTypePnl { background: #24a14820; color: #24a148; }
-.evidenceTypeBalance { background: #ff832b20; color: #ff832b; }
-.evidenceTypeVolume { background: #f1c21b20; color: #f1c21b; }
-.evidenceTypeAudit { background: #da1e2820; color: #da1e28; }
-.evidenceTypeMarket { background: #52525220; color: #525252; }
+.evidenceTypeOverview {
+  background: #0f62fe20;
+  color: #0f62fe;
+}
+
+.evidenceTypePortfolio {
+  background: #8a3ffc20;
+  color: #8a3ffc;
+}
+
+.evidenceTypeSwap {
+  background: #1192e820;
+  color: #1192e8;
+}
+
+.evidenceTypeTransfer {
+  background: #009d9a20;
+  color: #009d9a;
+}
+
+.evidenceTypePnl {
+  background: #24a14820;
+  color: #24a148;
+}
+
+.evidenceTypeBalance {
+  background: #ff832b20;
+  color: #ff832b;
+}
+
+.evidenceTypeVolume {
+  background: #f1c21b20;
+  color: #f1c21b;
+}
+
+.evidenceTypeAudit {
+  background: #da1e2820;
+  color: #da1e28;
+}
+
+.evidenceTypeMarket {
+  background: #52525220;
+  color: #525252;
+}
 
 .evidenceShowBtn {
   font-size: 11px;
@@ -928,6 +1023,132 @@
     opacity: 0.4;
     cursor: not-allowed;
   }
+}
+
+// ===== Plain wrapper for sections with own styles (TLDR, Warnings) =====
+.sectionCopyWrapper {
+  position: relative;
+
+  &:hover .sectionCopyBtn {
+    opacity: 1;
+  }
+}
+
+// ===== Section Block Wrapper =====
+.sectionBlock {
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 14px;
+  background: $background;
+  position: relative;
+}
+
+.sectionBlock:hover .sectionCopyBtn {
+  opacity: 1;
+}
+
+// ===== Section Copy Button =====
+.sectionCopyBtn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  background: $layer-02;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: $icon-secondary;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  z-index: 1;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $icon-primary;
+  }
+}
+
+.sectionCopyBtnVisible {
+  opacity: 1;
+}
+
+// ===== Clickable Bullet / Content =====
+.clickableBullet {
+  cursor: pointer;
+  transition: background-color 0.12s;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: 0 -4px;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+}
+
+.clickableContent {
+  cursor: pointer;
+  transition: background-color 0.12s;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: 0 -4px;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+}
+
+// ===== User Bubble Actions Row =====
+.bubbleActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 0 2px;
+}
+
+.copyBtn {
+  background: none;
+  border: none;
+  color: $icon-secondary;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background-color 0.12s, color 0.12s;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $icon-primary;
+  }
+}
+
+.copyBtnCopied {
+  color: $support-success;
+}
+
+// ===== Copy button for user bubble row hover =====
+.userBubbleRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+
+.userBubbleRow .copyBtn {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.userBubbleRow:hover .copyBtn {
+  opacity: 1;
 }
 
 // ===== Input validation =====

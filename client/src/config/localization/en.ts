@@ -1633,6 +1633,10 @@ export const translation = {
     inputOverLimit: "Question must be {{max}} characters or fewer.",
     clickToAsk: "Click to ask: {{query}}",
     tableNullValue: "-",
+    newChat: "New Chat",
+    copy: "Copy",
+    copied: "Copied!",
+    tellMeMore: "Tell me more about",
     prompt: {
       overview: { label: "Overview", query: "Give me a portfolio overview of this wallet including total balance, 24h change, and trading volume." },
       pnl: { label: "PnL Summary", query: "What is my profit and loss? Show per-token breakdown with realized PnL and win rate." },

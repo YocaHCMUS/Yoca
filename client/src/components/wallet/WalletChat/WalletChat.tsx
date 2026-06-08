@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { Playlist, Send } from "@carbon/icons-react";
+import { Add, Playlist, Send } from "@carbon/icons-react";
 import client from "@/api/main";
 import { WalletChatMessage } from "./WalletChatMessage";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
@@ -133,6 +133,12 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
     setIsMinimized(false);
   };
 
+  const handleNewChat = () => {
+    setMessages([]);
+    setError(null);
+    setShowPromptMenu(false);
+  };
+
   // Minimized FAB (widget variant only)
   if (variant === "widget" && (!isOpen || isMinimized)) {
     const unreadCount = messages.filter((m) => m.role === "assistant").length;
@@ -232,24 +238,34 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
         <span className={styles.headerTitle}>
           {tr("chat.headerTitle")}
         </span>
-        {variant === "widget" && (
-          <div className={styles.headerActions}>
-            <button
-              type="button"
-              onClick={() => setIsMinimized(true)}
-              className={styles.headerBtn}
-            >
-              ⟱
-            </button>
-            <button
-              type="button"
-              onClick={handleClose}
-              className={styles.headerBtn}
-            >
-              ✕
-            </button>
-          </div>
-        )}
+        <div className={styles.headerActions}>
+          <button
+            type="button"
+            onClick={handleNewChat}
+            className={styles.headerBtn}
+            title={tr("chat.newChat")}
+          >
+            <Add size={16} />
+          </button>
+          {variant === "widget" && (
+            <>
+              <button
+                type="button"
+                onClick={() => setIsMinimized(true)}
+                className={styles.headerBtn}
+              >
+                ⟱
+              </button>
+              <button
+                type="button"
+                onClick={handleClose}
+                className={styles.headerBtn}
+              >
+                ✕
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {showPromptMenu ? renderPromptMenu()
