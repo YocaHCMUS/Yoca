@@ -26,6 +26,7 @@ export interface MultiTimeSeriesChartProps {
   valueFormatter?: (v: number | null) => string;
   showLegend?: boolean;
   onClickDay?: (timestamp: number) => void;
+  stacked?: boolean;
 }
 
 export function MultiTimeSeriesLineChart({
@@ -36,6 +37,7 @@ export function MultiTimeSeriesLineChart({
   valueFormatter,
   showLegend = true,
   onClickDay,
+  stacked = false,
 }: MultiTimeSeriesChartProps) {
   const { fmt, tr } = useLocalization();
   const chartRef = useRef<ReactECharts>(null);
@@ -179,6 +181,7 @@ export function MultiTimeSeriesLineChart({
             },
           },
           color,
+          stack: stacked ? "total" : undefined, 
         } as const;
       }),
     };

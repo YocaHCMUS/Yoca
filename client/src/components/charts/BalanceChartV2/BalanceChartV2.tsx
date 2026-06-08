@@ -7,7 +7,7 @@ import { ONE_DAY_MS } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import overwriteStyles from "@/styles/_overwrite.module.scss";
-import { Layer, MultiSelect, Tag } from "@carbon/react";
+import { Button, IconButton, Layer, MultiSelect, Tag } from "@carbon/react";
 import { useMemo, useState } from "react";
 import { MultiTimeSeriesLineChart } from "../MultiTimeSeriesLineChart";
 import { ChartWrapper } from "../shared";
@@ -17,6 +17,7 @@ import DropdownPanelField from "@/components/DropdownPanelField/DropdownPanelFie
 import { TknImg } from "@/components/TknImg";
 import SearchableListPanel from "@/components/SearchableListPanel/SearchableListPanel";
 import styles from "./BalanceChartV2.module.scss";
+import { Add } from "@carbon/react/icons";
 
 type TimeSeriesDataPoint = {
   unixTimeMs: number;
@@ -73,11 +74,15 @@ export function BalanceChartV2({
   const [selectedTokens, setSelectedTokens] = useState<Set<string> | null>(
     null,
   );
+  const [pendingToken, setPendingToken] = useState<PortfolioToken>(null);
 
   const portfolio = useGet(client.api.wallets.portfolio, 200, {
     query: {
       address,
     },
+  }, {
+    // sort by value usd then amount -> to show valuable token balances up top
+    select: (data) => (data.)
   });
 
   const totalBalance = useGet(
@@ -171,23 +176,15 @@ export function BalanceChartV2({
     >
       <Flex dir="column" gap={8}>
         <Flex justify="between" align="end">
-          <Layer style={{ width: 300 }}>
+          <Flex align="end">
             <DropdownPanelField
+              style={{inlineSize: "14rem"}}
               id="token-selector"
               titleText="Select token"
-              placeholder="Search and select token"
+              placeholder="Search"
               initialValue={null as PortfolioToken}
-              onValueChange={(selectedToken) => {
-                if (selectedToken) {
-                  if (!selectedTokens) {
-                    setSelectedTokens(new Set([selectedToken.tokenAddress]));
-                  } else {
-                    setSelectedTokens((prev) =>
-                      new Set(prev).add(selectedToken.tokenAddress),
-                    );
-                  }
-                }
-              }}
+              value={pendingToken}
+              onValueChange={setPendingToken}
               renderValue={(token) => (
                 <Flex align="center" gap={3}>
                   <TknImg size={20} src={token.logoUri} alt={token.symbol} />
@@ -218,7 +215,7 @@ export function BalanceChartV2({
                       >
                         <Flex align="center" gap={4}>
                           <TknImg
-                            size={24}
+                            size={20}
                             src={token.logoUri}
                             alt={token.symbol}
                           />
@@ -228,14 +225,29 @@ export function BalanceChartV2({
                       </Flex>
                     </button>
                   )}
-                  searchPlaceholder="Search by symbol or name"
+                  searchPlaceholder="Symbol/Name"
                   hintText="Type to search tokens"
                   emptyText="No matching tokens"
                   closePanel={closePanel}
                 />
               )}
             />
-          </Layer>
+            <Button
+              renderIcon={Add}
+              kind="primary"
+              size="md"
+              onClick={() => {
+                if (pendingToken) {
+                  setSelectedTokens((prev) =>
+                    new Set(prev).add(pendingToken.tokenAddress),
+                  );
+                  setPendingToken(null); // clear selection
+                }
+              }}
+            >
+              Add
+            </Button>
+          </Flex>
 
           <FilterSwitch
             options={[
@@ -262,7 +274,7 @@ export function BalanceChartV2({
 
               // Determine what to display
               let displayValue: number;
-              let displayFormatter: (value: number| null) => string;
+              let displayFormatter: (value: number | null) => string;
               let prefixMode: "plus-minus" = "plus-minus";
 
               if (baselineValue == 0 && currentValue == 0) {
@@ -318,6 +330,7 @@ export function BalanceChartV2({
           }
           valueFormatter={fmt.num.currency}
           onClickDay={onClickDay}
+          stacked
         />
       </Flex>
     </ChartWrapper>
