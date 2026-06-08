@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './wash-trading.module.scss';
+import { LandingNavbar } from '@/components/landing/Navbar';
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const MOCK_RESULT = {
@@ -206,7 +207,8 @@ const WashTradingPage: React.FC = () => {
   });
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} style={{ paddingTop: '4rem' }}>
+      <LandingNavbar />
       {/* ── Top bar ── */}
       <div className={styles.topbar}>
         <div className={styles.topbarLeft}>
