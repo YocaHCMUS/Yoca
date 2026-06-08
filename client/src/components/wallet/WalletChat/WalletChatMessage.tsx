@@ -1,7 +1,13 @@
-import { useMemo, type ReactNode } from "react";
+import classNames from "classnames";
+import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import type { ActionSpec, ChatMessageItem } from "./types";
+import type {
+  ActionSpec,
+  ChatMessageItem,
+  WalletChatSection,
+  WalletSectionKind,
+} from "./types";
 import { ChartRenderer, TableRenderer } from "./WalletChatChartRenderer";
 import styles from "./WalletChat.module.scss";
 
@@ -52,6 +58,225 @@ function parseMarkers(text: string): PartType[] {
   return parts;
 }
 
+// ─── Rich Text Helpers ──────────────────────────────────────────────────
+
+const METRIC_OR_SIGNAL_PATTERN =
+  /([+-]\d+(?:\.\d+)?%|\$\s?\d[\d,]*(?:\.\d+)?\s?(?:K|M|B|T)?|\b\d[\d,]*(?:\.\d+)?\s?(?:million|billion|trillion)?|\b(?:bearish|decline|declines|declined|drop|drops|dropped|selling|pressure|risk|risks|outflow|outflows|loss|losses)\b|\b(?:bullish|growth|increase|increases|increased|inflow|inflows|support|liquidity|adoption|profitable|win)\b|\b(?:warning|unavailable|missing|cannot verify|not available|limited data)\b)/gi;
+
+function stripMarkdownArtifacts(value: string) {
+  return value.replace(/\*\*/g, "");
+}
+
+function splitBoldSegments(value: string) {
+  const segments: Array<{ text: string; bold: boolean }> = [];
+  const boldPattern = /\*\*([^*]+?)\*\*/g;
+  let lastIndex = 0;
+
+  for (const match of value.matchAll(boldPattern)) {
+    const index = match.index ?? 0;
+    if (index > lastIndex) {
+      segments.push({ text: stripMarkdownArtifacts(value.slice(lastIndex, index)), bold: false });
+    }
+    segments.push({ text: match[1], bold: true });
+    lastIndex = index + match[0].length;
+  }
+
+  if (lastIndex < value.length) {
+    segments.push({ text: stripMarkdownArtifacts(value.slice(lastIndex)), bold: false });
+  }
+
+  return segments.length > 0
+    ? segments.filter((s) => s.text.length > 0)
+    : [{ text: stripMarkdownArtifacts(value), bold: false }];
+}
+
+function getMetricClass(value: string) {
+  const normalized = value.toLowerCase();
+
+  if (/^\+\d/.test(value) && value.includes("%")) return "metricPositive";
+  if (/^-\d/.test(value) && value.includes("%")) return "metricNegative";
+  if (value.trim().startsWith("$")) return "metricMoney";
+  if (/\b(warning|unavailable|missing|cannot verify|not available|limited data)\b/.test(normalized)) return "warningText";
+  if (/\b(bearish|decline|declines|declined|drop|drops|dropped|selling|pressure|risk|risks|outflow|outflows|loss|losses)\b/.test(normalized)) return "riskText";
+  if (/\b(bullish|growth|increase|increases|increased|inflow|inflows|support|liquidity|adoption|profitable|win)\b/.test(normalized)) return "bullishText";
+  return "metricNeutral";
+}
+
+function renderMetricTokens(value: string, keyPrefix: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let lastIndex = 0;
+
+  for (const match of value.matchAll(METRIC_OR_SIGNAL_PATTERN)) {
+    const index = match.index ?? 0;
+    const text = match[0];
+    if (index > lastIndex) {
+      nodes.push(value.slice(lastIndex, index));
+    }
+    const metricClass = getMetricClass(text);
+    nodes.push(
+      <span key={`${keyPrefix}-${index}`} className={classNames(styles.metricToken, styles[metricClass])}>
+        {text}
+      </span>,
+    );
+    lastIndex = index + text.length;
+  }
+
+  if (lastIndex < value.length) {
+    nodes.push(value.slice(lastIndex));
+  }
+
+  return nodes;
+}
+
+function renderInlineRichText(value: string, keyPrefix = "rich") {
+  return splitBoldSegments(value).map((segment, idx) => {
+    const content = renderMetricTokens(segment.text, `${keyPrefix}-${idx}`);
+    if (!segment.bold) return <span key={`${keyPrefix}-${idx}`}>{content}</span>;
+    return (
+      <strong key={`${keyPrefix}-${idx}`} className={styles.richStrong}>
+        {content}
+      </strong>
+    );
+  });
+}
+
+function isBulletLikeLine(value: string) {
+  return /^\s*(?:[-*\u2022]\s+|\d+[.)]\s+)/.test(value);
+}
+
+function cleanBulletLine(value: string) {
+  return value.replace(/^\s*(?:[-*\u2022]\s+|\d+[.)]\s+)/, "").trim();
+}
+
+function WalletRichText({ text, inline = false }: { text?: string | number | null; inline?: boolean }) {
+  const value = String(text ?? "").trim();
+  if (!value) return null;
+
+  if (inline) return <>{renderInlineRichText(value)}</>;
+
+  const blocks = value.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
+
+  return (
+    <>
+      {blocks.map((block, blockIdx) => {
+        const lines = block.split(/\n/).map((l) => l.trim()).filter(Boolean);
+
+        if (lines.length > 0 && lines.every(isBulletLikeLine)) {
+          return (
+            <ul key={blockIdx} className={styles.richList}>
+              {lines.map((line, lineIdx) => (
+                <li key={lineIdx}>
+                  {renderInlineRichText(cleanBulletLine(line), `rich-${blockIdx}-${lineIdx}`)}
+                </li>
+              ))}
+            </ul>
+          );
+        }
+
+        return (
+          <div key={blockIdx} className={styles.richParagraphGroup}>
+            {lines.map((line, lineIdx) =>
+              isBulletLikeLine(line) ? (
+                <div key={lineIdx} className={styles.richBulletLine}>
+                  <span aria-hidden="true" />
+                  <span>{renderInlineRichText(cleanBulletLine(line), `rich-${blockIdx}-${lineIdx}`)}</span>
+                </div>
+              ) : (
+                <p key={lineIdx} className={styles.richParagraph}>
+                  {renderInlineRichText(line, `rich-${blockIdx}-${lineIdx}`)}
+                </p>
+              ),
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+// ─── Section Table ──────────────────────────────────────────────────────
+
+function SectionTable({ table }: { table: Array<Record<string, string | number | null>> }) {
+  const columns = useMemo(() => {
+    const keys = new Set<string>();
+    table.forEach((row) => Object.keys(row).forEach((k) => keys.add(k)));
+    return [...keys].slice(0, 6);
+  }, [table]);
+
+  if (columns.length === 0) return null;
+
+  return (
+    <div className={styles.tableWrap}>
+      <table className={styles.sectionTable}>
+        <thead>
+          <tr>
+            {columns.map((col) => <th key={col}>{col}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {table.map((row, idx) => (
+            <tr key={idx}>
+              {columns.map((col) => (
+                <td key={col}>
+                  <WalletRichText text={row[col] ?? "-"} inline />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── Section Kind → Meta ────────────────────────────────────────────────
+
+const SECTION_KIND_META: Record<WalletSectionKind, { label: string; icon: string; className: string }> = {
+  market_snapshot:  { label: "Market Snapshot",  icon: "M", className: "kindMarket" },
+  key_findings:     { label: "Key Findings",     icon: "K", className: "kindDrivers" },
+  pnl_summary:      { label: "PnL Summary",      icon: "P", className: "kindBullish" },
+  trading_activity: { label: "Trading Activity", icon: "T", className: "kindNews" },
+  top_holdings:     { label: "Top Holdings",     icon: "H", className: "kindDeepDive" },
+  risk_factors:     { label: "Risk Factors",     icon: "!", className: "kindRisk" },
+  what_to_watch:    { label: "What To Watch",    icon: "?", className: "kindWatch" },
+  conclusion:       { label: "Conclusion",       icon: "\u2713", className: "kindConclusion" },
+  custom:           { label: "Analysis",         icon: "A", className: "kindSimple" },
+};
+
+// ─── Section Renderer ───────────────────────────────────────────────────
+
+function WalletChatSectionRenderer({ section }: { section: WalletChatSection }) {
+  const meta = SECTION_KIND_META[section.kind] ?? SECTION_KIND_META.custom;
+
+  return (
+    <div className={classNames(styles[meta.className])}>
+      <div className={styles.sectionHeader}>
+        <span className={styles.sectionIcon} aria-hidden="true">{meta.icon}</span>
+        <span className={styles.sectionKind}>{meta.label}</span>
+      </div>
+      {section.content && (
+        <div className={styles.sectionContent}>
+          <WalletRichText text={section.content} />
+        </div>
+      )}
+      {section.bullets && section.bullets.length > 0 && (
+        <ul className={styles.sectionBulletList}>
+          {section.bullets.map((bullet, idx) => (
+            <li key={idx}>
+              <WalletRichText text={bullet} inline />
+            </li>
+          ))}
+        </ul>
+      )}
+      {section.table && section.table.length > 0 && (
+        <SectionTable table={section.table} />
+      )}
+    </div>
+  );
+}
+
+// ─── Action Button Group ────────────────────────────────────────────────
+
 function actionButtonGroup(actions: ActionSpec[], navigate: ReturnType<typeof useNavigate>, onAction?: (href: string) => void): ReactNode {
   return (
     <div key={`actg-${actions[0]?.index ?? "end"}`} className={styles.actionGroup}>
@@ -75,9 +300,13 @@ function actionButtonGroup(actions: ActionSpec[], navigate: ReturnType<typeof us
   );
 }
 
+// ─── Main Component ─────────────────────────────────────────────────────
+
 export function WalletChatMessage({ message, onAction }: Props) {
   const navigate = useNavigate();
   const { tr } = useLocalization();
+  const [showAllEvidence, setShowAllEvidence] = useState(false);
+
   const parsed = useMemo(() => parseMarkers(message.content), [message.content]);
 
   const { inlineByIndex, endActions } = useMemo(() => {
@@ -97,23 +326,54 @@ export function WalletChatMessage({ message, onAction }: Props) {
     return { inlineByIndex: inline, endActions: end };
   }, [message.actions]);
 
-  const elements: ReactNode[] = [];
-
   if (message.role === "user") {
     return (
       <div className={styles.userBubbleRow}>
-        <div className={styles.userBubble}>
-          {message.content}
-        </div>
+        <div className={styles.userBubble}>{message.content}</div>
       </div>
     );
   }
 
+  const elements: ReactNode[] = [];
+
+  // TLDR
+  if (message.tldr && message.tldr.length > 0) {
+    elements.push(
+      <div key="tldr" className={styles.tldr}>
+        <div className={styles.tldrHeader}>
+          <span className={styles.tldrIcon}>AI</span>
+          <h3>{tr("chat.tldr")}</h3>
+        </div>
+        <ol>
+          {message.tldr.map((item, idx) => (
+            <li key={idx}>
+              <span className={styles.tldrNumber}>{idx + 1}</span>
+              <WalletRichText text={item} inline />
+            </li>
+          ))}
+        </ol>
+      </div>,
+    );
+  }
+
+  // Confidence
+  if (message.confidence) {
+    elements.push(
+      <span
+        key="confidence"
+        className={classNames(styles.confidenceBadge, styles[`confidence${message.confidence}`])}
+      >
+        {message.confidence} {tr("chat.confidence")}
+      </span>,
+    );
+  }
+
+  // Parsed content parts (text, charts, tables, actions)
   for (const part of parsed) {
     if (part.type === "text" && part.content.trim()) {
       elements.push(
         <div key={`t-${elements.length}`} className={styles.textPart}>
-          {part.content}
+          <WalletRichText text={part.content} />
         </div>,
       );
     }
@@ -144,23 +404,95 @@ export function WalletChatMessage({ message, onAction }: Props) {
     }
   }
 
-  if (endActions.length > 0) {
-    elements.push(actionButtonGroup(endActions, navigate, onAction));
+  // Sections
+  if (message.sections && message.sections.length > 0) {
+    elements.push(
+      <div key="sections">
+        {message.sections.map((section, idx) => (
+          <WalletChatSectionRenderer key={`s-${idx}`} section={section} />
+        ))}
+      </div>,
+    );
+  }
+
+  // Warnings
+  if (message.warnings && message.warnings.length > 0) {
+    elements.push(
+      <div key="warnings" className={styles.warnings}>
+        <div className={styles.warnHeader}>
+          <span className={styles.warnIcon}>!</span>
+          <h3>{tr("chat.warnings")}</h3>
+        </div>
+        <ul>
+          {message.warnings.map((w, i) => (
+            <li key={i} className={styles[`warn${w.severity === "error" ? "Error" : w.severity === "warning" ? "Warning" : "Info"}`]}>
+              <WalletRichText text={w.text} inline />
+            </li>
+          ))}
+        </ul>
+      </div>,
+    );
+  }
+
+  // Evidence
+  const visibleEvidence = showAllEvidence
+    ? message.evidence
+    : message.evidence?.slice(0, 6);
+
+  if (message.evidence && message.evidence.length > 0) {
+    elements.push(
+      <div key="evidence" className={styles.evidenceBlock}>
+        <h3>{tr("chat.evidence")}</h3>
+        <div className={styles.evidenceGrid}>
+          {visibleEvidence?.map((item, idx) => (
+            <div key={idx} className={styles.evidenceCard}>
+              <span className={classNames(styles.evidenceTypeBadge, styles[`evidenceType${item.type.charAt(0).toUpperCase() + item.type.slice(1)}`])}>
+                {item.type}
+              </span>
+              <strong><WalletRichText text={item.label} inline /></strong>
+              {item.value && <div className={styles.evidenceValue}><WalletRichText text={item.value} inline /></div>}
+              {item.detail && <div className={styles.evidenceDetail}><WalletRichText text={item.detail} /></div>}
+            </div>
+          ))}
+        </div>
+        {message.evidence.length > 6 && (
+          <button type="button" className={styles.evidenceShowBtn} onClick={() => setShowAllEvidence((v) => !v)}>
+            {showAllEvidence ? tr("chat.showLess") : tr("chat.showAll", { count: message.evidence.length })}
+          </button>
+        )}
+      </div>,
+    );
+  }
+
+  // Suggested question chips
+  const askChips = endActions.filter((a) => a.href.startsWith("#ask:"));
+  if (askChips.length > 0) {
+    elements.push(
+      <div key="chips" className={styles.chips}>
+        {askChips.map((a, i) => (
+          <button key={i} type="button" className={styles.chip} onClick={() => onAction?.(a.href.slice(5))}>
+            {a.label}
+          </button>
+        ))}
+      </div>,
+    );
+  }
+
+  // End actions (non-ask)
+  const nonAskEndActions = endActions.filter((a) => !a.href.startsWith("#ask:"));
+  if (nonAskEndActions.length > 0) {
+    elements.push(actionButtonGroup(nonAskEndActions, navigate, onAction));
   }
 
   if (elements.length === 0) {
     elements.push(
-      <div key="empty" className={styles.emptyPart}>
-        {tr("common.noData")}
-      </div>,
+      <div key="empty" className={styles.emptyPart}>{tr("common.noData")}</div>,
     );
   }
 
   return (
     <div className={styles.assistantBubbleRow}>
-      <div className={styles.assistantBubble}>
-        {elements}
-      </div>
+      <div className={styles.assistantBubble}>{elements}</div>
     </div>
   );
 }

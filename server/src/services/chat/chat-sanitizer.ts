@@ -1,4 +1,4 @@
-import type { ActionSpec, ChartSpec, TableSpec } from "./chat.types.js";
+import type { ActionSpec, ChartSpec, TableSpec, WalletChatSection, WalletWarning, WalletConfidence } from "./chat.types.js";
 
 export function sanitizeText(text: string): string {
   let s = text;
@@ -48,6 +48,10 @@ export function sanitizeResponse(raw: string): {
   charts: ChartSpec[];
   tables: TableSpec[];
   actions: ActionSpec[];
+  tldr?: string[];
+  sections?: WalletChatSection[];
+  warnings?: WalletWarning[];
+  confidence?: WalletConfidence;
 } {
   const parsed = extractJsonObject(raw) as Record<string, unknown> | null;
   if (!parsed) {
@@ -93,5 +97,35 @@ export function sanitizeResponse(raw: string): {
       typeof (a as Record<string, unknown>).href === "string",
   );
 
-  return { rawText: raw, text, charts, tables, actions };
+  const tldr: string[] | undefined = Array.isArray(parsed.tldr)
+    ? (parsed.tldr as string[]).filter((s): s is string => typeof s === "string").slice(0, 3)
+    : undefined;
+
+  const warnings: WalletWarning[] | undefined = Array.isArray(parsed.warnings)
+    ? (parsed.warnings as WalletWarning[]).filter(
+        (w): w is WalletWarning =>
+          w && typeof w === "object" && typeof w.text === "string" && ["info", "warning", "error"].includes(w.severity),
+      ).slice(0, 4)
+    : undefined;
+
+  const confidence: WalletConfidence | undefined =
+    typeof parsed.confidence === "string" &&
+    ["Low", "Medium", "High"].includes(parsed.confidence)
+      ? (parsed.confidence as WalletConfidence)
+      : undefined;
+
+  const sections: WalletChatSection[] | undefined = (() => {
+    const raw = parsed.sections;
+    if (!Array.isArray(raw) || raw.length === 0) return undefined;
+    const valid = raw.filter(
+      (s): s is WalletChatSection =>
+        s !== null &&
+        typeof s === "object" &&
+        typeof (s as Record<string, unknown>).title === "string" &&
+        typeof (s as Record<string, unknown>).kind === "string",
+    );
+    return valid.length > 0 ? valid.slice(0, 6) : undefined;
+  })();
+
+  return { rawText: raw, text, charts, tables, actions, tldr, sections, warnings, confidence };
 }

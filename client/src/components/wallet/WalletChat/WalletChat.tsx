@@ -9,6 +9,7 @@ import type { ChatMessageItem, ChatResponse } from "./types";
 import styles from "./WalletChat.module.scss";
 
 const MAX_QUICK_QUESTIONS = 5;
+const MAX_INPUT_LENGTH = 500;
 
 interface Props {
   address: string;
@@ -73,6 +74,11 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
           charts: data.charts,
           tables: data.tables,
           actions: data.actions,
+          tldr: data.tldr,
+          sections: data.sections,
+          evidence: data.evidence,
+          warnings: data.warnings,
+          confidence: data.confidence,
         };
         setMessages((prev) => [...prev, assistantMsg]);
       } catch (err) {
@@ -154,6 +160,11 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
   }
 
   const quickItems = PREDEFINED_QUESTIONS.slice(0, MAX_QUICK_QUESTIONS);
+  const trimmedInput = inputText.trim();
+  const inputValidationError =
+    trimmedInput.length === 0 ? null
+    : trimmedInput.length > MAX_INPUT_LENGTH ? tr("chat.inputOverLimit", { max: MAX_INPUT_LENGTH })
+    : null;
 
   const renderPromptMenu = () => (
     <div className={styles.promptMenuOverlay}>
@@ -270,11 +281,17 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
           <button
             type="button"
             onClick={() => sendQuery(inputText)}
-            disabled={isLoading || !inputText.trim()}
+            disabled={isLoading || !inputText.trim() || inputText.length > MAX_INPUT_LENGTH}
             className={styles.sendBtn}
           >
             <Send size={16} />
           </button>
+        </div>
+        <div className={styles.inputMeta}>
+          <span>{tr("chat.inputCounter", { current: String(inputText.length), max: MAX_INPUT_LENGTH })}</span>
+          {inputText.length > 0 && inputValidationError && (
+            <span className={styles.validationError}>{inputValidationError}</span>
+          )}
         </div>
       </div>
     </div>

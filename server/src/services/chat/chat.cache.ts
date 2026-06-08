@@ -53,10 +53,11 @@ export async function computeCacheKey(
   address: string,
   query: string,
   model: string,
+  intent?: string,
 ): Promise<string> {
   const fingerprint = await computeDataFingerprint(address);
   const hash = createHash("sha256")
-    .update(`${address}|${query.trim().toLowerCase()}|${model}|${fingerprint}`)
+    .update(`${address}|${query.trim().toLowerCase()}|${model}|${fingerprint}|${intent ?? "custom"}`)
     .digest("hex");
   return hash;
 }
@@ -66,10 +67,11 @@ export async function getCachedResponse(
   query: string,
   model: string,
   historyHash?: string,
+  intent?: string,
 ): Promise<ChatResponse | null> {
   const fingerprint = await computeDataFingerprint(address);
   const key = createHash("sha256")
-    .update(`${address}|${query.trim().toLowerCase()}|${model}|${fingerprint}|${historyHash ?? ""}`)
+    .update(`${address}|${query.trim().toLowerCase()}|${model}|${fingerprint}|${historyHash ?? ""}|${intent ?? ""}`)
     .digest("hex");
 
   const rows = await db
@@ -99,10 +101,11 @@ export async function setCachedResponse(
   response: ChatResponse,
   model: string,
   historyHash?: string,
+  intent?: string,
 ): Promise<void> {
   const fingerprint = await computeDataFingerprint(address);
   const key = createHash("sha256")
-    .update(`${address}|${query.trim().toLowerCase()}|${model}|${fingerprint}|${historyHash ?? ""}`)
+    .update(`${address}|${query.trim().toLowerCase()}|${model}|${fingerprint}|${historyHash ?? ""}|${intent ?? ""}`)
     .digest("hex");
 
   await db

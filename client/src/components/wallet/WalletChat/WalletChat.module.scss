@@ -499,3 +499,448 @@
   color: $text-secondary;
   white-space: nowrap;
 }
+
+// ===== Rich Text =====
+.richParagraphGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.richParagraph {
+  margin: 0;
+  color: $text-secondary;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.richBulletLine {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr);
+  gap: 8px;
+  color: $text-secondary;
+  font-size: 13px;
+  line-height: 1.55;
+
+  > span:first-child {
+    width: 5px;
+    height: 5px;
+    margin-top: 9px;
+    border-radius: 999px;
+    background: var(--cds-border-strong, #6f6f6f);
+  }
+}
+
+.richList {
+  margin: 0;
+  padding-left: 18px;
+  color: $text-secondary;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.richStrong {
+  color: $text-primary;
+  font-weight: 800;
+}
+
+.metricToken {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  margin: 0 1px;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.metricPositive,
+.bullishText {
+  color: $support-success;
+  background: color-mix(in srgb, #{$support-success} 12%, transparent);
+}
+
+.metricNegative,
+.riskText {
+  color: $support-error;
+  background: color-mix(in srgb, #{$support-error} 10%, transparent);
+}
+
+.metricMoney {
+  color: $text-primary;
+  background: color-mix(in srgb, #{$support-info} 13%, transparent);
+}
+
+.metricNeutral {
+  color: $text-primary;
+  background: $layer-accent-01;
+}
+
+.warningText {
+  color: $support-warning;
+  background: color-mix(in srgb, #{$support-warning} 13%, transparent);
+}
+
+// ===== TLDR Block =====
+.tldr {
+  background: rgba(15, 98, 254, 0.08);
+  border-left: 3px solid #0f62fe;
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+
+  ol {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 10px;
+    align-items: flex-start;
+    color: $text-primary;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}
+
+.tldrHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+
+  h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: $text-primary;
+  }
+}
+
+.tldrIcon {
+  width: 24px;
+  height: 24px;
+  background: #0f62fe;
+  color: #fff;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.tldrNumber {
+  width: 18px;
+  height: 18px;
+  background: #0f62fe;
+  color: #fff;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  margin-right: 0;
+  flex-shrink: 0;
+}
+
+// ===== Section Rendering =====
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.sectionIcon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.sectionKind {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6f6f6f;
+}
+
+.sectionContent {
+  margin-bottom: 0.5rem;
+  max-width: 72ch;
+}
+
+.sectionBulletList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    padding: 2px 0;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}
+
+// Kind-specific icon colors
+.kindMarket .sectionIcon { background: #0f62fe; }
+.kindDrivers .sectionIcon { background: #8a3ffc; }
+.kindRisk .sectionIcon { background: #da1e28; }
+.kindWatch .sectionIcon { background: #ff832b; }
+.kindBullish .sectionIcon { background: #24a148; }
+.kindNews .sectionIcon { background: #1192e8; }
+.kindDeepDive .sectionIcon { background: #009d9a; }
+.kindConclusion .sectionIcon { background: #6f6f6f; }
+.kindSimple .sectionIcon { background: #525252; }
+
+// ===== Section Table =====
+.tableWrap {
+  overflow-x: auto;
+}
+
+.sectionTable {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+
+  th,
+  td {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--cds-border-subtle-02, #e0e0e0);
+    text-align: left;
+    color: $text-secondary;
+  }
+
+  th {
+    color: $text-primary;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: capitalize;
+  }
+}
+
+// ===== Warnings Block =====
+.warnings {
+  background: rgba(218, 30, 40, 0.06);
+  border-left: 3px solid #da1e28;
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+
+  ul {
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  li {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+}
+
+.warnHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+
+  h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: $text-primary;
+  }
+}
+
+.warnIcon {
+  color: #da1e28;
+  font-weight: 700;
+  font-size: 14px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.warnError { color: #da1e28; }
+.warnWarning { color: #f1c21b; }
+.warnInfo { color: #8d8d8d; }
+
+// ===== Confidence Badge =====
+.confidenceBadge {
+  display: inline-block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-bottom: 0.5rem;
+}
+
+.confidenceHigh {
+  background: rgba(36, 161, 72, 0.15);
+  color: #24a148;
+}
+
+.confidenceMedium {
+  background: rgba(241, 194, 27, 0.15);
+  color: #f1c21b;
+}
+
+.confidenceLow {
+  background: rgba(218, 30, 40, 0.1);
+  color: #fa4d56;
+}
+
+// ===== Evidence Grid =====
+.evidenceBlock {
+  margin: 0.5rem 0;
+
+  h3 {
+    margin: 0 0 0.5rem;
+    font-size: 13px;
+    font-weight: 600;
+    color: $text-primary;
+  }
+}
+
+.evidenceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.evidenceCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--cds-border-subtle-03, #353535);
+  border-radius: 6px;
+  background: $background;
+
+  strong {
+    color: $text-primary;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+}
+
+.evidenceValue {
+  color: $text-primary;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.evidenceDetail {
+  color: $text-secondary;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.evidenceTypeBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.evidenceTypeOverview { background: #0f62fe20; color: #0f62fe; }
+.evidenceTypePortfolio { background: #8a3ffc20; color: #8a3ffc; }
+.evidenceTypeSwap { background: #1192e820; color: #1192e8; }
+.evidenceTypeTransfer { background: #009d9a20; color: #009d9a; }
+.evidenceTypePnl { background: #24a14820; color: #24a148; }
+.evidenceTypeBalance { background: #ff832b20; color: #ff832b; }
+.evidenceTypeVolume { background: #f1c21b20; color: #f1c21b; }
+.evidenceTypeAudit { background: #da1e2820; color: #da1e28; }
+.evidenceTypeMarket { background: #52525220; color: #525252; }
+
+.evidenceShowBtn {
+  font-size: 11px;
+  padding: 4px 8px;
+  border: 1px solid var(--cds-border-subtle-03, #353535);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--cds-link-primary, #78a9ff);
+  cursor: pointer;
+  margin-top: 6px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--cds-layer-hover-01, #353535);
+  }
+}
+
+// ===== Suggested Question Chips =====
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 0.5rem;
+}
+
+.chip {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid #353535;
+  background: transparent;
+  color: #c6c6c6;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: #0f62fe;
+    color: #0f62fe;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+// ===== Input validation =====
+.inputMeta {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 4px;
+  font-size: 11px;
+  color: #6f6f6f;
+}
+
+.validationError {
+  color: #da1e28;
+}

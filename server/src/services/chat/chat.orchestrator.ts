@@ -22,6 +22,11 @@ import { chatInfo, chatWarn, chatError, chatDebug } from "./chat.logger.js";
 import { DATA_TRANSFORMERS } from "./data-transformers.js";
 import { sanitizeText, sanitizeResponse } from "./chat-sanitizer.js";
 import { getMessage } from "./chat.localization.js";
+import { classifyWalletChatIntent, inferWalletChatLanguage } from "./chat-intent.js";
+import { buildWalletFallbackResponse } from "./chat-fallback.js";
+import type { WalletConfidence, WalletWarning, WalletChatSection } from "./chat.types.js";
+import { z } from "zod";
+import { WALLET_CHAT_RESPONSE_LIMITS as L } from "./chat-fallback.js";
 
 const MAX_ITERATIONS = 3;
 
@@ -189,6 +194,55 @@ async function executeTools(tools: ChatToolCall[]): Promise<ChatToolResult[]> {
   return results;
 }
 
+// ─── Zod Validation for Structured Response ────────────────────────────
+
+const walletSectionSchema = z.object({
+  title: z.string().trim().min(1).max(L.sectionTitleChars),
+  kind: z.enum(["market_snapshot","key_findings","pnl_summary","trading_activity","top_holdings","risk_factors","what_to_watch","conclusion","custom"]),
+  content: z.string().trim().max(L.sectionContentChars).optional(),
+  bullets: z.array(z.string().trim().min(1).max(L.sectionBulletChars)).max(L.sectionBulletItems).optional(),
+  table: z.array(z.record(z.string(), z.union([z.string(), z.number(), z.null()]))).max(8).optional(),
+});
+
+const walletResponseSchema = z.object({
+  text: z.string(),
+  tldr: z.array(z.string().trim().min(1).max(L.tldrBulletChars)).min(1).max(L.tldrItems).optional(),
+  sections: z.array(walletSectionSchema).min(1).max(L.sectionItems).optional(),
+  warnings: z.array(z.object({ text: z.string(), severity: z.enum(["info","warning","error"]) })).max(L.warningItems).optional(),
+  confidence: z.enum(["Low", "Medium", "High"]).optional(),
+});
+
+function normalizeWalletResponse(raw: unknown): Record<string, unknown> {
+  const record = raw && typeof raw === "object" && !Array.isArray(raw)
+    ? (raw as Record<string, unknown>)
+    : {};
+  const out: Record<string, unknown> = { text: record.text ?? "" };
+
+  if (Array.isArray(record.tldr)) {
+    out.tldr = (record.tldr as unknown[]).filter((s): s is string => typeof s === "string").slice(0, L.tldrItems);
+  }
+  if (Array.isArray(record.sections)) {
+    const valid: Record<string, unknown>[] = [];
+    for (const s of (record.sections as unknown[])) {
+      if (valid.length >= L.sectionItems) break;
+      if (s && typeof s === "object" && typeof (s as Record<string, unknown>).title === "string") {
+        valid.push(s as Record<string, unknown>);
+      }
+    }
+    if (valid.length > 0) out.sections = valid;
+  }
+  if (Array.isArray(record.warnings)) {
+    out.warnings = (record.warnings as Array<Record<string, unknown>>).filter(
+      (w): w is Record<string, unknown> =>
+        w !== null && typeof (w as Record<string, unknown>).text === "string" && typeof w === "object",
+    ).slice(0, L.warningItems);
+  }
+  if (typeof record.confidence === "string" && ["Low", "Medium", "High"].includes(record.confidence)) {
+    out.confidence = record.confidence;
+  }
+  return out;
+}
+
 async function generateResponse(
   query: string,
   allResults: ChatToolResult[],
@@ -230,6 +284,24 @@ async function generateResponse(
   const tables = sanitized.tables;
   const actions = sanitized.actions;
 
+  // Validate structured fields from Gemini
+  const parsedJson = extractJsonObject(raw);
+  let validatedTldr: string[] | undefined;
+  let validatedSections: WalletChatSection[] | undefined;
+  let validatedWarnings: WalletWarning[] | undefined;
+  let validatedConfidence: WalletConfidence | undefined;
+
+  if (parsedJson && typeof parsedJson === "object") {
+    const normalized = normalizeWalletResponse(parsedJson);
+    const parsed = walletResponseSchema.safeParse(normalized);
+    if (parsed.success) {
+      validatedTldr = parsed.data.tldr;
+      validatedSections = parsed.data.sections as WalletChatSection[] | undefined;
+      validatedWarnings = parsed.data.warnings as WalletWarning[] | undefined;
+      validatedConfidence = parsed.data.confidence;
+    }
+  }
+
   if (!text && charts.length === 0 && tables.length === 0 && actions.length === 0) {
     chatWarn("generateResponse: sanitizeResponse returned empty, using raw text", { raw: trunc(raw, 300) });
     return {
@@ -261,6 +333,12 @@ async function generateResponse(
     charts,
     tables,
     actions: actions.length > 0 ? actions : undefined,
+    tldr: validatedTldr,
+    sections: validatedSections,
+    warnings: validatedWarnings,
+    confidence: validatedConfidence,
+    asOf: new Date().toISOString(),
+    generatedAt: new Date().toISOString(),
   };
 
   chatInfo("generateResponse: success", {
@@ -268,6 +346,8 @@ async function generateResponse(
     chartsCount: response.charts.length,
     tablesCount: response.tables.length,
     dataKeys: Object.keys(response.data),
+    hasSections: !!validatedSections,
+    hasTldr: !!validatedTldr,
   });
 
   return response;
@@ -286,7 +366,11 @@ export async function answerChatQuery(
 
   chatInfo("answerChatQuery: entry", { address, query: trunc(query, 200), language: language ?? "en", historyTurns: history?.length ?? 0 });
 
-  const cached = await getCachedResponse(address, query, model, historyHash);
+  const intent = classifyWalletChatIntent(query);
+  const detectedLang = inferWalletChatLanguage(query, language);
+  chatInfo("answerChatQuery: intent + language", { intent, detectedLang, originalLang: language ?? "en" });
+
+  const cached = await getCachedResponse(address, query, model, historyHash, intent);
   if (cached) {
     chatInfo("answerChatQuery: cache hit", {
       textLength: cached.text.length,
@@ -369,8 +453,13 @@ export async function answerChatQuery(
 
   const response = await generateResponse(query, allResults, language, history);
 
+  if (!response.text && response.charts.length === 0 && response.tables.length === 0) {
+    chatWarn("answerChatQuery: Gemini response empty, using deterministic fallback");
+    return buildWalletFallbackResponse(query, intent, allResults, detectedLang);
+  }
+
   try {
-    await setCachedResponse(address, query, response, model, historyHash);
+    await setCachedResponse(address, query, response, model, historyHash, intent);
     chatDebug("answerChatQuery: cache write succeeded");
   } catch {
     chatWarn("answerChatQuery: cache write failed");
