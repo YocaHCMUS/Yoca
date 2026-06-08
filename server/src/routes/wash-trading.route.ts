@@ -1,195 +1,118 @@
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { washTradingService } from '../services/wash-trading.service.js';
+/**
+ * wash-trading.route.ts  (CẬP NHẬT)
+ *
+ * Thêm endpoint mới:
+ *   POST /api/v1/wash-trading/ai-analyze
+ *
+ * Đặt file tại: server/src/routes/wash-trading.route.ts
+ * (Thay thế toàn bộ file cũ)
+ */
 
-// Schema for token address validation
+import { Hono } from "hono";
+import { z } from "zod";
+import { washTradingService } from "../services/wash-trading.service";
+import { analyzeWashTradingWithAI } from "../services/wash-trading-ai.service";
+
+// ─── Schema validation ────────────────────────────────────────────────────────
+
 const tokenQuerySchema = z.object({
-  mint: z.string().trim().min(1, 'Token mint address required'),
+  mint: z.string().trim().min(1, "Token mint address required"),
 });
 
-const circularTradesSchema = z.object({
-  mint: z.string().trim().min(1),
-  timeWindow: z.string().optional(),
-});
-
-const sameAmountSchema = z.object({
-  mint: z.string().trim().min(1),
-  tolerance: z.string().optional(),
+const aiAnalyzeSchema = z.object({
+  mint: z.string().trim().min(32, "Invalid Solana mint address"),
+  symbol: z.string().trim().optional().default("TOKEN"),
+  limit: z.number().int().min(50).max(500).optional().default(200),
 });
 
 export type WashTradingAppType = typeof app;
 
 const app = new Hono()
-  /**
-   * GET /api/v1/wash-trading/analyze
-   * Main endpoint for wash trading analysis
-   * Query: mint (token mint address)
-   * Returns: WashTradeAnalysis object with all findings
-   */
-  .get('/analyze', async (c) => {
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // POST /api/v1/wash-trading/ai-analyze
+  // ★ ENDPOINT CHÍNH — Hướng 2: Thuật toán + Gemini AI
+  //
+  // Body: { mint: string, symbol?: string, limit?: number }
+  // Returns: WashTradingAIResult (full analysis + AI commentary)
+  // ─────────────────────────────────────────────────────────────────────────────
+  .post("/ai-analyze", async (c) => {
     try {
-      const mint = c.req.query('mint');
-      
-      if (!mint) {
+      const body = await c.req.json();
+      const parsed = aiAnalyzeSchema.safeParse(body);
+
+      if (!parsed.success) {
         return c.json(
-          { success: false, error: 'Token mint address required' },
+          {
+            success: false,
+            error: "Invalid request body",
+            details: parsed.error.flatten(),
+          },
           400
         );
       }
-      
-      console.log(`[Wash Trading] Analyzing token: ${mint}`);
-      
-      // Run comprehensive analysis
-      const analysis = await washTradingService.analyzeWashTrading(mint);
-      
+
+      const { mint, symbol, limit } = parsed.data;
+      console.log(`[WashTradingAI] Starting AI analysis for ${symbol} (${mint})`);
+
+      const result = await analyzeWashTradingWithAI({ mint, symbol, limit });
+
       return c.json({
         success: true,
-        data: analysis,
+        data: result,
         timestamp: new Date().toISOString(),
-        version: '1.0.0'
       });
-    } catch (error) {
-      console.error('[Wash Trading] Analysis error:', error);
+    } catch (err) {
+      console.error("[WashTradingAI] AI analyze error:", err);
       return c.json(
         {
           success: false,
-          error: 'Analysis failed',
-          message: error instanceof Error ? error.message : 'Unknown error'
+          error: "AI analysis failed",
+          message: err instanceof Error ? err.message : "Unknown error",
         },
         500
       );
     }
   })
 
-  /**
-   * GET /api/v1/wash-trading/circular-trades
-   * Detect only circular trade patterns
-   */
-  .get('/circular-trades', async (c) => {
+  // ─────────────────────────────────────────────────────────────────────────────
+  // GET /api/v1/wash-trading/analyze (legacy endpoint, giữ để không break)
+  // ─────────────────────────────────────────────────────────────────────────────
+  .get("/analyze", async (c) => {
     try {
-      const mint = c.req.query('mint');
-      const timeWindowStr = c.req.query('timeWindow');
-      
+      const mint = c.req.query("mint");
       if (!mint) {
-        return c.json(
-          { success: false, error: 'Token mint address required' },
-          400
-        );
+        return c.json({ success: false, error: "Token mint address required" }, 400);
       }
-      
-      const timeWindow = timeWindowStr ? parseInt(timeWindowStr) : 3600000;
-      const circular = await washTradingService.detectCircularTrades(mint, timeWindow);
-      
-      return c.json({
-        success: true,
-        data: circular,
-        count: circular.length
-      });
-    } catch (error) {
-      console.error('[Wash Trading] Circular trade detection error:', error);
-      return c.json(
-        { success: false, error: 'Detection failed' },
-        500
-      );
+
+      const analysis = await washTradingService.analyzeWashTrading(mint);
+      return c.json({ success: true, data: analysis, timestamp: new Date().toISOString() });
+    } catch (err) {
+      console.error("[WashTrading] Analysis error:", err);
+      return c.json({ success: false, error: "Analysis failed" }, 500);
     }
   })
 
-  /**
-   * GET /api/v1/wash-trading/same-amount
-   * Detect same-amount transaction patterns
-   */
-  .get('/same-amount', async (c) => {
-    try {
-      const mint = c.req.query('mint');
-      const toleranceStr = c.req.query('tolerance');
-      
-      if (!mint) {
-        return c.json(
-          { success: false, error: 'Token mint address required' },
-          400
-        );
-      }
-      
-      const tolerance = toleranceStr ? parseFloat(toleranceStr) : 0.02;
-      const patterns = await washTradingService.detectSameAmountPatterns(mint, tolerance);
-      
-      return c.json({
-        success: true,
-        data: Array.from(patterns.entries()).map(([key, cluster]) => ({
-          amountGroup: key,
-          count: cluster.length,
-          sample: cluster.slice(0, 3)
-        }))
-      });
-    } catch (error) {
-      console.error('[Wash Trading] Same amount detection error:', error);
-      return c.json(
-        { success: false, error: 'Detection failed' },
-        500
-      );
-    }
+  .get("/circular-trades", async (c) => {
+    const mint = c.req.query("mint");
+    if (!mint) return c.json({ success: false, error: "mint required" }, 400);
+    const timeWindow = parseInt(c.req.query("timeWindow") ?? "3600000");
+    const data = await washTradingService.detectCircularTrades(mint, timeWindow);
+    return c.json({ success: true, data, count: data.length });
   })
 
-  /**
-   * GET /api/v1/wash-trading/star-topology
-   * Detect star topology (hub & spoke) patterns
-   */
-  .get('/star-topology', async (c) => {
-    try {
-      const mint = c.req.query('mint');
-      
-      if (!mint) {
-        return c.json(
-          { success: false, error: 'Token mint address required' },
-          400
-        );
-      }
-      
-      const hubs = await washTradingService.detectStarTopology(mint);
-      
-      return c.json({
-        success: true,
-        data: hubs,
-        count: hubs.length
-      });
-    } catch (error) {
-      console.error('[Wash Trading] Star topology detection error:', error);
-      return c.json(
-        { success: false, error: 'Detection failed' },
-        500
-      );
-    }
+  .get("/star-topology", async (c) => {
+    const mint = c.req.query("mint");
+    if (!mint) return c.json({ success: false, error: "mint required" }, 400);
+    const data = await washTradingService.detectStarTopology(mint);
+    return c.json({ success: true, data, count: data.length });
   })
 
-  /**
-   * GET /api/v1/wash-trading/volume-anomalies
-   * Detect statistical volume anomalies
-   */
-  .get('/volume-anomalies', async (c) => {
-    try {
-      const mint = c.req.query('mint');
-      
-      if (!mint) {
-        return c.json(
-          { success: false, error: 'Token mint address required' },
-          400
-        );
-      }
-      
-      const anomalies = await washTradingService.detectVolumeAnomalies(mint);
-      
-      return c.json({
-        success: true,
-        data: anomalies,
-        count: anomalies.length
-      });
-    } catch (error) {
-      console.error('[Wash Trading] Volume anomaly detection error:', error);
-      return c.json(
-        { success: false, error: 'Detection failed' },
-        500
-      );
-    }
+  .get("/volume-anomalies", async (c) => {
+    const mint = c.req.query("mint");
+    if (!mint) return c.json({ success: false, error: "mint required" }, 400);
+    const data = await washTradingService.detectVolumeAnomalies(mint);
+    return c.json({ success: true, data, count: data.length });
   });
 
 export default app;
