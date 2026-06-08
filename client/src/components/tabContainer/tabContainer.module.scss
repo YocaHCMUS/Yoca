@@ -133,13 +133,16 @@
   width: auto;
   min-width: 140px;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .tabHeaderTabsVertical {
   display: flex;
   flex-direction: column;
   flex: 1;
-  max-height: $spacing-10;
+  min-height: 0;
+  overflow-y: auto;
 
   .tabButton,
   .tabButtonActive {
@@ -190,6 +193,8 @@
 
   .tabHeaderTabsVertical {
     flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
 
     .tabButton,
     .tabButtonActive {
