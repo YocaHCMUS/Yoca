@@ -1,6 +1,6 @@
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/theme' as *;
-@use '@carbon/react/scss/type' as *;
+@use "@carbon/react/scss/spacing" as *;
+@use "@carbon/react/scss/theme" as *;
+@use "@carbon/react/scss/type" as *;
 
 .backdrop {
   position: fixed;
@@ -18,7 +18,7 @@
   background-color: $layer-01;
   border: 1px solid $border-subtle;
   border-radius: 8px;
-  width: 1040px;
+  width: 920px;
   max-width: calc(100vw - #{$spacing-09});
   max-height: 85vh;
   overflow: hidden;
@@ -29,22 +29,66 @@
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 
-.row {
+.closeBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: $icon-primary;
   display: flex;
-  flex-direction: row;
-  align-items: baseline;
-  gap: $spacing-02;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-02;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background-color: $layer-hover-01;
+  }
 }
 
-.col {
+.tokenCard {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: end;
+  align-items: center;
+  gap: $spacing-03;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.arrow {
+  flex-shrink: 0;
+  color: $icon-secondary;
+  display: flex;
+  align-items: center;
+}
+
+.summary {
+  text-align: center;
+  margin: $spacing-05 0;
+
+  strong {
+    color: $text-primary;
+  }
+}
+
+/* ── Two-column layout ───────────────────────── */
+.twoColumnLayout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-06;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .twoColumnLayout {
+    grid-template-columns: 1fr;
+    gap: $spacing-05;
+  }
 }
 
 .rightColumn {
-  padding-left: $spacing-05;
-  padding-right: $spacing-01;
+  padding-left: $spacing-06;
   border-left: 1px solid $border-subtle;
   height: 100%;
   max-height: calc(85vh - #{$spacing-06} * 2 - #{$spacing-05} * 2);
@@ -66,206 +110,29 @@
   }
 }
 
-/* ── Header ──────────────────────────────────── */
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.title {
-  @include type-style('heading-03');
-  color: $text-primary;
-}
-
-.closeBtn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: $icon-primary;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $spacing-02;
-  border-radius: 4px;
-  transition: background-color 0.15s;
-
-  &:hover {
-    background-color: $layer-hover-01;
-  }
-}
-
-/* ── Transfer visual ─────────────────────────── */
-.transferVisual {
-  display: flex;
-  align-items: center;
-  gap: $spacing-04;
-  background-color: $layer-02;
-  border-radius: 6px;
-  padding: $spacing-05;
-}
-
-.tokenCard {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $spacing-02;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.dirLabel {
-  @include type-style('label-01');
-  color: $text-secondary;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.tokenAmt {
-  @include type-style('heading-04');
-  color: $text-primary;
-  font-variant-numeric: tabular-nums;
-  word-break: break-all;
-  text-align: center;
-  width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tokenIdentity {
-  display: inline-flex;
-  justify-content: center;
-  width: 100%;
-  overflow: hidden;
-}
-
-.arrow {
-  flex-shrink: 0;
-  color: $icon-secondary;
-  display: flex;
-  align-items: center;
-}
-
-/* ── Summary sentence ────────────────────────── */
-.summary {
-  @include type-style('body-01');
-  color: $text-secondary;
-  text-align: center;
-  margin: $spacing-04;
-  overflow-wrap: break-word;
-  word-break: break-word;
-
-  strong {
-    color: $text-primary;
-  }
-}
-
-/* ── Detail rows ─────────────────────────────── */
-.details {
-  border-top: 1px solid $border-subtle;
-  padding-top: $spacing-05;
+/* ── Transfers section ───────────────────────── */
+.transfersSection {
   display: flex;
   flex-direction: column;
   gap: $spacing-03;
 }
 
-.detailRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $spacing-05;
-}
-
-.detailKey {
-  @include type-style('label-01');
-  color: $text-secondary;
-  flex-shrink: 0;
-}
-
-.detailVal {
-  @include type-style('body-compact-01');
-  color: $text-primary;
-  font-family: 'IBM Plex Mono', monospace;
-  text-align: right;
-}
-
-.detailLink {
-  @include type-style('body-compact-01');
-  color: $link-primary;
-  font-family: 'IBM Plex Mono', monospace;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: $spacing-01;
-
-  &:hover {
-    color: $link-primary-hover;
-    text-decoration: underline;
-  }
-}
-
-.txSigGroup {
-  display: flex;
-  align-items: center;
-  gap: $spacing-01;
-}
-
-/* ── Two-column layout ───────────────────────── */
-.twoColumnLayout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: $spacing-05;
-  align-items: start;
-}
-
-@media (max-width: 640px) {
-  .twoColumnLayout {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ── Transfers section ───────────────────────── */
-.transfersSection {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-02;
-}
-
-.transferSectionTitle {
-  @include type-style('label-01');
-  color: $text-secondary;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin: 0;
-}
-
 .transferList {
   display: flex;
   flex-direction: column;
-  gap: $spacing-01;
-}
-
-.transferItem {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-02;
-}
-
-.transferInfoRow {
-  display: flex;
-  align-items: center;
-  gap: $spacing-02;
+  gap: $spacing-03;
 }
 
 .transferGroup {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  padding: $spacing-02 $spacing-03;
+  gap: $spacing-02;
+  padding: $spacing-03 $spacing-04;
   background-color: $layer-02;
   border-radius: 4px;
+  transition:
+    background-color 0.15s,
+    outline 0.15s;
 }
 
 .transferGroup.highlighted {
@@ -273,140 +140,10 @@
   background-color: $layer-hover-02;
 }
 
-.transferSubRow {
-  display: flex;
-  align-items: center;
-  gap: $spacing-02;
-  padding: 0 $spacing-02 0 0;
-  font-family: 'IBM Plex Mono', monospace;
-}
-
-.transferTokenAddr {
-  @include type-style('label-01');
-  color: $text-placeholder;
-  font-size: 0.625rem;
-  font-family: 'IBM Plex Mono', monospace;
-  cursor: pointer;
-  transition: color 0.15s;
-  display: inline-flex;
-  align-items: center;
-  gap: $spacing-01;
-
-  &:hover {
-    color: $link-primary;
-    text-decoration: underline;
-  }
-}
-
-.transferDir {
-  font-weight: 700;
-  width: 1rem;
-  text-align: center;
-}
-
-.transferAmount {
-  @include type-style('body-compact-01');
-  font-variant-numeric: tabular-nums;
-}
-
-.transferAmountIn {
-  color: $support-success;
-}
-
-.transferAmountOut {
-  color: $support-error;
-}
-
-.transferSpacer {
-  flex: 1;
-}
-
-.transferFromTo {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  min-width: 0;
-}
-
-.transferArrowSep {
-  color: $text-secondary;
-  font-size: 0.65rem;
-  flex-shrink: 0;
-}
-
-.transferAddrLabel {
-  @include type-style('label-01');
-  color: $text-secondary;
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 0.65rem;
-}
-
-.transferAddress {
-  @include type-style('body-compact-01');
-  color: $text-secondary;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: color 0.15s;
-
-  &:hover {
-    color: $link-primary;
-    text-decoration: underline;
-  }
-}
-
-.addressWithCopy {
-  display: flex;
-  align-items: center;
-  gap: $spacing-01;
-
-}
-
-/* ── Fee section ─────────────────────────────── */
-.feeSection {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-02;
-  margin-top: $spacing-04;
-  padding-top: $spacing-04;
-  border-top: 1px solid $border-subtle;
-}
-
-.feeRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: $spacing-02 0;
-}
-
-.feeLabel {
-  @include type-style('label-01');
-  color: $text-secondary;
-}
-
-.feeValue {
-  @include type-style('body-compact-01');
-  color: $text-primary;
-  font-family: 'IBM Plex Mono', monospace;
-  font-variant-numeric: tabular-nums;
-}
-
-.feeValueLink {
-  cursor: pointer;
-  transition: color 0.15s;
-
-  &:hover {
-    color: $link-primary;
-    text-decoration: underline;
-  }
-}
-
 /* ── Loading ─────────────────────────────────── */
 .loadingContainer {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: $spacing-06 0;
+  padding: $spacing-08 0;
 }

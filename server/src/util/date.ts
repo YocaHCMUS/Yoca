@@ -15,26 +15,35 @@ export const periodToDayCount: Record<DayPeriodLike, number> = {
   All: -1,
 };
 
-export function getUtcDatesFromNow(dayPeriod: DayPeriodLike): string[] {
+export function getDateMsFromNow(
+  dayPeriod: DayPeriodLike,
+): number[] {
   const nowUtc = dayjs.utc();
-  const todayStart = nowUtc.startOf("day");
-  const results: string[] = [];
+  const dayCount = periodToDayCount[dayPeriod];
+  const todayStart = nowUtc.endOf("day");
+  const res : number[] = [];
 
-  for (let i = 0; i < periodToDayCount[dayPeriod]; i++) {
+  for (let i = dayCount - 1; i >= 1; i--) {
     const date = todayStart.subtract(i, "day");
-    results.push(date.toISOString());
+    res.push(date.valueOf());
   }
-  return results;
+  res.push(nowUtc.valueOf());
+
+  return res;
 }
 
-export function getUtcDatesFromNowMs(dayPeriod: DayPeriodLike): number[] {
+// end date is exclusive, start date is inclusive
+export function getUtcDateRangeFromNow(
+  dayPeriod: DayPeriodLike,
+): [number, number] {
   const nowUtc = dayjs.utc();
   const todayStart = nowUtc.startOf("day");
-  const results: number[] = [];
+  const dayCount = periodToDayCount[dayPeriod];
 
-  for (let i = 0; i < periodToDayCount[dayPeriod]; i++) {
-    const date = todayStart.subtract(i, "day");
-    results.push(date.valueOf());
-  }
-  return results;
+  const endDate = todayStart.add(1, "day").valueOf();
+  const startDate = todayStart
+    .subtract(dayCount == -1 ? 0 : dayCount - 1, "day")
+    .valueOf();
+
+  return [startDate, endDate];
 }

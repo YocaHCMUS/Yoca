@@ -40,12 +40,12 @@ import {
   Wikis,
 } from "@carbon/react/icons";
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, useLocation } from "react-router";
 import { SignInModal } from "../auth/SignInModal";
 import MarketTicker from "../MarketTicker";
 import { Divider } from "../partials/Divider/Divider";
 import { SearchBar } from "../search/SearchBar";
 import styles from "./PageWrapper.module.scss";
+import { useLocation } from "react-router";
 
 function ThemeToggleGlobalAction() {
   const { theme, toggleTheme } = useUserTheme();
@@ -76,6 +76,11 @@ type PageWrapperProps = {
   };
   onHeaderPanelOpenChange?: (isOpen: boolean) => void;
   noMarketTickers?: boolean;
+  wideContent?: boolean;
+  authPopup?: {
+    isOpen: boolean;
+    onClose: () => void;
+  };
 };
 
 function getNotificationSeverityLabel(severity: AlertNotification["severity"]) {
@@ -107,6 +112,8 @@ export function PageWrapper({
   children,
   extraHeaderPanel,
   noMarketTickers = true,
+  wideContent = false,
+  authPopup,
 }: PageWrapperProps) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
@@ -120,6 +127,17 @@ export function PageWrapper({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const isHeaderNotificationPanelOpen = openPanel == "notifications";
   const isAnyExtraPanelOpen = isExtraPanelOpen || isHeaderNotificationPanelOpen;
+
+  useEffect(() => {
+    if (authPopup && isSignInOpen != authPopup.isOpen)
+      setIsSignInOpen(authPopup.isOpen);
+  }, [authPopup]);
+
+  useEffect(() => {
+    if (authPopup && !isSignInOpen) {
+      authPopup.onClose();
+    }
+  }, [isSignInOpen]);
 
   // Ctrl+K / Cmd+K to open search
   useEffect(() => {
@@ -165,7 +183,7 @@ export function PageWrapper({
   function NavHeaderItems() {
     return (
       <>
-        <HeaderMenuItem href="/market">{tr("nav.dashboard")}</HeaderMenuItem>
+        <HeaderMenuItem href="/market">{tr("nav.market")}</HeaderMenuItem>
         <HeaderMenuItem href="/alerts">{tr("nav.alerts")}</HeaderMenuItem>
       </>
     );
@@ -425,7 +443,13 @@ export function PageWrapper({
 
       <Content
         id="main-content"
-        className={isAnyExtraPanelOpen ? styles.contentDimmed : ""}
+        className={
+          isAnyExtraPanelOpen
+            ? styles.contentDimmed
+            : wideContent
+              ? styles.wideContent
+              : ""
+        }
         style={
           {
             "--page-content-top-offset": noMarketTickers ? "0rem" : "3.5rem",

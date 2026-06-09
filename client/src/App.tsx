@@ -1,12 +1,18 @@
-import { BrowserRouter, Route, Routes } from "react-router";
+import {
+  createBrowserRouter,
+  Outlet,
+  RouterProvider,
+  useNavigation,
+} from "react-router";
+
+import { Loading } from "@carbon/react";
 import "./App.css";
-import { PageWrapper } from "@/components/wrapper";
 import Index from "@/pages";
 import AlertsPage from "@/pages/alerts";
-import AuthShowcase from "@/pages/auth";
 import HistoricalDataPage from "@/pages/historical-data";
 import MarketPage from "@/pages/market";
 import NotFoundPage from "@/pages/not-found";
+import PricingPage from "@/pages/pricing";
 import ProfilePage from "@/pages/profile";
 import TokenPage from "@/pages/token";
 import TokenOverviewPage from "@/pages/token-overview";
@@ -14,117 +20,148 @@ import TransactionGraphPage from "@/pages/transactions";
 import UnauthorizedPage from "@/pages/unauthorized";
 import WalletPage from "@/pages/wallet";
 import WalletsComparisonPage from "@/pages/walletsComparison";
-import PricingPage from "@/pages/pricing";
-import { Component, type ReactNode } from "react";
-import { AuthGuard, SignInModal, SignUpModal } from "./components/auth";
 import AlertsDemo from "./pages/alerts/demo";
-import { useAuth } from "./contexts/AuthContext";
 
-function LandingRoute() {
-  return <Index />;
-}
+import { AuthGuard } from "./components/auth";
+import { useLocalization } from "./contexts/LocalizationContext";
+import { BalanceChartV2 } from "./components/charts/BalanceChartV2/BalanceChartV2";
 
-/** Catches render errors inside route elements so a silent crash does not
- *  abort the React Router transition (leaving the old page mounted). */
-class RouteErrorBoundary extends Component<
-  { children: ReactNode },
-  { error: Error | null }
-> {
-  constructor(props: { children: ReactNode }) {
-    super(props);
-    this.state = { error: null };
-  }
+function RootLayout() {
+  const navigation = useNavigation();
+  const { tr } = useLocalization();
 
-  static getDerivedStateFromError(error: Error) {
-    return { error };
-  }
+  const isLoading =
+    navigation.state == "loading" || navigation.state == "submitting";
 
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error("[RouteErrorBoundary] Caught render error:", error, info);
-  }
-
-  render() {
-    if (this.state.error) {
-      return (
-        <div style={{ padding: "2rem", color: "red" }}>
-          <h2>Something went wrong loading this page.</h2>
-          <pre style={{ fontSize: "0.8rem", whiteSpace: "pre-wrap" }}>
-            {this.state.error.message}
-          </pre>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingRoute />} />
-        <Route path="/auth" element={<AuthShowcase />} />
-        <Route path="/pricing" element={<PricingPage />} />
-        <Route path="/unauthorized" element={<UnauthorizedPage />} />
-        <Route path="/test-401" element={<UnauthorizedPage />} />
-        {/* <Route path="/dashboard" element={<DashboardPage />} /> */}
-        <Route path="/market" element={<MarketPage />} />
-        <Route path="/alerts" element={<AlertsPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/tokens" element={<TokenPage />} />
-        <Route
-          path="/alerts/demo"
-          element={
-            <AuthGuard>
-              <AlertsDemo />
-            </AuthGuard>
-          }
-        />
-        <Route path="/tokens/:address" element={<TokenOverviewPage />} />
-        <Route path="/tokens/:address/:poolAddress" element={<TokenPage />} />
-        <Route
-          path="/historical-data/:address"
-          element={<HistoricalDataPage />}
-        />
-        <Route path="/transactions" element={<TransactionGraphPage />} />
-        <Route
-          path="/transactions/:txHash"
-          element={<TransactionGraphPage />}
-        />
-        {/* /comparison/wallets must be declared before /wallets/:address to avoid ambiguity */}
-        <Route
-          path="/comparison/wallets"
-          element={
-            <RouteErrorBoundary>
-              <WalletsComparisonPage />
-            </RouteErrorBoundary>
-          }
-        />
-        <Route path="/wallets/:address" element={<WalletPage />} />
-        <Route
-          path="/wallets/:address"
-          element={
-            <RouteErrorBoundary>
-              <WalletPage />
-            </RouteErrorBoundary>
-          }
-        />
-        <Route path="/secret-admin-dashboard" element={<UnauthorizedPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-      <GlobalAuthModals />
-    </BrowserRouter>
-  );
-}
-
-function GlobalAuthModals() {
-  const { isSignInOpen, isSignUpOpen, closeAuthModal } = useAuth();
   return (
     <>
-      <SignInModal open={isSignInOpen} onClose={closeAuthModal} />
-      <SignUpModal open={isSignUpOpen} onClose={closeAuthModal} />
+      <Loading
+        active={isLoading}
+        description={tr("common.loading")}
+        withOverlay
+      />
+      <Outlet />
     </>
   );
+}
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <RootLayout />,
+
+    children: [
+      {
+        index: true,
+        element: <Index />,
+      },
+
+      {
+        path: "pricing",
+        element: <PricingPage />,
+      },
+
+      {
+        path: "unauthorized",
+        element: <UnauthorizedPage />,
+      },
+
+      {
+        path: "market",
+        element: <MarketPage />,
+      },
+
+      // {
+      //   path: "alerts",
+      //   element: <AlertsPage />,
+        
+      // },
+
+      {
+        path: "alerts",
+        element: (
+          <AuthGuard>
+            <AlertsPage />
+          </AuthGuard>
+        ),
+      },
+
+      {
+        path: "profile",
+        element: (
+          <AuthGuard>
+            <ProfilePage />
+          </AuthGuard>
+        ),
+      },
+
+      {
+        path: "tokens",
+        element: <TokenPage />,
+      },
+
+      {
+        path: "tokens/:address",
+        element: <TokenOverviewPage />,
+      },
+
+      {
+        path: "tokens/:address/:poolAddress",
+        element: <TokenPage />,
+      },
+
+      {
+        path: "historical-data/:address",
+        element: <HistoricalDataPage />,
+      },
+
+      {
+        path: "transactions",
+        element: <TransactionGraphPage />,
+      },
+
+      {
+        path: "transactions/:txHash",
+        element: <TransactionGraphPage />,
+      },
+
+      {
+        path: "comparison/wallets",
+        element: <WalletsComparisonPage />,
+      },
+
+      {
+        path: "wallets/:address",
+        element: <WalletPage />,
+      },
+
+      {
+        path: "secret-admin-dashboard",
+        element: <UnauthorizedPage />,
+      },
+
+      {
+        path: "not-found",
+        element: <NotFoundPage />,
+      },
+
+      {
+        path: "balance",
+        element: (
+          <BalanceChartV2 address="3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH" />
+        ),
+      },
+
+      {
+        path: "*",
+        element: <NotFoundPage />,
+      },
+    ],
+  },
+]);
+
+function App() {
+  return <RouterProvider router={router} />;
 }
 
 export default App;

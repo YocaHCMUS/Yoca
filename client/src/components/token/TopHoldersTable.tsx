@@ -1,5 +1,4 @@
 import Tble from "@/components/Tble";
-import { SOLSCAN_ACCOUNT_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { Link } from "@carbon/react";
 import { useMemo } from "react";
@@ -31,9 +30,7 @@ export function TopHoldersTable({
       rank: <span>{idx + 1}</span>,
       address: (
         <Link
-          href={`${SOLSCAN_ACCOUNT_URL}/${holder.holderAddress}`}
-          target="_blank"
-          rel="noopener noreferrer"
+          href={`/wallets/${holder.holderAddress}`}
           className={styles.addressLink}
         >
           {fmt.text.address(holder.holderAddress)}

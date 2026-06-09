@@ -3,7 +3,6 @@ import classNames from "classnames";
 import { type CSSProperties, type PropsWithChildren } from "react";
 
 type TxtSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
-type TxtTone = "primary" | "secondary";
 type TxtWeight = "regular" | "medium" | "semibold" | "bold";
 type TxtProps = {
   size?: TxtSize;
@@ -11,11 +10,11 @@ type TxtProps = {
   stretch?: boolean;
   secondary?: boolean;
   bold?: boolean;
-  tone?: TxtTone;
   weight?: TxtWeight;
   align?: TxtAlign;
   uppercase?: boolean;
   ellipsis?: boolean;
+  mono?: boolean;
   width?: string | number;
   className?: string;
   style?: CSSProperties;
@@ -44,10 +43,10 @@ export function Txt({
   block,
   stretch,
   secondary,
-  tone,
   weight,
   uppercase,
   ellipsis,
+  mono,
   width,
   children,
   align,
@@ -56,7 +55,6 @@ export function Txt({
   size = "md",
 }: PropsWithChildren<TxtProps>) {
   const resolvedWeight = bold ? "bold" : weight;
-  const resolvedTone: TxtTone = tone || (secondary ? "secondary" : "primary");
 
   return (
     <span
@@ -66,9 +64,9 @@ export function Txt({
         fontWeight: resolvedWeight ? weightValue[resolvedWeight] : undefined,
         fontSize: `${sizeFontSize[size]}rem`,
         display: block ? "block" : stretch ? "inline-block" : undefined,
-        color:
-          resolvedTone == "secondary" ? cds.textSecondary : cds.textPrimary,
+        color: secondary ? cds.textSecondary : "inherit",
         width: stretch ? "100%" : width,
+        fontFamily: mono ? "monospace" : undefined,
         ...(ellipsis && {
           overflow: "hidden",
           whiteSpace: "nowrap",

@@ -13,7 +13,6 @@ import type {
 import { getWalletSwaps, getWalletTransfers } from "./walletTransfersSwaps.service.js";
 import { resolveEnhancedTransactions } from "./providers/walletEnhancedTx.service.js";
 import { roundUsd } from "./walletNormalization.utils.js";
-import { isRentExemptLikeLamports } from "./providers/helius-to-swap.js";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -26,12 +25,6 @@ export function isBaseAsset(mint: string | undefined): boolean {
     if (!mint) return false;
     return mint === SOL_MINT || STABLE_MINTS.has(mint);
 }
-
-function getUtcStartOfDayMs(tsMs: number): number {
-    const d = new Date(tsMs);
-    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-}
-
 interface TokenAccumulator {
     symbol: string;
     logoUri: string | null;
@@ -46,7 +39,7 @@ export async function getWalletDayActivitySummary(
     address: string,
     dayMs: number,
 ): Promise<WalletDayActivitySummary> {
-    const fromMs = getUtcStartOfDayMs(dayMs);
+    const fromMs = dayMs;
     const toMs = fromMs + 24 * 60 * 60 * 1000 - 1;
 
     const date = new Date(fromMs).toISOString().split("T")[0] ?? "";

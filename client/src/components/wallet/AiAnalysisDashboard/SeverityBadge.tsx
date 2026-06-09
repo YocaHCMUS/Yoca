@@ -1,7 +1,8 @@
 import styles from "./AiAnalysisDashboard.module.scss";
 import { HelpTooltip } from "./HelpTooltip";
+import { useAiAnalysisI18n } from "./i18n";
 import type { Severity } from "./types";
-import { getSeverityClass, getSeverityTooltip } from "./utils";
+import { getSeverityClass } from "./utils";
 
 export function SeverityBadge({
   severity,
@@ -10,14 +11,15 @@ export function SeverityBadge({
   severity?: Severity;
   context?: "finding" | "risk";
 }) {
+  const { severityLabel, severityTooltip } = useAiAnalysisI18n();
   if (!severity) return null;
   const tone = getSeverityClass(severity);
   return (
     <span className={styles.labelWithTooltip}>
       <span className={`${styles.severityBadge} ${styles[`severity_${tone}`]}`}>
-        {String(severity).toUpperCase()}
+        {severityLabel(severity)}
       </span>
-      <HelpTooltip text={getSeverityTooltip(severity, context)} />
+      <HelpTooltip text={severityTooltip(severity, context)} />
     </span>
   );
 }

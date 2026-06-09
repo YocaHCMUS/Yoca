@@ -1,39 +1,41 @@
 import styles from "./AiAnalysisDashboard.module.scss";
 import { ExplanationDetails } from "./HelpTooltip";
+import { useAiAnalysisI18n } from "./i18n";
 
 export function HowToReadAnalysis() {
+  const { tr } = useAiAnalysisI18n();
   return (
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div>
-          <h3 className={styles.sectionTitle}>How to Read This Analysis</h3>
-          <p className={styles.sectionDescription}>A compact guide to the labels, scores, and evidence.</p>
+          <h3 className={styles.sectionTitle}>{tr("aiAnalysisDashboard.howToRead.title")}</h3>
+          <p className={styles.sectionDescription}>{tr("aiAnalysisDashboard.howToRead.description")}</p>
         </div>
       </div>
-      <ExplanationDetails summary="Open explanation">
+      <ExplanationDetails summary={tr("aiAnalysisDashboard.howToRead.open")}>
         <div className={styles.explanationGrid}>
           <div className={styles.explanationBlock}>
-            <div className={styles.cardMetaLabel}>Persona vs Risk</div>
+            <div className={styles.cardMetaLabel}>{tr("aiAnalysisDashboard.howToRead.personaVsRiskTitle")}</div>
             <p className={styles.inlineHelpText}>
-              Persona describes observed behavior. Risk Level describes the total strength of risk signals.
+              {tr("aiAnalysisDashboard.howToRead.personaVsRiskText")}
             </p>
           </div>
           <div className={styles.explanationBlock}>
-            <div className={styles.cardMetaLabel}>Scores</div>
+            <div className={styles.cardMetaLabel}>{tr("aiAnalysisDashboard.howToRead.scoresTitle")}</div>
             <p className={styles.inlineHelpText}>
-              Trust Score is 100 minus Risk Score. Scores are based only on the analyzed transaction window.
+              {tr("aiAnalysisDashboard.howToRead.scoresText")}
             </p>
           </div>
           <div className={styles.explanationBlock}>
-            <div className={styles.cardMetaLabel}>Evidence</div>
+            <div className={styles.cardMetaLabel}>{tr("aiAnalysisDashboard.howToRead.evidenceTitle")}</div>
             <p className={styles.inlineHelpText}>
-              Evidence signatures are representative examples users can verify on Solscan.
+              {tr("aiAnalysisDashboard.howToRead.evidenceText")}
             </p>
           </div>
           <div className={styles.explanationBlock}>
-            <div className={styles.cardMetaLabel}>Limitations</div>
+            <div className={styles.cardMetaLabel}>{tr("aiAnalysisDashboard.howToRead.limitationsTitle")}</div>
             <p className={styles.inlineHelpText}>
-              This is not financial advice or proof of suspicious behavior. Missing or unsupported transactions can reduce reliability.
+              {tr("aiAnalysisDashboard.howToRead.limitationsText")}
             </p>
           </div>
         </div>

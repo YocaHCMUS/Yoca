@@ -19,7 +19,7 @@ function Index() {
 
   return (
     <div
-      className="landing-page relative isolate h-screen overflow-y-auto bg-(--landing-bg) text-(--landing-foreground) antialiased selection:bg-(--landing-accent)/25 selection:text-(--landing-bg)"
+      className="landing-page relative isolate h-screen overflow-y-auto bg-[var(--landing-bg)] text-[var(--landing-foreground)] antialiased selection:bg-[var(--landing-accent)]/25 selection:text-[var(--landing-bg)]"
       style={createLandingThemeStyles(theme)}
     >
       <LandingNavbar />

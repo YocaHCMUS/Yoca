@@ -1,6 +1,6 @@
 import { ProfileOverview } from "@/components/profile/overview/ProfileOverview";
 import { Table, FilterType, SortType } from "@/components/tables/Table";
-import { renderLongCode, createProfilePortfolioCellRenderers } from "@/components/tables/TableCellRenderer";
+import { createProfilePortfolioCellRenderers } from "@/components/tables/TableCellRenderer";
 import { WalletActionButton } from "@/components/auth/WalletActionButton";
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,7 +8,7 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import { useProfileOverviewData } from "@/hooks/profile/useProfileOverviewData";
 import type { ProfileOverviewData, ProfileAccountTier } from "@/types/profile";
 import type { TimePeriod } from "@/types/chart-filters.types";
-import { AddLarge, Checkmark, Close, Edit } from "@carbon/icons-react";
+import { AddLarge } from "@carbon/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import {
@@ -20,7 +20,6 @@ import { getUserSubscription, type PlanTier } from "@/services/profile/subscript
 import type { LinkedWalletRowPayload } from "@/services/profile/profileDataProvider";
 import styles from "@/components/profile/shared/profile.module.scss";
 import { WalletOverviewPeriodKey } from "@/services/wallet/walletApi";
-import { Button, IconButton, TextInput } from "@carbon/react";
 import { useWalletLabels } from "@/hooks/profile/useWalletLabels";
 
 interface ProfilePortfolioTabProps {
@@ -187,7 +186,6 @@ export function ProfilePortfolioTab({
     <section className={styles.contentStack}>
       <ProfileOverview
         data={overviewData}
-        onPeriodChange={onPeriodChange}
         loading={loading}
       />
       {(user?.userId && (

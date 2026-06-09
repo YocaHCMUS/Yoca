@@ -8,6 +8,8 @@ import {
   btnPrimaryLeave,
 } from "@/components/landing/tokens";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserTheme } from "@/contexts/ThemeContext";
+import { createLandingThemeStyles } from "@/components/landing/tokens";
 import { AuthReminderModal, PaymentModalWrapper, PaymentSuccessModal } from "@/components/payment";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -125,6 +127,7 @@ function MetricRow({
 
 export default function PricingPage() {
   const { user } = useAuth();
+  const { theme } = useUserTheme();
   const [isStandard, setIsStandard] = useState(false);
   const col1 = isStandard ? STANDARD_DATA : LITE_DATA;
 
@@ -169,7 +172,8 @@ export default function PricingPage() {
   return (
     <div
       id="pricing"
-      className="landing-page min-h-screen w-full bg-[#0a0a0f] text-[#f8fafc] antialiased relative flex flex-col"
+      className="landing-page min-h-screen w-full antialiased relative flex flex-col"
+      style={createLandingThemeStyles(theme)}
     >
       <LandingNavbar />
 
@@ -222,7 +226,7 @@ export default function PricingPage() {
 
         {/* ── Header ── */}
         <div className="relative z-10 flex flex-col items-center text-center w-full max-w-3xl mx-auto mb-20">
-          <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-white mb-5">
+          <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-[var(--landing-)] mb-5">
             Pricing
           </h1>
           <p className="text-lg text-[#94a3b8] leading-relaxed">
@@ -236,17 +240,17 @@ export default function PricingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
 
             {/* ── Card 1: Dynamic Lite / Standard ── */}
-            <div className="flex flex-col !p-8 lg:!p-10 rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl hover:border-[#14F195]/40 transition-all duration-300">
+            <div className="flex flex-col !p-8 lg:!p-10 rounded-3xl border border-[var(--landing-)] bg-[var(--landing-)] backdrop-blur-xl shadow-2xl hover:border-[#14F195]/40 transition-all duration-300">
               <div className="flex flex-col flex-1 gap-6">
 
                 {/* Tier name + price */}
-                <div className="space-y-3 pb-6 border-b border-white/10">
+                <div className="space-y-3 pb-6 border-b border-[var(--landing-)]">
                   <div className="flex items-center gap-2">
                     <BoltIcon color="#14F195" />
-                    <h3 className="text-lg font-semibold text-white">{col1.name}</h3>
+                    <h3 className="text-lg font-semibold text-[var(--landing-)]">{col1.name}</h3>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-extrabold text-white">{col1.price}</span>
+                    <span className="text-5xl font-extrabold text-[var(--landing-)]">{col1.price}</span>
                     {col1.period && (
                       <span className="text-sm text-[#64748b] font-medium">{col1.period}</span>
                     )}
@@ -259,25 +263,25 @@ export default function PricingPage() {
                 </div>
 
                 {/* Toggle + CTA */}
-                <div className="space-y-4 pt-6 border-t border-white/10">
+                <div className="space-y-4 pt-6 border-t border-[var(--landing-)]">
                   {/* Pill toggle */}
                   <button
                     type="button"
                     role="switch"
                     aria-checked={isStandard}
                     onClick={() => setIsStandard((v) => !v)}
-                    className="w-full flex items-center justify-between bg-white/5 hover:bg-white/8 border border-white/10 !rounded-full px-4 py-2.5 transition-all duration-200 cursor-pointer"
+                    className="w-full flex items-center justify-between bg-[var(--landing-)] hover:bg-[var(--landing-)] border border-[var(--landing-)] !rounded-full px-4 py-2.5 transition-all duration-200 cursor-pointer"
                   >
                     <span className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">
                       STANDARD
                     </span>
                     <span
                       className={`relative flex items-center justify-start h-6 w-11 shrink-0 !rounded-full transition-colors duration-300 p-0.5 ${
-                        isStandard ? "bg-[#14F195]" : "bg-white/20"
+                        isStandard ? "bg-[#14F195]" : "bg-[var(--landing-border)]"
                       }`}
                     >
                       <span
-                        className={`inline-block h-5 w-5 !rounded-full bg-white shadow-md transition-transform duration-300 ${
+                        className={`inline-block h-5 w-5 !rounded-full bg-[var(--landing-foreground)] shadow-md transition-transform duration-300 ${
                           isStandard ? "translate-x-5" : "translate-x-0"
                         }`}
                       />
@@ -290,7 +294,7 @@ export default function PricingPage() {
                       id="pricing-lite-buy-btn"
                       type="button"
                       onClick={() => handleBuyNow({ name: col1.name, price: col1.price })}
-                      className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-white"
+                      className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-[var(--landing-)] border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-[var(--landing-)]"
                     >
                       {col1.cta}
                     </button>
@@ -298,7 +302,7 @@ export default function PricingPage() {
                     <button
                       id="pricing-standard-try-btn"
                       type="button"
-                      className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-white"
+                      className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-[var(--landing-)] border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-[var(--landing-)]"
                     >
                       {col1.cta}
                     </button>
@@ -308,16 +312,16 @@ export default function PricingPage() {
             </div>
 
             {/* ── Card 2: Plus ── */}
-            <div className="flex flex-col !p-8 lg:!p-10 rounded-3xl border border-[#14F195]/30 bg-white/[0.04] backdrop-blur-xl shadow-[0_0_40px_rgba(20,241,149,0.08)] hover:shadow-[0_0_60px_rgba(20,241,149,0.15)] hover:border-[#14F195]/60 transition-all duration-300 relative">
+            <div className="flex flex-col !p-8 lg:!p-10 rounded-3xl border border-[#14F195]/30 bg-[var(--landing-)] backdrop-blur-xl shadow-[0_0_40px_rgba(20,241,149,0.08)] hover:shadow-[0_0_60px_rgba(20,241,149,0.15)] hover:border-[#14F195]/60 transition-all duration-300 relative">
               <div className="flex flex-col flex-1 gap-6">
                 {/* Tier name + price */}
-                <div className="space-y-3 pb-6 border-b border-white/10">
+                <div className="space-y-3 pb-6 border-b border-[var(--landing-)]">
                   <div className="flex items-center gap-2">
                     <BoltIcon color="#14F195" />
-                    <h3 className="text-lg font-semibold text-white">{PLUS_TIER.name}</h3>
+                    <h3 className="text-lg font-semibold text-[var(--landing-)]">{PLUS_TIER.name}</h3>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-extrabold text-white">{PLUS_TIER.price}</span>
+                    <span className="text-5xl font-extrabold text-[var(--landing-)]">{PLUS_TIER.price}</span>
                     <span className="text-sm text-[#64748b] font-medium">{PLUS_TIER.period}</span>
                   </div>
                 </div>
@@ -327,12 +331,12 @@ export default function PricingPage() {
                 </div>
 
                 {/* CTA */}
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-[var(--landing-)]">
                   <button
                     id="pricing-plus-buy-btn"
                     type="button"
                     onClick={() => handleBuyNow({ name: PLUS_TIER.name, price: PLUS_TIER.price })}
-                    className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-white"
+                    className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-[var(--landing-)] border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-[var(--landing-)]"
                   >
                     Buy Now
                   </button>
@@ -341,16 +345,16 @@ export default function PricingPage() {
             </div>
 
             {/* ── Card 3: Pro ── */}
-            <div className="flex flex-col !p-8 lg:!p-10 rounded-3xl border border-[#14F195]/30 bg-white/[0.03] backdrop-blur-xl shadow-[0_0_30px_rgba(20,241,149,0.08)] hover:shadow-[0_0_50px_rgba(20,241,149,0.15)] hover:border-[#14F195]/60 transition-all duration-300 relative">
+            <div className="flex flex-col !p-8 lg:!p-10 rounded-3xl border border-[#14F195]/30 bg-[var(--landing-)] backdrop-blur-xl shadow-[0_0_30px_rgba(20,241,149,0.08)] hover:shadow-[0_0_50px_rgba(20,241,149,0.15)] hover:border-[#14F195]/60 transition-all duration-300 relative">
               <div className="flex flex-col flex-1 gap-6">
                 {/* Tier name + price */}
-                <div className="space-y-3 pb-6 border-b border-white/10">
+                <div className="space-y-3 pb-6 border-b border-[var(--landing-)]">
                   <div className="flex items-center gap-2">
                     <BoltIcon color="#14F195" />
-                    <h3 className="text-lg font-semibold text-white">{PRO_TIER.name}</h3>
+                    <h3 className="text-lg font-semibold text-[var(--landing-)]">{PRO_TIER.name}</h3>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-extrabold text-white">{PRO_TIER.price}</span>
+                    <span className="text-5xl font-extrabold text-[var(--landing-)]">{PRO_TIER.price}</span>
                     <span className="text-sm text-[#64748b] font-medium">{PRO_TIER.period}</span>
                   </div>
                 </div>
@@ -360,12 +364,12 @@ export default function PricingPage() {
                 </div>
 
                 {/* CTA */}
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-[var(--landing-)]">
                   <button
                     id="pricing-pro-buy-btn"
                     type="button"
                     onClick={() => handleBuyNow({ name: PRO_TIER.name, price: PRO_TIER.price })}
-                    className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-white/5 border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-white"
+                    className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-[var(--landing-)] border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-[var(--landing-)]"
                   >
                     Buy Now
                   </button>

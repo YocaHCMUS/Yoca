@@ -1,3 +1,5 @@
+import env from "@sv/util/load-env.js";
+
 export const CG_TOKEN_LIST_TTL_MS = 30 * 24 * 60 * 1000; // 1 month
 export const TOKEN_DETAILS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 1 week
 export const TOKEN_MARKET_DATA_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -54,7 +56,7 @@ export const WALLET_IDENTITY_KNOWN_TTL_MS = 6 * 60 * 60 * 1000; // 72 hours
 export const WALLET_IDENTITY_UNKNOWN_TTL_MS = 2 * 60 * 60 * 1000; // 24 hours
 
 export const WALLET_TOKEN_DETAILS_TTL_MS = 60 * 60 * 1000; // 1 hour
-export const WALLET_BALANCE_HISTORY_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+export const WALLET_BALANCE_HISTORY_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // AI Wallet Forensic Audit
 export const WALLET_AUDIT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -64,7 +66,8 @@ export const WALLET_AUDIT_TX_SAMPLE_SIZE = 30;
 /** Gemini model id used by the AI Wallet Forensic Auditor. Override with GEMINI_AUDIT_MODEL. */
 export const WALLET_AUDIT_MODEL =
   process.env.GEMINI_AUDIT_MODEL?.trim() || "gemini-2.5-flash";
-export const GOOGLE_AI_KEY = process.env.GOOGLE_AI_KEY?.trim();
+
+export const GOOGLE_AI_KEY = env.GOOGLE_AI_KEY?.trim();
 
 function readBooleanEnv(name: string, fallback: boolean): boolean {
   const value = process.env[name]?.trim().toLowerCase();
@@ -124,14 +127,14 @@ const apiCallTrackerRedactFields = readListEnv(
 export const API_CALL_TRACKER_REDACT_FIELDS = apiCallTrackerRedactFields.length
   ? apiCallTrackerRedactFields
   : [
-    "apikey",
-    "api_key",
-    "authorization",
-    "token",
-    "password",
-    "secret",
-    "signature",
-  ];
+      "apikey",
+      "api_key",
+      "authorization",
+      "token",
+      "password",
+      "secret",
+      "signature",
+    ];
 export const API_CALL_TRACKER_PROVIDER_ALLOWLIST = readListEnv(
   "API_CALL_TRACKER_PROVIDER_ALLOWLIST",
 );
@@ -165,7 +168,12 @@ export const TRANSACTION_FETCH_MAX_ITEM_COUNT = readNumberEnv(
 ); // get 500 earliest txs
 
 export const SWAPS_SAMPLE_SIZE = 200;
-export const GEMINI_MODEL = process.env.GEMINI_SWAP_SUMMARY_MODEL?.trim() || "gemini-3.1-flash-lite";
+export const GEMINI_MODEL = env.GEMINI_SWAP_SUMMARY_MODEL?.trim() || "";
+
+// Chatbot
+export const CHAT_MODEL = env.CHAT_MODEL?.trim() || "gemini-3.1-flash-lite";
+export const CHAT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min soft TTL
+export const CHAT_CACHE_HARD_TTL_MS = 30 * 60 * 1000; // 30 min hard TTL
 
 export const SYSTEM_PROMPT_EN =
   "You are a crypto trading analyst. Given the wallet's per-token PnL breakdown, " +

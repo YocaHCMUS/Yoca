@@ -11,8 +11,8 @@ import {
     type Subscription,
     type PaymentHistory,
 } from "@/services/profile/subscriptionApi";
-import { Loading } from "@carbon/react";
 import { Copy, Check } from "lucide-react";
+import ProfileLoadingState from "@/components/profile/shared/ProfileLoadingState";
 
 type SubscriptionSubtab = "subscriptions" | "payment-history";
 
@@ -70,11 +70,7 @@ export function ProfileSubscriptionsTab() {
   const subtabIndex = subtabs.findIndex((tab) => tab.id === activeSubtab);
 
   if (loading) {
-    return (
-      <div className={styles.emptyStateContainer}>
-        <Loading withOverlay={false} />
-      </div>
-    );
+    return <ProfileLoadingState />;
   }
 
   return (

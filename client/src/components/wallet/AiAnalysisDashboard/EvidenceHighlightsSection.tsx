@@ -1,6 +1,7 @@
 import styles from "./AiAnalysisDashboard.module.scss";
 import { EvidenceCard } from "./EvidenceCard";
 import { ExplanationDetails } from "./HelpTooltip";
+import { useAiAnalysisI18n } from "./i18n";
 import type { EvidenceLike } from "./types";
 
 type EvidenceHighlightsSectionProps = {
@@ -9,6 +10,7 @@ type EvidenceHighlightsSectionProps = {
 };
 
 export function EvidenceHighlightsSection({ evidenceHighlights, profileEvidence }: EvidenceHighlightsSectionProps) {
+  const { tr } = useAiAnalysisI18n();
   const evidence = evidenceHighlights && evidenceHighlights.length > 0
     ? evidenceHighlights
     : profileEvidence ?? [];
@@ -17,30 +19,30 @@ export function EvidenceHighlightsSection({ evidenceHighlights, profileEvidence 
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div>
-          <h3 className={styles.sectionTitle}>Evidence Highlights</h3>
-          <p className={styles.sectionDescription}>Signals and representative signatures used to support the analysis.</p>
+          <h3 className={styles.sectionTitle}>{tr("aiAnalysisDashboard.evidence.sectionTitle")}</h3>
+          <p className={styles.sectionDescription}>{tr("aiAnalysisDashboard.evidence.sectionDescription")}</p>
         </div>
       </div>
 
-      <ExplanationDetails summary="How to read evidence cards">
+      <ExplanationDetails summary={tr("aiAnalysisDashboard.evidence.howToRead")}>
         <div className={styles.explanationGrid}>
           <div className={styles.explanationBlock}>
-            <div className={styles.cardMetaLabel}>Value and Threshold</div>
+            <div className={styles.cardMetaLabel}>{tr("aiAnalysisDashboard.evidence.valueAndThreshold")}</div>
             <p className={styles.inlineHelpText}>
-              Value is the measured result for this wallet. Threshold is the rule level that triggered the signal.
+              {tr("aiAnalysisDashboard.evidence.valueAndThresholdDescription")}
             </p>
           </div>
           <div className={styles.explanationBlock}>
-            <div className={styles.cardMetaLabel}>Traceability</div>
+            <div className={styles.cardMetaLabel}>{tr("aiAnalysisDashboard.evidence.traceability")}</div>
             <p className={styles.inlineHelpText}>
-              Evidence IDs connect findings, risk factors, and evidence. Signatures are representative transactions users can verify on Solscan.
+              {tr("aiAnalysisDashboard.evidence.traceabilityDescription")}
             </p>
           </div>
         </div>
       </ExplanationDetails>
 
       {evidence.length === 0 ? (
-        <p className={styles.bodyText}>No evidence highlights are available for this wallet.</p>
+        <p className={styles.bodyText}>{tr("aiAnalysisDashboard.evidence.empty")}</p>
       ) : (
         <div className={styles.evidenceList}>
           {evidence.map((item, index) => (

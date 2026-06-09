@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
-import { ArrowLeft, ArrowRight, Close, Wallet } from "@carbon/react/icons";
-import { Loading } from "@carbon/react";
+import { ArrowLeft, ArrowRight, Close } from "@carbon/react/icons";
+import { Link, Loading } from "@carbon/react";
 import { Launch } from "@carbon/icons-react";
 import { ID_MODAL_ROOT } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import { CpyBtn } from "@/components/CpyBtn";
+import { TrendNum } from "@/components/TrendNum";
+import { Flex } from "@/components/Flex";
+import { Txt } from "@/components/Txt";
 import { useNavigate } from "react-router";
 import {
   fetchTxDetail,
@@ -14,6 +17,7 @@ import {
   type WalletTxDetail,
 } from "@/services/wallet/walletApi";
 import styles from "./TransferDetailModal.module.scss";
+import { Divider } from "@/components/partials/Divider/Divider";
 
 const WSOL_MINT = "So11111111111111111111111111111111111111112";
 const BASE_FEE_LAMPORTS = 5_000;
@@ -32,33 +36,37 @@ function resolveTokenMetaLookupAddress(tokenAddress: string): string {
   return tokenAddress;
 }
 
-function truncateSig(sig: string): string {
-  if (!sig || sig.length <= 8) return sig;
-  return `${sig.slice(0, 4)}...${sig.slice(-4)}`;
+function AddressLinkWithCopy({
+  address,
+  className,
+}: {
+  address: string;
+  className?: string;
+}) {
+  const { fmt } = useLocalization();
+  return (
+    <Flex align="center" gap={2}>
+      <Link href={`/wallets/${encodeURIComponent(address)}`} target="_blank">
+        <Txt mono className={className}>
+          {fmt.text.address(address)}
+        </Txt>
+      </Link>
+      <CpyBtn size="xs" copyWhat={address} align="top" />
+    </Flex>
+  );
 }
 
-function truncateAddr(addr: string): string {
-  if (!addr || addr.length <= 8) return addr;
-  return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
+function TrendAmount({
+  value,
+  formatter,
+}: {
+  value: number | null;
+  formatter: (value: number | null) => string;
+}) {
+  return <TrendNum value={value} prefixes="none" formatter={formatter} />;
 }
 
-function formatTimestamp(isoTimestamp: string): string {
-  const parsed = new Date(isoTimestamp);
-  if (Number.isNaN(parsed.getTime())) {
-    return isoTimestamp;
-  }
-
-  return parsed.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
-// ── Props ──────────────────────────────────────────────────────────────────
+// ── Props & Types ──────────────────────────────────────────────────────────
 
 interface TransferDetailModalProps {
   isOpen: boolean;
@@ -73,8 +81,6 @@ interface TokenMetaEntry {
   logoUri: string | null;
 }
 
-// ── Component ──────────────────────────────────────────────────────────────
-
 export function TransferDetailModal({
   isOpen,
   onClose,
@@ -86,10 +92,13 @@ export function TransferDetailModal({
 
   const [txDetail, setTxDetail] = useState<WalletTxDetail | null>(null);
   const [loading, setLoading] = useState(false);
-  const [tokenMetaMap, setTokenMetaMap] = useState<Record<string, TokenMetaEntry>>({});
+  const [tokenMetaMap, setTokenMetaMap] = useState<
+    Record<string, TokenMetaEntry>
+  >({});
 
   const isOut = transfer ? transfer.from === walletAddress : false;
 
+  // Fetch transaction details
   useEffect(() => {
     if (!isOpen || !transfer) {
       setTxDetail(null);
@@ -102,19 +111,13 @@ export function TransferDetailModal({
 
     fetchTxDetail(walletAddress, transfer.transactionSignature)
       .then((data) => {
-        if (!cancelled) {
-          setTxDetail(data);
-        }
+        if (!cancelled) setTxDetail(data);
       })
       .catch(() => {
-        if (!cancelled) {
-          setTxDetail(null);
-        }
+        if (!cancelled) setTxDetail(null);
       })
       .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       });
 
     return () => {
@@ -122,6 +125,7 @@ export function TransferDetailModal({
     };
   }, [isOpen, transfer, walletAddress]);
 
+  // Fetch token metadata
   useEffect(() => {
     if (!txDetail || txDetail.transfers.length === 0) return;
 
@@ -129,7 +133,9 @@ export function TransferDetailModal({
       .map((t) => resolveTokenMetaLookupAddress(t.mint))
       .filter((mint, i, arr) => {
         if (!mint) return false;
-        const existing = txDetail.transfers.find((t) => resolveTokenMetaLookupAddress(t.mint) === mint);
+        const existing = txDetail.transfers.find(
+          (t) => resolveTokenMetaLookupAddress(t.mint) === mint,
+        );
         if (existing?.symbol && existing?.logoUri) return false;
         return arr.indexOf(mint) === i;
       });
@@ -156,7 +162,7 @@ export function TransferDetailModal({
             }
           }
         })
-        .catch(() => { /* ignore */ });
+        .catch(() => {});
     });
 
     return () => {
@@ -164,6 +170,7 @@ export function TransferDetailModal({
     };
   }, [txDetail]);
 
+  // Escape key hook
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -183,7 +190,11 @@ export function TransferDetailModal({
   const tokenSymbol = (transfer.tokenSymbol || "UNKNOWN").toUpperCase();
   const tokenName = transfer.tokenName ?? null;
   const tokenLogoUri = transfer.tokenLogoUri ?? null;
-  const priorityFee = txDetail ? Math.max(0, txDetail.feePaid - BASE_FEE_LAMPORTS) : 0;
+  const priorityFee = txDetail
+    ? Math.max(0, txDetail.feePaid - BASE_FEE_LAMPORTS)
+    : 0;
+  const baseFeeSol = BASE_FEE_LAMPORTS / 1e9;
+  const priorityFeeSol = priorityFee / 1e9;
 
   const otherAddr = isOut ? transfer.to : transfer.from;
 
@@ -196,9 +207,9 @@ export function TransferDetailModal({
       aria-label="Transfer details"
     >
       <div className={styles.card} onClick={(e) => e.stopPropagation()}>
-        {/* ── Header ── */}
-        <div className={styles.header}>
-          <span className={styles.title}>{tr("walletPage.transferDetails")}</span>
+        {/* Header */}
+        <Flex justify="between" align="center">
+          <Txt size="lg">{tr("walletPage.transferDetails")}</Txt>
           <button
             className={styles.closeBtn}
             onClick={onClose}
@@ -206,7 +217,7 @@ export function TransferDetailModal({
           >
             <Close size={20} />
           </button>
-        </div>
+        </Flex>
 
         {loading ? (
           <div className={styles.loadingContainer}>
@@ -214,222 +225,160 @@ export function TransferDetailModal({
           </div>
         ) : (
           <div className={styles.twoColumnLayout}>
-            {/* ── Left column: transfer info ── */}
+            {/* Left column: main transfer info */}
             <div>
-              {/* ── Transfer visual ── */}
-              <div className={styles.transferVisual}>
-                <div className={styles.tokenCard}>
-                  <span className={styles.dirLabel}>{isOut ? tr("walletPage.sent") : tr("walletPage.received")}</span>
-                  <span className={styles.tokenAmt} title={String(transfer.amount)}>
+              {/* Transfer Visual mapping */}
+              <Flex dir="row" align="center" gap={6}>
+                <Flex
+                  dir="column"
+                  align="center"
+                  gap={3}
+                  className={styles.tokenCard}
+                >
+                  <Txt size="sm" secondary uppercase>
+                    {isOut ? tr("walletPage.sent") : tr("walletPage.received")}
+                  </Txt>
+                  <Txt size="lg" mono>
                     {fmt.num.compact.decimal(transfer.amount)}
-                  </span>
-                  <span className={styles.tokenIdentity} title={transfer.tokenAddress}>
-                    <TokenIdentityCell
-                      symbol={tokenSymbol}
-                      fullName={tokenName}
-                      imageUrl={tokenLogoUri ?? undefined}
-                      imageSize={30}
-                      tooltipAlign="right"
-                    />
-                  </span>
-                </div>
+                  </Txt>
+                  <TokenIdentityCell
+                    symbol={tokenSymbol}
+                    fullName={tokenName}
+                    imageUrl={tokenLogoUri ?? undefined}
+                    imageSize={30}
+                    tooltipAlign="right"
+                  />
+                </Flex>
 
                 <div className={styles.arrow}>
                   {isOut ? <ArrowRight size={28} /> : <ArrowLeft size={28} />}
                 </div>
 
-                <div className={styles.tokenCard}>
-                  <span className={styles.dirLabel}>{isOut ? tr("walletPage.to") : tr("walletPage.from")}</span>
-                  <span
-                    className={styles.transferAddress}
-                    title={otherAddr}
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/wallets/${encodeURIComponent(otherAddr)}`);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        navigate(`/wallets/${encodeURIComponent(otherAddr)}`);
-                      }
-                    }}
-                  >
-                    {truncateAddr(otherAddr)}
-                  </span>
-                </div>
+                <Flex
+                  dir="column"
+                  align="center"
+                  gap={3}
+                  className={styles.tokenCard}
+                >
+                  <Txt size="sm" secondary uppercase>
+                    {isOut ? tr("walletPage.to") : tr("walletPage.from")}
+                  </Txt>
+                  <AddressLinkWithCopy address={otherAddr} />
+                </Flex>
+              </Flex>
+
+              {/* Summary Sentence */}
+              <div className={styles.summary}>
+                <Txt>
+                  {isOut ? tr("walletPage.sent") : tr("walletPage.received")}{" "}
+                  <strong>
+                    {fmt.num.compact.decimal(transfer.amount)} {tokenSymbol}
+                  </strong>{" "}
+                  {isOut ? tr("walletPage.to") : tr("walletPage.from")}{" "}
+                  <strong title={otherAddr}>
+                    {fmt.text.address(otherAddr)}
+                  </strong>
+                </Txt>
               </div>
 
-              {/* ── Summary ── */}
-              <p className={styles.summary}>
-                {isOut ? tr("walletPage.sent") : tr("walletPage.received")}{" "}
-                <strong>
-                  {fmt.num.compact.decimal(transfer.amount)} {tokenSymbol}
-                </strong>{" "}
-                {isOut ? tr("walletPage.to") : tr("walletPage.from")}{" "}
-                <strong title={otherAddr}>{truncateAddr(otherAddr)}</strong>
-              </p>
+              {/* Detail Rows */}
+              <Flex dir="column" gap={6}>
+                <Divider />
 
-              {/* ── Detail rows ── */}
-              <div className={styles.details}>
-                <div className={styles.detailRow}>
-                  <span className={styles.detailKey}>{tr("walletPage.signature")}</span>
-                  <span className={styles.txSigGroup}>
-                    <a
-                      className={styles.detailLink}
+                <Flex justify="between" align="center">
+                  <Txt>{tr("walletPage.signature")}</Txt>
+                  <Flex align="center" gap={2}>
+                    <Link
                       href={`https://solscan.io/tx/${signature}`}
                       target="_blank"
-                      rel="noopener noreferrer"
-                      title={signature}
                     >
-                      {truncateSig(signature)}
-                      <Launch size={12} />
-                    </a>
-                  </span>
-                </div>
+                      <Txt mono>{fmt.text.txHash(signature)}</Txt>
+                    </Link>
+                    <Launch size={16} />
+                  </Flex>
+                </Flex>
 
-                <div className={styles.detailRow}>
-                  <span className={styles.detailKey}>{tr("walletPage.time")}</span>
-                  <span className={styles.detailVal}>{formatTimestamp(timestamp)}</span>
-                </div>
+                <Flex justify="between" align="center" gap={5}>
+                  <Txt>{tr("walletPage.time")}</Txt>
+                  <Txt mono>{fmt.datetime.datetime(timestamp)}</Txt>
+                </Flex>
 
-                <div className={styles.detailRow}>
-                  <span className={styles.detailKey}>{tr("walletPage.from")}</span>
-                  <span className={styles.addressWithCopy}>
-                    <span
-                      className={styles.detailVal}
-                      title={transfer.from}
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/wallets/${encodeURIComponent(transfer.from)}`);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          navigate(`/wallets/${encodeURIComponent(transfer.from)}`);
-                        }
-                      }}
-                    >
-                      {truncateAddr(transfer.from)}
-                    </span>
-                    <CpyBtn size="sm" copyWhat={transfer.from} align="top" />
-                  </span>
-                </div>
+                <Flex justify="between" align="center" gap={5}>
+                  <Txt>{tr("walletPage.from")}</Txt>
+                  <AddressLinkWithCopy address={transfer.from} />
+                </Flex>
 
-                <div className={styles.detailRow}>
-                  <span className={styles.detailKey}>{tr("walletPage.to")}</span>
-                  <span className={styles.addressWithCopy}>
-                    <span
-                      className={styles.detailVal}
-                      title={transfer.to}
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/wallets/${encodeURIComponent(transfer.to)}`);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          navigate(`/wallets/${encodeURIComponent(transfer.to)}`);
-                        }
-                      }}
-                    >
-                      {truncateAddr(transfer.to)}
-                    </span>
-                    <CpyBtn size="sm" copyWhat={transfer.to} align="top" />
-                  </span>
-                </div>
+                <Flex justify="between" align="center" gap={5}>
+                  <Txt>{tr("walletPage.to")}</Txt>
+                  <AddressLinkWithCopy address={transfer.to} />
+                </Flex>
 
-                <div className={styles.detailRow}>
-                  <span className={styles.detailKey}>{tr("walletPage.token")}</span>
-                  <span className={styles.detailVal} title={transfer.tokenAddress}>
-                    <TokenIdentityCell
-                      symbol={tokenSymbol}
-                      fullName={tokenName}
-                      imageUrl={tokenLogoUri ?? undefined}
-                      imageSize={16}
-                    />
-                  </span>
-                </div>
+                <Flex justify="between" align="center" gap={5}>
+                  <Txt>{tr("walletPage.token")}</Txt>
+                  <TokenIdentityCell
+                    symbol={tokenSymbol}
+                    fullName={tokenName}
+                    imageUrl={tokenLogoUri ?? undefined}
+                    imageSize={16}
+                  />
+                </Flex>
 
-                <div className={styles.detailRow}>
-                  <span className={styles.detailKey}>{tr("walletPage.amount")}</span>
-                  <span className={styles.detailVal}>{fmt.num.compact.decimal(transfer.amount)}</span>
-                </div>
+                <Flex justify="between" align="center" gap={5}>
+                  <Txt>{tr("walletPage.amount")}</Txt>
+                  <Txt mono>{fmt.num.compact.decimal(transfer.amount)}</Txt>
+                </Flex>
 
                 {transfer.amountUsd != null && (
-                  <div className={styles.detailRow}>
-                    <span className={styles.detailKey}>{tr("walletPage.value")}</span>
-                    <span className={styles.detailVal}>{fmt.num.currency(transfer.amountUsd)}</span>
-                  </div>
+                  <Flex justify="between" align="center" gap={5}>
+                    <Txt>{tr("walletPage.value")}</Txt>
+                    <Txt mono>{fmt.num.currency(transfer.amountUsd)}</Txt>
+                  </Flex>
                 )}
-              </div>
 
-              {txDetail && (
-                <div className={styles.feeSection}>
-                  <div className={styles.feeRow}>
-                    <span className={styles.feeLabel}>{tr("walletPage.feeInLamports")}</span>
-                    <span className={styles.feeValue}>{txDetail.feePaid / 1e9} SOL</span>
-                  </div>
-                  <div className={styles.feeRow}>
-                    <span className={styles.feeLabel}>{tr("walletPage.baseFee")}</span>
-                    <span className={styles.feeValue}>{(BASE_FEE_LAMPORTS / 1e9).toFixed(9)} SOL</span>
-                  </div>
-                  <div className={styles.feeRow}>
-                    <span className={styles.feeLabel}>{tr("walletPage.priorityFee")}</span>
-                    <span className={styles.feeValue}>{(priorityFee / 1e9).toFixed(9)} SOL</span>
-                  </div>
-                  <div className={styles.feeRow}>
-                    <span className={styles.feeLabel}>{tr("walletPage.feePayer")}</span>
-                    <span className={styles.addressWithCopy}>
-                      <span
-                        className={`${styles.feeValue} ${styles.feeValueLink}`}
-                        title={txDetail.feePayer}
-                        role="button"
-                        tabIndex={0}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/wallets/${encodeURIComponent(txDetail.feePayer)}`);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            navigate(`/wallets/${encodeURIComponent(txDetail.feePayer)}`);
-                          }
-                        }}
-                      >
-                        {truncateAddr(txDetail.feePayer)}
-                      </span>
-                      <CpyBtn size="sm" copyWhat={txDetail.feePayer} align="top" />
-                    </span>
-                  </div>
-                </div>
-              )}
+                {txDetail && (
+                  <Flex dir="column" gap={5}>
+                    <Divider />
+                    <Flex justify="between" align="center">
+                      <Txt>{tr("walletPage.feeInLamports")}</Txt>
+                      <Txt mono>
+                        {fmt.num.unit(txDetail.feePaid / 1e9, "SOL")}
+                      </Txt>
+                    </Flex>
+                    <Flex justify="between" align="center">
+                      <Txt>{tr("walletPage.baseFee")}</Txt>
+                      <Txt mono>{fmt.num.unit(baseFeeSol, "SOL")}</Txt>
+                    </Flex>
+                    <Flex justify="between" align="center">
+                      <Txt>{tr("walletPage.priorityFee")}</Txt>
+                      <Txt mono>{fmt.num.unit(priorityFeeSol, "SOL")}</Txt>
+                    </Flex>
+                    <Flex justify="between" align="center">
+                      <Txt>{tr("walletPage.feePayer")}</Txt>
+                      <AddressLinkWithCopy address={txDetail.feePayer} />
+                    </Flex>
+                  </Flex>
+                )}
+              </Flex>
             </div>
 
-            {/* ── Right column: other transfers + fees ── */}
+            {/* Right column: Transfers list in same tx */}
             <div className={styles.rightColumn}>
               {txDetail && txDetail.transfers.length > 0 && (
                 <div className={styles.transfersSection}>
-                  <h4 className={styles.transferSectionTitle}>
-                    {tr("walletPage.transfersInTransaction", { count: txDetail.transfers.length })}
-                  </h4>
+                  <Txt secondary uppercase>
+                    {tr("walletPage.transfersInTransaction", {
+                      count: txDetail.transfers.length,
+                    })}
+                  </Txt>
                   <div className={styles.transferList}>
                     {txDetail.transfers.map((t, i) => {
-                      const involvesWallet = t.from === walletAddress || t.to === walletAddress;
                       const isTransferOut = t.from === walletAddress;
+                      const otherTransferAddr = isTransferOut ? t.to : t.from;
                       const isInternal = t.from === t.to;
                       const lookupMint = resolveTokenMetaLookupAddress(t.mint);
                       const meta = tokenMetaMap[lookupMint];
-                      const symbol = meta?.symbol || t.symbol || t.mint.slice(0, 8);
+                      const symbol =
+                        meta?.symbol || t.symbol || t.mint.slice(0, 8);
                       const name = meta?.name ?? t.name;
                       const logoUri = meta?.logoUri ?? t.logoUri;
                       const isCurrentTransfer =
@@ -437,166 +386,49 @@ export function TransferDetailModal({
                         t.to === transfer.to &&
                         t.mint === transfer.tokenAddress &&
                         t.amount === transfer.amount;
-                      const leftTA = isTransferOut ? t.fromTokenAccount : t.toTokenAccount;
-                      const rightTA = isTransferOut ? t.toTokenAccount : t.fromTokenAccount;
 
                       return (
                         <div
                           key={i}
-                          className={`${styles.transferGroup} ${isCurrentTransfer ? styles.highlighted : ""}`}
+                          className={`${styles.transferGroup} ${
+                            isCurrentTransfer ? styles.highlighted : ""
+                          }`}
                         >
-                          <div className={styles.transferItem}>
-                            <div className={styles.transferInfoRow}>
-                              {involvesWallet && (
-                                <span className={styles.transferDir}>{isTransferOut ? "→" : "←"}</span>
+                          <Flex justify="between" align="center">
+                            <Flex align="center" gap={3}>
+                              {isTransferOut ? (
+                                <ArrowRight size={16} />
+                              ) : (
+                                <ArrowLeft size={16} />
                               )}
-                              <span className={`${styles.transferAmount} ${involvesWallet ? (isTransferOut ? styles.transferAmountOut : styles.transferAmountIn) : ""}`}>
-                                {fmt.num.compact.decimal(t.amount)}
-                              </span>
+                              <TrendAmount
+                                value={isTransferOut ? -t.amount : t.amount}
+                                formatter={(value) =>
+                                  fmt.num.compact.decimal(value, true)
+                                }
+                              />
                               <TokenIdentityCell
                                 symbol={symbol.toUpperCase()}
                                 fullName={name}
                                 imageUrl={logoUri}
                                 imageSize={16}
                               />
-                            </div>
-                            <span className={styles.transferFromTo}>
-                              <div className={styles.col}>
-                                <span className={styles.row}>
-                                  <span className={styles.transferAddrLabel}>{tr("walletPage.from")}</span>
-                                  <span className={styles.addressWithCopy}>
-                                    <span
-                                      className={styles.transferAddress}
-                                      title={t.from}
-                                      role="button"
-                                      tabIndex={0}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(`/wallets/${encodeURIComponent(t.from)}`);
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter" || e.key === " ") {
-                                          e.stopPropagation();
-                                          e.preventDefault();
-                                          navigate(`/wallets/${encodeURIComponent(t.from)}`);
-                                        }
-                                      }}
-                                    >
-                                      {isInternal ? tr("walletPage.internal") : truncateAddr(t.from)}
-                                    </span>
-                                    {!isInternal && <CpyBtn size="xs" copyWhat={t.from} align="top" />}
-                                  </span>
-                                </span>
-
-                                {!isInternal && leftTA && (
-                                  <span className={styles.transferTokenAddr} title={leftTA}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(`/wallets/${encodeURIComponent(leftTA)}`);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter" || e.key === " ") {
-                                        e.stopPropagation();
-                                        e.preventDefault();
-                                        navigate(`/wallets/${encodeURIComponent(leftTA)}`);
-                                      }
-                                    }}
-                                  >
-                                    <Wallet size={12} />
-                                    {truncateAddr(leftTA)}
-                                    <CpyBtn size="xs" copyWhat={leftTA} align="top" />
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className={styles.col}>
-                                <span className={styles.row}>
-                                  <span className={styles.transferAddrLabel}>{tr("walletPage.to")}</span>
-                                  <span className={styles.addressWithCopy}>
-                                    <span
-                                      className={styles.transferAddress}
-                                      title={t.to}
-                                      role="button"
-                                      tabIndex={0}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(`/wallets/${encodeURIComponent(t.to)}`);
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter" || e.key === " ") {
-                                          e.stopPropagation();
-                                          e.preventDefault();
-                                          navigate(`/wallets/${encodeURIComponent(t.to)}`);
-                                        }
-                                      }}
-                                    >
-                                      {isInternal ? tr("walletPage.internal") : truncateAddr(t.to)}
-                                    </span>
-                                    {!isInternal && <CpyBtn size="xs" copyWhat={t.to} align="top" />}
-                                  </span>
-                                </span>
-
-                                {!isInternal && rightTA && (
-                                  <span className={styles.transferTokenAddr} title={rightTA}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(`/wallets/${encodeURIComponent(rightTA)}`);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter" || e.key === " ") {
-                                        e.stopPropagation();
-                                        e.preventDefault();
-                                        navigate(`/wallets/${encodeURIComponent(rightTA)}`);
-                                      }
-                                    }}
-                                  >
-                                    <Wallet size={12} />
-                                    {truncateAddr(rightTA)}
-                                    <CpyBtn size="xs" copyWhat={rightTA} align="top" />
-                                  </span>
-                                )}
-                              </div>
-                            </span>
-                            {/* {!isInternal && leftTA && rightTA && (
-                              <div className={styles.transferSubRow}>
-                                <span className={styles.transferTokenAddr} title={leftTA}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/wallets/${encodeURIComponent(leftTA)}`);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
-                                      e.stopPropagation();
-                                      e.preventDefault();
-                                      navigate(`/wallets/${encodeURIComponent(leftTA)}`);
-                                    }
-                                  }}
-                                >
-                                  <Wallet size={12} />
-                                  {truncateAddr(leftTA)}
-                                  <CpyBtn size="xs" copyWhat={leftTA} align="top" />
-                                </span>
-                                <span className={styles.transferSpacer} />
-                                <span className={styles.transferTokenAddr} title={rightTA}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/wallets/${encodeURIComponent(rightTA)}`);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
-                                      e.stopPropagation();
-                                      e.preventDefault();
-                                      navigate(`/wallets/${encodeURIComponent(rightTA)}`);
-                                    }
-                                  }}
-                                >
-                                  <Wallet size={12} />
-                                  {truncateAddr(rightTA)}
-                                  <CpyBtn size="xs" copyWhat={rightTA} align="top" />
-                                </span>
-                              </div>
-                            )} */}
-                          </div>
+                            </Flex>
+                            <Flex align="center" gap={3}>
+                              <Txt secondary uppercase>
+                                {isTransferOut
+                                  ? tr("walletPage.to")
+                                  : tr("walletPage.from")}
+                              </Txt>
+                              {isInternal ? (
+                                <Txt mono>{tr("walletPage.internal")}</Txt>
+                              ) : (
+                                <AddressLinkWithCopy
+                                  address={otherTransferAddr}
+                                />
+                              )}
+                            </Flex>
+                          </Flex>
                         </div>
                       );
                     })}

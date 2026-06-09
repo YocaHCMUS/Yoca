@@ -4,6 +4,7 @@ export * from "./PoolSelector";
 export * from "./RecentTransactions";
 export * from "./TokenChart";
 export * from "./TokenHeader";
+export * from "./TokenAIChat";
 export * from "./TokenInsightTabs";
 export * from "./TokenMarketsTable";
 export * from "./TokenOverviewChart";

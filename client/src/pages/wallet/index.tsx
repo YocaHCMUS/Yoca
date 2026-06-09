@@ -21,6 +21,7 @@ import {
   renderTokenCell,
 } from "@/components/tables/TableCellRenderer.tsx";
 import { SwapPairCell } from "@/components/wallet/SwapPairCell/SwapPairCell.tsx";
+import { useWalletWinrate } from "@/hooks/useWalletWinrate";
 import {
   WalletReportTemplate,
   type WalletReportSection,
@@ -47,9 +48,7 @@ import {
   type WalletSwapTokenInfo,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
-import {
-  User,
-} from "@carbon/icons-react";
+import { User } from "@carbon/icons-react";
 import { Button } from "@carbon/react";
 import JSZip from "jszip";
 import {
@@ -80,7 +79,7 @@ import { AiSwapSummaryModal } from "@/components/wallet/AiSwapSummaryModal";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
 import type { WalletOverviewPeriodKey } from "@/services/wallet/walletApi.ts";
 import { TimePeriod } from "@/types/chart-filters.types.ts";
-
+import WalletOverviewWinRateBanner from "@/components/wallet/WalletOverview/WalletOverviewWinRateBanner";
 function chunkArray<T>(items: T[], size: number): T[][] {
   if (size <= 0 || items.length === 0) {
     return [];
@@ -164,7 +163,8 @@ export default function WalletPage() {
   const [intelligenceLoading, setIntelligenceLoading] = useState(false);
   const [walletTags, setWalletTags] = useState<string[]>([]);
 
-  const [selectedPeriod, setSelectedPeriod] = useState<WalletOverviewPeriodKey>("24H");
+  const [selectedPeriod, setSelectedPeriod] =
+    useState<WalletOverviewPeriodKey>("24H");
   const [aiAnalysisOpen, setAiAnalysisOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
   const [activeActivityTab, setActiveActivityTab] = useState<number>(0);
@@ -176,7 +176,8 @@ export default function WalletPage() {
   const [isChartsExporting, setIsChartsExporting] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
   const reportTemplateRef = useRef<HTMLDivElement | null>(null);
-
+  
+  const { stats, loading } = useWalletWinrate(walletAddress, selectedPeriod);
   const [selectedToken, setSelectedToken] = useState<{
     address: string;
     symbol: string;
@@ -221,7 +222,8 @@ export default function WalletPage() {
   const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
 
   const [transferModalOpen, setTransferModalOpen] = useState(false);
-  const [selectedTransfer, setSelectedTransfer] = useState<WalletTransfer | null>(null);
+  const [selectedTransfer, setSelectedTransfer] =
+    useState<WalletTransfer | null>(null);
 
   const [dayPopupOpen, setDayPopupOpen] = useState(false);
   const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
@@ -244,7 +246,10 @@ export default function WalletPage() {
   );
 
   const portfolioMetaAsMap = useMemo(() => {
-    const map = new Map<number, { tokenAddress: string; logoUri: string | null; fullName: string | null }>();
+    const map = new Map<
+      number,
+      { tokenAddress: string; logoUri: string | null; fullName: string | null }
+    >();
     for (let i = 0; i < portfolioMeta.length; i++) {
       const meta = portfolioMeta[i];
       if (meta) {
@@ -314,7 +319,7 @@ export default function WalletPage() {
           : undefined;
         const tokenSymbol =
           typeof transfer.tokenSymbol === "string" &&
-            transfer.tokenSymbol.trim().length > 0
+          transfer.tokenSymbol.trim().length > 0
             ? transfer.tokenSymbol
             : "Unknown";
         const tokenAmount = transfer.amount;
@@ -443,7 +448,7 @@ export default function WalletPage() {
         4,
         isCurrentWallet ? <User size={12} /> : undefined,
         isCurrentWallet ? tr("walletPage.currentWallet") : undefined,
-        isCurrentWallet
+        isCurrentWallet,
       );
     },
     (value: string) => {
@@ -454,7 +459,7 @@ export default function WalletPage() {
         4,
         isCurrentWallet ? <User size={12} /> : undefined,
         isCurrentWallet ? tr("walletPage.currentWallet") : undefined,
-        isCurrentWallet
+        isCurrentWallet,
       );
     },
     (value: WalletSwapTokenInfo, row?: any) => {
@@ -628,7 +633,7 @@ export default function WalletPage() {
         setWalletTags([]);
       });
   }, [address]);
-
+  
   const loadPortfolioData = useCallback(async (): Promise<
     WalletPortfolioItem[]
   > => {
@@ -726,11 +731,15 @@ export default function WalletPage() {
 
     fetchWalletOverview(address)
       .then(setOverviewReport)
-      .catch((err) => console.error("[WalletPage] Failed to load overview:", err));
+      .catch((err) =>
+        console.error("[WalletPage] Failed to load overview:", err),
+      );
 
     fetchWalletIntelligence(address, "solana")
       .then(setIntelligenceReport)
-      .catch((err) => console.error("[WalletPage] Failed to load intelligence:", err));
+      .catch((err) =>
+        console.error("[WalletPage] Failed to load intelligence:", err),
+      );
   }, [address, loadPortfolioData, loadActivityData]);
 
   const ensurePortfolioAndActivityForExport = useCallback(async (): Promise<{
@@ -764,7 +773,7 @@ export default function WalletPage() {
     loadPortfolioData,
     loadActivityData,
   ]);
-
+  const { stats: winRateStats, loading: winRateLoading } = useWalletWinrate(walletAddress, selectedPeriod);
   const activeReportSection = useMemo<WalletReportSection>(() => {
     return "overview";
   }, []);
@@ -856,10 +865,11 @@ export default function WalletPage() {
         fmt.datetime.relativeShort(transfer.timestamp, true),
         transfer.from,
         transfer.to,
-        `${typeof transfer.tokenSymbol === "string" &&
+        `${
+          typeof transfer.tokenSymbol === "string" &&
           transfer.tokenSymbol.trim().length > 0
-          ? transfer.tokenSymbol
-          : "Unknown"
+            ? transfer.tokenSymbol
+            : "Unknown"
         } (${fmt.num.decimal(transfer.amount)})`,
         transfer.amountUsd != null ? fmt.num.currency(transfer.amountUsd) : "—",
       ]);
@@ -1193,10 +1203,11 @@ export default function WalletPage() {
           fmt.datetime.relativeShort(transfer.timestamp, true),
           transfer.from,
           transfer.to,
-          `${typeof transfer.tokenSymbol === "string" &&
+          `${
+            typeof transfer.tokenSymbol === "string" &&
             transfer.tokenSymbol.trim().length > 0
-            ? transfer.tokenSymbol
-            : "Unknown"
+              ? transfer.tokenSymbol
+              : "Unknown"
           } (${fmt.num.decimal(transfer.amount)})`,
         ])}
         chunkSize={PDF_TABLE_ROWS_PER_PAGE}
@@ -1237,22 +1248,25 @@ export default function WalletPage() {
       extraHeaderPanel={{
         isOpen: !!selectedToken,
         content: selectedToken && (
-          <TokenAverageTradePrice
-            walletAddress={address}
-            tokenAddress={selectedToken.address}
-            tokenImgUrl={
-              tokenMeta.data?.[selectedToken.address]?.imageUrl || null
-            }
-            tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
-            tokenSymbol={
-              tokenMeta.data?.[selectedToken.address]?.symbol || null
-            }
-            tokenCurrentPrice={
-              tokenMarket.data?.[selectedToken.address]?.priceUsd || null
-            }
-            avgBuyPrice={selectedToken.avgBuyCost}
-            avgSellPrice={selectedToken.avgSellCost}
-          />
+          <>
+            <TokenAverageTradePrice
+              walletAddress={address}
+              tokenAddress={selectedToken.address}
+              tokenImgUrl={
+                tokenMeta.data?.[selectedToken.address]?.imageUrl || null
+              }
+              tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
+              tokenSymbol={
+                tokenMeta.data?.[selectedToken.address]?.symbol || null
+              }
+              tokenCurrentPrice={
+                tokenMarket.data?.[selectedToken.address]?.priceUsd || null
+              }
+              avgBuyPrice={selectedToken.avgBuyCost}
+              avgSellPrice={selectedToken.avgSellCost}
+            />
+           
+          </>
         ),
         size: "lg",
         onClose: () => setSelectedToken(null),
@@ -1267,10 +1281,19 @@ export default function WalletPage() {
             onExportData={handleExportDataXlsx}
             onExportCharts={handleExportChartsZip}
             onExportPdf={handleExportPagePdf}
-            isExporting={isPagePdfExporting || isDataExporting || isChartsExporting}
+            isExporting={
+              isPagePdfExporting || isDataExporting || isChartsExporting
+            }
             currentPeriod={selectedPeriod}
             onPeriodChange={(period) => setSelectedPeriod(period)}
           />
+          <div style={{ padding: "20px 24px 0 24px" }}>
+            <WalletOverviewWinRateBanner 
+                stats={stats} // Nhận từ hook useWalletWinrate
+                selectedPeriod={selectedPeriod}
+                loading={loading} // Nhận từ hook useWalletWinrate
+            />
+          </div>
 
           <WalletHero
             overview={overviewReport}
@@ -1320,13 +1343,11 @@ export default function WalletPage() {
                       onClick={() => setAiSwapSummaryOpen(true)}
                     >
                       {/* {tr("walletPage.aiSwapSummary")}
-                     */}
+                       */}
                       {tr("walletPage.aiSwapSummary.button")}
                     </Button>
                   }
-                  onTabChange={(index) =>
-                    setActiveActivityTab(index)
-                  }
+                  onTabChange={(index) => setActiveActivityTab(index)}
                   tabs={[
                     <Table
                       key="swaps-tab" // Need to set key to prevent React from reusing the same Table instance for both tabs, which causes issues with independent loading states and data
@@ -1349,10 +1370,9 @@ export default function WalletPage() {
                       }}
                       enableExport={false}
                       loading={swapLoading && loadedSwaps.length === 0}
-                    />
+                    />,
                     // <div className={styles.chartSection} style={{ borderRadius: "0 0 12px 12px" }}>
                     // </div>
-                    ,
                     <Table
                       key="transfers-tab" // Need to set key to prevent React from reusing the same Table instance for both tabs, which causes issues with independent loading states and data
                       maxHeight={400}
@@ -1366,7 +1386,8 @@ export default function WalletPage() {
                       isSortable={isSortableTransfers}
                       sortConfigs={transferSortConfigs}
                       onRowClick={(_row, rowIndex) => {
-                        const transfer = loadedTransfers[rowIndex >= 0 ? rowIndex : -1];
+                        const transfer =
+                          loadedTransfers[rowIndex >= 0 ? rowIndex : -1];
                         if (transfer) {
                           setSelectedTransfer(transfer);
                           setTransferModalOpen(true);
@@ -1374,13 +1395,12 @@ export default function WalletPage() {
                       }}
                       enableExport={false}
                       loading={transferLoading && loadedTransfers.length === 0}
-                    />
+                    />,
                     // <div className={styles.chartSection} style={{ borderRadius: "0 0 12px 12px" }}>
                     // </div>,
                   ]}
                 />
               </div>
-
             </div>
 
             <div className={styles.sideCol}>
@@ -1401,6 +1421,8 @@ export default function WalletPage() {
         <RightSidebar
           currentAddress={address || ""}
           onToggle={setIsRightSidebarOpen}
+          address={walletAddress}
+          lang={lang}
         />
       </div>
 
@@ -1481,6 +1503,7 @@ export default function WalletPage() {
           </div>
         </div>
       )}
+
     </PageWrapper>
   );
 }

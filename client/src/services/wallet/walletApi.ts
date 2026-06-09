@@ -10,7 +10,15 @@ export interface WalletPortfolioItem {
   valueUsd: number;
   change24hPercent?: number;
 }
-
+// Thêm interface mới cho Win Rate
+export interface WalletOverviewWinRateStats {
+    winRate: number;       // VD: 68.4
+    winCount: number;      // Số token lãi
+    lossCount: number;     // Số token lỗ
+    totalTraded: number;   // Tổng số token có giao dịch chốt lời/lỗ
+    avgWinUsd: number;     // Trung bình số tiền lãi
+    avgLossUsd: number;    // Trung bình số tiền lỗ
+}
 
 export interface WalletSwap {
   transactionHash: string;
@@ -435,6 +443,7 @@ export interface WalletOverviewPeriodStats {
     unrealizedUsd: number | null;
   };
   source: "birdeye-overall-pnl" | "overview-cache" | "none";
+  winRateStats?: WalletOverviewWinRateStats;
 }
 
 export interface WalletOverviewHoldingsStats {
@@ -489,6 +498,7 @@ export function fetchWalletOverview(
     },
   }).then(resp => {
     if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });
 }
@@ -505,6 +515,7 @@ export function fetchWalletPortfolio(
     query: { address, ...(chain && { chain }) },
   }).then(resp => {
     if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });
 }
@@ -526,6 +537,7 @@ export function fetchWalletTransfers(
     query: { address, ...params },
   }).then(resp => {
     if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });
 }
@@ -547,6 +559,7 @@ export function fetchWalletSwaps(
     query: { address, ...params },
   }).then(resp => {
     if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });
 }
@@ -560,6 +573,7 @@ export function fetchWalletBalances(address: string) {
     param: { address },
   }).then(resp => {
     if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });
 }
@@ -573,6 +587,7 @@ export function fetchWalletDistribution(address: string, chain?: string) {
     query: { address, ...(chain && { chain }) },
   }).then(resp => {
     if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });
 }
@@ -586,6 +601,7 @@ export function fetchWalletIdentity(address: string) {
     query: { address },
   }).then(resp => {
     if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });
 }
@@ -602,6 +618,7 @@ export function fetchWalletIdentityBatch(
     json: { addresses, ...(chain && { chain }) },
   }).then(resp => {
     if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });
 }
@@ -618,6 +635,7 @@ export function fetchWalletIntelligence(
     query: { address, ...(chain && { chain }) },
   }).then(resp => {
     if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });
 }
@@ -634,6 +652,7 @@ export function fetchWalletAiAnalysis(
     json: { address, language },
   }).then(async resp => {
     if (resp.ok) return resp.json();
+    console.error(`API Error ${resp.status}`);
     throw new Error(`API Error ${resp.status}`);
   });
 }
@@ -702,6 +721,7 @@ export function fetchWalletAudit(
     param: { address },
   }).then(resp => {
     if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });
 }
@@ -711,6 +731,7 @@ export async function fetchWalletTokenDetails(address: string): Promise<WalletTo
     param: { address }
   }).then(resp => {
     if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });
 }
@@ -724,6 +745,7 @@ export async function fetchDayActivitySummary(
     query: { address, dayMs: String(dayMs) },
   }).then(resp => {
     if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });
 }
@@ -741,6 +763,7 @@ export function fetchTokenPriceChartForDay(
     query: { address: tokenAddress, dayMs: String(dayMs) },
   }).then(resp => {
     if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });
 }
@@ -753,6 +776,7 @@ export function fetchTxDetail(
     query: { address, signature },
   }).then(resp => {
     if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });
 }
@@ -765,6 +789,7 @@ export function fetchTxInstructions(
     query: { address, signature },
   }).then(resp => {
     if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });
 }

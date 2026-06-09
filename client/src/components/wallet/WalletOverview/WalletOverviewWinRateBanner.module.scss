@@ -1,0 +1,144 @@
+.bannerContainer {
+    background-color: var(--cds-layer-01, #ffffff);
+    border: 1px solid var(--cds-border-subtle, #e0e0e0);
+    border-radius: 8px;
+    padding: 16px 24px;
+    margin-bottom: 24px; /* Cách các thẻ Overview bên dưới */
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.bannerSkeleton {
+    width: 100%;
+    height: 120px;
+    margin-bottom: 24px;
+    border-radius: 8px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .title {
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--cds-text-secondary, #525252);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .infoIconBtn {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        color: var(--cds-icon-secondary, #525252);
+        display: flex;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+
+        &:hover { 
+            background-color: var(--cds-layer-hover-01, #e8e8e8); 
+            color: var(--cds-icon-primary, #161616);
+        }
+    }
+}
+
+.disclaimerBox {
+    background-color: var(--cds-layer-02, #f4f4f4);
+    padding: 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--cds-text-secondary, #525252);
+    line-height: 1.4;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.contentGrid {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 24px;
+    
+    @media (max-width: 768px) {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+}
+
+.mainRateCol {
+    flex: 1;
+    min-width: 200px;
+    width: 100%;
+
+    .rateValue {
+        font-size: 36px;
+        font-weight: 600;
+        line-height: 1.1;
+        margin-bottom: 8px;
+    }
+
+    .progressBarContainer {
+        height: 6px;
+        background-color: var(--cds-border-subtle, #e0e0e0);
+        border-radius: 3px;
+        display: flex;
+        overflow: hidden;
+        margin-bottom: 8px;
+
+        .progressWin { background-color: var(--cds-support-success, #24a148); } 
+        .progressLoss { background-color: var(--cds-support-error, #da1e28); } 
+    }
+
+    .tokenCounts {
+        font-size: 13px;
+        color: var(--cds-text-secondary, #525252);
+
+        .winText { 
+            color: var(--cds-support-success, #24a148);
+            font-weight: 500;
+        }
+    }
+}
+
+.divider {
+    width: 1px;
+    height: 48px;
+    background-color: var(--cds-border-subtle, #e0e0e0);
+    
+    @media (max-width: 768px) {
+        display: none;
+    }
+}
+
+.metricCol {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 120px;
+
+    .metricLabel {
+        font-size: 12px;
+        color: var(--cds-text-secondary, #525252);
+    }
+
+    .metricValueWin {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--cds-support-success, #24a148);
+    }
+    
+    .metricValueLoss {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--cds-support-error, #da1e28);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { CSSProperties } from "react";
 import styles from "./tabContainer.module.scss";
 
 export type tabIndex = number;
@@ -18,7 +18,8 @@ export interface TabContainerProps {
   /** Tab indices that have been opened at least once; only those panels render when preserveMountedPanels is true. */
   visitedTabIndices?: ReadonlySet<number>;
   /** Tab orientation: 'horizontal' (default) places tabs on top, 'vertical' places tabs on left */
-  orientation?: 'horizontal' | 'vertical';
+  orientation?: "horizontal" | "vertical";
+  style?: CSSProperties;
 }
 
 export const TabContainer: React.FC<TabContainerProps> = ({
@@ -30,18 +31,24 @@ export const TabContainer: React.FC<TabContainerProps> = ({
   actions,
   preserveMountedPanels = false,
   visitedTabIndices,
-  orientation = 'horizontal',
+  orientation = "horizontal",
+  style,
 }) => {
   const hasActions = Boolean(actions);
-  const isVertical = orientation === 'vertical';
+  const isVertical = orientation === "vertical";
 
   return (
-    <div className={`${styles.tabContainer} ${isVertical ? styles.tabContainerVertical : ''}`.trim()}>
+    <div
+      className={`${styles.tabContainer} ${isVertical ? styles.tabContainerVertical : ""}`.trim()}
+      style={style}
+    >
       {/* Tab Headers */}
       <div
-        className={`${styles.tabHeaders} ${hasActions ? styles.tabHeadersWithActions : ''} ${isVertical ? styles.tabHeadersVertical : ''}`.trim()}
+        className={`${styles.tabHeaders} ${hasActions ? styles.tabHeadersWithActions : ""} ${isVertical ? styles.tabHeadersVertical : ""}`.trim()}
       >
-        <div className={`${styles.tabHeaderTabs} ${isVertical ? styles.tabHeaderTabsVertical : ''}`.trim()}>
+        <div
+          className={`${styles.tabHeaderTabs} ${isVertical ? styles.tabHeaderTabsVertical : ""}`.trim()}
+        >
           {names.map((name, index) => (
             <button
               key={index}
@@ -67,23 +74,25 @@ export const TabContainer: React.FC<TabContainerProps> = ({
       </div>
 
       {/* Tab Content */}
-      <div className={`${styles.tabContent} ${isVertical ? styles.tabContentVertical : ''}`.trim()}>
+      <div
+        className={`${styles.tabContent} ${isVertical ? styles.tabContentVertical : ""}`.trim()}
+      >
         {preserveMountedPanels && visitedTabIndices
           ? tabs.map((tab, index) => {
-            if (!visitedTabIndices.has(index)) {
-              return null;
-            }
-            return (
-              <div
-                key={index}
-                role="tabpanel"
-                hidden={activeTab !== index}
-                className={styles.tabPanelPreserve}
-              >
-                {tab}
-              </div>
-            );
-          })
+              if (!visitedTabIndices.has(index)) {
+                return null;
+              }
+              return (
+                <div
+                  key={index}
+                  role="tabpanel"
+                  hidden={activeTab !== index}
+                  className={styles.tabPanelPreserve}
+                >
+                  {tab}
+                </div>
+              );
+            })
           : tabs[activeTab]}
       </div>
     </div>

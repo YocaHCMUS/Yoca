@@ -1,14 +1,14 @@
 import {
-  locale,
-  type BaseTranslation,
-  type FmtStrParams,
-  type HasNodeParam,
-  type PathValue,
-  type TranslationKeyPath,
-  type TranslationSchema,
-  type WithBase,
+    locale,
+    type BaseTranslation,
+    type FmtStrParams,
+    type HasNodeParam,
+    type PathValue,
+    type TranslationKeyPath,
+    type TranslationSchema,
+    type WithBase,
 } from "@/config/localization";
-import React, { useMemo, useState, type ReactNode } from "react";
+import React, { useEffect, useMemo, useState, type ReactNode } from "react";
 
 type LangCode = keyof typeof locale;
 
@@ -137,12 +137,50 @@ function interpolate(
   return hasNode ? reactFromParts(parts) : parts.join("");
 }
 
+const LANG_STORAGE_KEY = "yoca_language";
+const VIETNAMESE_LOCALES = ["vi", "vi-VN"];
+
+function getConfiguredLang(): LangCode {
+  // Try to get from localStorage first
+  const configuredLang = localStorage.getItem(
+    LANG_STORAGE_KEY,
+  ) as LangCode | null;
+  if (configuredLang && configuredLang in locale) {
+    return configuredLang;
+  }
+
+  // Detect browser language
+  const browserLang = navigator.language || navigator.languages?.[0];
+
+  // Check if browser language is Vietnamese
+  if (
+    browserLang &&
+    VIETNAMESE_LOCALES.some((loc) => browserLang.startsWith(loc))
+  ) {
+    return "vi";
+  }
+
+  // Note: this is rarely needed as we didn't aim to support other languages
+  // Check if browser language matches any supported language
+  // if (browserLang) {
+  //   const langCode = browserLang.split("-")[0] as LangCode;
+  //   if (langCode in locale) {
+  //     return langCode;
+  //   }
+  // }
+  return "en";
+}
+
 export function LocalizationProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [lang, setLang] = useState<LangCode>("en");
+  const [lang, setLang] = useState<LangCode>(getConfiguredLang());
+
+  useEffect(() => {
+    localStorage.setItem(LANG_STORAGE_KEY, lang);
+  }, [lang]);
 
   function tr<K extends TranslationKeyPath>(
     key: FmtStrParams<PathValue<BaseTranslation, K>> extends undefined

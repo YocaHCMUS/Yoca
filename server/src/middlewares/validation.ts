@@ -1,4 +1,3 @@
-import { AUTH_COOKIE_NAME } from "@sv/config/constants.js";
 import {
   userAlertConditionOps,
   userAlertPeriods,
@@ -286,7 +285,7 @@ export const honoJwt = async (c: Context, next: Next) => {
   const options = {
     secret: env.JWT_SECRET,
     alg: "HS256",
-    cookie: AUTH_COOKIE_NAME,
+    cookie: "auth_token",
   } as const;
   const token = getCookie(c, options.cookie);
   if (!token) {
@@ -313,7 +312,15 @@ export async function getTrackedApiResult<T extends z.ZodType>(
   logSuccessResponse: boolean = false,
 ) {
   try {
-    const jsonResp = await resp.json();
+    const text = await resp.text();
+    if (!text) {
+      console.error("External API returned empty response", {
+        status: resp.status,
+        url: resp.url,
+      });
+      return;
+    }
+    const jsonResp = JSON.parse(text);
     return validateResponseDataSchema(
       resp.status,
       jsonResp,
@@ -321,7 +328,11 @@ export async function getTrackedApiResult<T extends z.ZodType>(
       logSuccessResponse,
     );
   } catch (err) {
-    console.error("Unexpected Error:", err);
+    console.error("External API Error:", {
+      error: err instanceof Error ? err.message : String(err),
+      url: resp?.url,
+      status: resp?.status,
+    });
     return;
   }
 }
@@ -372,8 +383,13 @@ export const envSchema = z.object({
   // API Keys and URLs
   COINGECKO_API_BASE_URL: z.url().default("https://api.coingecko.com/api/v3"),
   COINGECKO_API_KEY: z.string(),
+
   BIRDEYE_API_BASE_URL: z.url().default("https://public-api.birdeye.so"),
   BIRDEYE_API_KEY: z.string(),
+
+  ZERION_API_BASE_URL: z.url().default("https://api.zerion.io/v1"),
+  ZERION_API_KEY: z.string(),
+
   HELIUS_API_KEY: z.string(),
   HELIUS_WEBHOOK_AUTH_KEY: z.string(),
   HELIUS_WEBHOOK_ID: z.string(),
@@ -384,6 +400,10 @@ export const envSchema = z.object({
     .default("http://localhost:5678/webhook/analyse-wallet"),
   N8N_ANALYSIS_TIMEOUT_MS: z.coerce.number().int().positive().default(200000),
   BRAVE_SEARCH_API_KEY: z.string().optional().default(""),
+  BRAVE_SEARCH_ENABLED: z.enum(["true", "false"]).optional().default("false"),
+  BRAVE_MONTHLY_SOFT_LIMIT: z.coerce.number().int().positive().optional(),
+  BRAVE_MONTHLY_USED_OFFSET: z.coerce.number().int().min(0).default(0),
+  GOOGLE_AI_KEY: z.string().optional().default(""),
 
   // Stripe
   STRIPE_SECRET_KEY: z.string().default(""),
@@ -400,6 +420,15 @@ export const envSchema = z.object({
   CLIENT_DEV_DOMAIN: z.url().default("http://localhost:3000"),
   CLIENT_DEV_PREVIEW_DOMAIN: z.url().default("http://localhost:4173"),
   CLIENT_PROD_DOMAIN: z.url(),
+
+  // AI
+  GEMINI_API_KEY: z.string().optional().default(""),
+  GEMINI_MODAL: z.string().optional().default("gemini-3.1-flash-lite"),
+  GEMINI_SWAP_SUMMARY_MODEL: z
+    .string()
+    .optional()
+    .default("gemini-3.1-flash-lite"),
+  CHAT_MODEL: z.string().optional().default("gemini-3.1-flash-lite"),
 });
 
 export type Env = z.infer<typeof envSchema>;

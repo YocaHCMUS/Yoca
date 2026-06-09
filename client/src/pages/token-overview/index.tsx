@@ -2,6 +2,7 @@ import client from "@/api/main";
 import {
   GlobalPrices,
   NewsTab,
+  TokenAIChat,
   TokenHeader,
   TokenInsightTabs,
   TokenMarketsTable,
@@ -63,8 +64,12 @@ function useTokenOverviewData(address: string) {
     };
   }
 
-  const details = tokenDetails.data ?? [null];
-  const [holdersInfo] = holdersStats.data ?? [null];
+  const details = Array.isArray(tokenDetails.data)
+    ? (tokenDetails.data[0] ?? null)
+    : (tokenDetails.data ?? null);
+  const holdersInfo = Array.isArray(holdersStats.data)
+    ? (holdersStats.data[0] ?? null)
+    : (holdersStats.data ?? null);
 
   return {
     isLoading,
@@ -218,6 +223,15 @@ export default function TokenOverviewPage() {
                 holders={result.data?.holders ?? []}
                 holdersInfo={result.data?.holdersInfo ?? null}
                 holdersLoading={result.isFirstLoad}
+              />
+            </div>
+
+            <div className={styles.marketsSection}>
+              <TokenAIChat
+                address={address}
+                symbol={details?.symbol ?? undefined}
+                name={details?.name ?? undefined}
+                timeframe="24h"
               />
             </div>
 

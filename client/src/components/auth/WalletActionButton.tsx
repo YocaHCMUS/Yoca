@@ -6,12 +6,12 @@ import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useEffect, useRef, useState } from "react";
 
 interface WalletActionPayload<TResult> {
-    publicKey: string;
-    signMessage: (message: Uint8Array) => Promise<Uint8Array>;
-    closeModal: () => void;
-    walletName: string;
-    onSuccess: (result: TResult) => void;
-    onError: (error: string) => void;
+  publicKey: string;
+  signMessage: (message: Uint8Array) => Promise<Uint8Array>;
+  closeModal: () => void;
+  walletName: string;
+  onSuccess: (result: TResult) => void;
+  onError: (error: string) => void;
 }
 
 type WalletActionButtonProps<TResult> = {

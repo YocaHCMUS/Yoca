@@ -1,24 +1,10 @@
 @use "@carbon/react/scss/spacing" as *;
 @use "@carbon/react/scss/type" as *;
 
-.page {
-  min-height: calc(100vh - 120px);
-  padding: $spacing-07 $spacing-05;
-  background: var(--cds-background);
-  color: var(--cds-text-primary);
-}
-
 @media (max-width: 960px) {
   .tabSection {
     flex-direction: column;
     min-height: auto;
-  }
-}
-
-@media (max-width: 768px) {
-  .page {
-    padding: $spacing-04;
-    height: calc(100vh - 2.5rem);
   }
 }
 
@@ -67,10 +53,8 @@
 .tabSection {
   display: flex;
   flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  min-height: calc(100vh - var(--page-content-top-offset) - #{$spacing-07} - #{$spacing-05});
-  height: calc(100vh - var(--page-content-top-offset) - #{$spacing-07} - #{$spacing-05});
+  overflow: auto;
+  min-block-size: 100vh;
 }
 
 .loadingState,

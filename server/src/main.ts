@@ -1,4 +1,5 @@
 import env from "@sv/util/load-env.js";
+import "@sv/util/date.js";
 import { serve } from "@hono/node-server";
 import { clientDomains } from "@sv/config/security.js";
 import { requestContextMiddleware } from "@sv/middlewares/request-context.js";
@@ -21,6 +22,9 @@ import tokenVolatility, {
 import tokenVolatilityNews, {
   type TokenVolatilityNewsAppType,
 } from "@sv/routes/token-volatility-news.js";
+import tokenAiChat, {
+  type TokenAiChatAppType,
+} from "@sv/routes/token-ai-chat.js";
 import profile, { type ProfileAppType } from "@sv/routes/profile.js";
 import search, { type SearchAppType } from "@sv/routes/search.js";
 import trades, { type TradesAppType } from "@sv/routes/trades.js";
@@ -36,11 +40,13 @@ import walletAnalysis, {
   type WalletAnalysisAppType,
 } from "@sv/modules/wallet-analysis/routes/walletAnalysis.routes.js";
 import webhook, { type WebhookAppType } from "@sv/routes/webhook.js";
+import chat, { type ChatAppType } from "@sv/routes/chat.route.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
 import payment, { PaymentAppType } from "./routes/payment.route";
+import "@sv/util/util-zerion";
 
 const app = new Hono()
   .use("*", logger())
@@ -90,8 +96,10 @@ export type AppRoutes = {
   "/api/token-chart-news-events": TokenChartNewsEventsAppType;
   "/api/token-volatility": TokenVolatilityAppType;
   "/api/token-volatility-news": TokenVolatilityNewsAppType;
+  "/api/token-ai-chat": TokenAiChatAppType;
   "/webhook": WebhookAppType;
   "/api/payment": PaymentAppType;
+  "/api/chat": ChatAppType;
 };
 
 // Then here
@@ -117,7 +125,9 @@ const routes: AppRoutes = {
   "/api/token-chart-news-events": tokenChartNewsEvents,
   "/api/token-volatility": tokenVolatility,
   "/api/token-volatility-news": tokenVolatilityNews,
+  "/api/token-ai-chat": tokenAiChat,
   "/api/payment": payment,
+  "/api/chat": chat,
   "/webhook": webhook,
 };
 
