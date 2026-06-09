@@ -1,58 +1,152 @@
-import React, { useState } from 'react';
-import styles from './wash-trading.module.scss';
-import { PageWrapper } from '@/components/wrapper/PageWrapper';
-import { useUserTheme } from '@/contexts/ThemeContext';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { PageWrapper } from "@/components/wrapper/PageWrapper";
+import { useUserTheme } from "@/contexts/ThemeContext";
+import styles from "./wash-trading.module.scss";
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOCK_RESULT = {
-  riskScore: 0.873,
-  suspiciousWallets: [
-    { wallet: '7xKp...mN3q', volume: 1_200_000, confidence: 94, pattern: 'Circular Trading' },
-    { wallet: '3Rtz...pQ8w', volume: 870_000,   confidence: 87, pattern: 'Circular Trading' },
-    { wallet: '9mWs...kL2x', volume: 540_000,   confidence: 76, pattern: 'Volume Spike' },
-    { wallet: '2Fjn...hY5c', volume: 310_000,   confidence: 71, pattern: 'Time Pattern' },
-    { wallet: '5Bqr...tW9m', volume: 280_000,   confidence: 68, pattern: 'Amount Mirror' },
-    { wallet: '8Kzt...nP4v', volume: 195_000,   confidence: 64, pattern: 'Volume Spike' },
-  ],
-  transactions: [
-    { hash: '4xK9pLmQrBw8nZtY', from: '7xKp...mN3q', to: '3Rtz...pQ8w', amount: 45200,  timestamp: '2024-01-15T13:05:00Z', anomalyScore: 0.92 },
-    { hash: '7nRtBqwKpMx3vZsL', from: '3Rtz...pQ8w', to: '9mWs...kL2x', amount: 44800,  timestamp: '2024-01-15T13:08:18Z', anomalyScore: 0.89 },
-    { hash: '2mVxKprNtWb5qLjP', from: '9mWs...kL2x', to: '7xKp...mN3q', amount: 45100,  timestamp: '2024-01-15T13:11:22Z', anomalyScore: 0.91 },
-    { hash: '9pLtNvwQmBr4kZxW', from: '2Fjn...hY5c', to: '5Bqr...tW9m', amount: 28300,  timestamp: '2024-01-15T13:32:05Z', anomalyScore: 0.74 },
-    { hash: '3kBmQrxPsNv6tLwJ', from: '5Bqr...tW9m', to: '8Kzt...nP4v', amount: 27900,  timestamp: '2024-01-15T13:35:12Z', anomalyScore: 0.71 },
-    { hash: '8wZjPltVrKb2nMxQ', from: '8Kzt...nP4v', to: '2Fjn...hY5c', amount: 28100,  timestamp: '2024-01-15T13:38:44Z', anomalyScore: 0.73 },
-    { hash: '1xCvMnpRtWq7kZbL', from: '7xKp...mN3q', to: '3Rtz...pQ8w', amount: 61400,  timestamp: '2024-01-15T14:15:03Z', anomalyScore: 0.96 },
-    { hash: '6tRkWsxBnPm3vZqJ', from: '3Rtz...pQ8w', to: '7xKp...mN3q', amount: 61200,  timestamp: '2024-01-15T14:18:27Z', anomalyScore: 0.95 },
-    { hash: '5nBvLqmKtWr8pZxN', from: '4Hvx...jL7b', to: '6Mds...cR2n', amount: 12800,  timestamp: '2024-01-15T14:42:18Z', anomalyScore: 0.62 },
-    { hash: '0pKtRwzQmBn4vZsL', from: '7xKp...mN3q', to: '3Rtz...pQ8w', amount: 58900,  timestamp: '2024-01-15T15:10:55Z', anomalyScore: 0.88 },
-  ],
-  summary: { totalVolume: 14_830_000, volumeAnomalies: 2_400_000, circularTrades: 34 },
-  gnnConfidence: 0.914,
-  f1Score: 0.89,
-};
+const API_DOMAIN: string = import.meta.env.VITE_CLIENT_API_DOMAIN || "";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface WashTradeResult {
-  riskScore: number;
-  suspiciousWallets: Array<{ wallet: string; volume: number; confidence: number; pattern: string }>;
-  transactions: Array<{ hash: string; from: string; to: string; amount: number; timestamp: string; anomalyScore: number }>;
-  summary: { totalVolume: number; volumeAnomalies: number; circularTrades: number };
-  gnnConfidence: number;
-  f1Score: number;
+type Timeframe = "24h" | "7d" | "30d";
+type RiskLevel = "High" | "Medium" | "Low";
+type Severity = "high" | "medium" | "info" | "success";
+
+interface SuspiciousWallet {
+  wallet: string;
+  score: number;
+  riskLevel: RiskLevel;
+  pattern: string;
+  features: {
+    circularPattern: number;
+    timeRegularity: number;
+    amountSimilarity: number;
+    selfLoopDegree: number;
+    hubness: number;
+  };
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+interface GraphNode {
+  id: string;
+  type: "wash" | "bridge" | "normal";
+  label: string;
+}
+
+interface GraphEdge {
+  from: string;
+  to: string;
+  amount: number;
+  suspicious: boolean;
+}
+
+interface WashTradingResult {
+  mint: string;
+  symbol: string;
+  analyzedAt: string;
+  summary: {
+    totalTransactions: number;
+    uniqueWallets: number;
+    totalVolume: number;
+    washVolumeEstimate: number;
+    washVolumePercent: number;
+    circularTradeCount: number;
+    suspiciousWalletCount: number;
+    overallRiskScore: number;
+    gnnConfidence: number;
+  };
+  circularPatterns: Array<{
+    cycle: string[];
+    hops: number;
+    amounts: number[];
+    timestamps: number[];
+    intervalMs: number;
+    confidence: number;
+  }>;
+  suspiciousWallets: SuspiciousWallet[];
+  graphData: {
+    nodes: GraphNode[];
+    edges: GraphEdge[];
+  };
+  aiAnalysis: {
+    verdict: "HIGH_RISK" | "MEDIUM_RISK" | "LOW_RISK" | "CLEAN";
+    summary: string;
+    detailedFindings: string[];
+    suspiciousPatterns: Array<{
+      patternName: string;
+      description: string;
+      affectedWallets: string[];
+      severity: "HIGH" | "MEDIUM" | "LOW";
+    }>;
+    recommendation: string;
+    confidenceNote: string;
+  };
+  detectionLog: Array<{
+    time: string;
+    message: string;
+    severity: Severity;
+  }>;
+}
+
+interface ApiResponse {
+  success: boolean;
+  data?: WashTradingResult;
+  error?: string;
+  message?: string;
+}
+
+const shortAddress = (address?: string) => {
+  if (!address) return "—";
+  if (address.length <= 12) return address;
+  return `${address.slice(0, 4)}...${address.slice(-4)}`;
+};
+
+const formatNumber = (value: number) =>
+  new Intl.NumberFormat("en-US", {
+    notation: value >= 1_000_000 ? "compact" : "standard",
+    maximumFractionDigits: 2,
+  }).format(value || 0);
+
+const getSeverityColor = (severity: Severity) => {
+  if (severity === "high") return "#e24b4a";
+  if (severity === "medium") return "#ef9f27";
+  if (severity === "success") return "#639922";
+  return "var(--text-muted)";
+};
+
+const getRiskLabel = (score: number) => {
+  if (score >= 75) return "High Risk";
+  if (score >= 45) return "Medium Risk";
+  if (score > 0) return "Low Risk";
+  return "No Signal";
+};
+
+const normalizeRiskLevel = (riskLevel: string): RiskLevel => {
+  if (riskLevel === "High" || riskLevel === "Medium" || riskLevel === "Low") {
+    return riskLevel;
+  }
+  return "Low";
+};
 
 const RiskGauge: React.FC<{ score: number; label: string }> = ({ score, label }) => {
+  const safeScore = Math.max(0, Math.min(100, Math.round(score || 0)));
+  const dashOffset = 170 - (170 * safeScore) / 100;
+  const color = safeScore >= 75 ? "#e24b4a" : safeScore >= 45 ? "#ef9f27" : "#639922";
+
   return (
     <div className={styles.gaugeWrap}>
       <svg width="140" height="82" viewBox="0 0 140 82">
-        <path d="M16,70 A54,54 0 0,1 124,70" fill="none" stroke="var(--border-light)" strokeWidth="10" strokeLinecap="round"/>
-        <path d="M16,70 A54,54 0 0,1 124,70" fill="none" stroke="#e24b4a" strokeWidth="10" strokeLinecap="round" strokeDasharray="170" strokeDashoffset="17"/>
-        <text x="70" y="62" textAnchor="middle" fontSize="24" fontWeight="500" fill="#e24b4a">{score}</text>
+        <path d="M16,70 A54,54 0 0,1 124,70" fill="none" stroke="var(--border-light)" strokeWidth="10" strokeLinecap="round" />
+        <path
+          d="M16,70 A54,54 0 0,1 124,70"
+          fill="none"
+          stroke={color}
+          strokeWidth="10"
+          strokeLinecap="round"
+          strokeDasharray="170"
+          strokeDashoffset={dashOffset}
+        />
+        <text x="70" y="62" textAnchor="middle" fontSize="24" fontWeight="600" fill={color}>{safeScore}</text>
         <text x="70" y="76" textAnchor="middle" fontSize="10" fill="var(--text-secondary)">/100</text>
       </svg>
-      <span className={`${styles.riskBadge} ${styles.riskHigh}`} style={{ fontSize: '12px', padding: '4px 14px', marginTop: '4px' }}>
+      <span className={`${styles.riskBadge} ${safeScore >= 75 ? styles.riskHigh : safeScore >= 45 ? styles.riskMedium : styles.riskLow}`}>
         {label}
       </span>
     </div>
@@ -60,107 +154,116 @@ const RiskGauge: React.FC<{ score: number; label: string }> = ({ score, label })
 };
 
 const FeatureBar: React.FC<{ label: string; value: number }> = ({ label, value }) => {
-  const color = value >= 0.85 ? '#e24b4a' : value >= 0.7 ? '#ef9f27' : '#639922';
+  const normalized = Math.max(0, Math.min(1, value || 0));
+  const color = normalized >= 0.85 ? "#e24b4a" : normalized >= 0.7 ? "#ef9f27" : "#639922";
   return (
     <div className={styles.featureRow}>
       <span className={styles.featureLabel}>{label}</span>
       <div className={styles.featureBarBg}>
-        <div className={styles.featureBarFill} style={{ width: `${value * 100}%`, background: color }} />
+        <div className={styles.featureBarFill} style={{ width: `${normalized * 100}%`, background: color }} />
       </div>
-      <span className={styles.featureScore} style={{ color }}>{value.toFixed(2)}</span>
+      <span className={styles.featureScore} style={{ color }}>{normalized.toFixed(2)}</span>
     </div>
   );
 };
 
-const NetworkGraph: React.FC = () => (
-  <div className={styles.graphContainer}>
-    <svg viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
-      <defs>
-        <marker id="arr-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-          <path d="M0,0 L6,3 L0,6 Z" fill="#e24b4a" opacity=".85" />
-        </marker>
-        <marker id="arr-gray" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-          <path d="M0,0 L6,3 L0,6 Z" fill="var(--graph-node-stroke)" opacity=".7" />
-        </marker>
-      </defs>
+const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[] }> = ({ nodes, edges }) => {
+  const visibleNodes = nodes.length > 0
+    ? nodes.slice(0, 12)
+    : [
+        { id: "empty-1", type: "normal" as const, label: "No data" },
+        { id: "empty-2", type: "normal" as const, label: "Run AI" },
+      ];
 
-      <ellipse cx="190" cy="130" rx="95" ry="75" fill="rgba(226,75,74,0.07)" stroke="#e24b4a" strokeWidth="1" strokeDasharray="5,3" opacity=".8" />
-      <text x="190" y="218" textAnchor="middle" fontSize="10" fill="#a32d2d">Wash Cluster A</text>
+  const layout = useMemo(() => {
+    const centerX = 280;
+    const centerY = 130;
+    const radiusX = 190;
+    const radiusY = 82;
+    return visibleNodes.map((node, index) => {
+      const angle = (Math.PI * 2 * index) / visibleNodes.length - Math.PI / 2;
+      return {
+        ...node,
+        x: centerX + Math.cos(angle) * radiusX,
+        y: centerY + Math.sin(angle) * radiusY,
+      };
+    });
+  }, [visibleNodes]);
 
-      {[
-        ['M128,100','Q158,78','190,88'],
-        ['M190,88','Q232,82','252,112'],
-        ['M252,112','Q245,155','222,170'],
-        ['M222,170','Q180,180','155,162'],
-        ['M155,162','Q128,140','128,100'],
-      ].map(([m, q, e], i) => (
-        <path key={i} d={`${m} ${q} ${e}`} fill="none" stroke="#e24b4a" strokeWidth="1.8" markerEnd="url(#arr-red)" />
-      ))}
-      <line x1="190" y1="88" x2="222" y2="170" stroke="#e24b4a" strokeWidth="1.2" strokeDasharray="4,3" opacity=".45" />
+  const positionMap = new Map(layout.map((node) => [node.id, node]));
+  const visibleEdges = edges
+    .filter((edge) => positionMap.has(edge.from) && positionMap.has(edge.to))
+    .slice(0, 28);
 
-      <line x1="252" y1="112" x2="330" y2="148" stroke="#ef9f27" strokeWidth="1.5" strokeDasharray="5,3" markerEnd="url(#arr-gray)" />
+  return (
+    <div className={styles.graphContainer}>
+      <svg viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg" className={styles.graphSvg}>
+        <defs>
+          <marker id="arr-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#e24b4a" opacity=".85" />
+          </marker>
+          <marker id="arr-gray" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="var(--graph-node-stroke)" opacity=".7" />
+          </marker>
+        </defs>
 
-      {[
-        [370,110,430,88],[430,88,484,115],[484,115,462,168],[462,168,370,110],
-        [330,148,370,110],[330,148,462,168],
-      ].map(([x1,y1,x2,y2],i) => (
-        <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--graph-line)" strokeWidth="1.2" opacity=".8" markerEnd="url(#arr-gray)" />
-      ))}
+        <ellipse cx="280" cy="130" rx="218" ry="102" fill="rgba(226,75,74,0.07)" stroke="#e24b4a" strokeWidth="1" strokeDasharray="5,3" opacity=".55" />
+        <text x="280" y="238" textAnchor="middle" fontSize="10" fill="#a32d2d">GNN transaction cluster</text>
 
-      {[
-        [128,100,'W1','#f0958b','#e24b4a','#501313'],
-        [190,88,'W2','#e24b4a','#a32d2d','#fcebeb'],
-        [252,112,'W3','#f0958b','#e24b4a','#501313'],
-        [222,170,'W4','#f7c1c1','#e24b4a','#501313'],
-        [155,162,'W5','#f7c1c1','#e24b4a','#501313'],
-      ].map(([cx,cy,label,fill,stroke,textFill]) => (
-        <g key={String(label)}>
-          <circle cx={Number(cx)} cy={Number(cy)} r={label==='W2'?18:14} fill={String(fill)} stroke={String(stroke)} strokeWidth="2" />
-          <text x={Number(cx)} y={Number(cy)+4} textAnchor="middle" fontSize="9" fill={String(textFill)} fontWeight="500">{String(label)}</text>
-        </g>
-      ))}
+        {visibleEdges.map((edge, index) => {
+          const from = positionMap.get(edge.from)!;
+          const to = positionMap.get(edge.to)!;
+          const stroke = edge.suspicious ? "#e24b4a" : "var(--graph-line)";
+          return (
+            <line
+              key={`${edge.from}-${edge.to}-${index}`}
+              x1={from.x}
+              y1={from.y}
+              x2={to.x}
+              y2={to.y}
+              stroke={stroke}
+              strokeWidth={edge.suspicious ? 2.2 : 1.2}
+              opacity={edge.suspicious ? 0.85 : 0.45}
+              markerEnd={edge.suspicious ? "url(#arr-red)" : "url(#arr-gray)"}
+            />
+          );
+        })}
 
-      <circle cx="330" cy="148" r="12" fill="#fac775" stroke="#ba7517" strokeWidth="1.5" />
-      <text x="330" y="152" textAnchor="middle" fontSize="9" fill="#412402">B</text>
+        {layout.map((node) => {
+          const fill = node.type === "wash" ? "#e24b4a" : node.type === "bridge" ? "#ef9f27" : "var(--graph-node-normal)";
+          const stroke = node.type === "normal" ? "var(--graph-node-stroke)" : fill;
+          return (
+            <g key={node.id}>
+              <circle cx={node.x} cy={node.y} r={node.type === "wash" ? 18 : 15} fill={fill} stroke={stroke} strokeWidth="2" opacity=".95" />
+              <text x={node.x} y={node.y + 34} textAnchor="middle" fontSize="10" fill="var(--graph-text)">{node.label}</text>
+            </g>
+          );
+        })}
+      </svg>
 
-      {[[370,110,'N1'],[430,88,'N2'],[484,115,'N3'],[462,168,'N4']].map(([cx,cy,lbl])=>(
-        <g key={String(lbl)}>
-          <circle cx={Number(cx)} cy={Number(cy)} r="12" fill="var(--graph-node-normal)" stroke="var(--graph-node-stroke)" strokeWidth="1.5"/>
-          <text x={Number(cx)} y={Number(cy)+4} textAnchor="middle" fontSize="9" fill="var(--graph-text)">{String(lbl)}</text>
-        </g>
-      ))}
-
-      <text x="14" y="250" fontSize="10" fill="var(--text-muted)">⏱ Giao dịch vòng tròn phát hiện lúc 14:32:18 UTC</text>
-    </svg>
-    <div className={styles.graphLegend}>
-      {[
-        { color: '#e24b4a', label: 'Ví wash trading' },
-        { color: '#ef9f27', label: 'Ví trung gian' },
-        { color: 'var(--graph-node-stroke)', label: 'Ví bình thường' },
-      ].map(({ color, label }) => (
-        <span key={label} className={styles.legendItem}>
-          <span className={styles.legendDot} style={{ background: color }} />
-          {label}
-        </span>
-      ))}
-      <span className={styles.legendItem}>
-        <span className={styles.legendLine} />
-        Circular flow
-      </span>
+      <div className={styles.graphLegend}>
+        <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: "#e24b4a" }} />High risk wallet</span>
+        <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: "#ef9f27" }} />Bridge wallet</span>
+        <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: "var(--graph-node-stroke)" }} />Normal wallet</span>
+        <span className={styles.legendItem}><span className={styles.legendLine} />Suspicious flow</span>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
-const WalletRow: React.FC<{ wallet: string; txns: number; desc: string; gnnScore: number; risk: 'High' | 'Medium' | 'Low' }> = ({ wallet, txns, desc, gnnScore, risk }) => (
-  <div className={styles.walletRow}>
-    <div className={styles.walletInfo}>
-      <span className={styles.walletAddr}>{wallet}</span>
-      <span className={styles.walletDesc}>{txns} txns · {desc}</span>
+const WalletRow: React.FC<{ wallet: SuspiciousWallet; index: number }> = ({ wallet, index }) => {
+  const risk = normalizeRiskLevel(wallet.riskLevel);
+  return (
+    <div className={styles.walletRow}>
+      <div className={styles.walletInfo}>
+        <span className={styles.walletAddr}>{shortAddress(wallet.wallet)}</span>
+        <span className={styles.walletDesc}>{wallet.pattern} · Graph rank #{index + 1}</span>
+      </div>
+      <span className={styles.walletGnn}>GNN: {wallet.score.toFixed(2)}</span>
+      <span className={`${styles.riskBadge} ${styles[`risk${risk}`]}`}>{risk}</span>
     </div>
-    <span className={styles.walletGnn}>GNN: {gnnScore.toFixed(2)}</span>
-    <span className={`${styles.riskBadge} ${styles[`risk${risk}`]}`}>{risk}</span>
-  </div>
-);
+  );
+};
 
 const LogItem: React.FC<{ time: string; text: string; color: string }> = ({ time, text, color }) => (
   <div className={styles.logItem}>
@@ -170,157 +273,297 @@ const LogItem: React.FC<{ time: string; text: string; color: string }> = ({ time
   </div>
 );
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
 const WashTradingPage: React.FC = () => {
-  const { theme } = useUserTheme(); // Lấy theme từ Context
-  const isLight = theme === 'light';
+  const { theme } = useUserTheme();
+  const isLight = theme === "light";
+  const navigate = useNavigate();
+  const { mint } = useParams<{ mint: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [token, setToken] = useState<string>('BONK');
-  const [timeframe, setTimeframe] = useState<'Last 24h' | 'Last 7d' | 'Last 30d'>('Last 24h');
+  const symbolFromUrl = searchParams.get("symbol") || "TOKEN";
+  const timeframeFromUrl = (searchParams.get("timeframe") || "24h") as Timeframe;
+
+  const [symbol, setSymbol] = useState(symbolFromUrl);
+  const [timeframe, setTimeframe] = useState<Timeframe>(["24h", "7d", "30d"].includes(timeframeFromUrl) ? timeframeFromUrl : "24h");
+  const [manualMint, setManualMint] = useState(mint || "");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [result, setResult] = useState<WashTradeResult>(MOCK_RESULT);
-  const [algoTab, setAlgoTab] = useState<'GCN' | 'GAT' | 'GraphSAGE'>('GCN');
-  const [walletFilter, setWalletFilter] = useState<'All' | 'High risk' | 'New'>('All');
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<WashTradingResult | null>(null);
+  const [algoTab, setAlgoTab] = useState<"GCN" | "GAT" | "GraphSAGE">("GCN");
+  const [walletFilter, setWalletFilter] = useState<"All" | "High risk" | "New">("All");
 
-  const handleAnalyze = async () => {
+  useEffect(() => {
+    setManualMint(mint || "");
+  }, [mint]);
+
+  useEffect(() => {
+    setSymbol(symbolFromUrl);
+  }, [symbolFromUrl]);
+
+  const targetMint = mint || manualMint.trim();
+
+  const handleAnalyze = useCallback(async () => {
+    const selectedMint = targetMint.trim();
+    if (!selectedMint) {
+      setError("Thiếu token mint address. Hãy mở trang từ Token Detail hoặc nhập mint để phân tích.");
+      return;
+    }
+
     setIsAnalyzing(true);
-    await new Promise(r => setTimeout(r, 1400));
-    setResult(MOCK_RESULT);
-    setIsAnalyzing(false);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_DOMAIN}/api/v1/wash-trading/ai-analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          mint: selectedMint,
+          symbol: symbol || "TOKEN",
+          limit: timeframe === "24h" ? 200 : timeframe === "7d" ? 300 : 500,
+        }),
+      });
+
+      const payload = (await response.json()) as ApiResponse;
+      if (!response.ok || !payload.success || !payload.data) {
+        throw new Error(payload.message || payload.error || "AI analysis failed");
+      }
+
+      setResult(payload.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không thể gọi AI Wash Trading API.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, [symbol, targetMint, timeframe]);
+
+  useEffect(() => {
+    if (mint) {
+      void handleAnalyze();
+    }
+  }, [mint, handleAnalyze]);
+
+  const handleManualOpen = () => {
+    const selectedMint = manualMint.trim();
+    if (!selectedMint) {
+      setError("Vui lòng nhập token mint address.");
+      return;
+    }
+    navigate(`/wash-trading/${selectedMint}?symbol=${encodeURIComponent(symbol || "TOKEN")}&timeframe=${timeframe}`);
   };
 
-  const filteredWallets = result.suspiciousWallets.filter(w => {
-    if (walletFilter === 'High risk') return w.confidence > 85;
-    if (walletFilter === 'New') return w.confidence >= 70 && w.confidence < 85;
+  const handleTimeframeChange = (next: Timeframe) => {
+    setTimeframe(next);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("timeframe", next);
+    if (symbol) nextParams.set("symbol", symbol);
+    setSearchParams(nextParams);
+  };
+
+  const filteredWallets = (result?.suspiciousWallets ?? []).filter((wallet) => {
+    if (walletFilter === "High risk") return wallet.riskLevel === "High";
+    if (walletFilter === "New") return wallet.riskLevel !== "High";
     return true;
   });
 
+  const topWallet = result?.suspiciousWallets[0];
+  const featureSource = topWallet?.features;
+  const summary = result?.summary;
+  const riskScore = summary?.overallRiskScore ?? 0;
+  const suspiciousCount = summary?.suspiciousWalletCount ?? 0;
+
   return (
-    <PageWrapper> 
-      <div className={`${styles.page} ${isLight ? styles.light : ''}`} style={{ paddingTop: '1rem' }}>
-      
-      <div className={styles.topbar}>
-        <div className={styles.topbarLeft}>
-          <span className={styles.pageIcon}>◎</span>
-          <h1 className={styles.pageTitle}>Wash Trading Detection</h1>
-          <span className={styles.suspiciousBadge}>6 Suspicious</span>
+    <PageWrapper>
+      <div className={`${styles.page} ${isLight ? styles.light : ""}`}>
+        <div className={styles.breadcrumb}>
+          <Link to="/tokens" className={styles.breadcrumbLink}>Tokens</Link>
+          <span>/</span>
+          {mint ? <Link to={`/tokens/${mint}`} className={styles.breadcrumbLink}>{symbol || shortAddress(mint)}</Link> : <span>Manual token</span>}
+          <span>/</span>
+          <span>Wash Trading Detection</span>
         </div>
-        <div className={styles.topbarRight}>
-          <select className={styles.tokenSelect} value={token} onChange={e => setToken(e.target.value)}>
-            {['BONK','WIF','POPCAT','JTO'].map(t => <option key={t}>Token: {t}</option>)}
-          </select>
-          <button className={styles.btnSecondary} onClick={() => setTimeframe(prev => prev)}>
-            <span className={styles.btnIcon}></span>
-            {timeframe}
-          </button>
-          <button className={`${styles.btnPrimary} ${isAnalyzing ? styles.loading : ''}`} onClick={handleAnalyze} disabled={isAnalyzing}>
-            <span className={styles.btnIcon}></span>
-            {isAnalyzing ? 'Đang phân tích...' : 'AI Analyze ↗'}
-          </button>
-        </div>
-      </div>
 
-      <div className={styles.metricsGrid}>
-        {[
-          { label: 'Total Transactions', value: '14,832', sub: '↑ +38% so với hôm qua', subColor: '#e24b4a' },
-          { label: 'Wash Volume Detected', value: `$${(result.summary.volumeAnomalies / 1e6).toFixed(1)}M`, sub: '16.2% tổng volume', subColor: '#e24b4a' },
-          { label: 'Suspicious Wallets', value: String(result.suspiciousWallets.length + 17), sub: '6 mới trong 1h', subColor: '#ef9f27' },
-          { label: 'GNN Confidence', value: `${(result.gnnConfidence * 100).toFixed(1)}%`, sub: `↓ F1-Score: ${result.f1Score}`, subColor: '#639922' },
-        ].map(({ label, value, sub, subColor }) => (
-          <div key={label} className={styles.metricCard}>
-            <div className={styles.metricLabel}>{label}</div>
-            <div className={styles.metricValue}>{value}</div>
-            <div className={styles.metricSub} style={{ color: subColor }}>{sub}</div>
+        <div className={styles.topbar}>
+          <div className={styles.topbarLeft}>
+            <span className={styles.pageIcon}>◎</span>
+            <div>
+              <h1 className={styles.pageTitle}>AI Wash Trading Detection</h1>
+              <p className={styles.pageSubtitle}>
+                GNN-inspired analysis for {symbol || "TOKEN"} · {shortAddress(targetMint)}
+              </p>
+            </div>
+            <span className={styles.suspiciousBadge}>{suspiciousCount} Suspicious</span>
           </div>
-        ))}
-      </div>
 
-      <div className={styles.mainGrid}>
-        <div className={styles.leftCol}>
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <span className={styles.cardIcon}>🔗</span>
-              <h2 className={styles.cardTitle}>Transaction Graph — GNN Cluster View</h2>
-              <div className={styles.algoTabs}>
-                {(['GCN','GAT','GraphSAGE'] as const).map(t => (
-                  <button key={t}
-                    className={`${styles.algoTab} ${algoTab === t ? styles.algoTabActive : ''}`}
-                    onClick={() => setAlgoTab(t)}
-                  >{t}</button>
+          <div className={styles.topbarRight}>
+            {!mint && (
+              <input
+                className={styles.mintInput}
+                value={manualMint}
+                onChange={(event) => setManualMint(event.target.value)}
+                placeholder="Token mint address"
+              />
+            )}
+            <input
+              className={styles.symbolInput}
+              value={symbol}
+              onChange={(event) => setSymbol(event.target.value.toUpperCase())}
+              placeholder="Symbol"
+            />
+            <select className={styles.tokenSelect} value={timeframe} onChange={(event) => handleTimeframeChange(event.target.value as Timeframe)}>
+              <option value="24h">Last 24h</option>
+              <option value="7d">Last 7d</option>
+              <option value="30d">Last 30d</option>
+            </select>
+            {!mint && (
+              <button className={styles.btnSecondary} onClick={handleManualOpen}>
+                Open token
+              </button>
+            )}
+            <button className={`${styles.btnPrimary} ${isAnalyzing ? styles.loading : ""}`} onClick={handleAnalyze} disabled={isAnalyzing}>
+              {isAnalyzing ? "Đang phân tích..." : "Run AI Analyze ↗"}
+            </button>
+          </div>
+        </div>
+
+        {error && <div className={styles.errorBox}>{error}</div>}
+
+        <div className={styles.aiSummaryCard}>
+          <div className={styles.aiSummaryHeader}>
+            <span className={styles.aiPill}>AI Verdict</span>
+            <strong>{result?.aiAnalysis.verdict?.replaceAll("_", " ") ?? "Waiting for analysis"}</strong>
+          </div>
+          <p>{result?.aiAnalysis.summary ?? "Nhấn Run AI Analyze để phân tích circular trading, amount similarity, timing regularity và graph features của token này."}</p>
+          {result?.aiAnalysis.recommendation && (
+            <div className={styles.recommendation}>{result.aiAnalysis.recommendation}</div>
+          )}
+        </div>
+
+        <div className={styles.metricsGrid}>
+          {[
+            { label: "Total Transactions", value: formatNumber(summary?.totalTransactions ?? 0), sub: `${formatNumber(summary?.uniqueWallets ?? 0)} unique wallets`, subColor: "var(--text-secondary)" },
+            { label: "Wash Volume Estimate", value: formatNumber(summary?.washVolumeEstimate ?? 0), sub: `${(summary?.washVolumePercent ?? 0).toFixed(1)}% tổng volume`, subColor: "#e24b4a" },
+            { label: "Suspicious Wallets", value: String(suspiciousCount), sub: `${summary?.circularTradeCount ?? 0} circular clusters`, subColor: "#ef9f27" },
+            { label: "GNN Confidence", value: `${((summary?.gnnConfidence ?? 0) * 100).toFixed(1)}%`, sub: `Risk score: ${riskScore}/100`, subColor: "#639922" },
+          ].map(({ label, value, sub, subColor }) => (
+            <div key={label} className={styles.metricCard}>
+              <div className={styles.metricLabel}>{label}</div>
+              <div className={styles.metricValue}>{value}</div>
+              <div className={styles.metricSub} style={{ color: subColor }}>{sub}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className={styles.mainGrid}>
+          <div className={styles.leftCol}>
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <span className={styles.cardIcon}>🔗</span>
+                <h2 className={styles.cardTitle}>Transaction Graph — GNN Cluster View</h2>
+                <div className={styles.algoTabs}>
+                  {(["GCN", "GAT", "GraphSAGE"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      className={`${styles.algoTab} ${algoTab === tab ? styles.algoTabActive : ""}`}
+                      onClick={() => setAlgoTab(tab)}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <NetworkGraph nodes={result?.graphData.nodes ?? []} edges={result?.graphData.edges ?? []} />
+            </div>
+
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <span className={styles.cardIcon}>🔍</span>
+                <h2 className={styles.cardTitle}>Suspicious Wallets</h2>
+                <div className={styles.walletTabs}>
+                  {(["All", "High risk", "New"] as const).map((filter) => (
+                    <button
+                      key={filter}
+                      className={`${styles.walletTab} ${walletFilter === filter ? styles.walletTabActive : ""}`}
+                      onClick={() => setWalletFilter(filter)}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={styles.walletList}>
+                {filteredWallets.length > 0 ? (
+                  filteredWallets.map((wallet, index) => <WalletRow key={wallet.wallet} wallet={wallet} index={index} />)
+                ) : (
+                  <div className={styles.emptyState}>Chưa có ví đáng ngờ. Hãy chạy phân tích AI cho token này.</div>
+                )}
+              </div>
+            </div>
+
+            {result?.aiAnalysis.detailedFindings?.length ? (
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                  <span className={styles.cardIcon}>🧠</span>
+                  <h2 className={styles.cardTitle}>AI Detailed Findings</h2>
+                </div>
+                <div className={styles.findingList}>
+                  {result.aiAnalysis.detailedFindings.map((finding, index) => (
+                    <div className={styles.findingItem} key={`${finding}-${index}`}>
+                      <span>{index + 1}</span>
+                      <p>{finding}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <div className={styles.rightCol}>
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <span className={styles.cardIcon}>🛡</span>
+                <h2 className={styles.cardTitle}>Risk Score — {topWallet ? shortAddress(topWallet.wallet) : symbol}</h2>
+              </div>
+              <RiskGauge score={riskScore} label={getRiskLabel(riskScore)} />
+              <div className={styles.featuresSection}>
+                <FeatureBar label="Circular pattern" value={featureSource?.circularPattern ?? 0} />
+                <FeatureBar label="Time regularity" value={featureSource?.timeRegularity ?? 0} />
+                <FeatureBar label="Amount similarity" value={featureSource?.amountSimilarity ?? 0} />
+                <FeatureBar label="Self-loop degree" value={featureSource?.selfLoopDegree ?? 0} />
+                <FeatureBar label="Hubness" value={featureSource?.hubness ?? 0} />
+              </div>
+            </div>
+
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <span className={styles.cardIcon}>⏱</span>
+                <h2 className={styles.cardTitle}>Detection Log</h2>
+              </div>
+              <div className={styles.logList}>
+                {(result?.detectionLog ?? [
+                  { time: "--:--", message: "Waiting for AI analysis request...", severity: "info" as Severity },
+                ]).map((item, index) => (
+                  <LogItem key={`${item.time}-${index}`} time={item.time} text={item.message} color={getSeverityColor(item.severity)} />
                 ))}
               </div>
             </div>
-            <NetworkGraph />
-          </div>
 
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <span className={styles.cardIcon}>🔍</span>
-              <h2 className={styles.cardTitle}>Suspicious Wallets</h2>
-              <div className={styles.walletTabs}>
-                {(['All','High risk','New'] as const).map(f => (
-                  <button key={f}
-                    className={`${styles.walletTab} ${walletFilter === f ? styles.walletTabActive : ''}`}
-                    onClick={() => setWalletFilter(f)}
-                  >{f}</button>
-                ))}
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <span className={styles.cardIcon}>📌</span>
+                <h2 className={styles.cardTitle}>Token Context</h2>
               </div>
-            </div>
-            <div className={styles.walletList}>
-              {filteredWallets.map((w, i) => {
-                const risk = w.confidence > 85 ? 'High' : w.confidence >= 70 ? 'Medium' : 'Low';
-                const descs = ['Vòng tròn 6 hop · SOL ↔ BONK','Thời gian đều nhau · Multi-hop','Volume bất thường · DEX: Raydium','Slippage thấp bất thường'];
-                return (
-                  <WalletRow
-                    key={w.wallet}
-                    wallet={w.wallet}
-                    txns={[147,89,62,34,28,21][i] || 18}
-                    desc={descs[i] || 'Pattern phức tạp'}
-                    gnnScore={w.confidence / 100}
-                    risk={risk as 'High' | 'Medium' | 'Low'}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.rightCol}>
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <span className={styles.cardIcon}>🛡</span>
-              <h2 className={styles.cardTitle}>Risk Score — W2</h2>
-            </div>
-            <RiskGauge score={94} label="Wash Trading" />
-            <div className={styles.featuresSection}>
-              {[
-                { label: 'Circular pattern',  value: 0.95 },
-                { label: 'Time regularity',   value: 0.88 },
-                { label: 'Amount similarity', value: 0.92 },
-                { label: 'Self-loop degree',  value: 0.78 },
-                { label: 'Wallet age',        value: 0.60 },
-              ].map(f => <FeatureBar key={f.label} {...f} />)}
-            </div>
-          </div>
-
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <span className={styles.cardIcon}>⏱</span>
-              <h2 className={styles.cardTitle}>Detection Log</h2>
-            </div>
-            <div className={styles.logList}>
-              {[
-                { time:'14:32', text:'GNN phát hiện circular flow 6 hop — Cluster A',       color:'#e24b4a' },
-                { time:'14:28', text:'Volume spike bất thường +340% trong 2 phút',           color:'#ef9f27' },
-                { time:'14:15', text:'Ví W2 tạo 23 giao dịch với interval đều 3.2s',         color:'#e24b4a' },
-                { time:'13:58', text:'Cluster B — false positive, đã dismiss',               color:'var(--text-muted)' },
-                { time:'13:41', text:'Model retrain hoàn tất — F1: 0.89',                    color:'#639922' },
-              ].map(item => <LogItem key={item.time} {...item} />)}
+              <div className={styles.contextList}>
+                <div><span>Symbol</span><strong>{symbol || "TOKEN"}</strong></div>
+                <div><span>Mint</span><strong>{shortAddress(targetMint)}</strong></div>
+                <div><span>Timeframe</span><strong>{timeframe}</strong></div>
+                <div><span>Analyzed at</span><strong>{result ? new Date(result.analyzedAt).toLocaleString("vi-VN") : "—"}</strong></div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
     </PageWrapper>
   );
 };

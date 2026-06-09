@@ -1,6 +1,5 @@
 import { BrowserRouter, Route, Routes } from "react-router";
 import "./App.css";
-import { PageWrapper } from "@/components/wrapper";
 import Index from "@/pages";
 import AlertsPage from "@/pages/alerts";
 import AuthShowcase from "@/pages/auth";
@@ -18,7 +17,7 @@ import PricingPage from "@/pages/pricing";
 import { Component, type ReactNode } from "react";
 import { AuthGuard } from "./components/auth";
 import AlertsDemo from "./pages/alerts/demo";
-import WashTradingPage from './pages/wash-trading';
+import WashTradingPage from "./pages/wash-trading";
 
 function LandingRoute() {
   return <Index />;
@@ -72,7 +71,11 @@ function App() {
         <Route path="/alerts" element={<AlertsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/tokens" element={<TokenPage />} />
+
+        {/* Wash Trading AI deep-link routes */}
         <Route path="/wash-trading" element={<WashTradingPage />} />
+        <Route path="/wash-trading/:mint" element={<WashTradingPage />} />
+
         <Route
           path="/alerts/demo"
           element={
@@ -101,7 +104,6 @@ function App() {
             </RouteErrorBoundary>
           }
         />
-        <Route path="/wallets/:address" element={<WalletPage />} />
         <Route
           path="/wallets/:address"
           element={

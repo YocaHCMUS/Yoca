@@ -1,38 +1,18 @@
-/**
- * wash-trading-ai.service.ts
- *
- * Hướng 2: Thuật toán (GNN-inspired features) + Gemini AI reasoning
- *
- * Pipeline:
- *  1. Fetch transactions thật từ Helius API
- *  2. Chạy 4 thuật toán phát hiện pattern (circular, same-amount, star-topology, volume-anomaly)
- *  3. Tính GNN-inspired score cho từng ví dựa trên graph features
- *  4. Gửi kết quả lên Gemini → AI phân tích, giải thích bằng ngôn ngữ tự nhiên
- *
- * File này đặt tại:
- *   server/src/services/wash-trading-ai.service.ts
- */
-
-import { GoogleGenAI } from "@google/genai";
 import { GOOGLE_AI_KEY, WALLET_AUDIT_MODEL } from "@sv/config/constants.js";
 import { heliusGetJson } from "@sv/services/wallet/providers/helius.client.js";
+import { GoogleGenAI } from "@google/genai";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+export type Timeframe = "1h" | "24h" | "7d" | "30d";
 
 export interface RawTransaction {
-  signature: string;
-  feePayer: string;
-  timestamp: number; // unix seconds
+  signature?: string;
+  feePayer?: string;
+  timestamp?: number;
   tokenTransfers?: Array<{
-    fromUserAccount: string;
-    toUserAccount: string;
-    tokenAmount: number;
-    mint: string;
-  }>;
-  nativeTransfers?: Array<{
-    fromUserAccount: string;
-    toUserAccount: string;
-    amount: number;
+    fromUserAccount?: string;
+    toUserAccount?: string;
+    tokenAmount?: number;
+    mint?: string;
   }>;
 }
 
@@ -41,33 +21,22 @@ export interface NormalizedTx {
   from: string;
   to: string;
   amount: number;
-  timestamp: number; // unix seconds
+  timestamp: number;
   mint: string;
 }
 
 export interface CircularPattern {
-  cycle: string[];           // danh sách địa chỉ ví tạo vòng
-  hops: number;              // số bước trong vòng
+  cycle: string[];
+  hops: number;
   amounts: number[];
   timestamps: number[];
-  intervalMs: number;        // khoảng cách thời gian trung bình giữa các tx
-  confidence: number;        // 0–1
-}
-
-export interface WalletGraphFeatures {
-  address: string;
-  inDegree: number;
-  outDegree: number;
-  selfLoop: boolean;
-  participatesInCircular: boolean;
-  avgInterval: number;         // ms giữa các tx liên tiếp
-  amountVariance: number;      // độ phân tán khối lượng (thấp = đáng ngờ)
-  walletTxCount: number;
+  intervalMs: number;
+  confidence: number;
 }
 
 export interface GNNScore {
   wallet: string;
-  score: number;              // 0–1, càng cao càng đáng ngờ
+  score: number;
   features: {
     circularPattern: number;
     timeRegularity: number;
@@ -77,14 +46,16 @@ export interface GNNScore {
   };
   riskLevel: "High" | "Medium" | "Low";
   pattern: string;
+  txCount: number;
+  volume: number;
 }
 
 export interface WashTradingAIResult {
   mint: string;
   symbol: string;
+  timeframe: Timeframe;
   analyzedAt: string;
-
-  // ─── Số liệu tổng quan ────────────────────────────────────────
+  dataSource: "helius" | "demo-fallback";
   summary: {
     totalTransactions: number;
     uniqueWallets: number;
@@ -93,34 +64,28 @@ export interface WashTradingAIResult {
     washVolumePercent: number;
     circularTradeCount: number;
     suspiciousWalletCount: number;
-    overallRiskScore: number;  // 0–100
-    gnnConfidence: number;     // 0–1
+    overallRiskScore: number;
+    gnnConfidence: number;
   };
-
-  // ─── Kết quả thuật toán ───────────────────────────────────────
   circularPatterns: CircularPattern[];
   suspiciousWallets: GNNScore[];
   graphData: {
-    nodes: Array<{ id: string; type: "wash" | "bridge" | "normal"; label: string }>;
+    nodes: Array<{ id: string; type: "wash" | "bridge" | "normal"; label: string; score?: number }>;
     edges: Array<{ from: string; to: string; amount: number; suspicious: boolean }>;
   };
-
-  // ─── Kết quả AI (Gemini) ──────────────────────────────────────
   aiAnalysis: {
     verdict: "HIGH_RISK" | "MEDIUM_RISK" | "LOW_RISK" | "CLEAN";
-    summary: string;                   // tóm tắt ngắn 1-2 câu
-    detailedFindings: string[];        // mảng các phát hiện chi tiết
+    summary: string;
+    detailedFindings: string[];
     suspiciousPatterns: Array<{
       patternName: string;
       description: string;
       affectedWallets: string[];
       severity: "HIGH" | "MEDIUM" | "LOW";
     }>;
-    recommendation: string;            // khuyến nghị cho user
-    confidenceNote: string;            // ghi chú về độ chính xác
+    recommendation: string;
+    confidenceNote: string;
   };
-
-  // ─── Detection log (cho UI) ───────────────────────────────────
   detectionLog: Array<{
     time: string;
     message: string;
@@ -128,591 +93,481 @@ export interface WashTradingAIResult {
   }>;
 }
 
-// ─── Step 1: Fetch transactions từ Helius ─────────────────────────────────────
+function shortAddress(address: string): string {
+  if (address.length <= 12) return address;
+  return `${address.slice(0, 4)}...${address.slice(-4)}`;
+}
 
-async function fetchTokenTransactions(
-  mint: string,
-  limit = 200
-): Promise<NormalizedTx[]> {
-  try {
-    // Helius Enhanced Transactions API: lấy transactions liên quan đến token mint
-    const raw = await heliusGetJson<RawTransaction[]>(
-      `/v0/addresses/${mint}/transactions`,
-      {
-        limit: Math.min(limit, 100), // Helius max 100/page
-        type: "SWAP",                // chỉ lấy SWAP transactions
-      }
-    );
+function hashSeed(input: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
 
-    if (!Array.isArray(raw) || raw.length === 0) {
-      return [];
+function createRandom(seedInput: string): () => number {
+  let seed = hashSeed(seedInput) || 1;
+  return () => {
+    seed = Math.imul(seed, 1664525) + 1013904223;
+    return ((seed >>> 0) / 4294967296);
+  };
+}
+
+function fakeWallet(prefix: string, index: number, seed: string): string {
+  const base = `${prefix}${index}${seed}`.replace(/[^a-zA-Z0-9]/g, "");
+  return `${base.slice(0, 8).padEnd(8, "X")}${hashSeed(base).toString(36).padEnd(24, "0")}`.slice(0, 32);
+}
+
+function createDemoTransactions(mint: string, symbol: string, limit: number): NormalizedTx[] {
+  const rand = createRandom(`${mint}:${symbol}`);
+  const now = Math.floor(Date.now() / 1000);
+  const txs: NormalizedTx[] = [];
+
+  const washA = [0, 1, 2, 3].map((i) => fakeWallet("washA", i, mint));
+  const washB = [0, 1, 2].map((i) => fakeWallet("washB", i, mint));
+  const normal = Array.from({ length: 18 }, (_, i) => fakeWallet("normal", i, mint));
+
+  let sigCounter = 0;
+  const pushTx = (from: string, to: string, amount: number, timestamp: number) => {
+    txs.push({
+      signature: `demo_${hashSeed(`${mint}_${sigCounter}_${from}_${to}`).toString(36)}`,
+      from,
+      to,
+      amount,
+      timestamp,
+      mint,
+    });
+    sigCounter++;
+  };
+
+  // Cluster A: circular flow with very similar amount and regular interval.
+  for (let round = 0; round < 14; round++) {
+    const start = now - 3600 + round * 185;
+    const baseAmount = 42_000 + Math.round(rand() * 1800);
+    for (let i = 0; i < washA.length; i++) {
+      pushTx(
+        washA[i],
+        washA[(i + 1) % washA.length],
+        baseAmount + Math.round((rand() - 0.5) * 500),
+        start + i * 7,
+      );
     }
+  }
 
-    // Normalize: chỉ giữ lại token transfers liên quan đến mint
+  // Cluster B: 3-hop round trips.
+  for (let round = 0; round < 9; round++) {
+    const start = now - 7200 + round * 260;
+    const baseAmount = 17_500 + Math.round(rand() * 900);
+    for (let i = 0; i < washB.length; i++) {
+      pushTx(
+        washB[i],
+        washB[(i + 1) % washB.length],
+        baseAmount + Math.round((rand() - 0.5) * 250),
+        start + i * 11,
+      );
+    }
+  }
+
+  // Bridge and normal traffic.
+  for (let i = 0; i < Math.max(25, limit - txs.length); i++) {
+    const from = rand() > 0.22 ? normal[Math.floor(rand() * normal.length)] : washA[Math.floor(rand() * washA.length)];
+    const to = normal[Math.floor(rand() * normal.length)];
+    const amount = 600 + Math.round(rand() * 8_000);
+    const timestamp = now - Math.round(rand() * 24 * 3600);
+    pushTx(from, to, amount, timestamp);
+  }
+
+  return txs.sort((a, b) => a.timestamp - b.timestamp).slice(0, limit);
+}
+
+async function fetchTokenTransactions(mint: string, symbol: string, limit: number): Promise<{ txs: NormalizedTx[]; source: "helius" | "demo-fallback" }> {
+  try {
+    const raw = await heliusGetJson<RawTransaction[]>(`/v0/addresses/${mint}/transactions`, {
+      limit: Math.min(limit, 100),
+      type: "SWAP",
+    });
+
     const normalized: NormalizedTx[] = [];
-    for (const tx of raw) {
-      const transfers = tx.tokenTransfers?.filter(t => t.mint === mint) ?? [];
-      for (const transfer of transfers) {
-        if (transfer.fromUserAccount && transfer.toUserAccount && transfer.tokenAmount > 0) {
+    for (const tx of Array.isArray(raw) ? raw : []) {
+      for (const transfer of tx.tokenTransfers ?? []) {
+        const amount = Number(transfer.tokenAmount ?? 0);
+        if (
+          transfer.mint === mint &&
+          transfer.fromUserAccount &&
+          transfer.toUserAccount &&
+          amount > 0
+        ) {
           normalized.push({
-            signature: tx.signature,
+            signature: tx.signature ?? `unknown_${normalized.length}`,
             from: transfer.fromUserAccount,
             to: transfer.toUserAccount,
-            amount: transfer.tokenAmount,
-            timestamp: tx.timestamp,
+            amount,
+            timestamp: Number(tx.timestamp ?? Math.floor(Date.now() / 1000)),
             mint,
           });
         }
       }
     }
 
-    return normalized;
-  } catch (err) {
-    console.error("[WashTradingAI] Helius fetch error:", err);
-    return [];
+    if (normalized.length >= 10) {
+      return { txs: normalized.slice(0, limit), source: "helius" };
+    }
+  } catch (error) {
+    console.warn("[WashTradingAI] Helius unavailable, using demo fallback:", error instanceof Error ? error.message : error);
   }
-}
 
-// ─── Step 2a: Detect circular patterns ───────────────────────────────────────
+  return { txs: createDemoTransactions(mint, symbol, limit), source: "demo-fallback" };
+}
 
 function detectCircularPatterns(txs: NormalizedTx[]): CircularPattern[] {
   const patterns: CircularPattern[] = [];
-  const txMap = new Map<string, NormalizedTx[]>();
+  const byFrom = new Map<string, NormalizedTx[]>();
 
-  // Group by sender
   for (const tx of txs) {
-    if (!txMap.has(tx.from)) txMap.set(tx.from, []);
-    txMap.get(tx.from)!.push(tx);
+    const list = byFrom.get(tx.from) ?? [];
+    list.push(tx);
+    byFrom.set(tx.from, list);
   }
 
-  // DFS tìm cycle 3–6 hop trong time window 1 giờ
-  const TIME_WINDOW = 3600; // seconds
-  const AMOUNT_TOLERANCE = 0.03; // 3%
+  const TIME_WINDOW_SECONDS = 3600;
+  const AMOUNT_TOLERANCE = 0.08;
 
-  function dfs(
-    startWallet: string,
-    currentWallet: string,
+  const dfs = (
+    start: string,
+    current: string,
     path: string[],
     amounts: number[],
     timestamps: number[],
     startAmount: number,
     startTime: number,
-    visited: Set<string>
-  ): void {
-    if (path.length > 6) return; // max 6-hop
+    visited: Set<string>,
+  ) => {
+    if (path.length > 6) return;
 
-    const outgoing = txMap.get(currentWallet) ?? [];
+    const outgoing = byFrom.get(current) ?? [];
     for (const tx of outgoing) {
-      // Check time window
-      if (tx.timestamp - startTime > TIME_WINDOW) continue;
+      if (tx.timestamp < startTime) continue;
+      if (tx.timestamp - startTime > TIME_WINDOW_SECONDS) continue;
+      const diff = Math.abs(tx.amount - startAmount) / Math.max(startAmount, 1);
+      if (diff > AMOUNT_TOLERANCE) continue;
 
-      // Check amount similarity
-      const amountDiff = Math.abs(tx.amount - startAmount) / (startAmount || 1);
-      if (amountDiff > AMOUNT_TOLERANCE) continue;
-
-      if (tx.to === startWallet && path.length >= 2) {
-        // Tìm thấy cycle!
-        const intervalMs =
-          ((tx.timestamp - startTime) / path.length) * 1000;
-        const confidence = Math.max(
-          0.6,
-          1 - amountDiff * 5 - (path.length - 3) * 0.05
-        );
+      if (tx.to === start && path.length >= 3) {
+        const hopCount = path.length;
+        const allTimestamps = [...timestamps, tx.timestamp];
+        const intervalMs = ((allTimestamps[allTimestamps.length - 1] - allTimestamps[0]) / Math.max(hopCount, 1)) * 1000;
+        const confidence = Math.min(0.99, Math.max(0.55, 1 - diff * 4 - Math.max(0, intervalMs - 60_000) / 600_000));
         patterns.push({
-          cycle: [...path, tx.to],
-          hops: path.length,
+          cycle: [...path, start],
+          hops: hopCount,
           amounts: [...amounts, tx.amount],
-          timestamps: [...timestamps, tx.timestamp],
+          timestamps: allTimestamps,
           intervalMs,
-          confidence: Math.min(0.99, confidence),
+          confidence,
         });
-        return;
+        continue;
       }
 
-      if (!visited.has(tx.to) && tx.to !== startWallet) {
+      if (!visited.has(tx.to)) {
         visited.add(tx.to);
-        dfs(
-          startWallet,
-          tx.to,
-          [...path, tx.to],
-          [...amounts, tx.amount],
-          [...timestamps, tx.timestamp],
-          startAmount,
-          startTime,
-          visited
-        );
+        dfs(start, tx.to, [...path, tx.to], [...amounts, tx.amount], [...timestamps, tx.timestamp], startAmount, startTime, visited);
         visited.delete(tx.to);
       }
     }
-  }
+  };
 
-  // Chỉ check top 50 wallets có nhiều tx nhất (performance)
-  const walletTxCount = new Map<string, number>();
-  for (const tx of txs) {
-    walletTxCount.set(tx.from, (walletTxCount.get(tx.from) ?? 0) + 1);
-  }
-  const topWallets = [...walletTxCount.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 50)
-    .map(([w]) => w);
+  const topWallets = [...byFrom.entries()]
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 60);
 
-  for (const wallet of topWallets) {
-    const outgoing = txMap.get(wallet) ?? [];
-    for (const tx of outgoing.slice(0, 10)) {
-      const visited = new Set<string>([wallet]);
+  for (const [wallet, outgoing] of topWallets) {
+    for (const tx of outgoing.slice(0, 12)) {
+      const visited = new Set<string>([wallet, tx.to]);
       dfs(wallet, tx.to, [wallet, tx.to], [tx.amount], [tx.timestamp], tx.amount, tx.timestamp, visited);
     }
   }
 
-  // Dedup patterns
   const seen = new Set<string>();
-  return patterns.filter(p => {
-    const key = [...p.cycle].sort().join(",");
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  return patterns
+    .sort((a, b) => b.confidence - a.confidence)
+    .filter((p) => {
+      const key = p.cycle.slice(0, -1).sort().join("|");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 20);
 }
 
-// ─── Step 2b: Tính GNN-inspired scores ───────────────────────────────────────
+function computeGNNScores(txs: NormalizedTx[], circularPatterns: CircularPattern[]): GNNScore[] {
+  const wallets = new Map<string, {
+    inDegree: number;
+    outDegree: number;
+    txCount: number;
+    volume: number;
+    timestamps: number[];
+    amounts: number[];
+    selfLoop: boolean;
+    circular: boolean;
+  }>();
 
-function computeGNNScores(
-  txs: NormalizedTx[],
-  circularPatterns: CircularPattern[]
-): GNNScore[] {
-  const walletFeatures = new Map<string, WalletGraphFeatures>();
+  const ensure = (wallet: string) => {
+    const existing = wallets.get(wallet);
+    if (existing) return existing;
+    const created = { inDegree: 0, outDegree: 0, txCount: 0, volume: 0, timestamps: [], amounts: [], selfLoop: false, circular: false };
+    wallets.set(wallet, created);
+    return created;
+  };
 
-  // Khởi tạo features
-  const allWallets = new Set([...txs.map(t => t.from), ...txs.map(t => t.to)]);
-  for (const w of allWallets) {
-    walletFeatures.set(w, {
-      address: w,
-      inDegree: 0,
-      outDegree: 0,
-      selfLoop: false,
-      participatesInCircular: false,
-      avgInterval: 0,
-      amountVariance: 0,
-      walletTxCount: 0,
-    });
-  }
-
-  // Tính in/out degree
   for (const tx of txs) {
-    const from = walletFeatures.get(tx.from)!;
-    const to = walletFeatures.get(tx.to)!;
+    const from = ensure(tx.from);
+    const to = ensure(tx.to);
     from.outDegree++;
-    from.walletTxCount++;
+    from.txCount++;
+    from.volume += tx.amount;
+    from.timestamps.push(tx.timestamp);
+    from.amounts.push(tx.amount);
     to.inDegree++;
     if (tx.from === tx.to) from.selfLoop = true;
   }
 
-  // Đánh dấu wallets tham gia circular patterns
-  const circularWallets = new Set<string>();
-  for (const p of circularPatterns) {
-    p.cycle.forEach(w => circularWallets.add(w));
-  }
-  for (const [w, f] of walletFeatures) {
-    if (circularWallets.has(w)) f.participatesInCircular = true;
-  }
+  const circularWallets = new Set(circularPatterns.flatMap((p) => p.cycle));
+  for (const wallet of circularWallets) ensure(wallet).circular = true;
 
-  // Tính time regularity (avgInterval) và amount variance
-  const walletTxs = new Map<string, NormalizedTx[]>();
-  for (const tx of txs) {
-    if (!walletTxs.has(tx.from)) walletTxs.set(tx.from, []);
-    walletTxs.get(tx.from)!.push(tx);
-  }
-
-  for (const [wallet, wtxs] of walletTxs) {
-    if (wtxs.length < 2) continue;
-    const sorted = [...wtxs].sort((a, b) => a.timestamp - b.timestamp);
-
-    // avg interval
-    let totalInterval = 0;
-    for (let i = 1; i < sorted.length; i++) {
-      totalInterval += (sorted[i].timestamp - sorted[i - 1].timestamp) * 1000;
-    }
-    const avgInterval = totalInterval / (sorted.length - 1);
-
-    // amount variance
-    const amounts = sorted.map(t => t.amount);
-    const mean = amounts.reduce((a, b) => a + b, 0) / amounts.length;
-    const variance = amounts.reduce((a, b) => a + (b - mean) ** 2, 0) / amounts.length;
-    const coeffVar = mean > 0 ? Math.sqrt(variance) / mean : 1;
-
-    const f = walletFeatures.get(wallet)!;
-    f.avgInterval = avgInterval;
-    f.amountVariance = coeffVar;
-  }
-
-  // Tính GNN score theo weighted formula
-  // Weights lấy từ nghiên cứu: "Wash Trading Detection in NFT Markets" (2023)
-  const WEIGHTS = {
-    circularPattern: 0.30,
-    timeRegularity:  0.25,
-    amountSimilarity:0.25,
-    selfLoopDegree:  0.10,
-    hubness:         0.10,
-  };
-
-  // Tìm max values để normalize
-  const maxDegree = Math.max(...[...walletFeatures.values()].map(f => f.inDegree + f.outDegree), 1);
-
+  const maxDegree = Math.max(1, ...[...wallets.values()].map((w) => w.inDegree + w.outDegree));
   const scores: GNNScore[] = [];
 
-  for (const [wallet, features] of walletFeatures) {
-    if (features.walletTxCount < 2) continue; // bỏ qua ví ít tx
+  for (const [wallet, f] of wallets) {
+    if (f.txCount < 2 && !f.circular) continue;
 
-    // Feature 1: Circular pattern (0–1)
-    const circularScore = features.participatesInCircular ? 0.95 : 0;
+    const sortedTimes = [...f.timestamps].sort((a, b) => a - b);
+    const intervals: number[] = [];
+    for (let i = 1; i < sortedTimes.length; i++) intervals.push((sortedTimes[i] - sortedTimes[i - 1]) * 1000);
+    const avgInterval = intervals.length ? intervals.reduce((a, b) => a + b, 0) / intervals.length : 600_000;
 
-    // Feature 2: Time regularity (0–1) — interval đều = đáng ngờ
-    // avgInterval < 5s → rất đáng ngờ (bot); > 600s → bình thường
-    const timeScore =
-      features.avgInterval > 0
-        ? Math.max(0, 1 - features.avgInterval / 600_000)
-        : 0;
+    const mean = f.amounts.length ? f.amounts.reduce((a, b) => a + b, 0) / f.amounts.length : 0;
+    const variance = f.amounts.length ? f.amounts.reduce((a, b) => a + (b - mean) ** 2, 0) / f.amounts.length : 0;
+    const coeffVar = mean > 0 ? Math.sqrt(variance) / mean : 1;
 
-    // Feature 3: Amount similarity (0–1) — coeffVar thấp = amount đều = đáng ngờ
-    const amountScore = Math.max(0, 1 - features.amountVariance);
+    const circularScore = f.circular ? 0.95 : 0;
+    const timeRegularity = Math.max(0, Math.min(1, 1 - avgInterval / 600_000));
+    const amountSimilarity = Math.max(0, Math.min(1, 1 - coeffVar));
+    const selfLoopDegree = f.selfLoop ? 0.85 : 0;
+    const hubness = Math.min(1, (f.inDegree + f.outDegree) / Math.max(1, maxDegree * 0.45));
 
-    // Feature 4: Self-loop degree (0–1)
-    const selfLoopScore = features.selfLoop ? 0.8 : 0;
+    const score = Math.min(0.99,
+      circularScore * 0.34 +
+      timeRegularity * 0.22 +
+      amountSimilarity * 0.22 +
+      selfLoopDegree * 0.08 +
+      hubness * 0.14,
+    );
 
-    // Feature 5: Hubness — nhiều kết nối hơn bình thường (0–1)
-    const totalDegree = features.inDegree + features.outDegree;
-    const hubnessScore = Math.min(1, totalDegree / (maxDegree * 0.3));
+    if (score < 0.18 && !f.circular) continue;
 
-    const gnnScore =
-      circularScore   * WEIGHTS.circularPattern +
-      timeScore       * WEIGHTS.timeRegularity +
-      amountScore     * WEIGHTS.amountSimilarity +
-      selfLoopScore   * WEIGHTS.selfLoopDegree +
-      hubnessScore    * WEIGHTS.hubness;
-
-    // Chỉ giữ những ví có score đủ cao
-    if (gnnScore < 0.15 && !features.participatesInCircular) continue;
-
-    const riskLevel: GNNScore["riskLevel"] =
-      gnnScore >= 0.7 ? "High" : gnnScore >= 0.4 ? "Medium" : "Low";
-
-    let pattern = "Anomalous Activity";
-    if (features.participatesInCircular) pattern = "Circular Trade";
-    else if (hubnessScore > 0.6) pattern = "Hub Wallet";
-    else if (timeScore > 0.7) pattern = "Bot-like Timing";
-    else if (amountScore > 0.8) pattern = "Amount Mirror";
+    const riskLevel: GNNScore["riskLevel"] = score >= 0.7 ? "High" : score >= 0.4 ? "Medium" : "Low";
+    const pattern = f.circular ? "Circular Trade" : hubness > 0.7 ? "Hub Wallet" : timeRegularity > 0.65 ? "Bot-like Timing" : amountSimilarity > 0.75 ? "Amount Mirror" : "Anomalous Activity";
 
     scores.push({
       wallet,
-      score: Math.min(0.99, gnnScore),
-      features: {
-        circularPattern: circularScore,
-        timeRegularity: timeScore,
-        amountSimilarity: amountScore,
-        selfLoopDegree: selfLoopScore,
-        hubness: hubnessScore,
-      },
+      score,
       riskLevel,
       pattern,
+      txCount: f.txCount,
+      volume: f.volume,
+      features: { circularPattern: circularScore, timeRegularity, amountSimilarity, selfLoopDegree, hubness },
     });
   }
 
-  return scores.sort((a, b) => b.score - a.score).slice(0, 20);
+  return scores.sort((a, b) => b.score - a.score).slice(0, 25);
 }
 
-// ─── Step 3: Build graph data cho visualization ───────────────────────────────
+function buildGraphData(txs: NormalizedTx[], suspiciousWallets: GNNScore[]): WashTradingAIResult["graphData"] {
+  const suspiciousSet = new Set(suspiciousWallets.slice(0, 12).map((w) => w.wallet));
+  const highRiskSet = new Set(suspiciousWallets.filter((w) => w.riskLevel === "High").map((w) => w.wallet));
+  const scoreMap = new Map(suspiciousWallets.map((w) => [w.wallet, w.score]));
 
-function buildGraphData(
-  txs: NormalizedTx[],
-  suspiciousWallets: GNNScore[]
-): WashTradingAIResult["graphData"] {
-  const suspSet = new Set(suspiciousWallets.slice(0, 10).map(w => w.wallet));
-  const highRiskSet = new Set(
-    suspiciousWallets.filter(w => w.riskLevel === "High").map(w => w.wallet)
-  );
-
-  // Chỉ lấy edges liên quan đến suspicious wallets (để graph không quá lớn)
-  const relevantEdges = txs.filter(
-    tx => suspSet.has(tx.from) || suspSet.has(tx.to)
-  ).slice(0, 50);
+  const relevant = txs
+    .filter((tx) => suspiciousSet.has(tx.from) || suspiciousSet.has(tx.to))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 60);
 
   const walletSet = new Set<string>();
-  relevantEdges.forEach(e => { walletSet.add(e.from); walletSet.add(e.to); });
+  for (const tx of relevant) {
+    walletSet.add(tx.from);
+    walletSet.add(tx.to);
+  }
 
-  const nodes = [...walletSet].map(id => ({
-    id,
-    type: (highRiskSet.has(id) ? "wash" : suspSet.has(id) ? "bridge" : "normal") as "wash" | "bridge" | "normal",
-    label: id.slice(0, 4) + "..." + id.slice(-4),
-  }));
-
-  const edges = relevantEdges.map(tx => ({
-    from: tx.from,
-    to: tx.to,
-    amount: tx.amount,
-    suspicious: suspSet.has(tx.from) && suspSet.has(tx.to),
-  }));
-
-  return { nodes, edges };
+  return {
+    nodes: [...walletSet].slice(0, 35).map((id) => ({
+      id,
+      label: shortAddress(id),
+      type: highRiskSet.has(id) ? "wash" : suspiciousSet.has(id) ? "bridge" : "normal",
+      score: scoreMap.get(id),
+    })),
+    edges: relevant.map((tx) => ({
+      from: tx.from,
+      to: tx.to,
+      amount: tx.amount,
+      suspicious: suspiciousSet.has(tx.from) && suspiciousSet.has(tx.to),
+    })),
+  };
 }
 
-// ─── Step 4: Gemini AI Analysis ───────────────────────────────────────────────
+function buildLocalAIAnalysis(symbol: string, circularPatterns: CircularPattern[], suspiciousWallets: GNNScore[], riskScore: number, dataSource: WashTradingAIResult["dataSource"]): WashTradingAIResult["aiAnalysis"] {
+  const verdict: WashTradingAIResult["aiAnalysis"]["verdict"] = riskScore >= 75 ? "HIGH_RISK" : riskScore >= 45 ? "MEDIUM_RISK" : riskScore >= 20 ? "LOW_RISK" : "CLEAN";
+  const highRisk = suspiciousWallets.filter((w) => w.riskLevel === "High");
 
-async function analyzeWithGemini(params: {
+  return {
+    verdict,
+    summary: `Token ${symbol} có risk score ${riskScore}/100. Hệ thống phát hiện ${circularPatterns.length} circular cluster và ${suspiciousWallets.length} ví có hành vi bất thường theo mô hình GNN-inspired.`,
+    detailedFindings: [
+      circularPatterns.length > 0
+        ? `Circular trading: phát hiện ${circularPatterns.length} vòng giao dịch 3-6 hop với amount tương đồng và khoảng thời gian đều.`
+        : "Circular trading: chưa phát hiện vòng giao dịch rõ ràng trong tập dữ liệu hiện tại.",
+      highRisk.length > 0
+        ? `GNN score: ${highRisk.length} ví đạt mức High risk, nổi bật là ${shortAddress(highRisk[0].wallet)} với score ${(highRisk[0].score * 100).toFixed(0)}/100.`
+        : "GNN score: chưa có ví nào vượt ngưỡng High risk.",
+      dataSource === "demo-fallback"
+        ? "Data source: đang dùng dữ liệu demo fallback vì chưa có/không lấy được Helius API. Phù hợp demo UX, chưa nên xem là kết luận on-chain thật."
+        : "Data source: dữ liệu lấy từ Helius Enhanced Transactions API và được chuẩn hóa theo token transfer.",
+    ],
+    suspiciousPatterns: suspiciousWallets.slice(0, 6).map((w) => ({
+      patternName: w.pattern,
+      description: `Ví ${shortAddress(w.wallet)} có ${w.txCount} giao dịch, volume ${Math.round(w.volume).toLocaleString()} token, GNN score ${(w.score * 100).toFixed(0)}/100.`,
+      affectedWallets: [w.wallet],
+      severity: w.riskLevel.toUpperCase() as "HIGH" | "MEDIUM" | "LOW",
+    })),
+    recommendation: verdict === "HIGH_RISK"
+      ? "Nên cảnh báo người dùng, kiểm tra thêm thanh khoản/pool và hạn chế ra quyết định dựa trên volume 24h của token này."
+      : verdict === "MEDIUM_RISK"
+      ? "Nên theo dõi thêm vì đã có một số dấu hiệu volume nhân tạo nhưng chưa đủ mạnh để kết luận chắc chắn."
+      : "Chưa thấy dấu hiệu wash trading nghiêm trọng trong dữ liệu hiện tại, nhưng vẫn nên kết hợp thêm holder distribution và pool liquidity.",
+    confidenceNote: "Đây là mô hình GNN-inspired dùng graph features: circularity, time regularity, amount similarity, self-loop và hubness. Kết quả là tín hiệu cảnh báo, không phải kết luận pháp lý.",
+  };
+}
+
+async function tryGeminiAnalysis(base: WashTradingAIResult["aiAnalysis"], params: {
   mint: string;
   symbol: string;
-  txCount: number;
-  uniqueWallets: number;
-  totalVolume: number;
+  summary: WashTradingAIResult["summary"];
   circularPatterns: CircularPattern[];
   suspiciousWallets: GNNScore[];
 }): Promise<WashTradingAIResult["aiAnalysis"]> {
-
-  const fallback: WashTradingAIResult["aiAnalysis"] = {
-    verdict:
-      params.suspiciousWallets.filter(w => w.riskLevel === "High").length > 3
-        ? "HIGH_RISK"
-        : params.suspiciousWallets.length > 5
-        ? "MEDIUM_RISK"
-        : "LOW_RISK",
-    summary: `Phát hiện ${params.circularPatterns.length} vòng giao dịch tròn và ${params.suspiciousWallets.length} ví đáng ngờ cho token ${params.symbol}.`,
-    detailedFindings: params.circularPatterns.slice(0, 3).map(
-      (p, i) => `Cluster ${i + 1}: ${p.hops}-hop circular trade, interval trung bình ${(p.intervalMs / 1000).toFixed(1)}s, confidence ${(p.confidence * 100).toFixed(0)}%`
-    ),
-    suspiciousPatterns: params.suspiciousWallets.slice(0, 5).map(w => ({
-      patternName: w.pattern,
-      description: `Ví ${w.wallet.slice(0, 8)}... có GNN score ${(w.score * 100).toFixed(0)}/100`,
-      affectedWallets: [w.wallet],
-      severity: w.riskLevel as "HIGH" | "MEDIUM" | "LOW",
-    })),
-    recommendation: "Cần điều tra thêm trước khi giao dịch token này.",
-    confidenceNote: "Phân tích dựa trên graph features, không cần model AI.",
-  };
-
   const apiKey = GOOGLE_AI_KEY?.trim();
-  if (!apiKey) {
-    console.warn("[WashTradingAI] GOOGLE_AI_KEY not set, using fallback");
-    return fallback;
-  }
-
-  // Chuẩn bị dữ liệu gửi lên Gemini (tóm gọn, không gửi raw tx)
-  const top5Suspicious = params.suspiciousWallets.slice(0, 5).map(w => ({
-    wallet: w.wallet.slice(0, 8) + "...",
-    gnnScore: w.score.toFixed(3),
-    pattern: w.pattern,
-    riskLevel: w.riskLevel,
-    features: {
-      circular: w.features.circularPattern.toFixed(2),
-      timing: w.features.timeRegularity.toFixed(2),
-      amount: w.features.amountSimilarity.toFixed(2),
-    },
-  }));
-
-  const topCircular = params.circularPatterns.slice(0, 3).map(p => ({
-    hops: p.hops,
-    wallets: p.cycle.map(w => w.slice(0, 8) + "..."),
-    avgIntervalSeconds: (p.intervalMs / 1000).toFixed(1),
-    confidence: p.confidence.toFixed(2),
-  }));
-
-  const prompt = `
-Bạn là chuyên gia phân tích blockchain, chuyên phát hiện wash trading (giao dịch ảo) trên Solana.
-
-Dưới đây là kết quả phân tích thuật toán GNN-based cho token ${params.symbol} (${params.mint.slice(0, 8)}...):
-
-## Thống kê tổng quan
-- Tổng giao dịch phân tích: ${params.txCount}
-- Ví duy nhất: ${params.uniqueWallets}
-- Tổng volume: ${params.totalVolume.toLocaleString()} tokens
-- Circular patterns phát hiện: ${params.circularPatterns.length}
-- Suspicious wallets: ${params.suspiciousWallets.length}
-
-## Top Circular Trade Patterns
-${JSON.stringify(topCircular, null, 2)}
-
-## Top Suspicious Wallets (GNN Score)
-${JSON.stringify(top5Suspicious, null, 2)}
-
-## Yêu cầu
-Phân tích dữ liệu trên và trả về JSON với cấu trúc sau (không thêm markdown, chỉ JSON thuần):
-{
-  "verdict": "HIGH_RISK" | "MEDIUM_RISK" | "LOW_RISK" | "CLEAN",
-  "summary": "tóm tắt 1-2 câu bằng tiếng Việt",
-  "detailedFindings": ["finding 1", "finding 2", "finding 3"],
-  "suspiciousPatterns": [
-    {
-      "patternName": "tên pattern",
-      "description": "mô tả chi tiết bằng tiếng Việt",
-      "affectedWallets": ["wallet1..."],
-      "severity": "HIGH" | "MEDIUM" | "LOW"
-    }
-  ],
-  "recommendation": "khuyến nghị cho nhà đầu tư",
-  "confidenceNote": "ghi chú về độ tin cậy của phân tích"
-}
-
-Lưu ý:
-- Giải thích TẠI SAO các pattern này là dấu hiệu wash trading
-- Đề cập đến interval đều, amount tương đồng, vòng lặp giao dịch
-- Ngôn ngữ chuyên nghiệp, phù hợp báo cáo blockchain
-`;
+  if (!apiKey) return base;
 
   try {
-    const gemini = new GoogleGenAI({ apiKey });
-    const response = await (gemini as any).models.generateContent({
-      model: WALLET_AUDIT_MODEL ?? "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        temperature: 0.3,
-        responseMimeType: "application/json",
-        systemInstruction:
-          "You are an expert blockchain analyst specializing in Solana wash trading detection. " +
-          "Return valid JSON only, no markdown, no explanation outside JSON.",
-      },
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: WALLET_AUDIT_MODEL || "gemini-2.5-flash",
+      contents: `Bạn là chuyên gia phân tích wash trading Solana. Hãy trả về JSON thuần theo cấu trúc: {"verdict":"HIGH_RISK|MEDIUM_RISK|LOW_RISK|CLEAN","summary":"...","detailedFindings":["..."],"suspiciousPatterns":[{"patternName":"...","description":"...","affectedWallets":["..."],"severity":"HIGH|MEDIUM|LOW"}],"recommendation":"...","confidenceNote":"..."}.\n\nDữ liệu: ${JSON.stringify({ mint: params.mint, symbol: params.symbol, summary: params.summary, circularPatterns: params.circularPatterns.slice(0, 5), suspiciousWallets: params.suspiciousWallets.slice(0, 8) })}`,
+      config: { temperature: 0.2, responseMimeType: "application/json" },
     });
 
-    const text: string = response?.text ?? "";
-    const clean = text.replace(/```json|```/g, "").trim();
-
-    let parsed: any;
-    try {
-      parsed = JSON.parse(clean);
-    } catch {
-      // Thử tìm JSON object trong response
-      const start = clean.indexOf("{");
-      const end = clean.lastIndexOf("}");
-      if (start !== -1 && end !== -1) {
-        parsed = JSON.parse(clean.slice(start, end + 1));
-      } else {
-        throw new Error("Cannot parse Gemini response");
-      }
-    }
-
+    const text = response.text?.replace(/```json|```/g, "").trim() ?? "";
+    const parsed = JSON.parse(text) as Partial<WashTradingAIResult["aiAnalysis"]>;
     return {
-      verdict: ["HIGH_RISK", "MEDIUM_RISK", "LOW_RISK", "CLEAN"].includes(parsed.verdict)
-        ? parsed.verdict
-        : fallback.verdict,
-      summary: typeof parsed.summary === "string" ? parsed.summary : fallback.summary,
-      detailedFindings: Array.isArray(parsed.detailedFindings)
-        ? parsed.detailedFindings.filter((f: unknown) => typeof f === "string")
-        : fallback.detailedFindings,
-      suspiciousPatterns: Array.isArray(parsed.suspiciousPatterns)
-        ? parsed.suspiciousPatterns
-        : fallback.suspiciousPatterns,
-      recommendation: typeof parsed.recommendation === "string"
-        ? parsed.recommendation
-        : fallback.recommendation,
-      confidenceNote: typeof parsed.confidenceNote === "string"
-        ? parsed.confidenceNote
-        : "Phân tích được thực hiện bởi Gemini AI dựa trên dữ liệu on-chain.",
+      verdict: parsed.verdict ?? base.verdict,
+      summary: typeof parsed.summary === "string" ? parsed.summary : base.summary,
+      detailedFindings: Array.isArray(parsed.detailedFindings) ? parsed.detailedFindings.filter((x): x is string => typeof x === "string") : base.detailedFindings,
+      suspiciousPatterns: Array.isArray(parsed.suspiciousPatterns) ? parsed.suspiciousPatterns as WashTradingAIResult["aiAnalysis"]["suspiciousPatterns"] : base.suspiciousPatterns,
+      recommendation: typeof parsed.recommendation === "string" ? parsed.recommendation : base.recommendation,
+      confidenceNote: typeof parsed.confidenceNote === "string" ? parsed.confidenceNote : base.confidenceNote,
     };
-  } catch (err) {
-    console.error("[WashTradingAI] Gemini error:", err);
-    return fallback;
+  } catch (error) {
+    console.warn("[WashTradingAI] Gemini failed, using local analysis:", error instanceof Error ? error.message : error);
+    return base;
   }
 }
-
-// ─── Main: Orchestration ──────────────────────────────────────────────────────
 
 export async function analyzeWashTradingWithAI(params: {
   mint: string;
   symbol?: string;
+  timeframe?: Timeframe;
   limit?: number;
 }): Promise<WashTradingAIResult> {
-  const { mint, symbol = "TOKEN", limit = 200 } = params;
+  const mint = params.mint.trim();
+  const symbol = (params.symbol ?? "TOKEN").trim() || "TOKEN";
+  const timeframe = params.timeframe ?? "24h";
+  const limit = Math.min(Math.max(params.limit ?? 200, 50), 500);
   const analyzedAt = new Date().toISOString();
-  const log: WashTradingAIResult["detectionLog"] = [];
+  const detectionLog: WashTradingAIResult["detectionLog"] = [];
 
-  const addLog = (message: string, severity: WashTradingAIResult["detectionLog"][0]["severity"]) => {
-    const time = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-    log.push({ time, message, severity });
-    console.log(`[WashTradingAI][${severity.toUpperCase()}] ${message}`);
+  const addLog = (message: string, severity: WashTradingAIResult["detectionLog"][number]["severity"]) => {
+    detectionLog.push({
+      time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+      message,
+      severity,
+    });
   };
 
-  // Step 1: Fetch
-  addLog(`Đang tải giao dịch cho token ${symbol}...`, "info");
-  const txs = await fetchTokenTransactions(mint, limit);
-  addLog(`Đã tải ${txs.length} giao dịch, ${new Set([...txs.map(t => t.from), ...txs.map(t => t.to)]).size} ví`, "info");
+  addLog(`Bắt đầu phân tích AI Wash Trading cho ${symbol}`, "info");
+  const { txs, source } = await fetchTokenTransactions(mint, symbol, limit);
+  addLog(`Đã chuẩn hóa ${txs.length} giao dịch token transfer`, "info");
 
-  // Step 2a: Circular detection
-  addLog("Chạy thuật toán phát hiện vòng giao dịch tròn...", "info");
   const circularPatterns = detectCircularPatterns(txs);
-  if (circularPatterns.length > 0) {
-    addLog(
-      `Phát hiện ${circularPatterns.length} circular trade cluster — nguy hiểm!`,
-      "high"
-    );
-  }
+  addLog(
+    circularPatterns.length > 0
+      ? `Phát hiện ${circularPatterns.length} circular trade cluster`
+      : "Không tìm thấy circular cluster rõ ràng",
+    circularPatterns.length > 0 ? "high" : "success",
+  );
 
-  // Step 2b: GNN scoring
-  addLog("Tính GNN-inspired score cho các ví...", "info");
   const suspiciousWallets = computeGNNScores(txs, circularPatterns);
-  const highRiskCount = suspiciousWallets.filter(w => w.riskLevel === "High").length;
-  if (highRiskCount > 0) {
-    addLog(`${highRiskCount} ví có risk score cao (≥0.7)`, "high");
-  }
+  const highRiskCount = suspiciousWallets.filter((w) => w.riskLevel === "High").length;
+  addLog(`GNN-inspired scoring hoàn tất: ${suspiciousWallets.length} ví đáng ngờ`, highRiskCount > 0 ? "high" : "success");
 
-  // Step 3: Graph
   const graphData = buildGraphData(txs, suspiciousWallets);
 
-  // Tính summary metrics
-  const totalVolume = txs.reduce((s, t) => s + t.amount, 0);
-  const washWallets = new Set(circularPatterns.flatMap(p => p.cycle));
-  const washVolume = txs
-    .filter(t => washWallets.has(t.from) || washWallets.has(t.to))
-    .reduce((s, t) => s + t.amount, 0);
-  const uniqueWallets = new Set([...txs.map(t => t.from), ...txs.map(t => t.to)]).size;
-
-  const overallRiskScore = Math.min(
-    100,
-    Math.round(
-      circularPatterns.length * 8 +
-      highRiskCount * 5 +
-      (washVolume / (totalVolume || 1)) * 40
-    )
-  );
-
-  const gnnConfidence = suspiciousWallets.length > 0
-    ? suspiciousWallets.reduce((s, w) => s + w.score, 0) / suspiciousWallets.length
+  const totalVolume = txs.reduce((sum, tx) => sum + tx.amount, 0);
+  const uniqueWallets = new Set(txs.flatMap((tx) => [tx.from, tx.to])).size;
+  const washWalletSet = new Set(circularPatterns.flatMap((p) => p.cycle));
+  const washVolumeEstimate = txs
+    .filter((tx) => washWalletSet.has(tx.from) || washWalletSet.has(tx.to))
+    .reduce((sum, tx) => sum + tx.amount, 0);
+  const washVolumePercent = totalVolume > 0 ? (washVolumeEstimate / totalVolume) * 100 : 0;
+  const avgSuspiciousScore = suspiciousWallets.length > 0
+    ? suspiciousWallets.reduce((sum, wallet) => sum + wallet.score, 0) / suspiciousWallets.length
     : 0;
 
-  // Step 4: AI analysis
-  addLog("Đang gửi dữ liệu lên Gemini AI để phân tích...", "info");
-  const aiAnalysis = await analyzeWithGemini({
-    mint,
-    symbol,
-    txCount: txs.length,
+  const overallRiskScore = Math.min(100, Math.round(
+    circularPatterns.length * 6 +
+    highRiskCount * 8 +
+    suspiciousWallets.length * 1.5 +
+    washVolumePercent * 0.55 +
+    avgSuspiciousScore * 18,
+  ));
+
+  const summary: WashTradingAIResult["summary"] = {
+    totalTransactions: txs.length,
     uniqueWallets,
     totalVolume,
-    circularPatterns,
-    suspiciousWallets,
-  });
+    washVolumeEstimate,
+    washVolumePercent,
+    circularTradeCount: circularPatterns.length,
+    suspiciousWalletCount: suspiciousWallets.length,
+    overallRiskScore,
+    gnnConfidence: avgSuspiciousScore,
+  };
 
-  addLog(
-    `AI phân tích hoàn tất — Verdict: ${aiAnalysis.verdict}`,
-    aiAnalysis.verdict === "HIGH_RISK" ? "high" :
-    aiAnalysis.verdict === "MEDIUM_RISK" ? "medium" : "success"
-  );
-  addLog(`Model retrain indicator — GNN confidence: ${(gnnConfidence * 100).toFixed(1)}%`, "success");
+  const localAI = buildLocalAIAnalysis(symbol, circularPatterns, suspiciousWallets, overallRiskScore, source);
+  addLog("Tạo AI explanation cho kết quả phân tích", "info");
+  const aiAnalysis = await tryGeminiAnalysis(localAI, { mint, symbol, summary, circularPatterns, suspiciousWallets });
+  addLog(`Hoàn tất phân tích — Verdict: ${aiAnalysis.verdict}`, aiAnalysis.verdict === "HIGH_RISK" ? "high" : aiAnalysis.verdict === "MEDIUM_RISK" ? "medium" : "success");
 
   return {
     mint,
     symbol,
+    timeframe,
     analyzedAt,
-    summary: {
-      totalTransactions: txs.length,
-      uniqueWallets,
-      totalVolume,
-      washVolumeEstimate: washVolume,
-      washVolumePercent: totalVolume > 0 ? (washVolume / totalVolume) * 100 : 0,
-      circularTradeCount: circularPatterns.length,
-      suspiciousWalletCount: suspiciousWallets.length,
-      overallRiskScore,
-      gnnConfidence,
-    },
+    dataSource: source,
+    summary,
     circularPatterns,
     suspiciousWallets,
     graphData,
     aiAnalysis,
-    detectionLog: log,
+    detectionLog,
   };
 }

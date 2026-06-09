@@ -1,6 +1,7 @@
-import { COINGECKO_THUMBNAIL_URL, PLACEHOLDER_IMAGE_URL } from "@/config/constants";
+import { COINGECKO_THUMBNAIL_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { Copy, LogoDiscord, Search, Wikis } from "@carbon/icons-react";
+import { Link } from "react-router";
 import styles from "./TokenHeader.module.scss";
 
 interface TokenHeaderProps {
@@ -53,6 +54,10 @@ export const TokenHeader = ({
   const openDiscord = () =>
     discordInvite && window.open(`https://discord.com/invite/${discordInvite}`, "_blank");
 
+  const washTradingUrl = `/wash-trading/${address}?symbol=${encodeURIComponent(
+    symbol || name || "TOKEN",
+  )}&timeframe=24h`;
+
   return (
     <>
       <div className={`${styles.container} ${compact ? styles.compact : ""}`}>
@@ -83,8 +88,6 @@ export const TokenHeader = ({
                 <button className={styles.iconBtn} title={tr("token.header.copy")} onClick={copyToClipboard}>
                   <Copy size={14} />
                 </button>
-
-
 
                 {websiteUrl && (
                   <button className={styles.iconBtn} title={tr("token.website")} onClick={openWebsite}>
@@ -120,10 +123,16 @@ export const TokenHeader = ({
               </div>
             </div>
           )}
+
+          <Link
+            to={washTradingUrl}
+            className={`${styles.aiWashButton} ${compact ? styles.aiWashButtonCompact : ""}`}
+          >
+            <span className={styles.aiWashIcon}>AI</span>
+            Wash Trading Detection
+          </Link>
         </div>
       </div>
-
-
     </>
   );
 };
