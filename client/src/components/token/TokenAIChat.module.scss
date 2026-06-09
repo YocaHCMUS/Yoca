@@ -639,6 +639,11 @@
   color: #8a3ffc;
 }
 
+.evidenceTypeSecurity {
+  border-color: $support-warning;
+  color: $support-warning;
+}
+
 .evidenceTypeMetadata,
 .evidenceTypeInternal {
   border-color: $border-strong;

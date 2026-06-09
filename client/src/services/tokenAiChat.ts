@@ -54,6 +54,7 @@ export interface TokenAiEvidence {
     | "holders"
     | "pool"
     | "trades"
+    | "security"
     | "metadata"
     | "internal";
   label: string;

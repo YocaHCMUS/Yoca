@@ -93,7 +93,7 @@ const TOKEN_AI_CHAT_MODEL =
   process.env.GEMINI_AUDIT_MODEL?.trim() ||
   WALLET_AUDIT_MODEL;
 const TOKEN_AI_CHAT_PROMPT_VERSION =
-  process.env.TOKEN_AI_CHAT_PROMPT_VERSION?.trim() || "v2";
+  process.env.TOKEN_AI_CHAT_PROMPT_VERSION?.trim() || "v3";
 
 const TOKEN_AI_RESPONSE_LIMITS = {
   tldrItems: 3,
@@ -133,6 +133,25 @@ const sectionKinds = [
   "practical_framework",
   "conclusion",
   "custom",
+] as const;
+
+const NOISY_UNAVAILABLE_PATTERNS = [
+  /security information such as mint authority, freeze authority, deployer, creator, honeypot status, and other security flags are not available[^.]*\.?/gi,
+  /mint authority, freeze authority, deployer, creator, honeypot status, and security flags are not available[^.]*\.?/gi,
+  /the market capitalization rank for this token is currently unavailable[^.]*\.?/gi,
+  /market cap(?:italization)? rank (?:is )?(?:currently )?unavailable[^.]*\.?/gi,
+  /fdv rank (?:is )?(?:currently )?unavailable[^.]*\.?/gi,
+] as const;
+
+const WEAK_UNAVAILABLE_WARNING_PATTERNS = [
+  /\b(?:market cap|market capitalization|fdv)?\s*rank\b.*\bunavailable\b/i,
+  /\brank unavailable\b/i,
+  /\bcreator\b.*\bunavailable\b/i,
+  /\bdeployer\b.*\bunavailable\b/i,
+  /\bhoneypot\b.*\bunavailable\b/i,
+  /\bsecurity flags?\b.*\bunavailable\b/i,
+  /\bmint authority\b.*\bfreeze authority\b.*\b(?:deployer|creator|honeypot)\b/i,
+  /\bsecurity (?:fields?|information)\b.*\b(?:unavailable|missing|not available)\b/i,
 ] as const;
 
 type TokenAiFallbackReason =
@@ -275,7 +294,11 @@ export function inferTokenAiLanguage(
 
 export function classifyTokenAiIntent(question: string): TokenAiIntent {
   const q = question.toLowerCase();
-  if (/\b(risk|risks|risky|safe|scam|dangerous)\b/.test(q)) {
+  if (
+    /\b(risk|risks|risky|safe|security|scam|dangerous|honeypot|freeze|mint authority|freeze authority|deployer|creator|rug|rug pull|owner|contract)\b/.test(
+      q,
+    )
+  ) {
     return "risk_overview";
   }
   if (/\b(nên mua|nên bán|giữ|chốt lời)\b/.test(q)) {
@@ -287,7 +310,7 @@ export function classifyTokenAiIntent(question: string): TokenAiIntent {
   if (/\b(tin tức|mới nhất|thông báo)\b/.test(q)) {
     return "latest_news";
   }
-  if (/\b(rủi ro|an toàn|lừa đảo|nguy hiểm)\b/.test(q)) {
+  if (/\b(rủi ro|an toàn|lừa đảo|nguy hiểm|bảo mật|đóng băng|chủ sở hữu)\b/.test(q)) {
     return "risk_overview";
   }
   if (/\b(tích cực|tiêu cực)\b/.test(q)) {
@@ -312,7 +335,11 @@ export function classifyTokenAiIntent(question: string): TokenAiIntent {
   if (/\b(news|latest|announcement|headline|tin tức|mới nhất|thông báo)\b/.test(q)) {
     return "latest_news";
   }
-  if (/\b(risk|safe|scam|dangerous|rủi ro|an toàn|lừa đảo|nguy hiểm)\b/.test(q)) {
+  if (
+    /\b(risk|safe|security|scam|dangerous|honeypot|freeze|mint authority|freeze authority|deployer|creator|rug|rug pull|owner|contract|rủi ro|an toàn|lừa đảo|nguy hiểm|bảo mật|đóng băng|chủ sở hữu)\b/.test(
+      q,
+    )
+  ) {
     return "risk_overview";
   }
   if (/\b(bullish|bearish|upside|downside|tích cực|tiêu cực)\b/.test(q)) {
@@ -362,10 +389,60 @@ function defaultDisclaimer(language: TokenAiLanguage) {
     : "For information only, not financial advice. Verify the data and consider your own risk before making decisions.";
 }
 
-function evidenceWarning(context: TokenAiContext, language: TokenAiLanguage) {
-  const warnings = context.missingSections
-    .filter((section) => section.section === "security")
-    .map((section) => section.reason);
+function isSecuritySensitiveIntent(intent: TokenAiIntent) {
+  return intent === "risk_overview";
+}
+
+function hasSecurityEvidence(context: TokenAiContext) {
+  return context.evidence.some((item) => item.type === "security");
+}
+
+function securityEvidenceBullets(context: TokenAiContext) {
+  return context.evidence
+    .filter((item) => item.type === "security")
+    .slice(0, 4)
+    .map((item) =>
+      [item.label, item.detail].filter((value) => value?.trim()).join(": "),
+    );
+}
+
+function conciseSecurityLimitation(language: TokenAiLanguage) {
+  return language === "vi"
+    ? "Yoca có thể đánh giá rủi ro thị trường, thanh khoản, holder, pool và tin tức. Kiểm tra bảo mật contract còn giới hạn nếu không có dữ liệu mint/freeze authority."
+    : "Yoca can assess visible market, liquidity, holder, pool, and news risks. Contract-level security checks are limited unless mint/freeze authority data is available.";
+}
+
+function removeNoisyUnavailableText(text: string) {
+  return NOISY_UNAVAILABLE_PATTERNS.reduce(
+    (current, pattern) => current.replace(pattern, " "),
+    text,
+  )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function warningKey(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9ăâđêôơưáàảãạắằẳẵặấầẩẫậéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ\s]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isWeakUnavailableWarning(value: string) {
+  return WEAK_UNAVAILABLE_WARNING_PATTERNS.some((pattern) => pattern.test(value));
+}
+
+function evidenceWarning(
+  context: TokenAiContext,
+  language: TokenAiLanguage,
+  intent: TokenAiIntent,
+) {
+  const warnings: string[] = [];
+
+  if (isSecuritySensitiveIntent(intent) && !hasSecurityEvidence(context)) {
+    warnings.push(conciseSecurityLimitation(language));
+  }
   if (context.latestNews.length === 0) {
     warnings.push(
       language === "vi"
@@ -380,14 +457,11 @@ function evidenceWarning(context: TokenAiContext, language: TokenAiLanguage) {
         : "Current market data is unavailable.",
     );
   }
-  return [...new Set(warnings)].slice(0, 6);
+  return normalizeWarningsForResponse(warnings);
 }
 
 function confidenceFor(context: TokenAiContext, intent: TokenAiIntent) {
-  if (
-    intent === "risk_overview" ||
-    context.missingSections.some((section) => section.section === "security")
-  ) {
+  if (intent === "risk_overview") {
     return context.market && (context.holderStats || context.pools.length > 0)
       ? "Medium"
       : "Low";
@@ -617,9 +691,6 @@ function lowDataInterpretation(context: TokenAiContext) {
   if (context.latestNews.length === 0) missing.push("recent news");
   if (!context.holderStats) missing.push("holder concentration");
   if (context.pools.length === 0) missing.push("pool liquidity");
-  if (context.missingSections.some((section) => section.section === "security")) {
-    missing.push("contract/security authority data");
-  }
 
   if (missing.length === 0) {
     return "The evidence bundle has enough market, liquidity, holder, and news context for a medium-confidence read.";
@@ -744,9 +815,6 @@ function viLowDataInterpretation(context: TokenAiContext) {
   if (context.latestNews.length === 0) missing.push("tin tức gần đây");
   if (!context.holderStats) missing.push("tập trung holder");
   if (context.pools.length === 0) missing.push("thanh khoản pool");
-  if (context.missingSections.some((section) => section.section === "security")) {
-    missing.push("dữ liệu contract/security");
-  }
 
   if (missing.length === 0) {
     return "Bằng chứng đủ để đọc rủi ro thị trường, thanh khoản, holder và tin tức ở mức trung bình.";
@@ -806,7 +874,6 @@ function bearishBullets(context: TokenAiContext) {
     bullets.push("News evidence is missing or indirect, so there is no clear headline support for the move.");
   }
   bullets.push(holderInterpretation(context));
-  bullets.push("Contract/security authority evidence is unavailable, so safe/scam conclusions cannot be verified from this response.");
 
   return [...new Set(bullets)].slice(0, 5);
 }
@@ -820,14 +887,13 @@ function localizedDisclaimer(language: TokenAiLanguage) {
 function localizedEvidenceWarning(
   context: TokenAiContext,
   language: TokenAiLanguage,
+  intent: TokenAiIntent,
 ) {
-  if (language !== "vi") return evidenceWarning(context, language);
+  if (language !== "vi") return evidenceWarning(context, language, intent);
 
   const warnings: string[] = [];
-  if (context.missingSections.some((section) => section.section === "security")) {
-    warnings.push(
-      "Yoca chưa có dữ liệu contract/security như mint authority, freeze authority hoặc deployer cho token này.",
-    );
+  if (isSecuritySensitiveIntent(intent) && !hasSecurityEvidence(context)) {
+    warnings.push(conciseSecurityLimitation(language));
   }
   if (context.latestNews.length === 0) {
     warnings.push("Không có tin tức gần đây trong bằng chứng Yoca cho token này.");
@@ -835,7 +901,7 @@ function localizedEvidenceWarning(
   if (!context.market) {
     warnings.push("Dữ liệu thị trường hiện không khả dụng.");
   }
-  return [...new Set(warnings)].slice(0, 6);
+  return normalizeWarningsForResponse(warnings);
 }
 
 function buildFallbackTldr(
@@ -845,15 +911,15 @@ function buildFallbackTldr(
 ) {
   const label = tokenLabel(context);
   const move = priceMove(context);
-  const securityGap =
-    "Security authority/deployer evidence is unavailable, so Yoca cannot verify safe/scam claims.";
+  const includeSecurityLimitation =
+    isSecuritySensitiveIntent(intent) && !hasSecurityEvidence(context);
 
   if (language === "vi") {
     return [
       `${label}: ${viPriceMovePhrase(context)}; cần đọc cùng volume, thanh khoản và tin tức thay vì chỉ nhìn giá.`,
       `${viCatalystInterpretation(context)} ${viVolumeInterpretation(context)}`,
-      "Yoca chưa có dữ liệu contract/security, nên không thể xác nhận token an toàn hay lừa đảo từ câu trả lời này.",
-    ];
+      ...(includeSecurityLimitation ? [conciseSecurityLimitation(language)] : []),
+    ].slice(0, 3);
   }
 
   if (intent === "latest_news") {
@@ -867,8 +933,8 @@ function buildFallbackTldr(
   return [
     `${label} is ${move.phrase}; the useful read is what that implies alongside volume, liquidity, holders, and news.`,
     `${catalystInterpretation(context)} ${volumeInterpretation(context)}`,
-    securityGap,
-  ];
+    ...(includeSecurityLimitation ? [conciseSecurityLimitation(language)] : []),
+  ].slice(0, 3);
 }
 
 function buildVietnameseFallbackSections(
@@ -910,12 +976,6 @@ function buildVietnameseFallbackSections(
               ]
             : []),
         ],
-      },
-      {
-        title: "Dữ Liệu Security Chưa Có",
-        kind: "risk_factors",
-        content:
-          "Yoca chưa có bằng chứng về mint authority, freeze authority, deployer, creator hoặc honeypot status, nên không thể kết luận token an toàn hay lừa đảo.",
       },
       {
         title: "Cần Theo Dõi",
@@ -1048,7 +1108,7 @@ function buildImprovedFallbackSections(
           title: "Balanced Conclusion",
           kind: "conclusion",
           content:
-            "The useful conclusion is not a trade command: weigh price direction against volume quality, liquidity depth, holder distribution, news relevance, and missing security evidence.",
+            "The useful conclusion is not a trade command: weigh price direction against volume quality, liquidity depth, holder distribution, news relevance, and any available authority evidence.",
         },
         {
           title: "Confirmation Signals",
@@ -1057,6 +1117,7 @@ function buildImprovedFallbackSections(
         },
       ];
     case "risk_overview":
+      const securityBullets = securityEvidenceBullets(context);
       return [
         {
           title: "Market Risk",
@@ -1082,12 +1143,15 @@ function buildImprovedFallbackSections(
           kind: "risk_factors",
           bullets: [newsInterpretation(context), ...(wrapped ? [wrapped] : [])],
         },
-        {
-          title: "Unavailable Security Evidence",
-          kind: "risk_factors",
-          content:
-            "Yoca does not have direct contract-security evidence for this token yet, so it cannot verify mint authority, freeze authority, deployer risk, creator risk, honeypot status, or whether the token is safe/scam.",
-        },
+        ...(securityBullets.length > 0
+          ? [
+              {
+                title: "Mint / Freeze Authority Evidence",
+                kind: "risk_factors" as const,
+                bullets: securityBullets,
+              },
+            ]
+          : []),
         {
           title: "Risk Signals To Watch",
           kind: "what_to_watch",
@@ -1171,7 +1235,7 @@ function buildImprovedFallbackSections(
           bullets: [
             "Do not treat this as a buy/sell instruction.",
             "Wait for confirmation from price direction, volume quality, liquidity stability, direct news, and holder concentration.",
-            "Keep security authority gaps separate from market signals; missing security data should lower confidence.",
+            "Keep market signals separate from contract-security checks; use mint/freeze authority evidence only when it is present.",
           ],
         },
       ];
@@ -1247,7 +1311,7 @@ function buildFallbackSections(
     }
     if (intent === "risk_overview") {
       return [
-        { title: "Rủi Ro Chính", kind: "risk_factors", bullets: ["Dữ liệu bảo mật như mint/freeze authority và deployer hiện chưa có.", ...drivers] },
+        { title: "Rủi Ro Chính", kind: "risk_factors", bullets: [conciseSecurityLimitation(language), ...drivers] },
         { title: "Tín Hiệu Có Dữ Liệu", kind: "deep_dive", bullets: snapshot },
         { title: "Cần Theo Dõi", kind: "what_to_watch", bullets: viWatch },
         { title: "Kết Luận", kind: "conclusion", content: "Có thể đánh giá rủi ro thị trường và thanh khoản ở mức sơ bộ, nhưng không thể kết luận token an toàn hay lừa đảo từ dữ liệu hiện có." },
@@ -1265,7 +1329,7 @@ function buildFallbackSections(
       ];
     case "risk_overview":
       return [
-        { title: "Main Risk Factors", kind: "risk_factors", bullets: ["Security fields are unavailable, so Yoca cannot verify mint authority, freeze authority, deployer, creator, honeypot status, or private insider behavior.", ...drivers] },
+        { title: "Main Risk Factors", kind: "risk_factors", bullets: [conciseSecurityLimitation(language), ...drivers] },
         { title: "Data-Backed Risk Signals", kind: "deep_dive", bullets: snapshot },
         { title: "What To Watch Next", kind: "what_to_watch", bullets: watchBullets(context) },
         { title: "Conclusion", kind: "conclusion", content: "This can support a market/liquidity risk overview, but it cannot prove whether the token is safe or unsafe." },
@@ -1273,7 +1337,7 @@ function buildFallbackSections(
     case "bullish_bearish":
       return [
         { title: "Bullish Signals", kind: "bullish_signals", bullets: [Number.isFinite(priceChange24h) && priceChange24h > 0 ? `Positive 24h price change of ${percent(priceChange24h)}.` : "No positive 24h price signal in the current market data.", context.latestNews.length > 0 ? "Recent news context is available." : "No recent news support in the evidence."] },
-        { title: "Bearish Signals", kind: "bearish_signals", bullets: [Number.isFinite(priceChange24h) && priceChange24h < 0 ? `Negative 24h price change of ${percent(priceChange24h)}.` : "No negative 24h price signal in the current market data.", "Security and authority fields are missing."] },
+        { title: "Bearish Signals", kind: "bearish_signals", bullets: [Number.isFinite(priceChange24h) && priceChange24h < 0 ? `Negative 24h price change of ${percent(priceChange24h)}.` : "No negative 24h price signal in the current market data.", holderInterpretation(context)] },
         { title: "Balance of Evidence", kind: "conclusion", content: "The evidence is mixed and should be treated as context, not a trading command." },
         { title: "What To Watch Next", kind: "what_to_watch", bullets: watchBullets(context) },
       ];
@@ -1294,7 +1358,7 @@ function buildFallbackSections(
       return [
         { title: "Market Facts and Why They Matter", kind: "market_snapshot", bullets: snapshot },
         { title: "Plausible Scenarios", kind: "scenario_analysis", bullets: ["Constructive scenario: price/volume/liquidity improve while news remains supportive.", "Cautious scenario: liquidity thins, volatility increases, or new negative evidence appears."] },
-        { title: "Practical Risk Framework", kind: "practical_framework", bullets: ["Define invalidation conditions before acting.", "Avoid relying on unavailable security fields.", "Size decisions according to risk tolerance and independent research."] },
+        { title: "Practical Risk Framework", kind: "practical_framework", bullets: ["Define invalidation conditions before acting.", "Use mint/freeze authority evidence only when it is present.", "Size decisions according to risk tolerance and independent research."] },
         { title: "What To Watch Next", kind: "what_to_watch", bullets: watchBullets(context) },
         { title: "Conclusion", kind: "conclusion", content: "Yoca can frame scenarios and risks, but it should not be used as a direct buy, sell, or hold instruction." },
       ];
@@ -1314,25 +1378,7 @@ function buildDeterministicAnswer(
   intent: TokenAiIntent,
   fallbackReason: TokenAiFallbackReason = "deterministic_fallback",
 ): TokenAiChatData {
-  const warnings = localizedEvidenceWarning(context, request.language);
-  const market = marketRecord(context);
-  const label = tokenLabel(context);
-  const tldr =
-    request.language === "vi"
-      ? [
-          `${label}: giá hiện khoảng ${compactCurrency(market.priceUsd)}, thay đổi 24h ${percent(market.priceChangePercentage24h)}.`,
-          context.latestNews.length > 0
-            ? `Có ${context.latestNews.length} tin tức gần đây trong bằng chứng.`
-            : "Không có tin tức gần đây trong bằng chứng.",
-          "Không có dữ liệu bảo mật mint/freeze/deployer, nên không thể kết luận token an toàn hay lừa đảo.",
-        ]
-      : [
-          `${label} is around ${compactCurrency(market.priceUsd)} with 24h change of ${percent(market.priceChangePercentage24h)}.`,
-          context.latestNews.length > 0
-            ? `${context.latestNews.length} recent news item(s) were included as context.`
-            : "No recent token news was available in the evidence bundle.",
-          "Security authority/deployer fields are unavailable, so Yoca cannot verify safe/scam claims.",
-        ];
+  const warnings = localizedEvidenceWarning(context, request.language, intent);
 
   return {
     token: context.token,
@@ -1372,6 +1418,7 @@ function compactContextForPrompt(context: TokenAiContext) {
     topHolders: context.topHolders.slice(0, 5),
     pools: context.pools.slice(0, 3),
     recentTrades: context.recentTrades.slice(0, 5),
+    security: context.security,
     missingSections: context.missingSections,
     evidence: context.evidence,
     sources: context.sources,
@@ -1405,12 +1452,18 @@ function buildPrompt({
     "If liquidity is high, explain that slippage risk may be lower, but price can still move strongly.",
     "If only wrapped-token data is available, explain that the token may reflect the underlying asset rather than an independent project.",
     "Never invent unavailable data. Never claim mint authority, freeze authority, deployer, creator, honeypot status, token security, or private insider behavior unless the evidence explicitly includes it.",
+    "If mint/freeze authority evidence is supplied, use it carefully as evidence only; do not call the token safe or unsafe based only on that.",
+    "Do not mention unavailable security fields unless the user asks about risk, safety, security, scam, honeypot, freeze authority, creator, or deployer.",
+    "Do not list every missing security field. If contract security data is limited, say it once as a concise limitation.",
+    "If the user asks whether the token is a honeypot, say honeypot detection is not included unless direct honeypot evidence is supplied; then discuss visible market, liquidity, holder, pool, and trading warning signs.",
+    "Do not mention market cap rank or FDV rank when it is missing.",
+    "Do not put missing-security limitations in TLDR unless the user specifically asked a security or risk question.",
     "Do not give direct buy, sell, or hold instructions. Do not use guaranteed, will pump, risk-free, or equivalent certainty.",
-    "If the user asks risk, safe, or scam, clearly separate available market/liquidity/holder/news risk from unavailable contract/security authority evidence.",
+    "If the user asks risk, safe, scam, or honeypot, clearly separate available market/liquidity/holder/news risks from contract-security limitations.",
     "If the user asks whether to buy, do not give a buy/sell command. Give market context, bullish case, bearish case, risk framework, and confirmation signals to wait for.",
     "For investment-like questions, use scenario framing, risk framework, and watch-next items.",
     "Sound like a crypto analyst explaining the situation to a normal user. Be direct, concrete, and careful about uncertainty.",
-    "Use intent-specific sections. Keep TLDR to 2-3 bullets. Include warnings for thin data, missing news, and missing security data.",
+    "Use intent-specific sections. Keep TLDR to 2-3 bullets. Warnings must be short, deduped, and limited to material data limitations.",
     "Keep TLDR bullets under 280 characters.",
     "Keep section bullets concise, ideally under 500 characters.",
     "Use section content for longer explanations instead of oversized bullets.",
@@ -1492,7 +1545,9 @@ function normalizeTextValue(
   stats?: TokenAiNormalizationStats,
 ): string | undefined {
   if (typeof value !== "string" && typeof value !== "number") return undefined;
-  const text = truncateText(String(value), maxLength, stats);
+  const cleaned = removeNoisyUnavailableText(String(value));
+  if (!cleaned) return undefined;
+  const text = truncateText(cleaned, maxLength, stats);
   return text.length > 0 ? text : undefined;
 }
 
@@ -1584,6 +1639,7 @@ function normalizeRawEvidenceForValidation(
     "holders",
     "pool",
     "trades",
+    "security",
     "metadata",
     "internal",
   ]);
@@ -1762,15 +1818,36 @@ function logGeminiNormalization(stats: TokenAiNormalizationStats) {
 }
 
 function normalizeWarningsForResponse(warnings: string[]) {
-  return normalizeTextArray(
+  const normalized = normalizeTextArray(
     warnings,
-    TOKEN_AI_RESPONSE_LIMITS.warningItems,
+    TOKEN_AI_RESPONSE_LIMITS.warningItems * 2,
     TOKEN_AI_RESPONSE_LIMITS.warningChars,
   );
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+
+  for (const warning of normalized) {
+    if (isWeakUnavailableWarning(warning)) continue;
+    const key = warningKey(warning);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(warning);
+    if (deduped.length >= 3) break;
+  }
+
+  return deduped;
+}
+
+function isWeakUnavailableEvidence(item: TokenAiEvidence) {
+  const text = [item.label, item.value, item.detail].filter(Boolean).join(" ");
+  return isWeakUnavailableWarning(text);
 }
 
 function normalizeEvidenceForResponse(evidence: TokenAiEvidence[]) {
-  return evidence.slice(0, TOKEN_AI_RESPONSE_LIMITS.evidenceItems).map((item) => ({
+  return evidence
+    .filter((item) => !isWeakUnavailableEvidence(item))
+    .slice(0, TOKEN_AI_RESPONSE_LIMITS.evidenceItems)
+    .map((item) => ({
     ...item,
     label:
       normalizeTextValue(
@@ -1918,7 +1995,7 @@ async function generateGeminiAnswer(
         warnings: normalizeWarningsForResponse([
           ...new Set([
             ...parsed.data.warnings,
-            ...localizedEvidenceWarning(context, request.language),
+            ...localizedEvidenceWarning(context, request.language, intent),
           ]),
         ]),
         confidence:
