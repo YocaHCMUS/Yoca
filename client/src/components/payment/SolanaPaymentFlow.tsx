@@ -1,6 +1,6 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import type { WalletName } from "@solana/wallet-adapter-base";
-import { SystemProgram, Transaction, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
+import { SystemProgram, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
@@ -49,6 +49,34 @@ type SolanaPaymentFlowProps = {
   onProcessingChange: (processing: boolean) => void;
   onCancel: () => void;
 };
+
+type BuildSolanaPaymentTransactionParams = {
+  payer: PublicKey;
+  merchant: PublicKey;
+  lamports: number;
+  blockhash: string;
+};
+
+function buildSolanaPaymentTransaction({
+  payer,
+  merchant,
+  lamports,
+  blockhash,
+}: BuildSolanaPaymentTransactionParams): VersionedTransaction {
+  const transferInstruction = SystemProgram.transfer({
+    fromPubkey: payer,
+    toPubkey: merchant,
+    lamports,
+  });
+
+  const messageV0 = new TransactionMessage({
+    payerKey: payer,
+    recentBlockhash: blockhash,
+    instructions: [transferInstruction],
+  }).compileToV0Message();
+
+  return new VersionedTransaction(messageV0);
+}
 
 /** Truncate a public key: first 4 + "..." + last 4 chars */
 function truncatePubKey(key: string): string {
@@ -343,34 +371,21 @@ export function SolanaPaymentFlow({
       }
 
       // -- Step 1 & 2: Transaction construction --
-      let transaction: VersionedTransaction;
-      let blockhash: string;
-      let lastValidBlockHeight: number;
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      const transaction = buildSolanaPaymentTransaction({
+        payer: publicKey,
+        merchant: merchantKey,
+        lamports,
+        blockhash,
+      });
 
-      const blockhashResult = await connection.getLatestBlockhash("confirmed");
-      blockhash = blockhashResult.blockhash;
-      lastValidBlockHeight = blockhashResult.lastValidBlockHeight;
-      console.log("[SolanaPaymentFlow] Fresh confirmed blockhash fetched:", blockhash);
-
-      const messageV0 = new TransactionMessage({
-        payerKey: publicKey,
-        recentBlockhash: blockhash,
-        instructions: [
-          SystemProgram.transfer({
-            fromPubkey: publicKey,
-            toPubkey: merchantKey,
-            lamports,
-          }),
-        ],
-      }).compileToV0Message();
-
-      transaction = new VersionedTransaction(messageV0);
-
-      console.log("[SolanaPaymentFlow] VersionedTransaction (V0) constructed:", {
-        payerKey: publicKey.toBase58(),
+      console.log("[SolanaPaymentFlow] Payment transaction built:", {
+        payer: publicKey.toBase58(),
         merchant: merchantKey.toBase58(),
         lamports,
-        lastValidBlockHeight,
+        blockhashLength: blockhash.length,
+        blockhashPrefix: `${blockhash.slice(0, 8)}...`,
+        transactionClass: transaction.constructor.name,
       });
 
       // -- Step 3a: Explicit balance check --

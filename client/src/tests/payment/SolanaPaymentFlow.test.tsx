@@ -35,6 +35,7 @@ const mockLegacyTransactionConstructor = vi.fn();
 const mockLegacyTransactionAdd = vi.fn();
 const mockTransactionMessageConstructor = vi.fn();
 const mockVersionedTransactionConstructor = vi.fn();
+const mockSystemProgramTransfer = vi.hoisted(() => vi.fn());
 
 vi.mock("@solana/web3.js", () => {
   class PublicKey {
@@ -48,7 +49,7 @@ vi.mock("@solana/web3.js", () => {
   }
 
   const SystemProgram = {
-    transfer: vi.fn().mockReturnValue({
+    transfer: mockSystemProgramTransfer.mockReturnValue({
       keys: [],
       programId: new PublicKey("11111111111111111111111111111111"),
       data: Buffer.from([]),
@@ -286,7 +287,7 @@ describe("SolanaPaymentFlow Component", () => {
   // STATE 2: Wallet CONNECTED — Happy Path
   // ─────────────────────────────────────────────────────────────────────────
   describe("Wallet Connected — Happy Payment Flow", () => {
-    const mockPublicKey = new PublicKey(MERCHANT_ADDR);
+    const mockPublicKey = new PublicKey(PAYER_ADDR);
     let sendTransactionMock: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
@@ -307,9 +308,7 @@ describe("SolanaPaymentFlow Component", () => {
       render(<SolanaPaymentFlow {...defaultProps} />);
       expect(screen.getByText("Phantom")).toBeInTheDocument();
       // Public key should be truncated: first 4 + '...' + last 4 chars
-      // MERCHANT_ADDR = '6BCvxUZXhi73HDeoe5metBKWEd5AFmPHNZHTQ98dF2dr'
-      // last 4 chars = 'F2dr'  (index -4)
-      expect(screen.getByText(/6BCv\.\.\.F2dr/i)).toBeInTheDocument();
+      expect(screen.getByText(/An9g\.\.\.PUrG/i)).toBeInTheDocument();
     });
 
     it("should display the correct SOL amount for the Lite tier", () => {
@@ -342,6 +341,14 @@ describe("SolanaPaymentFlow Component", () => {
 
       await waitFor(() => {
         expect(sendTransactionMock).toHaveBeenCalledTimes(1);
+        expect(mockConfirmTransaction).toHaveBeenCalledWith(
+          {
+            signature: MOCK_TX_SIG,
+            blockhash: "7hW5wLymv7K4KGeXGq6c16oVvW165Gq",
+            lastValidBlockHeight: 1_234_567,
+          },
+          "confirmed"
+        );
         expect(verifySolanaPayment).toHaveBeenCalledWith({
           txId: MOCK_TX_SIG,
           tier: "Lite",
@@ -349,6 +356,9 @@ describe("SolanaPaymentFlow Component", () => {
         });
         expect(defaultProps.onProcessingChange).toHaveBeenLastCalledWith(false);
         expect(defaultProps.onSuccess).toHaveBeenCalledTimes(1);
+        expect(mockConfirmTransaction.mock.invocationCallOrder[0]).toBeLessThan(
+          vi.mocked(verifySolanaPayment).mock.invocationCallOrder[0]
+        );
       });
     });
 
@@ -389,6 +399,47 @@ describe("SolanaPaymentFlow Component", () => {
       await waitFor(() => {
         expect(mockGetLatestBlockhash).toHaveBeenCalledWith("confirmed");
         expect(sendTransactionMock).toHaveBeenCalledTimes(1);
+        expect(mockGetLatestBlockhash.mock.invocationCallOrder[0]).toBeLessThan(
+          sendTransactionMock.mock.invocationCallOrder[0]
+        );
+      });
+    });
+
+    it("should build exactly one top-level SOL transfer instruction for the wallet preview", async () => {
+      vi.mocked(verifySolanaPayment).mockResolvedValue({
+        success: true,
+        subscriptionId: "sub-123",
+        status: "active",
+        txId: MOCK_TX_SIG,
+      });
+
+      render(<SolanaPaymentFlow {...defaultProps} />);
+
+      fireEvent.click(screen.getByRole("button", { name: /confirm payment with sol/i }));
+
+      await waitFor(() => {
+        expect(mockSystemProgramTransfer).toHaveBeenCalledTimes(1);
+        expect(mockSystemProgramTransfer).toHaveBeenCalledWith(
+          expect.objectContaining({
+            fromPubkey: mockPublicKey,
+            lamports: 1_000_000,
+          })
+        );
+
+        const transferArgs = mockSystemProgramTransfer.mock.calls[0][0];
+        expect(transferArgs.toPubkey.toBase58()).toBe(MERCHANT_ADDR);
+
+        const messageArgs = mockTransactionMessageConstructor.mock.calls[0][0];
+        expect(messageArgs).toEqual(
+          expect.objectContaining({
+            payerKey: mockPublicKey,
+            recentBlockhash: "7hW5wLymv7K4KGeXGq6c16oVvW165Gq",
+          })
+        );
+        expect(messageArgs.instructions).toHaveLength(1);
+        expect(messageArgs.instructions[0].programId.toBase58()).toBe(
+          "11111111111111111111111111111111"
+        );
       });
     });
 
