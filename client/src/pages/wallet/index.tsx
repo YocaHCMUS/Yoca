@@ -5,6 +5,7 @@ import { WalletHero } from "@/components/wallet/WalletHero/WalletHero.tsx";
 import { WalletHoldingsPanel } from "@/components/wallet/WalletHoldingsPanel/WalletHoldingsPanel.tsx";
 import { TabContainer } from "@/components/tabContainer/tabContainer.tsx";
 import { RightSidebar } from "./RightSidebar.tsx";
+import { WalletChat } from "@/components/wallet/WalletChat";
 import { AiAnalysisModal } from "@/components/wallet/AiAnalysisModal/AiAnalysisModal.tsx";
 import {
   FilterType,
@@ -48,7 +49,7 @@ import {
   type WalletSwapTokenInfo,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
-import { User } from "@carbon/icons-react";
+import { User, Close } from "@carbon/icons-react";
 import { Button } from "@carbon/react";
 import JSZip from "jszip";
 import {
@@ -80,6 +81,9 @@ import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV
 import type { WalletOverviewPeriodKey } from "@/services/wallet/walletApi.ts";
 import { TimePeriod } from "@/types/chart-filters.types.ts";
 import WalletOverviewWinRateBanner from "@/components/wallet/WalletOverview/WalletOverviewWinRateBanner";
+
+type ChatPosition = "right" | "left" | "fullscreen";
+
 function chunkArray<T>(items: T[], size: number): T[][] {
   if (size <= 0 || items.length === 0) {
     return [];
@@ -169,6 +173,8 @@ export default function WalletPage() {
   const [auditOpen, setAuditOpen] = useState(false);
   const [activeActivityTab, setActiveActivityTab] = useState<number>(0);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatPosition, setChatPosition] = useState<ChatPosition>("right");
 
   const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
@@ -176,7 +182,7 @@ export default function WalletPage() {
   const [isChartsExporting, setIsChartsExporting] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
   const reportTemplateRef = useRef<HTMLDivElement | null>(null);
-  
+
   const { stats, loading } = useWalletWinrate(walletAddress, selectedPeriod);
   const [selectedToken, setSelectedToken] = useState<{
     address: string;
@@ -319,7 +325,7 @@ export default function WalletPage() {
           : undefined;
         const tokenSymbol =
           typeof transfer.tokenSymbol === "string" &&
-          transfer.tokenSymbol.trim().length > 0
+            transfer.tokenSymbol.trim().length > 0
             ? transfer.tokenSymbol
             : "Unknown";
         const tokenAmount = transfer.amount;
@@ -633,7 +639,7 @@ export default function WalletPage() {
         setWalletTags([]);
       });
   }, [address]);
-  
+
   const loadPortfolioData = useCallback(async (): Promise<
     WalletPortfolioItem[]
   > => {
@@ -865,11 +871,10 @@ export default function WalletPage() {
         fmt.datetime.relativeShort(transfer.timestamp, true),
         transfer.from,
         transfer.to,
-        `${
-          typeof transfer.tokenSymbol === "string" &&
+        `${typeof transfer.tokenSymbol === "string" &&
           transfer.tokenSymbol.trim().length > 0
-            ? transfer.tokenSymbol
-            : "Unknown"
+          ? transfer.tokenSymbol
+          : "Unknown"
         } (${fmt.num.decimal(transfer.amount)})`,
         transfer.amountUsd != null ? fmt.num.currency(transfer.amountUsd) : "—",
       ]);
@@ -1203,11 +1208,10 @@ export default function WalletPage() {
           fmt.datetime.relativeShort(transfer.timestamp, true),
           transfer.from,
           transfer.to,
-          `${
-            typeof transfer.tokenSymbol === "string" &&
+          `${typeof transfer.tokenSymbol === "string" &&
             transfer.tokenSymbol.trim().length > 0
-              ? transfer.tokenSymbol
-              : "Unknown"
+            ? transfer.tokenSymbol
+            : "Unknown"
           } (${fmt.num.decimal(transfer.amount)})`,
         ])}
         chunkSize={PDF_TABLE_ROWS_PER_PAGE}
@@ -1265,7 +1269,7 @@ export default function WalletPage() {
               avgBuyPrice={selectedToken.avgBuyCost}
               avgSellPrice={selectedToken.avgSellCost}
             />
-           
+
           </>
         ),
         size: "lg",
@@ -1288,10 +1292,10 @@ export default function WalletPage() {
             onPeriodChange={(period) => setSelectedPeriod(period)}
           />
           <div style={{ padding: "20px 24px 0 24px" }}>
-            <WalletOverviewWinRateBanner 
-                stats={stats} // Nhận từ hook useWalletWinrate
-                selectedPeriod={selectedPeriod}
-                loading={loading} // Nhận từ hook useWalletWinrate
+            <WalletOverviewWinRateBanner
+              stats={stats} // Nhận từ hook useWalletWinrate
+              selectedPeriod={selectedPeriod}
+              loading={loading} // Nhận từ hook useWalletWinrate
             />
           </div>
 
@@ -1418,12 +1422,32 @@ export default function WalletPage() {
           </div>
         </div>
 
+        {/* Layout-integrated chat panel (right/left dock) */}
+        <div
+          className={styles.chatInline}
+          data-side={chatPosition}
+          data-open={isChatOpen && chatPosition !== "fullscreen"}
+        >
+          <div className={styles.chatInlineInner}>
+            <WalletChat address={walletAddress} variant="sidebar" lang={lang} chatPosition={chatPosition} onChatPositionChange={setChatPosition} />
+          </div>
+        </div>
+
         <RightSidebar
-          currentAddress={address || ""}
           onToggle={setIsRightSidebarOpen}
-          address={walletAddress}
-          lang={lang}
+          isChatOpen={isChatOpen}
+          onChatToggle={() => setIsChatOpen((v) => !v)}
         />
+
+        {/* Fullscreen overlay */}
+        {isChatOpen && chatPosition === "fullscreen" && (
+          <div className={styles.chatOverlay} data-position="fullscreen">
+            <div className={styles.chatBackdrop} onClick={() => setIsChatOpen(false)} />
+            <div className={styles.chatPanel}>
+              <WalletChat address={walletAddress} variant="sidebar" lang={lang} chatPosition={chatPosition} onChatPositionChange={setChatPosition} />
+            </div>
+          </div>
+        )}
       </div>
 
       <div
@@ -1493,7 +1517,7 @@ export default function WalletPage() {
                 className={styles.auditCloseBtn}
                 onClick={() => setAuditOpen(false)}
               >
-                ✕
+                <Close />
               </button>
             </div>
             <WalletAuditPanel

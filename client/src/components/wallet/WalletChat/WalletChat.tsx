@@ -7,6 +7,7 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import type { LangKeys } from "@/config/localization";
 import type { ChatMessageItem, ChatResponse } from "./types";
 import styles from "./WalletChat.module.scss";
+import { Maximize, OpenPanelLeft, OpenPanelRight } from "@carbon/icons-react";
 
 const MAX_QUICK_QUESTIONS = 5;
 const MAX_INPUT_LENGTH = 500;
@@ -15,9 +16,11 @@ interface Props {
   address: string;
   lang?: LangKeys;
   variant?: "widget" | "sidebar";
+  chatPosition: "right" | "left" | "fullscreen";
+  onChatPositionChange: (position: "right" | "left" | "fullscreen") => void;
 }
 
-export function WalletChat({ address, lang, variant = "widget" }: Props) {
+export function WalletChat({ address, lang, variant = "widget", chatPosition, onChatPositionChange }: Props) {
   const { tr } = useLocalization();
   const [isOpen, setIsOpen] = useState(variant === "sidebar");
   const [isMinimized, setIsMinimized] = useState(false);
@@ -169,8 +172,8 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
   const trimmedInput = inputText.trim();
   const inputValidationError =
     trimmedInput.length === 0 ? null
-    : trimmedInput.length > MAX_INPUT_LENGTH ? tr("chat.inputOverLimit", { max: MAX_INPUT_LENGTH })
-    : null;
+      : trimmedInput.length > MAX_INPUT_LENGTH ? tr("chat.inputOverLimit", { max: MAX_INPUT_LENGTH })
+        : null;
 
   const renderPromptMenu = () => (
     <div className={styles.promptMenuOverlay}>
@@ -240,6 +243,30 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
         </span>
         <div className={styles.headerActions}>
           <button
+            className={styles.headerBtn}
+            data-active={chatPosition === "left"}
+            onClick={() => onChatPositionChange("left")}
+            title="Left sidebar"
+          >
+            <OpenPanelLeft size={16} />
+          </button>
+          <button
+            className={styles.headerBtn}
+            data-active={chatPosition === "right"}
+            onClick={() => onChatPositionChange("right")}
+            title="Right sidebar"
+          >
+            <OpenPanelRight size={16} />
+          </button>
+          <button
+            className={styles.headerBtn}
+            data-active={chatPosition === "fullscreen"}
+            onClick={() => onChatPositionChange("fullscreen")}
+            title="Fullscreen"
+          >
+            <Maximize size={16} />
+          </button>
+          <button
             type="button"
             onClick={handleNewChat}
             className={styles.headerBtn}
@@ -270,7 +297,7 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
 
       {showPromptMenu ? renderPromptMenu()
         : messages.length === 0 && !isLoading ? renderQuickQuestions()
-        : renderMessages()}
+          : renderMessages()}
 
       {/* Input */}
       <div className={styles.inputBar}>

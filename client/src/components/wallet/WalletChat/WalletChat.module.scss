@@ -74,24 +74,24 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 0 16px;
+  height: 40px;
   border-bottom: 1px solid var(--cds-border-subtle-03);
   background: $layer-01;
   flex-shrink: 0;
 }
 
 .headerTitle {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: $text-primary;
   display: flex;
   align-items: center;
-  gap: 8px;
 }
 
 .headerActions {
   display: flex;
-  gap: 8px;
+  gap: $spacing-02;
 }
 
 .headerBtn {
@@ -109,6 +109,11 @@
   &:hover {
     background: $layer-hover-01;
     color: $icon-primary;
+  }
+
+  &[data-active="true"] {
+    color: $interactive;
+    background: $layer-selected;
   }
 }
 
