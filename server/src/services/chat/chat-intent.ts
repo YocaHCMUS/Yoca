@@ -9,6 +9,7 @@ export type WalletChatIntent =
   | "balance_trend"
   | "volume_trend"
   | "audit"
+  | "comparison"
   | "custom";
 
 export function classifyWalletChatIntent(question: string): WalletChatIntent {
@@ -30,6 +31,8 @@ export function classifyWalletChatIntent(question: string): WalletChatIntent {
   if (/\b(holdings?|token|asset|position)\b/.test(q)) return "portfolio";
   if (/\b(balance|trend|history.*balance)\b/.test(q)) return "balance_trend";
   if (/\b(volume|trading.*volume)\b/.test(q)) return "volume_trend";
+
+  if (/compare|vs\b|versus|difference|which (is|has|performed)|so sánh|khác nhau|hơn/i.test(q)) return "comparison";
 
   return "custom";
 }

@@ -89,6 +89,25 @@
   align-items: center;
 }
 
+.walletSelect {
+  flex: 1;
+  min-width: 0;
+  max-width: 140px;
+  height: 24px;
+  font-size: 0.6875rem;
+  background: $field-01;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 4px;
+  color: $text-primary;
+  padding: 0 $spacing-02;
+  cursor: pointer;
+  outline: none;
+
+  &:focus {
+    border-color: var(--cds-interactive-focus);
+  }
+}
+
 .headerActions {
   display: flex;
   gap: $spacing-02;

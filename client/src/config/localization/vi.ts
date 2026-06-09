@@ -998,6 +998,7 @@ export const translation = defineTranslation({
     pdfWalletsCompared: "Số ví so sánh",
     pdfWalletAddresses: "Địa chỉ ví",
     viewDeepDive: "Xem chi tiết",
+    aiChat: "AI Chat",
   },
   // Wallet Report PDF Template
   wallet_report: {

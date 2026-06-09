@@ -11,7 +11,7 @@ import type {
   HistoryMessage,
   PriorContext,
 } from "./chat.types.js";
-import { TOOL_DEFINITIONS, TOOL_HANDLERS, hasTool } from "./chat.tools.js";
+import { TOOL_DEFINITIONS, TOOL_HANDLERS, hasTool, isWalletTool } from "./chat.tools.js";
 import {
   buildToolSelectionPrompt,
   buildResponseGenerationPrompt,
@@ -90,8 +90,15 @@ async function callGemini(prompt: string, systemInstruction?: string): Promise<s
   }
 }
 
+function stripAddressKeys(input: Record<string, unknown>): Record<string, unknown> {
+  const copy = { ...input };
+  delete copy.address;
+  delete copy.addresses;
+  return copy;
+}
+
 function makeCallKey(call: ChatToolCall): string {
-  return `${call.name}:${JSON.stringify(call.input)}`;
+  return `${call.name}:${JSON.stringify(stripAddressKeys(call.input as Record<string, unknown>))}`;
 }
 
 function allDuplicates(
@@ -99,22 +106,24 @@ function allDuplicates(
   previousResults: PriorContext["previousResults"],
 ): boolean {
   if (!previousResults.length) return false;
-  const seen = new Set(previousResults.map((r) => `${r.name}:${JSON.stringify(r.input)}`));
+  const seen = new Set(
+    previousResults.map((r) => `${r.name}:${JSON.stringify(stripAddressKeys(r.input as Record<string, unknown>))}`),
+  );
   return tools.length > 0 && tools.every((t) => seen.has(makeCallKey(t)));
 }
 
 async function selectTool(
   query: string,
-  address: string,
+  addresses: string[],
   language?: string,
   context?: PriorContext,
   history?: HistoryMessage[],
 ): Promise<ChatToolCall[] | { type: "no_tool" | "general"; message: string }> {
-  const prompt = buildToolSelectionPrompt(query, TOOL_DEFINITIONS, address, context, history, language);
+  const prompt = buildToolSelectionPrompt(query, TOOL_DEFINITIONS, addresses, context, history, language);
   const raw = await callGemini(prompt);
 
   if (!raw) {
-    chatWarn("selectTool: Gemini returned null", { address });
+    chatWarn("selectTool: Gemini returned null", { addresses });
     return { type: "general", message: getMessage(language, "noResponse") };
   }
 
@@ -163,30 +172,63 @@ async function selectTool(
   return { type: "general", message: getMessage(language, "noTool") };
 }
 
-async function executeTools(tools: ChatToolCall[]): Promise<ChatToolResult[]> {
+async function executeToolsForAllAddresses(
+  addresses: string[],
+  tools: ChatToolCall[],
+): Promise<ChatToolResult[]> {
   const results = await Promise.all(
     tools.map(async (tool) => {
       const handler = TOOL_HANDLERS[tool.name];
       const start = performance.now();
 
       if (!handler) {
-        chatWarn("executeTool: handler not found", { tool: tool.name });
+        chatWarn("executeToolsForAllAddresses: handler not found", { tool: tool.name });
         return { name: tool.name, input: tool.input, data: null, error: `Tool '${tool.name}' not found` };
       }
 
       try {
+        if (isWalletTool(tool.name)) {
+          const restInput = stripAddressKeys(tool.input as Record<string, unknown>);
+          const perAddress = await Promise.all(
+            addresses.map(async (addr) => {
+              const { data: rawData, llmData } = await handler({ ...restInput, address: addr });
+              return { address: addr, data: rawData, llmData };
+            }),
+          );
+
+          const duration = Math.round(performance.now() - start);
+          chatInfo("executeToolsForAllAddresses: fan-out success", {
+            tool: tool.name,
+            addresses: addresses.length,
+            durationMs: duration,
+          });
+
+          const mergedData: Record<string, unknown> = {};
+          const mergedFullData: Record<string, unknown> = {};
+          for (const pa of perAddress) {
+            mergedData[pa.address] = pa.llmData;
+            mergedFullData[pa.address] = pa.data;
+          }
+
+          return {
+            name: tool.name,
+            input: { ...tool.input, addresses },
+            data: mergedData,
+            fullData: mergedFullData,
+          };
+        }
+
         const { data: fullData, llmData } = await handler(tool.input);
         const duration = Math.round(performance.now() - start);
-        chatInfo("executeTool: success", {
+        chatInfo("executeToolsForAllAddresses: global tool success", {
           tool: tool.name,
           durationMs: duration,
-          dataSize: trunc(JSON.stringify(llmData), 100).length,
         });
         return { name: tool.name, input: tool.input, data: llmData, fullData };
       } catch (err) {
         const duration = Math.round(performance.now() - start);
         const msg = err instanceof Error ? err.message : String(err);
-        chatError("executeTool: failed", { tool: tool.name, durationMs: duration, error: msg });
+        chatError("executeToolsForAllAddresses: failed", { tool: tool.name, durationMs: duration, error: msg });
         return { name: tool.name, input: tool.input, data: null, error: msg };
       }
     }),
@@ -354,7 +396,7 @@ async function generateResponse(
 }
 
 export async function answerChatQuery(
-  address: string,
+  addresses: string[],
   query: string,
   language?: string,
   history?: HistoryMessage[],
@@ -364,13 +406,13 @@ export async function answerChatQuery(
     ? createHash("sha256").update(JSON.stringify(history)).update(language ?? "en").digest("hex").slice(0, 8)
     : undefined;
 
-  chatInfo("answerChatQuery: entry", { address, query: trunc(query, 200), language: language ?? "en", historyTurns: history?.length ?? 0 });
+  chatInfo("answerChatQuery: entry", { addresses, query: trunc(query, 200), language: language ?? "en", historyTurns: history?.length ?? 0 });
 
   const intent = classifyWalletChatIntent(query);
   const detectedLang = inferWalletChatLanguage(query, language);
   chatInfo("answerChatQuery: intent + language", { intent, detectedLang, originalLang: language ?? "en" });
 
-  const cached = await getCachedResponse(address, query, model, historyHash, intent);
+  const cached = await getCachedResponse(addresses, query, model, historyHash, intent);
   if (cached) {
     chatInfo("answerChatQuery: cache hit", {
       textLength: cached.text.length,
@@ -390,7 +432,7 @@ export async function answerChatQuery(
       ? { previousResults: allResults.map((r) => ({ name: r.name, input: r.input ?? {}, data: r.data, error: r.error })) }
       : undefined;
 
-    const toolSelection = await selectTool(query, address, language, context, history);
+    const toolSelection = await selectTool(query, addresses, language, context, history);
 
     if (!Array.isArray(toolSelection)) {
       if (i === 0) {
@@ -426,7 +468,7 @@ export async function answerChatQuery(
       break;
     }
 
-    const results = await executeTools(toolSelection);
+    const results = await executeToolsForAllAddresses(addresses, toolSelection);
     allResults.push(...results);
 
     if (results.length > 0 && results.every((r) => r.error)) {
@@ -459,7 +501,7 @@ export async function answerChatQuery(
   }
 
   try {
-    await setCachedResponse(address, query, response, model, historyHash, intent);
+    await setCachedResponse(addresses, query, response, model, historyHash, intent);
     chatDebug("answerChatQuery: cache write succeeded");
   } catch {
     chatWarn("answerChatQuery: cache write failed");

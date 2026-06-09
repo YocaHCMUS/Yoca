@@ -3,15 +3,17 @@ import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivi
 import { GeneralTab } from "@/components/wallet/WalletComparison/GeneralTab";
 import { HoldingTab } from "@/components/wallet/WalletComparison/HoldingTab";
 import { RiskTab } from "@/components/wallet/WalletComparison/RiskTab";
+import { WalletChat } from "@/components/wallet/WalletChat";
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { applyRobotoRegularPdfFont } from "@/util/pdf-fonts";
-import { Button, Column, Grid, Search, Stack } from "@carbon/react";
-import { ChartLine, Close, Download, SearchAdvanced, Wallet, User, Launch } from "@carbon/react/icons";
+import { Button, Search, Stack } from "@carbon/react";
+import { ChartLine, Close, Download, SearchAdvanced, Wallet, User, Launch, AiGenerate } from "@carbon/react/icons";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
+import { RightSidebar } from "@/pages/wallet/RightSidebar";
 import styles from "./index.module.scss";
 
 const TAB_EXPORT_FILENAME_SEGMENTS = [
@@ -175,6 +177,8 @@ export default function WalletsComparisonPage() {
 
   const [dayPopupOpen, setDayPopupOpen] = useState(false);
   const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
+
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const handleDayClick = (walletAddress: string, timestamp: number) => {
     setDayPopupTimestamp(timestamp);
@@ -456,28 +460,68 @@ export default function WalletsComparisonPage() {
 
   return (
     <PageWrapper noMarketTickers>
-      <Grid className={styles.grid} fullWidth>
-        <Column lg={4} md={4} sm={4}>
-          <WalletComparisonSidebar
-            walletAddress={walletAddress}
-            selectedWallets={selectedWallets}
-            onWalletAddressChange={setWalletAddress}
-            onWalletKeyPress={handleKeyPress}
-            onRemoveWallet={handleRemoveWallet}
-            onExport={handleSidebarExport}
-            isExporting={isExporting}
-          />
-        </Column>
+      <div className={styles.pageLayout}>
+        <aside className={styles.leftSidebar}>
+          <div className={styles.walletSection}>
+            <WalletComparisonSidebar
+              walletAddress={walletAddress}
+              selectedWallets={selectedWallets}
+              onWalletAddressChange={setWalletAddress}
+              onWalletKeyPress={handleKeyPress}
+              onRemoveWallet={handleRemoveWallet}
+              onExport={handleSidebarExport}
+              isExporting={isExporting}
+            />
+          </div>
 
-        <Column lg={12} md={12} sm={4}>
+          {isChatOpen ? (
+            <div className={styles.chatSection}>
+              <div className={styles.chatHeader}>
+                <div className={styles.chatHeaderLeft}>
+                  <AiGenerate size={16} />
+                  <span>{tr("walletComparison.aiChat")}</span>
+                </div>
+                <button
+                  type="button"
+                  className={styles.chatCloseBtn}
+                  onClick={() => setIsChatOpen(false)}
+                >
+                  <Close size={16} />
+                </button>
+              </div>
+              <div className={styles.chatBody}>
+                <WalletChat
+                  addresses={selectedWallets}
+                  lang={lang}
+                  variant="sidebar"
+                  chatPosition="left"
+                  onChatPositionChange={() => {}}
+                />
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={styles.chatToggleBtn}
+              onClick={() => setIsChatOpen(true)}
+            >
+              <AiGenerate size={16} />
+              <span>{tr("walletComparison.aiChat")}</span>
+            </button>
+          )}
+        </aside>
+
+        <main className={styles.mainContent}>
           <WalletComparisonMainContent
             activeTab={activeTab}
             visitedTabs={visitedTabs}
             comparisonTabs={comparisonTabs}
             onTabChange={setActiveTab}
           />
-        </Column>
-      </Grid>
+        </main>
+
+        <RightSidebar noChatToggle />
+      </div>
 
       <DayActivityPopup
         isOpen={dayPopupOpen}

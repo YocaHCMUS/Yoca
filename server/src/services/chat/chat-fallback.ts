@@ -74,6 +74,63 @@ function findResultArray(
   return [];
 }
 
+// ─── Comparison Helpers ─────────────────────────────────────────────────
+
+function shortenAddress(addr: string): string {
+  if (addr.length <= 12) return addr;
+  return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
+}
+
+function getAddressesFromResults(results: ChatToolResult[]): string[] | null {
+  for (const r of results) {
+    const addrs = (r.input as Record<string, unknown>).addresses;
+    if (Array.isArray(addrs) && addrs.length > 1) {
+      return addrs as string[];
+    }
+  }
+  const addrSet = new Set<string>();
+  for (const r of results) {
+    const addr = (r.input as Record<string, unknown>).address as string | undefined;
+    if (addr) addrSet.add(addr);
+  }
+  return addrSet.size > 1 ? [...addrSet] : null;
+}
+
+function extractDataForAddress(
+  result: ChatToolResult | null | undefined,
+  address: string,
+): Record<string, unknown> | null {
+  if (!result || result.error) return null;
+  const data = result.data as Record<string, unknown> | undefined;
+  if (!data) return null;
+  if (data[address] && typeof data[address] === "object") {
+    return data[address] as Record<string, unknown>;
+  }
+  return data;
+}
+
+function extractArrayForAddress(
+  result: ChatToolResult | null | undefined,
+  address: string,
+): unknown[] {
+  if (!result || result.error) return [];
+  const data = result.data as Record<string, unknown> | undefined;
+  if (!data) return [];
+  const addrData = data[address];
+  if (Array.isArray(addrData)) return addrData;
+  if (addrData && typeof addrData === "object") {
+    const d = addrData as Record<string, unknown>;
+    if (Array.isArray(d.points)) return d.points;
+    if (Array.isArray(d.swaps)) return d.swaps;
+    if (Array.isArray(d.transfers)) return d.transfers;
+  }
+  return [];
+}
+
+function findResultByName(results: ChatToolResult[], name: string): ChatToolResult | null {
+  return results.find((r) => r.name === name) ?? null;
+}
+
 function topPortfolioLabel(portfolio: unknown[]): string {
   if (portfolio.length === 0) return "none";
   const top = portfolio[0] as Record<string, unknown> | undefined;
@@ -502,6 +559,346 @@ function buildRiskSections(
   ];
 }
 
+// ─── Comparison Sections ────────────────────────────────────────────────
+
+function buildMetricsComparisonTable(
+  perAddress: Record<string, {
+    overview: Record<string, unknown> | null;
+    pnl: Record<string, unknown> | null;
+    portfolio: unknown[];
+  }>,
+  language: "en" | "vi",
+): WalletChatSection {
+  const rows: Array<Record<string, string | number | null>> = [];
+
+  for (const [addr, data] of Object.entries(perAddress)) {
+    const label = shortenAddress(addr);
+    const balance = data.overview?.totalBalance != null
+      ? Number(data.overview.totalBalance)
+      : null;
+    const volume = data.overview?.tradingVolume24h != null
+      ? Number(data.overview.tradingVolume24h)
+      : null;
+    const pnl = data.pnl?.realizedPnlUsd != null
+      ? Number(data.pnl.realizedPnlUsd)
+      : null;
+    const winRate = data.pnl?.winRate != null
+      ? Number(data.pnl.winRate)
+      : null;
+    const holdings = data.overview?.holdingsCount != null
+      ? Number(data.overview.holdingsCount)
+      : (data.portfolio.length > 0 ? data.portfolio.length : null);
+
+    rows.push({
+      wallet: label,
+      balance,
+      volume24h: volume,
+      realizedPnl: pnl,
+      winRate,
+      holdings,
+    });
+  }
+
+  return {
+    title: language === "vi" ? "So Sánh Chỉ Số" : "Metrics Comparison",
+    kind: "key_findings",
+    table: rows.length > 0 ? rows : undefined,
+    bullets: rows.length === 0
+      ? [language === "vi" ? "Không có dữ liệu so sánh." : "No comparison data available."]
+      : undefined,
+  };
+}
+
+function buildHoldingsComparisonSection(
+  perAddress: Record<string, {
+    overview: Record<string, unknown> | null;
+    pnl: Record<string, unknown> | null;
+    portfolio: unknown[];
+  }>,
+  language: "en" | "vi",
+): WalletChatSection {
+  const addrTokens: Record<string, Set<string>> = {};
+
+  for (const [addr, data] of Object.entries(perAddress)) {
+    const tokens = new Set<string>();
+    for (const item of data.portfolio) {
+      const p = item as Record<string, unknown>;
+      tokens.add(String(p.token ?? p.symbol ?? "?"));
+    }
+    addrTokens[addr] = tokens;
+  }
+
+  const allTokenSets = Object.values(addrTokens);
+  let common: string[] = [];
+  if (allTokenSets.length > 0) {
+    common = [...allTokenSets[0]].filter((t) =>
+      allTokenSets.every((s) => s.has(t)),
+    );
+  }
+
+  const unique: Record<string, string[]> = {};
+  for (const [addr, tokens] of Object.entries(addrTokens)) {
+    unique[addr] = [...tokens].filter((t) =>
+      !Object.entries(addrTokens).some(
+        ([otherAddr, otherTokens]) => otherAddr !== addr && otherTokens.has(t),
+      ),
+    );
+  }
+
+  const bullets: string[] = [];
+
+  if (common.length > 0) {
+    bullets.push(
+      language === "vi"
+        ? `Token chung: ${common.join(", ")}.`
+        : `Common holdings: ${common.join(", ")}.`,
+    );
+  } else {
+    bullets.push(
+      language === "vi"
+        ? "Không có token chung giữa các ví."
+        : "No common tokens across wallets.",
+    );
+  }
+
+  for (const [addr, tokens] of Object.entries(unique)) {
+    if (tokens.length > 0) {
+      bullets.push(
+        language === "vi"
+          ? `${shortenAddress(addr)} có token riêng: ${tokens.join(", ")}.`
+          : `${shortenAddress(addr)} unique: ${tokens.join(", ")}.`,
+      );
+    }
+  }
+
+  if (bullets.length === 0) {
+    bullets.push(
+      language === "vi"
+        ? "Không có dữ liệu danh mục để so sánh."
+        : "No portfolio data to compare.",
+    );
+  }
+
+  return {
+    title: language === "vi" ? "So Sánh Danh Mục" : "Holdings Comparison",
+    kind: "top_holdings",
+    bullets,
+  };
+}
+
+function buildRiskComparisonSection(
+  perAddress: Record<string, {
+    overview: Record<string, unknown> | null;
+    pnl: Record<string, unknown> | null;
+    portfolio: unknown[];
+  }>,
+  language: "en" | "vi",
+): WalletChatSection {
+  const bullets: string[] = [];
+
+  for (const [addr, data] of Object.entries(perAddress)) {
+    const label = shortenAddress(addr);
+    const risks: string[] = [];
+
+    if (data.portfolio.length > 0) {
+      const total = data.portfolio.reduce<number>((sum, item) => {
+        const v = finiteNumber((item as Record<string, unknown>).valueUsd);
+        return sum + (v ?? 0);
+      }, 0);
+      if (total > 0) {
+        const top = data.portfolio[0] as Record<string, unknown> | undefined;
+        const topVal = finiteNumber(top?.valueUsd);
+        if (topVal != null) {
+          const conc = (topVal / total) * 100;
+          if (conc > 50) {
+            risks.push(
+              language === "vi"
+                ? `tập trung cao (${percent(conc)})`
+                : `high concentration (${percent(conc)})`,
+            );
+          }
+        }
+      }
+    }
+
+    const realized = finiteNumber(data.pnl?.realizedPnlUsd);
+    if (realized != null) {
+      risks.push(
+        realized >= 0
+          ? (language === "vi"
+              ? `PnL dương (${compactCurrency(realized)})`
+              : `positive PnL (${compactCurrency(realized)})`)
+          : (language === "vi"
+              ? `PnL âm (${compactCurrency(Math.abs(realized))} lỗ)`
+              : `negative PnL (${compactCurrency(Math.abs(realized))} loss)`),
+      );
+    }
+
+    const volume = finiteNumber(data.overview?.tradingVolume24h);
+    if (volume != null) {
+      risks.push(
+        volume > 1000
+          ? (language === "vi"
+              ? `khối lượng 24h: ${compactCurrency(volume)}`
+              : `24h volume: ${compactCurrency(volume)}`)
+          : (language === "vi"
+              ? `khối lượng thấp (${compactCurrency(volume)})`
+              : `low volume (${compactCurrency(volume)})`),
+      );
+    }
+
+    if (risks.length > 0) {
+      bullets.push(`${label}: ${risks.join("; ")}.`);
+    }
+  }
+
+  if (bullets.length === 0) {
+    bullets.push(
+      language === "vi"
+        ? "Không đủ dữ liệu để so sánh rủi ro."
+        : "Insufficient data for risk comparison.",
+    );
+  }
+
+  return {
+    title: language === "vi" ? "So Sánh Rủi Ro" : "Risk Comparison",
+    kind: "risk_factors",
+    bullets,
+  };
+}
+
+function buildComparisonConclusion(
+  perAddress: Record<string, {
+    overview: Record<string, unknown> | null;
+    pnl: Record<string, unknown> | null;
+    portfolio: unknown[];
+  }>,
+  language: "en" | "vi",
+): WalletChatSection {
+  let bestPnlAddr: string | null = null;
+  let bestPnlVal = -Infinity;
+
+  for (const [addr, data] of Object.entries(perAddress)) {
+    const realized = finiteNumber(data.pnl?.realizedPnlUsd);
+    if (realized != null && realized > bestPnlVal) {
+      bestPnlVal = realized;
+      bestPnlAddr = addr;
+    }
+  }
+
+  let bestBalanceAddr: string | null = null;
+  let bestBalanceVal = -Infinity;
+
+  for (const [addr, data] of Object.entries(perAddress)) {
+    const balance = finiteNumber(data.overview?.totalBalance);
+    if (balance != null && balance > bestBalanceVal) {
+      bestBalanceVal = balance;
+      bestBalanceAddr = addr;
+    }
+  }
+
+  let content: string;
+  if (bestPnlAddr && bestBalanceAddr) {
+    if (bestPnlAddr === bestBalanceAddr) {
+      const label = shortenAddress(bestPnlAddr);
+      content = language === "vi"
+        ? `${label} dẫn đầu cả về PnL (${compactCurrency(bestPnlVal)}) và số dư (${compactCurrency(bestBalanceVal)}).`
+        : `${label} leads in both PnL (${compactCurrency(bestPnlVal)}) and balance (${compactCurrency(bestBalanceVal)}).`;
+    } else {
+      const pnlLabel = shortenAddress(bestPnlAddr);
+      const balLabel = shortenAddress(bestBalanceAddr);
+      content = language === "vi"
+        ? `${pnlLabel} có PnL tốt nhất (${compactCurrency(bestPnlVal)}), ${balLabel} có số dư cao nhất (${compactCurrency(bestBalanceVal)}).`
+        : `${pnlLabel} has best PnL (${compactCurrency(bestPnlVal)}), ${balLabel} has highest balance (${compactCurrency(bestBalanceVal)}).`;
+    }
+  } else {
+    content = language === "vi"
+      ? "Không đủ dữ liệu để xác định ví nào hoạt động tốt hơn."
+      : "Insufficient data to determine which wallet performs better.";
+  }
+
+  return {
+    title: language === "vi" ? "Kết Luận" : "Conclusion",
+    kind: "conclusion",
+    content,
+  };
+}
+
+function buildComparisonSections(
+  allResults: ChatToolResult[],
+  language: "en" | "vi",
+): WalletChatSection[] {
+  const addresses = getAddressesFromResults(allResults);
+  if (!addresses) return [];
+
+  const overviewResult = findResultByName(allResults, "get_wallet_overview");
+  const pnlResult = findResultByName(allResults, "get_wallet_pnl");
+  const portfolioResult = findResultByName(allResults, "get_wallet_portfolio");
+
+  const perAddress: Record<string, {
+    overview: Record<string, unknown> | null;
+    pnl: Record<string, unknown> | null;
+    portfolio: unknown[];
+  }> = {};
+
+  for (const addr of addresses) {
+    perAddress[addr] = {
+      overview: extractDataForAddress(overviewResult, addr),
+      pnl: extractDataForAddress(pnlResult, addr),
+      portfolio: extractArrayForAddress(portfolioResult, addr),
+    };
+  }
+
+  return [
+    buildMetricsComparisonTable(perAddress, language),
+    buildHoldingsComparisonSection(perAddress, language),
+    buildRiskComparisonSection(perAddress, language),
+    buildComparisonConclusion(perAddress, language),
+  ];
+}
+
+function buildComparisonEvidence(
+  allResults: ChatToolResult[],
+  language: "en" | "vi",
+): WalletChatEvidence[] {
+  const evidence: WalletChatEvidence[] = [];
+  const addresses = getAddressesFromResults(allResults);
+  if (!addresses) return buildEvidence(allResults);
+
+  for (const addr of addresses) {
+    if (evidence.length >= WALLET_CHAT_RESPONSE_LIMITS.evidenceItems) break;
+    const overview = extractDataForAddress(
+      findResultByName(allResults, "get_wallet_overview"),
+      addr,
+    );
+    const pnl = extractDataForAddress(
+      findResultByName(allResults, "get_wallet_pnl"),
+      addr,
+    );
+    const label = shortenAddress(addr);
+
+    evidence.push({
+      type: "overview",
+      label: language === "vi" ? `Tổng quan ${label}` : `${label} Overview`,
+      value: overview?.totalBalance != null ? compactCurrency(overview.totalBalance) : undefined,
+      detail: overview?.holdingsCount != null ? `${overview.holdingsCount} holdings` : undefined,
+      toolName: "get_wallet_overview",
+    });
+
+    if (pnl && evidence.length < WALLET_CHAT_RESPONSE_LIMITS.evidenceItems) {
+      evidence.push({
+        type: "pnl",
+        label: language === "vi" ? `PnL ${label}` : `${label} PnL`,
+        value: pnl.realizedPnlUsd != null ? compactCurrency(pnl.realizedPnlUsd) : undefined,
+        detail: pnl.tradeCount != null ? `${pnl.tradeCount} trades` : undefined,
+        toolName: "get_wallet_pnl",
+      });
+    }
+  }
+
+  return evidence;
+}
+
 function computeConfidence(results: ChatToolResult[]): WalletConfidence {
   const total = results.length;
   if (total === 0) return "Low";
@@ -627,6 +1024,8 @@ export function buildWalletFallbackResponse(
 
   let sections: WalletChatSection[] = [];
 
+  const isComparison = intent === "comparison" || getAddressesFromResults(allResults) !== null;
+
   switch (intent) {
     case "overview":
       sections = buildOverviewSections(overview, portfolio, language);
@@ -649,11 +1048,18 @@ export function buildWalletFallbackResponse(
     case "risk_analysis":
       sections = buildRiskSections(overview, pnlData, portfolio, swaps, language);
       break;
+    case "comparison":
+      sections = buildComparisonSections(allResults, language);
+      break;
     default:
-      sections = buildOverviewSections(overview, portfolio, language);
+      sections = isComparison
+        ? buildComparisonSections(allResults, language)
+        : buildOverviewSections(overview, portfolio, language);
   }
 
-  const evidence = buildEvidence(allResults);
+  const evidence = isComparison
+    ? buildComparisonEvidence(allResults, language)
+    : buildEvidence(allResults);
   const warnings = buildWarnings(allResults);
   const confidence = computeConfidence(allResults);
   const tldr = buildTldr(sections);

@@ -742,3 +742,20 @@ export function findTool(name: string): ChatToolDefinition | undefined {
 export function hasTool(name: string): boolean {
   return name in TOOL_HANDLERS;
 }
+
+const WALLET_SCOPED_TOOLS = new Set([
+  "get_wallet_overview",
+  "get_wallet_swaps",
+  "get_wallet_transfers",
+  "get_balance_history",
+  "get_trading_volume",
+  "get_wallet_pnl",
+  "get_pnl_chart",
+  "get_wallet_portfolio",
+  "get_historical_portfolio",
+  "get_wallet_audit",
+]);
+
+export function isWalletTool(name: string): boolean {
+  return WALLET_SCOPED_TOOLS.has(name);
+}

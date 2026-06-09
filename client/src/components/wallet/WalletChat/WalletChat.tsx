@@ -13,14 +13,15 @@ const MAX_QUICK_QUESTIONS = 5;
 const MAX_INPUT_LENGTH = 500;
 
 interface Props {
-  address: string;
+  address?: string;
+  addresses?: string[];
   lang?: LangKeys;
   variant?: "widget" | "sidebar";
   chatPosition: "right" | "left" | "fullscreen";
   onChatPositionChange: (position: "right" | "left" | "fullscreen") => void;
 }
 
-export function WalletChat({ address, lang, variant = "widget", chatPosition, onChatPositionChange }: Props) {
+export function WalletChat({ address, addresses, lang, variant = "widget", chatPosition, onChatPositionChange }: Props) {
   const { tr } = useLocalization();
   const [isOpen, setIsOpen] = useState(variant === "sidebar");
   const [isMinimized, setIsMinimized] = useState(false);
@@ -61,8 +62,9 @@ export function WalletChat({ address, lang, variant = "widget", chatPosition, on
           role: m.role,
           content: m.content.length > 2000 ? m.content.slice(0, 2000) : m.content,
         }));
+        const activeAddresses = addresses?.length ? addresses : [address];
         const res = await client.api.chat.index.$post({
-          json: { address, query: query.trim(), language: lang, history },
+          json: { addresses: activeAddresses, query: query.trim(), language: lang, history },
         });
 
         if (!res.ok) {
@@ -98,7 +100,7 @@ export function WalletChat({ address, lang, variant = "widget", chatPosition, on
         setIsLoading(false);
       }
     },
-    [address, lang, isLoading, messages],
+    [address, addresses, lang, isLoading, messages],
   );
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -241,6 +243,7 @@ export function WalletChat({ address, lang, variant = "widget", chatPosition, on
         <span className={styles.headerTitle}>
           {tr("chat.headerTitle")}
         </span>
+
         <div className={styles.headerActions}>
           <button
             className={styles.headerBtn}

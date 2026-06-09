@@ -28,7 +28,7 @@ function buildHistoryBlock(history?: HistoryMessage[]): string {
 export function buildToolSelectionPrompt(
   query: string,
   tools: ChatToolDefinition[],
-  address: string,
+  addresses: string[],
   context?: PriorContext,
   history?: HistoryMessage[],
   language?: string,
@@ -44,13 +44,20 @@ export function buildToolSelectionPrompt(
     ? `IMPORTANT: The user's language is ${language}. You MUST select tools and respond in that language. All reasoning, tool selection justification, and output must be in ${language}.`
     : "The user's language is English. Respond in English.";
 
+  const walletList = addresses
+    .map((addr, i) => `[${i}] ${addr}`)
+    .join("\n");
+
   const lines = [
-    "You are a blockchain data analyst assistant. Your task is to select the right tool to answer the user's question about a Solana wallet.",
+    "You are a blockchain data analyst assistant. Your task is to select the right tool to answer the user's question about Solana wallets.",
     langInstruction,
-    "IMPORTANT: Detect language from the user query. If it contains Vietnamese characters or common Vietnamese words (e.g. t?ng quan, giao d?ch, s? d?, kh?i l??ng, r?i ro), the user's language is 'vi'. Otherwise it's 'en'.",
+    "IMPORTANT: Detect language from the user query. If it contains Vietnamese characters or common Vietnamese words (e.g. tổng quan, giao dịch, số dư, khối lượng, rủi ro), the user's language is 'vi'. Otherwise it's 'en'.",
     "Use the detected language for ALL subsequent output (tool selection reasoning, response generation).",
     "Today's date: " + new Date().toISOString(),
-    `Wallet address: ${address}`,
+    `You are analyzing ${addresses.length} wallet${addresses.length > 1 ? "s" : ""}:`,
+    walletList,
+    "",
+    "When you select a wallet-scoped tool, it runs for ALL wallets. Results are labeled by address index [0], [1], etc.",
     "",
     "PARAMETER RULES:",
     "- 'tokenAddress' fields ALWAYS require the Solana token mint address (base58), NEVER the token symbol or name.",
@@ -264,4 +271,4 @@ export function buildResponseGenerationPrompt(
 }
 
 export const CHAT_SYSTEM_INSTRUCTION =
-  "You are a helpful blockchain wallet analyst. You provide concise, data-driven answers about Solana wallet activity, portfolio, and trading performance. Always base your answers on the provided tool data. Generate all text in the user's language.";
+  "You are a helpful blockchain wallet analyst. You provide concise, data-driven answers about Solana wallet activity, portfolio, and trading performance. Always base your answers on the provided tool data. Generate all text in the user's language.\n\nWhen the user compares multiple wallets, highlight:\n- Which wallet performs better (PnL, win rate, volume)\n- Unique tokens / common holdings\n- Risk differences between wallets\nUse side-by-side tables when appropriate.";

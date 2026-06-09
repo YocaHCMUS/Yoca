@@ -27,6 +27,7 @@ interface RightSidebarProps {
   onToggle?: (isOpen: boolean) => void;
   isChatOpen?: boolean;
   onChatToggle?: () => void;
+  noChatToggle?: boolean;
 }
 
 const formatAddress = (addr: string) => {
@@ -164,6 +165,7 @@ export function RightSidebar({
   onToggle,
   isChatOpen = false,
   onChatToggle,
+  noChatToggle = false,
 }: RightSidebarProps) {
   const [activeTab, setActiveTab] = useState<"watchlist" | "labels" | null>(null);
   const [isAddingToken, setIsAddingToken] = useState(false);
@@ -330,13 +332,15 @@ export function RightSidebar({
           >
             <Tag size={20} />
           </button>
-          <button
-            className={`${styles.toolBtn} ${isChatOpen ? styles.toolBtnActive : ""}`}
-            onClick={onChatToggle}
-            title="AI Chat"
-          >
-            <AiGenerate size={20} />
-          </button>
+          {!noChatToggle && (
+            <button
+              className={`${styles.toolBtn} ${isChatOpen ? styles.toolBtnActive : ""}`}
+              onClick={onChatToggle}
+              title="AI Chat"
+            >
+              <AiGenerate size={20} />
+            </button>
+          )}
         </div>
         
         <div className={styles.toolbarBottom}>

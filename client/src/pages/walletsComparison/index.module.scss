@@ -2,28 +2,152 @@
 @use '@carbon/react/scss/theme' as *;
 @use '../../styles/variables' as *;
 
-.walletsComparisonPage {
-  min-height: 100vh;
+:global(.cds--content:has(.pageLayout)) {
+  overflow: hidden !important;
+}
+
+.pageLayout {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: calc(100vh - 3.5rem);
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.leftSidebar {
+  width: 480px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border-right: 1px solid $border-subtle-03;
   background: $background;
-  margin: 0;
-  padding: 0 $header-height 0 0;
+}
+
+.walletSection {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: $spacing-02;
 }
 
 .sidebarContainer {
-  position: sticky;
-  top: $header-height;
   display: flex;
   flex-direction: column;
   gap: $spacing-04;
-  padding-top: $spacing-02;
-  padding-left: $spacing-06;
-  border-left: 1px solid $border-subtle;
-  height: calc(100vh - $header-height);
+  padding: $spacing-02 $spacing-06;
+}
+
+.chatToggleBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: $spacing-03;
+  width: 100%;
+  padding: $spacing-04 $spacing-06;
+  border: none;
+  border-top: 1px solid $border-subtle-03;
+  background: transparent;
+  color: $text-secondary;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $interactive;
+  }
+}
+
+.chatSection {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-top: 1px solid $border-subtle-03;
+}
+
+.chatHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-03;
+  padding: $spacing-03 $spacing-04;
+  border-bottom: 1px solid $border-subtle-03;
+  background: $layer-01;
+  flex-shrink: 0;
+}
+
+.chatHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: $spacing-02;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $text-primary;
+  min-width: 0;
+}
+
+.walletSelect {
+  flex: 1;
+  min-width: 0;
+  max-width: 140px;
+  height: 24px;
+  font-size: 0.6875rem;
+  background: $field-01;
+  border: 1px solid $border-subtle-03;
+  border-radius: 4px;
+  color: $text-primary;
+  padding: 0 $spacing-02;
+  cursor: pointer;
+  outline: none;
+
+  &:focus {
+    border-color: var(--cds-interactive-focus);
+  }
+}
+
+.chatCloseBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: $icon-secondary;
+  cursor: pointer;
+  border-radius: 4px;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $icon-primary;
+  }
+}
+
+.chatBody {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.mainContent {
+  flex: 1;
+  min-width: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .mainContentContainer {
-  min-height: calc(100vh - $header-height - $spacing-05);
+  flex: 1;
   border: 1px solid $border-subtle;
   background: $layer-01;
 }
@@ -117,12 +241,6 @@
   color: $text-disabled;
 }
 
-.grid {
-  width: 100%;
-  padding: 0 !important;
-  min-height: calc(100vh - $header-height);
-}
-
 .sidebarTitle {
   margin: 0;
   color: $text-primary;
@@ -173,7 +291,7 @@
 .deepDiveButton {
   flex-shrink: 0;
   border-radius: 4px;
-  
+
   &:hover {
     background-color: $layer-hover-01;
     color: $link-primary;

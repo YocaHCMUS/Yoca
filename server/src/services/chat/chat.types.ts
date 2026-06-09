@@ -161,7 +161,7 @@ export interface HistoryMessage {
 }
 
 export interface ChatRequest {
-  address: string;
+  addresses: string[];
   query: string;
   language?: string;
   history?: HistoryMessage[];

@@ -8,7 +8,7 @@ const historyMessageSchema = z.object({
 });
 
 const chatRequestSchema = z.object({
-  address: z.string().min(32).max(48),
+  addresses: z.array(z.string().min(32).max(48)).min(1).max(10),
   query: z.string().min(1).max(2000),
   language: z.string().optional(),
   history: z.array(historyMessageSchema).max(20).optional(),
@@ -26,8 +26,8 @@ const app = new Hono().post("/", async (c) => {
       );
     }
 
-    const { address, query, language, history } = parsed.data;
-    const response = await answerChatQuery(address, query, language, history);
+    const { addresses, query, language, history } = parsed.data;
+    const response = await answerChatQuery(addresses, query, language, history);
 
     return c.json(response, 200);
   } catch (err) {

@@ -1037,6 +1037,7 @@ export const translation = {
     pdfWalletsCompared: "Wallets Compared",
     pdfWalletAddresses: "Wallet Addresses",
     viewDeepDive: "Deep Dive",
+    aiChat: "AI Chat",
   },
   // Wallet Report PDF Template
   wallet_report: {
