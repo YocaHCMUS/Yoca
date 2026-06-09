@@ -20,6 +20,14 @@ export type VerifySolanaPaymentResponse = {
   message?: string;
 };
 
+export function getSolanaPaymentApiDomain(): string {
+  return (
+    import.meta.env.VITE_CLIENT_API_DOMAIN ||
+    import.meta.env.VITE_API_DOMAIN ||
+    window.location.origin
+  );
+}
+
 /**
  * Verify a Solana Devnet transaction and activate subscription.
  *
@@ -33,7 +41,7 @@ export async function verifySolanaPayment(
   // NOTE: The backend mounts this router at /api/payment (singular).
   // Do NOT change to /api/payments — that path does not exist.
   const response = await fetch(
-    `${import.meta.env.VITE_CLIENT_API_DOMAIN}/api/payment/verify-solana`,
+    `${getSolanaPaymentApiDomain()}/api/payment/verify-solana`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

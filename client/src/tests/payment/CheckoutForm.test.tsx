@@ -22,12 +22,15 @@ vi.mock("@/components/payment/SolanaPaymentFlow", () => ({
   SolanaPaymentFlow: ({
     tierName,
     onCancel,
+    onSuccess,
   }: {
     tierName: string;
     onCancel: () => void;
+    onSuccess: () => void;
   }) => (
     <div data-testid="solana-payment-flow">
       <span>Solana flow for {tierName}</span>
+      <button onClick={onSuccess}>SolanaSuccess</button>
       <button onClick={onCancel}>SolanaCancel</button>
     </div>
   ),
@@ -152,6 +155,15 @@ describe("CheckoutForm Component", () => {
       render(<CheckoutForm {...defaultProps} activeMethod="solana" />);
       expect(screen.getByTestId("solana-payment-flow")).toBeInTheDocument();
       expect(screen.getByText("Solana flow for Plus Plan")).toBeInTheDocument();
+    });
+
+    it("should bubble Solana success to the parent checkout handler", async () => {
+      const onSuccessMock = vi.fn();
+      render(<CheckoutForm {...defaultProps} activeMethod="solana" onSuccess={onSuccessMock} />);
+
+      await userEvent.click(screen.getByRole("button", { name: /solanasuccess/i }));
+
+      expect(onSuccessMock).toHaveBeenCalledTimes(1);
     });
 
     it("should NOT render card or bank form when activeMethod is 'solana'", () => {

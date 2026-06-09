@@ -28,8 +28,13 @@ vi.mock("@/components/payment/PrivacyTransactionId", () => ({
 const mockGetGenesisHash = vi.fn();
 const mockGetLatestBlockhash = vi.fn();
 const mockGetBalance = vi.fn();
+const mockGetAccountInfo = vi.fn();
 const mockSimulateTransaction = vi.fn();
 const mockConfirmTransaction = vi.fn();
+const mockLegacyTransactionConstructor = vi.fn();
+const mockLegacyTransactionAdd = vi.fn();
+const mockTransactionMessageConstructor = vi.fn();
+const mockVersionedTransactionConstructor = vi.fn();
 
 vi.mock("@solana/web3.js", () => {
   class PublicKey {
@@ -51,17 +56,36 @@ vi.mock("@solana/web3.js", () => {
   };
 
   class TransactionMessage {
-    constructor(_opts: any) {}
+    constructor(opts: any) {
+      mockTransactionMessageConstructor(opts);
+    }
     compileToV0Message() { return {}; }
   }
 
   class VersionedTransaction {
-    constructor(_msg: any) {}
+    constructor(msg: any) {
+      mockVersionedTransactionConstructor(msg);
+    }
+  }
+
+  class Transaction {
+    recentBlockhash?: string;
+    feePayer?: PublicKey;
+
+    constructor() {
+      mockLegacyTransactionConstructor(this);
+    }
+
+    add(...instructions: any[]) {
+      mockLegacyTransactionAdd(...instructions);
+      return this;
+    }
   }
 
   return {
     PublicKey,
     SystemProgram,
+    Transaction,
     TransactionMessage,
     VersionedTransaction,
     LAMPORTS_PER_SOL: 1_000_000_000,
@@ -69,6 +93,7 @@ vi.mock("@solana/web3.js", () => {
       getGenesisHash: mockGetGenesisHash,
       getLatestBlockhash: mockGetLatestBlockhash,
       getBalance: mockGetBalance,
+      getAccountInfo: mockGetAccountInfo,
       simulateTransaction: mockSimulateTransaction,
       confirmTransaction: mockConfirmTransaction,
     })),
@@ -81,6 +106,7 @@ vi.mock("@solana/web3.js", () => {
 
 const DEVNET_GENESIS = "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG";
 const MOCK_TX_SIG    = "mock-tx-signature-12345";
+const PAYER_ADDR     = "An9g8G86CiEVfA1HFdiMUkjjeCBpDxj7gVHu7krPUrG";
 const MERCHANT_ADDR  = "6BCvxUZXhi73HDeoe5metBKWEd5AFmPHNZHTQ98dF2dr";
 
 const defaultProps = {
@@ -119,14 +145,17 @@ describe("SolanaPaymentFlow Component", () => {
       lastValidBlockHeight: 1_234_567,
     });
     mockGetBalance.mockResolvedValue(10_000_000); // 0.01 SOL — enough for Lite (0.001 SOL) + fees
+    mockGetAccountInfo.mockResolvedValue({ lamports: 10_000_000 });
     mockSimulateTransaction.mockResolvedValue({ value: { err: null, logs: [] } });
     mockConfirmTransaction.mockResolvedValue({ value: { err: null } });
 
     vi.mocked(useConnection).mockReturnValue({
       connection: {
+        rpcEndpoint: "https://api.devnet.solana.com",
         getGenesisHash: mockGetGenesisHash,
         getLatestBlockhash: mockGetLatestBlockhash,
         getBalance: mockGetBalance,
+        getAccountInfo: mockGetAccountInfo,
         simulateTransaction: mockSimulateTransaction,
         confirmTransaction: mockConfirmTransaction,
       } as any,
@@ -182,14 +211,14 @@ describe("SolanaPaymentFlow Component", () => {
       expect(selectMock).toHaveBeenCalledWith("Phantom");
     });
 
-    it("should show a spinner and 'Connecting…' text on the clicked wallet button", () => {
+    it("should show a spinner and 'Connecting...' text on the clicked wallet button", () => {
       render(<SolanaPaymentFlow {...defaultProps} />);
 
       const phantomBtn = screen.getByRole("button", { name: /phantom/i });
       fireEvent.click(phantomBtn);
 
-      // After click the button text changes to 'Connecting…'
-      expect(screen.getByText("Connecting…")).toBeInTheDocument();
+      // After click the button text changes to 'Connecting...'
+      expect(screen.getByText("Connecting...")).toBeInTheDocument();
     });
 
     it("should disable the clicked wallet button to prevent double-clicks", () => {
@@ -318,7 +347,123 @@ describe("SolanaPaymentFlow Component", () => {
           tier: "Lite",
           network: "devnet",
         });
+        expect(defaultProps.onProcessingChange).toHaveBeenLastCalledWith(false);
         expect(defaultProps.onSuccess).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("should not call onSuccess when backend verification returns success false", async () => {
+      vi.mocked(verifySolanaPayment).mockResolvedValue({
+        success: false,
+        subscriptionId: "",
+        status: "failed",
+        txId: MOCK_TX_SIG,
+        message: "Payment verification did not complete.",
+      });
+
+      render(<SolanaPaymentFlow {...defaultProps} />);
+
+      fireEvent.click(screen.getByRole("button", { name: /confirm payment with sol/i }));
+
+      await waitFor(() => {
+        expect(defaultProps.onError).toHaveBeenCalledWith(
+          "Payment verification did not complete."
+        );
+        expect(defaultProps.onProcessingChange).toHaveBeenLastCalledWith(false);
+        expect(defaultProps.onSuccess).not.toHaveBeenCalled();
+      });
+    });
+
+    it("should fetch a confirmed blockhash before opening Phantom for simulation", async () => {
+      vi.mocked(verifySolanaPayment).mockResolvedValue({
+        success: true,
+        subscriptionId: "sub-123",
+        status: "active",
+        txId: MOCK_TX_SIG,
+      });
+
+      render(<SolanaPaymentFlow {...defaultProps} />);
+
+      fireEvent.click(screen.getByRole("button", { name: /confirm payment with sol/i }));
+
+      await waitFor(() => {
+        expect(mockGetLatestBlockhash).toHaveBeenCalledWith("confirmed");
+        expect(sendTransactionMock).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("should use a VersionedTransaction V0 with send options for Phantom", async () => {
+      vi.mocked(verifySolanaPayment).mockResolvedValue({
+        success: true,
+        subscriptionId: "sub-123",
+        status: "active",
+        txId: MOCK_TX_SIG,
+      });
+
+      render(<SolanaPaymentFlow {...defaultProps} />);
+
+      fireEvent.click(screen.getByRole("button", { name: /confirm payment with sol/i }));
+
+      await waitFor(() => {
+        expect(mockTransactionMessageConstructor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            payerKey: mockPublicKey,
+            recentBlockhash: "7hW5wLymv7K4KGeXGq6c16oVvW165Gq",
+          })
+        );
+        expect(mockVersionedTransactionConstructor).toHaveBeenCalledTimes(1);
+        expect(sendTransactionMock).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.anything(),
+          {
+            skipPreflight: false,
+            preflightCommitment: "confirmed",
+            maxRetries: 3,
+          }
+        );
+      });
+    });
+
+    it("should use the same VersionedTransaction path for Solflare", async () => {
+      vi.mocked(verifySolanaPayment).mockResolvedValue({
+        success: true,
+        subscriptionId: "sub-123",
+        status: "active",
+        txId: MOCK_TX_SIG,
+      });
+      vi.mocked(useWallet).mockReturnValue({
+        connected: true,
+        publicKey: mockPublicKey,
+        wallet: { adapter: { name: "Solflare", icon: "solflare-icon.png" } } as any,
+        wallets: mockWallets as any,
+        select: vi.fn(),
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        sendTransaction: sendTransactionMock,
+      } as any);
+
+      render(<SolanaPaymentFlow {...defaultProps} />);
+
+      fireEvent.click(screen.getByRole("button", { name: /confirm payment with sol/i }));
+
+      await waitFor(() => {
+        expect(mockGetLatestBlockhash).toHaveBeenCalledWith("confirmed");
+        expect(mockTransactionMessageConstructor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            payerKey: mockPublicKey,
+            recentBlockhash: "7hW5wLymv7K4KGeXGq6c16oVvW165Gq",
+          })
+        );
+        expect(mockVersionedTransactionConstructor).toHaveBeenCalledTimes(1);
+        expect(sendTransactionMock).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.anything(),
+          {
+            skipPreflight: false,
+            preflightCommitment: "confirmed",
+            maxRetries: 3,
+          }
+        );
       });
     });
 
@@ -391,7 +536,7 @@ describe("SolanaPaymentFlow Component", () => {
 
     it("should surface an insufficient SOL error when balance is too low", async () => {
       // Arrange — only 100 lamports, needs ~1_100_000 (0.001 SOL + fee)
-      mockGetBalance.mockResolvedValue(100);
+      mockGetAccountInfo.mockResolvedValue({ lamports: 100 });
 
       render(<SolanaPaymentFlow {...defaultProps} />);
 
@@ -402,6 +547,49 @@ describe("SolanaPaymentFlow Component", () => {
       await waitFor(() => {
         expect(defaultProps.onError).toHaveBeenCalledWith(
           expect.stringContaining("Insufficient SOL: wallet has")
+        );
+        expect(sendTransactionMock).not.toHaveBeenCalled();
+      });
+    });
+
+    it("should stop before opening the wallet when the SOL account does not exist on the selected network", async () => {
+      mockGetAccountInfo.mockResolvedValue(null);
+
+      render(<SolanaPaymentFlow {...defaultProps} />);
+
+      fireEvent.click(screen.getByRole("button", { name: /confirm payment with sol/i }));
+
+      await waitFor(() => {
+        expect(defaultProps.onError).toHaveBeenCalledWith(
+          expect.stringContaining("This wallet has no SOL account on Devnet")
+        );
+        expect(sendTransactionMock).not.toHaveBeenCalled();
+      });
+    });
+
+    it("should stop before opening the wallet when the merchant SOL account does not exist", async () => {
+      const payerPublicKey = new PublicKey(PAYER_ADDR);
+      vi.mocked(useWallet).mockReturnValue({
+        connected: true,
+        publicKey: payerPublicKey,
+        wallet: { adapter: { name: "Phantom" } } as any,
+        wallets: mockWallets as any,
+        select: vi.fn(),
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        sendTransaction: sendTransactionMock,
+      } as any);
+      mockGetAccountInfo.mockImplementation((key: PublicKey) =>
+        key.toBase58() === MERCHANT_ADDR ? Promise.resolve(null) : Promise.resolve({ lamports: 10_000_000 })
+      );
+
+      render(<SolanaPaymentFlow {...defaultProps} />);
+
+      fireEvent.click(screen.getByRole("button", { name: /confirm payment with sol/i }));
+
+      await waitFor(() => {
+        expect(defaultProps.onError).toHaveBeenCalledWith(
+          expect.stringContaining("Merchant wallet has no SOL account on Devnet")
         );
         expect(sendTransactionMock).not.toHaveBeenCalled();
       });
@@ -647,7 +835,7 @@ describe("SolanaPaymentFlow Component", () => {
       expect(screen.getByRole("button", { name: /sending/i })).toBeDisabled();
     });
 
-    it("should show 'Sending…' label when isProcessing is true", () => {
+    it("should show 'Sending...' label when isProcessing is true", () => {
       vi.mocked(useWallet).mockReturnValue({
         connected: true,
         publicKey: new PublicKey(MERCHANT_ADDR),
@@ -660,7 +848,7 @@ describe("SolanaPaymentFlow Component", () => {
       } as any);
 
       render(<SolanaPaymentFlow {...defaultProps} isProcessing={true} />);
-      expect(screen.getByText("Sending…")).toBeInTheDocument();
+      expect(screen.getByText("Sending...")).toBeInTheDocument();
     });
 
     it("should show the passed errorMsg in an alert role element", () => {

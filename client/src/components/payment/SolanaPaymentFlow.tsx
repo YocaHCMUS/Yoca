@@ -1,6 +1,6 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import type { WalletName } from "@solana/wallet-adapter-base";
-import { SystemProgram, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
+import { SystemProgram, Transaction, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
@@ -60,9 +60,9 @@ function truncatePubKey(key: string): string {
  * Solana Devnet payment flow component.
  *
  * Flow:
- *  1. User selects Solana → sees wallet selection UI (Phantom/Solflare)
- *  2. User connects a wallet → sees connected state with address + confirm button
- *  3. User clicks "Send SOL" → transaction is built, signed, and sent to Devnet
+ *  1. User selects Solana -> sees wallet selection UI (Phantom/Solflare)
+ *  2. User connects a wallet -> sees connected state with address + confirm button
+ *  3. User clicks "Send SOL" -> transaction is built, signed, and sent to Devnet
  *  4. Frontend captures txId and sends to POST /api/payments/verify-solana
  *  5. Backend verifies via Helius RPC and creates subscription if valid
  */
@@ -95,7 +95,7 @@ export function SolanaPaymentFlow({
 
   /**
    * Step 1: Reset the loading spinner as soon as the wallet is fully connected.
-   * This is the primary success path — covers autoConnect and normal connect().
+   * This is the primary success path - covers autoConnect and normal connect().
    */
   useEffect(() => {
     if (connected) {
@@ -130,16 +130,16 @@ export function SolanaPaymentFlow({
     }
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // STATE 1: Wallet not connected → show wallet selection UI
-  // ─────────────────────────────────────────────────────────────────────────
+  // -------------------------------------------------------------------------
+  // STATE 1: Wallet not connected -> show wallet selection UI
+  // -------------------------------------------------------------------------
   if (!connected || !publicKey) {
     return (
       <div className="flex flex-col gap-4">
         {/* Header */}
         <div className="p-4 rounded-xl bg-[#14F195]/5 border border-[#14F195]/20">
           <div className="flex items-center gap-3 mb-2">
-            <span className="text-2xl">◎</span>
+            <span className="text-2xl">SOL</span>
             <div>
               <p className="text-white font-semibold text-sm">Connect Your Solana Wallet</p>
               <p className="text-[#64748b] text-xs">Select a wallet to pay with SOL on {networkName}</p>
@@ -195,7 +195,7 @@ export function SolanaPaymentFlow({
                     />
                   ) : (
                     <div className="w-8 h-8 rounded-lg bg-[#14F195]/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-[#14F195] text-sm font-bold">◎</span>
+                      <span className="text-[#14F195] text-sm font-bold">SOL</span>
                     </div>
                   )}
 
@@ -205,7 +205,7 @@ export function SolanaPaymentFlow({
                       {w.adapter.name}
                     </p>
                     <p className="text-[#64748b] text-xs capitalize">
-                      {isThisWalletConnecting ? "Connecting…" : (w.readyState === "Installed" ? "Installed" : "Not detected")}
+                      {isThisWalletConnecting ? "Connecting..." : (w.readyState === "Installed" ? "Installed" : "Not detected")}
                     </p>
                   </div>
 
@@ -242,9 +242,9 @@ export function SolanaPaymentFlow({
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // -------------------------------------------------------------------------
   // STATE 2: Transaction submitted, pending verification
-  // ─────────────────────────────────────────────────────────────────────────
+  // -------------------------------------------------------------------------
   if (txSignature && !verifyingSignature) {
     return (
       <div className="flex flex-col gap-4">
@@ -267,9 +267,9 @@ export function SolanaPaymentFlow({
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // STATE 3: Wallet connected → show payment confirmation UI
-  // ─────────────────────────────────────────────────────────────────────────
+  // -------------------------------------------------------------------------
+  // STATE 3: Wallet connected -> show payment confirmation UI
+  // -------------------------------------------------------------------------
 
   async function handleSendTransaction() {
     if (!publicKey) {
@@ -277,7 +277,7 @@ export function SolanaPaymentFlow({
       return;
     }
 
-    // ── Validate Solana network env var before any RPC call ───────────────
+    // -- Validate Solana network env var before any RPC call --
     // Catches missing/invalid VITE_SOLANA_NETWORK early so the user sees a
     // clear system error instead of a cryptic RPC or wallet error.
     let expectedGenesis: string;
@@ -292,7 +292,7 @@ export function SolanaPaymentFlow({
       return;
     }
 
-    // ── Validate merchant address at call-time, not module load-time ──────
+    // -- Validate merchant address at call-time, not module load-time --
     if (!MERCHANT_ADDRESS_RAW) {
       onError("VITE_SOLANA_MERCHANT_ADDRESS is not set. Check your .env file.");
       return;
@@ -309,10 +309,10 @@ export function SolanaPaymentFlow({
 
     try {
       // TODO: Hardcoded small amounts for Devnet/Testnet testing. Replace with real SOL conversion for Mainnet.
-      // Math.floor guarantees a strict integer — floating-point lamports cause simulation failures.
+      // Math.floor guarantees a strict integer - floating-point lamports cause simulation failures.
       const lamports = Math.floor(solAmount * LAMPORTS_PER_SOL);
 
-      // ── Step 0: Network mismatch guard ───────────────────────────────────
+      // -- Step 0: Network mismatch guard --
       // Compares the connected RPC's genesis hash against the known expected
       // genesis. If Phantom is set to Mainnet while the app uses Devnet, we
       // fail fast with a clear message instead of a cryptic Phantom warning.
@@ -324,16 +324,34 @@ export function SolanaPaymentFlow({
         );
       }
 
-      // ── Step 1: Fresh blockhash — fetched IMMEDIATELY before construction ─
-      // Using 'confirmed' per Phantom & Solflare best practices. This is the
-      // commitment level both wallets use internally during their own simulation,
-      // so the blockhash is guaranteed to be recognised on both ends.
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
-      console.log("[SolanaPaymentFlow] Fresh blockhash fetched:", blockhash);
+      // -- Step 0.5: Account presence checks --
+      // Check that the payer (selected wallet) account exists on the network
+      const payerInfo = await connection.getAccountInfo(publicKey);
+      if (!payerInfo) {
+        throw new Error(
+          `This wallet has no SOL account on ${validatedNetworkName}. ` +
+          `Airdrop more ${validatedNetworkName} SOL at faucet.solana.com.`
+        );
+      }
 
-      // ── Step 2: VersionedTransaction (V0) construction ───────────────────
-      // Modern V0 transaction format. Solflare strictly expects this format
-      // for accurate parsing and simulation of transfer instructions.
+      // Check that the merchant account exists on the network
+      const merchantInfo = await connection.getAccountInfo(merchantKey);
+      if (!merchantInfo) {
+        throw new Error(
+          `Merchant wallet has no SOL account on ${validatedNetworkName}.`
+        );
+      }
+
+      // -- Step 1 & 2: Transaction construction --
+      let transaction: VersionedTransaction;
+      let blockhash: string;
+      let lastValidBlockHeight: number;
+
+      const blockhashResult = await connection.getLatestBlockhash("confirmed");
+      blockhash = blockhashResult.blockhash;
+      lastValidBlockHeight = blockhashResult.lastValidBlockHeight;
+      console.log("[SolanaPaymentFlow] Fresh confirmed blockhash fetched:", blockhash);
+
       const messageV0 = new TransactionMessage({
         payerKey: publicKey,
         recentBlockhash: blockhash,
@@ -346,23 +364,22 @@ export function SolanaPaymentFlow({
         ],
       }).compileToV0Message();
 
-      const transaction = new VersionedTransaction(messageV0);
+      transaction = new VersionedTransaction(messageV0);
 
-      console.log("[SolanaPaymentFlow] Transaction constructed (V0):", {
+      console.log("[SolanaPaymentFlow] VersionedTransaction (V0) constructed:", {
         payerKey: publicKey.toBase58(),
         merchant: merchantKey.toBase58(),
         lamports,
         lastValidBlockHeight,
       });
 
-      // ── Step 3a: Explicit balance check ──────────────────────────────────
+      // -- Step 3a: Explicit balance check --
       // simulateTransaction() runs on an UNSIGNED tx (sigVerify:false) so it
-      // can silently skip the fee-payer balance check → false "pass".
+      // can silently skip the fee-payer balance check -> false "pass".
       // We manually verify balance here to catch InsufficientFunds BEFORE
-      // Phantom shows its own simulation error to the user.
-      // Phantom may add priority fees (up to 0.0001 SOL), so we use a safe margin.
+      // Phantom/Solflare shows its own simulation error to the user.
       const ESTIMATED_FEE_LAMPORTS = 100_000; // 0.0001 SOL upper bound for safety
-      const balance = await connection.getBalance(publicKey, 'confirmed');
+      const balance = payerInfo.lamports;
       const totalRequired = lamports + ESTIMATED_FEE_LAMPORTS;
       console.log(
         `[SolanaPaymentFlow] Balance check: have ${balance} lamports, ` +
@@ -377,15 +394,11 @@ export function SolanaPaymentFlow({
         );
       }
 
-      // ── Step 3b: Pre-simulation with explicit error + log output ─────────
-      // CRITICAL: Run simulation BEFORE presenting the Phantom popup to the user.
-      // If simulation fails, log the EXACT on-chain error and logs — this is
-      // the information Phantom hides behind a generic "Transaction may fail" UI.
-      // sigVerify:false is the default for unsigned transactions.
+      // -- Step 3b: Pre-simulation with explicit error + log output --
+      // CRITICAL: Run simulation BEFORE presenting the wallet popup to the user.
       console.log("[SolanaPaymentFlow] Running pre-send simulation...");
       const simulation = await connection.simulateTransaction(transaction);
       if (simulation.value.err) {
-        // ⬇️ These two lines are the most important debugging output in the flow.
         console.error("[SolanaPaymentFlow] SIMULATION ERROR (exact):", simulation.value.err);
         console.error("[SolanaPaymentFlow] SIMULATION LOGS:", simulation.value.logs);
         const logSummary = simulation.value.logs?.find(
@@ -395,16 +408,18 @@ export function SolanaPaymentFlow({
           logSummary ?? `Simulation failed: ${JSON.stringify(simulation.value.err)}`
         );
       }
-      console.log("[SolanaPaymentFlow] Simulation passed ✅ — presenting wallet for signature...");
+      console.log("[SolanaPaymentFlow] Simulation passed [SUCCESS] - presenting wallet for signature...");
 
-      // ── Step 4: Send (only reached if simulation passed) ─────────────────
-      // No extra options needed — the wallet adapter defaults are correct for
-      // legacy transactions with both Phantom and Solflare.
-      const signature = await sendTransaction(transaction, connection);
+      // -- Step 4: Send (only reached if simulation passed) --
+      const signature = await sendTransaction(transaction, connection, {
+        skipPreflight: false,
+        preflightCommitment: "confirmed",
+        maxRetries: 3,
+      });
       setTxSignature(signature);
       console.log("[SolanaPaymentFlow] Transaction submitted with signature:", signature);
 
-      // ── Step 5: Strict on-chain confirmation ─────────────────────────────
+      // -- Step 5: Strict on-chain confirmation --
       // Wait for on-chain confirmation BEFORE calling the backend.
       // Use the object form { signature, blockhash, lastValidBlockHeight } so
       // the SDK can detect block-height expiry and fail fast rather than polling
@@ -412,10 +427,10 @@ export function SolanaPaymentFlow({
       console.log("[SolanaPaymentFlow] Awaiting on-chain confirmation...");
       const confirmation = await connection.confirmTransaction(
         { signature, blockhash, lastValidBlockHeight },
-        'confirmed'
+        "confirmed"
       );
 
-      // ── Step 6: On-chain error check ──────────────────────────────────────
+      // -- Step 6: On-chain error check --
       // confirmation.value.err is non-null when the validator executed the
       // transaction but it REVERTED (e.g. bad instruction, account constraint).
       // Without this check, the UI would show success for reverted transactions.
@@ -425,9 +440,9 @@ export function SolanaPaymentFlow({
           `Transaction failed on-chain: ${JSON.stringify(confirmation.value.err)}`
         );
       }
-      console.log("[SolanaPaymentFlow] Transaction confirmed on-chain ✅");
+      console.log("[SolanaPaymentFlow] Transaction confirmed on-chain [SUCCESS]");
 
-      // ── Step 7: Backend verification (only after confirmed + no error) ────
+      // -- Step 7: Backend verification (only after confirmed + no error) --
       setVerifyingSignature(signature);
 
       try {
@@ -436,8 +451,12 @@ export function SolanaPaymentFlow({
           tier: tierKey,
           network: rawNetworkKey
         });
+        if (!result.success) {
+          throw new Error(result.message || "Payment verification did not complete.");
+        }
         console.log("[SolanaPaymentFlow] Subscription verified:", result.subscriptionId);
         onSuccess();
+        onProcessingChange(false);
       } catch (verifyErr: any) {
         console.error("[SolanaPaymentFlow] Backend verification error:", verifyErr);
         onError(verifyErr.message || "Failed to verify transaction. Please contact support.");
@@ -446,7 +465,7 @@ export function SolanaPaymentFlow({
         onProcessingChange(false);
       }
     } catch (err: any) {
-      // ── Unified error handler ─────────────────────────────────────────────
+      // -- Unified error handler --
       // All failure paths flow here: user rejection in Phantom/Solflare,
       // simulation failure, on-chain revert, network timeout, or balance errors.
       // SendTransactionError carries RPC simulation logs with the EXACT reason.
@@ -493,7 +512,7 @@ export function SolanaPaymentFlow({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* ── Connected Wallet Card ─────────────────────────────────────── */}
+      {/* -- Connected Wallet Card -- */}
       <div className="flex items-center justify-between p-3 rounded-xl bg-[#14F195]/5 border border-[#14F195]/20">
         <div className="flex items-center gap-3 min-w-0">
           {/* Wallet icon */}
@@ -505,7 +524,7 @@ export function SolanaPaymentFlow({
             />
           ) : (
             <div className="w-8 h-8 rounded-lg bg-[#14F195]/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-[#14F195] text-sm font-bold">◎</span>
+              <span className="text-[#14F195] text-sm font-bold">SOL</span>
             </div>
           )}
 
@@ -530,7 +549,7 @@ export function SolanaPaymentFlow({
         </button>
       </div>
 
-      {/* ── Transaction Details ──────────────────────────────────────── */}
+      {/* -- Transaction Details -- */}
       <div className="p-4 rounded-xl bg-white/5 border border-white/10">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
@@ -552,7 +571,7 @@ export function SolanaPaymentFlow({
         </div>
       </div>
 
-      {/* ── Info Box ─────────────────────────────────────────────────── */}
+      {/* -- Info Box -- */}
       <div className="p-3 rounded-xl bg-[#14F195]/5 border border-[#14F195]/20 text-sm">
         <p className="text-xs text-[#64748b]">
           You will be prompted to sign a transaction to send{" "}
@@ -561,7 +580,22 @@ export function SolanaPaymentFlow({
         </p>
       </div>
 
-      {/* ── Error Message ─────────────────────────────────────────────── */}
+      {/* -- Network mismatch warning -- */}
+      {networkName === "Testnet" && (
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300">
+          <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <span>
+            <strong className="text-amber-200">Phantom must be on Testnet.</strong>{" "}
+            If the popup shows "reverted during simulation", open Phantom {"->"} {" "}
+            <strong className="text-amber-200">Settings {"->"} Developer Settings {"->"} Testnet Mode</strong>{" "}
+            then retry.
+          </span>
+        </div>
+      )}
+
+      {/* -- Error Message -- */}
       {errorMsg && (
         <div
           role="alert"
@@ -574,7 +608,7 @@ export function SolanaPaymentFlow({
         </div>
       )}
 
-      {/* ── Action Buttons ────────────────────────────────────────────── */}
+      {/* -- Action Buttons -- */}
       <div className="flex flex-col sm:flex-row gap-4 pt-2">
         <button
           id="solana-confirm-payment-btn"
@@ -589,7 +623,7 @@ export function SolanaPaymentFlow({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              <span>Sending…</span>
+              <span>Sending...</span>
             </>
           ) : verifyingSignature ? (
             <>
@@ -597,10 +631,10 @@ export function SolanaPaymentFlow({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              <span>Verifying…</span>
+              <span>Verifying...</span>
             </>
           ) : (
-            <span>◎ Confirm Payment with SOL</span>
+            <span>Confirm Payment with SOL</span>
           )}
         </button>
 
