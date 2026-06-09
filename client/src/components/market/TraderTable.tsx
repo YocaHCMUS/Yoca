@@ -1,10 +1,9 @@
-import React from "react";
+import { Copy, Star, StarFilled } from "@carbon/icons-react";
 import classNames from "classnames";
-import styles from "./TraderTable.module.scss";
-import { useLocalization } from "@/contexts/LocalizationContext";
 import { useNavigate } from "react-router";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { useWatchlist } from "@/contexts/WatchlistContext";
-import { Star, StarFilled, Copy } from "@carbon/icons-react";
+import styles from "./TraderTable.module.scss";
 
 export interface TraderRow {
   rank: number;
@@ -26,8 +25,10 @@ function truncateAddress(address: string) {
 }
 
 export function TraderTable({ data, type, loading }: TraderTableProps) {
+  void type;
+
   const navigate = useNavigate();
-  const { fmt } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const { walletWatchlist, walletPending, toggleWallet } = useWatchlist();
 
   return (
@@ -35,25 +36,24 @@ export function TraderTable({ data, type, loading }: TraderTableProps) {
       <table className={styles.traderTable}>
         <thead>
           <tr>
-            {/* Star column */}
             <th className={styles.thStar} />
-            <th className={styles.thTrader}>Trader</th>
+            <th className={styles.thTrader}>{tr("marketPage.trader")}</th>
             <th className={styles.thRight}>PnL</th>
-            <th className={styles.thRight}>Volume</th>
-            <th className={styles.thRight}>Trades</th>
+            <th className={styles.thRight}>{tr("marketPage.volume")}</th>
+            <th className={styles.thRight}>{tr("marketPage.trades")}</th>
           </tr>
         </thead>
         <tbody>
           {loading ? (
             <tr>
               <td colSpan={5} className={styles.emptyCell}>
-                Loading…
+                {tr("marketPage.loading")}
               </td>
             </tr>
           ) : data.length === 0 ? (
             <tr>
               <td colSpan={5} className={styles.emptyCell}>
-                No data available
+                {tr("marketPage.noDataAvailable")}
               </td>
             </tr>
           ) : (
@@ -64,26 +64,29 @@ export function TraderTable({ data, type, loading }: TraderTableProps) {
               const pnlColorClass = isPositive
                 ? styles.positive
                 : isNegative
-                ? styles.negative
-                : styles.neutral;
+                  ? styles.negative
+                  : styles.neutral;
 
               const inWatchlist = walletWatchlist.includes(trader.address);
               const isPending = Boolean(walletPending[trader.address]);
 
               return (
                 <tr key={trader.address}>
-                  {/* Watchlist star */}
                   <td className={styles.tdStar}>
                     <button
                       className={classNames(styles.starBtn, {
                         [styles.starBtnActive]: inWatchlist,
                       })}
                       disabled={isPending}
-                      onClick={(e) => {
-                        e.stopPropagation();
+                      onClick={(event) => {
+                        event.stopPropagation();
                         void toggleWallet(trader.address);
                       }}
-                      title={inWatchlist ? "Remove from watchlist" : "Add to watchlist"}
+                      title={
+                        inWatchlist
+                          ? tr("marketPage.removeFromWatchlist")
+                          : tr("marketPage.addToWatchlist")
+                      }
                     >
                       {inWatchlist ? (
                         <StarFilled size={14} />
@@ -93,7 +96,6 @@ export function TraderTable({ data, type, loading }: TraderTableProps) {
                     </button>
                   </td>
 
-                  {/* Trader address + rank */}
                   <td className={styles.tdTrader}>
                     <div
                       className={styles.traderCell}
@@ -105,18 +107,17 @@ export function TraderTable({ data, type, loading }: TraderTableProps) {
                       </span>
                       <button
                         className={styles.copyBtn}
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={(event) => {
+                          event.stopPropagation();
                           navigator.clipboard.writeText(trader.address);
                         }}
-                        title="Copy address"
+                        title={tr("marketPage.copyAddress")}
                       >
                         <Copy size={12} />
                       </button>
                     </div>
                   </td>
 
-                  {/* PnL */}
                   <td className={styles.tdRight}>
                     <span className={classNames(styles.numVal, pnlColorClass)}>
                       {pnlValue > 0 ? "+" : ""}
@@ -124,17 +125,15 @@ export function TraderTable({ data, type, loading }: TraderTableProps) {
                     </span>
                   </td>
 
-                  {/* Volume */}
                   <td className={styles.tdRight}>
                     <span className={styles.numVal}>
                       {fmt.num.compact.currency(trader.volume)}
                     </span>
                   </td>
 
-                  {/* Trades */}
                   <td className={styles.tdRight}>
                     <span className={styles.numVal}>
-                      {trader.tradeCount.toLocaleString()}
+                      {fmt.num.decimal(trader.tradeCount)}
                     </span>
                   </td>
                 </tr>
