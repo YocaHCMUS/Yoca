@@ -29,6 +29,7 @@ export const users = pgTable(
     displayName: varchar("display_name"),
     // Email is not needed for wallet users, see it as contact
     email: varchar("email"),
+    avatarUrl: varchar("avatar_url"),
     discordWebhookUrl: text("discord_webhook_url"),
     emailAlertsEnabled: boolean("email_alerts_enabled")
       .notNull()

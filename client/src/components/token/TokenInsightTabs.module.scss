@@ -4,8 +4,35 @@
     width: 100%;
 }
 
-// Eliminated .tabList since we use TabContainer now
+// ── Tabs ──────────────────────────────────────────
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 
+.tabBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: $text-helper;
+  transition: background 0.15s, color 0.15s;
+
+  &.active {
+    background: $layer-01;
+    color: $text-primary;
+    font-weight: 600;
+  }
+
+  &:hover:not(.active) {
+    color: $text-primary;
+    background: $layer-hover-01;
+  }
+}
 // ── Tab Content ───────────────────────────────────
 .tabContent {
     padding: 20px 0 0;

@@ -1640,8 +1640,10 @@ export const translation = defineTranslation({
     overviewChart: {
       price: "Giá",
       marketCap: "Vốn hóa thị trường",
+      candle: "Nến",
       noData: "Không có dữ liệu biểu đồ",
       noCoingeckoId: "token có thể không có ID CoinGecko",
+      noCandlePool: "Không tìm thấy pool giao dịch cho token này.",
     },
     range24h: "Khoảng giá 24h",
     marketCap: "Vốn hóa thị trường",
@@ -1765,6 +1767,7 @@ export const translation = defineTranslation({
       tx: "TX",
       buy: "MUA",
       sell: "BÁN",
+      all: "MỚI NHẤT",
       loading: "Đang tải...",
       empty: "Không có giao dịch gần đây",
       noAddress: "Không có địa chỉ token",

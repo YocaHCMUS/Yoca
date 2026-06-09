@@ -228,10 +228,10 @@ export async function findUserByGoogleId(googleId: string) {
   return user;
 }
 
-export async function createUserWithGoogle(googleId: string, displayName: string = "Guest") {
+export async function createUserWithGoogle(googleId: string, displayName: string = "Guest", avatarUrl: string | null = null) {
   let userId = "";
   await db.transaction(async (tx) => {
-    const [newUser] = await tx.insert(users).values({ displayName }).returning();
+    const [newUser] = await tx.insert(users).values({ displayName, avatarUrl }).returning();
     await tx.insert(authAccounts).values({
       provider: "google",
       userId: newUser.id,
@@ -240,6 +240,13 @@ export async function createUserWithGoogle(googleId: string, displayName: string
     userId = newUser.id;
   });
   return userId;
+}
+
+export async function updateUserAvatarUrl(userId: string, avatarUrl: string) {
+  await db
+    .update(users)
+    .set({ avatarUrl })
+    .where(eq(users.id, userId));
 }
 
 export async function findUserByWalletAddress(pubKey: string) {
@@ -411,6 +418,7 @@ export async function getUserSettingsSnapshot(userId: string) {
   return {
     userId: user.id,
     displayName: user.displayName,
+    avatarUrl: user.avatarUrl,
     email: user.email ? user.email : null,
     authMethods,
     hasPassword: authMethods.includes("password"),

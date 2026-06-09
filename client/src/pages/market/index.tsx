@@ -88,14 +88,6 @@ export default function MarketPage() {
       setSortKey(key);
       setSortDirection("desc");
     }
-
-    // Sync tabs
-    if (["5m", "1h", "6h", "24h"].includes(key)) {
-      setTrendingDuration(key as PoolDuration);
-    }
-    if (["volume", "txns"].includes(key)) {
-      setTopSort(key as TopSort);
-    }
   };
 
   const handleApplyFilters = () => {
@@ -131,6 +123,28 @@ export default function MarketPage() {
     { key: "liquidity", label: "Liquidity" },
     { key: "age", label: "Pair Age" },
   ];
+
+  const SYNC_OPTIONS = [
+    { key: "trending-5m", label: "Trending 5m", tab: "trending", sub: "5m" },
+    { key: "trending-1h", label: "Trending 1h", tab: "trending", sub: "1h" },
+    { key: "trending-6h", label: "Trending 6h", tab: "trending", sub: "6h" },
+    { key: "trending-24h", label: "Trending 24h", tab: "trending", sub: "24h" },
+    { key: "top-volume", label: "Top Volume", tab: "top", sub: "volume" },
+    { key: "top-txns", label: "Top Txns", tab: "top", sub: "txns" },
+    { key: "gainers-5m", label: "Top Gainers 5m", tab: "gainers", sub: "5m" },
+    { key: "gainers-1h", label: "Top Gainers 1h", tab: "gainers", sub: "1h" },
+    { key: "gainers-6h", label: "Top Gainers 6h", tab: "gainers", sub: "6h" },
+    { key: "gainers-24h", label: "Top Gainers 24h", tab: "gainers", sub: "24h" },
+    { key: "new-pairs", label: "New Pairs", tab: "newPairs", sub: "age" },
+  ];
+
+  const currentDropdownLabel = useMemo(() => {
+    if (activeTab === "trending") return `Trending ${trendingDuration}`;
+    if (activeTab === "gainers") return `Top Gainers ${trendingDuration}`;
+    if (activeTab === "top") return `Top ${topSort === "volume" ? "Volume" : "Txns"}`;
+    if (activeTab === "newPairs") return "New Pairs";
+    return "";
+  }, [activeTab, trendingDuration, topSort]);
 
   const trendingPools = useGet(
     client.api.tokens["market-pools"].trending,
@@ -323,8 +337,7 @@ export default function MarketPage() {
                         >
                           <Trophy size={16} />
                           <span>
-                            Rank by:{" "}
-                            {`${sortDirection === "desc" ? "↓" : "↑"} ${SORT_OPTIONS.find((o) => o.key === sortKey)?.label}`}
+                            Rank by: {currentDropdownLabel}
                           </span>
                           <ChevronDown size={16} />
                         </button>
@@ -332,45 +345,38 @@ export default function MarketPage() {
                         {isRankOpen && (
                           <div className={styles.dropdown}>
                             <div className={styles.dropdownSection}>
-                              <div className={styles.sectionTitle}>Order</div>
-                              <div
-                                className={styles.option}
-                                onClick={() => {
-                                  setSortDirection("desc");
-                                  setIsRankOpen(false);
-                                }}
-                              >
-                                {sortDirection === "desc" && (
-                                  <Checkmark size={14} />
-                                )}
-                                <span>Descending</span>
-                              </div>
-                              <div
-                                className={styles.option}
-                                onClick={() => {
-                                  setSortDirection("asc");
-                                  setIsRankOpen(false);
-                                }}
-                              >
-                                {sortDirection === "asc" && <Checkmark size={14} />}
-                                <span>Ascending</span>
-                              </div>
-                            </div>
-                            <div className={styles.dropdownSection}>
                               <div className={styles.sectionTitle}>Rank by</div>
-                              {SORT_OPTIONS.map((opt) => (
-                                <div
-                                  key={opt.key}
-                                  className={styles.option}
-                                  onClick={() => {
-                                    handleSort(opt.key);
-                                    setIsRankOpen(false);
-                                  }}
-                                >
-                                  {sortKey === opt.key && <Checkmark size={14} />}
-                                  <span>{opt.label}</span>
-                                </div>
-                              ))}
+                              {SYNC_OPTIONS.map((opt) => {
+                                const isSelected = activeTab === opt.tab && 
+                                  (opt.tab === "top" ? topSort === opt.sub : 
+                                   opt.tab === "newPairs" ? true : 
+                                   trendingDuration === opt.sub);
+                                return (
+                                  <div
+                                    key={opt.key}
+                                    className={styles.option}
+                                    onClick={() => {
+                                      const newIndex = MAIN_TABS.findIndex((t) => t.key === opt.tab);
+                                      if (newIndex !== -1) setActiveTabIndex(newIndex);
+                                      
+                                      if (opt.tab === "top") {
+                                        setTopSort(opt.sub as TopSort);
+                                        setSortKey(opt.sub as SortKey);
+                                      } else if (opt.tab === "newPairs") {
+                                        setSortKey("age");
+                                      } else {
+                                        setTrendingDuration(opt.sub as PoolDuration);
+                                        setSortKey(opt.sub as SortKey);
+                                      }
+                                      setSortDirection("desc");
+                                      setIsRankOpen(false);
+                                    }}
+                                  >
+                                    {isSelected && <Checkmark size={14} />}
+                                    <span>{opt.label}</span>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         )}
