@@ -143,7 +143,7 @@ const TRACKED_WALLETS = [
 
 export default function ProfileDashboardTab({ walletAddresses }: ProfileDashboardTabProps) {
   const trackedWallets = useMemo(
-    () => TRACKED_WALLETS,
+    () => (walletAddresses && walletAddresses.length > 0) ? walletAddresses : TRACKED_WALLETS,
     [walletAddresses],
   );
   const [walletData, setWalletData] = useState<WalletDashboardData[]>([]);

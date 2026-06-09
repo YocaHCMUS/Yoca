@@ -259,7 +259,11 @@ export function PageWrapper({
               }
             }}
           >
-            <User size={20} />
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} style={{ width: 20, height: 20, borderRadius: "50%" }} alt="" />
+            ) : (
+              <User size={20} />
+            )}
           </HeaderGlobalAction>
 
           <ThemeToggleGlobalAction />
@@ -326,7 +330,11 @@ export function PageWrapper({
                 gap={4}
                 style={{ alignItems: "center" }}
               >
-                <User size={16} />
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} style={{ width: 16, height: 16, borderRadius: "50%" }} alt="" />
+                ) : (
+                  <User size={16} />
+                )}
                 <p style={{ fontFamily: "monospace" }}>
                   {user
                     ? user.displayName || `${user.userId.slice(0, 8)}…`

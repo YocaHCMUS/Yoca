@@ -1,6 +1,7 @@
 import client from "@/api/main";
-import { FilterSwitch } from "@/components/FilterSwitch";
+import { GeckoTerminalChart } from "@/components/charts/GeckoTerminalChart";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { useGet } from "@/hooks/useGet";
 import { getTokenChartNewsEvents } from "@/services/tokenChartNewsEvents";
 import type {
   TokenChartNewsEvent,
@@ -12,7 +13,8 @@ import type { InferResponseType } from "hono/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./TokenOverviewChart.module.scss";
 
-type ChartMode = "price" | "marketcap";
+type ChartMode = "price" | "marketcap" | "candle";
+type LineMode = "price" | "marketcap";
 type TimeRange = { label: string; days: number };
 
 type ChartPoint = InferResponseType<
@@ -78,7 +80,45 @@ export function TokenOverviewChart({
   );
 
   const [mode, setMode] = useState<ChartMode>("price");
+  const [lineMode, setLineMode] = useState<LineMode>("price");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [range, setRange] = useState<TimeRange>(TIME_RANGES[0]);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [isDropdownOpen]);
+
+  // Sync lineMode -> mode when in line modes
+  const handleLineModeSelect = (v: LineMode) => {
+    setLineMode(v);
+    setMode(v);
+    setIsDropdownOpen(false);
+  };
+
+  // ── Candle chart: fetch top pool for this token ──
+  const topPools = useGet(
+    client.api.tokens[":address"].pools,
+    200,
+    { param: { address } },
+    { enabled: mode === "candle" },
+  );
+  const topPoolAddress = useMemo(() => {
+    if (!topPools.data || topPools.data.length === 0) return null;
+    // Pick the pool with highest liquidity
+    const sorted = [...topPools.data].sort(
+      (a, b) => (b.data.liquidityUsd ?? 0) - (a.data.liquidityUsd ?? 0),
+    );
+    return sorted[0]?.data?.poolAddress ?? null;
+  }, [topPools.data]);
   const [prices, setPrices] = useState<[number, number][]>([]);
   const [marketCaps, setMarketCaps] = useState<[number, number][]>([]);
   const [loading, setLoading] = useState(false);
@@ -437,35 +477,145 @@ export function TokenOverviewChart({
 
   return (
     <div className={styles.container}>
-      {/* Toggle: Price / Market Cap */}
+      {/* Toolbar: CoinGecko-style */}
       <div className={styles.toolbar}>
-        <FilterSwitch
-          width="lg"
-          options={[
-            { value: "price", label: tr("token.overviewChart.price") },
-            { value: "marketcap", label: tr("token.overviewChart.marketCap") },
-          ]}
-          value={mode}
-          onChange={(v) => setMode(v as ChartMode)}
-        />
-
-        {/* Time range buttons */}
-        <div className={styles.rangeButtons}>
-          {TIME_RANGES.map((r) => (
+        {/* LEFT: Metric dropdown + time range */}
+        <div className={styles.toolbarLeft}>
+          {/* Price / MarketCap dropdown — only when in line mode */}
+          <div className={styles.dropdownWrap} ref={dropdownRef}>
             <button
-              key={r.label}
-              className={`${styles.rangeBtn} ${range.label === r.label ? styles.active : ""}`}
-              onClick={() => setRange(r)}
+              className={`${styles.metricBtn} ${mode !== "candle" ? styles.metricBtnActive : ""}`}
+              onClick={() => {
+                if (mode === "candle") {
+                  // Switch back to line mode with last selected lineMode
+                  setMode(lineMode);
+                } else {
+                  setIsDropdownOpen((v) => !v);
+                }
+              }}
+              aria-haspopup="listbox"
+              aria-expanded={isDropdownOpen}
             >
-              {r.label}
+              <span>
+                {mode === "candle"
+                  ? tr("token.overviewChart.price")
+                  : mode === "price"
+                    ? tr("token.overviewChart.price")
+                    : tr("token.overviewChart.marketCap")}
+              </span>
+              <svg
+                className={`${styles.chevron} ${isDropdownOpen && mode !== "candle" ? styles.chevronUp : ""}`}
+                width="12" height="12" viewBox="0 0 12 12" fill="none"
+                aria-hidden="true"
+              >
+                <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </button>
-          ))}
+
+            {isDropdownOpen && mode !== "candle" && (
+              <div className={styles.dropdown} role="listbox">
+                <button
+                  className={`${styles.dropdownItem} ${lineMode === "price" ? styles.dropdownItemActive : ""}`}
+                  role="option"
+                  aria-selected={lineMode === "price"}
+                  onClick={() => handleLineModeSelect("price")}
+                >
+                  {tr("token.overviewChart.price")}
+                  {lineMode === "price" && (
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                      <path d="M2.5 7L5.5 10L11.5 4" stroke="#16a34a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </button>
+                <button
+                  className={`${styles.dropdownItem} ${lineMode === "marketcap" ? styles.dropdownItemActive : ""}`}
+                  role="option"
+                  aria-selected={lineMode === "marketcap"}
+                  onClick={() => handleLineModeSelect("marketcap")}
+                >
+                  {tr("token.overviewChart.marketCap")}
+                  {lineMode === "marketcap" && (
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                      <path d="M2.5 7L5.5 10L11.5 4" stroke="#16a34a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT: Time range + Chart type icon buttons */}
+        <div className={styles.toolbarRight}>
+          {/* Time range buttons — hidden for candle mode */}
+          {mode !== "candle" && (
+            <div className={styles.rangeButtons}>
+              {TIME_RANGES.map((r) => (
+                <button
+                  key={r.label}
+                  className={`${styles.rangeBtn} ${range.label === r.label ? styles.active : ""}`}
+                  onClick={() => setRange(r)}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Chart type icon buttons */}
+          <div className={styles.chartTypeButtons}>
+          {/* Line chart icon */}
+          <button
+            className={`${styles.chartTypeBtn} ${mode !== "candle" ? styles.chartTypeBtnActive : ""}`}
+            onClick={() => { setMode(lineMode); setIsDropdownOpen(false); }}
+            title={tr("token.overviewChart.price")}
+            aria-pressed={mode !== "candle"}
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <polyline points="2,14 6,8 10,11 16,4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+            </svg>
+          </button>
+
+          {/* Candlestick icon */}
+          <button
+            className={`${styles.chartTypeBtn} ${mode === "candle" ? styles.chartTypeBtnActive : ""}`}
+            onClick={() => { setMode("candle"); setIsDropdownOpen(false); }}
+            title={tr("token.overviewChart.candle")}
+            aria-pressed={mode === "candle"}
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              {/* Candle 1 - bullish */}
+              <line x1="5" y1="2" x2="5" y2="5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              <rect x="3.5" y="5" width="3" height="5" rx="0.5" fill="currentColor" opacity="0.9"/>
+              <line x1="5" y1="10" x2="5" y2="13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              {/* Candle 2 - bearish */}
+              <line x1="10" y1="3" x2="10" y2="6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              <rect x="8.5" y="6" width="3" height="6" rx="0.5" fill="currentColor" opacity="0.5"/>
+              <line x1="10" y1="12" x2="10" y2="15" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              {/* Candle 3 - bullish */}
+              <line x1="15" y1="4" x2="15" y2="7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              <rect x="13.5" y="7" width="3" height="4" rx="0.5" fill="currentColor" opacity="0.9"/>
+              <line x1="15" y1="11" x2="15" y2="14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+          </button>
         </div>
       </div>
+      </div>
+      {/* End Toolbar */}
 
       {/* Chart */}
-      <div className={styles.chartWrapper}>
-        {loading && seriesData.length === 0 ? (
+      <div className={mode === "candle" ? styles.candleWrapper : styles.chartWrapper}>
+        {mode === "candle" ? (
+          topPools.isLoading ? (
+            <div className={styles.loading}>{tr("common.loading")}</div>
+          ) : !topPoolAddress ? (
+            <div className={styles.empty}>
+              {tr("token.overviewChart.noCandlePool")}
+            </div>
+          ) : (
+            <GeckoTerminalChart poolAddress={topPoolAddress} height="560" />
+          )
+        ) : loading && seriesData.length === 0 ? (
           <div className={styles.loading}>{tr("common.loading")}</div>
         ) : seriesData.length === 0 ? (
           <div className={styles.empty}>

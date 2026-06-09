@@ -113,6 +113,9 @@ export default function ProfilePage() {
       visibleTabs = allTabs.filter((tab) => tab.id !== "dashboard");
     }
 
+    // Tạm ẩn Activity và Wallets
+    visibleTabs = visibleTabs.filter((tab) => tab.id !== "activity" && tab.id !== "wallets");
+
     return {
       names: visibleTabs.map(
         (tab) =>

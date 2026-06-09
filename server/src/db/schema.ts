@@ -413,6 +413,7 @@ export const topTokenHolders = pgTable(
     holderAddress: varchar("holder_address", { length: 44 }).notNull(),
     rank: integer("rank").notNull(),
     percentage: decimal("percentage").notNull(),
+    balance: decimal("balance"),
     updatedAt: timestamp("updated_at")
       .notNull()
       .$onUpdate(() => new Date()),

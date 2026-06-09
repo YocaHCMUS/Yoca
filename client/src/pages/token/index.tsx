@@ -140,36 +140,7 @@ export default function TokenPage() {
 
   const result = useTokenPageData(address, poolAddress);
 
-  const [pairData, setPairData] = useState<
-    NonNullable<typeof result.data>["pool"] | null
-  >(null);
-
-  useEffect(() => {
-    setPairData(null);
-  }, [poolAddress]);
-
-  useEffect(() => {
-    const nextPool = result.data?.pool ?? null;
-    if (!nextPool) {
-      return;
-    }
-
-    if (nextPool.poolAddress === poolAddress) {
-      setPairData(nextPool);
-    }
-  }, [poolAddress, result.data?.pool]);
-
-  if (poolAddress && !result.error && (result.pairLoading || !pairData)) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', width: '100%' }}>
-        <div style={{ width: 'fit-content' }}>
-          <InlineLoading status="active" description="Loading token data..." />
-        </div>
-      </div>
-    );
-  }
-
-  if (result.isLoading) {
+  if (result.isLoading || result.pairLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', width: '100%' }}>
         <div style={{ width: 'fit-content' }}>
@@ -194,9 +165,8 @@ export default function TokenPage() {
     );
   }
 
-  const { meta, topPools, holders, holdersInfo, market, trades } =
+  const { meta, topPools, holders, holdersInfo, market, trades, pool } =
     result.data;
-  const pool = pairData;
 
   if (!pool) {
     return (

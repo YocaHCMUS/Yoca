@@ -94,26 +94,26 @@ export function ProfileWatchlistTab() {
     {
       header: tr("marketPage.token"),
       align: "start" as const,
-      minWidth: "13rem",
+      minWidth: "11rem",
     },
-    { header: tr("marketPage.price"), align: "end" as const, minWidth: "8rem" },
-    { header: "1h", align: "end" as const, minWidth: "7rem" },
-    { header: "24h", align: "end" as const, minWidth: "7rem" },
-    { header: "7d", align: "end" as const, minWidth: "7rem" },
+    { header: tr("marketPage.price"), align: "end" as const, minWidth: "6rem" },
+    { header: "1h", align: "end" as const, minWidth: "5rem" },
+    { header: "24h", align: "end" as const, minWidth: "5rem" },
+    { header: "7d", align: "end" as const, minWidth: "5rem" },
     {
       header: tr("marketPage.volume24h"),
       align: "end" as const,
-      minWidth: "8rem",
+      minWidth: "7rem",
     },
     {
       header: tr("marketPage.marketCap"),
       align: "end" as const,
-      minWidth: "9rem",
+      minWidth: "7rem",
     },
     {
       header: tr("token.marketStats.fdv"),
       align: "end" as const,
-      minWidth: "9rem",
+      minWidth: "7rem",
     },
     {
       header: tr("nav.searchLast7Days"),
@@ -234,7 +234,6 @@ export function ProfileWatchlistTab() {
                 >
                   {symbol}
                 </Link>
-                <CpyBtn size="xs" copyWhat={tokenAddress} />
               </Stack>
               <Txt secondary ellipsis>
                 {(name ?? "").length > 16 ? `${name.slice(0, 16)}...` : name}
@@ -249,19 +248,19 @@ export function ProfileWatchlistTab() {
           : "-",
       (value: unknown) =>
         typeof value === "number" && Number.isFinite(value) ? (
-          <TrendNum value={value} formatter={fmt.num.percent} />
+          <TrendNum value={value} formatter={(val) => val == null ? "-" : `${Number(val).toFixed(2)}%`} />
         ) : (
           "-"
         ),
       (value: unknown) =>
         typeof value === "number" && Number.isFinite(value) ? (
-          <TrendNum value={value} formatter={fmt.num.percent} />
+          <TrendNum value={value} formatter={(val) => val == null ? "-" : `${Number(val).toFixed(2)}%`} />
         ) : (
           "-"
         ),
       (value: unknown) =>
         typeof value === "number" && Number.isFinite(value) ? (
-          <TrendNum value={value} formatter={fmt.num.percent} />
+          <TrendNum value={value} formatter={(val) => val == null ? "-" : `${Number(val).toFixed(2)}%`} />
         ) : (
           "-"
         ),

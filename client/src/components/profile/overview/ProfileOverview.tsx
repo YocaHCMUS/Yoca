@@ -83,6 +83,7 @@ export function ProfileOverview({ data, onPeriodChange, loading }: ProfileOvervi
         </div>
       </div>
 
+      {/* Temporarily hidden as requested
       <div className={styles.metricGrid}>
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>
@@ -137,6 +138,7 @@ export function ProfileOverview({ data, onPeriodChange, loading }: ProfileOvervi
           </div>
         </div>
       </div>
+      */}
     </section>
   );
 }

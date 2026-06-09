@@ -8,6 +8,7 @@ import styles from "./TopHoldersTable.module.scss";
 type TopHoldersData = Array<{
   holderAddress: string;
   percentage: number | string;
+  balance?: number | null;
 }>;
 
 interface TopHoldersTableProps {
@@ -24,7 +25,8 @@ export function TopHoldersTable({
   const rows = useMemo(() => {
     if (!holders) return [];
 
-    return holders.map((holder, idx) => ({
+    const top10 = holders.slice(0, 10);
+    return top10.map((holder, idx) => ({
       id: holder.holderAddress,
       rank: <span>{idx + 1}</span>,
       address: (
@@ -37,9 +39,10 @@ export function TopHoldersTable({
           {fmt.text.address(holder.holderAddress)}
         </Link>
       ),
+      amount: <span>{fmt.num.compact.decimal(holder.balance ?? 0)}</span>,
       percentage: <span>{Number(holder.percentage).toFixed(2)}%</span>,
     }));
-  }, [holders]);
+  }, [holders, fmt]);
 
   return (
     <Tble
@@ -54,6 +57,11 @@ export function TopHoldersTable({
           key: "address",
           header: tr("token.topHolders.address"),
           align: "start",
+        },
+        {
+          key: "amount",
+          header: "Amount",
+          align: "end",
         },
         {
           key: "percentage",

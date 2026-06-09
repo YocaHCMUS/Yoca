@@ -158,6 +158,7 @@ export const userPayloadSchema = z.object({
   id: z.string(),
   exp: z.number(),
   displayName: z.string().nullable(),
+  avatarUrl: z.string().nullable().optional(),
 });
 
 export type UserPayload = z.infer<typeof userPayloadSchema>;

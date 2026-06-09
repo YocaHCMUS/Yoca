@@ -16,8 +16,9 @@ import WalletPage from "@/pages/wallet";
 import WalletsComparisonPage from "@/pages/walletsComparison";
 import PricingPage from "@/pages/pricing";
 import { Component, type ReactNode } from "react";
-import { AuthGuard } from "./components/auth";
+import { AuthGuard, SignInModal, SignUpModal } from "./components/auth";
 import AlertsDemo from "./pages/alerts/demo";
+import { useAuth } from "./contexts/AuthContext";
 
 function LandingRoute() {
   return <Index />;
@@ -111,7 +112,18 @@ function App() {
         <Route path="/secret-admin-dashboard" element={<UnauthorizedPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      <GlobalAuthModals />
     </BrowserRouter>
+  );
+}
+
+function GlobalAuthModals() {
+  const { isSignInOpen, isSignUpOpen, closeAuthModal } = useAuth();
+  return (
+    <>
+      <SignInModal open={isSignInOpen} onClose={closeAuthModal} />
+      <SignUpModal open={isSignUpOpen} onClose={closeAuthModal} />
+    </>
   );
 }
 

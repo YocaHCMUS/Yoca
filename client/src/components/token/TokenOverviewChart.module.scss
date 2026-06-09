@@ -16,15 +16,145 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-bottom: 1px solid $border-subtle;
-  flex-wrap: wrap;
   gap: 8px;
+  flex-wrap: wrap;
 }
+
+.toolbarLeft,
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+// ===== Metric dropdown button =====
+.dropdownWrap {
+  position: relative;
+}
+
+.metricBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 6px;
+  border: 1px solid $border-subtle;
+  background: transparent;
+  color: $text-helper;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $text-primary;
+    border-color: $border-strong;
+  }
+
+  &.metricBtnActive {
+    background: $layer-01;
+    color: $text-primary;
+    border-color: $border-subtle;
+    font-weight: 600;
+  }
+}
+
+.chevron {
+  opacity: 0.6;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+
+  &.chevronUp {
+    transform: rotate(180deg);
+  }
+}
+
+// ===== Dropdown panel =====
+.dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  min-width: 150px;
+  padding: 4px;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  background: $background;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: $text-primary;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+
+  &.dropdownItemActive {
+    font-weight: 600;
+  }
+}
+
+// ===== Chart type icon buttons =====
+.chartTypeButtons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 7px;
+  background: $layer-01;
+  border: 1px solid $border-subtle;
+}
+
+.chartTypeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: $text-helper;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover:not(.chartTypeBtnActive) {
+    background: $layer-hover-01;
+    color: $text-primary;
+  }
+
+  &.chartTypeBtnActive {
+    background: $layer-02;
+    color: $text-primary;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  }
+}
+
 // ===== Range buttons =====
 .rangeButtons {
   display: flex;
-  gap: 2px;
+  gap: 1px;
+  margin-left: 4px;
 }
 
 .rangeBtn {
@@ -32,7 +162,7 @@
   border: none;
   cursor: pointer;
   padding: 4px 10px;
-  border-radius: 4px;
+  border-radius: 5px;
   font-size: 12px;
   font-weight: 500;
   color: $text-helper;
@@ -57,6 +187,13 @@
   height: 520px;
   position: relative;
   padding: 12px 0 4px;
+}
+
+// Candle mode — GeckoTerminal iframe, no extra padding needed
+.candleWrapper {
+  height: 560px;
+  position: relative;
+  padding: 12px 12px 12px;
 }
 
 .loading,
@@ -204,6 +341,7 @@
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   font-size: 12px;
   line-height: 1.4;
   color: $text-secondary;

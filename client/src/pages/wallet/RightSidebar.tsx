@@ -200,8 +200,6 @@ export function RightSidebar({ currentAddress, onToggle }: RightSidebarProps) {
                   </div>
                   <div className={styles.headerIcons}>
                     <Add size={16} className={styles.iconBtn} onClick={() => setIsAddingToken(!isAddingToken)} />
-                    <ChartLine size={16} className={styles.iconBtn} />
-                    <Settings size={16} className={styles.iconBtn} />
                   </div>
                 </div>
 
@@ -237,12 +235,6 @@ export function RightSidebar({ currentAddress, onToggle }: RightSidebarProps) {
 
               {/* Splitter */}
               <div className={styles.splitter}>
-                <div className={styles.splitterHandle}>
-                  <svg width="10" height="16" viewBox="0 0 10 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M5 0L9 4H1L5 0Z" fill="#888"/>
-                    <path d="M5 16L1 12H9L5 16Z" fill="#888"/>
-                  </svg>
-                </div>
               </div>
 
               {/* Wallet Section Container */}
@@ -255,8 +247,6 @@ export function RightSidebar({ currentAddress, onToggle }: RightSidebarProps) {
                     <ChevronDown size={16} />
                   </div>
                   <div className={styles.headerIcons}>
-                    <ChartLine size={16} className={styles.iconBtn} />
-                    <Settings size={16} className={styles.iconBtn} />
                   </div>
                 </div>
                 
@@ -285,7 +275,6 @@ export function RightSidebar({ currentAddress, onToggle }: RightSidebarProps) {
                   <span style={{textTransform: 'uppercase', letterSpacing: '1px'}}>LABEL</span>
                 </div>
                 <div className={styles.headerIcons}>
-                  <Settings size={16} className={styles.iconBtn} />
                 </div>
               </div>
 
