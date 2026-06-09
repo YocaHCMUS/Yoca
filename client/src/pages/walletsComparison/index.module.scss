@@ -41,100 +41,146 @@
   padding: $spacing-02 $spacing-06;
 }
 
-.chatToggleBtn {
-  flex-shrink: 0;
+// ===== Accordion sections (left sidebar, left-dock mode) =====
+.accordionSection {
   display: flex;
-  align-items: center;
-  gap: $spacing-03;
-  width: 100%;
-  padding: $spacing-04 $spacing-06;
-  border: none;
-  border-top: 1px solid $border-subtle-03;
-  background: transparent;
-  color: $text-secondary;
-  font-size: 0.8125rem;
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 
-  &:hover {
-    background: $layer-hover-01;
-    color: $interactive;
+  &[data-open="false"] {
+    flex-shrink: 0;
+  }
+
+  &[data-open="true"] {
+    flex: 1;
   }
 }
 
-.chatSection {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-top: 1px solid $border-subtle-03;
-}
-
-.chatHeader {
+.accordionHeader {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: $spacing-03;
-  padding: $spacing-03 $spacing-04;
+  width: 100%;
+  padding: $spacing-03 $spacing-06;
+  border: none;
   border-bottom: 1px solid $border-subtle-03;
   background: $layer-01;
+  color: $text-primary;
+  cursor: pointer;
   flex-shrink: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
 }
 
-.chatHeaderLeft {
+.accordionHeaderTitle {
   display: flex;
   align-items: center;
   gap: $spacing-02;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: $text-primary;
   min-width: 0;
 }
 
-.walletSelect {
-  flex: 1;
-  min-width: 0;
-  max-width: 140px;
-  height: 24px;
-  font-size: 0.6875rem;
-  background: $field-01;
-  border: 1px solid $border-subtle-03;
-  border-radius: 4px;
-  color: $text-primary;
-  padding: 0 $spacing-02;
-  cursor: pointer;
-  outline: none;
-
-  &:focus {
-    border-color: var(--cds-interactive-focus);
-  }
-}
-
-.chatCloseBtn {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border: none;
-  background: transparent;
+.accordionChevron {
   color: $icon-secondary;
-  cursor: pointer;
-  border-radius: 4px;
+  flex-shrink: 0;
+  transition: transform 0.2s;
 
-  &:hover {
-    background: $layer-hover-01;
-    color: $icon-primary;
+  &[data-open="false"] {
+    transform: rotate(-90deg);
   }
 }
 
-.chatBody {
+.accordionBody {
   flex: 1;
   min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.accordionBodyChat {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+// ===== Chat inline (right/left dock — matches wallet page) =====
+.chatInline {
+  flex-shrink: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: max-width 0.3s ease;
+  display: flex;
+  border-left: 1px solid $border-subtle-03;
+
+  &[data-open="true"] {
+    max-width: 460px;
+  }
+
+  &[data-side="left"] {
+    order: -1;
+    border-right: 1px solid $border-subtle-03;
+    border-left: none;
+  }
+}
+
+.chatInlineInner {
+  width: 460px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: $background;
+}
+
+// ===== Chat fullscreen overlay =====
+.chatOverlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 60;
+  display: flex;
+  overflow: hidden;
+
+  &[data-position="fullscreen"] {
+    left: 0;
+    right: 0;
+  }
+}
+
+.chatBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 0;
+}
+
+.chatPanel {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: $background;
+
+  .chatOverlay[data-position="fullscreen"] & {
+    inset: 24px;
+    border-radius: 16px;
+    border: 1px solid $border-subtle-03;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    max-width: 900px;
+    margin: 0 auto;
+    width: calc(100% - 48px);
+  }
 }
 
 .mainContent {
@@ -261,6 +307,8 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-03;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .buttonTag {
