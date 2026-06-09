@@ -2,7 +2,9 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserTheme } from "@/contexts/ThemeContext";
 import {
+  Check,
   ChevronDown,
+  Languages,
   LogOut,
   Menu,
   Moon,
@@ -68,7 +70,7 @@ function navLabel(labelKey: NavLinkKey, tr: ReturnType<typeof useLocalization>["
 
 export function LandingNavbar() {
   const { user, signOut } = useAuth();
-  const { tr } = useLocalization();
+  const { tr, lang, setLang } = useLocalization();
   const { theme, toggleTheme } = useUserTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -76,10 +78,13 @@ export function LandingNavbar() {
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [languageOpen, setLanguageOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
+  const languageRef = useRef<HTMLDivElement>(null);
   const accountLabel = user
     ? user.displayName || `${user.userId.slice(0, 8)}...`
     : "";
+  const shortLanguageLabel = lang === "vi" ? "VI" : "EN";
 
   useEffect(() => {
     const container = document.querySelector(".landing-page");
@@ -123,6 +128,12 @@ export function LandingNavbar() {
       ) {
         setAccountOpen(false);
       }
+      if (
+        languageRef.current &&
+        !languageRef.current.contains(event.target as Node)
+      ) {
+        setLanguageOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleOutsideClick);
@@ -131,8 +142,15 @@ export function LandingNavbar() {
 
   const handleSignOut = async () => {
     setAccountOpen(false);
+    setLanguageOpen(false);
     setMobileOpen(false);
     await signOut();
+  };
+
+  const handleLanguageChange = (nextLang: "en" | "vi") => {
+    setLang(nextLang);
+    setLanguageOpen(false);
+    setMobileOpen(false);
   };
 
   return (
@@ -231,6 +249,85 @@ export function LandingNavbar() {
                     )}
                   </li>
                 ))}
+                <li
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.75rem",
+                    paddingTop: "0.75rem",
+                    borderTop: "1px solid var(--landing-border)",
+                  }}
+                >
+                  <span
+                    style={{
+                      color: "var(--landing-muted)",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {tr("landing.nav.language")}
+                  </span>
+                  <div
+                    role="menu"
+                    aria-label={tr("landing.nav.languageMenu")}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={lang === "en"}
+                      onClick={() => handleLanguageChange("en")}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "0.5rem",
+                        padding: "0.75rem",
+                        borderRadius: "0.75rem",
+                        border: "1px solid var(--landing-border)",
+                        color: "var(--landing-foreground)",
+                        background:
+                          lang === "en" ? "var(--landing-surface)" : "none",
+                        cursor: "pointer",
+                        fontSize: "0.875rem",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {tr("landing.nav.english")}
+                      {lang === "en" && <Check size={16} aria-hidden />}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={lang === "vi"}
+                      onClick={() => handleLanguageChange("vi")}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "0.5rem",
+                        padding: "0.75rem",
+                        borderRadius: "0.75rem",
+                        border: "1px solid var(--landing-border)",
+                        color: "var(--landing-foreground)",
+                        background:
+                          lang === "vi" ? "var(--landing-surface)" : "none",
+                        cursor: "pointer",
+                        fontSize: "0.875rem",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {tr("landing.nav.vietnamese")}
+                      {lang === "vi" && <Check size={16} aria-hidden />}
+                    </button>
+                  </div>
+                </li>
                 <li
                   style={{
                     display: "flex",
@@ -424,6 +521,146 @@ export function LandingNavbar() {
             }}
           >
             <ThemeToggleBtn theme={theme} toggleTheme={toggleTheme} />
+            <div
+              ref={languageRef}
+              style={{ position: "relative", display: "flex", alignItems: "center" }}
+            >
+              <button
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={languageOpen}
+                aria-label={tr("landing.nav.language")}
+                title={tr("landing.nav.language")}
+                onClick={() => {
+                  setLanguageOpen((open) => !open);
+                  setAccountOpen(false);
+                }}
+                style={{
+                  background: languageOpen ? "var(--landing-surface)" : "none",
+                  border: "1px solid var(--landing-border)",
+                  color: "var(--landing-muted)",
+                  cursor: "pointer",
+                  padding: "8px 10px",
+                  borderRadius: "9999px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.35rem",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(event) => {
+                  event.currentTarget.style.color =
+                    "var(--landing-foreground)";
+                  event.currentTarget.style.backgroundColor =
+                    "var(--landing-surface)";
+                }}
+                onMouseLeave={(event) => {
+                  event.currentTarget.style.color = "var(--landing-muted)";
+                  event.currentTarget.style.backgroundColor = languageOpen
+                    ? "var(--landing-surface)"
+                    : "transparent";
+                }}
+              >
+                <Languages size={18} aria-hidden />
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {shortLanguageLabel}
+                </span>
+                <ChevronDown
+                  size={14}
+                  aria-hidden
+                  style={{
+                    transform: languageOpen ? "rotate(180deg)" : "rotate(0deg)",
+                    transition: "transform 0.2s ease",
+                  }}
+                />
+              </button>
+              {languageOpen && (
+                <div
+                  role="menu"
+                  aria-label={tr("landing.nav.languageMenu")}
+                  style={{
+                    position: "absolute",
+                    right: 0,
+                    top: "calc(100% + 0.6rem)",
+                    width: "12rem",
+                    padding: "0.45rem",
+                    borderRadius: "1rem",
+                    border: "1px solid var(--landing-border)",
+                    background: "var(--landing-bg)",
+                    boxShadow: "0 20px 50px rgba(0,0,0,0.18)",
+                    zIndex: 80,
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "0.65rem 0.75rem",
+                      color: "var(--landing-muted)",
+                      fontSize: "0.8rem",
+                      borderBottom: "1px solid var(--landing-border)",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
+                    {tr("landing.nav.currentLanguage")}: {shortLanguageLabel}
+                  </div>
+                  <button
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={lang === "en"}
+                    onClick={() => handleLanguageChange("en")}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "0.6rem",
+                      padding: "0.7rem 0.75rem",
+                      color: "var(--landing-foreground)",
+                      background: lang === "en" ? "var(--landing-surface)" : "none",
+                      border: "none",
+                      borderRadius: "0.75rem",
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
+                  >
+                    {tr("landing.nav.english")}
+                    {lang === "en" && <Check size={16} aria-hidden />}
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={lang === "vi"}
+                    onClick={() => handleLanguageChange("vi")}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "0.6rem",
+                      padding: "0.7rem 0.75rem",
+                      color: "var(--landing-foreground)",
+                      background: lang === "vi" ? "var(--landing-surface)" : "none",
+                      border: "none",
+                      borderRadius: "0.75rem",
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
+                  >
+                    {tr("landing.nav.vietnamese")}
+                    {lang === "vi" && <Check size={16} aria-hidden />}
+                  </button>
+                </div>
+              )}
+            </div>
             {!user ? (
               <>
                 <LogInLink
@@ -450,7 +687,10 @@ export function LandingNavbar() {
                   aria-label={tr("landing.nav.account")}
                   aria-expanded={accountOpen}
                   title={tr("landing.nav.account")}
-                  onClick={() => setAccountOpen((open) => !open)}
+                  onClick={() => {
+                    setAccountOpen((open) => !open);
+                    setLanguageOpen(false);
+                  }}
                   style={{
                     background: accountOpen ? "var(--landing-surface)" : "none",
                     border: "1px solid var(--landing-border)",
