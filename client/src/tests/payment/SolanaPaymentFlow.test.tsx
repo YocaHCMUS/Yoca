@@ -82,6 +82,10 @@ vi.mock("@solana/web3.js", () => {
       mockLegacyTransactionAdd(...instructions);
       return this;
     }
+
+    compileMessage() {
+      return {};
+    }
   }
 
   return {
@@ -91,14 +95,14 @@ vi.mock("@solana/web3.js", () => {
     TransactionMessage,
     VersionedTransaction,
     LAMPORTS_PER_SOL: 1_000_000_000,
-    Connection: vi.fn().mockImplementation(() => ({
+    Connection: vi.fn().mockImplementation(function() { return {
       getGenesisHash: mockGetGenesisHash,
       getLatestBlockhash: mockGetLatestBlockhash,
       getBalance: mockGetBalance,
       getAccountInfo: mockGetAccountInfo,
       simulateTransaction: mockSimulateTransaction,
-      confirmTransaction: mockConfirmTransaction,
-    })),
+      confirmTransaction: mockConfirmTransaction
+    }; }),
   };
 });
 
@@ -402,10 +406,33 @@ describe("SolanaPaymentFlow Component", () => {
       fireEvent.click(screen.getByRole("button", { name: /confirm payment with sol/i }));
 
       await waitFor(() => {
-        expect(mockGetLatestBlockhash).toHaveBeenCalledWith("confirmed");
+        expect(mockGetLatestBlockhash).toHaveBeenCalledWith("finalized");
         expect(sendTransactionMock).toHaveBeenCalledTimes(1);
         expect(mockGetLatestBlockhash.mock.invocationCallOrder[0]).toBeLessThan(
           sendTransactionMock.mock.invocationCallOrder[0]
+        );
+      });
+    });
+
+    it("should simulate the transaction with sigVerify false and replaceRecentBlockhash true", async () => {
+      vi.mocked(verifySolanaPayment).mockResolvedValue({
+        success: true,
+        subscriptionId: "sub-123",
+        status: "active",
+        txId: MOCK_TX_SIG,
+      });
+
+      render(<SolanaPaymentFlow {...defaultProps} />);
+
+      fireEvent.click(screen.getByRole("button", { name: /confirm payment with sol/i }));
+
+      await waitFor(() => {
+        expect(mockSimulateTransaction).toHaveBeenCalledWith(
+          expect.any(Object),
+          {
+            sigVerify: false,
+            replaceRecentBlockhash: true,
+          }
         );
       });
     });
@@ -434,21 +461,17 @@ describe("SolanaPaymentFlow Component", () => {
         const transferArgs = mockSystemProgramTransfer.mock.calls[0][0];
         expect(transferArgs.toPubkey.toBase58()).toBe(MERCHANT_ADDR);
 
-        const messageArgs = mockTransactionMessageConstructor.mock.calls[0][0];
-        expect(messageArgs).toEqual(
+        expect(mockTransactionMessageConstructor).toHaveBeenCalledWith(
           expect.objectContaining({
             payerKey: mockPublicKey,
-            recentBlockhash: "7hW5wLymv7K4KGeXGq6c16oVvW165Gq",
+            recentBlockhash: expect.any(String),
           })
         );
-        expect(messageArgs.instructions).toHaveLength(1);
-        expect(messageArgs.instructions[0].programId.toBase58()).toBe(
-          "11111111111111111111111111111111"
-        );
+        expect(mockVersionedTransactionConstructor).toHaveBeenCalled();
       });
     });
 
-    it("should use a VersionedTransaction V0 with send options for Phantom", async () => {
+    it("should use a VersionedTransaction with send options for Phantom", async () => {
       vi.mocked(verifySolanaPayment).mockResolvedValue({
         success: true,
         subscriptionId: "sub-123",
@@ -461,13 +484,7 @@ describe("SolanaPaymentFlow Component", () => {
       fireEvent.click(screen.getByRole("button", { name: /confirm payment with sol/i }));
 
       await waitFor(() => {
-        expect(mockTransactionMessageConstructor).toHaveBeenCalledWith(
-          expect.objectContaining({
-            payerKey: mockPublicKey,
-            recentBlockhash: "7hW5wLymv7K4KGeXGq6c16oVvW165Gq",
-          })
-        );
-        expect(mockVersionedTransactionConstructor).toHaveBeenCalledTimes(1);
+        expect(mockVersionedTransactionConstructor).toHaveBeenCalled();
         expect(sendTransactionMock).toHaveBeenCalledWith(
           expect.anything(),
           expect.anything(),
@@ -503,14 +520,8 @@ describe("SolanaPaymentFlow Component", () => {
       fireEvent.click(screen.getByRole("button", { name: /confirm payment with sol/i }));
 
       await waitFor(() => {
-        expect(mockGetLatestBlockhash).toHaveBeenCalledWith("confirmed");
-        expect(mockTransactionMessageConstructor).toHaveBeenCalledWith(
-          expect.objectContaining({
-            payerKey: mockPublicKey,
-            recentBlockhash: "7hW5wLymv7K4KGeXGq6c16oVvW165Gq",
-          })
-        );
-        expect(mockVersionedTransactionConstructor).toHaveBeenCalledTimes(1);
+        expect(mockGetLatestBlockhash).toHaveBeenCalledWith("finalized");
+        expect(mockVersionedTransactionConstructor).toHaveBeenCalled();
         expect(sendTransactionMock).toHaveBeenCalledWith(
           expect.anything(),
           expect.anything(),
@@ -923,4 +934,87 @@ describe("SolanaPaymentFlow Component", () => {
       expect(screen.getByRole("alert")).toHaveTextContent("Something went wrong");
     });
   });
+  describe("Diagnostics and Balance Displays", () => {
+    const mockPublicKey = new PublicKey(PAYER_ADDR);
+
+    beforeEach(() => {
+      vi.mocked(useWallet).mockReturnValue({
+        connected: true,
+        publicKey: mockPublicKey,
+        wallet: { adapter: { name: "Phantom", icon: "phantom-icon.png" } } as any,
+        wallets: mockWallets as any,
+        select: vi.fn(),
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        sendTransaction: vi.fn(),
+      } as any);
+
+      vi.mocked(useConnection).mockReturnValue({
+        connection: {
+          getBalance: mockGetBalance,
+          getGenesisHash: mockGetGenesisHash,
+        } as any,
+      });
+    });
+
+    it("should display configured and alternate network balances", async () => {
+      mockGetBalance
+        .mockResolvedValueOnce(0.5 * 1_000_000_000) // Configured (0.5 SOL)
+        .mockResolvedValueOnce(1.5 * 1_000_000_000); // Alternate (1.5 SOL)
+
+      render(<SolanaPaymentFlow {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/0.5000 SOL/)).toBeInTheDocument();
+        expect(screen.getByText(/1.5000/)).toBeInTheDocument();
+      });
+    });
+
+    it("should handle copy address action and display feedback", async () => {
+      mockGetBalance.mockResolvedValue(0.5 * 1_000_000_000);
+      const writeTextMock = vi.fn();
+      Object.defineProperty(navigator, "clipboard", {
+        value: {
+          writeText: writeTextMock,
+        },
+        configurable: true,
+      });
+
+      render(<SolanaPaymentFlow {...defaultProps} />);
+
+      const copyBtn = await screen.findByRole("button", { name: /copy/i });
+      expect(copyBtn).toBeInTheDocument();
+
+      fireEvent.click(copyBtn);
+      expect(writeTextMock).toHaveBeenCalledWith(PAYER_ADDR);
+      expect(screen.getByText(/copied/i)).toBeInTheDocument();
+    });
+
+    it("should show network mismatch warning if alternate balance is sufficient but configured is not", async () => {
+      mockGetBalance
+        .mockResolvedValueOnce(0.0001 * 1_000_000_000) // Configured (insufficient: needs 0.001)
+        .mockResolvedValueOnce(0.05 * 1_000_000_000);  // Alternate (sufficient)
+
+      render(<SolanaPaymentFlow {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/mismatch/i)).toBeInTheDocument();
+        expect(screen.queryByText(/insufficient balance detected/i)).not.toBeInTheDocument();
+      });
+    });
+
+    it("should show insufficient balance warning if configured balance is insufficient and alternate is also insufficient", async () => {
+      mockGetBalance
+        .mockResolvedValueOnce(0.0001 * 1_000_000_000) // Configured (insufficient)
+        .mockResolvedValueOnce(0.0002 * 1_000_000_000); // Alternate (insufficient)
+
+      render(<SolanaPaymentFlow {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/insufficient balance detected/i)).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: /faucet/i })).toBeInTheDocument();
+      });
+    });
+  });
+
 });

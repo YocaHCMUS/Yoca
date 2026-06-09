@@ -1,6 +1,6 @@
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import type { WalletName } from "@solana/wallet-adapter-base";
-import { SystemProgram, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
+import { Connection, SystemProgram, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
@@ -29,9 +29,9 @@ const MERCHANT_ADDRESS_RAW =
  * Note: Must be > 0.00089 SOL to avoid rent-exemption errors
  * if the merchant wallet is completely empty on Devnet/Testnet.
  *
- * ⚠️  MUST stay in sync with `TIER_SOL_AMOUNTS` in
- *     `server/src/services/solana-payment.service.ts`.
- *     If you change a value here, update the server constant too, and vice versa.
+ * MUST stay in sync with `TIER_SOL_AMOUNTS` in
+ * `server/src/services/solana-payment.service.ts`.
+ * If you change a value here, update the server constant too, and vice versa.
  */
 const TIER_SOL_AMOUNTS: Record<"Lite" | "Plus" | "Pro", number> = {
   Lite: 0.001,
@@ -114,6 +114,15 @@ export function SolanaPaymentFlow({
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectingWalletName, setConnectingWalletName] = useState<string | null>(null);
 
+  // States for copy feedback & dual balance status
+  const [copied, setCopied] = useState(false);
+  const [balances, setBalances] = useState<{
+    configured: number | null;
+    alternate: number | null;
+    loading: boolean;
+    error: string | null;
+  }>({ configured: null, alternate: null, loading: false, error: null });
+
   let networkName = "Devnet";
   try {
     networkName = getNetworkDisplayName();
@@ -121,7 +130,81 @@ export function SolanaPaymentFlow({
     // Fallback if env is broken, the actual throw happens during submit
   }
 
+  const alternateNetwork = networkName === "Testnet" ? "Devnet" : "Testnet";
   const solAmount = TIER_SOL_AMOUNTS[tierKey];
+
+  const handleCopyAddress = () => {
+    if (!publicKey) return;
+    navigator.clipboard.writeText(publicKey.toBase58());
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  useEffect(() => {
+    const pubKey = publicKey;
+    if (!pubKey) {
+      setBalances({ configured: null, alternate: null, loading: false, error: null });
+      return;
+    }
+
+    let active = true;
+
+    async function fetchBalances() {
+      if (!pubKey) return;
+      try {
+        setBalances(prev => ({ ...prev, loading: prev.configured === null }));
+        
+        // 1. Fetch configured network balance
+        const configuredBal = await connection.getBalance(pubKey);
+
+        // 2. Fetch alternate network balance
+        let alternateBal: number | null = null;
+        let rawNetworkKey: "devnet" | "testnet" | "mainnet-beta" = "testnet";
+        try {
+          rawNetworkKey = getValidatedSolanaNetwork();
+        } catch {
+          // ignore env error here, handleSendTransaction will catch it
+        }
+        
+        const altUrl = rawNetworkKey === "testnet" 
+          ? "https://api.devnet.solana.com" 
+          : "https://api.testnet.solana.com";
+        
+        try {
+          const altConnection = new Connection(altUrl, "confirmed");
+          alternateBal = await altConnection.getBalance(pubKey);
+        } catch (altErr) {
+          console.warn("[SolanaPaymentFlow] Failed to fetch alternate network balance:", altErr);
+        }
+
+        if (active) {
+          setBalances({
+            configured: configuredBal / LAMPORTS_PER_SOL,
+            alternate: alternateBal !== null ? alternateBal / LAMPORTS_PER_SOL : null,
+            loading: false,
+            error: null,
+          });
+        }
+      } catch (err: any) {
+        console.error("[SolanaPaymentFlow] Error fetching balances:", err);
+        if (active) {
+          setBalances(prev => ({
+            ...prev,
+            loading: false,
+            error: err.message || "Failed to fetch balances",
+          }));
+        }
+      }
+    }
+
+    fetchBalances();
+    const interval = setInterval(fetchBalances, 10000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [publicKey, connection]);
 
   /**
    * Step 1: Reset the loading spinner as soon as the wallet is fully connected.
@@ -388,7 +471,7 @@ export function SolanaPaymentFlow({
       }
 
       // -- Step 1 & 2: Transaction construction --
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
       const transaction = buildSolanaPaymentTransaction({
         payer: publicKey,
         merchant: merchantKey,
@@ -429,7 +512,10 @@ export function SolanaPaymentFlow({
       // -- Step 3b: Pre-simulation with explicit error + log output --
       // CRITICAL: Run simulation BEFORE presenting the wallet popup to the user.
       console.log("[SolanaPaymentFlow] Running pre-send simulation...");
-      const simulation = await connection.simulateTransaction(transaction);
+      const simulation = await connection.simulateTransaction(transaction, {
+        sigVerify: false,
+        replaceRecentBlockhash: true,
+      });
       if (simulation.value.err) {
         console.error("[SolanaPaymentFlow] SIMULATION ERROR (exact):", simulation.value.err);
         console.error("[SolanaPaymentFlow] SIMULATION LOGS:", simulation.value.logs);
@@ -542,6 +628,11 @@ export function SolanaPaymentFlow({
     setVerifyingSignature(null);
   }
 
+  const isAlternateBalanceSufficient = balances.alternate !== null && balances.alternate >= (solAmount + 0.0001);
+  const isConfiguredBalanceInsufficient = balances.configured !== null && balances.configured < (solAmount + 0.0001);
+  const showNetworkMismatchAlert = isConfiguredBalanceInsufficient && isAlternateBalanceSufficient;
+  const showInsufficientFundsAlert = isConfiguredBalanceInsufficient && !isAlternateBalanceSufficient && !balances.loading;
+
   return (
     <div className="flex flex-col gap-4">
       {/* -- Connected Wallet Card -- */}
@@ -564,9 +655,18 @@ export function SolanaPaymentFlow({
             <p className="text-white text-sm font-semibold leading-tight">
               {wallet?.adapter.name ?? "Solana Wallet"}
             </p>
-            <p className="text-[#14F195] text-xs font-mono">
-              {truncatePubKey(publicKey.toString())}
-            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-[#14F195] text-xs font-mono">
+                {truncatePubKey(publicKey.toString())}
+              </p>
+              <button
+                type="button"
+                onClick={handleCopyAddress}
+                className="text-[10px] text-[#94a3b8] hover:text-[#14F195] transition-colors font-medium border border-white/10 px-1.5 py-0.5 rounded bg-white/5 whitespace-nowrap"
+              >
+                {copied ? tr("payment.solana.copied") : tr("payment.solana.copyAddress")}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -579,6 +679,32 @@ export function SolanaPaymentFlow({
         >
           {tr("payment.solana.disconnect")}
         </button>
+      </div>
+
+      {/* -- Balance Info Card -- */}
+      <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-xs">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between text-[#94a3b8]">
+            <span>{tr("payment.solana.balanceConfigured", { networkName })}:</span>
+            {balances.loading ? (
+              <span className="text-[#64748b]">{tr("payment.solana.balanceLoading")}</span>
+            ) : balances.configured !== null ? (
+              <span className="font-semibold text-white font-mono">{balances.configured.toFixed(4)} SOL</span>
+            ) : (
+              <span className="text-red-400">{tr("payment.solana.balanceUnreachable")}</span>
+            )}
+          </div>
+          <div className="flex items-center justify-between text-[#64748b]">
+            <span>{tr("payment.solana.balanceAlternate", { alternateNetwork })}:</span>
+            {balances.loading ? (
+              <span>{tr("payment.solana.balanceLoading")}</span>
+            ) : balances.alternate !== null ? (
+              <span className="font-semibold font-mono">{balances.alternate.toFixed(4)} SOL</span>
+            ) : (
+              <span>{tr("payment.solana.balanceUnreachable")}</span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* -- Transaction Details -- */}
@@ -613,8 +739,56 @@ export function SolanaPaymentFlow({
         </p>
       </div>
 
-      {/* -- Network mismatch warning -- */}
-      {networkName === "Testnet" && (
+      {/* -- Network Mismatch Warning -- */}
+      {showNetworkMismatchAlert && (
+        <div className="flex flex-col gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300">
+          <div className="flex items-start gap-2">
+            <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <span className="font-bold">{tr("payment.solana.mismatchDetected")}</span>
+          </div>
+          <p className="leading-normal pl-6">
+            {tr("payment.solana.mismatchExplanation", {
+              balance: balances.alternate?.toFixed(4) || "0",
+              alternateNetwork,
+              networkName,
+            })}
+          </p>
+        </div>
+      )}
+
+      {/* -- Insufficient Funds Warning -- */}
+      {showInsufficientFundsAlert && (
+        <div className="flex flex-col gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400">
+          <div className="flex items-start gap-2">
+            <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-bold">{tr("payment.solana.insufficientBalanceDetected")}</span>
+          </div>
+          <p className="leading-normal pl-6">
+            {tr("payment.solana.insufficientBalanceExplanation", {
+              balance: balances.configured?.toFixed(4) || "0",
+              networkName,
+              required: solAmount.toString(),
+            })}
+          </p>
+          <div className="pl-6 pt-1">
+            <a
+              href="https://faucet.solana.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#14F195] hover:bg-[#0fd484] text-[#0a0a0f] font-bold text-xs uppercase tracking-wider transition-colors"
+            >
+              {tr("payment.solana.faucetButton")}
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* -- General Testnet Warning -- */}
+      {networkName === "Testnet" && !showNetworkMismatchAlert && !showInsufficientFundsAlert && (
         <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300">
           <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
