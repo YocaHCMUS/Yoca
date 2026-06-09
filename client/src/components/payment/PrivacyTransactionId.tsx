@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useLocalization } from "@/contexts/LocalizationContext";
 
 interface PrivacyTransactionIdProps {
   /** The full, unmasked Solana transaction signature. */
@@ -17,10 +18,12 @@ interface PrivacyTransactionIdProps {
  */
 export function PrivacyTransactionId({
   transactionId,
-  label = "Transaction ID",
+  label,
 }: PrivacyTransactionIdProps) {
+  const { tr } = useLocalization();
   const [isVisible, setIsVisible] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const displayLabel = label ?? tr("payment.transactionId.label");
 
   /** Returns the masked representation: first 4 chars + bullets + last 4 chars */
   const masked = transactionId.length > 12
@@ -42,7 +45,7 @@ export function PrivacyTransactionId({
     <div className="flex flex-col gap-1.5 w-full">
       {/* Label */}
       <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b]">
-        {label}
+        {displayLabel}
       </p>
 
       {/* ID row */}
@@ -51,8 +54,12 @@ export function PrivacyTransactionId({
         <span
           className="flex-1 text-xs font-mono break-all leading-relaxed transition-all duration-200"
           style={{ color: isVisible ? "#e2e8f0" : "#94a3b8" }}
-          title={isVisible ? transactionId : "Click the eye icon to reveal"}
-          aria-label={isVisible ? `Transaction ID: ${transactionId}` : "Transaction ID hidden"}
+          title={isVisible ? transactionId : tr("payment.transactionId.revealHint")}
+          aria-label={
+            isVisible
+              ? tr("payment.transactionId.visibleAria", { transactionId })
+              : tr("payment.transactionId.hiddenAria")
+          }
         >
           {isVisible ? transactionId : masked}
         </span>
@@ -64,8 +71,16 @@ export function PrivacyTransactionId({
             id="privacy-txid-toggle-btn"
             type="button"
             onClick={() => setIsVisible((v) => !v)}
-            aria-label={isVisible ? "Hide transaction ID" : "Show transaction ID"}
-            title={isVisible ? "Hide" : "Reveal"}
+            aria-label={
+              isVisible
+                ? tr("payment.transactionId.hideAria")
+                : tr("payment.transactionId.showAria")
+            }
+            title={
+              isVisible
+                ? tr("payment.transactionId.hide")
+                : tr("payment.transactionId.reveal")
+            }
             className="p-1.5 rounded-lg text-[#64748b] hover:text-[#14F195] hover:bg-[#14F195]/10 transition-all duration-150"
           >
             {isVisible ? (
@@ -114,8 +129,8 @@ export function PrivacyTransactionId({
               id="privacy-txid-copy-btn"
               type="button"
               onClick={handleCopy}
-              aria-label="Copy full transaction ID to clipboard"
-              title="Copy full ID"
+              aria-label={tr("payment.transactionId.copyAria")}
+              title={tr("payment.transactionId.copyTitle")}
               className="p-1.5 rounded-lg transition-all duration-150"
               style={{
                 color: isCopied ? "#14F195" : "#64748b",
@@ -170,7 +185,7 @@ export function PrivacyTransactionId({
                   boxShadow: "0 0 12px rgba(20,241,149,0.4)",
                 }}
               >
-                Copied!
+                {tr("payment.transactionId.copied")}
               </span>
             )}
           </div>

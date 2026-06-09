@@ -1,6 +1,7 @@
 import { PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { useState } from "react";
 import client from "@/api/main";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { SolanaPaymentFlow } from "./SolanaPaymentFlow";
 
 type CheckoutFormProps = {
@@ -42,6 +43,7 @@ export function CheckoutForm({
   onSuccess,
   onCancel,
 }: CheckoutFormProps) {
+  const { tr } = useLocalization();
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -66,7 +68,7 @@ export function CheckoutForm({
 
       if (!setupResp.ok) {
         const body = await setupResp.json() as any;
-        setErrorMsg(body.message ?? "Failed to create payment intent. Please try again.");
+        setErrorMsg(body.message ?? tr("payment.errors.createIntent"));
         setIsProcessing(false);
         return;
       }
@@ -75,7 +77,7 @@ export function CheckoutForm({
       const clientSecret = setupData.clientSecret;
 
       if (!clientSecret) {
-        setErrorMsg("Payment setup failed. Please try again.");
+        setErrorMsg(tr("payment.errors.setupFailed"));
         setIsProcessing(false);
         return;
       }
@@ -91,13 +93,13 @@ export function CheckoutForm({
       });
 
       if (error) {
-        setErrorMsg(error.message ?? "Card setup failed. Please try again.");
+        setErrorMsg(error.message ?? tr("payment.errors.cardSetupFailed"));
         setIsProcessing(false);
         return;
       }
 
       if (!setupIntent || setupIntent.status !== "succeeded") {
-        setErrorMsg("Card setup did not complete. Please try again.");
+        setErrorMsg(tr("payment.errors.cardSetupIncomplete"));
         setIsProcessing(false);
         return;
       }
@@ -109,7 +111,7 @@ export function CheckoutForm({
           : (setupIntent.payment_method as any)?.id;
 
       if (!paymentMethodId) {
-        setErrorMsg("Could not retrieve payment method. Please try again.");
+        setErrorMsg(tr("payment.errors.missingPaymentMethod"));
         setIsProcessing(false);
         return;
       }
@@ -122,7 +124,7 @@ export function CheckoutForm({
       const body = await activateResp.json() as any;
 
       if (!activateResp.ok) {
-        setErrorMsg(body.message ?? "Subscription activation failed. Please try again.");
+        setErrorMsg(body.message ?? tr("payment.errors.activateSubscription"));
         setIsProcessing(false);
         return;
       }
@@ -131,7 +133,7 @@ export function CheckoutForm({
       onSuccess();
     } catch (networkErr) {
       console.error("[CheckoutForm] Network error:", networkErr);
-      setErrorMsg("A network error occurred. Please try again.");
+      setErrorMsg(tr("payment.errors.network"));
       setIsProcessing(false);
     }
   }
@@ -142,13 +144,13 @@ export function CheckoutForm({
       <div className="flex items-center justify-between !p-6 rounded-2xl bg-white/5 border border-white/10 shadow-inner">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b]">
-            Plan
+            {tr("payment.checkout.plan")}
           </p>
           <p className="text-white font-bold">{tierName}</p>
         </div>
         <div className="text-right">
           <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b]">
-            Total
+            {tr("payment.checkout.total")}
           </p>
           <p className="text-[#14F195] font-extrabold text-lg">{tierPrice}</p>
         </div>
@@ -182,7 +184,7 @@ export function CheckoutForm({
                 activeMethod === "card" ? "text-[#0a0a0f]" : "text-white"
               }`}
             >
-              Cash
+              {tr("payment.checkout.methods.card")}
             </p>
           </div>
         </button>
@@ -213,7 +215,7 @@ export function CheckoutForm({
                 activeMethod === "bank" ? "text-[#0a0a0f]" : "text-white"
               }`}
             >
-              Bank
+              {tr("payment.checkout.methods.bank")}
             </p>
             <p
               className={`text-xs ${
@@ -222,7 +224,7 @@ export function CheckoutForm({
                   : "text-[#64748b]"
               }`}
             >
-              US Bank Transfer
+              {tr("payment.checkout.methods.bankDescription")}
             </p>
           </div>
         </button>
@@ -253,7 +255,7 @@ export function CheckoutForm({
                 activeMethod === "solana" ? "text-[#0a0a0f]" : "text-white"
               }`}
             >
-              Wallet
+              {tr("payment.checkout.methods.wallet")}
             </p>
           </div>
         </button>
@@ -292,7 +294,9 @@ export function CheckoutForm({
               disabled={isProcessing || !stripe}
               className="flex-1 !py-4 rounded-full text-sm font-bold uppercase tracking-widest text-[#0a0a0f] bg-[#14F195] hover:bg-[#0fd484] shadow-[0_0_24px_rgba(20,241,149,0.35)] hover:shadow-[0_0_36px_rgba(20,241,149,0.5)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isProcessing ? "Processing…" : "Subscribe Now"}
+              {isProcessing
+                ? tr("payment.checkout.processing")
+                : tr("payment.checkout.subscribeNow")}
             </button>
 
             <button
@@ -302,7 +306,7 @@ export function CheckoutForm({
               disabled={isProcessing}
               className="flex-1 !py-4 rounded-full text-sm font-medium border border-white/10 text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all duration-200 disabled:opacity-50"
             >
-              Cancel
+              {tr("payment.shared.cancel")}
             </button>
           </div>
         </form>
@@ -341,7 +345,9 @@ export function CheckoutForm({
               disabled={isProcessing || !stripe}
               className="flex-1 !py-4 rounded-full text-sm font-bold uppercase tracking-widest text-[#0a0a0f] bg-[#14F195] hover:bg-[#0fd484] shadow-[0_0_24px_rgba(20,241,149,0.35)] hover:shadow-[0_0_36px_rgba(20,241,149,0.5)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isProcessing ? "Processing…" : "Subscribe Now"}
+              {isProcessing
+                ? tr("payment.checkout.processing")
+                : tr("payment.checkout.subscribeNow")}
             </button>
 
             <button
@@ -351,7 +357,7 @@ export function CheckoutForm({
               disabled={isProcessing}
               className="flex-1 !py-4 rounded-full text-sm font-medium border border-white/10 text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all duration-200 disabled:opacity-50"
             >
-              Cancel
+              {tr("payment.shared.cancel")}
             </button>
           </div>
         </form>

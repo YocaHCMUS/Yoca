@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import PricingPage from "@/pages/pricing";
+import { LocalizationProvider } from "@/contexts/LocalizationContext";
 
 vi.mock("@/components/landing", () => ({
   LandingFooter: () => <footer>Footer</footer>,
@@ -48,6 +49,10 @@ vi.mock("@/components/payment", () => ({
     tierName: string;
   }) => (open ? <div role="dialog">Payment Successful for {tierName}</div> : null),
 }));
+
+function render(ui: Parameters<typeof rtlRender>[0]) {
+  return rtlRender(ui, { wrapper: LocalizationProvider });
+}
 
 describe("PricingPage payment success state", () => {
   it("should close the payment modal and open the success modal after payment success", async () => {

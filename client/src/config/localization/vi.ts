@@ -149,6 +149,273 @@ export const translation = defineTranslation({
     googleAuthFailed: "Xác thực Google thất bại. Vui lòng thử lại.",
     googleAuthCancelled: "Xác thực Google đã bị hủy.",
   },
+  landing: {
+    nav: {
+      primary: "Điều hướng chính",
+      products: "Sản phẩm",
+      useCases: "Trường hợp sử dụng",
+      docs: "Tài liệu",
+      pricing: "Bảng giá",
+      login: "Đăng nhập",
+      signUp: "Đăng ký",
+      profile: "Hồ sơ",
+      account: "Tài khoản",
+      toggleMenu: "Mở hoặc đóng menu",
+      switchToLightMode: "Chuyển sang giao diện sáng",
+      switchToDarkMode: "Chuyển sang giao diện tối",
+    },
+    hero: {
+      eyebrow: "Phân tích Solana bằng AI",
+      title: "Biến dữ liệu on-chain thành lợi thế của bạn.",
+      subtitle:
+        "Bộ công cụ toàn diện cho trader Solana. Theo dõi xu hướng token, trực quan hóa chuyển động của ví lớn và nắm bắt thị trường bằng cảnh báo on-chain thời gian thực.",
+      primaryCta: "Mở Market Radar",
+      secondaryCta: "Xem ví trực tiếp",
+    },
+    stats: {
+      uiLatency: "Độ trễ UI",
+      dataStreaming: "Dữ liệu thời gian thực",
+      walletLabels: "Nhãn ví bằng AI",
+      transactionGraphs: "Đồ thị giao dịch",
+    },
+    products: {
+      eyebrow: "Tính năng cốt lõi",
+      title: "Mọi thứ bạn cần để đi trước thị trường.",
+      learnMore: "Tìm hiểu thêm",
+      items: {
+        marketExplorer: {
+          tag: "Khám phá",
+          title: "Market Explorer",
+          description:
+            "Theo dõi thời gian thực các token và pool thanh khoản nổi bật nhất trên Solana.",
+        },
+        portfolioIntelligence: {
+          tag: "Phân tích",
+          title: "Portfolio Intelligence",
+          description:
+            "Đào sâu lịch sử và hành vi của bất kỳ ví nào bằng hệ thống gắn nhãn hành vi do AI hỗ trợ.",
+        },
+        smartAlerts: {
+          tag: "Giám sát",
+          title: "Smart Alerts",
+          description:
+            "Không bỏ lỡ biến động quan trọng. Thiết lập cảnh báo cho swap lớn và hoạt động ví lớn gửi thẳng đến Discord.",
+        },
+      },
+    },
+    marketIntelligence: {
+      eyebrow: "Market Intelligence",
+      title: "Nhìn thị trường theo cách của nhà giao dịch chuyên nghiệp.",
+      marketStats: "Thống kê thị trường",
+      stats: {
+        marketCap: "Vốn hóa",
+        volume24h: "Khối lượng 24h",
+        circulatingSupply: "Nguồn cung lưu hành",
+      },
+    },
+    customerStories: {
+      title: "Câu chuyện khách hàng",
+      subtitle:
+        "Xem cách các đội ngũ dùng Yoca để biến hoạt động thô trên blockchain thành quyết định đáng tin cậy cho toàn tổ chức.",
+      seeMore: "Xem thêm",
+      readStory: "Đọc câu chuyện",
+      items: {
+        base: {
+          title: "Cách các đội ngũ vận hành chuyển đổi dữ liệu on-chain ở quy mô lớn với Yoca",
+        },
+        blockworks: {
+          title: "Hỗ trợ nghiên cứu crypto tổ chức bằng các chỉ số thống nhất",
+        },
+        opLabs: {
+          title: "Tăng trưởng hệ sinh thái và tính minh bạch dựa trên dashboard trực tiếp",
+        },
+        oneInch: {
+          title: "Làm cho dữ liệu thực thi và thanh khoản minh bạch, dễ tiếp cận hơn",
+        },
+      },
+    },
+    testimonials: {
+      items: {
+        multicoin: {
+          text: "Nếu dữ liệu không có trong dashboard, nó chưa đủ đáng tin. Yoca cho chúng tôi một nguồn dữ liệu thống nhất về dòng ví và token.",
+        },
+        blockworks: {
+          text: "Bộ dữ liệu on-chain thực dụng nhất mà chúng tôi từng đưa vào quy trình nghiên cứu: truy vấn nhanh, ít bất ngờ hơn.",
+        },
+        oneInch: {
+          text: "Nếu không nhìn rõ hoạt động on-chain, sản phẩm sẽ bị mù dữ liệu. Yoca giúp đội ngũ của chúng tôi giải quyết điều đó chỉ trong vài ngày.",
+        },
+      },
+    },
+    news: {
+      eyebrow: "Tin mới nhất",
+      title: "Cập nhật mới từ Yoca",
+      label: "Tin tức",
+      readPost: "Đọc bài viết",
+      items: {
+        walletReports: {
+          title: "Xuất báo cáo ví mà không cần duy trì pipeline dễ vỡ",
+          excerpt:
+            "Xuất snapshot đáng tin cậy cho analyst, dùng cùng định nghĩa với app trực tiếp và giảm các bản spreadsheet rời rạc.",
+        },
+        tempo: {
+          title: "Tempo đã có mặt: chỉ số settlement tức thì trong Yoca",
+          excerpt:
+            "Theo dõi hoạt động chain ưu tiên thanh toán cùng các chỉ số Solana và EVM trong một mô hình điều hướng thống nhất.",
+        },
+        cardano: {
+          title: "Cardano được thêm vào catalog",
+          excerpt:
+            "Tín hiệu staking và delegation cấp nghiên cứu nay nằm cạnh các ví bạn đang theo dõi.",
+        },
+      },
+    },
+    finalCta: {
+      title: "Tạo tăng trưởng vượt chuẩn",
+      subtitle:
+        "Tham gia cùng các đội ngũ dùng Yoca để nhìn ví, token và thị trường trong một câu chuyện mạch lạc.",
+      cta: "Bắt đầu",
+    },
+    footer: {
+      description:
+        "Phân tích on-chain cho các đội ngũ xây dựng dựa trên dữ liệu, không dựa vào phỏng đoán.",
+      companyPrompt: "Bạn muốn dùng Yoca cho công ty của mình?",
+      contactSales: "Liên hệ sales",
+      columns: {
+        products: { title: "Sản phẩm" },
+        resources: { title: "Tài nguyên" },
+        company: { title: "Công ty" },
+        legal: { title: "Pháp lý" },
+      },
+      links: {
+        dataHub: "Data Hub",
+        tokenExplorer: "Token Explorer",
+        datashare: "Datashare",
+        chains: "Chains",
+        pricing: "Bảng giá",
+        documentation: "Tài liệu",
+        caseStudies: "Case study",
+        blog: "Blog",
+        support: "Hỗ trợ",
+        about: "Giới thiệu",
+        careers: "Tuyển dụng",
+        press: "Báo chí",
+        contact: "Liên hệ",
+        termsOfService: "Điều khoản dịch vụ",
+        privacyPolicy: "Chính sách bảo mật",
+        systemStatus: "Trạng thái hệ thống",
+      },
+    },
+  },
+  pricing: {
+    title: "Bảng giá",
+    subtitle:
+      "Trang bị cho nền tảng của bạn dữ liệu crypto thời gian thực và insight từ hơn 200 thị trường chỉ với 1 tích hợp.",
+    placeholder: "Sẽ được cập nhật",
+    free: "MIỄN PHÍ",
+    period: {
+      month: "/ tháng",
+    },
+    tiers: {
+      standard: { name: "STANDARD" },
+    },
+    cta: {
+      buyNow: "Mua ngay",
+      tryForFree: "Dùng thử miễn phí",
+    },
+  },
+  payment: {
+    shared: {
+      cancel: "Hủy",
+      close: "Đóng",
+      maybeLater: "Để sau",
+    },
+    success: {
+      title: "Thanh toán thành công!",
+      description:
+        "Gói {{$tierName}} của bạn hiện đã được kích hoạt. Bạn có toàn quyền truy cập vào các tính năng cao cấp.",
+      goToProfile: "Đi đến hồ sơ",
+      receipt: "Biên nhận đã được gửi đến email của bạn",
+    },
+    authReminder: {
+      eyebrow: "Cần đăng nhập",
+      title: "Đăng nhập để tiếp tục",
+      description:
+        "Bạn cần đăng nhập trước khi mua gói. Tạo tài khoản miễn phí hoặc đăng nhập để bắt đầu.",
+    },
+    modal: {
+      eyebrow: "Thanh toán an toàn",
+      title: "Đăng ký gói {{tierName}}",
+      close: "Đóng modal thanh toán",
+    },
+    checkout: {
+      plan: "Gói",
+      total: "Tổng",
+      processing: "Đang xử lý...",
+      subscribeNow: "Đăng ký ngay",
+      methods: {
+        card: "Thẻ",
+        bank: "Ngân hàng",
+        bankDescription: "Chuyển khoản ngân hàng Mỹ",
+        wallet: "Ví",
+      },
+    },
+    solana: {
+      connectTitle: "Kết nối ví Solana",
+      connectDescription: "Chọn ví để thanh toán bằng SOL trên {{networkName}}",
+      noWallets: "Không phát hiện ví Solana.",
+      installPrefix: "Cài đặt",
+      installSuffix: "để tiếp tục.",
+      connecting: "Đang kết nối...",
+      installed: "Đã cài đặt",
+      notDetected: "Không phát hiện",
+      transactionSubmitted: "Đã gửi giao dịch",
+      verifyingBackend:
+        "Giao dịch của bạn đã được gửi. Đang xác minh với backend...",
+      verifyingTransaction: "Đang xác minh giao dịch...",
+      walletNotConnected: "Ví chưa được kết nối",
+      networkMismatch:
+        "Sai mạng: ví của bạn đang kết nối nhầm mạng. Ứng dụng này dùng {{networkName}}. Vui lòng đổi mạng ví trong phần Settings.",
+      transactionFailed: "Giao dịch thất bại. Vui lòng thử lại.",
+      disconnect: "Ngắt kết nối",
+      amount: "Số tiền",
+      network: "Mạng",
+      usdEquivalent: "Tương đương USD",
+      transferNotice:
+        "Bạn sẽ được yêu cầu ký giao dịch gửi {{amount}} từ ví của bạn đến địa chỉ merchant của chúng tôi trên Solana {{networkName}}.",
+      testnetWarning:
+        "Phantom phải ở Testnet. Nếu popup hiển thị reverted during simulation, hãy mở Phantom Settings > Developer Settings > Testnet Mode, rồi thử lại.",
+      sending: "Đang gửi...",
+      verifying: "Đang xác minh...",
+      confirmPayment: "Xác nhận thanh toán bằng SOL",
+      tryAgain: "Thử lại",
+    },
+    transactionId: {
+      label: "ID giao dịch",
+      revealHint: "Bấm biểu tượng mắt để hiện",
+      visibleAria: "ID giao dịch: {{transactionId}}",
+      hiddenAria: "ID giao dịch đang được ẩn",
+      hideAria: "Ẩn ID giao dịch",
+      showAria: "Hiện ID giao dịch",
+      hide: "Ẩn",
+      reveal: "Hiện",
+      copyAria: "Sao chép đầy đủ ID giao dịch vào clipboard",
+      copyTitle: "Sao chép đầy đủ ID",
+      copied: "Đã sao chép!",
+    },
+    errors: {
+      loadStripe: "Không tải được Stripe. Vui lòng thử lại.",
+      createIntent: "Không tạo được payment intent. Vui lòng thử lại.",
+      setupFailed: "Thiết lập thanh toán thất bại. Vui lòng thử lại.",
+      cardSetupFailed: "Thiết lập thẻ thất bại. Vui lòng thử lại.",
+      cardSetupIncomplete: "Thiết lập thẻ chưa hoàn tất. Vui lòng thử lại.",
+      missingPaymentMethod:
+        "Không lấy được phương thức thanh toán. Vui lòng thử lại.",
+      activateSubscription:
+        "Kích hoạt gói đăng ký thất bại. Vui lòng thử lại.",
+      network: "Đã xảy ra lỗi mạng. Vui lòng thử lại.",
+    },
+  },
   // Wallet
   wallet: {
     transactionCount: "Số lượng giao dịch",

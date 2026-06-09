@@ -1,9 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render as rtlRender, screen, fireEvent, waitFor } from "@testing-library/react";
 import { SolanaPaymentFlow } from "@/components/payment/SolanaPaymentFlow";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { verifySolanaPayment } from "@/services/payment/solanaPaymentApi";
 import { PublicKey } from "@solana/web3.js";
+import { LocalizationProvider } from "@/contexts/LocalizationContext";
 
 // ---------------------------------------------------------------------------
 // Module Mocks
@@ -126,6 +127,10 @@ const mockWallets = [
   { adapter: { name: "Phantom",  icon: "phantom-icon.png"  }, readyState: "Installed" },
   { adapter: { name: "Solflare", icon: "solflare-icon.png" }, readyState: "Installed" },
 ];
+
+function render(ui: Parameters<typeof rtlRender>[0]) {
+  return rtlRender(ui, { wrapper: LocalizationProvider });
+}
 
 // ---------------------------------------------------------------------------
 // Test Suite

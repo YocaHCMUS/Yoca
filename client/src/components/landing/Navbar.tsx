@@ -1,20 +1,35 @@
-import { Link } from "react-router";
-import { Menu, X, Sun, Moon } from "lucide-react";
-import { useEffect, useState } from "react";
-import appLogo from "../../assets/app-logo.png";
-import { GRID_MAX_WIDTH, btnPrimaryBase, btnPrimaryEnter, btnPrimaryLeave } from "./tokens";
-import { SignInModal } from "../auth/SignInModal";
-import { SignUpModal } from "../auth/SignUpModal";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserTheme } from "@/contexts/ThemeContext";
-import { LogOut } from "lucide-react";
+import {
+  ChevronDown,
+  LogOut,
+  Menu,
+  Moon,
+  Sun,
+  User,
+  X,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router";
+import appLogo from "../../assets/app-logo.png";
+import {
+  GRID_MAX_WIDTH,
+  btnPrimaryBase,
+  btnPrimaryEnter,
+  btnPrimaryLeave,
+} from "./tokens";
+import { SignInModal } from "../auth/SignInModal";
+import { SignUpModal } from "../auth/SignUpModal";
 
-const navLinks = [
-  { label: "Products", href: "#products" },
-  { label: "Use Cases", href: "#stories" },
-  { label: "Docs", href: "/market" },
-  { label: "Pricing", href: "/pricing" },
-] as const;
+type NavLinkKey = "products" | "useCases" | "docs" | "pricing";
+
+const navLinks: Array<{ labelKey: NavLinkKey; href: string }> = [
+  { labelKey: "products", href: "#products" },
+  { labelKey: "useCases", href: "#stories" },
+  { labelKey: "docs", href: "/market" },
+  { labelKey: "pricing", href: "/pricing" },
+];
 
 const linkStyle = {
   fontSize: "0.875rem",
@@ -25,28 +40,68 @@ const linkStyle = {
   transition: "color 0.2s ease",
 };
 
+const quietIconButtonStyle = {
+  background: "none",
+  border: "none",
+  color: "var(--landing-muted)",
+  cursor: "pointer",
+  padding: "8px",
+  borderRadius: "8px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  transition: "all 0.2s",
+};
+
+function navLabel(labelKey: NavLinkKey, tr: ReturnType<typeof useLocalization>["tr"]) {
+  switch (labelKey) {
+    case "products":
+      return tr("landing.nav.products");
+    case "useCases":
+      return tr("landing.nav.useCases");
+    case "docs":
+      return tr("landing.nav.docs");
+    case "pricing":
+      return tr("landing.nav.pricing");
+  }
+}
+
 export function LandingNavbar() {
   const { user, signOut } = useAuth();
+  const { tr } = useLocalization();
   const { theme, toggleTheme } = useUserTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
+  const accountLabel = user
+    ? user.displayName || `${user.userId.slice(0, 8)}...`
+    : "";
 
   useEffect(() => {
     const container = document.querySelector(".landing-page");
     if (container) {
       setScrolled(container.scrollTop > 48);
     }
-    const onScroll = (e: Event) => {
-      const target = e.target as HTMLElement;
-      if (target && target.classList && target.classList.contains("landing-page")) {
+    const onScroll = (event: Event) => {
+      const target = event.target as HTMLElement;
+      if (
+        target &&
+        target.classList &&
+        target.classList.contains("landing-page")
+      ) {
         setScrolled(target.scrollTop > 48);
       }
     };
-    window.addEventListener("scroll", onScroll, { capture: true, passive: true });
-    return () => window.removeEventListener("scroll", onScroll, { capture: true });
+    window.addEventListener("scroll", onScroll, {
+      capture: true,
+      passive: true,
+    });
+    return () =>
+      window.removeEventListener("scroll", onScroll, { capture: true });
   }, []);
 
   useEffect(() => {
@@ -56,10 +111,29 @@ export function LandingNavbar() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Close mobile menu when resizing to desktop
   useEffect(() => {
     if (!isMobile) setMobileOpen(false);
   }, [isMobile]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        accountRef.current &&
+        !accountRef.current.contains(event.target as Node)
+      ) {
+        setAccountOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  const handleSignOut = async () => {
+    setAccountOpen(false);
+    setMobileOpen(false);
+    await signOut();
+  };
 
   return (
     <header
@@ -82,7 +156,6 @@ export function LandingNavbar() {
       }}
     >
       {isMobile ? (
-        /* ── Mobile bar ── */
         <>
           <div
             style={{
@@ -95,30 +168,14 @@ export function LandingNavbar() {
               padding: "0 1.5rem",
             }}
           >
-            <Link
-              to="/"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                fontFamily: "inherit",
-                fontSize: "1.25rem",
-                fontWeight: 700,
-                letterSpacing: "-0.025em",
-                color: "var(--landing-foreground)",
-                textDecoration: "none",
-              }}
-            >
-              <img src={appLogo} alt="Yoca logo" width={28} height={28} style={{ display: "block" }} />
-              <span>YOCA</span>
-            </Link>
+            <BrandLink />
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <ThemeToggleBtn theme={theme} toggleTheme={toggleTheme} />
               <button
                 type="button"
                 aria-expanded={mobileOpen}
-                aria-label="Toggle menu"
-                onClick={() => setMobileOpen((o) => !o)}
+                aria-label={tr("landing.nav.toggleMenu")}
+                onClick={() => setMobileOpen((open) => !open)}
                 style={{
                   background: "none",
                   border: "none",
@@ -143,16 +200,25 @@ export function LandingNavbar() {
                 backgroundColor: "var(--landing-bg)",
               }}
             >
-              <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <ul
+                style={{
+                  listStyle: "none",
+                  margin: 0,
+                  padding: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1rem",
+                }}
+              >
                 {navLinks.map((item) => (
-                  <li key={item.label}>
+                  <li key={item.labelKey}>
                     {item.href.startsWith("#") ? (
                       <a
                         href={item.href}
                         style={{ ...linkStyle, fontSize: "1rem", display: "block" }}
                         onClick={() => setMobileOpen(false)}
                       >
-                        {item.label}
+                        {navLabel(item.labelKey, tr)}
                       </a>
                     ) : (
                       <Link
@@ -160,12 +226,19 @@ export function LandingNavbar() {
                         style={{ ...linkStyle, fontSize: "1rem", display: "block" }}
                         onClick={() => setMobileOpen(false)}
                       >
-                        {item.label}
+                        {navLabel(item.labelKey, tr)}
                       </Link>
                     )}
                   </li>
                 ))}
-                <li style={{ display: "flex", flexDirection: "column", gap: "0.75rem", paddingTop: "0.75rem" }}>
+                <li
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.75rem",
+                    paddingTop: "0.75rem",
+                  }}
+                >
                   {!user ? (
                     <>
                       <button
@@ -184,30 +257,88 @@ export function LandingNavbar() {
                           background: "none",
                           cursor: "pointer",
                         }}
-                        onClick={() => { setMobileOpen(false); setIsSignInOpen(true); }}
+                        onClick={() => {
+                          setMobileOpen(false);
+                          setIsSignInOpen(true);
+                        }}
                       >
-                        Log In
+                        {tr("landing.nav.login")}
                       </button>
                       <button
                         type="button"
-                        style={{ ...btnPrimaryBase, width: "100%", justifyContent: "center" }}
-                        onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
-                        onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
-                        onClick={() => { setMobileOpen(false); setIsSignUpOpen(true); }}
+                        style={{
+                          ...btnPrimaryBase,
+                          width: "100%",
+                          justifyContent: "center",
+                        }}
+                        onMouseEnter={(event) =>
+                          btnPrimaryEnter(event.currentTarget)
+                        }
+                        onMouseLeave={(event) =>
+                          btnPrimaryLeave(event.currentTarget)
+                        }
+                        onClick={() => {
+                          setMobileOpen(false);
+                          setIsSignUpOpen(true);
+                        }}
                       >
-                        Sign Up
+                        {tr("landing.nav.signUp")}
                       </button>
                     </>
                   ) : (
-                    <Link
-                      to="/profile"
-                      style={{ ...btnPrimaryBase, width: "100%", justifyContent: "center" }}
-                      onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
-                      onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
-                      onClick={() => setMobileOpen(false)}
-                    >
-                      Go to Profile
-                    </Link>
+                    <>
+                      <div
+                        style={{
+                          padding: "0.75rem",
+                          borderRadius: "0.75rem",
+                          border: "1px solid var(--landing-border)",
+                          color: "var(--landing-muted)",
+                          fontSize: "0.875rem",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {accountLabel}
+                      </div>
+                      <Link
+                        to="/profile"
+                        style={{
+                          display: "block",
+                          textAlign: "center",
+                          width: "100%",
+                          padding: "0.75rem",
+                          borderRadius: "9999px",
+                          border: "1px solid var(--landing-border)",
+                          fontSize: "0.875rem",
+                          fontWeight: 500,
+                          color: "var(--landing-foreground)",
+                          textDecoration: "none",
+                        }}
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        {tr("landing.nav.profile")}
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={handleSignOut}
+                        style={{
+                          display: "block",
+                          textAlign: "center",
+                          width: "100%",
+                          padding: "0.75rem",
+                          borderRadius: "9999px",
+                          border: "1px solid var(--landing-border)",
+                          fontSize: "0.875rem",
+                          fontWeight: 500,
+                          color: "var(--landing-foreground)",
+                          background: "none",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {tr("auth.signOut")}
+                      </button>
+                    </>
                   )}
                 </li>
               </ul>
@@ -215,7 +346,6 @@ export function LandingNavbar() {
           )}
         </>
       ) : (
-        /* ── Desktop / Tablet bar (≥ 768px) — true CSS Grid 3-column ── */
         <div
           style={{
             display: "grid",
@@ -228,29 +358,17 @@ export function LandingNavbar() {
             gap: "1rem",
           }}
         >
-          {/* LEFT — Logo */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start" }}>
-            <Link
-              to="/"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                fontFamily: "inherit",
-                fontSize: "1.25rem",
-                fontWeight: 700,
-                letterSpacing: "-0.025em",
-                color: "var(--landing-foreground)",
-                textDecoration: "none",
-              }}
-            >
-              <img src={appLogo} alt="Yoca logo" width={28} height={28} style={{ display: "block" }} />
-              <span>YOCA</span>
-            </Link>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-start",
+            }}
+          >
+            <BrandLink />
           </div>
 
-          {/* CENTER — Nav links (always geometrically centered) */}
-          <nav aria-label="Primary">
+          <nav aria-label={tr("landing.nav.primary")}>
             <ul
               style={{
                 listStyle: "none",
@@ -262,24 +380,34 @@ export function LandingNavbar() {
               }}
             >
               {navLinks.map((item) => (
-                <li key={item.label} style={{ flexShrink: 0 }}>
+                <li key={item.labelKey} style={{ flexShrink: 0 }}>
                   {item.href.startsWith("#") ? (
                     <a
                       href={item.href}
                       style={linkStyle}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = "var(--landing-foreground)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--landing-muted)")}
+                      onMouseEnter={(event) =>
+                        (event.currentTarget.style.color =
+                          "var(--landing-foreground)")
+                      }
+                      onMouseLeave={(event) =>
+                        (event.currentTarget.style.color = "var(--landing-muted)")
+                      }
                     >
-                      {item.label}
+                      {navLabel(item.labelKey, tr)}
                     </a>
                   ) : (
                     <Link
                       to={item.href}
                       style={linkStyle}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = "var(--landing-foreground)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--landing-muted)")}
+                      onMouseEnter={(event) =>
+                        (event.currentTarget.style.color =
+                          "var(--landing-foreground)")
+                      }
+                      onMouseLeave={(event) =>
+                        (event.currentTarget.style.color = "var(--landing-muted)")
+                      }
                     >
-                      {item.label}
+                      {navLabel(item.labelKey, tr)}
                     </Link>
                   )}
                 </li>
@@ -287,58 +415,152 @@ export function LandingNavbar() {
             </ul>
           </nav>
 
-          {/* RIGHT — Auth actions */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.5rem" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: "0.5rem",
+            }}
+          >
             <ThemeToggleBtn theme={theme} toggleTheme={toggleTheme} />
             {!user ? (
               <>
-                <LogInLink onOpen={() => setIsSignInOpen(true)} />
+                <LogInLink
+                  label={tr("landing.nav.login")}
+                  onOpen={() => setIsSignInOpen(true)}
+                />
                 <button
                   type="button"
                   style={{ ...btnPrimaryBase, border: "none", cursor: "pointer" }}
-                  onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
-                  onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
+                  onMouseEnter={(event) => btnPrimaryEnter(event.currentTarget)}
+                  onMouseLeave={(event) => btnPrimaryLeave(event.currentTarget)}
                   onClick={() => setIsSignUpOpen(true)}
                 >
-                  Sign Up
+                  {tr("landing.nav.signUp")}
                 </button>
               </>
             ) : (
-              <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                <Link
-                  to="/profile"
-                  style={{ ...btnPrimaryBase, border: "none", cursor: "pointer", textDecoration: "none" }}
-                  onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
-                  onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
-                >
-                  Go to Profile
-                </Link>
+              <div
+                ref={accountRef}
+                style={{ position: "relative", display: "flex", alignItems: "center" }}
+              >
                 <button
-                  onClick={signOut}
-                  title="Log out"
+                  type="button"
+                  aria-label={tr("landing.nav.account")}
+                  aria-expanded={accountOpen}
+                  title={tr("landing.nav.account")}
+                  onClick={() => setAccountOpen((open) => !open)}
                   style={{
-                    background: "none",
-                    border: "none",
+                    background: accountOpen ? "var(--landing-surface)" : "none",
+                    border: "1px solid var(--landing-border)",
                     color: "var(--landing-muted)",
                     cursor: "pointer",
-                    padding: "8px",
-                    borderRadius: "8px",
+                    padding: "8px 10px",
+                    borderRadius: "9999px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    transition: "all 0.2s"
+                    gap: "0.35rem",
+                    transition: "all 0.2s",
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = "var(--landing-foreground)";
-                    e.currentTarget.style.backgroundColor = "var(--landing-surface)";
+                  onMouseEnter={(event) => {
+                    event.currentTarget.style.color =
+                      "var(--landing-foreground)";
+                    event.currentTarget.style.backgroundColor =
+                      "var(--landing-surface)";
                   }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = "var(--landing-muted)";
-                    e.currentTarget.style.backgroundColor = "transparent";
+                  onMouseLeave={(event) => {
+                    event.currentTarget.style.color = "var(--landing-muted)";
+                    event.currentTarget.style.backgroundColor = accountOpen
+                      ? "var(--landing-surface)"
+                      : "transparent";
                   }}
                 >
-                  <LogOut size={18} />
+                  <User size={18} />
+                  <ChevronDown
+                    size={14}
+                    style={{
+                      transform: accountOpen ? "rotate(180deg)" : "rotate(0deg)",
+                      transition: "transform 0.2s ease",
+                    }}
+                  />
                 </button>
+                {accountOpen && (
+                  <div
+                    role="menu"
+                    aria-label={tr("landing.nav.account")}
+                    style={{
+                      position: "absolute",
+                      right: 0,
+                      top: "calc(100% + 0.6rem)",
+                      width: "14rem",
+                      padding: "0.45rem",
+                      borderRadius: "1rem",
+                      border: "1px solid var(--landing-border)",
+                      background: "var(--landing-bg)",
+                      boxShadow: "0 20px 50px rgba(0,0,0,0.18)",
+                      zIndex: 80,
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "0.65rem 0.75rem",
+                        color: "var(--landing-muted)",
+                        fontSize: "0.8rem",
+                        borderBottom: "1px solid var(--landing-border)",
+                        marginBottom: "0.25rem",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {accountLabel}
+                    </div>
+                    <Link
+                      to="/profile"
+                      role="menuitem"
+                      onClick={() => setAccountOpen(false)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.6rem",
+                        padding: "0.7rem 0.75rem",
+                        color: "var(--landing-foreground)",
+                        textDecoration: "none",
+                        borderRadius: "0.75rem",
+                        fontSize: "0.875rem",
+                        fontWeight: 500,
+                      }}
+                    >
+                      <User size={16} />
+                      {tr("landing.nav.profile")}
+                    </Link>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleSignOut}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.6rem",
+                        padding: "0.7rem 0.75rem",
+                        color: "var(--landing-foreground)",
+                        background: "none",
+                        border: "none",
+                        borderRadius: "0.75rem",
+                        fontSize: "0.875rem",
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        textAlign: "left",
+                      }}
+                    >
+                      <LogOut size={16} />
+                      {tr("auth.signOut")}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -350,8 +572,35 @@ export function LandingNavbar() {
   );
 }
 
-/** Renders "Log In" only on wide viewports (≥ 900 px) via a hidden span trick */
-function LogInLink({ onOpen }: { onOpen: () => void }) {
+function BrandLink() {
+  return (
+    <Link
+      to="/"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "0.5rem",
+        fontFamily: "inherit",
+        fontSize: "1.25rem",
+        fontWeight: 700,
+        letterSpacing: "-0.025em",
+        color: "var(--landing-foreground)",
+        textDecoration: "none",
+      }}
+    >
+      <img
+        src={appLogo}
+        alt="Yoca logo"
+        width={28}
+        height={28}
+        style={{ display: "block" }}
+      />
+      <span>YOCA</span>
+    </Link>
+  );
+}
+
+function LogInLink({ label, onOpen }: { label: string; onOpen: () => void }) {
   const [show, setShow] = useState(true);
   useEffect(() => {
     const check = () => setShow(window.innerWidth >= 900);
@@ -376,39 +625,45 @@ function LogInLink({ onOpen }: { onOpen: () => void }) {
         border: "none",
         cursor: "pointer",
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.color = "var(--landing-foreground)")}
-      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--landing-muted)")}
+      onMouseEnter={(event) =>
+        (event.currentTarget.style.color = "var(--landing-foreground)")
+      }
+      onMouseLeave={(event) =>
+        (event.currentTarget.style.color = "var(--landing-muted)")
+      }
       onClick={onOpen}
     >
-      Log In
+      {label}
     </button>
   );
 }
 
-function ThemeToggleBtn({ theme, toggleTheme }: { theme: string; toggleTheme: () => void }) {
+function ThemeToggleBtn({
+  theme,
+  toggleTheme,
+}: {
+  theme: string;
+  toggleTheme: () => void;
+}) {
+  const { tr } = useLocalization();
+
   return (
     <button
+      type="button"
       onClick={toggleTheme}
-      title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-      style={{
-        background: "none",
-        border: "none",
-        color: "var(--landing-muted)",
-        cursor: "pointer",
-        padding: "8px",
-        borderRadius: "8px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        transition: "all 0.2s"
+      title={
+        theme === "dark"
+          ? tr("landing.nav.switchToLightMode")
+          : tr("landing.nav.switchToDarkMode")
+      }
+      style={quietIconButtonStyle}
+      onMouseEnter={(event) => {
+        event.currentTarget.style.color = "var(--landing-foreground)";
+        event.currentTarget.style.backgroundColor = "var(--landing-surface)";
       }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.color = "var(--landing-foreground)";
-        e.currentTarget.style.backgroundColor = "var(--landing-surface)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.color = "var(--landing-muted)";
-        e.currentTarget.style.backgroundColor = "transparent";
+      onMouseLeave={(event) => {
+        event.currentTarget.style.color = "var(--landing-muted)";
+        event.currentTarget.style.backgroundColor = "transparent";
       }}
     >
       {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}

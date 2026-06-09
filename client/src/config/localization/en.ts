@@ -188,6 +188,273 @@ export const translation = {
     googleAuthFailed: "Google authentication failed. Please try again.",
     googleAuthCancelled: "Google authentication was cancelled.",
   },
+  landing: {
+    nav: {
+      primary: "Primary navigation",
+      products: "Products",
+      useCases: "Use Cases",
+      docs: "Docs",
+      pricing: "Pricing",
+      login: "Log In",
+      signUp: "Sign Up",
+      profile: "Profile",
+      account: "Account",
+      toggleMenu: "Toggle menu",
+      switchToLightMode: "Switch to Light Mode",
+      switchToDarkMode: "Switch to Dark Mode",
+    },
+    hero: {
+      eyebrow: "AI-driven Solana analytics",
+      title: "Make onchain data work for you.",
+      subtitle:
+        "The all-in-one suite for Solana traders. Track token trends, visualize whale movements, and stay ahead of the market with real-time on-chain alerts.",
+      primaryCta: "Launch Market Radar",
+      secondaryCta: "View Live Wallets",
+    },
+    stats: {
+      uiLatency: "UI Latency",
+      dataStreaming: "Data Streaming",
+      walletLabels: "Wallet Labels",
+      transactionGraphs: "Transaction Graphs",
+    },
+    products: {
+      eyebrow: "Core Features",
+      title: "Everything you need to stay ahead of the market.",
+      learnMore: "Learn more",
+      items: {
+        marketExplorer: {
+          tag: "Explore",
+          title: "Market Explorer",
+          description:
+            "Real-time tracking of Solana's top-performing tokens and liquidity pools.",
+        },
+        portfolioIntelligence: {
+          tag: "Analyze",
+          title: "Portfolio Intelligence",
+          description:
+            "Deep-dive into any wallet's history and behavior with our AI-powered behavioral tagging.",
+        },
+        smartAlerts: {
+          tag: "Monitor",
+          title: "Smart Alerts",
+          description:
+            "Never miss a move. Set custom alerts for large swaps and whale activity delivered straight to your Discord.",
+        },
+      },
+    },
+    marketIntelligence: {
+      eyebrow: "Market Intelligence",
+      title: "See the market the way professionals do.",
+      marketStats: "Market Stats",
+      stats: {
+        marketCap: "Market Cap",
+        volume24h: "24h Volume",
+        circulatingSupply: "Circulating Supply",
+      },
+    },
+    customerStories: {
+      title: "Customer stories",
+      subtitle:
+        "Read how teams use Yoca to turn raw chain activity into decisions their whole org can trust.",
+      seeMore: "See more",
+      readStory: "Read story",
+      items: {
+        base: {
+          title: "How teams run onchain data transformations at scale with Yoca",
+        },
+        blockworks: {
+          title: "Powering institutional crypto research with unified metrics",
+        },
+        opLabs: {
+          title: "Ecosystem growth and transparency backed by live dashboards",
+        },
+        oneInch: {
+          title: "Making execution and liquidity data transparent and accessible",
+        },
+      },
+    },
+    testimonials: {
+      items: {
+        multicoin: {
+          text: "If it's not in your dashboards, it's not real. Yoca gave us one source of truth for wallet and token flows.",
+        },
+        blockworks: {
+          text: "The most practical onchain dataset we've plugged into research workflows: fast queries, fewer surprises.",
+        },
+        oneInch: {
+          text: "Without a clear view of chain activity, your product is blind. Yoca fixed that for our team in days.",
+        },
+      },
+    },
+    news: {
+      eyebrow: "Latest news",
+      title: "Hear the latest",
+      label: "News",
+      readPost: "Read post",
+      items: {
+        walletReports: {
+          title: "Ship wallet reports without maintaining brittle pipelines",
+          excerpt:
+            "Export snapshots your analysts can trust, with the same definitions as the live app and fewer spreadsheet forks.",
+        },
+        tempo: {
+          title: "Tempo is live: instant settlement metrics in Yoca",
+          excerpt:
+            "Track payments-first chain activity alongside Solana and EVM metrics from one navigation model.",
+        },
+        cardano: {
+          title: "Cardano joins the catalog",
+          excerpt:
+            "Research-grade staking and delegation signals now sit next to the wallets you already watch.",
+        },
+      },
+    },
+    finalCta: {
+      title: "Create off-the-chart growth",
+      subtitle:
+        "Join teams who use Yoca to see wallets, tokens, and markets in one coherent story.",
+      cta: "Get started",
+    },
+    footer: {
+      description:
+        "Onchain analytics for teams who ship with data, not guesswork.",
+      companyPrompt: "Looking to use Yoca for your company?",
+      contactSales: "Contact sales",
+      columns: {
+        products: { title: "Products" },
+        resources: { title: "Resources" },
+        company: { title: "Company" },
+        legal: { title: "Legal" },
+      },
+      links: {
+        dataHub: "Data Hub",
+        tokenExplorer: "Token Explorer",
+        datashare: "Datashare",
+        chains: "Chains",
+        pricing: "Pricing",
+        documentation: "Documentation",
+        caseStudies: "Case studies",
+        blog: "Blog",
+        support: "Support",
+        about: "About",
+        careers: "Careers",
+        press: "Press",
+        contact: "Contact",
+        termsOfService: "Terms of service",
+        privacyPolicy: "Privacy policy",
+        systemStatus: "System status",
+      },
+    },
+  },
+  pricing: {
+    title: "Pricing",
+    subtitle:
+      "Outfit your platform with real-time crypto data and insights from 200+ markets with just 1 integration.",
+    placeholder: "To be updated",
+    free: "FREE",
+    period: {
+      month: "/ month",
+    },
+    tiers: {
+      standard: { name: "STANDARD" },
+    },
+    cta: {
+      buyNow: "Buy Now",
+      tryForFree: "Try For Free",
+    },
+  },
+  payment: {
+    shared: {
+      cancel: "Cancel",
+      close: "Close",
+      maybeLater: "Maybe Later",
+    },
+    success: {
+      title: "Payment Successful!",
+      description:
+        "Your subscription to the {{$tierName}} plan is now active. Enjoy full access to all premium features.",
+      goToProfile: "Go to Profile",
+      receipt: "A receipt has been sent to your email",
+    },
+    authReminder: {
+      eyebrow: "Authentication Required",
+      title: "Sign in to Continue",
+      description:
+        "You need to be signed in before purchasing a plan. Create a free account or log in to get started.",
+    },
+    modal: {
+      eyebrow: "Secure Payment",
+      title: "Subscribe to {{tierName}}",
+      close: "Close payment modal",
+    },
+    checkout: {
+      plan: "Plan",
+      total: "Total",
+        processing: "Processing…",
+      subscribeNow: "Subscribe Now",
+      methods: {
+        card: "Cash",
+        bank: "Bank",
+        bankDescription: "US Bank Transfer",
+        wallet: "Wallet",
+      },
+    },
+    solana: {
+      connectTitle: "Connect Your Solana Wallet",
+      connectDescription: "Select a wallet to pay with SOL on {{networkName}}",
+      noWallets: "No Solana wallets detected.",
+      installPrefix: "Install",
+      installSuffix: "to continue.",
+      connecting: "Connecting...",
+      installed: "Installed",
+      notDetected: "Not detected",
+      transactionSubmitted: "Transaction Submitted",
+      verifyingBackend:
+        "Your transaction has been submitted. Verifying with backend...",
+      verifyingTransaction: "Verifying transaction...",
+      walletNotConnected: "Wallet not connected",
+      networkMismatch:
+        "Network mismatch: your wallet is connected to the wrong network. This app uses {{networkName}}. Please change your wallet network in Settings.",
+      transactionFailed: "Transaction failed. Please try again.",
+      disconnect: "Disconnect",
+      amount: "Amount",
+      network: "Network",
+      usdEquivalent: "USD Equiv.",
+      transferNotice:
+        "You will be prompted to sign a transaction to send {{amount}} from your wallet to our merchant address on Solana {{networkName}}.",
+      testnetWarning:
+        "Phantom must be on Testnet. If the popup shows reverted during simulation, open Phantom Settings > Developer Settings > Testnet Mode, then retry.",
+      sending: "Sending...",
+      verifying: "Verifying...",
+      confirmPayment: "Confirm Payment with SOL",
+      tryAgain: "Try Again",
+    },
+    transactionId: {
+      label: "Transaction ID",
+      revealHint: "Click the eye icon to reveal",
+      visibleAria: "Transaction ID: {{transactionId}}",
+      hiddenAria: "Transaction ID hidden",
+      hideAria: "Hide transaction ID",
+      showAria: "Show transaction ID",
+      hide: "Hide",
+      reveal: "Reveal",
+      copyAria: "Copy full transaction ID to clipboard",
+      copyTitle: "Copy full ID",
+      copied: "Copied!",
+    },
+    errors: {
+      loadStripe: "Failed to load Stripe. Please try again.",
+      createIntent: "Failed to create payment intent. Please try again.",
+      setupFailed: "Payment setup failed. Please try again.",
+      cardSetupFailed: "Card setup failed. Please try again.",
+      cardSetupIncomplete: "Card setup did not complete. Please try again.",
+      missingPaymentMethod:
+        "Could not retrieve payment method. Please try again.",
+      activateSubscription:
+        "Subscription activation failed. Please try again.",
+      network: "A network error occurred. Please try again.",
+    },
+  },
   // Wallet
   wallet: {
     transactionCount: "Transaction Count",

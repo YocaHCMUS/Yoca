@@ -1,24 +1,40 @@
+import { useLocalization, type TranslateFunction } from "@/contexts/LocalizationContext";
 import { LANDING_ACCENT, SECTION_PADDING_Y, cardSurface, grid12Shell } from "./tokens";
 
 const quotes = [
   {
-    text: "If it\u2019s not in your dashboards, it\u2019s not real \u2014 Yoca gave us one source of truth for wallet and token flows.",
+    key: "multicoin",
     name: "Kyle Samani",
     role: "Multicoin Capital",
   },
   {
-    text: "The most practical onchain dataset we\u2019ve plugged into research workflows \u2014 fast queries, fewer surprises.",
+    key: "blockworks",
     name: "Dan Smith",
     role: "Blockworks",
   },
   {
-    text: "Without a clear view of chain activity, your product is blind. Yoca fixed that for our team in days.",
+    key: "oneInch",
     name: "Anton Bukov",
     role: "1inch",
   },
 ] as const;
 
+type QuoteKey = (typeof quotes)[number]["key"];
+
+function quoteText(tr: TranslateFunction, key: QuoteKey) {
+  switch (key) {
+    case "multicoin":
+      return tr("landing.testimonials.items.multicoin.text");
+    case "blockworks":
+      return tr("landing.testimonials.items.blockworks.text");
+    case "oneInch":
+      return tr("landing.testimonials.items.oneInch.text");
+  }
+}
+
 export function LandingTestimonials() {
+  const { tr } = useLocalization();
+
   return (
     <section
       style={{ paddingTop: SECTION_PADDING_Y, paddingBottom: SECTION_PADDING_Y }}
@@ -48,7 +64,7 @@ export function LandingTestimonials() {
               className="mt-1 flex-1 text-lg text-(--landing-muted)"
               style={{ lineHeight: 1.7 }}
             >
-              {q.text}
+              {quoteText(tr, q.key)}
             </p>
             <footer
               className="mt-8 pt-6"

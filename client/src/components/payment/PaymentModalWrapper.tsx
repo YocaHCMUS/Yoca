@@ -3,6 +3,7 @@ import { Elements } from "@stripe/react-stripe-js";
 import { useEffect, useState } from "react";
 import { CheckoutForm } from "./CheckoutForm";
 import client from "@/api/main";
+import { useLocalization } from "@/contexts/LocalizationContext";
 
 type Tier = {
   name: string;
@@ -40,6 +41,7 @@ export function PaymentModalWrapper({
   onClose,
   onSuccess,
 }: PaymentModalWrapperProps) {
+  const { tr } = useLocalization();
   const [intentState, setIntentState] = useState<IntentState>({ status: "idle" });
   const [activeMethod, setActiveMethod] = useState<PaymentMethod>("card");
 
@@ -71,7 +73,7 @@ export function PaymentModalWrapper({
       console.error("[PaymentModalWrapper]", err);
       setIntentState({
         status: "error",
-        message: "Failed to load Stripe. Please try again.",
+        message: tr("payment.errors.loadStripe"),
       });
     }
   }, [open, tier]);
@@ -98,13 +100,13 @@ export function PaymentModalWrapper({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#64748b] mb-1">
-                  Secure Payment
+                  {tr("payment.modal.eyebrow")}
                 </p>
                 <h2
                   id="payment-modal-title"
                   className="text-white font-bold text-xl tracking-tight"
                 >
-                  Subscribe to {tier.name}
+                  {tr("payment.modal.title", { tierName: tier.name })}
                 </h2>
               </div>
               <button
@@ -112,7 +114,7 @@ export function PaymentModalWrapper({
                 type="button"
                 onClick={onClose}
                 className="text-[#64748b] hover:text-white transition-colors p-2 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10"
-                aria-label="Close payment modal"
+                aria-label={tr("payment.modal.close")}
               >
                 <svg
                   className="w-5 h-5"
@@ -156,7 +158,7 @@ export function PaymentModalWrapper({
                   onClick={onClose}
                   className="text-sm text-[#78a9ff] hover:underline"
                 >
-                  Close
+                  {tr("payment.shared.close")}
                 </button>
               </div>
             )}

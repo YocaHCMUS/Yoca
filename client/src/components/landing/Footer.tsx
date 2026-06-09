@@ -1,46 +1,102 @@
 import { Link } from "react-router";
+import { useLocalization, type TranslateFunction } from "@/contexts/LocalizationContext";
 import { LANDING_ACCENT, SECTION_PADDING_Y, grid12Shell } from "./tokens";
 
 const columns = [
   {
-    title: "Products",
+    titleKey: "products",
     links: [
-      { label: "Data Hub", to: "/market" },
-      { label: "Token Explorer", to: "/tokens" },
-      { label: "Datashare", to: "/market" },
-      { label: "Chains", to: "/tokens" },
-      { label: "Pricing", to: "#cta" },
+      { labelKey: "dataHub", to: "/market" },
+      { labelKey: "tokenExplorer", to: "/tokens" },
+      { labelKey: "datashare", to: "/market" },
+      { labelKey: "chains", to: "/tokens" },
+      { labelKey: "pricing", to: "#cta" },
     ],
   },
   {
-    title: "Resources",
+    titleKey: "resources",
     links: [
-      { label: "Documentation", to: "/market" },
-      { label: "Case studies", to: "#stories" },
-      { label: "Blog", to: "/market" },
-      { label: "Support", to: "/auth" },
+      { labelKey: "documentation", to: "/market" },
+      { labelKey: "caseStudies", to: "#stories" },
+      { labelKey: "blog", to: "/market" },
+      { labelKey: "support", to: "/auth" },
     ],
   },
   {
-    title: "Company",
+    titleKey: "company",
     links: [
-      { label: "About", to: "/" },
-      { label: "Careers", to: "/" },
-      { label: "Press", to: "/" },
-      { label: "Contact", to: "/auth" },
+      { labelKey: "about", to: "/" },
+      { labelKey: "careers", to: "/" },
+      { labelKey: "press", to: "/" },
+      { labelKey: "contact", to: "/auth" },
     ],
   },
   {
-    title: "Legal",
+    titleKey: "legal",
     links: [
-      { label: "Terms of service", to: "/" },
-      { label: "Privacy policy", to: "/" },
-      { label: "System status", to: "/" },
+      { labelKey: "termsOfService", to: "/" },
+      { labelKey: "privacyPolicy", to: "/" },
+      { labelKey: "systemStatus", to: "/" },
     ],
   },
 ] as const;
 
+type FooterColumnKey = (typeof columns)[number]["titleKey"];
+type FooterLinkKey = (typeof columns)[number]["links"][number]["labelKey"];
+
+function footerColumnTitle(tr: TranslateFunction, key: FooterColumnKey) {
+  switch (key) {
+    case "products":
+      return tr("landing.footer.columns.products.title");
+    case "resources":
+      return tr("landing.footer.columns.resources.title");
+    case "company":
+      return tr("landing.footer.columns.company.title");
+    case "legal":
+      return tr("landing.footer.columns.legal.title");
+  }
+}
+
+function footerLinkLabel(tr: TranslateFunction, key: FooterLinkKey) {
+  switch (key) {
+    case "dataHub":
+      return tr("landing.footer.links.dataHub");
+    case "tokenExplorer":
+      return tr("landing.footer.links.tokenExplorer");
+    case "datashare":
+      return tr("landing.footer.links.datashare");
+    case "chains":
+      return tr("landing.footer.links.chains");
+    case "pricing":
+      return tr("landing.footer.links.pricing");
+    case "documentation":
+      return tr("landing.footer.links.documentation");
+    case "caseStudies":
+      return tr("landing.footer.links.caseStudies");
+    case "blog":
+      return tr("landing.footer.links.blog");
+    case "support":
+      return tr("landing.footer.links.support");
+    case "about":
+      return tr("landing.footer.links.about");
+    case "careers":
+      return tr("landing.footer.links.careers");
+    case "press":
+      return tr("landing.footer.links.press");
+    case "contact":
+      return tr("landing.footer.links.contact");
+    case "termsOfService":
+      return tr("landing.footer.links.termsOfService");
+    case "privacyPolicy":
+      return tr("landing.footer.links.privacyPolicy");
+    case "systemStatus":
+      return tr("landing.footer.links.systemStatus");
+  }
+}
+
 export function LandingFooter() {
+  const { tr } = useLocalization();
+
   return (
     <footer
       style={{
@@ -63,7 +119,7 @@ export function LandingFooter() {
             className="mt-4 max-w-xs text-sm text-(--landing-muted)"
             style={{ lineHeight: 1.6 }}
           >
-            Onchain analytics for teams who ship with data, not guesswork.
+            {tr("landing.footer.description")}
           </p>
           <p className="mt-8 text-sm text-(--landing-muted)">
             &copy; {new Date().getFullYear()} Yoca
@@ -72,13 +128,13 @@ export function LandingFooter() {
 
         <div className="landing-footer-links">
           {columns.map((col) => (
-            <div key={col.title}>
+            <div key={col.titleKey}>
               <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-(--landing-muted)">
-                {col.title}
+                {footerColumnTitle(tr, col.titleKey)}
               </h3>
               <ul className="mt-5 flex flex-col gap-3">
                 {col.links.map((l) => (
-                  <li key={l.label}>
+                  <li key={l.labelKey}>
                     {l.to.startsWith("#") ? (
                       <a
                         href={l.to}
@@ -91,7 +147,7 @@ export function LandingFooter() {
                           (e.currentTarget.style.color = "var(--landing-foreground)")
                         }
                       >
-                        {l.label}
+                        {footerLinkLabel(tr, l.labelKey)}
                       </a>
                     ) : (
                       <Link
@@ -105,7 +161,7 @@ export function LandingFooter() {
                           (e.currentTarget.style.color = "var(--landing-foreground)")
                         }
                       >
-                        {l.label}
+                        {footerLinkLabel(tr, l.labelKey)}
                       </Link>
                     )}
                   </li>
@@ -123,7 +179,7 @@ export function LandingFooter() {
           }}
         >
           <p className="text-sm text-(--landing-muted)">
-            Looking to use Yoca for your company?
+            {tr("landing.footer.companyPrompt")}
           </p>
           <Link
             to="/auth"
@@ -132,7 +188,7 @@ export function LandingFooter() {
             onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
             onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
           >
-            Contact sales
+            {tr("landing.footer.contactSales")}
           </Link>
         </div>
       </div>

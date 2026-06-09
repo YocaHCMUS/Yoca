@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { useLocalization, type TranslateFunction } from "@/contexts/LocalizationContext";
 import { LANDING_ACCENT, SECTION_PADDING_Y, grid12Shell } from "./tokens";
 
 type TimeRange = "24H" | "7D" | "1M" | "1Y";
@@ -60,10 +61,23 @@ const RANGE_DATA: Record<TimeRange, RangeData> = {
 const CURRENT_PRICE = "$142.50";
 
 const MARKET_STATS = [
-  { label: "Market Cap", value: "$67.80B" },
-  { label: "24h Volume", value: "$2.14B" },
-  { label: "Circulating Supply", value: "475.2M SOL" },
-];
+  { labelKey: "marketCap", value: "$67.80B" },
+  { labelKey: "volume24h", value: "$2.14B" },
+  { labelKey: "circulatingSupply", value: "475.2M SOL" },
+] as const;
+
+type MarketStatLabelKey = (typeof MARKET_STATS)[number]["labelKey"];
+
+function marketStatLabel(tr: TranslateFunction, key: MarketStatLabelKey) {
+  switch (key) {
+    case "marketCap":
+      return tr("landing.marketIntelligence.stats.marketCap");
+    case "volume24h":
+      return tr("landing.marketIntelligence.stats.volume24h");
+    case "circulatingSupply":
+      return tr("landing.marketIntelligence.stats.circulatingSupply");
+  }
+}
 
 /* Carbon white-theme palette for dashboard-style consistency */
 const carbon = {
@@ -110,6 +124,7 @@ function buildPaths(prices: number[]) {
 }
 
 export function MarketIntelligenceSection() {
+  const { tr } = useLocalization();
   const [activeRange, setActiveRange] = useState<TimeRange>("7D");
   const data = RANGE_DATA[activeRange];
   const paths = useMemo(() => buildPaths(data.prices), [data.prices]);
@@ -147,13 +162,13 @@ export function MarketIntelligenceSection() {
             className="text-sm font-semibold uppercase tracking-[0.22em]"
             style={{ color: LANDING_ACCENT }}
           >
-            Market Intelligence
+            {tr("landing.marketIntelligence.eyebrow")}
           </p>
           <h2
             className="mx-auto mt-4 max-w-3xl text-3xl font-bold tracking-tight text-(--landing-foreground) sm:text-4xl"
             style={{ lineHeight: 1.2 }}
           >
-            See the market the way professionals do.
+            {tr("landing.marketIntelligence.title")}
           </h2>
         </div>
 
@@ -356,11 +371,11 @@ export function MarketIntelligenceSection() {
                   marginBottom: 20,
                 }}
               >
-                Market Stats
+                {tr("landing.marketIntelligence.marketStats")}
               </p>
               {MARKET_STATS.map((stat, i) => (
                 <div
-                  key={stat.label}
+                  key={stat.labelKey}
                   style={{
                     paddingTop: i > 0 ? 16 : 0,
                     paddingBottom: 16,
@@ -377,7 +392,7 @@ export function MarketIntelligenceSection() {
                       marginBottom: 4,
                     }}
                   >
-                    {stat.label}
+                    {marketStatLabel(tr, stat.labelKey)}
                   </p>
                   <p
                     style={{

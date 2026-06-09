@@ -1,7 +1,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render as rtlRender, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CheckoutForm } from "@/components/payment/CheckoutForm";
+import { LocalizationProvider } from "@/contexts/LocalizationContext";
 
 // ---------------------------------------------------------------------------
 // Module Mocks
@@ -75,6 +76,10 @@ const defaultProps = {
   onSuccess: vi.fn(),
   onCancel: vi.fn(),
 };
+
+function render(ui: Parameters<typeof rtlRender>[0]) {
+  return rtlRender(ui, { wrapper: LocalizationProvider });
+}
 
 // ---------------------------------------------------------------------------
 // Test Suite
@@ -209,12 +214,9 @@ describe("CheckoutForm Component", () => {
   // ─────────────────────────────────────────────────────────────────────────
   describe("Stripe Card — Happy Path", () => {
     it("should show 'Processing…' label while the form is being submitted", async () => {
-      // Arrange — add a delay to catch the in-progress state
+      // Arrange — keep the request pending so only the in-progress state is asserted
       vi.mocked(client.api.payment["setup-intent"].$post).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({
-          ok: true,
-          json: async () => ({ clientSecret: "seti_secret", setupIntentId: "seti_1", publishableKey: "pk_test", tier: "Plus" }),
-        } as any), 200))
+        () => new Promise(() => { /* never resolves */ })
       );
 
       render(<CheckoutForm {...defaultProps} />);

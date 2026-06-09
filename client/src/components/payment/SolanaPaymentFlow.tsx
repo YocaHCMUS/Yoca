@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { verifySolanaPayment } from "@/services/payment/solanaPaymentApi";
 import { PrivacyTransactionId } from "./PrivacyTransactionId";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { 
   getValidatedSolanaNetwork, 
   getExpectedGenesisHash, 
@@ -105,6 +106,7 @@ export function SolanaPaymentFlow({
   onProcessingChange,
   onCancel,
 }: SolanaPaymentFlowProps) {
+  const { tr } = useLocalization();
   const { connection } = useConnection();
   const { publicKey, connected, wallet, wallets, select, connect, disconnect, sendTransaction } = useWallet();
   const [txSignature, setTxSignature] = useState<string | null>(null);
@@ -169,8 +171,12 @@ export function SolanaPaymentFlow({
           <div className="flex items-center gap-3 mb-2">
             <span className="text-2xl">SOL</span>
             <div>
-              <p className="text-white font-semibold text-sm">Connect Your Solana Wallet</p>
-              <p className="text-[#64748b] text-xs">Select a wallet to pay with SOL on {networkName}</p>
+              <p className="text-white font-semibold text-sm">
+                {tr("payment.solana.connectTitle")}
+              </p>
+              <p className="text-[#64748b] text-xs">
+                {tr("payment.solana.connectDescription", { networkName })}
+              </p>
             </div>
           </div>
         </div>
@@ -179,9 +185,11 @@ export function SolanaPaymentFlow({
         <div className="flex flex-col gap-2">
           {wallets.length === 0 ? (
             <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
-              <p className="text-[#64748b] text-sm">No Solana wallets detected.</p>
+              <p className="text-[#64748b] text-sm">
+                {tr("payment.solana.noWallets")}
+              </p>
               <p className="text-[#64748b] text-xs mt-1">
-                Install{" "}
+                {tr("payment.solana.installPrefix")}{" "}
                 <a
                   href="https://phantom.app"
                   target="_blank"
@@ -199,7 +207,7 @@ export function SolanaPaymentFlow({
                 >
                   Solflare
                 </a>{" "}
-                to continue.
+                {tr("payment.solana.installSuffix")}
               </p>
             </div>
           ) : (
@@ -233,7 +241,11 @@ export function SolanaPaymentFlow({
                       {w.adapter.name}
                     </p>
                     <p className="text-[#64748b] text-xs capitalize">
-                      {isThisWalletConnecting ? "Connecting..." : (w.readyState === "Installed" ? "Installed" : "Not detected")}
+                      {isThisWalletConnecting
+                        ? tr("payment.solana.connecting")
+                        : w.readyState === "Installed"
+                          ? tr("payment.solana.installed")
+                          : tr("payment.solana.notDetected")}
                     </p>
                   </div>
 
@@ -264,7 +276,7 @@ export function SolanaPaymentFlow({
           onClick={onCancel}
           className="w-full !py-3 rounded-full text-sm font-medium border border-white/10 text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all duration-200 mt-1"
         >
-          Cancel
+          {tr("payment.shared.cancel")}
         </button>
       </div>
     );
@@ -277,16 +289,20 @@ export function SolanaPaymentFlow({
     return (
       <div className="flex flex-col gap-4">
         <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30">
-          <p className="font-semibold text-green-400 mb-2">Transaction Submitted</p>
+          <p className="font-semibold text-green-400 mb-2">
+            {tr("payment.solana.transactionSubmitted")}
+          </p>
           <p className="text-xs text-green-300 mb-3">
-            Your transaction has been submitted. Verifying with backend...
+            {tr("payment.solana.verifyingBackend")}
           </p>
           <div className="flex items-center gap-2">
             <svg className="w-4 h-4 animate-spin text-green-400" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
-            <span className="text-xs text-[#64748b]">Verifying transaction...</span>
+            <span className="text-xs text-[#64748b]">
+              {tr("payment.solana.verifyingTransaction")}
+            </span>
           </div>
         </div>
         {/* Privacy-masked transaction ID with toggle & copy */}
@@ -301,7 +317,7 @@ export function SolanaPaymentFlow({
 
   async function handleSendTransaction() {
     if (!publicKey) {
-      onError("Wallet not connected");
+      onError(tr("payment.solana.walletNotConnected"));
       return;
     }
 
@@ -347,8 +363,9 @@ export function SolanaPaymentFlow({
       const genesisHash = await connection.getGenesisHash();
       if (genesisHash !== expectedGenesis) {
         throw new Error(
-          `Network mismatch: your wallet is connected to the wrong network. ` +
-          `This app uses ${validatedNetworkName}. Please change your wallet network in Settings.`
+          tr("payment.solana.networkMismatch", {
+            networkName: validatedNetworkName,
+          }),
         );
       }
 
@@ -512,7 +529,7 @@ export function SolanaPaymentFlow({
       const logError = simLogs?.find(
         (l) => l.includes("Error") || l.includes("failed") || l.includes("insufficient")
       );
-      onError(logError ?? err?.message ?? "Transaction failed. Please try again.");
+      onError(logError ?? err?.message ?? tr("payment.solana.transactionFailed"));
       setTxSignature(null);
       setVerifyingSignature(null);
       // Always re-enable the button on any error path
@@ -560,7 +577,7 @@ export function SolanaPaymentFlow({
           onClick={() => disconnect()}
           className="text-xs text-[#64748b] hover:text-red-400 transition-colors whitespace-nowrap pl-2 flex-shrink-0"
         >
-          Disconnect
+          {tr("payment.solana.disconnect")}
         </button>
       </div>
 
@@ -568,19 +585,19 @@ export function SolanaPaymentFlow({
       <div className="p-4 rounded-xl bg-white/5 border border-white/10">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b] mb-1">Plan</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b] mb-1">{tr("payment.checkout.plan")}</p>
             <p className="text-white font-bold">{tierName}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b] mb-1">Amount</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b] mb-1">{tr("payment.solana.amount")}</p>
             <p className="text-[#14F195] font-extrabold">{solAmount} SOL</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b] mb-1">Network</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b] mb-1">{tr("payment.solana.network")}</p>
             <p className="text-white font-bold">{networkName}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b] mb-1">USD Equiv.</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b] mb-1">{tr("payment.solana.usdEquivalent")}</p>
             <p className="text-[#94a3b8] font-semibold">{tierPrice}</p>
           </div>
         </div>
@@ -589,9 +606,10 @@ export function SolanaPaymentFlow({
       {/* -- Info Box -- */}
       <div className="p-3 rounded-xl bg-[#14F195]/5 border border-[#14F195]/20 text-sm">
         <p className="text-xs text-[#64748b]">
-          You will be prompted to sign a transaction to send{" "}
-          <strong className="text-white">{solAmount} SOL</strong> from your wallet to our
-          merchant address on <strong className="text-white">Solana {networkName}</strong>.
+          {tr("payment.solana.transferNotice", {
+            amount: `${solAmount} SOL`,
+            networkName,
+          })}
         </p>
       </div>
 
@@ -602,10 +620,7 @@ export function SolanaPaymentFlow({
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
           </svg>
           <span>
-            <strong className="text-amber-200">Phantom must be on Testnet.</strong>{" "}
-            If the popup shows "reverted during simulation", open Phantom {"->"} {" "}
-            <strong className="text-amber-200">Settings {"->"} Developer Settings {"->"} Testnet Mode</strong>{" "}
-            then retry.
+            {tr("payment.solana.testnetWarning")}
           </span>
         </div>
       )}
@@ -638,7 +653,7 @@ export function SolanaPaymentFlow({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              <span>Sending...</span>
+              <span>{tr("payment.solana.sending")}</span>
             </>
           ) : verifyingSignature ? (
             <>
@@ -646,10 +661,10 @@ export function SolanaPaymentFlow({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              <span>Verifying...</span>
+              <span>{tr("payment.solana.verifying")}</span>
             </>
           ) : (
-            <span>Confirm Payment with SOL</span>
+            <span>{tr("payment.solana.confirmPayment")}</span>
           )}
         </button>
 
@@ -660,7 +675,9 @@ export function SolanaPaymentFlow({
           disabled={isProcessing && !verifyingSignature}
           className="flex-1 !py-4 rounded-full text-sm font-medium border border-white/10 text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all duration-200 disabled:opacity-50"
         >
-          {verifyingSignature ? "Try Again" : "Cancel"}
+          {verifyingSignature
+            ? tr("payment.solana.tryAgain")
+            : tr("payment.shared.cancel")}
         </button>
       </div>
     </div>
