@@ -406,7 +406,7 @@ describe("SolanaPaymentFlow Component", () => {
       fireEvent.click(screen.getByRole("button", { name: /confirm payment with sol/i }));
 
       await waitFor(() => {
-        expect(mockGetLatestBlockhash).toHaveBeenCalledWith("finalized");
+        expect(mockGetLatestBlockhash).toHaveBeenCalledWith("confirmed");
         expect(sendTransactionMock).toHaveBeenCalledTimes(1);
         expect(mockGetLatestBlockhash.mock.invocationCallOrder[0]).toBeLessThan(
           sendTransactionMock.mock.invocationCallOrder[0]
@@ -414,7 +414,7 @@ describe("SolanaPaymentFlow Component", () => {
       });
     });
 
-    it("should simulate the transaction with sigVerify false and replaceRecentBlockhash true", async () => {
+    it("should simulate the transaction with sigVerify false (mirrors Phantom's simulation)", async () => {
       vi.mocked(verifySolanaPayment).mockResolvedValue({
         success: true,
         subscriptionId: "sub-123",
@@ -431,7 +431,6 @@ describe("SolanaPaymentFlow Component", () => {
           expect.any(Object),
           {
             sigVerify: false,
-            replaceRecentBlockhash: true,
           }
         );
       });
@@ -489,8 +488,7 @@ describe("SolanaPaymentFlow Component", () => {
           expect.anything(),
           expect.anything(),
           {
-            skipPreflight: false,
-            preflightCommitment: "confirmed",
+            skipPreflight: true,
             maxRetries: 3,
           }
         );
@@ -520,14 +518,13 @@ describe("SolanaPaymentFlow Component", () => {
       fireEvent.click(screen.getByRole("button", { name: /confirm payment with sol/i }));
 
       await waitFor(() => {
-        expect(mockGetLatestBlockhash).toHaveBeenCalledWith("finalized");
+        expect(mockGetLatestBlockhash).toHaveBeenCalledWith("confirmed");
         expect(mockVersionedTransactionConstructor).toHaveBeenCalled();
         expect(sendTransactionMock).toHaveBeenCalledWith(
           expect.anything(),
           expect.anything(),
           {
-            skipPreflight: false,
-            preflightCommitment: "confirmed",
+            skipPreflight: true,
             maxRetries: 3,
           }
         );

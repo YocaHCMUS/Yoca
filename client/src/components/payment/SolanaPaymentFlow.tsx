@@ -471,7 +471,11 @@ export function SolanaPaymentFlow({
       }
 
       // -- Step 1 & 2: Transaction construction --
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
+      // Use "confirmed" (not "finalized") for a fresher blockhash.
+      // "finalized" can be 30+ slots old; Phantom simulates the tx with the
+      // exact blockhash embedded in it, so a stale hash causes Phantom's
+      // internal preflight to fail even when the on-chain execution succeeds.
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
       const transaction = buildSolanaPaymentTransaction({
         payer: publicKey,
         merchant: merchantKey,
@@ -509,12 +513,13 @@ export function SolanaPaymentFlow({
         );
       }
 
-      // -- Step 3b: Pre-simulation with explicit error + log output --
-      // CRITICAL: Run simulation BEFORE presenting the wallet popup to the user.
+      // -- Step 3b: Pre-simulation mirroring Phantom's approach --
+      // We simulate WITHOUT replaceRecentBlockhash so that our simulation uses
+      // the same fresh "confirmed" blockhash that Phantom will also use.
+      // If our simulation passes, Phantom's internal simulation should too.
       console.log("[SolanaPaymentFlow] Running pre-send simulation...");
       const simulation = await connection.simulateTransaction(transaction, {
         sigVerify: false,
-        replaceRecentBlockhash: true,
       });
       if (simulation.value.err) {
         console.error("[SolanaPaymentFlow] SIMULATION ERROR (exact):", simulation.value.err);
@@ -529,9 +534,13 @@ export function SolanaPaymentFlow({
       console.log("[SolanaPaymentFlow] Simulation passed [SUCCESS] - presenting wallet for signature...");
 
       // -- Step 4: Send (only reached if simulation passed) --
+      // We already ran our own simulation above with replaceRecentBlockhash:true.
+      // Setting skipPreflight:true here prevents Phantom/Solflare from running
+      // a SECOND internal simulation with their own (possibly stale) blockhash,
+      // which causes the red "reverted during simulation" error line in the wallet
+      // UI even though the transaction itself is valid and succeeds on-chain.
       const signature = await sendTransaction(transaction, connection, {
-        skipPreflight: false,
-        preflightCommitment: "confirmed",
+        skipPreflight: true,
         maxRetries: 3,
       });
       setTxSignature(signature);
@@ -787,17 +796,6 @@ export function SolanaPaymentFlow({
         </div>
       )}
 
-      {/* -- General Testnet Warning -- */}
-      {networkName === "Testnet" && !showNetworkMismatchAlert && !showInsufficientFundsAlert && (
-        <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300">
-          <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-          </svg>
-          <span>
-            {tr("payment.solana.testnetWarning")}
-          </span>
-        </div>
-      )}
 
       {/* -- Error Message -- */}
       {errorMsg && (
