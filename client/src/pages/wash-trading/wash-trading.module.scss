@@ -358,17 +358,27 @@
 }
 
 .graphContainer {
-  min-height: 318px;
+  position: relative;
+  min-height: 380px;
   border-radius: 12px;
   border: 1px solid var(--border-light);
   background: var(--graph-bg);
   padding: 10px 12px 12px;
 }
 
-.graphSvg {
+.graphEcharts {
   width: 100%;
-  height: 260px;
+  height: 330px;
+  min-height: 330px;
   display: block;
+}
+
+.graphFooter {
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.45;
 }
 
 .graphLegend {
@@ -615,4 +625,115 @@
   color: var(--text-secondary);
   text-align: center;
   font-size: 13px;
+}
+
+.walletRow {
+  width: 100%;
+  border: 1px solid var(--border-light);
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.walletRowSelected {
+  border-color: rgba(133, 183, 235, 0.7);
+  box-shadow: 0 0 0 2px rgba(133, 183, 235, 0.12);
+}
+
+.walletInsight,
+.walletInsightEmpty {
+  border: 1px solid var(--border-light);
+  background: var(--hover-bg);
+  border-radius: 12px;
+  padding: 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.walletInsightHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.walletInsightHeader div,
+.walletInsightGrid div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.walletInsightHeader span,
+.walletInsightGrid span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.walletInsightHeader strong,
+.walletInsightGrid strong {
+  color: var(--text-title);
+}
+
+.walletInsightGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.walletInsightNote {
+  margin-bottom: 0;
+  color: var(--text-secondary);
+}
+
+
+.graphStats {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  z-index: 2;
+
+  span {
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: var(--bg-btn-sec);
+    border: 1px solid var(--border-light);
+    color: var(--text-secondary);
+    font-size: 11px;
+  }
+}
+
+.sourceNotice {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  border: 1px solid var(--border-light);
+
+  strong {
+    color: var(--text-primary);
+  }
+
+  span {
+    color: var(--text-secondary);
+  }
+}
+
+.sourceLive {
+  background: rgba(99, 153, 34, 0.12);
+  border-color: rgba(99, 153, 34, 0.35);
+}
+
+.sourceWarning {
+  background: rgba(239, 159, 39, 0.12);
+  border-color: rgba(239, 159, 39, 0.35);
 }

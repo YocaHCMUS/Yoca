@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import * as echarts from "echarts";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { PageWrapper } from "@/components/wrapper/PageWrapper";
 import { useUserTheme } from "@/contexts/ThemeContext";
@@ -7,6 +8,7 @@ import styles from "./wash-trading.module.scss";
 const API_DOMAIN: string = import.meta.env.VITE_CLIENT_API_DOMAIN || "";
 
 type Timeframe = "24h" | "7d" | "30d";
+type GnnAlgorithm = "GCN" | "GAT" | "GraphSAGE";
 type RiskLevel = "High" | "Medium" | "Low";
 type Severity = "high" | "medium" | "info" | "success";
 
@@ -28,6 +30,7 @@ interface GraphNode {
   id: string;
   type: "wash" | "bridge" | "normal";
   label: string;
+  score?: number;
 }
 
 interface GraphEdge {
@@ -41,6 +44,9 @@ interface WashTradingResult {
   mint: string;
   symbol: string;
   analyzedAt: string;
+  dataSource?: "helius-rpc-token-accounts" | "helius-enhanced-api" | "demo-fallback";
+  dataSourceReason?: string;
+  algorithm?: GnnAlgorithm;
   summary: {
     totalTransactions: number;
     uniqueWallets: number;
@@ -168,99 +174,294 @@ const FeatureBar: React.FC<{ label: string; value: number }> = ({ label, value }
 };
 
 const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[] }> = ({ nodes, edges }) => {
-  const visibleNodes = nodes.length > 0
-    ? nodes.slice(0, 12)
-    : [
-        { id: "empty-1", type: "normal" as const, label: "No data" },
-        { id: "empty-2", type: "normal" as const, label: "Run AI" },
-      ];
+  const chartRef = useRef<HTMLDivElement | null>(null);
+  const chartInstanceRef = useRef<echarts.ECharts | null>(null);
 
-  const layout = useMemo(() => {
-    const centerX = 280;
-    const centerY = 130;
-    const radiusX = 190;
-    const radiusY = 82;
-    return visibleNodes.map((node, index) => {
-      const angle = (Math.PI * 2 * index) / visibleNodes.length - Math.PI / 2;
+  const visibleNodes = useMemo(() => {
+    const sourceNodes = nodes.length > 0
+      ? nodes
+      : [
+          { id: "empty-1", type: "normal" as const, label: "No data" },
+          { id: "empty-2", type: "normal" as const, label: "Run AI" },
+        ];
+
+    return sourceNodes.slice(0, 80);
+  }, [nodes]);
+
+  const visibleNodeIds = useMemo(
+    () => new Set(visibleNodes.map((node) => node.id)),
+    [visibleNodes],
+  );
+
+  const visibleEdges = useMemo(
+    () =>
+      edges
+        .filter((edge) => visibleNodeIds.has(edge.from) && visibleNodeIds.has(edge.to))
+        .slice(0, 160),
+    [edges, visibleNodeIds],
+  );
+
+  const suspiciousEdges = visibleEdges.filter((edge) => edge.suspicious).length;
+
+  const option = useMemo<echarts.EChartsOption>(() => {
+    const categories = [
+      { name: "High risk wallet", itemStyle: { color: "#e24b4a" } },
+      { name: "Bridge wallet", itemStyle: { color: "#ef9f27" } },
+      { name: "Normal wallet", itemStyle: { color: "#64748b" } },
+    ];
+
+    const categoryIndex = (type: GraphNode["type"]) => {
+      if (type === "wash") return 0;
+      if (type === "bridge") return 1;
+      return 2;
+    };
+
+    const graphNodes = visibleNodes.map((node) => {
+      const score = typeof node.score === "number" ? Math.round(node.score * 100) : 0;
+      const isWash = node.type === "wash";
+      const isBridge = node.type === "bridge";
+
       return {
-        ...node,
-        x: centerX + Math.cos(angle) * radiusX,
-        y: centerY + Math.sin(angle) * radiusY,
+        id: node.id,
+        name: node.label || shortAddress(node.id),
+        value: score,
+        category: categoryIndex(node.type),
+        symbolSize: isWash ? Math.max(34, 24 + score * 0.28) : isBridge ? 30 : 22,
+        draggable: true,
+        label: {
+          show: isWash || isBridge,
+          formatter: "{b}",
+        },
+        itemStyle: {
+          borderWidth: isWash ? 3 : 1.5,
+          borderColor: isWash ? "#fecaca" : isBridge ? "#fde68a" : "#94a3b8",
+          shadowBlur: isWash ? 12 : 4,
+          shadowColor: isWash ? "rgba(226, 75, 74, 0.55)" : "rgba(15, 23, 42, 0.25)",
+        },
+        tooltip: {
+          formatter: [
+            `<strong>${node.label || shortAddress(node.id)}</strong>`,
+            `Type: ${node.type}`,
+            score ? `GNN score: ${score}/100` : "GNN score: —",
+            `Address: ${node.id}`,
+          ].join("<br/>"),
+        },
       };
     });
-  }, [visibleNodes]);
 
-  const positionMap = new Map(layout.map((node) => [node.id, node]));
-  const visibleEdges = edges
-    .filter((edge) => positionMap.has(edge.from) && positionMap.has(edge.to))
-    .slice(0, 28);
+    const graphLinks = visibleEdges.map((edge) => ({
+      source: edge.from,
+      target: edge.to,
+      value: edge.amount,
+      suspicious: edge.suspicious,
+      lineStyle: {
+        width: edge.suspicious ? 2.6 : 1,
+        opacity: edge.suspicious ? 0.9 : 0.32,
+        color: edge.suspicious ? "#e24b4a" : "#64748b",
+        curveness: edge.suspicious ? 0.18 : 0.05,
+      },
+      emphasis: {
+        lineStyle: {
+          width: edge.suspicious ? 4 : 2.4,
+        },
+      },
+      label: {
+        show: edge.suspicious,
+        formatter: formatNumber(edge.amount),
+        color: "#e24b4a",
+        fontSize: 10,
+      },
+      tooltip: {
+        formatter: [
+          `<strong>${edge.suspicious ? "Suspicious flow" : "Transfer flow"}</strong>`,
+          `From: ${shortAddress(edge.from)}`,
+          `To: ${shortAddress(edge.to)}`,
+          `Amount: ${formatNumber(edge.amount)}`,
+        ].join("<br/>"),
+      },
+    }));
+
+    return {
+      backgroundColor: "transparent",
+      legend: {
+        top: 6,
+        right: 12,
+        orient: "horizontal",
+        textStyle: {
+          color: "inherit",
+          fontSize: 11,
+        },
+        data: categories.map((category) => category.name),
+      },
+      tooltip: {
+        trigger: "item",
+        confine: true,
+        backgroundColor: "rgba(15, 23, 42, 0.92)",
+        borderColor: "rgba(148, 163, 184, 0.25)",
+        textStyle: {
+          color: "#f8fafc",
+          fontSize: 12,
+        },
+      },
+      series: [
+        {
+          name: "Wallet transaction graph",
+          type: "graph",
+          layout: "force",
+          animation: false,
+          roam: true,
+          roamTrigger: "global",
+          draggable: true,
+          focusNodeAdjacency: true,
+          scaleLimit: {
+            min: 0.35,
+            max: 8,
+          },
+          categories,
+          data: graphNodes,
+          links: graphLinks,
+          edgeSymbol: ["none", "arrow"],
+          edgeSymbolSize: [0, 8],
+          label: {
+            position: "right",
+            formatter: "{b}",
+            color: "var(--graph-text)",
+            fontSize: 11,
+          },
+          edgeLabel: {
+            show: false,
+          },
+          force: {
+            edgeLength: [45, 135],
+            repulsion: 260,
+            gravity: 0.12,
+            friction: 0.62,
+          },
+          lineStyle: {
+            color: "source",
+            curveness: 0.08,
+          },
+          emphasis: {
+            focus: "adjacency",
+            label: {
+              show: true,
+            },
+            lineStyle: {
+              opacity: 1,
+            },
+          },
+        },
+      ],
+      // ECharts supports this in newer graph examples. It is harmless if the
+      // installed version ignores it.
+      thumbnail: {
+        width: "16%",
+        height: "16%",
+        right: 12,
+        bottom: 10,
+        windowStyle: {
+          color: "rgba(140, 212, 250, 0.28)",
+          borderColor: "rgba(30, 64, 175, 0.7)",
+          opacity: 1,
+        },
+      },
+    } as echarts.EChartsOption;
+  }, [visibleNodes, visibleEdges]);
+
+  useEffect(() => {
+    if (!chartRef.current) return;
+
+    if (!chartInstanceRef.current) {
+      chartInstanceRef.current = echarts.init(chartRef.current, undefined, {
+        renderer: "canvas",
+      });
+    }
+
+    const chart = chartInstanceRef.current;
+    chart.setOption(option, true);
+
+    const resizeObserver = new ResizeObserver(() => {
+      chart.resize();
+    });
+
+    resizeObserver.observe(chartRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [option]);
+
+  useEffect(() => {
+    return () => {
+      chartInstanceRef.current?.dispose();
+      chartInstanceRef.current = null;
+    };
+  }, []);
 
   return (
     <div className={styles.graphContainer}>
-      <svg viewBox="0 0 560 260" xmlns="http://www.w3.org/2000/svg" className={styles.graphSvg}>
-        <defs>
-          <marker id="arr-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6 Z" fill="#e24b4a" opacity=".85" />
-          </marker>
-          <marker id="arr-gray" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6 Z" fill="var(--graph-node-stroke)" opacity=".7" />
-          </marker>
-        </defs>
+      <div className={styles.graphStats}>
+        <span>{nodes.length} nodes</span>
+        <span>{edges.length} edges</span>
+        <span>{suspiciousEdges} suspicious flows visible</span>
+        <span>Force graph · draggable · zoom/pan</span>
+      </div>
 
-        <ellipse cx="280" cy="130" rx="218" ry="102" fill="rgba(226,75,74,0.07)" stroke="#e24b4a" strokeWidth="1" strokeDasharray="5,3" opacity=".55" />
-        <text x="280" y="238" textAnchor="middle" fontSize="10" fill="#a32d2d">GNN transaction cluster</text>
+      <div ref={chartRef} className={styles.graphEcharts} />
 
-        {visibleEdges.map((edge, index) => {
-          const from = positionMap.get(edge.from)!;
-          const to = positionMap.get(edge.to)!;
-          const stroke = edge.suspicious ? "#e24b4a" : "var(--graph-line)";
-          return (
-            <line
-              key={`${edge.from}-${edge.to}-${index}`}
-              x1={from.x}
-              y1={from.y}
-              x2={to.x}
-              y2={to.y}
-              stroke={stroke}
-              strokeWidth={edge.suspicious ? 2.2 : 1.2}
-              opacity={edge.suspicious ? 0.85 : 0.45}
-              markerEnd={edge.suspicious ? "url(#arr-red)" : "url(#arr-gray)"}
-            />
-          );
-        })}
-
-        {layout.map((node) => {
-          const fill = node.type === "wash" ? "#e24b4a" : node.type === "bridge" ? "#ef9f27" : "var(--graph-node-normal)";
-          const stroke = node.type === "normal" ? "var(--graph-node-stroke)" : fill;
-          return (
-            <g key={node.id}>
-              <circle cx={node.x} cy={node.y} r={node.type === "wash" ? 18 : 15} fill={fill} stroke={stroke} strokeWidth="2" opacity=".95" />
-              <text x={node.x} y={node.y + 34} textAnchor="middle" fontSize="10" fill="var(--graph-text)">{node.label}</text>
-            </g>
-          );
-        })}
-      </svg>
-
-      <div className={styles.graphLegend}>
-        <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: "#e24b4a" }} />High risk wallet</span>
-        <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: "#ef9f27" }} />Bridge wallet</span>
-        <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: "var(--graph-node-stroke)" }} />Normal wallet</span>
-        <span className={styles.legendItem}><span className={styles.legendLine} />Suspicious flow</span>
+      <div className={styles.graphFooter}>
+        {nodes.length > 0
+          ? "Live force-directed graph from backend graphData. Drag nodes, zoom, pan, and hover edges/wallets to inspect flow details."
+          : "Waiting for backend graphData. Click AI Analyze to build the wallet transaction graph."}
       </div>
     </div>
   );
 };
 
-const WalletRow: React.FC<{ wallet: SuspiciousWallet; index: number }> = ({ wallet, index }) => {
+const WalletRow: React.FC<{ wallet: SuspiciousWallet; index: number; selected?: boolean; onClick?: () => void }> = ({ wallet, index, selected = false, onClick }) => {
   const risk = normalizeRiskLevel(wallet.riskLevel);
   return (
-    <div className={styles.walletRow}>
+    <button type="button" className={`${styles.walletRow} ${selected ? styles.walletRowSelected : ""}`} onClick={onClick}>
       <div className={styles.walletInfo}>
         <span className={styles.walletAddr}>{shortAddress(wallet.wallet)}</span>
         <span className={styles.walletDesc}>{wallet.pattern} · Graph rank #{index + 1}</span>
       </div>
       <span className={styles.walletGnn}>GNN: {wallet.score.toFixed(2)}</span>
       <span className={`${styles.riskBadge} ${styles[`risk${risk}`]}`}>{risk}</span>
+    </button>
+  );
+};
+
+const WalletInsightPanel: React.FC<{ wallet?: SuspiciousWallet; symbol: string }> = ({ wallet, symbol }) => {
+  if (!wallet) {
+    return (
+      <div className={styles.walletInsightEmpty}>
+        Chọn một ví trong danh sách Suspicious Wallets để xem giải thích AI chi tiết.
+      </div>
+    );
+  }
+
+  const topFeature = (Object.entries(wallet.features) as [string, number][]).sort((a, b) => b[1] - a[1])[0];
+  return (
+    <div className={styles.walletInsight}>
+      <div className={styles.walletInsightHeader}>
+        <div>
+          <span>Selected wallet</span>
+          <strong>{shortAddress(wallet.wallet)}</strong>
+        </div>
+        <span className={`${styles.riskBadge} ${styles[`risk${normalizeRiskLevel(wallet.riskLevel)}`]}`}>{wallet.riskLevel}</span>
+      </div>
+      <p>
+        AI đánh dấu ví này vì pattern <strong>{wallet.pattern}</strong> trên token <strong>{symbol}</strong>.
+        Điểm GNN hiện tại là <strong>{(wallet.score * 100).toFixed(0)}/100</strong>.
+      </p>
+      <div className={styles.walletInsightGrid}>
+        <div><span>Top feature</span><strong>{topFeature?.[0] ?? "—"}</strong></div>
+        <div><span>Feature score</span><strong>{topFeature ? topFeature[1].toFixed(2) : "—"}</strong></div>
+      </div>
+      <p className={styles.walletInsightNote}>
+        Cách đọc: ví có circularPattern cao thường tham gia vòng giao dịch khép kín; timeRegularity cao cho thấy bot-like timing; amountSimilarity cao cho thấy lượng token được lặp lại bất thường.
+      </p>
     </div>
   );
 };
@@ -282,6 +483,7 @@ const WashTradingPage: React.FC = () => {
 
   const symbolFromUrl = searchParams.get("symbol") || "TOKEN";
   const timeframeFromUrl = (searchParams.get("timeframe") || "24h") as Timeframe;
+  const algorithmFromUrl = (searchParams.get("algorithm") || "GCN") as GnnAlgorithm;
 
   const [symbol, setSymbol] = useState(symbolFromUrl);
   const [timeframe, setTimeframe] = useState<Timeframe>(["24h", "7d", "30d"].includes(timeframeFromUrl) ? timeframeFromUrl : "24h");
@@ -289,8 +491,9 @@ const WashTradingPage: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<WashTradingResult | null>(null);
-  const [algoTab, setAlgoTab] = useState<"GCN" | "GAT" | "GraphSAGE">("GCN");
+  const [algoTab, setAlgoTab] = useState<GnnAlgorithm>(["GCN", "GAT", "GraphSAGE"].includes(algorithmFromUrl) ? algorithmFromUrl : "GCN");
   const [walletFilter, setWalletFilter] = useState<"All" | "High risk" | "New">("All");
+  const [selectedWalletAddress, setSelectedWalletAddress] = useState<string | null>(null);
 
   useEffect(() => {
     setManualMint(mint || "");
@@ -320,6 +523,8 @@ const WashTradingPage: React.FC = () => {
         body: JSON.stringify({
           mint: selectedMint,
           symbol: symbol || "TOKEN",
+          timeframe,
+          algorithm: algoTab,
           limit: timeframe === "24h" ? 200 : timeframe === "7d" ? 300 : 500,
         }),
       });
@@ -330,12 +535,13 @@ const WashTradingPage: React.FC = () => {
       }
 
       setResult(payload.data);
+      setSelectedWalletAddress(payload.data.suspiciousWallets[0]?.wallet ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không thể gọi AI Wash Trading API.");
     } finally {
       setIsAnalyzing(false);
     }
-  }, [symbol, targetMint, timeframe]);
+  }, [symbol, targetMint, timeframe, algoTab]);
 
   useEffect(() => {
     if (mint) {
@@ -349,15 +555,24 @@ const WashTradingPage: React.FC = () => {
       setError("Vui lòng nhập token mint address.");
       return;
     }
-    navigate(`/wash-trading/${selectedMint}?symbol=${encodeURIComponent(symbol || "TOKEN")}&timeframe=${timeframe}`);
+    navigate(`/wash-trading/${selectedMint}?symbol=${encodeURIComponent(symbol || "TOKEN")}&timeframe=${timeframe}&algorithm=${algoTab}`);
+  };
+
+  const updateUrlParam = (key: string, value: string) => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set(key, value);
+    if (symbol) nextParams.set("symbol", symbol);
+    setSearchParams(nextParams);
   };
 
   const handleTimeframeChange = (next: Timeframe) => {
     setTimeframe(next);
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("timeframe", next);
-    if (symbol) nextParams.set("symbol", symbol);
-    setSearchParams(nextParams);
+    updateUrlParam("timeframe", next);
+  };
+
+  const handleAlgorithmChange = (next: GnnAlgorithm) => {
+    setAlgoTab(next);
+    updateUrlParam("algorithm", next);
   };
 
   const filteredWallets = (result?.suspiciousWallets ?? []).filter((wallet) => {
@@ -366,7 +581,8 @@ const WashTradingPage: React.FC = () => {
     return true;
   });
 
-  const topWallet = result?.suspiciousWallets[0];
+  const selectedWallet = result?.suspiciousWallets.find((wallet) => wallet.wallet === selectedWalletAddress) ?? result?.suspiciousWallets[0];
+  const topWallet = selectedWallet;
   const featureSource = topWallet?.features;
   const summary = result?.summary;
   const riskScore = summary?.overallRiskScore ?? 0;
@@ -434,6 +650,12 @@ const WashTradingPage: React.FC = () => {
             <strong>{result?.aiAnalysis.verdict?.replaceAll("_", " ") ?? "Waiting for analysis"}</strong>
           </div>
           <p>{result?.aiAnalysis.summary ?? "Nhấn Run AI Analyze để phân tích circular trading, amount similarity, timing regularity và graph features của token này."}</p>
+          {result?.dataSource && (
+            <div className={`${styles.sourceNotice} ${result.dataSource === "demo-fallback" ? styles.sourceWarning : styles.sourceLive}`}>
+              Data source: <strong>{result.dataSource}</strong>
+              {result.dataSourceReason ? <span> · {result.dataSourceReason}</span> : null}
+            </div>
+          )}
           {result?.aiAnalysis.recommendation && (
             <div className={styles.recommendation}>{result.aiAnalysis.recommendation}</div>
           )}
@@ -465,7 +687,7 @@ const WashTradingPage: React.FC = () => {
                     <button
                       key={tab}
                       className={`${styles.algoTab} ${algoTab === tab ? styles.algoTabActive : ""}`}
-                      onClick={() => setAlgoTab(tab)}
+                      onClick={() => handleAlgorithmChange(tab)}
                     >
                       {tab}
                     </button>
@@ -494,11 +716,27 @@ const WashTradingPage: React.FC = () => {
 
               <div className={styles.walletList}>
                 {filteredWallets.length > 0 ? (
-                  filteredWallets.map((wallet, index) => <WalletRow key={wallet.wallet} wallet={wallet} index={index} />)
+                  filteredWallets.map((wallet, index) => (
+                    <WalletRow
+                      key={wallet.wallet}
+                      wallet={wallet}
+                      index={index}
+                      selected={selectedWalletAddress === wallet.wallet}
+                      onClick={() => setSelectedWalletAddress(wallet.wallet)}
+                    />
+                  ))
                 ) : (
                   <div className={styles.emptyState}>Chưa có ví đáng ngờ. Hãy chạy phân tích AI cho token này.</div>
                 )}
               </div>
+            </div>
+
+            <div className={styles.card}>
+              <div className={styles.cardHeader}>
+                <span className={styles.cardIcon}>🧩</span>
+                <h2 className={styles.cardTitle}>Wallet AI Explanation</h2>
+              </div>
+              <WalletInsightPanel wallet={selectedWallet} symbol={symbol || "TOKEN"} />
             </div>
 
             {result?.aiAnalysis.detailedFindings?.length ? (
@@ -558,6 +796,9 @@ const WashTradingPage: React.FC = () => {
                 <div><span>Symbol</span><strong>{symbol || "TOKEN"}</strong></div>
                 <div><span>Mint</span><strong>{shortAddress(targetMint)}</strong></div>
                 <div><span>Timeframe</span><strong>{timeframe}</strong></div>
+                <div><span>Algorithm</span><strong>{result?.algorithm ?? algoTab}</strong></div>
+                <div><span>Data source</span><strong>{result?.dataSource ?? "—"}</strong></div>
+                <div><span>Source reason</span><strong>{result?.dataSourceReason ?? "—"}</strong></div>
                 <div><span>Analyzed at</span><strong>{result ? new Date(result.analyzedAt).toLocaleString("vi-VN") : "—"}</strong></div>
               </div>
             </div>
