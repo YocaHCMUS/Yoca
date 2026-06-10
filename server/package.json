@@ -18,6 +18,7 @@
     "db:push": "drizzle-kit push --verbose",
     "db:push-force": "drizzle-kit push --verbose --force",
     "db:seed": "tsx src/db/seed.ts",
+    "alerts:replay": "tsx src/scripts/replay-wallet-alert-webhook.ts",
     "db:studio": "drizzle-kit studio",
     "db:clear": "drizzle-kit push --force --config drizzle-empty.config.ts",
     "db:reset": "npm run db:clear && npm run db:push"

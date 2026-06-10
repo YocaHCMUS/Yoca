@@ -2,7 +2,9 @@ import { Resend } from "resend";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const RESEND_FROM =
-  process.env.RESEND_FROM || "Yoca Alerts <yourcontact@yoca.id.vn>";
+  process.env.RESEND_FROM ||
+  process.env.FROM_EMAIL ||
+  "Yoca Alerts <yourcontact@yoca.id.vn>";
 
 let resendClient: Resend | null = null;
 
@@ -92,7 +94,9 @@ export async function sendAlertEmail(
 ): Promise<boolean> {
   const client = getResend();
   if (!client) {
-    console.warn("[email] RESEND_API_KEY is not set; skipping email to", to);
+    console.warn("[email] RESEND_API_KEY is not set; skipping alert email", {
+      hasRecipient: Boolean(to),
+    });
     return false;
   }
   try {
