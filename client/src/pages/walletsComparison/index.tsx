@@ -531,6 +531,7 @@ export default function WalletsComparisonPage() {
                     addresses={selectedWallets}
                     lang={lang}
                     variant="sidebar"
+                    contextType="wallet-comparison"
                     chatPosition="left"
                     onChatPositionChange={setChatPosition}
                   />
@@ -576,6 +577,7 @@ export default function WalletsComparisonPage() {
                 addresses={selectedWallets}
                 lang={lang}
                 variant="sidebar"
+                contextType="wallet-comparison"
                 chatPosition={chatPosition}
                 onChatPositionChange={setChatPosition}
               />
@@ -600,6 +602,7 @@ export default function WalletsComparisonPage() {
                 addresses={selectedWallets}
                 lang={lang}
                 variant="sidebar"
+                contextType="wallet-comparison"
                 chatPosition="fullscreen"
                 onChatPositionChange={setChatPosition}
               />

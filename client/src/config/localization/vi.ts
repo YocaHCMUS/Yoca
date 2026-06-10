@@ -1611,6 +1611,11 @@ export const translation = defineTranslation({
       balance: { label: "Xu hướng số dư", query: "Hiển thị biểu đồ lịch sử số dư của ví này trong 30 ngày qua." },
       portfolioChange: { label: "Biến động danh mục", query: "So sánh danh mục hiện tại của ví này với ví trong 7 ngày trước. Có thay đổi đáng kể nào không?" },
       tokenPrices: { label: "Giá token", query: "Kiểm tra giá hiện tại và dữ liệu thị trường của 5 token quan trọng nhất trong ví này." },
+      compareOverview: { label: "So sánh danh mục", query: "So sánh danh mục đầu tư của các ví — ví nào có tổng giá trị và biến động 24h tốt nhất?" },
+      comparePnl: { label: "So sánh lãi/lỗ", query: "So sánh PnL giữa các ví — ví nào có lợi nhuận thực tế và tỷ lệ thắng cao nhất?" },
+      commonHoldings: { label: "Token chung", query: "Token nào được nắm giữ phổ biến ở các ví này và có sự trùng lặp như thế nào?" },
+      topPerformer: { label: "Hiệu suất tốt nhất", query: "Ví nào có ROI và hiệu suất giao dịch tốt nhất trên tất cả các chỉ số?" },
+      riskComparison: { label: "So sánh rủi ro", query: "So sánh mức độ đa dạng hóa và hồ sơ rủi ro giữa các ví này." },
     },
   },
   ERROR: {

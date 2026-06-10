@@ -9,7 +9,7 @@ import type { ChatMessageItem, ChatResponse } from "./types";
 import styles from "./WalletChat.module.scss";
 import { Maximize, OpenPanelLeft, OpenPanelRight } from "@carbon/icons-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useChatSessions } from "./useChatSessions";
+import { useChatSessions, type ChatSessionContextType } from "./useChatSessions";
 
 const MAX_QUICK_QUESTIONS = 5;
 const MAX_INPUT_LENGTH = 500;
@@ -21,9 +21,10 @@ interface Props {
   variant?: "widget" | "sidebar";
   chatPosition: "right" | "left" | "fullscreen";
   onChatPositionChange: (position: "right" | "left" | "fullscreen") => void;
+  contextType?: ChatSessionContextType;
 }
 
-export function WalletChat({ address, addresses, lang, variant = "widget", chatPosition, onChatPositionChange }: Props) {
+export function WalletChat({ address, addresses, lang, variant = "widget", chatPosition, onChatPositionChange, contextType: contextTypeProp }: Props) {
   const { tr, fmt } = useLocalization();
   const { user, isUserLoading } = useAuth();
   const [isOpen, setIsOpen] = useState(variant === "sidebar");
@@ -42,7 +43,12 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
     () => (addresses?.length ? addresses : address ? [address] : []).filter(Boolean),
     [address, addresses],
   );
-  const contextType = activeAddresses.length > 1 ? "wallet-comparison" : "wallet";
+  const contextType = contextTypeProp ?? (activeAddresses.length > 1 ? "wallet-comparison" : "wallet");
+
+  const contextQuestions = useMemo(
+    () => PREDEFINED_QUESTIONS.filter((q) => !q.contextTypes || q.contextTypes.includes(contextType)),
+    [contextType],
+  );
 
   const {
     sessions,
@@ -298,7 +304,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
     return null;
   }
 
-  const quickItems = PREDEFINED_QUESTIONS.slice(0, MAX_QUICK_QUESTIONS);
+  const quickItems = contextQuestions.slice(0, MAX_QUICK_QUESTIONS);
   const trimmedInput = inputText.trim();
   const inputValidationError =
     trimmedInput.length === 0 ? null
@@ -309,7 +315,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
     <div className={styles.promptMenuOverlay}>
       <div className={styles.promptMenuTitle}>{tr("chat.promptMenuTitle")}</div>
       <div className={styles.promptMenuList}>
-        {PREDEFINED_QUESTIONS.map((q) => (
+        {contextQuestions.map((q) => (
           <button
             key={q.id}
             type="button"

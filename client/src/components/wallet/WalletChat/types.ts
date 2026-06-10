@@ -111,4 +111,5 @@ export interface PredefinedQuestion {
   query: string;
   labelKey?: string;
   queryKey?: string;
+  contextTypes?: ("wallet" | "wallet-comparison")[];
 }

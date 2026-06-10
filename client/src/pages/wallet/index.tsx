@@ -1429,7 +1429,7 @@ export default function WalletPage() {
           data-open={isChatOpen && chatPosition !== "fullscreen"}
         >
           <div className={styles.chatInlineInner}>
-            <WalletChat address={walletAddress} variant="sidebar" lang={lang} chatPosition={chatPosition} onChatPositionChange={setChatPosition} />
+            <WalletChat address={walletAddress} variant="sidebar" lang={lang} contextType="wallet" chatPosition={chatPosition} onChatPositionChange={setChatPosition} />
           </div>
         </div>
 
@@ -1444,7 +1444,7 @@ export default function WalletPage() {
           <div className={styles.chatOverlay} data-position="fullscreen">
             <div className={styles.chatBackdrop} onClick={() => setIsChatOpen(false)} />
             <div className={styles.chatPanel}>
-              <WalletChat address={walletAddress} variant="sidebar" lang={lang} chatPosition={chatPosition} onChatPositionChange={setChatPosition} />
+              <WalletChat address={walletAddress} variant="sidebar" lang={lang} contextType="wallet" chatPosition={chatPosition} onChatPositionChange={setChatPosition} />
             </div>
           </div>
         )}

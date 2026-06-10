@@ -1651,6 +1651,11 @@ export const translation = {
       balance: { label: "Balance Trend", query: "Show the balance history chart for this wallet over the last 30 days." },
       portfolioChange: { label: "Portfolio Change", query: "Compare this wallet's current portfolio to a 7 days ago. Have holdings changed significantly?" },
       tokenPrices: { label: "Token Prices", query: "Check the current prices and market data for 5 most significant tokens held by this wallet." },
+      compareOverview: { label: "Compare Portfolios", query: "Compare the portfolios of these wallets — which has the best total value and 24h change?" },
+      comparePnl: { label: "PnL Comparison", query: "Compare PnL across these wallets — which has the highest realized profit and win rate?" },
+      commonHoldings: { label: "Common Holdings", query: "Which tokens are commonly held across these wallets and what are the overlaps?" },
+      topPerformer: { label: "Top Performer", query: "Which wallet has the best ROI and trading performance across all metrics?" },
+      riskComparison: { label: "Risk Comparison", query: "Compare diversification and risk profiles across these wallets." },
     },
   },
   token: {
