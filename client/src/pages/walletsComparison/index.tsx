@@ -178,7 +178,7 @@ export default function WalletsComparisonPage() {
   const [dayPopupOpen, setDayPopupOpen] = useState(false);
   const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
 
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(true);
   const [chatPosition, setChatPosition] = useState<"right" | "left" | "fullscreen">("right");
   const [walletSectionOpen, setWalletSectionOpen] = useState(true);
   const [chatSectionOpen, setChatSectionOpen] = useState(true);
@@ -507,7 +507,7 @@ export default function WalletsComparisonPage() {
             </div>
 
             <div
-              className={styles.accordionSection}
+              className={`${styles.accordionSection} ${styles.accordionSectionChat}`}
               data-open={chatSectionOpen}
             >
               <button

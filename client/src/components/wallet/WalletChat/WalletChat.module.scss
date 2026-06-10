@@ -1189,3 +1189,167 @@
 .validationError {
   color: #da1e28;
 }
+
+// ===== Session Selector =====
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sessionSelector {
+  position: relative;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.sessionToggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: $layer-02;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: $text-primary;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+}
+
+.sessionDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 240px;
+  max-width: 320px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: $background;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  padding: 4px;
+  margin-top: 4px;
+}
+
+.sessionDropdownTitle {
+  font-size: 10px;
+  font-weight: 600;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 6px 8px 4px;
+}
+
+.sessionEmpty {
+  padding: 12px 8px;
+  font-size: 11px;
+  color: $text-secondary;
+  text-align: center;
+}
+
+.sessionItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.12s;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+}
+
+.sessionItemActive {
+  background: $layer-selected;
+
+  &:hover {
+    background: $layer-selected-hover;
+  }
+}
+
+.sessionItemContent {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.sessionItemTitle {
+  font-size: 12px;
+  color: $text-primary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.sessionItemTime {
+  font-size: 10px;
+  color: $text-secondary;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sessionItemDelete {
+  background: none;
+  border: none;
+  color: $icon-secondary;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.12s;
+
+  .sessionItem:hover & {
+    opacity: 1;
+  }
+
+  &:hover {
+    color: $support-error;
+  }
+}
+
+// ===== Auth Required =====
+.authRequired {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.authRequiredTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: $text-primary;
+  margin-bottom: 8px;
+}
+
+.authRequiredDesc {
+  font-size: 13px;
+  color: $text-secondary;
+  line-height: 1.5;
+  max-width: 280px;
+}

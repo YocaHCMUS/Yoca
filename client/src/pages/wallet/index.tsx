@@ -173,7 +173,7 @@ export default function WalletPage() {
   const [auditOpen, setAuditOpen] = useState(false);
   const [activeActivityTab, setActiveActivityTab] = useState<number>(0);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(true);
   const [chatPosition, setChatPosition] = useState<ChatPosition>("right");
 
   const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);

@@ -51,9 +51,14 @@
   &[data-open="false"] {
     flex-shrink: 0;
   }
+}
 
-  &[data-open="true"] {
-    flex: 1;
+.accordionSectionChat {
+  flex: 1;
+
+  &[data-open="false"] {
+    flex: none;
+    flex-shrink: 0;
   }
 }
 

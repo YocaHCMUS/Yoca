@@ -2,6 +2,7 @@ import {
   bigint,
   boolean,
   decimal as dec,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -1429,10 +1430,17 @@ export const chatSessions = pgTable(
   "chat_sessions",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    walletAddresses: jsonb("wallet_addresses").$type<string[]>().notNull().default([]),
+    contextType: varchar("context_type", { length: 32 }).notNull().default("wallet"),
+    contextHash: varchar("context_hash", { length: 64 }).notNull().default(""),
+    title: varchar("title", { length: 255 }),
     messages: jsonb("messages").$type<Record<string, unknown>[]>().notNull().default([]),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
+  (table) => [
+    index("chat_sessions_user_id_idx").on(table.userId),
+  ],
 );
 // #endregion
