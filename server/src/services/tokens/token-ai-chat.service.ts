@@ -16,7 +16,9 @@ import {
 } from "./token-ai-context.js";
 import {
   getTokenAiChatCacheExpiresAt,
+  readLastSuccessfulGeminiCache,
   readTokenAiChatCache,
+  writeLastSuccessfulGeminiCache,
   writeTokenAiChatCache,
 } from "./token-ai-chat-cache.js";
 import env from "@sv/util/load-env.js";
@@ -38,7 +40,10 @@ export interface TokenAiChatRequest {
   language: TokenAiLanguage;
   includeNews: boolean;
   includeVolatility: boolean;
+  modelMode?: TokenAiModelMode;
 }
+
+export type TokenAiModelMode = "fast" | "balanced" | "deep";
 
 export interface TokenAiSection {
   title: string;
@@ -80,8 +85,18 @@ export interface TokenAiChatData {
   asOf: string;
   disclaimer: string;
   generatedAt: string;
-  provider: "gemini" | "deterministic";
+  provider:
+    | "gemini"
+    | "gemini_model_fallback"
+    | "cached_gemini"
+    | "analyst_fallback"
+    | "deterministic";
   fallbackReason?: string;
+  modelModeRequested?: TokenAiModelMode;
+  modelModeUsed?: TokenAiModelMode;
+  modelRequested?: string;
+  modelUsed?: string;
+  stale?: boolean;
   cache?: {
     hit: boolean;
     expiresAt?: string;
@@ -92,8 +107,17 @@ const TOKEN_AI_CHAT_MODEL =
   process.env.TOKEN_AI_CHAT_MODEL?.trim() ||
   process.env.GEMINI_AUDIT_MODEL?.trim() ||
   WALLET_AUDIT_MODEL;
+const TOKEN_AI_CHAT_BALANCED_MODEL =
+  process.env.TOKEN_AI_CHAT_BALANCED_MODEL?.trim() ||
+  process.env.TOKEN_AI_CHAT_FALLBACK_MODEL?.trim() ||
+  "gemini-2.5-flash";
+const TOKEN_AI_CHAT_FAST_MODEL =
+  process.env.TOKEN_AI_CHAT_FAST_MODEL?.trim() ||
+  "gemini-2.5-flash-lite";
 const TOKEN_AI_CHAT_PROMPT_VERSION =
-  process.env.TOKEN_AI_CHAT_PROMPT_VERSION?.trim() || "v3";
+  process.env.TOKEN_AI_CHAT_PROMPT_VERSION?.trim() || "v4";
+const ANALYST_FALLBACK_CACHE_TTL_MS = 3 * 60 * 1000;
+const LAST_SUCCESSFUL_GEMINI_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 const TOKEN_AI_RESPONSE_LIMITS = {
   tldrItems: 3,
@@ -116,7 +140,7 @@ const TOKEN_AI_RESPONSE_LIMITS = {
   disclaimerChars: 500,
 } as const;
 
-const TRUNCATION_ELLIPSIS = "…";
+const TRUNCATION_ELLIPSIS = "\u2026";
 
 const sectionKinds = [
   "market_snapshot",
@@ -157,9 +181,20 @@ const WEAK_UNAVAILABLE_WARNING_PATTERNS = [
 type TokenAiFallbackReason =
   | "missing_api_key"
   | "gemini_api_error"
+  | "gemini_retryable_error"
+  | "preferred_model_retry_failed"
+  | "preferred_model_429"
+  | "preferred_model_500"
+  | "preferred_model_502"
+  | "preferred_model_503"
+  | "preferred_model_504"
+  | "fallback_model_failed"
+  | "gemini_unavailable_using_recent_success"
+  | "all_gemini_models_unavailable"
   | "gemini_invalid_json"
   | "gemini_zod_validation_error_after_normalization"
   | "cached_deterministic_response"
+  | "cached_analyst_fallback_ignored_gemini_available"
   | "cached_deterministic_ignored_gemini_available"
   | "deterministic_fallback";
 
@@ -168,7 +203,7 @@ function shouldExposeTokenAiDiagnostics() {
 }
 
 function exposeFallbackReason(reason?: TokenAiFallbackReason) {
-  return reason && shouldExposeTokenAiDiagnostics() ? reason : undefined;
+  return reason;
 }
 
 function logGeminiFallback(
@@ -183,6 +218,119 @@ function logGeminiFallback(
     hasGoogleAiKey: Boolean(process.env.GOOGLE_AI_KEY?.trim()),
     hasGeminiApiKey: Boolean(process.env.GEMINI_API_KEY?.trim()),
     ...details,
+  });
+}
+
+function modelForMode(mode: TokenAiModelMode) {
+  if (mode === "fast") return TOKEN_AI_CHAT_FAST_MODEL;
+  if (mode === "balanced") return TOKEN_AI_CHAT_BALANCED_MODEL;
+  return TOKEN_AI_CHAT_MODEL;
+}
+
+function fallbackModelCandidate(
+  requestedMode: TokenAiModelMode,
+  requestedModel: string,
+) {
+  const candidates: Array<{ mode: TokenAiModelMode; model: string }> =
+    requestedMode === "deep"
+      ? [
+          { mode: "balanced", model: TOKEN_AI_CHAT_BALANCED_MODEL },
+          { mode: "fast", model: TOKEN_AI_CHAT_FAST_MODEL },
+        ]
+      : [
+          { mode: "fast", model: TOKEN_AI_CHAT_FAST_MODEL },
+          { mode: "balanced", model: TOKEN_AI_CHAT_BALANCED_MODEL },
+          { mode: "deep", model: TOKEN_AI_CHAT_MODEL },
+        ];
+
+  return candidates.find((candidate) => candidate.model !== requestedModel);
+}
+
+function retryDelayMs() {
+  return 700 + Math.floor(Math.random() * 801);
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function errorText(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+function parseGeminiError(error: unknown) {
+  const text = errorText(error);
+  let status: number | undefined;
+  let providerStatus: string | undefined;
+  let message = text;
+
+  const record = error && typeof error === "object"
+    ? (error as Record<string, unknown>)
+    : {};
+  if (typeof record.status === "number") status = record.status;
+
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]) as {
+        error?: { code?: number; status?: string; message?: string };
+      };
+      status = parsed.error?.code ?? status;
+      providerStatus = parsed.error?.status;
+      message = parsed.error?.message ?? message;
+    } catch {
+      // Keep the safe raw message fallback.
+    }
+  }
+
+  const normalized = `${providerStatus ?? ""} ${message}`.toLowerCase();
+  const retryable =
+    status === 429 ||
+    status === 500 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504 ||
+    normalized.includes("unavailable") ||
+    normalized.includes("resource_exhausted") ||
+    normalized.includes("high demand") ||
+    normalized.includes("try again later") ||
+    normalized.includes("overloaded");
+
+  const reason: TokenAiFallbackReason =
+    status === 429 ||
+    status === 500 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504
+      ? `preferred_model_${status}`
+      : retryable
+        ? "gemini_retryable_error"
+        : "gemini_api_error";
+
+  return {
+    status,
+    providerStatus,
+    message,
+    retryable,
+    reason,
+  };
+}
+
+function logRetryableGeminiError(
+  model: string,
+  details: ReturnType<typeof parseGeminiError>,
+) {
+  if (!shouldExposeTokenAiDiagnostics()) return;
+  console.warn("[token-ai-chat] Gemini retryable error", {
+    model,
+    status: details.status ?? details.providerStatus ?? "unknown",
+    reason: details.reason,
   });
 }
 
@@ -473,6 +621,31 @@ function confidenceFor(context: TokenAiContext, intent: TokenAiIntent) {
   return "Low";
 }
 
+function lastSuccessfulGeminiWindowMs(intent: TokenAiIntent) {
+  switch (intent) {
+    case "price_move_explanation":
+    case "latest_news":
+    case "investment_guidance":
+      return 15 * 60 * 1000;
+    case "bullish_bearish":
+      return 30 * 60 * 1000;
+    case "risk_overview":
+    case "what_to_watch":
+      return 60 * 60 * 1000;
+    case "simple_explanation":
+      return 24 * 60 * 60 * 1000;
+    case "custom":
+    default:
+      return 15 * 60 * 1000;
+  }
+}
+
+function staleGeminiWarning(language: TokenAiLanguage) {
+  return language === "vi"
+    ? "Gemini tạm thời không khả dụng, nên Yoca đang hiển thị một phân tích AI gần đây. Hãy kiểm tra lại dữ liệu thị trường trực tiếp trước khi ra quyết định."
+    : "Gemini is temporarily unavailable, so Yoca is showing a recent AI analysis. Verify live market data before making decisions.";
+}
+
 function newsBullets(context: TokenAiContext) {
   return context.latestNews.length > 0
     ? context.latestNews.map((article) => {
@@ -517,6 +690,32 @@ function topPoolData(context: TokenAiContext) {
 
 function topPoolLiquidity(context: TokenAiContext) {
   return finiteNumber(topPoolData(context).liquidityUsd);
+}
+
+function topPoolTradeCounts(context: TokenAiContext) {
+  const data = topPoolData(context);
+  return {
+    buys: finiteNumber(data.buys24h),
+    sells: finiteNumber(data.sells24h),
+  };
+}
+
+function tradeFlowInterpretation(context: TokenAiContext) {
+  const { buys, sells } = topPoolTradeCounts(context);
+  if (buys == null || sells == null) {
+    return "Top-pool buy/sell counts are unavailable, so trade-flow balance cannot be confirmed.";
+  }
+
+  const total = buys + sells;
+  const difference = buys - sells;
+  const threshold = Math.max(5, total * 0.15);
+  if (Math.abs(difference) <= threshold) {
+    return `Top-pool flow looks relatively balanced with ${buys.toLocaleString("en-US")} buys vs ${sells.toLocaleString("en-US")} sells in 24h.`;
+  }
+
+  return difference > 0
+    ? `Top-pool flow leans buy-side with ${buys.toLocaleString("en-US")} buys vs ${sells.toLocaleString("en-US")} sells in 24h, which supports demand but does not prove sustained accumulation.`
+    : `Top-pool flow leans sell-side with ${sells.toLocaleString("en-US")} sells vs ${buys.toLocaleString("en-US")} buys in 24h, which can explain pressure even without a direct news catalyst.`;
 }
 
 function holderTop10Percent(context: TokenAiContext) {
@@ -716,6 +915,7 @@ function headlineBullets(context: TokenAiContext) {
 
 function watchSignalBullets(context: TokenAiContext) {
   return [
+    tradeFlowInterpretation(context),
     "If price falls while 24h volume rises, selling pressure, liquidation, or rotation may still be active.",
     "If liquidity drops sharply, slippage and volatility risk increase even when headline news is neutral.",
     "If new headlines are unrelated to the token, avoid over-attributing price moves to news.",
@@ -844,6 +1044,10 @@ function bullishBullets(context: TokenAiContext) {
   if (volume != null && volume >= 250_000) {
     bullets.push(`${compactCurrency(volume)} in 24h volume shows active trading interest.`);
   }
+  const flow = topPoolTradeCounts(context);
+  if (flow.buys != null && flow.sells != null && flow.buys > flow.sells) {
+    bullets.push(tradeFlowInterpretation(context));
+  }
   if (liquidity != null && liquidity >= 100_000) {
     bullets.push(liquidityInterpretation(context));
   }
@@ -869,6 +1073,10 @@ function bearishBullets(context: TokenAiContext) {
   }
   if (liquidity != null && liquidity < 100_000) {
     bullets.push(liquidityInterpretation(context));
+  }
+  const flow = topPoolTradeCounts(context);
+  if (flow.buys != null && flow.sells != null && flow.sells > flow.buys) {
+    bullets.push(tradeFlowInterpretation(context));
   }
   if (context.latestNews.length === 0 || countDirectNews(context) === 0) {
     bullets.push("News evidence is missing or indirect, so there is no clear headline support for the move.");
@@ -1389,12 +1597,19 @@ function buildDeterministicAnswer(
     evidence: normalizeEvidenceForResponse(context.evidence),
     sources: normalizeSourcesForResponse(context.sources),
     warnings: normalizeWarningsForResponse(warnings),
-    confidence: confidenceFor(context, intent),
+    confidence:
+      confidenceFor(context, intent) === "High"
+        ? "Medium"
+        : confidenceFor(context, intent),
     asOf: context.builtAt,
     disclaimer: localizedDisclaimer(request.language),
     generatedAt: new Date().toISOString(),
-    provider: "deterministic",
+    provider: "analyst_fallback",
     fallbackReason: exposeFallbackReason(fallbackReason),
+    modelModeRequested: request.modelMode ?? "deep",
+    modelModeUsed: undefined,
+    modelRequested: modelForMode(request.modelMode ?? "deep"),
+    modelUsed: undefined,
   };
 }
 
@@ -1477,6 +1692,66 @@ function buildPrompt({
 interface GeminiAnswerResult {
   data: Omit<TokenAiChatData, "cache"> | null;
   fallbackReason: TokenAiFallbackReason;
+  retryable: boolean;
+  modelRequested?: string;
+  modelUsed?: string;
+  modeRequested?: TokenAiModelMode;
+  modeUsed?: TokenAiModelMode;
+}
+
+function geminiDataFromParsed({
+  request,
+  context,
+  intent,
+  parsed,
+  provider,
+  fallbackReason,
+  modelRequested,
+  modelUsed,
+  modeRequested,
+  modeUsed,
+}: {
+  request: TokenAiChatRequest;
+  context: TokenAiContext;
+  intent: TokenAiIntent;
+  parsed: z.infer<typeof geminiResponseSchema>;
+  provider: TokenAiChatData["provider"];
+  fallbackReason?: TokenAiFallbackReason;
+  modelRequested: string;
+  modelUsed: string;
+  modeRequested: TokenAiModelMode;
+  modeUsed: TokenAiModelMode;
+}): Omit<TokenAiChatData, "cache"> {
+  return {
+    token: context.token,
+    question: request.question,
+    intent,
+    tldr: parsed.tldr,
+    sections: parsed.sections,
+    evidence: normalizeEvidenceForResponse(context.evidence),
+    sources: normalizeSourcesForResponse(context.sources),
+    warnings: normalizeWarningsForResponse([
+      ...new Set([
+        ...parsed.warnings,
+        ...localizedEvidenceWarning(context, request.language, intent),
+      ]),
+    ]),
+    confidence:
+      intent === "risk_overview" && parsed.confidence === "High"
+        ? "Medium"
+        : parsed.confidence,
+    asOf: context.builtAt,
+    disclaimer: parsed.disclaimer || localizedDisclaimer(request.language),
+    generatedAt: new Date().toISOString(),
+    provider,
+    fallbackReason: fallbackReason
+      ? exposeFallbackReason(fallbackReason)
+      : undefined,
+    modelModeRequested: modeRequested,
+    modelModeUsed: modeUsed,
+    modelRequested,
+    modelUsed,
+  };
 }
 
 function parseGeminiJsonText(text: string) {
@@ -1895,21 +2170,35 @@ function normalizeSourcesForResponse(sources: TokenAiSource[]) {
   }));
 }
 
-async function generateGeminiAnswer(
+async function generateGeminiAnswerForModel(
   request: TokenAiChatRequest,
   context: TokenAiContext,
   intent: TokenAiIntent,
+  model: string,
+  mode: TokenAiModelMode,
+  requestedModel: string,
+  requestedMode: TokenAiModelMode,
+  provider: TokenAiChatData["provider"],
+  fallbackReason?: TokenAiFallbackReason,
 ): Promise<GeminiAnswerResult> {
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     logGeminiFallback("missing_api_key");
-    return { data: null, fallbackReason: "missing_api_key" };
+    return {
+      data: null,
+      fallbackReason: "missing_api_key",
+      retryable: false,
+      modelRequested: requestedModel,
+      modelUsed: model,
+      modeRequested: requestedMode,
+      modeUsed: mode,
+    };
   }
 
   try {
     const client = new GoogleGenAI({ apiKey });
     const response = await client.models.generateContent({
-      model: TOKEN_AI_CHAT_MODEL,
+      model,
       contents: buildPrompt({ request, context, intent }),
       config: {
         temperature: 0.25,
@@ -1957,7 +2246,15 @@ async function generateGeminiAnswer(
         error: json.error,
         responseLength: rawText.length,
       });
-      return { data: null, fallbackReason: "gemini_invalid_json" };
+      return {
+        data: null,
+        fallbackReason: "gemini_invalid_json",
+        retryable: false,
+        modelRequested: requestedModel,
+        modelUsed: model,
+        modeRequested: requestedMode,
+        modeUsed: mode,
+      };
     }
 
     const normalizationStats = createTokenAiNormalizationStats();
@@ -1980,47 +2277,140 @@ async function generateGeminiAnswer(
       return {
         data: null,
         fallbackReason: "gemini_zod_validation_error_after_normalization",
+        retryable: false,
+        modelRequested: requestedModel,
+        modelUsed: model,
+        modeRequested: requestedMode,
+        modeUsed: mode,
       };
     }
 
     return {
-      data: {
-        token: context.token,
-        question: request.question,
+      data: geminiDataFromParsed({
+        request,
+        context,
         intent,
-        tldr: parsed.data.tldr,
-        sections: parsed.data.sections,
-        evidence: normalizeEvidenceForResponse(context.evidence),
-        sources: normalizeSourcesForResponse(context.sources),
-        warnings: normalizeWarningsForResponse([
-          ...new Set([
-            ...parsed.data.warnings,
-            ...localizedEvidenceWarning(context, request.language, intent),
-          ]),
-        ]),
-        confidence:
-          intent === "risk_overview" && parsed.data.confidence === "High"
-            ? "Medium"
-            : parsed.data.confidence,
-        asOf: context.builtAt,
-        disclaimer: parsed.data.disclaimer || localizedDisclaimer(request.language),
-        generatedAt: new Date().toISOString(),
-        provider: "gemini",
-      },
+        parsed: parsed.data,
+        provider,
+        fallbackReason,
+        modelRequested: requestedModel,
+        modelUsed: model,
+        modeRequested: requestedMode,
+        modeUsed: mode,
+      }),
       fallbackReason: "deterministic_fallback",
+      retryable: false,
+      modelRequested: requestedModel,
+      modelUsed: model,
+      modeRequested: requestedMode,
+      modeUsed: mode,
     };
   } catch (err) {
-    logGeminiFallback("gemini_api_error", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return { data: null, fallbackReason: "gemini_api_error" };
+    const parsedError = parseGeminiError(err);
+    if (parsedError.retryable) {
+      logRetryableGeminiError(model, parsedError);
+    } else {
+      logGeminiFallback("gemini_api_error", {
+        status: parsedError.status ?? parsedError.providerStatus,
+        retryable: false,
+      });
+    }
+    return {
+      data: null,
+      fallbackReason: parsedError.reason as TokenAiFallbackReason,
+      retryable: parsedError.retryable,
+      modelRequested: requestedModel,
+      modelUsed: model,
+      modeRequested: requestedMode,
+      modeUsed: mode,
+    };
   }
+}
+
+async function generateGeminiAnswer(
+  request: TokenAiChatRequest,
+  context: TokenAiContext,
+  intent: TokenAiIntent,
+): Promise<GeminiAnswerResult> {
+  const requestedMode = request.modelMode ?? "deep";
+  const requestedModel = modelForMode(requestedMode);
+  const preferred = await generateGeminiAnswerForModel(
+    request,
+    context,
+    intent,
+    requestedModel,
+    requestedMode,
+    requestedModel,
+    requestedMode,
+    "gemini",
+  );
+
+  if (preferred.data || !preferred.retryable) return preferred;
+
+  if (shouldExposeTokenAiDiagnostics()) {
+    console.warn("[token-ai-chat] Retrying Gemini preferred model", {
+      model: requestedModel,
+    });
+  }
+  await sleep(retryDelayMs());
+
+  const retry = await generateGeminiAnswerForModel(
+    request,
+    context,
+    intent,
+    requestedModel,
+    requestedMode,
+    requestedModel,
+    requestedMode,
+    "gemini",
+  );
+
+  if (retry.data || !retry.retryable) {
+    return retry.data
+      ? retry
+      : { ...retry, fallbackReason: "preferred_model_retry_failed" };
+  }
+
+  const fallbackCandidate = fallbackModelCandidate(requestedMode, requestedModel);
+  if (fallbackCandidate) {
+    if (shouldExposeTokenAiDiagnostics()) {
+      console.warn("[token-ai-chat] Trying fallback Gemini model", {
+        fromModel: requestedModel,
+        toModel: fallbackCandidate.model,
+      });
+    }
+    const fallback = await generateGeminiAnswerForModel(
+      request,
+      context,
+      intent,
+      fallbackCandidate.model,
+      fallbackCandidate.mode,
+      requestedModel,
+      requestedMode,
+      "gemini_model_fallback",
+      retry.fallbackReason,
+    );
+    if (fallback.data) return fallback;
+    return {
+      ...fallback,
+      fallbackReason: fallback.retryable
+        ? "fallback_model_failed"
+        : fallback.fallbackReason,
+    };
+  }
+
+  return {
+    ...retry,
+    fallbackReason: "preferred_model_retry_failed",
+  };
 }
 
 export async function askTokenAiChat(
   request: TokenAiChatRequest,
 ): Promise<TokenAiChatData> {
   const intent = classifyTokenAiIntent(request.question);
+  const modelModeRequested = request.modelMode ?? "deep";
+  const modelRequested = modelForMode(modelModeRequested);
   const context = await buildTokenAiContext({
     address: request.address,
     symbol: request.symbol,
@@ -2036,18 +2426,28 @@ export async function askTokenAiChat(
     timeframe: request.timeframe,
     language: request.language,
     promptVersion: TOKEN_AI_CHAT_PROMPT_VERSION,
-    model: TOKEN_AI_CHAT_MODEL,
+    model: modelRequested,
     evidenceHash,
   };
   const geminiConfigured = Boolean(getGeminiApiKey());
+  const normalizedQuestionHash = hashQuestion(request.question);
 
   const cached = await readTokenAiChatCache(cacheKey);
   if (cached) {
-    if (cached.data.provider === "deterministic" && geminiConfigured) {
-      logGeminiFallback("cached_deterministic_ignored_gemini_available");
+    if (
+      (cached.data.provider === "deterministic" ||
+        cached.data.provider === "analyst_fallback") &&
+      geminiConfigured
+    ) {
+      logGeminiFallback(
+        cached.data.provider === "analyst_fallback"
+          ? "cached_analyst_fallback_ignored_gemini_available"
+          : "cached_deterministic_ignored_gemini_available",
+      );
     } else {
       const fallbackReason =
-        cached.data.provider === "deterministic"
+        cached.data.provider === "deterministic" ||
+        cached.data.provider === "analyst_fallback"
           ? cached.data.fallbackReason ??
             exposeFallbackReason("cached_deterministic_response")
           : undefined;
@@ -2063,20 +2463,70 @@ export async function askTokenAiChat(
   }
 
   const gemini = await generateGeminiAnswer(request, context, intent);
-  const fresh =
-    gemini.data ??
-    buildDeterministicAnswer(
-      request,
-      context,
-      intent,
-      gemini.fallbackReason,
-    );
+  let fresh: Omit<TokenAiChatData, "cache">;
 
-  if (fresh.provider === "deterministic" && !fresh.fallbackReason) {
-    fresh.fallbackReason = exposeFallbackReason(gemini.fallbackReason);
+  if (gemini.data) {
+    fresh = gemini.data;
+  } else {
+    const lastGood = await readLastSuccessfulGeminiCache({
+      tokenAddress: request.address,
+      intent,
+      normalizedQuestionHash,
+      timeframe: request.timeframe,
+      language: request.language,
+      promptVersion: TOKEN_AI_CHAT_PROMPT_VERSION,
+    });
+    const ageMs = lastGood?.updatedAt
+      ? Date.now() - Date.parse(lastGood.updatedAt)
+      : Number.POSITIVE_INFINITY;
+    if (lastGood && ageMs <= lastSuccessfulGeminiWindowMs(intent)) {
+      if (shouldExposeTokenAiDiagnostics()) {
+        console.warn("[token-ai-chat] Using cached Gemini fallback", {
+          ageMs,
+          intent,
+        });
+      }
+      fresh = {
+        ...lastGood.data,
+        token: context.token,
+        question: request.question,
+        intent,
+        evidence: normalizeEvidenceForResponse(context.evidence),
+        sources: normalizeSourcesForResponse(context.sources),
+        warnings: normalizeWarningsForResponse([
+          ...lastGood.data.warnings,
+          staleGeminiWarning(request.language),
+        ]),
+        provider: "cached_gemini",
+        fallbackReason: exposeFallbackReason(
+          "gemini_unavailable_using_recent_success",
+        ),
+        asOf: lastGood.data.asOf,
+        generatedAt: new Date().toISOString(),
+        stale: true,
+        modelModeRequested,
+        modelRequested,
+      };
+    } else {
+      if (shouldExposeTokenAiDiagnostics()) {
+        console.warn("[token-ai-chat] Using Yoca Analyst Fallback", {
+          reason: gemini.fallbackReason,
+          intent,
+        });
+      }
+      fresh = buildDeterministicAnswer(
+        { ...request, modelMode: modelModeRequested },
+        context,
+        intent,
+        gemini.fallbackReason || "all_gemini_models_unavailable",
+      );
+    }
   }
 
-  const expiresAt = getTokenAiChatCacheExpiresAt(request.timeframe);
+  const expiresAt =
+    fresh.provider === "analyst_fallback"
+      ? new Date(Date.now() + ANALYST_FALLBACK_CACHE_TTL_MS)
+      : getTokenAiChatCacheExpiresAt(request.timeframe);
   const data: TokenAiChatData = {
     ...fresh,
     cache: {
@@ -2087,6 +2537,23 @@ export async function askTokenAiChat(
 
   try {
     await writeTokenAiChatCache(cacheKey, data, expiresAt);
+    if (
+      data.provider === "gemini" ||
+      data.provider === "gemini_model_fallback"
+    ) {
+      await writeLastSuccessfulGeminiCache(
+        {
+          tokenAddress: request.address,
+          intent,
+          normalizedQuestionHash,
+          timeframe: request.timeframe,
+          language: request.language,
+          promptVersion: TOKEN_AI_CHAT_PROMPT_VERSION,
+        },
+        { ...data, cache: undefined },
+        new Date(Date.now() + LAST_SUCCESSFUL_GEMINI_CACHE_TTL_MS),
+      );
+    }
   } catch (err) {
     console.warn("[token-ai-chat] cache write failed", {
       error: err instanceof Error ? err.message : String(err),

@@ -411,12 +411,34 @@ function getSourceDomain(url: string) {
 }
 
 function getProviderLabel(provider: TokenAiChatData["provider"]) {
-  return provider === "gemini" ? "Gemini" : "Deterministic";
+  switch (provider) {
+    case "gemini":
+      return "Gemini";
+    case "gemini_model_fallback":
+      return "Gemini fallback model";
+    case "cached_gemini":
+      return "Recent Gemini analysis";
+    case "analyst_fallback":
+      return "Yoca Analyst Fallback";
+    case "deterministic":
+    default:
+      return "Deterministic";
+  }
 }
 
 function getCacheLabel(cache: TokenAiChatData["cache"]) {
   if (!cache) return "Cache unknown";
   return cache.hit ? "Cache hit" : "Cache miss";
+}
+
+function getModelModeLabel(answer: TokenAiChatData) {
+  const used = answer.modelModeUsed ?? answer.modelModeRequested;
+  if (!used) return null;
+  return `${used.charAt(0).toUpperCase()}${used.slice(1)} mode`;
+}
+
+function formatFallbackReason(reason: string) {
+  return reason.replace(/_/g, " ");
 }
 
 function getConfidenceClass(confidence: TokenAiChatData["confidence"]) {
@@ -657,8 +679,10 @@ export function TokenAIChat({
                 )}
               </h3>
               <div className={styles.answerMode}>
-                <span>Deep Analysis</span>
+                <span>{getModelModeLabel(answer) ?? "Deep Analysis"}</span>
                 <span>{getProviderLabel(answer.provider)}</span>
+                {answer.modelUsed && <span>{answer.modelUsed}</span>}
+                {answer.stale && <span>Stale</span>}
                 <span>{getCacheLabel(answer.cache)}</span>
               </div>
             </div>
@@ -849,12 +873,12 @@ export function TokenAIChat({
               <TokenAiRichText text={answer.disclaimer} />
             </div>
             <span className={styles.footerMeta}>
-              Provider: {answer.provider}
+              Provider: {getProviderLabel(answer.provider)}
               {answer.cache
                 ? ` | cache ${answer.cache.hit ? "hit" : "miss"}`
                 : ""}
               {answer.fallbackReason
-                ? ` | fallback: ${answer.fallbackReason.replace(/_/g, " ")}`
+                ? ` | fallback: ${formatFallbackReason(answer.fallbackReason)}`
                 : ""}
             </span>
           </div>
