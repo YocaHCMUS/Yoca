@@ -155,6 +155,14 @@ export interface ChatMessage {
   confidence?: WalletConfidence;
 }
 
+export interface WebSearchArticle {
+  title: string;
+  url: string;
+  description: string;
+  source: string;
+  publishedAt: string | null;
+}
+
 export interface HistoryMessage {
   role: "user" | "assistant";
   content: string;

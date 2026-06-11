@@ -2,12 +2,12 @@ import { getWalletOverview } from "@sv/services/wallet/walletOverview.service.js
 import { getWalletSwaps, getWalletTransfers } from "@sv/services/wallet/walletTransfersSwaps.service.js";
 import { getWalletBalanceHistory, getCumulativePnL } from "@sv/services/wallet/walletCharts.service.js";
 import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
-import { getDailyTradingVolumeFromDb } from "@sv/services/charts/dailyTradingVolume.service.js";
+import { getWinrateData } from "@sv/services/charts/winrate.service.js";
 import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
 import { getTokenMeta, getTokenDetails } from "@sv/services/tokens/token-info.js";
 import { searchToken } from "./chat-token-search.js";
+import { searchNews, searchWeb } from "./chat-web-search.js";
 import { get24hTokenMarketChart, getHourlyTokenMarketChart, getDailyTokenMarketChart } from "@sv/services/tokens/token-chart.js";
-import type { DailyTradingVolumeResponse } from "@sv/services/charts/dailyTradingVolume.service.js";
 import type { ChatToolDefinition } from "./chat.types.js";
 import { isBaseAsset } from "@sv/services/wallet/walletDayActivity.service.js";
 import { z } from "zod";
@@ -109,6 +109,19 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
         fromMs: { type: "number", description: "Start time (epoch ms) — only swaps after this time are included in PnL computation" },
         toMs: { type: "number", description: "End time (epoch ms) — only swaps before this time are included in PnL computation" },
         tokenAddress: { type: "string", description: "Token mint address (base58) to filter PnL. NOT the symbol/name. Example: 'So11111111111111111111111111111111111111112' for SOL. Call search_token first if you only have a symbol." },
+      },
+      required: ["address"],
+    },
+  },
+  {
+    name: "get_wallet_winrate",
+    description:
+      "Fetch winrate (win/loss ratio) for a wallet. Returns winrate %, total trades, winning/losing trade counts, and average win/loss amounts in USD. Data sourced from Birdeye for comprehensive coverage across all tokens ever traded. Supports time periods: 24H, 7D, 30D, All.",
+    input_schema: {
+      type: "object",
+      properties: {
+        address: { type: "string", description: "Solana wallet address (base58)" },
+        period: { type: "string", enum: ["24H", "7D", "30D", "All"], description: "Time period for winrate calculation (default 30D)" },
       },
       required: ["address"],
     },
@@ -245,6 +258,32 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
       type: "object",
       properties: {
         query: { type: "string", description: "Token symbol or name to search for (e.g. 'SOL', 'USDC', 'BONK', 'Wojak'). Case-insensitive." },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "search_news",
+    description:
+      "Search cryptocurrency news articles for current events about a token, project, or market topic. Returns news headlines with links and publication dates. Use this when you need recent news context about a token or project the wallet holds. Not for general web content — use search_web for that.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "News search query (e.g. 'Jupiter aggregator latest news 2025', 'Solana DeFi updates')" },
+        count: { type: "number", description: "Number of results (max 10, default 5)" },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "search_web",
+    description:
+      "Search the web for any topic — token analysis, project documentation, market research, technical info, or general knowledge. Returns web page snippets with links. Use this for general web content that news articles wouldn't cover — e.g. project docs, GitHub repos, analysis pieces, announcements. For recent news, prefer search_news.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Web search query (e.g. 'Jupiter DEX documentation', 'BONK tokenomics analysis', 'Solana staking guide 2025')" },
+        count: { type: "number", description: "Number of results (max 10, default 5)" },
       },
       required: ["query"],
     },
@@ -388,16 +427,6 @@ function extractBalanceHistoryForLLM(data: unknown, address: string): unknown {
   };
 }
 
-function extractDailyVolumeForLLM(data: DailyTradingVolumeResponse | null, address: string): unknown {
-  if (!data || !data.wallets) return [];
-  const walletSeries = data.wallets.find((w) => w.walletAddress === address);
-  if (!walletSeries) return [];
-  return data.dates.map((date, i) => ({
-    date,
-    volume: walletSeries.volumes[i] ?? 0,
-  }));
-}
-
 function extractPnLForLLM(data: unknown): unknown {
   if (!data || typeof data !== "object") return null;
   const p = data as Record<string, unknown>;
@@ -488,6 +517,21 @@ function extractChartForLLM(data: unknown, tokenAddress?: string): unknown {
   };
 }
 
+function extractWinrateForLLM(data: unknown): unknown {
+  if (!data || typeof data !== "object") return null;
+  const r = data as { wallets?: unknown[] };
+  if (!Array.isArray(r.wallets) || r.wallets.length === 0) return null;
+  const w = r.wallets[0] as Record<string, unknown>;
+  return {
+    winrate: w.winrate,
+    totalTrades: w.totalTrades,
+    winningTrades: w.winningTrades,
+    losingTrades: w.losingTrades,
+    avgWinUsd: w.avgWinUsd,
+    avgLossUsd: w.avgLossUsd,
+  };
+}
+
 const ROUTE_MAP: Record<string, (params?: Record<string, string>) => { path: string; label: string }> = {
   wallet: (params) => ({ path: `/wallets/${params?.address ?? ""}`, label: "View Wallet" }),
   token: (params) => ({ path: `/tokens/${params?.address ?? ""}`, label: "View Token" }),
@@ -569,11 +613,6 @@ const periodSchema = z.object({
   timePeriod: z.enum(["7D", "30D", "60D", "90D", "1Y"]).optional().default("30D"),
 });
 
-const periodVolSchema = z.object({
-  address: z.string().min(1),
-  period: z.enum(["7D", "30D", "60D", "90D", "1Y"]).optional().default("30D"),
-});
-
 const addressOnlySchema = z.object({
   address: z.string().min(1),
 });
@@ -623,12 +662,6 @@ export const TOOL_HANDLERS: Record<
     return { data, llmData: extractBalanceHistoryForLLM(data, address) };
   },
 
-  get_trading_volume: async (input) => {
-    const { address, period } = periodVolSchema.parse(input);
-    const data = await getDailyTradingVolumeFromDb(period, [address]);
-    return { data, llmData: extractDailyVolumeForLLM(data, address) };
-  },
-
   get_wallet_pnl: async (input) => {
     const { address, fromMs, toMs, tokenAddress } = z.object({
       address: z.string().min(1),
@@ -641,6 +674,15 @@ export const TOOL_HANDLERS: Record<
     );
     const data = await getWalletPnLComputed(address, { fromMs, toMs, tokenAddress });
     return { data, llmData: extractPnLComputedForLLM(data) };
+  },
+
+  get_wallet_winrate: async (input) => {
+    const { address, period } = z.object({
+      address: z.string().min(1),
+      period: z.enum(["24H", "7D", "30D", "All"]).optional().default("30D"),
+    }).parse(input);
+    const data = await getWinrateData([address], period);
+    return { data, llmData: extractWinrateForLLM(data) };
   },
 
   get_pnl_chart: async (input) => {
@@ -726,6 +768,24 @@ export const TOOL_HANDLERS: Record<
     return { data, llmData: data };
   },
 
+  search_news: async (input) => {
+    const { query, count } = z.object({
+      query: z.string().min(1, "Search query is required"),
+      count: z.number().int().min(1).max(10).optional().default(5),
+    }).parse(input);
+    const data = await searchNews(query, count);
+    return { data, llmData: data.articles };
+  },
+
+  search_web: async (input) => {
+    const { query, count } = z.object({
+      query: z.string().min(1, "Search query is required"),
+      count: z.number().int().min(1).max(10).optional().default(5),
+    }).parse(input);
+    const data = await searchWeb(query, count);
+    return { data, llmData: data.articles };
+  },
+
   navigate_to_page: async (input) => {
     const { page, params } = navigatePageSchema.parse(input);
     const resolved = ROUTE_MAP[page](params);
@@ -748,8 +808,8 @@ const WALLET_SCOPED_TOOLS = new Set([
   "get_wallet_swaps",
   "get_wallet_transfers",
   "get_balance_history",
-  "get_trading_volume",
   "get_wallet_pnl",
+  "get_wallet_winrate",
   "get_pnl_chart",
   "get_wallet_portfolio",
   "get_historical_portfolio",

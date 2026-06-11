@@ -103,6 +103,15 @@ function getMetricClass(value: string) {
   return "metricNeutral";
 }
 
+function isNumericPartOfIdentifier(fullText: string, matchIndex: number, matchedText: string): boolean {
+  if (!/^\d[\d,.]*$/.test(matchedText)) return false;
+  const charBefore = fullText[matchIndex - 1];
+  const charAfter = fullText[matchIndex + matchedText.length];
+  if (charBefore && /[a-zA-Z]/.test(charBefore)) return true;
+  if (charAfter && /[a-zA-Z]/.test(charAfter)) return true;
+  return false;
+}
+
 function renderMetricTokens(value: string, keyPrefix: string): ReactNode[] {
   const nodes: ReactNode[] = [];
   let lastIndex = 0;
@@ -113,12 +122,16 @@ function renderMetricTokens(value: string, keyPrefix: string): ReactNode[] {
     if (index > lastIndex) {
       nodes.push(value.slice(lastIndex, index));
     }
-    const metricClass = getMetricClass(text);
-    nodes.push(
-      <span key={`${keyPrefix}-${index}`} className={classNames(styles.metricToken, styles[metricClass])}>
-        {text}
-      </span>,
-    );
+    if (isNumericPartOfIdentifier(value, index, text)) {
+      nodes.push(text);
+    } else {
+      const metricClass = getMetricClass(text);
+      nodes.push(
+        <span key={`${keyPrefix}-${index}`} className={classNames(styles.metricToken, styles[metricClass])}>
+          {text}
+        </span>,
+      );
+    }
     lastIndex = index + text.length;
   }
 
