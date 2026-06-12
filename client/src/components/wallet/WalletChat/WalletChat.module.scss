@@ -1445,3 +1445,155 @@
   font-size: 11px;
   flex-shrink: 0;
 }
+
+// ===== Cite Blocks (Gemini-style citations) =====
+
+.citeBlock {
+  display: inline;
+  background: rgba(79, 140, 255, 0.08);
+  border-radius: 4px;
+  padding: 1px 0;
+  transition: background 0.15s ease;
+  cursor: default;
+
+  &:hover {
+    background: rgba(79, 140, 255, 0.18);
+  }
+}
+
+.citeBlockHighlighted {
+  background: rgba(79, 140, 255, 0.22) !important;
+}
+
+.citePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  vertical-align: baseline;
+  font-size: 10px;
+  font-weight: 600;
+  color: $interactive;
+  background: transparent;
+  border: 1px solid rgba(79, 140, 255, 0.3);
+  border-radius: 10px;
+  padding: 1px 6px;
+  margin: 0 2px;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.4;
+  transition: background 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background: rgba(79, 140, 255, 0.12);
+    border-color: $interactive;
+  }
+}
+
+// ===== Source Panel (bottom panel for cite block sources) =====
+
+.sourcePanel {
+  margin: 10px 0 4px;
+  padding: 10px 12px;
+  background: $background;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sourcePanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sourcePanelTitle {
+  font-size: 10px;
+  font-weight: 600;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sourcePanelClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: $text-secondary;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+
+  &:hover {
+    color: $text-primary;
+  }
+}
+
+// ===== Source Cards (inside panel) =====
+
+.sourceCard {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--cds-background-secondary, #f4f4f4);
+  transition: background 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  &:hover {
+    background: var(--cds-background-hover, #e8e8e8);
+  }
+}
+
+.sourceCardHighlighted {
+  background: rgba(79, 140, 255, 0.15) !important;
+  outline: 1px solid rgba(79, 140, 255, 0.4);
+}
+
+.sourceCardTitle {
+  color: $interactive;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1.4;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.sourceCardDomain {
+  color: $text-secondary;
+  font-size: 11px;
+}
+
+.sourceCardSnippet {
+  color: $text-primary;
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.sourceCardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.sourceCardDate {
+  color: $text-secondary;
+  font-size: 10px;
+}
+
+.sourceCardOpen {
+  color: $interactive;
+  font-size: 11px;
+  font-weight: 500;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

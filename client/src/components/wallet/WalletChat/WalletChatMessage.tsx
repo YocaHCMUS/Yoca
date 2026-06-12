@@ -19,6 +19,7 @@ interface Props {
 }
 
 const MARKER_RE = /<(chart|table|action)\s+id="([^"]+)"\s*\/>/g;
+const CITE_RE = /<cite\s+ids="([^"]+)"\s*>((?:(?!<\/cite>)[\s\S])*?)<\/cite>/g;
 
 function normalizeMarkers(text: string): string {
   return text.replace(/<(chart|table)>id="([^"]+)"<\/\1>/g, '<$1 id="$2" />');
@@ -28,33 +29,60 @@ type PartType =
   | { type: "text"; content: string }
   | { type: "chart"; id: string }
   | { type: "table"; id: string }
-  | { type: "action"; id: string };
+  | { type: "action"; id: string }
+  | { type: "cite"; ids: string[]; content: string };
 
 function parseMarkers(text: string): PartType[] {
   const normalized = normalizeMarkers(text);
   const parts: PartType[] = [];
-  let lastIndex = 0;
-  const combined: Array<{ index: number; type: "chart" | "table" | "action"; match: RegExpExecArray }> = [];
+
+  // Collect all marker positions (cite + self-closing)
+  type Marker = { index: number; endIndex: number; type: PartType["type"] } & (
+    | { type: "cite"; ids: string[]; content: string }
+    | { type: "chart" | "table" | "action"; id: string }
+  );
+
+  const markers: Marker[] = [];
 
   let m: RegExpExecArray | null;
-  while ((m = MARKER_RE.exec(normalized)) !== null) {
-    combined.push({ index: m.index, type: m[1] as "chart" | "table" | "action", match: [...m] as unknown as RegExpExecArray });
+  while ((m = CITE_RE.exec(normalized)) !== null) {
+    const ids = m[1].split(",").map((s) => s.trim()).filter(Boolean);
+    markers.push({
+      index: m.index,
+      endIndex: m.index + m[0].length,
+      type: "cite",
+      ids,
+      content: m[2],
+    });
   }
-  combined.sort((a, b) => a.index - b.index);
 
-  for (const item of combined) {
-    if (item.index > lastIndex) {
-      parts.push({ type: "text", content: text.slice(lastIndex, item.index) });
-    }
-    if (item.type === "action") {
-      parts.push({ type: "action", id: item.match[2] });
-    } else {
-      parts.push({ type: item.type as "chart" | "table", id: item.match[2] });
-    }
-    lastIndex = item.index + item.match[0].length;
+  while ((m = MARKER_RE.exec(normalized)) !== null) {
+    markers.push({
+      index: m.index,
+      endIndex: m.index + m[0].length,
+      type: m[1] as "chart" | "table" | "action",
+      id: m[2],
+    });
   }
-  if (lastIndex < text.length) {
-    parts.push({ type: "text", content: text.slice(lastIndex) });
+
+  markers.sort((a, b) => a.index - b.index);
+
+  let lastIndex = 0;
+  for (const marker of markers) {
+    if (marker.index > lastIndex) {
+      parts.push({ type: "text", content: normalized.slice(lastIndex, marker.index) });
+    }
+    if (marker.type === "cite") {
+      parts.push({ type: "cite", ids: marker.ids, content: marker.content });
+    } else if (marker.type === "action") {
+      parts.push({ type: "action", id: marker.id });
+    } else {
+      parts.push({ type: marker.type as "chart" | "table", id: marker.id });
+    }
+    lastIndex = marker.endIndex;
+  }
+  if (lastIndex < normalized.length) {
+    parts.push({ type: "text", content: normalized.slice(lastIndex) });
   }
 
   return parts;
@@ -322,87 +350,152 @@ function WalletChatSectionRenderer({ section, onBulletClick, onCopySection, copi
 
 // ─── Action Button Group ────────────────────────────────────────────────
 
-// ─── Source Citation Helpers ────────────────────────────────────────────
+// ─── Cite Block + Source Panel ──────────────────────────────────────────
 
-const CITATION_RE = /\[(\d+(?:\s*,\s*\d+)*)\]/g;
-
-function renderCitationTokens(
-  value: string,
-  sources: ChatSource[],
-): ReactNode {
-  const segments: ReactNode[] = [];
-  let lastIndex = 0;
-  let m: RegExpExecArray | null;
-
-  while ((m = CITATION_RE.exec(value)) !== null) {
-    const index = m.index;
-    if (index > lastIndex) {
-      segments.push(renderInlineRichText(value.slice(lastIndex, index), `cit-${lastIndex}`));
-    }
-    const nums = m[1].split(",").map((s) => s.trim()).filter(Boolean);
-    const tokens = nums.map((numStr, i) => {
-      const num = parseInt(numStr, 10);
-      const srcIdx = num - 1;
-      const source = sources.length > 0 && srcIdx >= 0 && srcIdx < sources.length ? sources[srcIdx] : null;
-      if (source) {
-        return (
-          <a
-            key={`cit-${index}-${i}`}
-            href={source.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.citationLink}
-            title={source.title}
-          >
-            [{numStr}]
-          </a>
-        );
-      }
-      return (
-        <span key={`cit-${index}-${i}`} className={styles.citationRef}>[{numStr}]</span>
-      );
-    });
-
-    const joined = tokens.reduce<ReactNode[]>((acc, token, i) => {
-      if (i > 0) acc.push(", ");
-      acc.push(token);
-      return acc;
-    }, []);
-
-    segments.push(<span key={`cit-group-${index}`}>{joined}</span>);
-    lastIndex = index + m[0].length;
-  }
-  if (lastIndex < value.length) {
-    segments.push(renderInlineRichText(value.slice(lastIndex), `cit-${lastIndex}`));
-  }
-
-  return <>{segments}</>;
+function buildPillLabel(ids: string[], allSources: ChatSource[]): string {
+  const maxVisible = 2;
+  const visible = ids.slice(0, maxVisible);
+  const remainder = ids.length - maxVisible;
+  const nums = visible.join(", ");
+  return remainder > 0 ? `sources: ${nums}, +${remainder}` : `sources: ${nums}`;
 }
 
-// ─── Sources Block ─────────────────────────────────────────────────────
+function CitedTextBlock({
+  ids,
+  content,
+  sources,
+  activePanelKey,
+  hoveredCiteIds,
+  onOpenPanel,
+  onHoverIds,
+  onLeaveIds,
+}: {
+  ids: string[];
+  content: string;
+  sources: ChatSource[];
+  activePanelKey: string | null;
+  hoveredCiteIds: number[];
+  onOpenPanel: (key: string, ids: string[]) => void;
+  onHoverIds: (ids: string[]) => void;
+  onLeaveIds: () => void;
+}) {
+  const numIds = ids.map(Number);
+  const matchesHover = hoveredCiteIds.some((h) => numIds.includes(h));
+  const isActive = activePanelKey === ids.join(",");
 
-function SourcesBlock({ sources }: { sources: ChatSource[] }) {
-  const { tr } = useLocalization();
-  if (!sources || sources.length === 0) return null;
   return (
-    <div className={styles.sourcesBlock}>
-      <div className={styles.sourcesHeader}>{tr("chat.sources")}</div>
-      <ol className={styles.sourcesList}>
-        {sources.map((s, i) => (
-          <li key={i} className={styles.sourceItem}>
-            <span className={styles.sourceIndex}>[{i + 1}]</span>
-            <a
-              href={s.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.sourceLink}
-            >
-              {s.title}
-            </a>
-            <span className={styles.sourceName}> — {s.source}</span>
-          </li>
-        ))}
-      </ol>
+    <span
+      className={classNames(styles.citeBlock, {
+        [styles.citeBlockHighlighted]: matchesHover || isActive,
+      })}
+      onMouseEnter={() => onHoverIds(ids)}
+      onMouseLeave={onLeaveIds}
+    >
+      <WalletRichText text={content} inline />
+      <button
+        type="button"
+        className={styles.citePill}
+        onClick={() => onOpenPanel(ids.join(","), ids)}
+      >
+        📎 {buildPillLabel(ids, sources)}
+      </button>
+    </span>
+  );
+}
+
+function SourceCard({
+  source,
+  idx,
+  isHighlighted,
+  onHover,
+  onLeave,
+}: {
+  source: ChatSource;
+  idx: number;
+  isHighlighted: boolean;
+  onHover: (num: number) => void;
+  onLeave: () => void;
+}) {
+  return (
+    <div
+      className={classNames(styles.sourceCard, { [styles.sourceCardHighlighted]: isHighlighted })}
+      onMouseEnter={() => onHover(idx)}
+      onMouseLeave={onLeave}
+    >
+      <a
+        href={source.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={styles.sourceCardTitle}
+      >
+        {source.title}
+      </a>
+      <span className={styles.sourceCardDomain}>{source.source}</span>
+      {source.snippet && <p className={styles.sourceCardSnippet}>{source.snippet}</p>}
+      <div className={styles.sourceCardFooter}>
+        {source.publishedAt && (
+          <span className={styles.sourceCardDate}>{formatDate(source.publishedAt)}</span>
+        )}
+        <a
+          href={source.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.sourceCardOpen}
+        >
+          Open ↗
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function formatDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  } catch {
+    return iso;
+  }
+}
+
+function SourcePanel({
+  ids,
+  sources,
+  hoveredCiteIds,
+  onHoverSource,
+  onLeaveSource,
+  onClose,
+}: {
+  ids: string[];
+  sources: ChatSource[];
+  hoveredCiteIds: number[];
+  onHoverSource: (num: number) => void;
+  onLeaveSource: () => void;
+  onClose: () => void;
+}) {
+  const { tr } = useLocalization();
+  const matched = ids
+    .map((id) => ({ idx: parseInt(id, 10), source: sources[parseInt(id, 10) - 1] }))
+    .filter((item) => item.source);
+
+  if (matched.length === 0) return null;
+
+  return (
+    <div className={styles.sourcePanel}>
+      <div className={styles.sourcePanelHeader}>
+        <span className={styles.sourcePanelTitle}>{tr("chat.sources")}</span>
+        <button type="button" className={styles.sourcePanelClose} onClick={onClose}>✕</button>
+      </div>
+      {matched.map(({ idx, source }) => (
+        <SourceCard
+          key={idx}
+          source={source}
+          idx={idx}
+          isHighlighted={hoveredCiteIds.includes(idx)}
+          onHover={onHoverSource}
+          onLeave={onLeaveSource}
+        />
+      ))}
     </div>
   );
 }
@@ -437,6 +530,9 @@ export function WalletChatMessage({ message, onAction }: Props) {
   const { tr } = useLocalization();
   const [showAllEvidence, setShowAllEvidence] = useState(false);
   const [copiedSectionId, setCopiedSectionId] = useState<string | null>(null);
+  const [activePanelKey, setActivePanelKey] = useState<string | null>(null);
+  const [activePanelIds, setActivePanelIds] = useState<string[]>([]);
+  const [hoveredCiteIds, setHoveredCiteIds] = useState<number[]>([]);
 
   const handleCopySection = useCallback(async (_id: string, text: string) => {
     try {
@@ -452,6 +548,32 @@ export function WalletChatMessage({ message, onAction }: Props) {
     const query = `${tr("chat.tellMeMore")}: ${text}`;
     onAction?.(query);
   }, [tr, onAction]);
+
+  const handleOpenPanel = useCallback((key: string, ids: string[]) => {
+    setActivePanelKey((prev) => (prev === key ? null : key));
+    setActivePanelIds(ids);
+  }, []);
+
+  const handleClosePanel = useCallback(() => {
+    setActivePanelKey(null);
+    setActivePanelIds([]);
+  }, []);
+
+  const handleHoverSource = useCallback((num: number) => {
+    setHoveredCiteIds([num]);
+  }, []);
+
+  const handleLeaveSource = useCallback(() => {
+    setHoveredCiteIds([]);
+  }, []);
+
+  const handleHoverCiteIds = useCallback((ids: string[]) => {
+    setHoveredCiteIds(ids.map(Number));
+  }, []);
+
+  const handleLeaveCiteIds = useCallback(() => {
+    setHoveredCiteIds([]);
+  }, []);
 
   const parsed = useMemo(() => parseMarkers(message.content), [message.content]);
 
@@ -493,6 +615,7 @@ export function WalletChatMessage({ message, onAction }: Props) {
   }
 
   const elements: ReactNode[] = [];
+  const sources = message.sources ?? [];
 
   // TLDR
   if (message.tldr && message.tldr.length > 0) {
@@ -539,13 +662,29 @@ export function WalletChatMessage({ message, onAction }: Props) {
     );
   }
 
-  // Parsed content parts (text, charts, tables, actions)
+  // Parsed content parts (text, cite, charts, tables, actions)
   for (const part of parsed) {
     if (part.type === "text" && part.content.trim()) {
       elements.push(
         <div key={`t-${elements.length}`} className={styles.textPart}>
-          {renderCitationTokens(part.content, message.sources ?? [])}
+          <WalletRichText text={part.content} />
         </div>,
+      );
+    }
+
+    if (part.type === "cite") {
+      elements.push(
+        <CitedTextBlock
+          key={`cite-${elements.length}`}
+          ids={part.ids}
+          content={part.content}
+          sources={sources}
+          activePanelKey={activePanelKey}
+          hoveredCiteIds={hoveredCiteIds}
+          onOpenPanel={handleOpenPanel}
+          onHoverIds={handleHoverCiteIds}
+          onLeaveIds={handleLeaveCiteIds}
+        />,
       );
     }
 
@@ -573,6 +712,21 @@ export function WalletChatMessage({ message, onAction }: Props) {
         elements.push(actionButtonGroup(group, navigate, onAction));
       }
     }
+  }
+
+  // Source panel (active cite block)
+  if (activePanelKey && activePanelIds.length > 0) {
+    elements.push(
+      <SourcePanel
+        key="source-panel"
+        ids={activePanelIds}
+        sources={sources}
+        hoveredCiteIds={hoveredCiteIds}
+        onHoverSource={handleHoverSource}
+        onLeaveSource={handleLeaveSource}
+        onClose={handleClosePanel}
+      />,
+    );
   }
 
   // Sections
@@ -622,11 +776,6 @@ export function WalletChatMessage({ message, onAction }: Props) {
         </div>
       </div>,
     );
-  }
-
-  // Sources
-  if (message.sources && message.sources.length > 0) {
-    elements.push(<SourcesBlock key="sources" sources={message.sources} />);
   }
 
   // Evidence

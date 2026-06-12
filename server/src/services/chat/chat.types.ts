@@ -106,6 +106,8 @@ export interface ChatSource {
   title: string;
   url: string;
   source: string;
+  snippet?: string;
+  publishedAt?: string;
 }
 
 export interface WalletChatEvidence {

@@ -23,6 +23,13 @@ export function sanitizeText(text: string): string {
     return `<${tag} ${a}>`;
   });
 
+  // Normalize <cite ids="...">...</cite> tags
+  s = s.replace(/<cite\s+ids="([^"]*?)"\s*>((?:(?!<\/cite>)[\s\S])*?)<\/cite>/g, (_m: string, ids: string, content: string) => {
+    const clean = content.trim();
+    if (!clean) return clean;
+    return `<cite ids="${ids}">${clean}</cite>`;
+  });
+
   return s;
 }
 
@@ -142,18 +149,29 @@ export function sanitizeResponse(raw: string): {
     return valid.length > 0 ? valid.slice(0, 6) : undefined;
   })();
 
-  // Strip orphan citations — [N] or [N, M, ...] where any N > sources.length
+  // Strip orphan citations — [N] or [N, M, ...] and <cite> tags where any N > sources.length
   const cleanedText = sources && sources.length > 0
-    ? text.replace(/\[(\d+(?:\s*,\s*\d+)*)\]/g, (_m: string, inner: string) => {
-        const parts = inner.split(",").map((s) => s.trim()).filter(Boolean);
-        const valid = parts.filter((p) => {
-          const idx = parseInt(p, 10);
-          return !isNaN(idx) && idx >= 1 && idx <= sources.length;
-        });
-        if (valid.length === 0) return "";
-        if (valid.length === 1) return `[${valid[0]}]`;
-        return `[${valid.join(", ")}]`;
-      })
+    ? text
+        .replace(/\[(\d+(?:\s*,\s*\d+)*)\]/g, (_m: string, inner: string) => {
+          const parts = inner.split(",").map((s) => s.trim()).filter(Boolean);
+          const valid = parts.filter((p) => {
+            const idx = parseInt(p, 10);
+            return !isNaN(idx) && idx >= 1 && idx <= sources.length;
+          });
+          if (valid.length === 0) return "";
+          if (valid.length === 1) return `[${valid[0]}]`;
+          return `[${valid.join(", ")}]`;
+        })
+        .replace(/<cite\s+ids="([^"]+)"\s*>((?:(?!<\/cite>)[\s\S])*?)<\/cite>/g, (_m: string, idsStr: string, content: string) => {
+          const parts = idsStr.split(",").map((s) => s.trim()).filter(Boolean);
+          const valid = parts.filter((p) => {
+            const idx = parseInt(p, 10);
+            return !isNaN(idx) && idx >= 1 && idx <= sources.length;
+          });
+          if (valid.length === 0) return content;
+          if (valid.length === parts.length) return _m;
+          return `<cite ids="${valid.join(",")}">${content}</cite>`;
+        })
     : text;
 
   return { rawText: raw, text: cleanedText, charts, tables, actions, sources, tldr, sections, warnings, confidence };
