@@ -11,6 +11,8 @@ export interface RelatedNewsArticle {
   description: string;
   score: number;
   matchedBy: string[];
+  imageUrl?: string | null;
+  favicon?: string | null;
   timeDistanceHours: number | null;
   confidence: RelatedNewsConfidence;
 }
@@ -54,6 +56,10 @@ export interface VolatilitySignalResponse {
     groupedEventsReturned: number;
     evaluatedWindows: string[];
     relatedNewsWindowHours: number;
+    meta?: {
+      providersUsed: Array<"rss" | "brave">;
+      braveFallbackUsed: boolean;
+    };
     cache?: {
       hit: boolean;
       expiresAt: string;

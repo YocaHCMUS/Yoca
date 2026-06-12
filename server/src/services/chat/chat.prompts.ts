@@ -1,0 +1,243 @@
+import type { ChatToolDefinition, ChatToolResult, HistoryMessage, PriorContext } from "./chat.types.js";
+
+const MAX_HISTORY_TURNS = 10;
+const MAX_HISTORY_CHARS = 4000;
+
+function buildHistoryBlock(history?: HistoryMessage[]): string {
+  if (!history?.length) return "";
+
+  const turns: string[] = [];
+  const recent = history.slice(-MAX_HISTORY_TURNS);
+
+  for (const msg of recent) {
+    const label = msg.role === "user" ? "User" : "Assistant";
+    const trimmed = msg.content.length > 1000
+      ? msg.content.slice(0, 1000) + "... (truncated)"
+      : msg.content;
+    turns.push(`${label}: ${trimmed}`);
+  }
+
+  let block = turns.join("\n");
+  if (block.length > MAX_HISTORY_CHARS) {
+    block = block.slice(0, MAX_HISTORY_CHARS) + "\n... (history truncated)";
+  }
+
+  return block ? `Conversation so far:\n${block}\n` : "";
+}
+
+export function buildToolSelectionPrompt(
+  query: string,
+  tools: ChatToolDefinition[],
+  address: string,
+  context?: PriorContext,
+  history?: HistoryMessage[],
+  language?: string,
+): string {
+  const toolList = tools
+    .map(
+      (t) =>
+        `- ${t.name}: ${t.description}\n  Input schema: ${JSON.stringify(t.input_schema)}`,
+    )
+    .join("\n\n");
+
+  const langInstruction = language && language !== "en"
+    ? `IMPORTANT: The user's language is ${language}. You MUST select tools and respond in that language. All reasoning, tool selection justification, and output must be in ${language}.`
+    : "The user's language is English. Respond in English.";
+
+  const lines = [
+    "You are a blockchain data analyst assistant. Your task is to select the right tool to answer the user's question about a Solana wallet.",
+    langInstruction,
+    "Today's date: " + new Date().toISOString(),
+    `Wallet address: ${address}`,
+    "",
+    "PARAMETER RULES:",
+    "- 'tokenAddress' fields ALWAYS require the Solana token mint address (base58), NEVER the token symbol or name.",
+    "- If the user gives a token symbol/name (e.g. 'SOL', 'USDC'), call search_token first to resolve it to a base58 mint address.",
+    "- 'address' fields refer to the Solana wallet address (base58).",
+    "",
+    "Available tools:",
+    toolList,
+  ];
+
+  const historyBlock = buildHistoryBlock(history);
+  if (historyBlock) {
+    lines.push("", historyBlock);
+  }
+
+  if (context?.previousResults?.length) {
+    lines.push(
+      "",
+      "Previously fetched data (use these to decide if more data is needed):",
+      ...context.previousResults.map(
+        (r) => `  - ${r.name} (input: ${JSON.stringify(r.input)}): ${r.error ? `ERROR: ${r.error}` : JSON.stringify(r.data)}`,
+      ),
+    );
+  }
+
+  lines.push(
+    "",
+    "User query:",
+    query,
+    "",
+    "Respond with ONLY a JSON object in the following format (no markdown, no code blocks):",
+    JSON.stringify(
+      {
+        type: "tool_use",
+        tools: [
+          { name: "tool_name1", input: { param1: "value1" } },
+        ],
+      },
+      null,
+      2,
+    ),
+    "",
+    "If the query requires multiple data sources, include all relevant tools in the tools array.",
+    "If you already have enough data to answer, respond with: { \"type\": \"no_tool\", \"message\": \"ready\" }",
+    "If no tool is relevant, respond with: { \"type\": \"no_tool\", \"message\": \"explanation\" }",
+    "If the query is about something that can be answered with general knowledge, respond with: { \"type\": \"general\", \"message\": \"answer\" }",
+  );
+
+  return lines.join("\n");
+}
+
+export function buildResponseGenerationPrompt(
+  query: string,
+  allResults: ChatToolResult[],
+  history?: HistoryMessage[],
+  language?: string,
+): string {
+  const langInstruction = language && language !== "en"
+    ? `IMPORTANT: The user's language is ${language}. Generate the 'text' field entirely in ${language}. Translate chart titles, table headers, and data labels into ${language}.`
+    : "The user's language is English. Generate the 'text' field in English.";
+
+  const systemPrompt = [
+    // ── CRITICAL: stated first so it anchors the whole response ──
+    "You respond ONLY with a valid JSON object. No markdown, no code blocks, no text outside the JSON.",
+    "",
+    "You are a blockchain data analyst assistant.",
+    langInstruction,
+    "Given the user's question and the tool result data, generate a helpful JSON response.",
+    "",
+    "RESPONSE STRUCTURE:",
+    "- 'text': your natural language response as a single string. Use \\n for newlines.",
+    "          Embed <chart id=\"...\" />, <table id=\"...\" />, and <action id=\"N\" /> markers inline where you want them rendered.",
+    "- 'charts': array of chart specs ([] if none)",
+    "- 'tables': array of table specs ([] if none)",
+    "- 'actions': array of action button specs ([] if none). Each action: { label, href, index }.",
+    "    - index: number → button is placed inline at <action id=\"N\" /> marker position in text.",
+    "    - index: null or omitted → button is appended at the end of the response.",
+    "    - Multiple actions with the same index render as a button group at that marker.",
+    "",
+    "CONTENT RULES:",
+    "- Use ONLY data from tool results. Do not invent numbers or facts.",
+    "- Summarize and explain — do not echo raw data verbatim.",
+    "- Be concise and directly answer the question. No jargon unless necessary. No lengthy explanations or additional uneeded information. No explainations of what you are doing or what data you are using. Just answer the question using the data.",
+    "- Include charts/tables only if they genuinely help answer the question.",
+    "- When a tool result has 'path' and 'label' fields, include them so the frontend can render a button.",
+    "- Before concluding any token, address, or entity is absent from the data, internally verify:",
+    "   1. State how many total rows the dataset has",
+    "   2. State every unique token/identifier you found across ALL rows",
+    "   3. Only then answer the user's question",
+    "- Do not restate the user's question or introduce what you are about to say.",
+    "- Answer directly. Bad: 'Regarding your request for X, there are 5 transactions.'",
+    "- Good: 'There are 5 transactions:'",
+    "",
+    "ACTION FOLLOW-UP SUGGESTIONS:",
+    "- After answering, suggest 1-3 follow-up questions as action buttons to keep the conversation flowing.",
+    "- Each follow-up: { label: 'Button text', href: '#ask:your question here', index: null }",
+    "- Use href format '#ask:...' so the frontend treats it as a question prompt.",
+    "- Set index to null so follow-ups always append at the end, never inline.",
+    "- Examples:",
+    "  { label: 'Check PnL for token X', href: '#ask:Show me the wallet's profit and loss breakdown for token X(mint address)', index: null }",
+    "  { label: 'View wallet trade for day Y', href: '#ask:what were the trades for day Y?', index: null }",
+    "FOLLOW-UP SUGGESTION RULES:",
+    "- Suggestions must be grounded in what the data actually showed.",
+    "  Bad: 'Show me more transactions', 'show pnl'  ← too vague",
+    "  Bad: repeat of the same question  ← already answered in this response",
+    "  Good: 'What was the PnL on these 5 HANTA trades?' ← specific next step",
+    "- Do not suggest questions already answered in the current response.",
+    "- Prefer questions that reveal something new: PnL, comparison, trend, or time range drill-down.",
+    "",
+    "INLINE ACTION BUTTONS:",
+    "- For navigation links (e.g. 'View Token', 'View Transaction'), use index: 0, 1, 2.",
+    "- Place <action id=\"0\" />, <action id=\"1\" /> markers in text where each button should appear.",
+    "- Example text: 'Check out SOL: <action id=\"0\" /> and JUP: <action id=\"1\" />'",
+    "- Each unique index gets its own marker; group related buttons under the same index.",
+    "",
+    "MARKER FORMAT (inside the 'text' string):",
+    "  <chart id=\"your-id\" />",
+    "  <table id=\"your-id\" />",
+    "  <action id=\"0\" />    ← replaces with action button(s) whose index matches",
+    "Rules:",
+    "  - Self-closing. No space before id=. id must be quoted.",
+    "  - Each marker on its own line, with a blank line before and after.",
+    "  - id must exactly match the id in charts[], tables[], or the index in actions[].",
+    "",
+    "INVALID — never produce these:",
+    "  <table> id=\"x\" />      ← space before id",
+    "  <table id=\"x\"></table> ← closing tag",
+    "  <chart id=x />         ← unquoted id",
+    "",
+    "CHART SPEC FIELDS:",
+    "  id (required), type: line|bar|area|pie (required), dataRef (required),",
+    "  title (optional), limit (optional)",
+    "  pointActions (required): { label, query } — single object, NOT array. Per-data-point follow-up action.",
+    "    Uses {label} as x-axis label variable for interpolation.",
+    "    Hover shows query preview in tooltip, click sends query.",
+    "    Example: { \"label\": \"View {label}\", \"query\": \"show trades on {label}\" }",
+    "    If not meaningful follow ups can be generated for chart points, dont set the value.",
+    "",
+    "TABLE SPEC FIELDS:",
+    "  id (required), dataRef (required), columns: comma-separated (required),",
+    "  rowActions (required): { label, query } — single object, NOT array. Per-row follow-up action.",
+    "    Uses {fieldName} vars from row data for interpolation.",
+    "    Hover shows query preview, click sends query.",
+    "    Example: { \"label\": \"Analyze {symbol}\", \"query\": \"Show PnL for {symbol}\" }",
+    "    If not meaningful follow ups can be generated for table rows, dont set the value.",
+    "  columns format: 'fieldName:DisplayTitle:format' or 'fieldName:DisplayTitle' or 'fieldName'",
+    "    format can be: currency, decimal, percent, address, datetime, date, time, relative, text",
+    "    Examples: 'totalValueUsd:Total Value:currency,token:Token,amount:Amount:decimal'",
+    "    By default: fields ending in Usd/Price/Value/Pnl/Volume use currency; Percent/Rate/Change use percent;",
+    "    At/Time/Date use datetime; Address/Hash use address; everything else is decimal.",
+    "  limit, sortBy, sortDesc (default true),",
+    "  filters: array of {field, value, op} where op is eq|gt|lt|contains",
+    "  filterMode: 'and' (default, all filters must match) or 'or' (any filter matches)",
+    "  FILTER PRIORITY RULE:",
+    "  the user references a token, apply filters in this order of preference:",
+    "   1. filterField: 'tokenSymbol', filterOp: 'eq'  ← always try this first (exact symbol match)",
+    "   2. filterField: 'tokenMint',   filterOp: 'eq'  ← if user gives an address",
+    "   3. filterField: 'tokenName',   filterOp: 'contains' ← only if no symbol match exists in the data",
+    "",
+    "  When multiple tokens share the same symbol, include ALL of them — do not pick one.",
+    "  Never use 'contains' on a symbol field. Symbols are exact identifiers, not search terms.",
+    "",
+    "EXAMPLE:",
+    "User: Show top 5 tokens by PnL and the trend over time.",
+    "Output:",
+    `{
+    "text": "Your portfolio is led by SOL and JUP.\\n\\nTop 5 tokens by PnL:\\n\\n<table id=\\"top_pnl\\" />\\n\\nPnL trend over 30 days:\\n\\n<chart id=\\"pnl_trend\\" />",
+    "charts": [{ "id": "pnl_trend", "type": "line", "dataRef": "0", "title": "PnL over time" }],
+    "tables": [{ "id": "top_pnl", "dataRef": "1", "columns": "token,pnl", "sortBy": "pnl", "limit": 5 }],
+    
+  }`,
+  ].join("\n");
+
+  return [
+    systemPrompt,
+    "If the tool result is empty or an error, explain that to the user.",
+    "",
+    "---",
+    buildHistoryBlock(history),
+    `User query: ${query}`,
+    "",
+    "Tool results (use [N] index as dataRef for charts/tables).",
+    "IMPORTANT: Only create tables for results that contain arrays. Single-object results (e.g. token price, token details, overview) do not have tabular data.",
+    "Tool results:",
+    ...allResults.map(
+      (r, i) => `  [${i}] ${r.name}: ${r.error ? `ERROR: ${r.error}` : JSON.stringify(r.data)}`,
+    ),
+  ].join("\n");
+}
+
+export const CHAT_SYSTEM_INSTRUCTION =
+  "You are a helpful blockchain wallet analyst. You provide concise, data-driven answers about Solana wallet activity, portfolio, and trading performance. Always base your answers on the provided tool data. Generate all text in the user's language.";

@@ -17,7 +17,14 @@ export interface WalletOverview {
 }
 
 export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D" | "All";
-
+export interface WalletOverviewWinRateStats {
+    winRate: number;       // VD: 68.4
+    winCount: number;      // Số token lãi
+    lossCount: number;     // Số token lỗ
+    totalTraded: number;   // Tổng số token có giao dịch chốt lời/lỗ
+    avgWinUsd: number;     // Trung bình số tiền lãi
+    avgLossUsd: number;    // Trung bình số tiền lỗ
+}
 export interface WalletOverviewPeriodStats {
     tradingVolumeUsd: number | null;
     buy: {
@@ -36,6 +43,7 @@ export interface WalletOverviewPeriodStats {
         unrealizedUsd: number | null;
     };
     source: "birdeye-overall-pnl" | "overview-cache" | "none";
+    winRateStats?: WalletOverviewWinRateStats;
 }
 
 export interface WalletOverviewHoldingsStats {

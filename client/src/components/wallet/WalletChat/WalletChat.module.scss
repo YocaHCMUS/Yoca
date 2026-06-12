@@ -1,0 +1,501 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+
+// ===== Sidebar variant (full height) =====
+.sidebarContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+// ===== Widget variant (fixed overlay) =====
+.widgetContainer {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 420px;
+  height: 600px;
+  background: $background;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// ===== FAB button (widget minimized) =====
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2a6df4, #6c3af8);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  box-shadow: 0 4px 16px rgba(42, 109, 244, 0.4);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.fabText {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.fabBadge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #da1e28;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// ===== Header =====
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--cds-border-subtle-03);
+  background: $layer-01;
+  flex-shrink: 0;
+}
+
+.headerTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: $text-primary;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerActions {
+  display: flex;
+  gap: 8px;
+}
+
+.headerBtn {
+  background: none;
+  border: none;
+  color: $icon-secondary;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $icon-primary;
+  }
+}
+
+// ===== Quick Questions (column) =====
+.quickTitle {
+  font-size: 11px;
+  color: $text-secondary;
+  margin-bottom: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.quickList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quickBtn {
+  background: $layer-02;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: $text-primary;
+  cursor: pointer;
+  text-align: left;
+  line-height: 1.4;
+  transition: background-color 0.15s;
+  word-break: break-word;
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// ===== Messages area =====
+.messagesArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 12px 4px;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: $text-secondary;
+  font-size: 13px;
+  text-align: center;
+  padding: 20px;
+}
+
+.loadingDots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+  color: $text-secondary;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: $text-secondary;
+}
+
+.loadingLabel {
+  font-size: 11px;
+  margin-left: 4px;
+}
+
+.errorMsg {
+  font-size: 11px;
+  color: #da1e28;
+  padding: 4px 0;
+}
+
+// ===== Input bar =====
+.inputBar {
+  padding: 8px 12px 12px;
+  border-top: 1px solid var(--cds-border-subtle-03);
+  flex-shrink: 0;
+}
+
+.inputRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.inputField {
+  flex: 1;
+  height: 36px;
+  box-sizing: border-box;
+  background: $field-01;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: $text-primary;
+  outline: none;
+
+  &::placeholder {
+    color: $text-placeholder;
+  }
+
+  &:focus {
+    border-color: var(--interactive-focus);
+  }
+}
+
+.promptMenuBtn {
+  height: 36px;
+  width: 36px;
+  box-sizing: border-box;
+  background: transparent;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 8px;
+  padding: 8px;
+  color: $icon-secondary;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $icon-primary;
+  }
+}
+
+.sendBtn {
+  height: 36px;
+  width: 36px;
+  box-sizing: border-box;
+  background: $interactive;
+  border: none;
+  border-radius: 8px;
+  padding: 8px;
+  color: $text-on-color;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+
+  &:disabled {
+    // background: ;
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  &:hover:not(:disabled) {
+    opacity: 0.85;
+  }
+}
+
+// ===== Prompt Menu (overlay in messages area) =====
+.promptMenuOverlay {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+
+.promptMenuTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+  padding: 4px 0;
+}
+
+.promptMenuList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.promptMenuItem {
+  background: $layer-02;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: $text-primary;
+  cursor: pointer;
+  text-align: left;
+  line-height: 1.4;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+}
+
+.promptMenuItemLabel {
+  font-weight: 600;
+  font-size: 11px;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.promptMenuItemQuery {
+  font-size: 12px;
+  color: $text-primary;
+}
+
+// ===== Message bubbles (shared with WalletChatMessage) =====
+.userBubbleRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.userBubble {
+  max-width: 80%;
+  background: $interactive;
+  color: $text-on-color;
+  border-radius: 12px 12px 4px 12px;
+  padding: 8px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.assistantBubbleRow {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+.assistantBubble {
+  max-width: 85%;
+  background: $layer-02;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 12px 12px 12px 4px;
+  padding: 10px 14px;
+}
+
+.textPart {
+  font-size: 13px;
+  line-height: 1.6;
+  color: $text-primary;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 4px;
+}
+
+.emptyPart {
+  font-size: 13px;
+  color: $text-secondary;
+}
+
+// ===== Action button group =====
+.actionGroup {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.actionBtn {
+  background: transparent;
+  border: 1px solid $interactive;
+  color: $interactive;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: $layer-selected-inverse;
+  }
+}
+
+// ===== Chart container (shared with WalletChatChartRenderer) =====
+.chartContainer {
+  width: 100%;
+  height: 200px;
+  margin: 8px 0;
+}
+
+.chartTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: $text-primary;
+  margin-bottom: 4px;
+}
+
+// ===== Table (shared with WalletChatChartRenderer) =====
+.tableWrapper {
+  width: 100%;
+  margin: 8px 0;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.tableTh {
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--cds-border-subtle-03);
+  color: $text-secondary;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.tableTd {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--cds-border-subtle-02);
+  color: $text-primary;
+}
+
+.tableRow {
+  cursor: default;
+  transition: background 0.15s;
+
+  &[data-clickable="true"] {
+    cursor: pointer;
+  }
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+}
+
+// ===== Pagination =====
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid var(--cds-border-subtle-02);
+  margin-top: 4px;
+}
+
+.pageBtn {
+  background: $layer-02;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: $text-primary;
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  &:hover:not(:disabled) {
+    background: $layer-hover-01;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.pageInfo {
+  font-size: 11px;
+  color: $text-secondary;
+  white-space: nowrap;
+}

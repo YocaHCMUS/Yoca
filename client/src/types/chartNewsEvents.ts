@@ -8,6 +8,8 @@ export interface TokenChartNewsArticle {
   description: string;
   score: number;
   matchedBy: string[];
+  imageUrl?: string | null;
+  favicon?: string | null;
 }
 
 export interface TokenChartNewsEventSummary {
@@ -37,6 +39,10 @@ export interface TokenChartNewsEventsData {
   };
   timeframe: TokenChartNewsTimeframe;
   updatedAt: string;
+  meta?: {
+    providersUsed: Array<"rss" | "brave">;
+    braveFallbackUsed: boolean;
+  };
   events: TokenChartNewsEvent[];
 }
 

@@ -1,8 +1,9 @@
 import styles from "./AiAnalysisDashboard.module.scss";
 import { HelpTooltip, LabelWithTooltip } from "./HelpTooltip";
+import { useAiAnalysisI18n } from "./i18n";
 import { SeverityBadge } from "./SeverityBadge";
 import type { RiskFactorLike } from "./types";
-import { getRiskFactorExplanation, normalizeRiskLanguage, uniqueStrings } from "./utils";
+import { uniqueStrings } from "./utils";
 
 function formatScoreImpact(value: RiskFactorLike["scoreImpact"]): string | null {
   if (value == null || value === "") return null;
@@ -15,7 +16,7 @@ function formatScoreImpact(value: RiskFactorLike["scoreImpact"]): string | null 
 
 function riskPointText(value: RiskFactorLike["scoreImpact"]): string | null {
   const formatted = formatScoreImpact(value);
-  return formatted ? `${formatted} added to Risk Score` : null;
+  return formatted;
 }
 
 export function RiskBreakdownSection({
@@ -25,6 +26,7 @@ export function RiskBreakdownSection({
   riskFactors?: RiskFactorLike[];
   profile?: any;
 }) {
+  const { tr, formatCount, riskFactorExplanation, normalizeUserText } = useAiAnalysisI18n();
   const factors = riskFactors ?? [];
   const unsupported = Number(profile?.dataQuality?.unsupportedTransactionCount ?? 0);
   const totalTx = Number(profile?.analysisWindow?.actualTransactionCount ?? profile?.analysisWindow?.transactionLimit ?? 0);
@@ -33,18 +35,18 @@ export function RiskBreakdownSection({
     <section className={styles.sectionCard}>
       <div className={styles.sectionHeader}>
         <div>
-          <h3 className={styles.sectionTitle}>Risk Breakdown</h3>
-          <p className={styles.sectionDescription}>Computed risk factors contributing to the wallet score.</p>
+          <h3 className={styles.sectionTitle}>{tr("aiAnalysisDashboard.riskBreakdown.title")}</h3>
+          <p className={styles.sectionDescription}>{tr("aiAnalysisDashboard.riskBreakdown.description")}</p>
         </div>
       </div>
 
       {factors.length === 0 ? (
-        <p className={styles.bodyText}>No risk factors were generated for this wallet.</p>
+        <p className={styles.bodyText}>{tr("aiAnalysisDashboard.riskBreakdown.empty")}</p>
       ) : (
         <div className={styles.riskList}>
           {factors.map((factor, index) => {
             const evidenceIds = uniqueStrings(factor.evidenceIds ?? []);
-            const explanation = getRiskFactorExplanation(factor.code);
+            const explanation = riskFactorExplanation(factor.code);
             const isMissingData = String(factor.code ?? "").toUpperCase() === "MISSING_DATA";
             return (
               <article key={`${factor.code ?? "risk"}-${index}`} className={styles.riskFactorCard}>
@@ -60,28 +62,38 @@ export function RiskBreakdownSection({
                     <SeverityBadge severity={factor.severity} context="risk" />
                     {riskPointText(factor.scoreImpact) ? (
                       <span className={styles.labelWithTooltip}>
-                        <span className={styles.scoreImpact}>{riskPointText(factor.scoreImpact)}</span>
-                        <HelpTooltip text="This is how many points this factor adds to the total Risk Score. Higher point impact means the factor contributes more strongly to the risk level." />
+                        <span className={styles.scoreImpact}>
+                          {tr("aiAnalysisDashboard.riskBreakdown.pointsAdded", {
+                            points: riskPointText(factor.scoreImpact) ?? "",
+                          })}
+                        </span>
+                        <HelpTooltip text={String(tr("aiAnalysisDashboard.riskBreakdown.pointsTooltip"))} />
                       </span>
                     ) : null}
                   </div>
                 </div>
-                <p className={styles.riskDescription}>{normalizeRiskLanguage(factor.description) || "No description was provided."}</p>
+                <p className={styles.riskDescription}>
+                  {normalizeUserText(factor.description) || tr("aiAnalysisDashboard.riskBreakdown.fallbackDescription")}
+                </p>
                 <p className={styles.inlineHelpText}>
-                  <strong>Why it matters:</strong> {explanation.whyItMatters}
+                  <strong>{tr("aiAnalysisDashboard.riskBreakdown.whyItMatters")}</strong>{" "}
+                  {explanation.whyItMatters}
                 </p>
                 {isMissingData && totalTx > 0 ? (
                   <p className={styles.inlineHelpText}>
-                    Unsupported transactions: {unsupported.toLocaleString()} out of {totalTx.toLocaleString()} analyzed transactions. Missing Data is a reliability adjustment, not suspicious wallet behavior.
+                    {tr("aiAnalysisDashboard.riskBreakdown.unsupportedOutOfTotal", {
+                      unsupported: formatCount(unsupported),
+                      txTotal: formatCount(totalTx),
+                    })}
                   </p>
                 ) : null}
                 {evidenceIds.length > 0 ? (
                   <div className={styles.chipRow}>
                     <LabelWithTooltip
                       className={styles.chipLabel}
-                      tooltip="Evidence IDs connect this risk factor to supporting evidence cards and key findings."
+                      tooltip={String(tr("aiAnalysisDashboard.riskBreakdown.evidenceTooltip"))}
                     >
-                      Evidence
+                      {tr("aiAnalysisDashboard.riskBreakdown.evidence")}
                     </LabelWithTooltip>
                     {evidenceIds.map((id) => (
                       <span key={id} className={styles.chip}>{id}</span>

@@ -247,6 +247,371 @@ export const translation = {
     unrealizedPnL: "Unrealized PnL",
     change24hPercent: "24H change",
   },
+  aiAnalysisDashboard: {
+    header: {
+      eyebrow: "AI analysis",
+      title: "AI Wallet Behavior Analysis",
+      subtitle:
+        "Evidence-aware wallet analysis with persona, risk, and signature-backed findings.",
+      refresh: "Refresh analysis",
+      notGenerated: "Not generated yet",
+      generatedUnavailable: "Generated time unavailable",
+      generated: "Generated {{time}}",
+    },
+    loading: {
+      title: "Analyzing wallet behavior...",
+      description:
+        "Building evidence-backed persona, risk, and activity summaries.",
+    },
+    metrics: {
+      ariaLabel: "AI analysis metrics",
+      trustScore: "Trust Score",
+      trustScoreHelper: "Higher means cleaner observed behavior",
+      trustScoreTooltip:
+        "Trust Score is calculated as 100 minus Risk Score. Higher means fewer risk signals were observed in the analyzed transaction window.",
+      riskLevel: "Risk Level",
+      riskLevelHelper: "Based on computed behavioral signals",
+      riskLevelTooltip:
+        "Risk Level is assigned from the total Risk Score: LOW 0-19, MEDIUM 20-44, HIGH 45-74, CRITICAL 75-100. UNKNOWN is used when there are too few transactions.",
+      persona: "Persona",
+      personaHelper: "Primary behavior pattern",
+      personaTooltip:
+        "Persona is the wallet's primary observed behavior pattern. It describes behavior in the analyzed window, not the identity or intent of the wallet owner.",
+      personaConfidence: "Persona Confidence",
+      personaConfidenceHelper: "Confidence in the persona classification",
+      personaConfidenceTooltip:
+        "Persona Confidence estimates how strongly the available metrics support the selected persona compared with alternatives. It is not legal or identity certainty.",
+      dataCompleteness: "Data Completeness",
+      dataCompletenessHelper: "Quality of available analysis inputs",
+      dataCompletenessTooltip:
+        "Data Completeness estimates how usable the analyzed data is. It is reduced by missing prices, unsupported transactions, parsing warnings, and failed transactions.",
+      analyzedTransactions: "Analyzed Transactions",
+      analyzedTransactionsHelper: "Transactions in the analysis window",
+      analyzedTransactionsTooltip:
+        "This is the number of transactions included in the AI analysis window. Results may not represent the wallet's full history.",
+      unsupported: "{{count}} unsupported",
+      missingPrices: "{{count}} missing prices",
+      outOfAnalyzed: "{{items}} out of {{txCount}} analyzed transactions",
+      unsupportedOutOfAnalyzed:
+        "{{unsupported}} unsupported out of {{txCount}} analyzed transactions.",
+    },
+    summary: {
+      title: "AI Wallet Behavior Summary",
+      description: "Plain-language interpretation of the computed wallet profile.",
+      noSummary: "No summary was generated for this wallet.",
+      walletPersona: "Wallet Persona",
+      walletPersonaTooltip:
+        "Persona explains what behavior the wallet most resembles. It is separate from Risk Level.",
+      riskSummary: "Risk Summary",
+      pnlSummary: "PnL Summary",
+      pnlSummaryTooltip:
+        "PnL summary is based on closed positions and available price data in the analyzed window. It may not include all wallet value changes.",
+      whyPersona: "Why this persona?",
+      personaVsRisk:
+        "Persona explains what behavior the wallet most resembles. Risk Level explains how strong the overall risk signals are.",
+      selectedPersona: "Selected Persona",
+      selectedPersonaFallbackTooltip:
+        "This is a behavioral classification, not an identity claim.",
+      commonSignals: "Common Signals",
+      observedSupport: "Observed Support",
+      personaConfidenceSentence:
+        "Persona confidence is {{confidence}} based on how strongly available metrics support this persona compared with alternatives.",
+      more: "+{{count}} more",
+    },
+    findings: {
+      title: "Key Findings",
+      description:
+        "Evidence-backed observations generated from the wallet profile.",
+      empty: "No major evidence-backed findings were generated for this wallet.",
+      fallbackTitle: "Finding",
+      fallbackExplanation: "No explanation was provided.",
+      whyItMatters: "Why it matters:",
+      evidence: "Evidence",
+      evidenceTooltip:
+        "Evidence IDs connect this finding to supporting evidence cards and risk factors.",
+      signatures: "Signatures",
+      signaturesTooltip:
+        "Signature chips are representative transactions that support this finding and open in Solscan.",
+    },
+    riskBreakdown: {
+      title: "Risk Breakdown",
+      description: "Computed risk factors contributing to the wallet score.",
+      empty: "No risk factors were generated for this wallet.",
+      fallbackDescription: "No description was provided.",
+      whyItMatters: "Why it matters:",
+      pointsAdded: "{{points}} added to Risk Score",
+      pointsTooltip:
+        "This is how many points this factor adds to the total Risk Score. Higher point impact means the factor contributes more strongly to the risk level.",
+      unsupportedOutOfTotal:
+        "Unsupported transactions: {{unsupported}} out of {{txTotal}} analyzed transactions. Missing Data is a reliability adjustment, not suspicious wallet behavior.",
+      evidence: "Evidence",
+      evidenceTooltip:
+        "Evidence IDs connect this risk factor to supporting evidence cards and key findings.",
+    },
+    evidence: {
+      sectionTitle: "Evidence Highlights",
+      sectionDescription:
+        "Signals and representative signatures used to support the analysis.",
+      howToRead: "How to read evidence cards",
+      valueAndThreshold: "Value and Threshold",
+      valueAndThresholdDescription:
+        "Value is the measured result for this wallet. Threshold is the rule level that triggered the signal.",
+      traceability: "Traceability",
+      traceabilityDescription:
+        "Evidence IDs connect findings, risk factors, and evidence. Signatures are representative transactions users can verify on Solscan.",
+      empty: "No evidence highlights are available for this wallet.",
+      fallbackTitle: "Evidence",
+      evidenceId: "Evidence ID",
+      evidenceIdTooltip:
+        "Internal reference used to connect findings, risk factors, and evidence.",
+      fallbackDescription: "No evidence description was provided.",
+      value: "Value",
+      valueTooltip:
+        "The measured value from this wallet's analyzed transaction window.",
+      threshold: "Threshold",
+      thresholdTooltip:
+        "The rule threshold used to decide whether this signal should be shown.",
+      relatedSignatures: "Related Signatures",
+      relatedSignaturesTooltip:
+        "Representative transactions used as supporting evidence. Opens in Solscan.",
+      relatedTokenMints: "Related Token Mints",
+      relatedTokenMintsTooltip: "Token addresses involved in this signal.",
+      signatureTooltip:
+        "Representative transaction used as supporting evidence. Opens in Solscan.",
+      tokenMintTooltip: "Token address involved in this signal.",
+    },
+    howToRead: {
+      title: "How to Read This Analysis",
+      description: "A compact guide to the labels, scores, and evidence.",
+      open: "Open explanation",
+      personaVsRiskTitle: "Persona vs Risk",
+      personaVsRiskText:
+        "Persona describes observed behavior. Risk Level describes the total strength of risk signals.",
+      scoresTitle: "Scores",
+      scoresText:
+        "Trust Score is 100 minus Risk Score. Scores are based only on the analyzed transaction window.",
+      evidenceTitle: "Evidence",
+      evidenceText:
+        "Evidence signatures are representative examples users can verify on Solscan.",
+      limitationsTitle: "Limitations",
+      limitationsText:
+        "This is not financial advice or proof of suspicious behavior. Missing or unsupported transactions can reduce reliability.",
+    },
+    caution: {
+      title: "Caution Notes",
+      description: "How to interpret this analysis responsibly.",
+      defaultDisclaimer:
+        "Risk score reflects observed behavior in the analyzed transaction window. It is not financial advice, a legal judgment, or proof of fraud.",
+      labelDisclaimer:
+        "Labels such as Bot-like Trader, High Risk Speculator, or Wash Trading Suspect are behavioral classifications, not accusations.",
+      backendRiskVerdict:
+        "Risk score reflects observed behavior in the analyzed transaction window. It is not a legal, financial, or suspicious behavior verdict.",
+      backendFullHistory:
+        "Do not claim this analysis represents the wallet's full history unless the analysis window is FULL_HISTORY.",
+      backendNoConfirmedSuspicious:
+        "Do not claim confirmed suspicious behavior or wash trading.",
+      backendNoIntent:
+        "Do not infer intent beyond the computed metrics.",
+    },
+    empty: {
+      title: "No analyzable activity found for this wallet.",
+      description:
+        "Transaction data loaded successfully, but there were no wallet events available for evidence-backed analysis.",
+    },
+    error: {
+      title: "AI analysis could not be loaded",
+      fallback: "Please retry the analysis.",
+      retry: "Retry AI analysis",
+    },
+    labels: {
+      unknown: "Unknown",
+      low: "LOW",
+      medium: "MEDIUM",
+      high: "HIGH",
+      critical: "CRITICAL",
+      neutral: "NEUTRAL",
+      highRiskSpeculator: "High Risk Speculator",
+      botLikeTrader: "Bot-like Trader",
+      defiTrader: "DeFi Trader",
+      memecoinTrader: "Memecoin Trader",
+      smartMoneyLike: "Smart Money-like",
+      washTradingSuspect: "Wash Trading Suspect",
+      longTermHolder: "Long-term Holder",
+      casualUser: "Casual User",
+      airdropFarmer: "Airdrop Farmer",
+      nftCollector: "NFT Collector",
+      highFrequencyActivity: "High Frequency Activity",
+      shortHoldingPeriod: "Short Holding Period",
+      negativePnl: "Negative PnL",
+      lowWinRate: "Low Win Rate",
+      highTokenDiversity: "High Token Diversity",
+      highPortfolioConcentration: "High Portfolio Concentration",
+      washTradingSuspected: "Wash Trading Suspected",
+      missingData: "Missing Data",
+    },
+    severityTooltips: {
+      findingHigh:
+        "Strong signal. Review this first. It is not proof of wrongdoing.",
+      findingMedium:
+        "Meaningful signal that contributes to the interpretation.",
+      findingLow: "Contextual signal that is useful but not decisive alone.",
+      findingNeutral:
+        "Severity indicates how important this signal is in the current analysis.",
+      riskHigh:
+        "High severity means this factor adds 15 or more points to the Risk Score.",
+      riskMedium:
+        "Medium severity means this factor adds 8 to 14 points to the Risk Score.",
+      riskLow:
+        "Low severity means this factor adds 1 to 7 points to the Risk Score.",
+      riskNeutral:
+        "Severity is based on how many risk points this factor adds.",
+    },
+    personaExplanations: {
+      unknown: {
+        meaning: "There is not enough clear behavior to assign a specific persona.",
+        commonSignals: "Low transaction count, incomplete data, or mixed signals.",
+        caution: "Unknown should not be interpreted as safe or risky by itself.",
+      },
+      longTermHolder: {
+        meaning: "Wallet behavior resembles holding assets for longer periods.",
+        commonSignals:
+          "Low swap count, longer holding periods, low short-term trade ratio, concentrated holdings.",
+        caution: "This describes observed behavior in the analyzed window only.",
+      },
+      casualUser: {
+        meaning: "Wallet behavior resembles occasional, lower-intensity usage.",
+        commonSignals:
+          "Low or medium activity, fewer swaps, limited token diversity, few closed positions.",
+        caution:
+          "A casual label does not guarantee low risk outside the analyzed window.",
+      },
+      defiTrader: {
+        meaning:
+          "Wallet frequently interacts with decentralized trading protocols.",
+        commonSignals:
+          "Many swaps, high DEX usage, multiple traded tokens, meaningful trading volume.",
+        caution: "This label describes protocol usage and trading behavior, not trading skill.",
+      },
+      memecoinTrader: {
+        meaning:
+          "Wallet behavior resembles speculative trading across volatile or narrative-driven tokens.",
+        commonSignals:
+          "High token diversity, short-term trades, heavy DEX usage, smaller average trade sizes.",
+        caution:
+          "Token category metadata may be incomplete, so this can rely on behavior proxies.",
+      },
+      nftCollector: {
+        meaning: "Wallet behavior includes meaningful NFT-related activity.",
+        commonSignals:
+          "NFT holdings, NFT marketplace usage, repeated NFT transfer, purchase, or sale events.",
+        caution:
+          "NFT activity can be incomplete if marketplace or collection metadata is missing.",
+      },
+      airdropFarmer: {
+        meaning:
+          "Wallet behavior resembles activity aimed at receiving or claiming token distributions.",
+        commonSignals:
+          "Repeated airdrop claims, many inbound token transfers, broad token coverage, burst activity.",
+        caution: "This does not prove intent; it describes claim-like behavior.",
+      },
+      botLikeTrader: {
+        meaning:
+          "Wallet activity resembles automated or high-intensity trading behavior.",
+        commonSignals:
+          "Dense transaction bursts, short transaction gaps, high swap count, extreme activity level.",
+        caution: "This does not prove the wallet is operated by a bot.",
+      },
+      highRiskSpeculator: {
+        meaning: "Wallet behavior resembles aggressive speculative trading.",
+        commonSignals:
+          "Short holding periods, high token diversity, low win rate, negative PnL, heavy DEX usage.",
+        caution: "This describes behavior, not identity or intent.",
+      },
+      smartMoneyLike: {
+        meaning:
+          "Wallet shows stronger trading outcomes in the analyzed window.",
+        commonSignals:
+          "Positive realized PnL, higher win rate, profit factor above threshold, enough closed positions.",
+        caution: "This does not guarantee future performance.",
+      },
+      washTradingSuspect: {
+        meaning:
+          "Wallet shows patterns that can be associated with potentially suspicious market behavior.",
+        commonSignals:
+          "High suspicion score, repeated counterparties, circular or reciprocal flow signals.",
+        caution:
+          "This is not proof of wash trading or suspicious behavior.",
+      },
+    },
+    riskFactorExplanations: {
+      highFrequencyActivity: {
+        meaning:
+          "Activity is concentrated into dense or unusually fast transaction bursts.",
+        whyItMatters:
+          "Dense transaction bursts can indicate automated or high-intensity trading.",
+      },
+      shortHoldingPeriod: {
+        meaning: "Many positions appear to be opened and closed quickly.",
+        whyItMatters:
+          "Short holding can indicate speculative or rapid trading behavior.",
+      },
+      negativePnl: {
+        meaning:
+          "Closed positions in the analyzed window produced negative realized PnL.",
+        whyItMatters:
+          "Negative realized PnL means closed positions lost value in this analysis window.",
+      },
+      lowWinRate: {
+        meaning:
+          "The wallet has enough closed positions to estimate win rate, and that rate is low.",
+        whyItMatters:
+          "Low win rate matters only when there are enough closed positions.",
+      },
+      highTokenDiversity: {
+        meaning: "The wallet traded many different tokens in the analyzed window.",
+        whyItMatters:
+          "Trading many different tokens can indicate broad speculative behavior.",
+      },
+      highPortfolioConcentration: {
+        meaning:
+          "A large share of portfolio value appears concentrated in one or a few holdings.",
+        whyItMatters:
+          "Concentration can increase exposure to one asset or theme.",
+      },
+      washTradingSuspected: {
+        meaning:
+          "The wallet shows patterns that can be associated with potentially suspicious market behavior.",
+        whyItMatters:
+          "This can be a review-priority signal, but it is not proof of wash trading.",
+      },
+      missingData: {
+        meaning: "Some data could not be fully parsed or valued.",
+        whyItMatters:
+          "This affects reliability, not wallet behavior itself.",
+      },
+      fallbackMeaning:
+        "This risk factor was generated from the wallet's analyzed behavior.",
+      fallbackWhy:
+        "It contributes to the total Risk Score based on the rule that produced it.",
+    },
+    dataCompleteness: {
+      summary:
+        "Data completeness is {{completeness}}. This means {{usability}} of the analyzed data was usable.",
+      most: "most",
+      some: "some",
+      unsupported:
+        "{{unsupported}} unsupported out of {{txTotal}} analyzed transactions.",
+      missingPrices: "{{count}} transactions were missing price data.",
+      none:
+        "No missing prices or unsupported transactions were detected in this analysis window.",
+    },
+    riskLevelExplanation: {
+      unknown:
+        "Risk Level is UNKNOWN because fewer than 10 transactions were analyzed.",
+      known:
+        "Risk Level is assigned from total Risk Score. Current Risk Score is {{score}} / 100: LOW 0-19, MEDIUM 20-44, HIGH 45-74, CRITICAL 75-100.",
+    },
+  },
   // Wallet Page
   walletPage: {
     addressNotFound: "Address not found",
@@ -1244,6 +1609,31 @@ export const translation = {
       year: "Year",
       custom: "Custom",
       days: "Days",
+    },
+  },
+  // Chat / AI Wallet Assistant
+  chat: {
+    headerTitle: "YOCA AI",
+    inputPlaceholder: "Ask about this wallet...",
+    loadingLabel: "Analyzing...",
+    errorMessage: "Sorry, I encountered an error: {{error}}. Please try again.",
+    promptMenuTitle: "Choose a prompt",
+    quickQuestionsTitle: "Quick Questions",
+    sendButtonTitle: "Send",
+    promptMenuBtn: "Prompt menu",
+    fabTitle: "Open AI Chat",
+    seriesLabel: "Series {{count}}",
+    clickToAsk: "Click to ask: {{query}}",
+    tableNullValue: "-",
+    prompt: {
+      overview: { label: "Overview", query: "Give me a portfolio overview of this wallet including total balance, 24h change, and trading volume." },
+      pnl: { label: "PnL Summary", query: "What is my profit and loss? Show per-token breakdown with realized PnL and win rate." },
+      trades: { label: "Recent Trades", query: "Show me my recent swap transactions with token details and USD values." },
+      risk: { label: "Risk Analysis", query: "Analyze the risk level of this wallet. What are the risk factors and trust score?" },
+      tokens: { label: "Top Tokens", query: "What are my current token holdings by USD value?" },
+      balance: { label: "Balance Trend", query: "Show me my balance history chart over the last 30 days." },
+      volume: { label: "Volume Trend", query: "What's my daily trading volume trend over the last 30 days?" },
+      audit: { label: "Forensic Audit", query: "Run a forensic audit on this wallet. What persona and behavior patterns do you see?" },
     },
   },
   token: {

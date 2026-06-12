@@ -1,26 +1,25 @@
 import styles from "./AiAnalysisDashboard.module.scss";
-import { normalizeRiskLanguage, uniqueStrings } from "./utils";
-
-const DEFAULT_DISCLAIMER =
-  "Risk score reflects observed behavior in the analyzed transaction window. It is not financial advice, a legal judgment, or proof of fraud.";
-const LABEL_DISCLAIMER =
-  "Labels such as Bot-like Trader, High Risk Speculator, or Wash Trading Suspect are behavioral classifications, not accusations.";
+import { useAiAnalysisI18n } from "./i18n";
+import { uniqueStrings } from "./utils";
 
 export function CautionNotesSection({ notes }: { notes?: string[] }) {
-  const cautionNotes = uniqueStrings([...(notes ?? []), DEFAULT_DISCLAIMER, LABEL_DISCLAIMER]);
+  const { tr, normalizeUserText } = useAiAnalysisI18n();
+  const defaultDisclaimer = String(tr("aiAnalysisDashboard.caution.defaultDisclaimer"));
+  const labelDisclaimer = String(tr("aiAnalysisDashboard.caution.labelDisclaimer"));
+  const cautionNotes = uniqueStrings([...(notes ?? []), defaultDisclaimer, labelDisclaimer]);
 
   return (
     <section className={`${styles.sectionCard} ${styles.cautionCard}`}>
       <div className={styles.sectionHeader}>
         <div>
-          <h3 className={styles.sectionTitle}>Caution Notes</h3>
-          <p className={styles.sectionDescription}>How to interpret this analysis responsibly.</p>
+          <h3 className={styles.sectionTitle}>{tr("aiAnalysisDashboard.caution.title")}</h3>
+          <p className={styles.sectionDescription}>{tr("aiAnalysisDashboard.caution.description")}</p>
         </div>
       </div>
       <div className={styles.notesList}>
         {cautionNotes.map((note, index) => (
           <p key={`${note}-${index}`} className={styles.noteText}>
-            {note === DEFAULT_DISCLAIMER || note === LABEL_DISCLAIMER ? note : normalizeRiskLanguage(note)}
+            {note === defaultDisclaimer || note === labelDisclaimer ? note : normalizeUserText(note)}
           </p>
         ))}
       </div>

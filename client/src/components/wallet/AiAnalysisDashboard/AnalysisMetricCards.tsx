@@ -1,7 +1,8 @@
 import styles from "./AiAnalysisDashboard.module.scss";
 import { LabelWithTooltip } from "./HelpTooltip";
+import { useAiAnalysisI18n } from "./i18n";
 import type { MetricCardItem } from "./types";
-import { formatEnumLabel, formatPercent, getRiskLevelClass } from "./utils";
+import { formatPercent, getRiskLevelClass } from "./utils";
 
 type AnalysisMetricCardsProps = {
   profile: any;
@@ -23,6 +24,7 @@ function metricToneFromScore(score: number | null | undefined): MetricCardItem["
 }
 
 export function AnalysisMetricCards({ profile }: AnalysisMetricCardsProps) {
+  const { tr, formatCount, labelForCode } = useAiAnalysisI18n();
   const trustScore = profile?.risk?.trustScore;
   const riskLevel = profile?.risk?.riskLevel;
   const persona = profile?.persona?.primaryPersona;
@@ -31,63 +33,70 @@ export function AnalysisMetricCards({ profile }: AnalysisMetricCardsProps) {
   const txCount = profile?.analysisWindow?.actualTransactionCount ?? profile?.analysisWindow?.transactionLimit;
   const unsupportedCount = Number(profile?.dataQuality?.unsupportedTransactionCount ?? 0);
   const missingPriceCount = Number(profile?.dataQuality?.missingPriceCount ?? 0);
+  const dataIssueText = [
+    unsupportedCount > 0 ? String(tr("aiAnalysisDashboard.metrics.unsupported", { count: unsupportedCount })) : null,
+    missingPriceCount > 0 ? String(tr("aiAnalysisDashboard.metrics.missingPrices", { count: missingPriceCount })) : null,
+  ].filter(Boolean).join("; ");
   const dataHelper = txCount != null && (unsupportedCount > 0 || missingPriceCount > 0)
-    ? [
-        unsupportedCount > 0 ? `${unsupportedCount} unsupported` : null,
-        missingPriceCount > 0 ? `${missingPriceCount} missing prices` : null,
-      ].filter(Boolean).join("; ") + ` out of ${Number(txCount).toLocaleString()} analyzed transactions`
-    : "Quality of available analysis inputs";
+    ? String(tr("aiAnalysisDashboard.metrics.outOfAnalyzed", {
+        items: dataIssueText,
+        txCount: formatCount(Number(txCount)),
+      }))
+    : String(tr("aiAnalysisDashboard.metrics.dataCompletenessHelper"));
   const transactionHelper = txCount != null && unsupportedCount > 0
-    ? `${unsupportedCount} unsupported out of ${Number(txCount).toLocaleString()} analyzed transactions.`
-    : "Transactions in the analysis window";
+    ? String(tr("aiAnalysisDashboard.metrics.unsupportedOutOfAnalyzed", {
+        unsupported: formatCount(unsupportedCount),
+        txCount: formatCount(Number(txCount)),
+      }))
+    : String(tr("aiAnalysisDashboard.metrics.analyzedTransactionsHelper"));
 
   const cards: MetricCardItem[] = [
     {
-      label: "Trust Score",
+      label: String(tr("aiAnalysisDashboard.metrics.trustScore")),
       value: trustScore != null ? `${Math.round(Number(trustScore))} / 100` : "-",
-      helper: "Higher means cleaner observed behavior",
-      tooltip: "Trust Score is calculated as 100 minus Risk Score. Higher means fewer risk signals were observed in the analyzed transaction window.",
+      helper: String(tr("aiAnalysisDashboard.metrics.trustScoreHelper")),
+      tooltip: String(tr("aiAnalysisDashboard.metrics.trustScoreTooltip")),
       tone: metricToneFromScore(trustScore),
     },
     {
-      label: "Risk Level",
-      value: String(riskLevel ?? "UNKNOWN").toUpperCase(),
-      helper: "Based on computed behavioral signals",
-      tooltip: "Risk Level is assigned from the total Risk Score: LOW 0-19, MEDIUM 20-44, HIGH 45-74, CRITICAL 75-100. UNKNOWN is used when there are too few transactions.",
+      label: String(tr("aiAnalysisDashboard.metrics.riskLevel")),
+      value: labelForCode(riskLevel ?? "UNKNOWN"),
+      helper: String(tr("aiAnalysisDashboard.metrics.riskLevelHelper")),
+      tooltip: String(tr("aiAnalysisDashboard.metrics.riskLevelTooltip")),
       tone: metricToneFromRisk(riskLevel),
     },
     {
-      label: "Persona",
-      value: formatEnumLabel(persona),
-      helper: "Primary behavior pattern",
-      tooltip: "Persona is the wallet's primary observed behavior pattern. It describes behavior in the analyzed window, not the identity or intent of the wallet owner.",
+      label: String(tr("aiAnalysisDashboard.metrics.persona")),
+      value: labelForCode(persona),
+      helper: String(tr("aiAnalysisDashboard.metrics.personaHelper")),
+      tooltip: String(tr("aiAnalysisDashboard.metrics.personaTooltip")),
       tone: "info",
     },
     {
-      label: "Persona Confidence",
+      label: String(tr("aiAnalysisDashboard.metrics.personaConfidence")),
       value: formatPercent(confidence),
-      helper: "Confidence in the persona classification",
-      tooltip: "Persona Confidence estimates how strongly the available metrics support the selected persona compared with alternatives. It is not legal or identity certainty.",
+      helper: String(tr("aiAnalysisDashboard.metrics.personaConfidenceHelper")),
+      tooltip: String(tr("aiAnalysisDashboard.metrics.personaConfidenceTooltip")),
       tone: "neutral",
     },
     {
-      label: "Data Completeness",
+      label: String(tr("aiAnalysisDashboard.metrics.dataCompleteness")),
       value: formatPercent(completeness),
       helper: dataHelper,
-      tooltip: "Data Completeness estimates how usable the analyzed data is. It is reduced by missing prices, unsupported transactions, parsing warnings, and failed transactions.",
+      tooltip: String(tr("aiAnalysisDashboard.metrics.dataCompletenessTooltip")),
       tone: Number(completeness ?? 0) >= 70 ? "success" : "warning",
     },
     {
-      label: "Analyzed Transactions",
-      value: txCount != null ? Number(txCount).toLocaleString() : "-",
+      label: String(tr("aiAnalysisDashboard.metrics.analyzedTransactions")),
+      value: txCount != null ? formatCount(Number(txCount)) : "-",
       helper: transactionHelper,
-      tooltip: "This is the number of transactions included in the AI analysis window. Results may not represent the wallet's full history.",
+      tooltip: String(tr("aiAnalysisDashboard.metrics.analyzedTransactionsTooltip")),
       tone: "neutral",
     },
   ];
 
   return (
-    <section className={styles.metricsGrid} aria-label="AI analysis metrics">
+    <section className={styles.metricsGrid} aria-label={String(tr("aiAnalysisDashboard.metrics.ariaLabel"))}>
       {cards.map((card) => (
         <article key={card.label} className={`${styles.metricCard} ${styles[`metric_${card.tone ?? "neutral"}`]}`}>
           <LabelWithTooltip className={styles.metricLabel} tooltip={card.tooltip}>

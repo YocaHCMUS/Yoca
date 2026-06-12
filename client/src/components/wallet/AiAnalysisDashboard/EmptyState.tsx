@@ -1,13 +1,14 @@
 import { Button } from "@carbon/react";
 import styles from "./AiAnalysisDashboard.module.scss";
-import { normalizeRiskLanguage } from "./utils";
+import { useAiAnalysisI18n } from "./i18n";
 
 export function EmptyAnalysisState() {
+  const { tr } = useAiAnalysisI18n();
   return (
     <div className={styles.emptyState}>
-      <h3 className={styles.emptyTitle}>No analyzable activity found for this wallet.</h3>
+      <h3 className={styles.emptyTitle}>{tr("aiAnalysisDashboard.empty.title")}</h3>
       <p className={styles.emptyText}>
-        Transaction data loaded successfully, but there were no wallet events available for evidence-backed analysis.
+        {tr("aiAnalysisDashboard.empty.description")}
       </p>
     </div>
   );
@@ -20,13 +21,14 @@ export function AnalysisErrorState({
   message?: string | null;
   onRetry?: () => void;
 }) {
+  const { tr, normalizeUserText } = useAiAnalysisI18n();
   return (
     <div className={styles.errorCard}>
-      <h3 className={styles.errorTitle}>AI analysis could not be loaded</h3>
-      <p className={styles.errorText}>{normalizeRiskLanguage(message) || "Please retry the analysis."}</p>
+      <h3 className={styles.errorTitle}>{tr("aiAnalysisDashboard.error.title")}</h3>
+      <p className={styles.errorText}>{normalizeUserText(message) || tr("aiAnalysisDashboard.error.fallback")}</p>
       {onRetry ? (
         <Button kind="primary" size="sm" onClick={onRetry}>
-          Retry AI analysis
+          {tr("aiAnalysisDashboard.error.retry")}
         </Button>
       ) : null}
     </div>

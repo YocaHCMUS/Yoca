@@ -2,6 +2,7 @@ import client from "@/api/main";
 import {
   GlobalPrices,
   NewsTab,
+  TokenAIChat,
   TokenHeader,
   TokenInsightTabs,
   TokenMarketsTable,
@@ -221,6 +222,15 @@ export default function TokenOverviewPage() {
                 holders={result.data?.holders ?? []}
                 holdersInfo={result.data?.holdersInfo ?? null}
                 holdersLoading={result.isFirstLoad}
+              />
+            </div>
+
+            <div className={styles.marketsSection}>
+              <TokenAIChat
+                address={address}
+                symbol={details?.symbol ?? undefined}
+                name={details?.name ?? undefined}
+                timeframe="24h"
               />
             </div>
 

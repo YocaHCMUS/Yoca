@@ -294,13 +294,30 @@ export async function getCachedWalletTransfersMeta(address: string) {
 export async function getCachedWalletTransfers(
 	address: string,
 	from?: number, //ms
-	to?: number
+	to?: number,
+	tokenAddress?: string,
+	direction?: "in" | "out",
+	minAmountUsd?: number
 ): Promise<WalletTransfer[] | null> {
 	const predicates = [eq(tokenTransfers.address, address)];
 
 	if (from != null && to != null) {
 		predicates.push(gte(tokenTransfers.blockTime, new Date(from)));
 		predicates.push(lte(tokenTransfers.blockTime, new Date(to)));
+	}
+
+	if (tokenAddress != null) {
+		predicates.push(eq(tokenTransfers.tokenAddress, tokenAddress));
+	}
+
+	if (direction === "in") {
+		predicates.push(eq(tokenTransfers.toOwner, address));
+	} else if (direction === "out") {
+		predicates.push(eq(tokenTransfers.fromOwner, address));
+	}
+
+	if (minAmountUsd != null) {
+		predicates.push(gte(tokenTransfers.amountUsd, minAmountUsd));
 	}
 
 	const rows = await db
@@ -338,13 +355,21 @@ export async function getCachedWalletSwapsMeta(address: string) {
 export async function getCachedWalletSwaps(
 	address: string,
 	from?: number, //ms
-	to?: number
+	to?: number,
+	tokenAddress?: string
 ): Promise<WalletSwap[] | null> {
 	const predicates = [eq(walletSwap.walletAddress, address)];
 
 	if (from != null && to != null) {
 		predicates.push(gte(walletSwap.blockTimestampMs, from));
 		predicates.push(lte(walletSwap.blockTimestampMs, to));
+	}
+
+	if (tokenAddress != null) {
+		predicates.push(or(
+			eq(walletSwap.boughtTokenAddress, tokenAddress),
+			eq(walletSwap.soldTokenAddress, tokenAddress),
+		)!);
 	}
 
 	const rows = await db

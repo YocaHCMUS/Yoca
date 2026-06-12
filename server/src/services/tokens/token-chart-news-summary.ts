@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { WALLET_AUDIT_MODEL } from "@sv/config/constants.js";
 import type { TokenNewsArticle } from "@sv/services/rss-news.service.js";
+import env from "@sv/util/load-env";
 import { z } from "zod";
 
 export interface TokenChartNewsEventSummary {
@@ -93,11 +94,7 @@ const BOILERPLATE_PATTERNS = [
 ];
 
 function getGeminiApiKey() {
-  return (
-    process.env.GOOGLE_AI_KEY?.trim() ||
-    process.env.GEMINI_API_KEY?.trim() ||
-    ""
-  );
+  return env.GOOGLE_AI_KEY;
 }
 
 function normalizeText(value: string | null | undefined, maxLength: number) {
