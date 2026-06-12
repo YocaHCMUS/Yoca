@@ -1,5 +1,6 @@
 import classNames from "classnames";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { Copy, Checkmark } from "@carbon/icons-react";
 import { useLocalization } from "@/contexts/LocalizationContext";
@@ -11,6 +12,7 @@ import type {
   WalletSectionKind,
 } from "./types";
 import { ChartRenderer, TableRenderer } from "./WalletChatChartRenderer";
+import { SourcePanel } from "./WalletChatSourcePanel";
 import styles from "./WalletChat.module.scss";
 
 interface Props {
@@ -375,7 +377,7 @@ function CitedTextBlock({
   sources: ChatSource[];
   activePanelKey: string | null;
   hoveredCiteIds: number[];
-  onOpenPanel: (key: string, ids: string[]) => void;
+  onOpenPanel: (key: string, ids: string[], pos: { top: number; left: number }) => void;
   onHoverIds: (ids: string[]) => void;
   onLeaveIds: () => void;
 }) {
@@ -395,7 +397,10 @@ function CitedTextBlock({
       <button
         type="button"
         className={styles.citePill}
-        onClick={() => onOpenPanel(ids.join(","), ids)}
+        onClick={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          onOpenPanel(ids.join(","), ids, { top: rect.bottom + 4, left: rect.left });
+        }}
       >
         📎 {buildPillLabel(ids, sources)}
       </button>
@@ -403,102 +408,7 @@ function CitedTextBlock({
   );
 }
 
-function SourceCard({
-  source,
-  idx,
-  isHighlighted,
-  onHover,
-  onLeave,
-}: {
-  source: ChatSource;
-  idx: number;
-  isHighlighted: boolean;
-  onHover: (num: number) => void;
-  onLeave: () => void;
-}) {
-  return (
-    <div
-      className={classNames(styles.sourceCard, { [styles.sourceCardHighlighted]: isHighlighted })}
-      onMouseEnter={() => onHover(idx)}
-      onMouseLeave={onLeave}
-    >
-      <a
-        href={source.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={styles.sourceCardTitle}
-      >
-        {source.title}
-      </a>
-      <span className={styles.sourceCardDomain}>{source.source}</span>
-      {source.snippet && <p className={styles.sourceCardSnippet}>{source.snippet}</p>}
-      <div className={styles.sourceCardFooter}>
-        {source.publishedAt && (
-          <span className={styles.sourceCardDate}>{formatDate(source.publishedAt)}</span>
-        )}
-        <a
-          href={source.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={styles.sourceCardOpen}
-        >
-          Open ↗
-        </a>
-      </div>
-    </div>
-  );
-}
 
-function formatDate(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-  } catch {
-    return iso;
-  }
-}
-
-function SourcePanel({
-  ids,
-  sources,
-  hoveredCiteIds,
-  onHoverSource,
-  onLeaveSource,
-  onClose,
-}: {
-  ids: string[];
-  sources: ChatSource[];
-  hoveredCiteIds: number[];
-  onHoverSource: (num: number) => void;
-  onLeaveSource: () => void;
-  onClose: () => void;
-}) {
-  const { tr } = useLocalization();
-  const matched = ids
-    .map((id) => ({ idx: parseInt(id, 10), source: sources[parseInt(id, 10) - 1] }))
-    .filter((item) => item.source);
-
-  if (matched.length === 0) return null;
-
-  return (
-    <div className={styles.sourcePanel}>
-      <div className={styles.sourcePanelHeader}>
-        <span className={styles.sourcePanelTitle}>{tr("chat.sources")}</span>
-        <button type="button" className={styles.sourcePanelClose} onClick={onClose}>✕</button>
-      </div>
-      {matched.map(({ idx, source }) => (
-        <SourceCard
-          key={idx}
-          source={source}
-          idx={idx}
-          isHighlighted={hoveredCiteIds.includes(idx)}
-          onHover={onHoverSource}
-          onLeave={onLeaveSource}
-        />
-      ))}
-    </div>
-  );
-}
 
 function actionButtonGroup(actions: ActionSpec[], navigate: ReturnType<typeof useNavigate>, onAction?: (href: string) => void): ReactNode {
   return (
@@ -532,6 +442,7 @@ export function WalletChatMessage({ message, onAction }: Props) {
   const [copiedSectionId, setCopiedSectionId] = useState<string | null>(null);
   const [activePanelKey, setActivePanelKey] = useState<string | null>(null);
   const [activePanelIds, setActivePanelIds] = useState<string[]>([]);
+  const [activePanelPos, setActivePanelPos] = useState<{ top: number; left: number } | null>(null);
   const [hoveredCiteIds, setHoveredCiteIds] = useState<number[]>([]);
 
   const handleCopySection = useCallback(async (_id: string, text: string) => {
@@ -549,14 +460,23 @@ export function WalletChatMessage({ message, onAction }: Props) {
     onAction?.(query);
   }, [tr, onAction]);
 
-  const handleOpenPanel = useCallback((key: string, ids: string[]) => {
-    setActivePanelKey((prev) => (prev === key ? null : key));
-    setActivePanelIds(ids);
+  const handleOpenPanel = useCallback((key: string, ids: string[], pos: { top: number; left: number }) => {
+    setActivePanelKey((prev) => {
+      if (prev === key) {
+        setActivePanelPos(null);
+        setActivePanelIds([]);
+        return null;
+      }
+      setActivePanelPos(pos);
+      setActivePanelIds(ids);
+      return key;
+    });
   }, []);
 
   const handleClosePanel = useCallback(() => {
     setActivePanelKey(null);
     setActivePanelIds([]);
+    setActivePanelPos(null);
   }, []);
 
   const handleHoverSource = useCallback((num: number) => {
@@ -714,20 +634,8 @@ export function WalletChatMessage({ message, onAction }: Props) {
     }
   }
 
-  // Source panel (active cite block)
-  if (activePanelKey && activePanelIds.length > 0) {
-    elements.push(
-      <SourcePanel
-        key="source-panel"
-        ids={activePanelIds}
-        sources={sources}
-        hoveredCiteIds={hoveredCiteIds}
-        onHoverSource={handleHoverSource}
-        onLeaveSource={handleLeaveSource}
-        onClose={handleClosePanel}
-      />,
-    );
-  }
+  // Source panel dropdown (ported to body)
+  const showPanel = activePanelKey && activePanelIds.length > 0 && activePanelPos;
 
   // Sections
   if (message.sections && message.sections.length > 0) {
@@ -848,8 +756,22 @@ export function WalletChatMessage({ message, onAction }: Props) {
   }
 
   return (
-    <div className={styles.assistantBubbleRow}>
-      <div className={styles.assistantBubble}>{elements}</div>
-    </div>
+    <>
+      <div className={styles.assistantBubbleRow}>
+        <div className={styles.assistantBubble}>{elements}</div>
+      </div>
+      {showPanel && createPortal(
+        <SourcePanel
+          ids={activePanelIds}
+          sources={sources}
+          hoveredCiteIds={hoveredCiteIds}
+          position={activePanelPos!}
+          onHoverSource={handleHoverSource}
+          onLeaveSource={handleLeaveSource}
+          onClose={handleClosePanel}
+        />,
+        document.body,
+      )}
+    </>
   );
 }
