@@ -146,6 +146,21 @@ export function buildResponseGenerationPrompt(
     "                       top_holdings, risk_factors, what_to_watch, conclusion, custom",
     "- 'warnings': array of { text, severity } objects (optional). severity: info|warning|error",
     "- 'confidence': 'Low' | 'Medium' | 'High' (optional)",
+    "- 'sources': array of { title, url, source } objects (optional). Use ONLY for web search results.",
+    "    Each source: { title: article headline, url: full URL, source: publisher/domain name }.",
+    "    Reference sources in text as [1], [2], etc.",
+    "    Max 5 sources. Do NOT include sources for non-search tools.",
+    "    CRITICAL: sources array indices MUST be 1-based and exactly match [N] markers in text.",
+    "    If you write [4] in text, the 4th element in sources array MUST exist.",
+    "    The first entry in sources is [1], second is [2], etc. Re-number sources sequentially.",
+    "",
+    "SOURCE CITATION RULES:",
+    "- When you use search_news or search_web results, you MUST cite them in the 'sources' field.",
+    "- Extract title, url, and source from the article objects in the tool results.",
+    "- In the 'text' field, mark each citation with its bracket number: e.g. 'According to a recent report[1], SOL price...'",
+    "- The frontend will render [N] as clickable links to the source URL.",
+    "- Never fabricate sources. Only cite what is actually in the search tool results.",
+    "- If the search result article has a description, you may use it for context but still cite the source.",
     "",
     "SECTION USAGE GUIDE:",
     "- market_snapshot: wallet balance, holdings count, 24h metrics",
@@ -250,14 +265,24 @@ export function buildResponseGenerationPrompt(
     "  When multiple tokens share the same symbol, include ALL of them — do not pick one.",
     "  Never use 'contains' on a symbol field. Symbols are exact identifiers, not search terms.",
     "",
-    "EXAMPLE:",
+    "EXAMPLE (with sources):",
+    "User: What is the latest news about SOL?",
+    "Output:",
+    `{
+    "text": "SOL has been trending up this week. Recent coverage highlights strong ecosystem growth[1] and new DeFi integrations[2].\\n\\nKey developments:\\n- Jupiter exchange volume hit new highs[1]\\n- Solana mobile adoption growing[2]",
+    "sources": [
+      { "title": "Solana Ecosystem Report Q1 2025", "url": "https://example.com/solana-report", "source": "CoinDesk" },
+      { "title": "Jupiter DEX Volume Surpasses $X", "url": "https://example.com/jupiter-volume", "source": "The Block" }
+    ]
+  }`,
+    "",
+    "EXAMPLE (PnL analysis, no sources):",
     "User: Show top 5 tokens by PnL and the trend over time.",
     "Output:",
     `{
     "text": "Your portfolio is led by SOL and JUP.\\n\\nTop 5 tokens by PnL:\\n\\n<table id=\\"top_pnl\\" />\\n\\nPnL trend over 30 days:\\n\\n<chart id=\\"pnl_trend\\" />",
     "charts": [{ "id": "pnl_trend", "type": "line", "dataRef": "0", "title": "PnL over time" }],
-    "tables": [{ "id": "top_pnl", "dataRef": "1", "columns": "token,pnl", "sortBy": "pnl", "limit": 5 }],
-    
+    "tables": [{ "id": "top_pnl", "dataRef": "1", "columns": "token,pnl", "sortBy": "pnl", "limit": 5 }]
   }`,
   ].join("\n");
 

@@ -1225,6 +1225,13 @@
   }
 }
 
+.sessionToggleLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 16ch;
+}
+
 .sessionDropdown {
   position: absolute;
   top: 100%;
@@ -1352,4 +1359,89 @@
   color: $text-secondary;
   line-height: 1.5;
   max-width: 280px;
+}
+
+// ===== Source Citations =====
+
+.citationLink {
+  color: $interactive;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 11px;
+  cursor: pointer;
+  margin: 0 1px;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.citationRef {
+  color: $text-secondary;
+  background: var(--cds-background-tertiary);
+  font-weight: 700;
+  font-size: 11px;
+  padding: 0 3px;
+  border-radius: 2px;
+  margin: 0 1px;
+}
+
+.sourcesBlock {
+  margin: 12px 0 4px;
+  padding: 10px 12px;
+  background: $background;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 8px;
+}
+
+.sourcesHeader {
+  font-size: 10px;
+  font-weight: 600;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.sourcesList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sourceItem {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.sourceIndex {
+  color: $text-secondary;
+  font-weight: 700;
+  font-size: 10px;
+  flex-shrink: 0;
+  min-width: 20px;
+}
+
+.sourceLink {
+  color: $interactive;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.sourceName {
+  color: $text-secondary;
+  font-size: 11px;
+  flex-shrink: 0;
 }

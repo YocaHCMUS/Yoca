@@ -131,7 +131,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
         });
 
         if (!res.ok) {
-          throw new Error(`Server error: ${res.status}`);
+          throw new Error(tr("chat.serverError", { status: String(res.status) }));
         }
 
         const data = (await res.json()) as ChatResponse & { sessionId?: string };
@@ -144,6 +144,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
           actions: data.actions,
           tldr: data.tldr,
           sections: data.sections,
+          sources: data.sources,
           evidence: data.evidence,
           warnings: data.warnings,
           confidence: data.confidence,
@@ -240,7 +241,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
           title={tr("chat.fabTitle")}
           className={styles.fab}
         >
-          <span className={styles.fabText}>AI</span>
+          <span className={styles.fabText}>{tr("chat.fabLabel")}</span>
         </button>
       );
     }
@@ -255,7 +256,14 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
           <span className={styles.headerTitle}>{tr("chat.headerTitle")}</span>
           <div className={styles.headerActions}>
             {variant === "widget" && (
-              <button type="button" onClick={handleClose} className={styles.headerBtn}>✕</button>
+              <button
+                type="button"
+                onClick={handleClose}
+                className={styles.headerBtn}
+                aria-label={tr("chat.close")}
+              >
+                ✕
+              </button>
             )}
           </div>
         </div>
@@ -271,7 +279,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
     if (variant === "widget" && (!isOpen || isMinimized)) {
       return (
         <button type="button" className={styles.fab}>
-          <span className={styles.fabText}>AI</span>
+          <span className={styles.fabText}>{tr("chat.fabLabel")}</span>
         </button>
       );
     }
@@ -289,7 +297,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
         title={tr("chat.fabTitle")}
         className={styles.fab}
       >
-        <span className={styles.fabText}>AI</span>
+        <span className={styles.fabText}>{tr("chat.fabLabel")}</span>
         {unreadCount > 0 && (
           <span className={styles.fabBadge}>
             {unreadCount}
@@ -421,11 +429,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
               onClick={() => setShowSessionMenu((v) => !v)}
             >
               <span className={styles.sessionToggleLabel}>
-                {activeSession?.title
-                  ? activeSession.title.length > 16
-                    ? activeSession.title.slice(0, 16) + "..."
-                    : activeSession.title
-                  : tr("chat.newChat")}
+                {activeSession?.title ?? tr("chat.newChat")}
               </span>
               <ChevronDown size={12} />
             </button>
@@ -435,7 +439,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
             className={styles.headerBtn}
             data-active={chatPosition === "left"}
             onClick={() => onChatPositionChange("left")}
-            title="Left sidebar"
+            title={tr("chat.leftSidebar")}
           >
             <OpenPanelLeft size={16} />
           </button>
@@ -443,7 +447,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
             className={styles.headerBtn}
             data-active={chatPosition === "right"}
             onClick={() => onChatPositionChange("right")}
-            title="Right sidebar"
+            title={tr("chat.rightSidebar")}
           >
             <OpenPanelRight size={16} />
           </button>
@@ -451,7 +455,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
             className={styles.headerBtn}
             data-active={chatPosition === "fullscreen"}
             onClick={() => onChatPositionChange("fullscreen")}
-            title="Fullscreen"
+            title={tr("chat.fullscreenMode")}
           >
             <Maximize size={16} />
           </button>
@@ -469,6 +473,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
                 type="button"
                 onClick={() => setIsMinimized(true)}
                 className={styles.headerBtn}
+                aria-label={tr("chat.minimize")}
               >
                 ⟱
               </button>
@@ -476,6 +481,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
                 type="button"
                 onClick={handleClose}
                 className={styles.headerBtn}
+                aria-label={tr("chat.close")}
               >
                 ✕
               </button>

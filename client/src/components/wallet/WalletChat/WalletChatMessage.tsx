@@ -6,6 +6,7 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import type {
   ActionSpec,
   ChatMessageItem,
+  ChatSource,
   WalletChatSection,
   WalletSectionKind,
 } from "./types";
@@ -124,6 +125,8 @@ function renderMetricTokens(value: string, keyPrefix: string): ReactNode[] {
     }
     if (isNumericPartOfIdentifier(value, index, text)) {
       nodes.push(text);
+    } else if (isInsideCitationBrackets(value, index, text)) {
+      nodes.push(text);
     } else {
       const metricClass = getMetricClass(text);
       nodes.push(
@@ -140,6 +143,10 @@ function renderMetricTokens(value: string, keyPrefix: string): ReactNode[] {
   }
 
   return nodes;
+}
+
+function isInsideCitationBrackets(fullText: string, matchIndex: number, matchedText: string): boolean {
+  return fullText[matchIndex - 1] === "[" && fullText[matchIndex + matchedText.length] === "]";
 }
 
 function renderInlineRichText(value: string, keyPrefix = "rich") {
@@ -265,6 +272,7 @@ function WalletChatSectionRenderer({ section, onBulletClick, onCopySection, copi
   onCopySection?: (id: string, text: string) => void;
   copiedSectionId?: string | null;
 }) {
+  const { tr } = useLocalization();
   const meta = SECTION_KIND_META[section.kind] ?? SECTION_KIND_META.custom;
   const sectionId = `section-${section.title || section.kind}`;
   const isCopied = copiedId === sectionId;
@@ -277,10 +285,10 @@ function WalletChatSectionRenderer({ section, onBulletClick, onCopySection, copi
         type="button"
         className={classNames(styles.sectionCopyBtn, { [styles.sectionCopyBtnVisible]: isCopied })}
         onClick={() => onCopySection?.(sectionId, sectionCopyText)}
-        title="Copy section"
+        title={tr("chat.copySection")}
       >
         {isCopied ? <Checkmark size={12} /> : <Copy size={12} />}
-        {isCopied ? "Copied" : "Copy"}
+        {isCopied ? tr("chat.copied") : tr("chat.copy")}
       </button>
       <div className={styles.sectionHeader}>
         <span className={styles.sectionIcon} aria-hidden="true">{meta.icon}</span>
@@ -313,6 +321,91 @@ function WalletChatSectionRenderer({ section, onBulletClick, onCopySection, copi
 }
 
 // ─── Action Button Group ────────────────────────────────────────────────
+
+// ─── Source Citation Helpers ────────────────────────────────────────────
+
+const CITATION_RE = /\[(\d+(?:\s*,\s*\d+)*)\]/g;
+
+function renderCitationTokens(
+  value: string,
+  sources: ChatSource[],
+): ReactNode {
+  const segments: ReactNode[] = [];
+  let lastIndex = 0;
+  let m: RegExpExecArray | null;
+
+  while ((m = CITATION_RE.exec(value)) !== null) {
+    const index = m.index;
+    if (index > lastIndex) {
+      segments.push(renderInlineRichText(value.slice(lastIndex, index), `cit-${lastIndex}`));
+    }
+    const nums = m[1].split(",").map((s) => s.trim()).filter(Boolean);
+    const tokens = nums.map((numStr, i) => {
+      const num = parseInt(numStr, 10);
+      const srcIdx = num - 1;
+      const source = sources.length > 0 && srcIdx >= 0 && srcIdx < sources.length ? sources[srcIdx] : null;
+      if (source) {
+        return (
+          <a
+            key={`cit-${index}-${i}`}
+            href={source.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.citationLink}
+            title={source.title}
+          >
+            [{numStr}]
+          </a>
+        );
+      }
+      return (
+        <span key={`cit-${index}-${i}`} className={styles.citationRef}>[{numStr}]</span>
+      );
+    });
+
+    const joined = tokens.reduce<ReactNode[]>((acc, token, i) => {
+      if (i > 0) acc.push(", ");
+      acc.push(token);
+      return acc;
+    }, []);
+
+    segments.push(<span key={`cit-group-${index}`}>{joined}</span>);
+    lastIndex = index + m[0].length;
+  }
+  if (lastIndex < value.length) {
+    segments.push(renderInlineRichText(value.slice(lastIndex), `cit-${lastIndex}`));
+  }
+
+  return <>{segments}</>;
+}
+
+// ─── Sources Block ─────────────────────────────────────────────────────
+
+function SourcesBlock({ sources }: { sources: ChatSource[] }) {
+  const { tr } = useLocalization();
+  if (!sources || sources.length === 0) return null;
+  return (
+    <div className={styles.sourcesBlock}>
+      <div className={styles.sourcesHeader}>{tr("chat.sources")}</div>
+      <ol className={styles.sourcesList}>
+        {sources.map((s, i) => (
+          <li key={i} className={styles.sourceItem}>
+            <span className={styles.sourceIndex}>[{i + 1}]</span>
+            <a
+              href={s.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.sourceLink}
+            >
+              {s.title}
+            </a>
+            <span className={styles.sourceName}> — {s.source}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
 
 function actionButtonGroup(actions: ActionSpec[], navigate: ReturnType<typeof useNavigate>, onAction?: (href: string) => void): ReactNode {
   return (
@@ -414,7 +507,7 @@ export function WalletChatMessage({ message, onAction }: Props) {
           onClick={() => handleCopySection(tldrId, tldrCopyText)}
         >
           {tldrCopied ? <Checkmark size={12} /> : <Copy size={12} />}
-          {tldrCopied ? "Copied" : "Copy"}
+          {tldrCopied ? tr("chat.copied") : tr("chat.copy")}
         </button>
         <div className={styles.tldr}>
           <div className={styles.tldrHeader}>
@@ -451,7 +544,7 @@ export function WalletChatMessage({ message, onAction }: Props) {
     if (part.type === "text" && part.content.trim()) {
       elements.push(
         <div key={`t-${elements.length}`} className={styles.textPart}>
-          <WalletRichText text={part.content} />
+          {renderCitationTokens(part.content, message.sources ?? [])}
         </div>,
       );
     }
@@ -512,7 +605,7 @@ export function WalletChatMessage({ message, onAction }: Props) {
           onClick={() => handleCopySection(warnId, warnCopyText)}
         >
           {warnCopied ? <Checkmark size={12} /> : <Copy size={12} />}
-          {warnCopied ? "Copied" : "Copy"}
+          {warnCopied ? tr("chat.copied") : tr("chat.copy")}
         </button>
         <div className={styles.warnings}>
           <div className={styles.warnHeader}>
@@ -529,6 +622,11 @@ export function WalletChatMessage({ message, onAction }: Props) {
         </div>
       </div>,
     );
+  }
+
+  // Sources
+  if (message.sources && message.sources.length > 0) {
+    elements.push(<SourcesBlock key="sources" sources={message.sources} />);
   }
 
   // Evidence
@@ -548,7 +646,7 @@ export function WalletChatMessage({ message, onAction }: Props) {
           onClick={() => handleCopySection(evId, evCopyText)}
         >
           {evCopied ? <Checkmark size={12} /> : <Copy size={12} />}
-          {evCopied ? "Copied" : "Copy"}
+          {evCopied ? tr("chat.copied") : tr("chat.copy")}
         </button>
         <div className={styles.evidenceBlock}>
           <h3>{tr("chat.evidence")}</h3>

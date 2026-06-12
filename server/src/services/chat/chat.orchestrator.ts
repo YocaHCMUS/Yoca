@@ -325,6 +325,7 @@ async function generateResponse(
   const charts = sanitized.charts;
   const tables = sanitized.tables;
   const actions = sanitized.actions;
+  const sources = sanitized.sources;
 
   // Validate structured fields from Gemini
   const parsedJson = extractJsonObject(raw);
@@ -375,6 +376,7 @@ async function generateResponse(
     charts,
     tables,
     actions: actions.length > 0 ? actions : undefined,
+    sources: sources && sources.length > 0 ? sources : undefined,
     tldr: validatedTldr,
     sections: validatedSections,
     warnings: validatedWarnings,

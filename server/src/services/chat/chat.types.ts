@@ -102,6 +102,12 @@ export interface WalletChatSection {
   table?: Array<Record<string, string | number | null>>;
 }
 
+export interface ChatSource {
+  title: string;
+  url: string;
+  source: string;
+}
+
 export interface WalletChatEvidence {
   type:
     | "overview"
@@ -134,6 +140,7 @@ export interface ChatResponse {
   actions?: ActionSpec[];
   tldr?: string[];
   sections?: WalletChatSection[];
+  sources?: ChatSource[];
   evidence?: WalletChatEvidence[];
   warnings?: WalletWarning[];
   confidence?: WalletConfidence;
@@ -150,6 +157,7 @@ export interface ChatMessage {
   actions?: ActionSpec[];
   tldr?: string[];
   sections?: WalletChatSection[];
+  sources?: ChatSource[];
   evidence?: WalletChatEvidence[];
   warnings?: WalletWarning[];
   confidence?: WalletConfidence;

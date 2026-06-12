@@ -1,4 +1,4 @@
-import type { ActionSpec, ChartSpec, TableSpec, WalletChatSection, WalletWarning, WalletConfidence } from "./chat.types.js";
+import type { ActionSpec, ChartSpec, ChatSource, TableSpec, WalletChatSection, WalletWarning, WalletConfidence } from "./chat.types.js";
 
 export function sanitizeText(text: string): string {
   let s = text;
@@ -48,6 +48,7 @@ export function sanitizeResponse(raw: string): {
   charts: ChartSpec[];
   tables: TableSpec[];
   actions: ActionSpec[];
+  sources?: ChatSource[];
   tldr?: string[];
   sections?: WalletChatSection[];
   warnings?: WalletWarning[];
@@ -114,6 +115,20 @@ export function sanitizeResponse(raw: string): {
       ? (parsed.confidence as WalletConfidence)
       : undefined;
 
+  const sources: ChatSource[] | undefined = (() => {
+    const raw = parsed.sources;
+    if (!Array.isArray(raw) || raw.length === 0) return undefined;
+    const valid = raw.filter(
+      (s): s is ChatSource =>
+        s !== null &&
+        typeof s === "object" &&
+        typeof (s as Record<string, unknown>).title === "string" &&
+        typeof (s as Record<string, unknown>).url === "string" &&
+        typeof (s as Record<string, unknown>).source === "string",
+    );
+    return valid.length > 0 ? valid.slice(0, 10) : undefined;
+  })();
+
   const sections: WalletChatSection[] | undefined = (() => {
     const raw = parsed.sections;
     if (!Array.isArray(raw) || raw.length === 0) return undefined;
@@ -127,5 +142,19 @@ export function sanitizeResponse(raw: string): {
     return valid.length > 0 ? valid.slice(0, 6) : undefined;
   })();
 
-  return { rawText: raw, text, charts, tables, actions, tldr, sections, warnings, confidence };
+  // Strip orphan citations — [N] or [N, M, ...] where any N > sources.length
+  const cleanedText = sources && sources.length > 0
+    ? text.replace(/\[(\d+(?:\s*,\s*\d+)*)\]/g, (_m: string, inner: string) => {
+        const parts = inner.split(",").map((s) => s.trim()).filter(Boolean);
+        const valid = parts.filter((p) => {
+          const idx = parseInt(p, 10);
+          return !isNaN(idx) && idx >= 1 && idx <= sources.length;
+        });
+        if (valid.length === 0) return "";
+        if (valid.length === 1) return `[${valid[0]}]`;
+        return `[${valid.join(", ")}]`;
+      })
+    : text;
+
+  return { rawText: raw, text: cleanedText, charts, tables, actions, sources, tldr, sections, warnings, confidence };
 }

@@ -63,6 +63,12 @@ export interface WalletChatSection {
   table?: Array<Record<string, string | number | null>>;
 }
 
+export interface ChatSource {
+  title: string;
+  url: string;
+  source: string;
+}
+
 export interface WalletChatEvidence {
   type: "overview" | "portfolio" | "swap" | "transfer" | "pnl" | "balance" | "volume" | "audit" | "market";
   label: string;
@@ -86,6 +92,7 @@ export interface ChatResponse {
   actions?: ActionSpec[];
   tldr?: string[];
   sections?: WalletChatSection[];
+  sources?: ChatSource[];
   evidence?: WalletChatEvidence[];
   warnings?: WalletWarning[];
   confidence?: WalletConfidence;
@@ -100,6 +107,7 @@ export interface ChatMessageItem {
   actions?: ActionSpec[];
   tldr?: string[];
   sections?: WalletChatSection[];
+  sources?: ChatSource[];
   evidence?: WalletChatEvidence[];
   warnings?: WalletWarning[];
   confidence?: WalletConfidence;
