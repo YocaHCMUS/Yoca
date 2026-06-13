@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useMemo } from "react";
 import classNames from "classnames";
 import { useNavigate } from "react-router";
 import { InlineLoading } from "@carbon/react";
@@ -8,11 +8,6 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import {
   CaretUp,
   CaretDown,
-  SettingsAdjust,
-  ChevronDown,
-  Checkmark,
-  Close,
-  Trophy,
   ArrowUp,
   ArrowDown,
 } from "@carbon/icons-react";
@@ -85,7 +80,7 @@ export const INITIAL_FILTERS: TableFilters = {
   change24h: {},
 };
 
-function formatAge(dateStr: string | null): string {
+function formatAge(dateStr: string | null, justNowLabel: string): string {
   if (!dateStr) return "-";
   const ms = Date.now() - new Date(dateStr).getTime();
   if (ms < 0) return "-";
@@ -99,7 +94,7 @@ function formatAge(dateStr: string | null): string {
   const mins = Math.floor(ms / 60000);
   if (mins > 0) return `${mins}m`;
 
-  return "just now";
+  return justNowLabel;
 }
 
 function getSortValue(item: DexTableItem, key: SortKey): number {
@@ -137,7 +132,7 @@ export function DexTable({
   filters = INITIAL_FILTERS,
   onSort,
 }: DexTableProps) {
-  const { fmt } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const navigate = useNavigate();
 
   const sortedData = useMemo(() => {
@@ -220,7 +215,10 @@ export function DexTable({
         }}
       >
         <div style={{ width: "fit-content" }}>
-          <InlineLoading status="active" description="Loading market data..." />
+          <InlineLoading
+            status="active"
+            description={tr("marketPage.loadingMarketData")}
+          />
         </div>
       </div>
     );
@@ -229,7 +227,7 @@ export function DexTable({
   if (data.length === 0) {
     return (
       <div className={styles.dexTableContainer}>
-        <div className={styles.emptyState}>No pools found.</div>
+        <div className={styles.emptyState}>{tr("marketPage.noPoolsFound")}</div>
       </div>
     );
   }
@@ -239,9 +237,9 @@ export function DexTable({
       <table className={styles.dexTable}>
         <thead>
           <tr>
-            <th className={styles.alignLeft}>TOKEN</th>
+            <th className={styles.alignLeft}>{tr("marketPage.token")}</th>
             <th onClick={() => onSort && onSort("marketCap")}>
-              MCAP
+              {tr("marketPage.mcap")}
               {sortKey === "marketCap" && (
                 <span
                   className={classNames(styles.sortIndicator, styles.active)}
@@ -255,7 +253,7 @@ export function DexTable({
               )}
             </th>
             <th onClick={() => onSort && onSort("price")}>
-              PRICE
+              {tr("marketPage.price")}
               {sortKey === "price" && (
                 <span
                   className={classNames(styles.sortIndicator, styles.active)}
@@ -269,7 +267,7 @@ export function DexTable({
               )}
             </th>
             <th onClick={() => onSort && onSort("age")}>
-              AGE
+              {tr("marketPage.age")}
               {sortKey === "age" && (
                 <span
                   className={classNames(styles.sortIndicator, styles.active)}
@@ -283,7 +281,7 @@ export function DexTable({
               )}
             </th>
             <th onClick={() => onSort && onSort("txns")}>
-              TXNS
+              {tr("marketPage.txns")}
               {sortKey === "txns" && (
                 <span
                   className={classNames(styles.sortIndicator, styles.active)}
@@ -297,7 +295,7 @@ export function DexTable({
               )}
             </th>
             <th onClick={() => onSort && onSort("volume")}>
-              VOLUME
+              {tr("marketPage.volume")}
               {sortKey === "volume" && (
                 <span
                   className={classNames(styles.sortIndicator, styles.active)}
@@ -367,7 +365,7 @@ export function DexTable({
               )}
             </th>
             <th onClick={() => onSort && onSort("liquidity")}>
-              LIQUIDITY
+              {tr("marketPage.liquidity")}
               {sortKey === "liquidity" && (
                 <span
                   className={classNames(styles.sortIndicator, styles.active)}
@@ -450,7 +448,7 @@ export function DexTable({
                 </td>
                 <td>
                   <span className={styles.secondaryValue}>
-                    {formatAge(pool.poolCreatedAt)}
+                    {formatAge(pool.poolCreatedAt, tr("marketPage.justNow"))}
                   </span>
                 </td>
                 <td>
@@ -461,7 +459,7 @@ export function DexTable({
                 <td>
                   <span className={styles.numberValue}>
                     {pool.volume24h
-                      ? `$${fmt.num.compact.decimal(pool.volume24h)}`
+                      ? fmt.num.compact.currency(pool.volume24h)
                       : "-"}
                   </span>
                 </td>
@@ -480,7 +478,7 @@ export function DexTable({
                 <td>
                   <span className={styles.numberValue}>
                     {pool.liquidityUsd
-                      ? `$${fmt.num.compact.decimal(pool.liquidityUsd)}`
+                      ? fmt.num.compact.currency(pool.liquidityUsd)
                       : "-"}
                   </span>
                 </td>

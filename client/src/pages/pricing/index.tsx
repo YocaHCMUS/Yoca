@@ -8,6 +8,7 @@ import {
   btnPrimaryLeave,
 } from "@/components/landing/tokens";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { useUserTheme } from "@/contexts/ThemeContext";
 import { createLandingThemeStyles } from "@/components/landing/tokens";
 import { AuthReminderModal, PaymentModalWrapper, PaymentSuccessModal } from "@/components/payment";
@@ -17,38 +18,15 @@ import { AuthReminderModal, PaymentModalWrapper, PaymentSuccessModal } from "@/c
 const LITE_DATA = {
   name: "Lite",
   price: "$39",
-  period: "/ month",
-  included: "To be updated",
-  apiLimit: "To be updated",
-  overage: "To be updated",
-  websocket: "To be updated",
-  cta: "Buy Now",
 };
 
 const STANDARD_DATA = {
   name: "Standard",
-  price: "FREE",
-  period: "",
-  included: "To be updated",
-  apiLimit: "To be updated",
-  overage: "To be updated",
-  websocket: "To be updated",
-  cta: "Try For Free",
 };
 
 const PLUS_TIER = {
   name: "Plus",
   price: "$199",
-  period: "/ month",
-  included: "To be updated",
-  apiLimit: "To be updated",
-  overage: "To be updated",
-  features: [
-    "To be updated",
-    "To be updated",
-    "To be updated",
-    "To be updated",
-  ],
   isMostPopular: true,
   accentColor: "#14F195" as const,
 };
@@ -56,17 +34,6 @@ const PLUS_TIER = {
 const PRO_TIER = {
   name: "Pro",
   price: "$499",
-  period: "/ month",
-  included: "To be updated",
-  apiLimit: "To be updated",
-  overage: "To be updated",
-  features: [
-    "To be updated",
-    "To be updated",
-    "To be updated",
-    "To be updated",
-    "To be updated",
-  ],
   isMostPopular: false,
   accentColor: "#14F195" as const,
 };
@@ -127,9 +94,46 @@ function MetricRow({
 
 export default function PricingPage() {
   const { user } = useAuth();
+  const { tr } = useLocalization();
   const { theme } = useUserTheme();
   const [isStandard, setIsStandard] = useState(false);
-  const col1 = isStandard ? STANDARD_DATA : LITE_DATA;
+  const placeholder = tr("pricing.placeholder");
+  const localizedLite = {
+    ...LITE_DATA,
+    period: tr("pricing.period.month"),
+    included: placeholder,
+    apiLimit: placeholder,
+    overage: placeholder,
+    websocket: placeholder,
+    cta: tr("pricing.cta.buyNow"),
+  };
+  const localizedStandard = {
+    ...STANDARD_DATA,
+    price: tr("pricing.free"),
+    period: undefined,
+    included: placeholder,
+    apiLimit: placeholder,
+    overage: placeholder,
+    websocket: placeholder,
+    cta: tr("pricing.cta.tryForFree"),
+  };
+  const localizedPlus = {
+    ...PLUS_TIER,
+    period: tr("pricing.period.month"),
+    included: placeholder,
+    apiLimit: placeholder,
+    overage: placeholder,
+    features: [placeholder, placeholder, placeholder, placeholder],
+  };
+  const localizedPro = {
+    ...PRO_TIER,
+    period: tr("pricing.period.month"),
+    included: placeholder,
+    apiLimit: placeholder,
+    overage: placeholder,
+    features: [placeholder, placeholder, placeholder, placeholder, placeholder],
+  };
+  const col1 = isStandard ? localizedStandard : localizedLite;
 
   // Payment flow state
   const [isAuthReminderOpen, setIsAuthReminderOpen] = useState(false);
@@ -227,11 +231,10 @@ export default function PricingPage() {
         {/* ── Header ── */}
         <div className="relative z-10 flex flex-col items-center text-center w-full max-w-3xl mx-auto mb-20">
           <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-[var(--landing-)] mb-5">
-            Pricing
+            {tr("pricing.title")}
           </h1>
           <p className="text-lg text-[#94a3b8] leading-relaxed">
-            Outfit your platform with real-time crypto data and insights from
-            200+ markets—with just 1 integration.
+            {tr("pricing.subtitle")}
           </p>
         </div>
 
@@ -259,7 +262,9 @@ export default function PricingPage() {
 
                 {/* Metrics */}
                 <div className="flex-1">
-                  <p className="text-[15px] font-semibold text-[#14F195]">To be updated</p>
+                  <p className="text-[15px] font-semibold text-[#14F195]">
+                    {placeholder}
+                  </p>
                 </div>
 
                 {/* Toggle + CTA */}
@@ -273,7 +278,7 @@ export default function PricingPage() {
                     className="w-full flex items-center justify-between bg-[var(--landing-)] hover:bg-[var(--landing-)] border border-[var(--landing-)] !rounded-full px-4 py-2.5 transition-all duration-200 cursor-pointer"
                   >
                     <span className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">
-                      STANDARD
+                      {tr("pricing.tiers.standard.name")}
                     </span>
                     <span
                       className={`relative flex items-center justify-start h-6 w-11 shrink-0 !rounded-full transition-colors duration-300 p-0.5 ${
@@ -318,16 +323,18 @@ export default function PricingPage() {
                 <div className="space-y-3 pb-6 border-b border-[var(--landing-)]">
                   <div className="flex items-center gap-2">
                     <BoltIcon color="#14F195" />
-                    <h3 className="text-lg font-semibold text-[var(--landing-)]">{PLUS_TIER.name}</h3>
+                    <h3 className="text-lg font-semibold text-[var(--landing-)]">{localizedPlus.name}</h3>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-extrabold text-[var(--landing-)]">{PLUS_TIER.price}</span>
-                    <span className="text-sm text-[#64748b] font-medium">{PLUS_TIER.period}</span>
+                    <span className="text-5xl font-extrabold text-[var(--landing-)]">{localizedPlus.price}</span>
+                    <span className="text-sm text-[#64748b] font-medium">{localizedPlus.period}</span>
                   </div>
                 </div>
 
                 <div className="flex-1">
-                  <p className="text-[15px] font-semibold text-[#14F195]">To be updated</p>
+                  <p className="text-[15px] font-semibold text-[#14F195]">
+                    {placeholder}
+                  </p>
                 </div>
 
                 {/* CTA */}
@@ -335,10 +342,10 @@ export default function PricingPage() {
                   <button
                     id="pricing-plus-buy-btn"
                     type="button"
-                    onClick={() => handleBuyNow({ name: PLUS_TIER.name, price: PLUS_TIER.price })}
+                    onClick={() => handleBuyNow({ name: localizedPlus.name, price: localizedPlus.price })}
                     className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-[var(--landing-)] border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-[var(--landing-)]"
                   >
-                    Buy Now
+                    {tr("pricing.cta.buyNow")}
                   </button>
                 </div>
               </div>
@@ -351,16 +358,18 @@ export default function PricingPage() {
                 <div className="space-y-3 pb-6 border-b border-[var(--landing-)]">
                   <div className="flex items-center gap-2">
                     <BoltIcon color="#14F195" />
-                    <h3 className="text-lg font-semibold text-[var(--landing-)]">{PRO_TIER.name}</h3>
+                    <h3 className="text-lg font-semibold text-[var(--landing-)]">{localizedPro.name}</h3>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-extrabold text-[var(--landing-)]">{PRO_TIER.price}</span>
-                    <span className="text-sm text-[#64748b] font-medium">{PRO_TIER.period}</span>
+                    <span className="text-5xl font-extrabold text-[var(--landing-)]">{localizedPro.price}</span>
+                    <span className="text-sm text-[#64748b] font-medium">{localizedPro.period}</span>
                   </div>
                 </div>
 
                 <div className="flex-1">
-                  <p className="text-[15px] font-semibold text-[#14F195]">To be updated</p>
+                  <p className="text-[15px] font-semibold text-[#14F195]">
+                    {placeholder}
+                  </p>
                 </div>
 
                 {/* CTA */}
@@ -368,10 +377,10 @@ export default function PricingPage() {
                   <button
                     id="pricing-pro-buy-btn"
                     type="button"
-                    onClick={() => handleBuyNow({ name: PRO_TIER.name, price: PRO_TIER.price })}
+                    onClick={() => handleBuyNow({ name: localizedPro.name, price: localizedPro.price })}
                     className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-[var(--landing-)] border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-[var(--landing-)]"
                   >
-                    Buy Now
+                    {tr("pricing.cta.buyNow")}
                   </button>
                 </div>
               </div>

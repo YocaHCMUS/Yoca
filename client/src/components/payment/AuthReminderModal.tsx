@@ -1,4 +1,5 @@
 import { SignInModal } from "@/components/auth/SignInModal";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { useState, useEffect } from "react";
 
 type AuthReminderModalProps = {
@@ -13,6 +14,7 @@ type AuthReminderModalProps = {
  * existing SignInModal on demand.
  */
 export function AuthReminderModal({ open, onClose }: AuthReminderModalProps) {
+  const { tr } = useLocalization();
   const [activeView, setActiveView] = useState<"reminder" | "signin" | "signup">("reminder");
 
   // Reset view whenever the modal opens OR closes to prevent stale state flash.
@@ -69,18 +71,17 @@ export function AuthReminderModal({ open, onClose }: AuthReminderModalProps) {
                 className="text-[#a0aec0] font-semibold uppercase tracking-widest"
                 style={{ fontSize: "0.75rem" }}
               >
-                Authentication Required
+                {tr("payment.authReminder.eyebrow")}
               </p>
               <h2
                 id="auth-reminder-title"
                 className="text-[#f4f4f4] font-bold tracking-tight leading-tight"
                 style={{ fontSize: "clamp(1.5rem, 4vw, 2rem)" }}
               >
-                Sign in to Continue
+                {tr("payment.authReminder.title")}
               </h2>
               <p className="text-[#94a3b8] text-sm leading-relaxed">
-                You need to be signed in before purchasing a plan. Create a free account
-                or log in to get started.
+                {tr("payment.authReminder.description")}
               </p>
             </div>
 
@@ -92,7 +93,7 @@ export function AuthReminderModal({ open, onClose }: AuthReminderModalProps) {
                 onClick={() => setActiveView("signin")}
                 className="flex-1 bg-[#14F195] hover:bg-[#0fd484] text-[#0a0a0f] font-bold px-4 !py-4 rounded-full transition-all duration-200 text-sm uppercase tracking-widest shadow-[0_0_20px_rgba(20,241,149,0.3)]"
               >
-                Sign In
+                {tr("auth.signIn")}
               </button>
 
               <button
@@ -101,7 +102,7 @@ export function AuthReminderModal({ open, onClose }: AuthReminderModalProps) {
                 onClick={onClose}
                 className="flex-1 text-[#78a9ff] hover:text-[#a6c8ff] hover:bg-white/5 px-4 !py-4 font-medium text-sm rounded-full border border-white/10 transition-all duration-200"
               >
-                Maybe Later
+                {tr("payment.shared.maybeLater")}
               </button>
             </div>
           </div>

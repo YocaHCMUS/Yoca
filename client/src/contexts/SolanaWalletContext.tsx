@@ -15,7 +15,7 @@ import {
   SolflareWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
 import { clusterApiUrl } from "@solana/web3.js";
-import { getWalletAdapterNetwork } from "@/util/solanaNetwork";
+import { getSolanaRpcEndpoint, getWalletAdapterNetwork } from "@/util/solanaNetwork";
 import {
   type FC,
   type ReactNode,
@@ -112,11 +112,21 @@ export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
       return WalletAdapterNetwork.Devnet;
     }
   }, []);
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  const endpoint = useMemo(() => {
+    try {
+      return getSolanaRpcEndpoint();
+    } catch (err) {
+      console.error(
+        "[SolanaProvider] RPC configuration error — falling back to clusterApiUrl:\n",
+        (err as Error).message
+      );
+      return clusterApiUrl(network);
+    }
+  }, [network]);
 
   const wallets = useMemo(
-    () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
-    [],
+    () => [new PhantomWalletAdapter(), new SolflareWalletAdapter({ network })],
+    [network],
   );
 
   localStorage.removeItem("walletName");
