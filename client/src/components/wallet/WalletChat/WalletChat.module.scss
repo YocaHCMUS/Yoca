@@ -211,11 +211,22 @@
   height: 6px;
   border-radius: 50%;
   background: $text-secondary;
+  animation: wave 1.2s ease-in-out infinite;
 }
 
 .loadingLabel {
   font-size: 11px;
   margin-left: 4px;
+}
+
+.loadingChar {
+  display: inline-block;
+  animation: wave 1.2s ease-in-out infinite;
+}
+
+@keyframes wave {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }
 
 .errorMsg {

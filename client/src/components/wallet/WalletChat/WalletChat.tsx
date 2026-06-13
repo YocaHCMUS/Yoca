@@ -364,10 +364,21 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
       ))}
       {isLoading && (
         <div className={styles.loadingDots}>
-          <div className={styles.dot} />
-          <div className={styles.dot} />
-          <div className={styles.dot} />
-          <span className={styles.loadingLabel}>{tr("chat.loadingLabel")}</span>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={styles.dot} style={{ animationDelay: `${i * 0.15}s` }} />
+          ))}
+          <span className={styles.loadingLabel}>
+            {tr("chat.loadingLabel")}
+            {/* {tr("chat.loadingLabel").split("").map((char, i) => (
+              <span
+                key={i}
+                className={styles.loadingChar}
+                style={{ animationDelay: `${0.45 + i * 0.08}s` }}
+              >
+                {char === " " ? "\u00A0" : char}
+              </span>
+            ))} */}
+          </span>
         </div>
       )}
       {error && (

@@ -172,6 +172,42 @@ async function selectTool(
   return { type: "general", message: getMessage(language, "noTool") };
 }
 
+function mergeAddressData(perAddress: Array<{ address: string; data: unknown }>): unknown {
+  const dataList = perAddress.map((r) => r.data).filter((d) => d != null);
+  if (dataList.length <= 1) return dataList[0] ?? null;
+
+  const first = dataList[0];
+
+  // Array → concatenate (portfolio, balance_history, etc.)
+  if (Array.isArray(first)) {
+    return dataList.flatMap((d) => (Array.isArray(d) ? d : []));
+  }
+
+  // Object → merge array-valued properties (swaps/transfers/pnl_chart)
+  if (typeof first === "object" && first !== null) {
+    const keys = new Set<string>();
+    for (const d of dataList) {
+      if (d && typeof d === "object" && !Array.isArray(d)) {
+        Object.keys(d as Record<string, unknown>).forEach((k) => keys.add(k));
+      }
+    }
+    const merged: Record<string, unknown> = {};
+    for (const key of keys) {
+      const values = dataList
+        .map((d) => (d as Record<string, unknown>)[key])
+        .filter((v) => v != null);
+      if (values.every((v) => Array.isArray(v))) {
+        merged[key] = values.flatMap((v) => v as unknown[]);
+      } else {
+        merged[key] = values[values.length - 1];
+      }
+    }
+    return merged;
+  }
+
+  return first;
+}
+
 async function executeToolsForAllAddresses(
   addresses: string[],
   tools: ChatToolCall[],
@@ -204,11 +240,11 @@ async function executeToolsForAllAddresses(
           });
 
           const mergedData: Record<string, unknown> = {};
-          const mergedFullData: Record<string, unknown> = {};
           for (const pa of perAddress) {
             mergedData[pa.address] = pa.llmData;
-            mergedFullData[pa.address] = pa.data;
           }
+
+          const mergedFullData = mergeAddressData(perAddress);
 
           return {
             name: tool.name,
