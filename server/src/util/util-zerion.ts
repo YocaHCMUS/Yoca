@@ -7,6 +7,10 @@ import Bottleneck from "bottleneck";
 //   curl --request GET \
 // --url 'https://api.zerion.io/v1/wallets/3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH/charts/day?currency=usd&filter[positions]=only_simple&filter[chain_ids]=solana&filter[fungible_ids]=solana' \
 // --header 'Authorization: Basic emtfMWZiYjg0MTNiZDgzNDJmNWE0MGY0YTE0N2I5ZWQyNmE6'
+curl --request GET \
+  --url 'https://api.zerion.io/v1/wallets/3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH/transactions/?currency=usd&filter%5Boperation_types%5D=trade&filter%5Bchain_ids%5D=solana&page%5Bsize%5D=100' \
+  --header 'Authorization: Basic emtfMWZiYjg0MTNiZDgzNDJmNWE0MGY0YTE0N2I5ZWQyNmE6'
+
 
 const apiKey = env.ZERION_API_KEY;
 const apiKeyTransformed = btoa(apiKey + ":");
