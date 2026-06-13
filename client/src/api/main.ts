@@ -41,7 +41,7 @@ type TokenAiChatClient = ClientTypeOf<"/api/token-ai-chat">;
 type ChatClient = ClientTypeOf<"/api/chat">;
 type PaymentClient = ClientTypeOf<"/api/payment">;
 
-export type ApiClient = {
+type ApiClient = {
   api: {
     users: UsersClient;
     auth: AuthClient;

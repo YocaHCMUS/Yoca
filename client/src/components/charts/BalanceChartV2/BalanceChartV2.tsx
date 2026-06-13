@@ -5,13 +5,11 @@ import { TrendNum } from "@/components/TrendNum";
 import { Txt } from "@/components/Txt";
 import { ONE_DAY_MS } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { useGet } from "@/hooks/useGet";
-import overwriteStyles from "@/styles/_overwrite.module.scss";
-import { Button, IconButton, Layer, MultiSelect, Tag } from "@carbon/react";
+import { useGet, UseGetResp } from "@/hooks/useGet";
+import { Button } from "@carbon/react";
 import { useMemo, useState } from "react";
 import { MultiTimeSeriesLineChart } from "../MultiTimeSeriesLineChart";
 import { ChartWrapper } from "../shared";
-import { TokenIdentityCell } from "@/components/token/TokenIdentityCell";
 import { DismissibleContentTag } from "@/components/DismissibleContentTag/DismissibleContentTag";
 import DropdownPanelField from "@/components/DropdownPanelField/DropdownPanelField";
 import { TknImg } from "@/components/TknImg";
@@ -30,6 +28,24 @@ type ChangeMetric = {
   pct: number | null; // null when baseline is zero
   baselineValue: number;
   currentValue: number;
+};
+
+type TokenPortpofilo = {
+  tokenAddress: string;
+  symbol: string;
+  name?: string;
+  logoUri?: string;
+  amount: number;
+  valueUsd: number;
+};
+
+type BalanceSeries = {
+  key: string;
+  label: string;
+  data: {
+    unixTimeMs: number;
+    value: number;
+  }[];
 };
 
 function compute24hChange(points: TimeSeriesDataPoint[]): ChangeMetric | null {
@@ -74,18 +90,39 @@ export function BalanceChartV2({
   const [selectedTokens, setSelectedTokens] = useState<Set<string> | null>(
     null,
   );
+
   const [pendingToken, setPendingToken] = useState<PortfolioToken>(null);
 
-  const portfolio = useGet(client.api.wallets.portfolio, 200, {
-    query: {
-      address,
+  const portfolio: UseGetResp<TokenPortpofilo[]> = useGet(
+    client.api.wallets.portfolio,
+    200,
+    {
+      query: {
+        address,
+      },
     },
-  }, {
-    // sort by value usd then amount -> to show valuable token balances up top
-    select: (data) => (data.)
-  });
+    {
+      // sort by value usd then amount -> to show valuable token balances up top
+      select: (data): TokenPortpofilo[] => {
+        const forSort = [...data];
+        forSort.sort((a, b) => {
+          if (a.valueUsd > b.valueUsd) {
+            return 1;
+          }
+          if (a.valueUsd < b.valueUsd) {
+            return -1;
+          }
+          if (a.amount > b.amount) {
+            return 1;
+          }
+          return -1;
+        });
+        return forSort;
+      },
+    },
+  );
 
-  const totalBalance = useGet(
+  const totalBalance: UseGetResp<BalanceSeries> = useGet(
     client.api.charts.balance,
     200,
     {
@@ -107,7 +144,7 @@ export function BalanceChartV2({
     },
   );
 
-  const tokenBalances = useGet(
+  const tokenBalances: UseGetResp<BalanceSeries[]> = useGet(
     client.api.charts.balance.tokens,
     200,
     {
@@ -152,18 +189,6 @@ export function BalanceChartV2({
     );
   }, [balanceSeries]);
 
-  const tokenOptions = useMemo(
-    () =>
-      (portfolio?.data || []).map((token) => ({
-        title: token.symbol || token.tokenAddress, // Display text
-        value: token.tokenAddress, // Selection value
-        // Keep original data for tooltips/custom rendering
-        fullName: token.name,
-        logoUri: token.logoUri,
-      })),
-    [portfolio?.data],
-  );
-
   type PortfolioToken = NonNullable<typeof portfolio.data>[number] | null;
 
   return (
@@ -178,7 +203,7 @@ export function BalanceChartV2({
         <Flex justify="between" align="end">
           <Flex align="end">
             <DropdownPanelField
-              style={{inlineSize: "14rem"}}
+              style={{ inlineSize: "14rem" }}
               id="token-selector"
               titleText="Select token"
               placeholder="Search"
