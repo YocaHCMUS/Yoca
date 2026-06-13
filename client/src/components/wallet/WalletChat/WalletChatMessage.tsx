@@ -419,20 +419,27 @@ function InlineFlow({
     <div className={styles.inlineFlow}>
       {parts.map((part, idx) => {
         if (part.type === "text" && part.content.trim()) {
-          return <WalletRichText key={`f-t-${idx}`} text={part.content} inline />;
+          const next = parts[idx + 1];
+          const textContent = next?.type === "cite" ? part.content.replace(/\s+$/, "") : part.content;
+          return <WalletRichText key={`f-t-${idx}`} text={textContent} inline />;
         }
         if (part.type === "cite") {
+          const prev = parts[idx - 1];
+          const needsLeadingSpace = prev?.type === "text" && prev.content.trim().length > 0;
           return (
-            <CitedTextBlock
-              key={`f-c-${idx}`}
-              ids={part.ids}
-              content={part.content}
-              sources={sources}
-              hoveredCiteIds={hoveredCiteIds}
-              onOpenPanel={onOpenPanel}
-              onHoverIds={onHoverIds}
-              onLeaveIds={onLeaveIds}
-            />
+            <>
+              {needsLeadingSpace && ' '}
+              <CitedTextBlock
+                key={`f-c-${idx}`}
+                ids={part.ids}
+                content={part.content}
+                sources={sources}
+                hoveredCiteIds={hoveredCiteIds}
+                onOpenPanel={onOpenPanel}
+                onHoverIds={onHoverIds}
+                onLeaveIds={onLeaveIds}
+              />
+            </>
           );
         }
         return null;
