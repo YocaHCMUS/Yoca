@@ -20,7 +20,7 @@ import TransactionGraphPage from "@/pages/transactions";
 import UnauthorizedPage from "@/pages/unauthorized";
 import WalletPage from "@/pages/wallet";
 import WalletsComparisonPage from "@/pages/walletsComparison";
-import AlertsDemo from "./pages/alerts/demo";
+import WashTradingPage from "./pages/wash-trading";
 
 import { AuthGuard } from "./components/auth";
 import { useLocalization } from "./contexts/LocalizationContext";
@@ -74,7 +74,7 @@ const router = createBrowserRouter([
       // {
       //   path: "alerts",
       //   element: <AlertsPage />,
-        
+
       // },
 
       {
@@ -108,6 +108,16 @@ const router = createBrowserRouter([
       {
         path: "tokens/:address/:poolAddress",
         element: <TokenPage />,
+      },
+
+      {
+        path: "wash-trading",
+        element: <WashTradingPage />,
+      },
+      
+      {
+        path: "wash-trading/:mint",
+        element: <WashTradingPage />,
       },
 
       {
