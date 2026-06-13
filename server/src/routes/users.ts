@@ -45,11 +45,13 @@ async function setAuthToken(
   c: Context,
   userId: string,
   displayName?: string | null,
+  avatarUrl?: string | null,
 ) {
   const token = await sign(
     {
       id: userId,
       displayName: displayName || null,
+      avatarUrl: avatarUrl || null,
       exp: Math.floor(Date.now() + AUTHEN_COOKIE_TTL_MS) / 1000,
     } satisfies UserPayload,
     jwtSecret,
@@ -147,6 +149,8 @@ const app = new Hono()
       const googleUser = await userService.findUserByGoogleId(googleId);
       let userId: string = "";
       let displayName: string | null = null;
+      let avatarUrl: string | null = payload.picture || null;
+      
       if (googleUser) {
         userId = googleUser.account.userId;
         displayName = googleUser.user.displayName;
@@ -154,12 +158,17 @@ const app = new Hono()
           displayName = payload.name || "Guest";
           await userService.updateUserDisplayName(userId, displayName);
         }
+        if (avatarUrl && !googleUser.user.avatarUrl) {
+          await userService.updateUserAvatarUrl(userId, avatarUrl);
+        } else if (!avatarUrl && googleUser.user.avatarUrl) {
+          avatarUrl = googleUser.user.avatarUrl;
+        }
       } else {
         displayName = payload.name || "Guest";
-        userId = await userService.createUserWithGoogle(googleId, displayName);
+        userId = await userService.createUserWithGoogle(googleId, displayName, avatarUrl);
       }
 
-      const token = await setAuthToken(c, userId, displayName);
+      const token = await setAuthToken(c, userId, displayName, avatarUrl);
       return c.json(
         {
           message: messageText.GoogleLoggedInSuccessfully,
@@ -290,6 +299,7 @@ const app = new Hono()
           id: parsedPayload.data.id,
           exp: parsedPayload.data.exp,
           displayName: user.displayName,
+          avatarUrl: user.avatarUrl,
         } satisfies UserPayload,
         statusCode.Ok,
       );

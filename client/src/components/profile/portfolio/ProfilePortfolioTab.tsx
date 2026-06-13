@@ -117,7 +117,7 @@ export function ProfilePortfolioTab({
     );
 
     return {
-      avatarUrl: `https://api.dicebear.com/9.x/identicon/svg?seed=${user?.userId ?? user?.displayName ?? linkedWalletAddresses.join(",")}`,
+      avatarUrl: user?.avatarUrl || `https://api.dicebear.com/9.x/identicon/svg?seed=${user?.userId ?? user?.displayName ?? linkedWalletAddresses.join(",")}`,
       displayName: user?.displayName?.trim() || "Guest",
       userId: user?.userId,
       accountTier: mapPlanTierToAccountTier(currentPlanTier),

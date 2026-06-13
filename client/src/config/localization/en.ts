@@ -1642,8 +1642,10 @@ export const translation = {
     overviewChart: {
       price: "Price",
       marketCap: "Market Cap",
+      candle: "Candle",
       noData: "No chart data available",
       noCoingeckoId: "token may not have a CoinGecko ID",
+      noCandlePool: "No trading pool found for this token.",
     },
     range24h: "24h Range",
     marketCap: "Market Cap",
@@ -1767,6 +1769,7 @@ export const translation = {
       tx: "TX",
       buy: "BUY",
       sell: "SELL",
+      all: "LATEST",
       loading: "Loading trades...",
       empty: "No recent transactions",
       noAddress: "No token address for bubblemaps",

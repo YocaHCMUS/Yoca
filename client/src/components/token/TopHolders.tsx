@@ -49,10 +49,12 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
   console.log(holdersInfo);
 
   // Tính tổng phần trăm top 10
-  // Ưu tiên lấy từ API (holdersInfo), nếu không có thì tính tổng từ danh sách holders
-  const totalPercentage = holdersInfo?.top10Percent
-    ? Number(holdersInfo.top10Percent)
-    : holders.reduce((acc: number, curr: any) => acc + curr.percentage, 0);
+  // Dùng trực tiếp dữ liệu top 10 từ mảng holders
+  const top10Holders = holders.slice(0, 10);
+  const totalPercentage = top10Holders.reduce(
+    (acc: number, curr: any) => acc + curr.percentage,
+    0
+  );
 
   const toggleExpand = () => setIsExpanded(!isExpanded);
 
@@ -88,6 +90,11 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
               { key: "rank", header: "#" },
               { key: "address", header: tr("token.topHolders.address") },
               {
+                key: "amount",
+                header: "Amount",
+                align: "end",
+              },
+              {
                 key: "percentage",
                 header: tr("token.topHolders.percent"),
                 align: "end",
@@ -95,7 +102,7 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
             ]}
             loading={false}
             height="auto"
-            rows={holders.map((holder: any, index: number) => ({
+            rows={top10Holders.map((holder: any, index: number) => ({
               id: holder.holderAddress,
               rank: <span className={styles.rank}>{index + 1}</span>,
               address: (
@@ -119,6 +126,11 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
                   >
                     <Copy size={16} />
                   </div>
+                </div>
+              ),
+              amount: (
+                <div className={styles.amount}>
+                  {fmt.num.compact.decimal(holder.balance)}
                 </div>
               ),
               percentage: (

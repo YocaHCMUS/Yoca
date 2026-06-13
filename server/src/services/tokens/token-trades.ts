@@ -81,7 +81,7 @@ export async function getPoolTrades24h(poolAddress: string) {
       ),
     )
     .orderBy(desc(poolTrades24h.blockTimestamp))
-    .limit(50);
+    .limit(100);
 
   let stale = false;
 
@@ -98,8 +98,8 @@ export async function getPoolTrades24h(poolAddress: string) {
 
   if (stale) {
     const fresh = await fetchPoolTrades(poolAddress);
-    // fresh is already sorted descending by GeckoTerminal usually, but limit to 50
-    return fresh.slice(0, 50);
+    // fresh is already sorted descending by GeckoTerminal usually, limit to 100
+    return fresh.slice(0, 100);
   }
   return res;
 }

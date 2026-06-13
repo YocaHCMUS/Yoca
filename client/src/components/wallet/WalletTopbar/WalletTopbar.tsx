@@ -32,6 +32,7 @@ import { useWatchlist } from "@/contexts/WatchlistContext";
 import { PERIOD_OPTIONS } from "@/config/periodOptions";
 import { useNavigate } from "react-router";
 import type { TimePeriod } from "@/types/chart-filters.types";
+import { useWalletLabels } from "@/hooks/profile/useWalletLabels";
 import styles from "./WalletTopbar.module.scss";
 
 function shortenWalletAddress(address: string): string {
@@ -97,9 +98,8 @@ export function WalletTopbar({
 
   const [intelligence, setIntelligence] = useState<WalletIntelligenceResponse | null>(null);
   const [tags, setTags] = useState<string[]>([]);
-  const [label, setLabel] = useState<string>(() => {
-    return localStorage.getItem(`wallet-label-${address}`) ?? "";
-  });
+  const { labels, setLabel: setApiLabel } = useWalletLabels();
+  const label = labels[address] ?? "";
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
   const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
@@ -124,8 +124,7 @@ export function WalletTopbar({
     })
     : null;
 
-  const name = label || (identityStatus === "known" && identityName ? identityName : tr("walletPage.defaultWalletName"));
-  const displayedAddress = identityStatus === "unknown" ? shortenWalletAddress(address) : address;
+  const displayName = label || (identityStatus === "known" && identityName ? identityName : shortenWalletAddress(address));
 
   useEffect(() => {
     if (!address || address === "null") return;
@@ -161,14 +160,8 @@ export function WalletTopbar({
   }, [address]);
 
   const handleLabelSave = useCallback((newLabel: string) => {
-    setLabel(newLabel);
-    const key = `wallet-label-${address}`;
-    if (newLabel) {
-      localStorage.setItem(key, newLabel);
-    } else {
-      localStorage.removeItem(key);
-    }
-  }, [address]);
+    setApiLabel(address, newLabel);
+  }, [address, setApiLabel]);
 
   const handleTagsSave = useCallback(async (newTags: string[]) => {
     try {
@@ -200,7 +193,12 @@ export function WalletTopbar({
           </div>
           <div className={styles.topbarIdentity}>
             <div className={styles.topbarAddress}>
-              <span className={styles.topbarAddressText}>{displayedAddress}</span>
+              <span className={styles.topbarAddressText}>{displayName}</span>
+              {displayName !== shortenWalletAddress(address) && displayName !== address && (
+                <span style={{ fontSize: "12px", color: "var(--cds-text-secondary)", marginLeft: "4px", marginRight: "4px", fontFamily: "monospace" }}>
+                  {shortenWalletAddress(address)}
+                </span>
+              )}
               <button
                 type="button"
                 className={styles.copyBtn}
