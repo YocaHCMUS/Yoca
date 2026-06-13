@@ -1652,6 +1652,8 @@ export const translation = {
     fullscreenMode: "Fullscreen",
     minimize: "Minimize",
     close: "Close",
+    sourcePill: "sources",
+    openSource: "Open",
     prompt: {
       overview: { label: "Overview", query: "Give a portfolio overview of this wallet including total balance, 24h change, and trading volume." },
       pnl: { label: "PnL Summary", query: "What is the profit and loss for this wallet? Show per-token breakdown with realized PnL and win rate." },

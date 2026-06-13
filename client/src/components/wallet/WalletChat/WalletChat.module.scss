@@ -402,6 +402,17 @@
   margin-bottom: 4px;
 }
 
+.inlineFlow {
+  display: block;
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.6;
+  color: $text-primary;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 4px;
+}
+
 .emptyPart {
   font-size: 13px;
   color: $text-secondary;
@@ -570,11 +581,8 @@
 
 .metricToken {
   display: inline-flex;
-  align-items: center;
+  // align-items: center;
   min-height: 18px;
-  margin: 0 1px;
-  padding: 0 4px;
-  border-radius: 4px;
   font-weight: 700;
   line-height: 1.35;
 }
@@ -582,13 +590,11 @@
 .metricPositive,
 .bullishText {
   color: $support-success;
-  background: color-mix(in srgb, #{$support-success} 12%, transparent);
 }
 
 .metricNegative,
 .riskText {
   color: $support-error;
-  background: color-mix(in srgb, #{$support-error} 10%, transparent);
 }
 
 .metricMoney {
@@ -598,7 +604,6 @@
 
 .metricNeutral {
   color: $text-primary;
-  background: $layer-accent-01;
 }
 
 .warningText {
@@ -1450,41 +1455,41 @@
 
 .citeBlock {
   display: inline;
-  background: rgba(79, 140, 255, 0.08);
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
   border-radius: 4px;
   padding: 1px 0;
   transition: background 0.15s ease;
   cursor: default;
 
   &:hover {
-    background: rgba(79, 140, 255, 0.18);
+    background: color-mix(in srgb, var(--cds-interactive) 18%, transparent);
   }
 }
 
 .citeBlockHighlighted {
-  background: rgba(79, 140, 255, 0.22) !important;
+  background: color-mix(in srgb, var(--cds-interactive) 22%, transparent);
 }
 
 .citePill {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
+  display: inline-block;
   vertical-align: baseline;
   font-size: 10px;
   font-weight: 600;
   color: $interactive;
   background: transparent;
-  border: 1px solid rgba(79, 140, 255, 0.3);
+  border: 1px solid color-mix(in srgb, var(--cds-interactive) 30%, transparent);
   border-radius: 10px;
   padding: 1px 6px;
   margin: 0 2px;
   cursor: pointer;
   white-space: nowrap;
-  line-height: 1.4;
+  line-height: normal;
   transition: background 0.15s ease, border-color 0.15s ease;
 
   &:hover {
-    background: rgba(79, 140, 255, 0.12);
+    background: color-mix(in srgb, var(--cds-interactive) 12%, transparent);
     border-color: $interactive;
   }
 }
@@ -1527,39 +1532,25 @@
   letter-spacing: 0.06em;
 }
 
-.sourcePanelClose {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: $text-secondary;
-  font-size: 14px;
-  padding: 0;
-  line-height: 1;
-
-  &:hover {
-    color: $text-primary;
-  }
-}
-
 // ===== Source Cards (inside panel) =====
 
 .sourceCard {
   padding: 8px 10px;
   border-radius: 6px;
-  background: var(--cds-background-secondary, #f4f4f4);
+  background: $background;
   transition: background 0.15s ease;
   display: flex;
   flex-direction: column;
   gap: 3px;
 
   &:hover {
-    background: var(--cds-background-hover, #e8e8e8);
+    background: var(--cds-layer-hover-01);
   }
 }
 
 .sourceCardHighlighted {
-  background: rgba(79, 140, 255, 0.15) !important;
-  outline: 1px solid rgba(79, 140, 255, 0.4);
+  background: color-mix(in srgb, var(--cds-interactive) 15%, transparent) !important;
+  outline: 1px solid color-mix(in srgb, var(--cds-interactive) 40%, transparent);
 }
 
 .sourceCardTitle {

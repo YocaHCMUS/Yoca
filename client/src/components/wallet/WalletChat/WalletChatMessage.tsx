@@ -1,8 +1,9 @@
 import classNames from "classnames";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import ReactDOM from "react-dom";
 import { useNavigate } from "react-router";
 import { Copy, Checkmark } from "@carbon/icons-react";
+import { ID_MODAL_ROOT } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type {
   ActionSpec,
@@ -283,15 +284,15 @@ function SectionTable({ table }: { table: Array<Record<string, string | number |
 // ─── Section Kind → Meta ────────────────────────────────────────────────
 
 const SECTION_KIND_META: Record<WalletSectionKind, { label: string; icon: string; className: string }> = {
-  market_snapshot:  { label: "Market Snapshot",  icon: "M", className: "kindMarket" },
-  key_findings:     { label: "Key Findings",     icon: "K", className: "kindDrivers" },
-  pnl_summary:      { label: "PnL Summary",      icon: "P", className: "kindBullish" },
+  market_snapshot: { label: "Market Snapshot", icon: "M", className: "kindMarket" },
+  key_findings: { label: "Key Findings", icon: "K", className: "kindDrivers" },
+  pnl_summary: { label: "PnL Summary", icon: "P", className: "kindBullish" },
   trading_activity: { label: "Trading Activity", icon: "T", className: "kindNews" },
-  top_holdings:     { label: "Top Holdings",     icon: "H", className: "kindDeepDive" },
-  risk_factors:     { label: "Risk Factors",     icon: "!", className: "kindRisk" },
-  what_to_watch:    { label: "What To Watch",    icon: "?", className: "kindWatch" },
-  conclusion:       { label: "Conclusion",       icon: "\u2713", className: "kindConclusion" },
-  custom:           { label: "Analysis",         icon: "A", className: "kindSimple" },
+  top_holdings: { label: "Top Holdings", icon: "H", className: "kindDeepDive" },
+  risk_factors: { label: "Risk Factors", icon: "!", className: "kindRisk" },
+  what_to_watch: { label: "What To Watch", icon: "?", className: "kindWatch" },
+  conclusion: { label: "Conclusion", icon: "\u2713", className: "kindConclusion" },
+  custom: { label: "Analysis", icon: "A", className: "kindSimple" },
 };
 
 // ─── Section Renderer ───────────────────────────────────────────────────
@@ -354,19 +355,10 @@ function WalletChatSectionRenderer({ section, onBulletClick, onCopySection, copi
 
 // ─── Cite Block + Source Panel ──────────────────────────────────────────
 
-function buildPillLabel(ids: string[], allSources: ChatSource[]): string {
-  const maxVisible = 2;
-  const visible = ids.slice(0, maxVisible);
-  const remainder = ids.length - maxVisible;
-  const nums = visible.join(", ");
-  return remainder > 0 ? `sources: ${nums}, +${remainder}` : `sources: ${nums}`;
-}
-
 function CitedTextBlock({
   ids,
   content,
   sources,
-  activePanelKey,
   hoveredCiteIds,
   onOpenPanel,
   onHoverIds,
@@ -375,20 +367,20 @@ function CitedTextBlock({
   ids: string[];
   content: string;
   sources: ChatSource[];
-  activePanelKey: string | null;
   hoveredCiteIds: number[];
   onOpenPanel: (key: string, ids: string[], pos: { top: number; left: number }) => void;
   onHoverIds: (ids: string[]) => void;
   onLeaveIds: () => void;
 }) {
+  const { tr } = useLocalization();
   const numIds = ids.map(Number);
   const matchesHover = hoveredCiteIds.some((h) => numIds.includes(h));
-  const isActive = activePanelKey === ids.join(",");
+  const pillLabel = tr("chat.sourcePill");
 
   return (
     <span
       className={classNames(styles.citeBlock, {
-        [styles.citeBlockHighlighted]: matchesHover || isActive,
+        [styles.citeBlockHighlighted]: matchesHover,
       })}
       onMouseEnter={() => onHoverIds(ids)}
       onMouseLeave={onLeaveIds}
@@ -402,9 +394,50 @@ function CitedTextBlock({
           onOpenPanel(ids.join(","), ids, { top: rect.bottom + 4, left: rect.left });
         }}
       >
-        📎 {buildPillLabel(ids, sources)}
+        📎 {pillLabel}
       </button>
     </span>
+  );
+}
+
+function InlineFlow({
+  parts,
+  sources,
+  hoveredCiteIds,
+  onOpenPanel,
+  onHoverIds,
+  onLeaveIds,
+}: {
+  parts: PartType[];
+  sources: ChatSource[];
+  hoveredCiteIds: number[];
+  onOpenPanel: (key: string, ids: string[], pos: { top: number; left: number }) => void;
+  onHoverIds: (ids: string[]) => void;
+  onLeaveIds: () => void;
+}) {
+  return (
+    <div className={styles.inlineFlow}>
+      {parts.map((part, idx) => {
+        if (part.type === "text" && part.content.trim()) {
+          return <WalletRichText key={`f-t-${idx}`} text={part.content} inline />;
+        }
+        if (part.type === "cite") {
+          return (
+            <CitedTextBlock
+              key={`f-c-${idx}`}
+              ids={part.ids}
+              content={part.content}
+              sources={sources}
+              hoveredCiteIds={hoveredCiteIds}
+              onOpenPanel={onOpenPanel}
+              onHoverIds={onHoverIds}
+              onLeaveIds={onLeaveIds}
+            />
+          );
+        }
+        return null;
+      })}
+    </div>
   );
 }
 
@@ -497,6 +530,22 @@ export function WalletChatMessage({ message, onAction }: Props) {
 
   const parsed = useMemo(() => parseMarkers(message.content), [message.content]);
 
+  // Collapse adjacent text/cite parts into inline groups for continuous flow
+  const inlineGroups = useMemo(() => {
+    const groups: PartType[][] = [];
+    let buf: PartType[] = [];
+    for (const part of parsed) {
+      if (part.type === "text" || part.type === "cite") {
+        buf.push(part);
+      } else {
+        if (buf.length) { groups.push(buf); buf = []; }
+        groups.push([part]);
+      }
+    }
+    if (buf.length) groups.push(buf);
+    return groups;
+  }, [parsed]);
+
   const { inlineByIndex, endActions } = useMemo(() => {
     const inline: Record<string, ActionSpec[]> = {};
     const end: ActionSpec[] = [];
@@ -582,54 +631,47 @@ export function WalletChatMessage({ message, onAction }: Props) {
     );
   }
 
-  // Parsed content parts (text, cite, charts, tables, actions)
-  for (const part of parsed) {
-    if (part.type === "text" && part.content.trim()) {
-      elements.push(
-        <div key={`t-${elements.length}`} className={styles.textPart}>
-          <WalletRichText text={part.content} />
-        </div>,
-      );
-    }
+  // Parsed content parts — text+cite groups rendered as inline flow
+  for (const group of inlineGroups) {
+    const isMixed = group.length > 1 || group.some((p) => p.type === "cite");
+    const only = group[0];
 
-    if (part.type === "cite") {
+    if (isMixed) {
       elements.push(
-        <CitedTextBlock
-          key={`cite-${elements.length}`}
-          ids={part.ids}
-          content={part.content}
+        <InlineFlow
+          key={`flow-${elements.length}`}
+          parts={group}
           sources={sources}
-          activePanelKey={activePanelKey}
           hoveredCiteIds={hoveredCiteIds}
           onOpenPanel={handleOpenPanel}
           onHoverIds={handleHoverCiteIds}
           onLeaveIds={handleLeaveCiteIds}
         />,
       );
-    }
-
-    if (part.type === "chart" && message.data && part.id) {
-      const spec = message.charts?.find((c) => c.id === part.id) ?? {
-        id: part.id, type: "line" as const, dataRef: part.id,
+    } else if (only.type === "text" && only.content.trim()) {
+      elements.push(
+        <div key={`t-${elements.length}`} className={styles.textPart}>
+          <WalletRichText text={only.content} />
+        </div>,
+      );
+    } else if (only.type === "chart" && message.data && only.id) {
+      const spec = message.charts?.find((c) => c.id === only.id) ?? {
+        id: only.id, type: "line" as const, dataRef: only.id,
       };
       elements.push(
-        <ChartRenderer key={`c-${part.id}`} spec={spec} data={message.data} onAction={onAction} />,
+        <ChartRenderer key={`c-${only.id}`} spec={spec} data={message.data} onAction={onAction} />,
       );
-    }
-
-    if (part.type === "table" && message.data && part.id) {
-      const spec = message.tables?.find((t) => t.id === part.id) ?? {
-        id: part.id, dataRef: part.id, columns: "",
+    } else if (only.type === "table" && message.data && only.id) {
+      const spec = message.tables?.find((t) => t.id === only.id) ?? {
+        id: only.id, dataRef: only.id, columns: "",
       };
       elements.push(
-        <TableRenderer key={`t-${part.id}`} spec={spec} data={message.data} onAction={onAction} />,
+        <TableRenderer key={`t-${only.id}`} spec={spec} data={message.data} onAction={onAction} />,
       );
-    }
-
-    if (part.type === "action" && part.id) {
-      const group = inlineByIndex[part.id];
-      if (group?.length) {
-        elements.push(actionButtonGroup(group, navigate, onAction));
+    } else if (only.type === "action" && only.id) {
+      const actGroup = inlineByIndex[only.id];
+      if (actGroup?.length) {
+        elements.push(actionButtonGroup(actGroup, navigate, onAction));
       }
     }
   }
@@ -755,12 +797,14 @@ export function WalletChatMessage({ message, onAction }: Props) {
     );
   }
 
+  const modalRoot = document.getElementById(ID_MODAL_ROOT);
+
   return (
     <>
       <div className={styles.assistantBubbleRow}>
         <div className={styles.assistantBubble}>{elements}</div>
       </div>
-      {showPanel && createPortal(
+      {showPanel && modalRoot && ReactDOM.createPortal(
         <SourcePanel
           ids={activePanelIds}
           sources={sources}
@@ -770,7 +814,7 @@ export function WalletChatMessage({ message, onAction }: Props) {
           onLeaveSource={handleLeaveSource}
           onClose={handleClosePanel}
         />,
-        document.body,
+        modalRoot,
       )}
     </>
   );

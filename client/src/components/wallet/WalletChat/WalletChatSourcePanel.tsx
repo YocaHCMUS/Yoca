@@ -1,16 +1,7 @@
 import classNames from "classnames";
-import { createPortal } from "react-dom";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import type { ChatSource } from "./types";
 import styles from "./WalletChat.module.scss";
-
-function formatDate(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-  } catch {
-    return iso;
-  }
-}
 
 function SourceCard({
   source,
@@ -25,6 +16,8 @@ function SourceCard({
   onHover: (num: number) => void;
   onLeave: () => void;
 }) {
+  const { tr, fmt } = useLocalization();
+
   return (
     <div
       className={classNames(styles.sourceCard, { [styles.sourceCardHighlighted]: isHighlighted })}
@@ -43,16 +36,8 @@ function SourceCard({
       {source.snippet && <p className={styles.sourceCardSnippet}>{source.snippet}</p>}
       <div className={styles.sourceCardFooter}>
         {source.publishedAt && (
-          <span className={styles.sourceCardDate}>{formatDate(source.publishedAt)}</span>
+          <span className={styles.sourceCardDate}>{fmt.datetime.date(source.publishedAt)}</span>
         )}
-        <a
-          href={source.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={styles.sourceCardOpen}
-        >
-          Open ↗
-        </a>
       </div>
     </div>
   );
@@ -77,6 +62,7 @@ export function SourcePanel({
   onLeaveSource,
   onClose,
 }: SourcePanelProps) {
+  const { tr } = useLocalization();
   const matched = ids
     .map((id) => ({ idx: parseInt(id, 10), source: sources[parseInt(id, 10) - 1] }))
     .filter((item) => item.source);
@@ -86,7 +72,7 @@ export function SourcePanel({
   const panelWidth = 340;
   const clampedLeft = Math.max(4, Math.min(position.left, window.innerWidth - panelWidth - 4));
 
-  return createPortal(
+  return (
     <>
       <div className={styles.sourcePanelBackdrop} onClick={onClose} onKeyDown={(e) => e.key === "Escape" && onClose()} />
       <div
@@ -94,8 +80,7 @@ export function SourcePanel({
         style={{ top: position.top, left: clampedLeft }}
       >
         <div className={styles.sourcePanelHeader}>
-          <span className={styles.sourcePanelTitle}>Sources</span>
-          <button type="button" className={styles.sourcePanelClose} onClick={onClose}>✕</button>
+          <span className={styles.sourcePanelTitle}>{tr("chat.sources")}</span>
         </div>
         {matched.map(({ idx, source }) => (
           <SourceCard
@@ -108,7 +93,6 @@ export function SourcePanel({
           />
         ))}
       </div>
-    </>,
-    document.body,
+    </>
   );
 }
