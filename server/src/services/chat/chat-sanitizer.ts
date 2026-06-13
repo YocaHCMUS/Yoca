@@ -1,4 +1,4 @@
-import type { ActionSpec, ChartSpec, TableSpec } from "./chat.types.js";
+import type { ActionSpec, ChartSpec, ChatSource, TableSpec, WalletChatSection, WalletWarning, WalletConfidence } from "./chat.types.js";
 
 export function sanitizeText(text: string): string {
   let s = text;
@@ -21,6 +21,13 @@ export function sanitizeText(text: string): string {
       return `<${tag} ${a.slice(0, -1).trim()} />`;
     }
     return `<${tag} ${a}>`;
+  });
+
+  // Normalize <cite ids="...">...</cite> tags
+  s = s.replace(/<cite\s+ids="([^"]*?)"\s*>((?:(?!<\/cite>)[\s\S])*?)<\/cite>/g, (_m: string, ids: string, content: string) => {
+    const clean = content.trim();
+    if (!clean) return clean;
+    return `<cite ids="${ids}">${clean}</cite>`;
   });
 
   return s;
@@ -48,6 +55,11 @@ export function sanitizeResponse(raw: string): {
   charts: ChartSpec[];
   tables: TableSpec[];
   actions: ActionSpec[];
+  sources?: ChatSource[];
+  tldr?: string[];
+  sections?: WalletChatSection[];
+  warnings?: WalletWarning[];
+  confidence?: WalletConfidence;
 } {
   const parsed = extractJsonObject(raw) as Record<string, unknown> | null;
   if (!parsed) {
@@ -93,5 +105,74 @@ export function sanitizeResponse(raw: string): {
       typeof (a as Record<string, unknown>).href === "string",
   );
 
-  return { rawText: raw, text, charts, tables, actions };
+  const tldr: string[] | undefined = Array.isArray(parsed.tldr)
+    ? (parsed.tldr as string[]).filter((s): s is string => typeof s === "string").slice(0, 3)
+    : undefined;
+
+  const warnings: WalletWarning[] | undefined = Array.isArray(parsed.warnings)
+    ? (parsed.warnings as WalletWarning[]).filter(
+        (w): w is WalletWarning =>
+          w && typeof w === "object" && typeof w.text === "string" && ["info", "warning", "error"].includes(w.severity),
+      ).slice(0, 4)
+    : undefined;
+
+  const confidence: WalletConfidence | undefined =
+    typeof parsed.confidence === "string" &&
+    ["Low", "Medium", "High"].includes(parsed.confidence)
+      ? (parsed.confidence as WalletConfidence)
+      : undefined;
+
+  const sources: ChatSource[] | undefined = (() => {
+    const raw = parsed.sources;
+    if (!Array.isArray(raw) || raw.length === 0) return undefined;
+    const valid = raw.filter(
+      (s): s is ChatSource =>
+        s !== null &&
+        typeof s === "object" &&
+        typeof (s as Record<string, unknown>).title === "string" &&
+        typeof (s as Record<string, unknown>).url === "string" &&
+        typeof (s as Record<string, unknown>).source === "string",
+    );
+    return valid.length > 0 ? valid.slice(0, 10) : undefined;
+  })();
+
+  const sections: WalletChatSection[] | undefined = (() => {
+    const raw = parsed.sections;
+    if (!Array.isArray(raw) || raw.length === 0) return undefined;
+    const valid = raw.filter(
+      (s): s is WalletChatSection =>
+        s !== null &&
+        typeof s === "object" &&
+        typeof (s as Record<string, unknown>).title === "string" &&
+        typeof (s as Record<string, unknown>).kind === "string",
+    );
+    return valid.length > 0 ? valid.slice(0, 6) : undefined;
+  })();
+
+  // Strip orphan citations — [N] or [N, M, ...] and <cite> tags where any N > sources.length
+  const cleanedText = sources && sources.length > 0
+    ? text
+        .replace(/\[(\d+(?:\s*,\s*\d+)*)\]/g, (_m: string, inner: string) => {
+          const parts = inner.split(",").map((s) => s.trim()).filter(Boolean);
+          const valid = parts.filter((p) => {
+            const idx = parseInt(p, 10);
+            return !isNaN(idx) && idx >= 1 && idx <= sources.length;
+          });
+          if (valid.length === 0) return "";
+          if (valid.length === 1) return `[${valid[0]}]`;
+          return `[${valid.join(", ")}]`;
+        })
+        .replace(/<cite\s+ids="([^"]+)"\s*>((?:(?!<\/cite>)[\s\S])*?)<\/cite>/g, (_m: string, idsStr: string, content: string) => {
+          const parts = idsStr.split(",").map((s) => s.trim()).filter(Boolean);
+          const valid = parts.filter((p) => {
+            const idx = parseInt(p, 10);
+            return !isNaN(idx) && idx >= 1 && idx <= sources.length;
+          });
+          if (valid.length === 0) return content;
+          if (valid.length === parts.length) return _m;
+          return `<cite ids="${valid.join(",")}">${content}</cite>`;
+        })
+    : text;
+
+  return { rawText: raw, text: cleanedText, charts, tables, actions, sources, tldr, sections, warnings, confidence };
 }

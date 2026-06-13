@@ -47,6 +47,65 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
 
     const colors = ["#0f62fe", "#24a148", "#da1e28", "#8a3ffc", "#ff832b", "#f1c21b"];
 
+    const isPie = spec.type === "pie";
+
+    const tooltip: Record<string, unknown> = {
+      trigger: isPie ? "item" : "axis",
+      backgroundColor: "rgba(22,22,22,0.95)",
+      borderColor: "#333",
+      textStyle: { color: "#fff", fontSize: 11 },
+      ...(isPie && spec.pointActions
+        ? {
+            formatter: (params: unknown) => {
+              const p = params as { name?: string; value?: number } | undefined;
+              const label = p?.name ?? "";
+              const value = p?.value ?? "";
+              const query = interpolate(spec.pointActions!.query, { label });
+              return `${label}: ${value}<br/><span style="color:#2a6df4;font-size:10px">${tr("chat.clickToAsk", { query })}</span>`;
+            },
+          }
+        : {}),
+    };
+
+    if (!isPie && spec.pointActions) {
+      tooltip.formatter = (params: unknown) => {
+        const arr = Array.isArray(params) ? params : [params];
+        const p = arr[0] as { axisValueLabel?: string } | undefined;
+        const label = p?.axisValueLabel ?? "";
+        const query = interpolate(spec.pointActions!.query, { label });
+        const lines = arr.map((pt: unknown) => {
+          const seriesName = (pt as { seriesName?: string }).seriesName ?? "";
+          const value = (pt as { value?: number[] }).value;
+          const v = Array.isArray(value) ? value[1] ?? value[0] : value;
+          return `${seriesName}: ${v}`;
+        });
+        return `${lines.join("<br/>")}<br/><span style="color:#2a6df4;font-size:10px">${tr("chat.clickToAsk", { query })}</span>`;
+      };
+    }
+
+    if (isPie) {
+      const ds = datasets[0];
+      return {
+        backgroundColor: "transparent",
+        color: colors,
+        tooltip,
+        series: [{
+          type: "pie",
+          radius: ["40%", "70%"],
+          center: ["50%", "50%"],
+          avoidLabelOverlap: true,
+          itemStyle: { borderRadius: 4, borderColor: "transparent", borderWidth: 2 },
+          label: { show: true, position: "outside", fontSize: 10, color: "#ccc", formatter: "{b}" },
+          emphasis: { label: { show: true, fontSize: 12, fontWeight: "bold" } },
+          data: labels.map((label, i) => ({
+            name: label,
+            value: ds?.values?.[i] ?? 0,
+          })),
+          animationDuration: 500,
+        }],
+      };
+    }
+
     const series = datasets.map((ds, i) => {
       const base: Record<string, unknown> = {
         name: ds.name ?? tr("chat.seriesLabel", { count: i + 1 }),
@@ -72,29 +131,6 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
 
       return base;
     });
-
-    const tooltip: Record<string, unknown> = {
-      trigger: "axis",
-      backgroundColor: "rgba(22,22,22,0.95)",
-      borderColor: "#333",
-      textStyle: { color: "#fff", fontSize: 11 },
-    };
-
-    if (spec.pointActions) {
-      tooltip.formatter = (params: unknown) => {
-        const arr = Array.isArray(params) ? params : [params];
-        const p = arr[0] as { axisValueLabel?: string } | undefined;
-        const label = p?.axisValueLabel ?? "";
-        const query = interpolate(spec.pointActions!.query, { label });
-        const lines = arr.map((pt: unknown) => {
-          const seriesName = (pt as { seriesName?: string }).seriesName ?? "";
-          const value = (pt as { value?: number[] }).value;
-          const v = Array.isArray(value) ? value[1] ?? value[0] : value;
-          return `${seriesName}: ${v}`;
-        });
-        return `${lines.join("<br/>")}<br/><span style="color:#2a6df4;font-size:10px">${tr("chat.clickToAsk", { query })}</span>`;
-      };
-    }
 
     return {
       backgroundColor: "transparent",

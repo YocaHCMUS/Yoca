@@ -3,15 +3,17 @@ import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivi
 import { GeneralTab } from "@/components/wallet/WalletComparison/GeneralTab";
 import { HoldingTab } from "@/components/wallet/WalletComparison/HoldingTab";
 import { RiskTab } from "@/components/wallet/WalletComparison/RiskTab";
+import { WalletChat } from "@/components/wallet/WalletChat";
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { applyRobotoRegularPdfFont } from "@/util/pdf-fonts";
-import { Button, Column, Grid, Search, Stack } from "@carbon/react";
-import { ChartLine, Close, Download, SearchAdvanced, Wallet, User, Launch } from "@carbon/react/icons";
+import { Button, Search, Stack } from "@carbon/react";
+import { ChartLine, Close, Download, SearchAdvanced, Wallet, User, Launch, AiGenerate, ChevronDown } from "@carbon/react/icons";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
+import { RightSidebar } from "@/pages/wallet/RightSidebar";
 import styles from "./index.module.scss";
 
 const TAB_EXPORT_FILENAME_SEGMENTS = [
@@ -175,6 +177,11 @@ export default function WalletsComparisonPage() {
 
   const [dayPopupOpen, setDayPopupOpen] = useState(false);
   const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
+
+  const [isChatOpen, setIsChatOpen] = useState(true);
+  const [chatPosition, setChatPosition] = useState<"right" | "left" | "fullscreen">("right");
+  const [walletSectionOpen, setWalletSectionOpen] = useState(true);
+  const [chatSectionOpen, setChatSectionOpen] = useState(true);
 
   const handleDayClick = (walletAddress: string, timestamp: number) => {
     setDayPopupTimestamp(timestamp);
@@ -454,30 +461,155 @@ export default function WalletsComparisonPage() {
     void handleExportPDF(activeTabTranslationKey);
   };
 
+  const activeWalletCount = selectedWallets.length;
+
   return (
     <PageWrapper noMarketTickers>
-      <Grid className={styles.grid} fullWidth>
-        <Column lg={4} md={4} sm={4}>
-          <WalletComparisonSidebar
-            walletAddress={walletAddress}
-            selectedWallets={selectedWallets}
-            onWalletAddressChange={setWalletAddress}
-            onWalletKeyPress={handleKeyPress}
-            onRemoveWallet={handleRemoveWallet}
-            onExport={handleSidebarExport}
-            isExporting={isExporting}
-          />
-        </Column>
+      <div className={styles.pageLayout}>
+        {/* Left Sidebar */}
+        {chatPosition === "left" ? (
+          /* Accordion mode: wallet selector + AI chat collapsible sections */
+          <aside className={styles.leftSidebar}>
+            <div
+              className={styles.accordionSection}
+              data-open={walletSectionOpen}
+            >
+              <button
+                type="button"
+                className={styles.accordionHeader}
+                onClick={() => setWalletSectionOpen((v) => !v)}
+              >
+                <span className={styles.accordionHeaderTitle}>
+                  <Wallet size={14} />
+                  {activeWalletCount === 1
+                    ? tr("walletComparison.activeWallet")
+                    : tr("walletComparison.selectedWallets")}
+                </span>
+                <ChevronDown
+                  size={16}
+                  className={styles.accordionChevron}
+                  data-open={walletSectionOpen}
+                />
+              </button>
+              {walletSectionOpen && (
+                <div className={styles.accordionBody}>
+                  <WalletComparisonSidebar
+                    walletAddress={walletAddress}
+                    selectedWallets={selectedWallets}
+                    onWalletAddressChange={setWalletAddress}
+                    onWalletKeyPress={handleKeyPress}
+                    onRemoveWallet={handleRemoveWallet}
+                    onExport={handleSidebarExport}
+                    isExporting={isExporting}
+                  />
+                </div>
+              )}
+            </div>
 
-        <Column lg={12} md={12} sm={4}>
+            <div
+              className={`${styles.accordionSection} ${styles.accordionSectionChat}`}
+              data-open={chatSectionOpen}
+            >
+              <button
+                type="button"
+                className={styles.accordionHeader}
+                onClick={() => setChatSectionOpen((v) => !v)}
+              >
+                <span className={styles.accordionHeaderTitle}>
+                  <AiGenerate size={14} />
+                  {tr("walletComparison.aiChat")}
+                </span>
+                <ChevronDown
+                  size={16}
+                  className={styles.accordionChevron}
+                  data-open={chatSectionOpen}
+                />
+              </button>
+              {chatSectionOpen && (
+                <div className={styles.accordionBodyChat}>
+                  <WalletChat
+                    addresses={selectedWallets}
+                    lang={lang}
+                    variant="sidebar"
+                    contextType="wallet-comparison"
+                    chatPosition="left"
+                    onChatPositionChange={setChatPosition}
+                  />
+                </div>
+              )}
+            </div>
+          </aside>
+        ) : (
+          /* Normal mode: only wallet selector */
+          <aside className={styles.leftSidebar}>
+            <div className={styles.walletSection}>
+              <WalletComparisonSidebar
+                walletAddress={walletAddress}
+                selectedWallets={selectedWallets}
+                onWalletAddressChange={setWalletAddress}
+                onWalletKeyPress={handleKeyPress}
+                onRemoveWallet={handleRemoveWallet}
+                onExport={handleSidebarExport}
+                isExporting={isExporting}
+              />
+            </div>
+          </aside>
+        )}
+
+        <main className={styles.mainContent}>
           <WalletComparisonMainContent
             activeTab={activeTab}
             visitedTabs={visitedTabs}
             comparisonTabs={comparisonTabs}
             onTabChange={setActiveTab}
           />
-        </Column>
-      </Grid>
+        </main>
+
+        {/* Chat inline panel (right dock — same as wallet page) */}
+        {chatPosition !== "left" && (
+          <div
+            className={styles.chatInline}
+            data-open={isChatOpen && chatPosition !== "fullscreen"}
+            data-side="right"
+          >
+            <div className={styles.chatInlineInner}>
+              <WalletChat
+                addresses={selectedWallets}
+                lang={lang}
+                variant="sidebar"
+                contextType="wallet-comparison"
+                chatPosition={chatPosition}
+                onChatPositionChange={setChatPosition}
+              />
+            </div>
+          </div>
+        )}
+
+        <RightSidebar
+          isChatOpen={isChatOpen}
+          onChatToggle={() => setIsChatOpen((v) => !v)}
+        />
+
+        {/* Fullscreen overlay */}
+        {isChatOpen && chatPosition === "fullscreen" && (
+          <div className={styles.chatOverlay} data-position="fullscreen">
+            <div
+              className={styles.chatBackdrop}
+              onClick={() => setIsChatOpen(false)}
+            />
+            <div className={styles.chatPanel}>
+              <WalletChat
+                addresses={selectedWallets}
+                lang={lang}
+                variant="sidebar"
+                contextType="wallet-comparison"
+                chatPosition="fullscreen"
+                onChatPositionChange={setChatPosition}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       <DayActivityPopup
         isOpen={dayPopupOpen}

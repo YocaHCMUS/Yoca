@@ -11,7 +11,7 @@ import type {
   HistoryMessage,
   PriorContext,
 } from "./chat.types.js";
-import { TOOL_DEFINITIONS, TOOL_HANDLERS, hasTool } from "./chat.tools.js";
+import { TOOL_DEFINITIONS, TOOL_HANDLERS, hasTool, isWalletTool } from "./chat.tools.js";
 import {
   buildToolSelectionPrompt,
   buildResponseGenerationPrompt,
@@ -22,6 +22,11 @@ import { chatInfo, chatWarn, chatError, chatDebug } from "./chat.logger.js";
 import { DATA_TRANSFORMERS } from "./data-transformers.js";
 import { sanitizeText, sanitizeResponse } from "./chat-sanitizer.js";
 import { getMessage } from "./chat.localization.js";
+import { classifyWalletChatIntent, inferWalletChatLanguage } from "./chat-intent.js";
+import { buildWalletFallbackResponse } from "./chat-fallback.js";
+import type { WalletConfidence, WalletWarning, WalletChatSection } from "./chat.types.js";
+import { z } from "zod";
+import { WALLET_CHAT_RESPONSE_LIMITS as L } from "./chat-fallback.js";
 
 const MAX_ITERATIONS = 3;
 
@@ -85,8 +90,15 @@ async function callGemini(prompt: string, systemInstruction?: string): Promise<s
   }
 }
 
+function stripAddressKeys(input: Record<string, unknown>): Record<string, unknown> {
+  const copy = { ...input };
+  delete copy.address;
+  delete copy.addresses;
+  return copy;
+}
+
 function makeCallKey(call: ChatToolCall): string {
-  return `${call.name}:${JSON.stringify(call.input)}`;
+  return `${call.name}:${JSON.stringify(stripAddressKeys(call.input as Record<string, unknown>))}`;
 }
 
 function allDuplicates(
@@ -94,22 +106,24 @@ function allDuplicates(
   previousResults: PriorContext["previousResults"],
 ): boolean {
   if (!previousResults.length) return false;
-  const seen = new Set(previousResults.map((r) => `${r.name}:${JSON.stringify(r.input)}`));
+  const seen = new Set(
+    previousResults.map((r) => `${r.name}:${JSON.stringify(stripAddressKeys(r.input as Record<string, unknown>))}`),
+  );
   return tools.length > 0 && tools.every((t) => seen.has(makeCallKey(t)));
 }
 
 async function selectTool(
   query: string,
-  address: string,
+  addresses: string[],
   language?: string,
   context?: PriorContext,
   history?: HistoryMessage[],
 ): Promise<ChatToolCall[] | { type: "no_tool" | "general"; message: string }> {
-  const prompt = buildToolSelectionPrompt(query, TOOL_DEFINITIONS, address, context, history, language);
+  const prompt = buildToolSelectionPrompt(query, TOOL_DEFINITIONS, addresses, context, history, language);
   const raw = await callGemini(prompt);
 
   if (!raw) {
-    chatWarn("selectTool: Gemini returned null", { address });
+    chatWarn("selectTool: Gemini returned null", { addresses });
     return { type: "general", message: getMessage(language, "noResponse") };
   }
 
@@ -158,35 +172,153 @@ async function selectTool(
   return { type: "general", message: getMessage(language, "noTool") };
 }
 
-async function executeTools(tools: ChatToolCall[]): Promise<ChatToolResult[]> {
+function mergeAddressData(perAddress: Array<{ address: string; data: unknown }>): unknown {
+  const dataList = perAddress.map((r) => r.data).filter((d) => d != null);
+  if (dataList.length <= 1) return dataList[0] ?? null;
+
+  const first = dataList[0];
+
+  // Array → concatenate (portfolio, balance_history, etc.)
+  if (Array.isArray(first)) {
+    return dataList.flatMap((d) => (Array.isArray(d) ? d : []));
+  }
+
+  // Object → merge array-valued properties (swaps/transfers/pnl_chart)
+  if (typeof first === "object" && first !== null) {
+    const keys = new Set<string>();
+    for (const d of dataList) {
+      if (d && typeof d === "object" && !Array.isArray(d)) {
+        Object.keys(d as Record<string, unknown>).forEach((k) => keys.add(k));
+      }
+    }
+    const merged: Record<string, unknown> = {};
+    for (const key of keys) {
+      const values = dataList
+        .map((d) => (d as Record<string, unknown>)[key])
+        .filter((v) => v != null);
+      if (values.every((v) => Array.isArray(v))) {
+        merged[key] = values.flatMap((v) => v as unknown[]);
+      } else {
+        merged[key] = values[values.length - 1];
+      }
+    }
+    return merged;
+  }
+
+  return first;
+}
+
+async function executeToolsForAllAddresses(
+  addresses: string[],
+  tools: ChatToolCall[],
+): Promise<ChatToolResult[]> {
   const results = await Promise.all(
     tools.map(async (tool) => {
       const handler = TOOL_HANDLERS[tool.name];
       const start = performance.now();
 
       if (!handler) {
-        chatWarn("executeTool: handler not found", { tool: tool.name });
+        chatWarn("executeToolsForAllAddresses: handler not found", { tool: tool.name });
         return { name: tool.name, input: tool.input, data: null, error: `Tool '${tool.name}' not found` };
       }
 
       try {
+        if (isWalletTool(tool.name)) {
+          const restInput = stripAddressKeys(tool.input as Record<string, unknown>);
+          const perAddress = await Promise.all(
+            addresses.map(async (addr) => {
+              const { data: rawData, llmData } = await handler({ ...restInput, address: addr });
+              return { address: addr, data: rawData, llmData };
+            }),
+          );
+
+          const duration = Math.round(performance.now() - start);
+          chatInfo("executeToolsForAllAddresses: fan-out success", {
+            tool: tool.name,
+            addresses: addresses.length,
+            durationMs: duration,
+          });
+
+          const mergedData: Record<string, unknown> = {};
+          for (const pa of perAddress) {
+            mergedData[pa.address] = pa.llmData;
+          }
+
+          const mergedFullData = mergeAddressData(perAddress);
+
+          return {
+            name: tool.name,
+            input: { ...tool.input, addresses },
+            data: mergedData,
+            fullData: mergedFullData,
+          };
+        }
+
         const { data: fullData, llmData } = await handler(tool.input);
         const duration = Math.round(performance.now() - start);
-        chatInfo("executeTool: success", {
+        chatInfo("executeToolsForAllAddresses: global tool success", {
           tool: tool.name,
           durationMs: duration,
-          dataSize: trunc(JSON.stringify(llmData), 100).length,
         });
         return { name: tool.name, input: tool.input, data: llmData, fullData };
       } catch (err) {
         const duration = Math.round(performance.now() - start);
         const msg = err instanceof Error ? err.message : String(err);
-        chatError("executeTool: failed", { tool: tool.name, durationMs: duration, error: msg });
+        chatError("executeToolsForAllAddresses: failed", { tool: tool.name, durationMs: duration, error: msg });
         return { name: tool.name, input: tool.input, data: null, error: msg };
       }
     }),
   );
   return results;
+}
+
+// ─── Zod Validation for Structured Response ────────────────────────────
+
+const walletSectionSchema = z.object({
+  title: z.string().trim().min(1).max(L.sectionTitleChars),
+  kind: z.enum(["market_snapshot", "key_findings", "pnl_summary", "trading_activity", "top_holdings", "risk_factors", "what_to_watch", "conclusion", "custom"]),
+  content: z.string().trim().max(L.sectionContentChars).optional(),
+  bullets: z.array(z.string().trim().min(1).max(L.sectionBulletChars)).max(L.sectionBulletItems).optional(),
+  table: z.array(z.record(z.string(), z.union([z.string(), z.number(), z.null()]))).max(8).optional(),
+});
+
+const walletResponseSchema = z.object({
+  text: z.string(),
+  tldr: z.array(z.string().trim().min(1).max(L.tldrBulletChars)).min(1).max(L.tldrItems).optional(),
+  sections: z.array(walletSectionSchema).min(1).max(L.sectionItems).optional(),
+  warnings: z.array(z.object({ text: z.string(), severity: z.enum(["info", "warning", "error"]) })).max(L.warningItems).optional(),
+  confidence: z.enum(["Low", "Medium", "High"]).optional(),
+});
+
+function normalizeWalletResponse(raw: unknown): Record<string, unknown> {
+  const record = raw && typeof raw === "object" && !Array.isArray(raw)
+    ? (raw as Record<string, unknown>)
+    : {};
+  const out: Record<string, unknown> = { text: record.text ?? "" };
+
+  if (Array.isArray(record.tldr)) {
+    out.tldr = (record.tldr as unknown[]).filter((s): s is string => typeof s === "string").slice(0, L.tldrItems);
+  }
+  if (Array.isArray(record.sections)) {
+    const valid: Record<string, unknown>[] = [];
+    for (const s of (record.sections as unknown[])) {
+      if (valid.length >= L.sectionItems) break;
+      if (s && typeof s === "object" && typeof (s as Record<string, unknown>).title === "string") {
+        valid.push(s as Record<string, unknown>);
+      }
+    }
+    if (valid.length > 0) out.sections = valid;
+  }
+  if (Array.isArray(record.warnings)) {
+    out.warnings = (record.warnings as Array<Record<string, unknown>>).filter(
+      (w): w is Record<string, unknown> =>
+        w !== null && typeof (w as Record<string, unknown>).text === "string" && typeof w === "object",
+    ).slice(0, L.warningItems);
+  }
+  if (typeof record.confidence === "string" && ["Low", "Medium", "High"].includes(record.confidence)) {
+    out.confidence = record.confidence;
+  }
+  return out;
 }
 
 async function generateResponse(
@@ -229,6 +361,25 @@ async function generateResponse(
   const charts = sanitized.charts;
   const tables = sanitized.tables;
   const actions = sanitized.actions;
+  const sources = sanitized.sources;
+
+  // Validate structured fields from Gemini
+  const parsedJson = extractJsonObject(raw);
+  let validatedTldr: string[] | undefined;
+  let validatedSections: WalletChatSection[] | undefined;
+  let validatedWarnings: WalletWarning[] | undefined;
+  let validatedConfidence: WalletConfidence | undefined;
+
+  if (parsedJson && typeof parsedJson === "object") {
+    const normalized = normalizeWalletResponse(parsedJson);
+    const parsed = walletResponseSchema.safeParse(normalized);
+    if (parsed.success) {
+      validatedTldr = parsed.data.tldr;
+      validatedSections = parsed.data.sections as WalletChatSection[] | undefined;
+      validatedWarnings = parsed.data.warnings as WalletWarning[] | undefined;
+      validatedConfidence = parsed.data.confidence;
+    }
+  }
 
   if (!text && charts.length === 0 && tables.length === 0 && actions.length === 0) {
     chatWarn("generateResponse: sanitizeResponse returned empty, using raw text", { raw: trunc(raw, 300) });
@@ -261,6 +412,13 @@ async function generateResponse(
     charts,
     tables,
     actions: actions.length > 0 ? actions : undefined,
+    sources: sources && sources.length > 0 ? sources : undefined,
+    tldr: validatedTldr,
+    sections: validatedSections,
+    warnings: validatedWarnings,
+    confidence: validatedConfidence,
+    asOf: new Date().toISOString(),
+    generatedAt: new Date().toISOString(),
   };
 
   chatInfo("generateResponse: success", {
@@ -268,13 +426,15 @@ async function generateResponse(
     chartsCount: response.charts.length,
     tablesCount: response.tables.length,
     dataKeys: Object.keys(response.data),
+    hasSections: !!validatedSections,
+    hasTldr: !!validatedTldr,
   });
 
   return response;
 }
 
 export async function answerChatQuery(
-  address: string,
+  addresses: string[],
   query: string,
   language?: string,
   history?: HistoryMessage[],
@@ -284,9 +444,13 @@ export async function answerChatQuery(
     ? createHash("sha256").update(JSON.stringify(history)).update(language ?? "en").digest("hex").slice(0, 8)
     : undefined;
 
-  chatInfo("answerChatQuery: entry", { address, query: trunc(query, 200), language: language ?? "en", historyTurns: history?.length ?? 0 });
+  chatInfo("answerChatQuery: entry", { addresses, query: trunc(query, 200), language: language ?? "en", historyTurns: history?.length ?? 0 });
 
-  const cached = await getCachedResponse(address, query, model, historyHash);
+  const intent = classifyWalletChatIntent(query);
+  const detectedLang = inferWalletChatLanguage(query, language);
+  chatInfo("answerChatQuery: intent + language", { intent, detectedLang, originalLang: language ?? "en" });
+
+  const cached = await getCachedResponse(addresses, query, model, historyHash, intent);
   if (cached) {
     chatInfo("answerChatQuery: cache hit", {
       textLength: cached.text.length,
@@ -306,7 +470,7 @@ export async function answerChatQuery(
       ? { previousResults: allResults.map((r) => ({ name: r.name, input: r.input ?? {}, data: r.data, error: r.error })) }
       : undefined;
 
-    const toolSelection = await selectTool(query, address, language, context, history);
+    const toolSelection = await selectTool(query, addresses, language, context, history);
 
     if (!Array.isArray(toolSelection)) {
       if (i === 0) {
@@ -342,7 +506,7 @@ export async function answerChatQuery(
       break;
     }
 
-    const results = await executeTools(toolSelection);
+    const results = await executeToolsForAllAddresses(addresses, toolSelection);
     allResults.push(...results);
 
     if (results.length > 0 && results.every((r) => r.error)) {
@@ -369,8 +533,13 @@ export async function answerChatQuery(
 
   const response = await generateResponse(query, allResults, language, history);
 
+  if (!response.text && response.charts.length === 0 && response.tables.length === 0) {
+    chatWarn("answerChatQuery: Gemini response empty, using deterministic fallback");
+    return buildWalletFallbackResponse(query, intent, allResults, detectedLang);
+  }
+
   try {
-    await setCachedResponse(address, query, response, model, historyHash);
+    await setCachedResponse(addresses, query, response, model, historyHash, intent);
     chatDebug("answerChatQuery: cache write succeeded");
   } catch {
     chatWarn("answerChatQuery: cache write failed");

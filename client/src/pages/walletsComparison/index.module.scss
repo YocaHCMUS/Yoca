@@ -2,28 +2,203 @@
 @use '@carbon/react/scss/theme' as *;
 @use '../../styles/variables' as *;
 
-.walletsComparisonPage {
-  min-height: 100vh;
+:global(.cds--content:has(.pageLayout)) {
+  overflow: hidden !important;
+}
+
+.pageLayout {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: calc(100vh - 3.5rem);
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.leftSidebar {
+  width: 480px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border-right: 1px solid $border-subtle-03;
   background: $background;
-  margin: 0;
-  padding: 0 $header-height 0 0;
+}
+
+.walletSection {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: $spacing-02;
 }
 
 .sidebarContainer {
-  position: sticky;
-  top: $header-height;
   display: flex;
   flex-direction: column;
   gap: $spacing-04;
-  padding-top: $spacing-02;
-  padding-left: $spacing-06;
-  border-left: 1px solid $border-subtle;
-  height: calc(100vh - $header-height);
+  padding: $spacing-02 $spacing-06;
+}
+
+// ===== Accordion sections (left sidebar, left-dock mode) =====
+.accordionSection {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+
+  &[data-open="false"] {
+    flex-shrink: 0;
+  }
+}
+
+.accordionSectionChat {
+  flex: 1;
+
+  &[data-open="false"] {
+    flex: none;
+    flex-shrink: 0;
+  }
+}
+
+.accordionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-03;
+  width: 100%;
+  padding: $spacing-03 $spacing-06;
+  border: none;
+  border-bottom: 1px solid $border-subtle-03;
+  background: $layer-01;
+  color: $text-primary;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+}
+
+.accordionHeaderTitle {
+  display: flex;
+  align-items: center;
+  gap: $spacing-02;
+  min-width: 0;
+}
+
+.accordionChevron {
+  color: $icon-secondary;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+
+  &[data-open="false"] {
+    transform: rotate(-90deg);
+  }
+}
+
+.accordionBody {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.accordionBodyChat {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+// ===== Chat inline (right/left dock — matches wallet page) =====
+.chatInline {
+  flex-shrink: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: max-width 0.3s ease;
+  display: flex;
+  border-left: 1px solid $border-subtle-03;
+
+  &[data-open="true"] {
+    max-width: 460px;
+  }
+
+  &[data-side="left"] {
+    order: -1;
+    border-right: 1px solid $border-subtle-03;
+    border-left: none;
+  }
+}
+
+.chatInlineInner {
+  width: 460px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: $background;
+}
+
+// ===== Chat fullscreen overlay =====
+.chatOverlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 60;
+  display: flex;
+  overflow: hidden;
+
+  &[data-position="fullscreen"] {
+    left: 0;
+    right: 0;
+  }
+}
+
+.chatBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 0;
+}
+
+.chatPanel {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: $background;
+
+  .chatOverlay[data-position="fullscreen"] & {
+    inset: 24px;
+    border-radius: 16px;
+    border: 1px solid $border-subtle-03;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    max-width: 900px;
+    margin: 0 auto;
+    width: calc(100% - 48px);
+  }
+}
+
+.mainContent {
+  flex: 1;
+  min-width: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .mainContentContainer {
-  min-height: calc(100vh - $header-height - $spacing-05);
+  flex: 1;
   border: 1px solid $border-subtle;
   background: $layer-01;
 }
@@ -117,12 +292,6 @@
   color: $text-disabled;
 }
 
-.grid {
-  width: 100%;
-  padding: 0 !important;
-  min-height: calc(100vh - $header-height);
-}
-
 .sidebarTitle {
   margin: 0;
   color: $text-primary;
@@ -143,6 +312,8 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-03;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .buttonTag {
@@ -173,7 +344,7 @@
 .deepDiveButton {
   flex-shrink: 0;
   border-radius: 4px;
-  
+
   &:hover {
     background-color: $layer-hover-01;
     color: $link-primary;

@@ -16,20 +16,18 @@ import TokenSearch from "@/components/TokenSearch/TokenSearch";
 import { useWatchlist } from "@/contexts/WatchlistContext";
 import { useWalletLabels } from "@/hooks/profile/useWalletLabels";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import type { LangKeys } from "@/config/localization";
 import { useNavigate } from "react-router";
 import styles from "./RightSidebar.module.scss";
 import { useGet } from "@/hooks/useGet";
 import client from "@/api/main";
 
 import { fetchWalletOverview } from "@/services/wallet/walletApi";
-import { WalletChat } from "@/components/wallet/WalletChat";
 
 interface RightSidebarProps {
-  currentAddress: string;
   onToggle?: (isOpen: boolean) => void;
-  address?: string;
-  lang?: LangKeys;
+  isChatOpen?: boolean;
+  onChatToggle?: () => void;
+  noChatToggle?: boolean;
 }
 
 const formatAddress = (addr: string) => {
@@ -163,8 +161,13 @@ function WalletWatchlistRow({ wallet }: { wallet: string }) {
   );
 }
 
-export function RightSidebar({ currentAddress, onToggle, address: chatAddress, lang }: RightSidebarProps) {
-  const [activeTab, setActiveTab] = useState<"watchlist" | "labels" | "ai-chat" | null>(null);
+export function RightSidebar({
+  onToggle,
+  isChatOpen = false,
+  onChatToggle,
+  noChatToggle = false,
+}: RightSidebarProps) {
+  const [activeTab, setActiveTab] = useState<"watchlist" | "labels" | null>(null);
   const [isAddingToken, setIsAddingToken] = useState(false);
 
   useEffect(() => {
@@ -176,20 +179,15 @@ export function RightSidebar({ currentAddress, onToggle, address: chatAddress, l
   const [editingWallet, setEditingWallet] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // We no longer need to manually listen to wallet-labels-updated since React Query handles reactivity.
-  }, []);
-
   const handleCopy = (e: any, text: string) => {
     e.stopPropagation();
     navigator.clipboard.writeText(text);
   };
 
   return (
-    <div className={styles.container} style={{ width: activeTab ? (activeTab === "ai-chat" ? "360px" : "308px") : "48px" }}>
+    <div className={styles.container}>
       {/* Expanded Panel Area */}
-      {activeTab && (
-        <div className={styles.panel} style={activeTab === "ai-chat" ? { width: "312px", overflow: "hidden", padding: 0 } : undefined}>
+      <div className={styles.panel} data-visible={activeTab !== null}>
           {/* WATCHLIST TAB */}
           {activeTab === "watchlist" && (
             <>
@@ -306,16 +304,7 @@ export function RightSidebar({ currentAddress, onToggle, address: chatAddress, l
             </>
           )}
 
-          {/* AI CHAT TAB */}
-          {activeTab === "ai-chat" && chatAddress && (
-            <WalletChat
-              address={chatAddress}
-              lang={lang}
-              variant="sidebar"
-            />
-          )}
         </div>
-      )}
 
       {/* Toolbar Area (Always visible on the right) */}
       <div className={styles.toolbar}>
@@ -332,13 +321,15 @@ export function RightSidebar({ currentAddress, onToggle, address: chatAddress, l
           >
             <Tag size={20} />
           </button>
-          <button 
-            className={`${styles.toolBtn} ${activeTab === "ai-chat" ? styles.toolBtnActive : ""}`}
-            onClick={() => setActiveTab(activeTab === "ai-chat" ? null : "ai-chat")}
-            title="AI Chat"
-          >
-            <AiGenerate size={20} />
-          </button>
+          {!noChatToggle && (
+            <button
+              className={`${styles.toolBtn} ${isChatOpen ? styles.toolBtnActive : ""}`}
+              onClick={onChatToggle}
+              title="AI Chat"
+            >
+              <AiGenerate size={20} />
+            </button>
+          )}
         </div>
         
         <div className={styles.toolbarBottom}>
