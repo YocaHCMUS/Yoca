@@ -20,6 +20,9 @@ import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import z from "zod";
 
+const isStripeManagedSubscription = (subscriptionId: string) =>
+  subscriptionId.startsWith("sub_");
+
 const app = new Hono()
   /**
    * POST /api/payment/setup-intent
@@ -309,21 +312,28 @@ const app = new Hono()
           );
         }
 
+        if (!isStripeManagedSubscription(subscriptionId)) {
+          return c.json(
+            {
+              errorCode: "UNSUPPORTED_SUBSCRIPTION_PROVIDER",
+              message: "This subscription is not managed by Stripe.",
+            },
+            statusCode.BadRequest,
+          );
+        }
+
         const { cancelSubscription } = await import(
           "@sv/services/stripe.service.js"
         );
         const updatedSub = await cancelSubscription(subscriptionId);
-
-        await db
-          .update(subscriptions)
-          .set({ cancelAtPeriodEnd: true, updatedAt: new Date() })
-          .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
+        const syncedSubscription = await upsertSubscription(updatedSub);
 
         return c.json(
           {
             success: true,
             status: updatedSub.status,
             cancel_at_period_end: updatedSub.cancel_at_period_end,
+            subscription: syncedSubscription,
           },
           statusCode.Ok,
         );
@@ -365,6 +375,16 @@ const app = new Hono()
           return c.json(
             { errorCode: "NOT_FOUND", message: "Subscription not found" },
             statusCode.NotFound,
+          );
+        }
+
+        if (!isStripeManagedSubscription(subscriptionId)) {
+          return c.json(
+            {
+              errorCode: "UNSUPPORTED_SUBSCRIPTION_PROVIDER",
+              message: "This subscription is not managed by Stripe.",
+            },
+            statusCode.BadRequest,
           );
         }
 

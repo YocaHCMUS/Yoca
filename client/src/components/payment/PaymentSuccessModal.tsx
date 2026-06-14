@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useLocalization } from "@/contexts/LocalizationContext";
 
 type PaymentSuccessModalProps = {
   open: boolean;
@@ -8,6 +9,7 @@ type PaymentSuccessModalProps = {
 };
 
 export function PaymentSuccessModal({ open, tierName, onClose }: PaymentSuccessModalProps) {
+  const { tr } = useLocalization();
   const [mounted, setMounted] = useState(false);
   const [showContent, setShowContent] = useState(false);
 
@@ -74,10 +76,14 @@ export function PaymentSuccessModal({ open, tierName, onClose }: PaymentSuccessM
             showContent ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           }`}>
             <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">
-              Payment Successful!
+              {tr("payment.success.title")}
             </h2>
             <p className="text-[#94a3b8] mb-8 text-sm leading-relaxed">
-              Your subscription to the <span className="text-[#14F195] font-bold">{tierName}</span> plan is now active. Enjoy full access to all premium features.
+              {tr("payment.success.description", {
+                $tierName: (
+                  <span className="text-[#14F195] font-bold">{tierName}</span>
+                ),
+              })}
             </p>
           </div>
 
@@ -89,13 +95,13 @@ export function PaymentSuccessModal({ open, tierName, onClose }: PaymentSuccessM
               onClick={() => window.location.href = "/profile"}
               className="w-full py-4 rounded-none bg-[#14F195] text-[#0a0a0f] font-bold text-xs uppercase tracking-[0.2em] hover:bg-[#0fd484] transition-all duration-300 shadow-[0_10px_20px_rgba(20,241,149,0.2)]"
             >
-              Go to Profile
+              {tr("payment.success.goToProfile")}
             </button>
             <button
               onClick={onClose}
               className="w-full py-4 rounded-none border border-white/10 text-[#64748b] font-bold text-xs uppercase tracking-[0.2em] hover:text-white hover:bg-white/5 transition-all duration-200"
             >
-              Maybe Later
+              {tr("payment.shared.maybeLater")}
             </button>
           </div>
 
@@ -103,7 +109,7 @@ export function PaymentSuccessModal({ open, tierName, onClose }: PaymentSuccessM
           <p className={`mt-8 text-[10px] text-[#475569] uppercase tracking-widest transition-all duration-700 delay-1000 ${
             showContent ? "opacity-100" : "opacity-0"
           }`}>
-            A receipt has been sent to your email
+            {tr("payment.success.receipt")}
           </p>
         </div>
       </div>

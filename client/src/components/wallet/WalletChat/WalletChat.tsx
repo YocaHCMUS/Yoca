@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { Playlist, Send } from "@carbon/icons-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { Add, ChevronDown, Playlist, Send, TrashCan } from "@carbon/icons-react";
 import client from "@/api/main";
 import { WalletChatMessage } from "./WalletChatMessage";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
@@ -7,17 +7,26 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import type { LangKeys } from "@/config/localization";
 import type { ChatMessageItem, ChatResponse } from "./types";
 import styles from "./WalletChat.module.scss";
+import { Maximize, OpenPanelLeft, OpenPanelRight } from "@carbon/icons-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useChatSessions, type ChatSessionContextType } from "./useChatSessions";
 
 const MAX_QUICK_QUESTIONS = 5;
+const MAX_INPUT_LENGTH = 500;
 
 interface Props {
-  address: string;
+  address?: string;
+  addresses?: string[];
   lang?: LangKeys;
   variant?: "widget" | "sidebar";
+  chatPosition: "right" | "left" | "fullscreen";
+  onChatPositionChange: (position: "right" | "left" | "fullscreen") => void;
+  contextType?: ChatSessionContextType;
 }
 
-export function WalletChat({ address, lang, variant = "widget" }: Props) {
-  const { tr } = useLocalization();
+export function WalletChat({ address, addresses, lang, variant = "widget", chatPosition, onChatPositionChange, contextType: contextTypeProp }: Props) {
+  const { tr, fmt } = useLocalization();
+  const { user, isUserLoading } = useAuth();
   const [isOpen, setIsOpen] = useState(variant === "sidebar");
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
@@ -25,8 +34,32 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPromptMenu, setShowPromptMenu] = useState(false);
+  const [showSessionMenu, setShowSessionMenu] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const sessionMenuRef = useRef<HTMLDivElement>(null);
+
+  const activeAddresses = useMemo(
+    () => (addresses?.length ? addresses : address ? [address] : []).filter(Boolean),
+    [address, addresses],
+  );
+  const contextType = contextTypeProp ?? (activeAddresses.length > 1 ? "wallet-comparison" : "wallet");
+
+  const contextQuestions = useMemo(
+    () => PREDEFINED_QUESTIONS.filter((q) => !q.contextTypes || q.contextTypes.includes(contextType)),
+    [contextType],
+  );
+
+  const {
+    sessions,
+    activeSessionId,
+    activeSession,
+    setActiveSessionId: changeSessionId,
+    createNewSession,
+    saveMessagesToSession,
+    deleteSessionById,
+    refreshSessions,
+  } = useChatSessions(user?.userId ?? null);
 
   useEffect(() => {
     if (listRef.current) {
@@ -40,9 +73,38 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
     }
   }, [isOpen, isMinimized]);
 
+  // Load active session messages when switching sessions
+  useEffect(() => {
+    if (activeSession) {
+      setMessages(activeSession.messages);
+      setError(null);
+      return;
+    }
+    setMessages([]);
+    setError(null);
+  }, [activeSession]);
+
+  // Close session menu on outside click
+  useEffect(() => {
+    if (!showSessionMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (sessionMenuRef.current && !sessionMenuRef.current.contains(e.target as Node)) {
+        setShowSessionMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showSessionMenu]);
+
+  const doSaveCurrentSession = useCallback(async () => {
+    if (!activeSessionId || messages.length === 0) return;
+    const title = messages.find((m) => m.role === "user")?.content.slice(0, 50);
+    await saveMessagesToSession(activeSessionId, messages, title);
+  }, [activeSessionId, messages, saveMessagesToSession]);
+
   const sendQuery = useCallback(
     async (query: string) => {
-      if (!query.trim() || isLoading) return;
+      if (!query.trim() || isLoading || activeAddresses.length === 0) return;
 
       setShowPromptMenu(false);
 
@@ -58,14 +120,21 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
           content: m.content.length > 2000 ? m.content.slice(0, 2000) : m.content,
         }));
         const res = await client.api.chat.index.$post({
-          json: { address, query: query.trim(), language: lang, history },
+          json: {
+            addresses: activeAddresses,
+            query: query.trim(),
+            language: lang,
+            history,
+            sessionId: activeSessionId ?? undefined,
+            contextType,
+          },
         });
 
         if (!res.ok) {
-          throw new Error(`Server error: ${res.status}`);
+          throw new Error(tr("chat.serverError", { status: String(res.status) }));
         }
 
-        const data = (await res.json()) as ChatResponse;
+        const data = (await res.json()) as ChatResponse & { sessionId?: string };
         const assistantMsg: ChatMessageItem = {
           role: "assistant",
           content: data.text,
@@ -73,8 +142,23 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
           charts: data.charts,
           tables: data.tables,
           actions: data.actions,
+          tldr: data.tldr,
+          sections: data.sections,
+          sources: data.sources,
+          evidence: data.evidence,
+          warnings: data.warnings,
+          confidence: data.confidence,
         };
+
         setMessages((prev) => [...prev, assistantMsg]);
+
+        // If backend created a new session, sync the id
+        if (data.sessionId && data.sessionId !== activeSessionId) {
+          changeSessionId(data.sessionId);
+        }
+
+        // Refresh session list so new sessions appear in selector
+        refreshSessions();
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Failed to send message";
         setError(msg);
@@ -89,7 +173,7 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
         setIsLoading(false);
       }
     },
-    [address, lang, isLoading, messages],
+    [activeAddresses, contextType, lang, isLoading, messages, activeSessionId, changeSessionId, refreshSessions, tr],
   );
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -122,12 +206,87 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
     }
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
+    await doSaveCurrentSession();
     setIsOpen(false);
     setIsMinimized(false);
   };
 
-  // Minimized FAB (widget variant only)
+  const handleNewChat = async () => {
+    await doSaveCurrentSession();
+    setMessages([]);
+    setError(null);
+    setShowPromptMenu(false);
+    changeSessionId(null);
+  };
+
+  const handleSessionSelect = async (sessionId: string) => {
+    await doSaveCurrentSession();
+    changeSessionId(sessionId);
+    setShowSessionMenu(false);
+  };
+
+  const handleDeleteSession = async (e: React.MouseEvent, sessionId: string) => {
+    e.stopPropagation();
+    await deleteSessionById(sessionId);
+  };
+
+  // ─── Auth gate ───────────────────────────────────────────────────────
+  if (!isUserLoading && !user) {
+    if (variant === "widget" && (!isOpen || isMinimized)) {
+      return (
+        <button
+          type="button"
+          onClick={handleToggle}
+          title={tr("chat.fabTitle")}
+          className={styles.fab}
+        >
+          <span className={styles.fabText}>{tr("chat.fabLabel")}</span>
+        </button>
+      );
+    }
+
+    if (variant === "sidebar" && !isOpen) {
+      return null;
+    }
+
+    return (
+      <div className={variant === "sidebar" ? styles.sidebarContainer : styles.widgetContainer}>
+        <div className={styles.header}>
+          <span className={styles.headerTitle}>{tr("chat.headerTitle")}</span>
+          <div className={styles.headerActions}>
+            {variant === "widget" && (
+              <button
+                type="button"
+                onClick={handleClose}
+                className={styles.headerBtn}
+                aria-label={tr("chat.close")}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+        <div className={styles.authRequired}>
+          <div className={styles.authRequiredTitle}>{tr("chat.signInRequired")}</div>
+          <p className={styles.authRequiredDesc}>{tr("chat.signInRequiredDesc")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isUserLoading) {
+    if (variant === "widget" && (!isOpen || isMinimized)) {
+      return (
+        <button type="button" className={styles.fab}>
+          <span className={styles.fabText}>{tr("chat.fabLabel")}</span>
+        </button>
+      );
+    }
+    return null;
+  }
+
+  // Minimized FAB (widget variant only, authenticated)
   if (variant === "widget" && (!isOpen || isMinimized)) {
     const unreadCount = messages.filter((m) => m.role === "assistant").length;
 
@@ -138,7 +297,7 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
         title={tr("chat.fabTitle")}
         className={styles.fab}
       >
-        <span className={styles.fabText}>AI</span>
+        <span className={styles.fabText}>{tr("chat.fabLabel")}</span>
         {unreadCount > 0 && (
           <span className={styles.fabBadge}>
             {unreadCount}
@@ -153,13 +312,18 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
     return null;
   }
 
-  const quickItems = PREDEFINED_QUESTIONS.slice(0, MAX_QUICK_QUESTIONS);
+  const quickItems = contextQuestions.slice(0, MAX_QUICK_QUESTIONS);
+  const trimmedInput = inputText.trim();
+  const inputValidationError =
+    trimmedInput.length === 0 ? null
+      : trimmedInput.length > MAX_INPUT_LENGTH ? tr("chat.inputOverLimit", { max: MAX_INPUT_LENGTH })
+        : null;
 
   const renderPromptMenu = () => (
     <div className={styles.promptMenuOverlay}>
       <div className={styles.promptMenuTitle}>{tr("chat.promptMenuTitle")}</div>
       <div className={styles.promptMenuList}>
-        {PREDEFINED_QUESTIONS.map((q) => (
+        {contextQuestions.map((q) => (
           <button
             key={q.id}
             type="button"
@@ -183,7 +347,7 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
             key={q.id}
             type="button"
             onClick={() => handlePredefined(resolveQuery(q))}
-            disabled={isLoading}
+            disabled={isLoading || activeAddresses.length === 0}
             className={styles.quickBtn}
           >
             {resolveLabel(q)}
@@ -200,15 +364,59 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
       ))}
       {isLoading && (
         <div className={styles.loadingDots}>
-          <div className={styles.dot} />
-          <div className={styles.dot} />
-          <div className={styles.dot} />
-          <span className={styles.loadingLabel}>{tr("chat.loadingLabel")}</span>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={styles.dot} style={{ animationDelay: `${i * 0.15}s` }} />
+          ))}
+          <span className={styles.loadingLabel}>
+            {tr("chat.loadingLabel")}
+            {/* {tr("chat.loadingLabel").split("").map((char, i) => (
+              <span
+                key={i}
+                className={styles.loadingChar}
+                style={{ animationDelay: `${0.45 + i * 0.08}s` }}
+              >
+                {char === " " ? "\u00A0" : char}
+              </span>
+            ))} */}
+          </span>
         </div>
       )}
       {error && (
         <div className={styles.errorMsg}>{error}</div>
       )}
+    </div>
+  );
+
+  const renderSessionMenu = () => (
+    <div ref={sessionMenuRef} className={styles.sessionDropdown}>
+      <div className={styles.sessionDropdownTitle}>{tr("chat.sessions")}</div>
+      {sessions.length === 0 && (
+        <div className={styles.sessionEmpty}>{tr("chat.noSessions")}</div>
+      )}
+      {sessions.map((s) => (
+        <div
+          key={s.id}
+          className={`${styles.sessionItem} ${s.id === activeSessionId ? styles.sessionItemActive : ""}`}
+          onClick={() => handleSessionSelect(s.id)}
+        >
+          <div className={styles.sessionItemContent}>
+            <span className={styles.sessionItemTitle}>
+              {s.title || tr("chat.newChat")}
+            </span>
+            <span className={styles.sessionItemTime}>
+              {fmt.datetime.relative(s.updatedAt)}
+            </span>
+          </div>
+          <button
+            type="button"
+            className={styles.sessionItemDelete}
+            onClick={(e) => handleDeleteSession(e, s.id)}
+            title={tr("chat.deleteSession")}
+          >
+            <TrashCan size={12} />
+          </button>
+        </div>
+      ))}
     </div>
   );
 
@@ -218,32 +426,84 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
     <div className={wrapperClass}>
       {/* Header */}
       <div className={styles.header}>
-        <span className={styles.headerTitle}>
-          {tr("chat.headerTitle")}
-        </span>
-        {variant === "widget" && (
-          <div className={styles.headerActions}>
+        <div className={styles.headerLeft}>
+          <span className={styles.headerTitle}>
+            {tr("chat.headerTitle")}
+          </span>
+        </div>
+
+        <div className={styles.headerActions}>
+          <div className={styles.sessionSelector}>
             <button
               type="button"
-              onClick={() => setIsMinimized(true)}
-              className={styles.headerBtn}
+              className={styles.sessionToggle}
+              onClick={() => setShowSessionMenu((v) => !v)}
             >
-              ⟱
+              <span className={styles.sessionToggleLabel}>
+                {activeSession?.title ?? tr("chat.newChat")}
+              </span>
+              <ChevronDown size={12} />
             </button>
-            <button
-              type="button"
-              onClick={handleClose}
-              className={styles.headerBtn}
-            >
-              ✕
-            </button>
+            {showSessionMenu && renderSessionMenu()}
           </div>
-        )}
+          <button
+            className={styles.headerBtn}
+            data-active={chatPosition === "left"}
+            onClick={() => onChatPositionChange("left")}
+            title={tr("chat.leftSidebar")}
+          >
+            <OpenPanelLeft size={16} />
+          </button>
+          <button
+            className={styles.headerBtn}
+            data-active={chatPosition === "right"}
+            onClick={() => onChatPositionChange("right")}
+            title={tr("chat.rightSidebar")}
+          >
+            <OpenPanelRight size={16} />
+          </button>
+          <button
+            className={styles.headerBtn}
+            data-active={chatPosition === "fullscreen"}
+            onClick={() => onChatPositionChange("fullscreen")}
+            title={tr("chat.fullscreenMode")}
+          >
+            <Maximize size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={handleNewChat}
+            className={styles.headerBtn}
+            title={tr("chat.newChat")}
+          >
+            <Add size={16} />
+          </button>
+          {variant === "widget" && (
+            <>
+              <button
+                type="button"
+                onClick={() => setIsMinimized(true)}
+                className={styles.headerBtn}
+                aria-label={tr("chat.minimize")}
+              >
+                ⟱
+              </button>
+              <button
+                type="button"
+                onClick={handleClose}
+                className={styles.headerBtn}
+                aria-label={tr("chat.close")}
+              >
+                ✕
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {showPromptMenu ? renderPromptMenu()
         : messages.length === 0 && !isLoading ? renderQuickQuestions()
-        : renderMessages()}
+          : renderMessages()}
 
       {/* Input */}
       <div className={styles.inputBar}>
@@ -255,13 +515,13 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={tr("chat.inputPlaceholder")}
-            disabled={isLoading}
+            disabled={isLoading || activeAddresses.length === 0}
             className={styles.inputField}
           />
           <button
             type="button"
             onClick={() => setShowPromptMenu((v) => !v)}
-            disabled={isLoading}
+            disabled={isLoading || activeAddresses.length === 0}
             className={styles.promptMenuBtn}
             title={tr("chat.promptMenuBtn")}
           >
@@ -270,11 +530,17 @@ export function WalletChat({ address, lang, variant = "widget" }: Props) {
           <button
             type="button"
             onClick={() => sendQuery(inputText)}
-            disabled={isLoading || !inputText.trim()}
+            disabled={isLoading || activeAddresses.length === 0 || !inputText.trim() || inputText.length > MAX_INPUT_LENGTH}
             className={styles.sendBtn}
           >
             <Send size={16} />
           </button>
+        </div>
+        <div className={styles.inputMeta}>
+          <span>{tr("chat.inputCounter", { current: String(inputText.length), max: MAX_INPUT_LENGTH })}</span>
+          {inputText.length > 0 && inputValidationError && (
+            <span className={styles.validationError}>{inputValidationError}</span>
+          )}
         </div>
       </div>
     </div>

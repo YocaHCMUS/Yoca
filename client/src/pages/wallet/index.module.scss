@@ -13,6 +13,7 @@
   height: calc(100vh - 3.5rem);
   min-height: 0;
   overflow: hidden;
+  position: relative;
 }
 
 // ===== Shell (outer wrapper) =====
@@ -273,6 +274,11 @@
   display: flex;
   flex-direction: row;
   gap: 0;
+  container-type: inline-size;
+
+  @container (max-width: 768px) {
+    flex-direction: column;
+  }
 }
 
 .tokenDetailsWrapper {
@@ -281,15 +287,22 @@
 
 .mainCol {
   flex: 6;
+  min-width: 0;
   border-right: 1px solid var(--cds-border-subtle-03);
   display: flex;
   flex-direction: column;
   // overflow-y: auto;
   min-height: 0;
+
+  @container (max-width: 768px) {
+    border-right: none;
+    border-bottom: 1px solid var(--cds-border-subtle-03);
+  }
 }
 
 .sideCol {
   flex: 4;
+  min-width: 0;
   // background: $layer-01;
   display: flex;
   flex-direction: column;
@@ -634,6 +647,77 @@
   &:hover {
     background: $layer-hover-01;
     color: $icon-primary;
+  }
+}
+
+// ===== Chat Inline (layout-integrated, right/left dock) =====
+.chatInline {
+  flex-shrink: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: max-width 0.3s ease;
+  display: flex;
+  border-left: 1px solid var(--cds-border-subtle-03);
+
+  &[data-open="true"] {
+    max-width: 460px;
+  }
+
+  &[data-side="left"] {
+    order: -1;
+    border-right: 1px solid var(--cds-border-subtle-03);
+    border-left: none;
+  }
+}
+
+.chatInlineInner {
+  width: 460px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: $background;
+}
+
+// ===== Chat Fullscreen Overlay =====
+.chatOverlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 60;
+  display: flex;
+  overflow: hidden;
+
+  &[data-position="fullscreen"] {
+    left: 0;
+    right: 0;
+  }
+}
+
+.chatBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 0;
+}
+
+.chatPanel {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: $background;
+
+  .chatOverlay[data-position="fullscreen"] & {
+    inset: 24px;
+    border-radius: 16px;
+    border: 1px solid var(--cds-border-subtle-03);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    max-width: 900px;
+    margin: 0 auto;
+    width: calc(100% - 48px);
   }
 }
 

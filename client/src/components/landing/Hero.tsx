@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import {
   LANDING_ACCENT,
   LANDING_ACCENT_GLOW,
@@ -32,6 +33,8 @@ const item = {
 };
 
 export function LandingHero() {
+  const { tr } = useLocalization();
+
   return (
     <section
       className="relative overflow-hidden"
@@ -93,7 +96,7 @@ export function LandingHero() {
               className="mb-5 text-sm font-semibold uppercase tracking-[0.22em]"
               style={{ color: LANDING_ACCENT }}
             >
-              AI-DRIVEN SOLANA ANALYTICS
+              {tr("landing.hero.eyebrow")}
             </motion.p>
 
             <motion.h1
@@ -101,8 +104,7 @@ export function LandingHero() {
               className="text-4xl font-bold tracking-tight text-(--landing-foreground) sm:text-5xl md:text-6xl"
               style={{ lineHeight: 1.08, maxWidth: "700px" }}
             >
-              Make onchain data
-              work for you.
+              {tr("landing.hero.title")}
             </motion.h1>
 
             <motion.p
@@ -113,9 +115,7 @@ export function LandingHero() {
                 maxWidth: "600px",
               }}
             >
-              The all-in-one suite for Solana traders. Track token trends,
-              visualize whale movements, and stay ahead of the market with
-              real-time on-chain alerts.
+              {tr("landing.hero.subtitle")}
             </motion.p>
 
             <motion.div
@@ -129,7 +129,7 @@ export function LandingHero() {
                 onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
                 onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
               >
-                Launch Market Radar
+                {tr("landing.hero.primaryCta")}
               </Link>
               <Link
                 to="/auth"
@@ -137,7 +137,7 @@ export function LandingHero() {
                 onMouseEnter={(e) => btnSecondaryEnter(e.currentTarget)}
                 onMouseLeave={(e) => btnSecondaryLeave(e.currentTarget)}
               >
-                View Live Wallets
+                {tr("landing.hero.secondaryCta")}
               </Link>
             </motion.div>
             </div>

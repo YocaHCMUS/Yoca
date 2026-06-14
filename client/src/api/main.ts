@@ -40,6 +40,7 @@ type TokenVolatilityNewsClient = ClientTypeOf<"/api/token-volatility-news">;
 type TokenAiChatClient = ClientTypeOf<"/api/token-ai-chat">;
 type ChatClient = ClientTypeOf<"/api/chat">;
 type PaymentClient = ClientTypeOf<"/api/payment">;
+type WashTradingClient = ClientTypeOf<"/api/v1/wash-trading">;
 
 type ApiClient = {
   api: {
@@ -65,6 +66,7 @@ type ApiClient = {
     tokenAiChat: TokenAiChatClient;
     payment: PaymentClient;
     chat: ChatClient;
+    washTrading: WashTradingClient;
   };
 };
 
@@ -92,14 +94,9 @@ const client: ApiClient = {
     tokenAiChat: hcc("/api/token-ai-chat"),
     payment: hcc("/api/payment"),
     chat: hcc("/api/chat"),
+    washTrading: hcc("/api/v1/wash-trading"),
   },
 };
 
 export default client;
 export type ApiErrCode = ErrCode;
-
-// client.api.tokens.markets.chart[":address"].daily.$get({
-//   query: {
-//     days: ,
-//   },
-// });

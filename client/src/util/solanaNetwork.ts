@@ -76,6 +76,30 @@ export function getWalletAdapterNetwork(): WalletAdapterNetwork {
 }
 
 /**
+ * Returns the RPC endpoint used by wallet-adapter and client-side transaction
+ * construction. `VITE_SOLANA_RPC_URL` is preferred so local/test RPC changes do
+ * not get silently replaced by `clusterApiUrl()` during merges.
+ */
+export function getSolanaRpcEndpoint(): string {
+  const configuredRpc = import.meta.env.VITE_SOLANA_RPC_URL as string | undefined;
+
+  if (configuredRpc?.trim()) {
+    const trimmed = configuredRpc.trim();
+    try {
+      new URL(trimmed);
+    } catch {
+      throw new Error(
+        `System Error: Invalid VITE_SOLANA_RPC_URL value "${trimmed}". ` +
+          "Set it to a valid Solana RPC URL."
+      );
+    }
+    return trimmed;
+  }
+
+  return clusterApiUrl(getValidatedSolanaNetwork());
+}
+
+/**
  * Builds and returns a `@solana/web3.js` `Connection` instance whose
  * endpoint is derived dynamically from `VITE_SOLANA_NETWORK`.
  *
@@ -86,8 +110,7 @@ export function getWalletAdapterNetwork(): WalletAdapterNetwork {
  * @throws {Error} Propagates from `getValidatedSolanaNetwork()`.
  */
 export function getDynamicConnection(): Connection {
-  const network = getValidatedSolanaNetwork();
-  return new Connection(clusterApiUrl(network), "confirmed");
+  return new Connection(getSolanaRpcEndpoint(), "confirmed");
 }
 
 /**

@@ -108,7 +108,8 @@
 }
 
 .wideContent {
-  padding: 0 !important; 
+  padding: calc(3rem + var(--page-content-top-offset, 0rem)) 0 0 !important;
+  overflow: hidden;
 }
 
 .sideNavItemsLayout {

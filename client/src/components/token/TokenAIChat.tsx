@@ -36,8 +36,9 @@ const EVIDENCE_PRIORITY: Record<string, number> = {
   chart: 1,
   volatility: 2,
   holders: 3,
-  pool: 4,
-  news: 5,
+  security: 4,
+  pool: 5,
+  news: 6,
 };
 
 const SECTION_KIND_META: Record<
@@ -127,12 +128,24 @@ const EVIDENCE_TYPE_META: Record<
   holders: { label: "Holders", className: "evidenceTypeHolders" },
   pool: { label: "Pool", className: "evidenceTypePool" },
   trades: { label: "Trades", className: "evidenceTypeTrades" },
+  security: { label: "Security", className: "evidenceTypeSecurity" },
   metadata: { label: "Metadata", className: "evidenceTypeMetadata" },
   internal: { label: "Internal", className: "evidenceTypeInternal" },
 };
 
 const METRIC_OR_SIGNAL_PATTERN =
   /([+-]\d+(?:\.\d+)?%|\$\s?\d[\d,]*(?:\.\d+)?\s?(?:K|M|B|T|million|billion|trillion)?|\b\d[\d,]*(?:\.\d+)?\s?(?:million|billion|trillion|holders?|buys?|sells?|trades?|transactions?|txns?|volume|market cap)\b|\b(?:bearish|decline|declines|declined|drop|drops|dropped|selling pressure|risk|risks|outflow|outflows|loss|losses)\b|\b(?:bullish|growth|increase|increases|increased|inflow|inflows|support|liquidity|adoption)\b|\b(?:warning|warnings|unavailable|missing|cannot verify|not available|limited data)\b)/gi;
+
+const WEAK_WARNING_PATTERNS = [
+  /\b(?:market cap|market capitalization|fdv)?\s*rank\b.*\bunavailable\b/i,
+  /\brank unavailable\b/i,
+  /\bcreator\b.*\bunavailable\b/i,
+  /\bdeployer\b.*\bunavailable\b/i,
+  /\bhoneypot\b.*\bunavailable\b/i,
+  /\bsecurity flags?\b.*\bunavailable\b/i,
+  /\bmint authority\b.*\bfreeze authority\b.*\b(?:deployer|creator|honeypot)\b/i,
+  /\bsecurity (?:fields?|information)\b.*\b(?:unavailable|missing|not available)\b/i,
+] as const;
 
 function formatDateTime(value?: string | null) {
   if (!value) return "";
@@ -159,6 +172,43 @@ function sortEvidenceByUsefulness(data: TokenAiChatData) {
     if (left !== right) return left - right;
     return a.label.localeCompare(b.label);
   });
+}
+
+function warningKey(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9ăâđêôơưáàảãạắằẳẵặấầẩẫậéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ\s]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isWeakUnavailableWarning(value: string) {
+  return WEAK_WARNING_PATTERNS.some((pattern) => pattern.test(value));
+}
+
+function normalizeVisibleWarnings(warnings: string[]) {
+  const seen = new Set<string>();
+  const visible: string[] = [];
+
+  for (const warning of warnings) {
+    const trimmed = warning.trim();
+    if (!trimmed || isWeakUnavailableWarning(trimmed)) continue;
+    const key = warningKey(trimmed);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    visible.push(trimmed);
+    if (visible.length >= 3) break;
+  }
+
+  return visible;
+}
+
+function hasSecurityLimitationWarning(warnings: string[]) {
+  return warnings.some((warning) =>
+    /\b(contract|security|mint\/freeze|mint authority|freeze authority|bảo mật)\b/i.test(
+      warning,
+    ),
+  );
 }
 
 function stripMarkdownArtifacts(value: string) {
@@ -361,12 +411,34 @@ function getSourceDomain(url: string) {
 }
 
 function getProviderLabel(provider: TokenAiChatData["provider"]) {
-  return provider === "gemini" ? "Gemini" : "Deterministic";
+  switch (provider) {
+    case "gemini":
+      return "Gemini";
+    case "gemini_model_fallback":
+      return "Gemini fallback model";
+    case "cached_gemini":
+      return "Recent Gemini analysis";
+    case "analyst_fallback":
+      return "Yoca Analyst Fallback";
+    case "deterministic":
+    default:
+      return "Deterministic";
+  }
 }
 
 function getCacheLabel(cache: TokenAiChatData["cache"]) {
   if (!cache) return "Cache unknown";
   return cache.hit ? "Cache hit" : "Cache miss";
+}
+
+function getModelModeLabel(answer: TokenAiChatData) {
+  const used = answer.modelModeUsed ?? answer.modelModeRequested;
+  if (!used) return null;
+  return `${used.charAt(0).toUpperCase()}${used.slice(1)} mode`;
+}
+
+function formatFallbackReason(reason: string) {
+  return reason.replace(/_/g, " ");
 }
 
 function getConfidenceClass(confidence: TokenAiChatData["confidence"]) {
@@ -477,6 +549,10 @@ export function TokenAIChat({
         : null;
   const sortedEvidence = useMemo(
     () => (answer ? sortEvidenceByUsefulness(answer) : []),
+    [answer],
+  );
+  const visibleWarnings = useMemo(
+    () => (answer ? normalizeVisibleWarnings(answer.warnings) : []),
     [answer],
   );
   const visibleEvidence = showAllEvidence
@@ -603,8 +679,10 @@ export function TokenAIChat({
                 )}
               </h3>
               <div className={styles.answerMode}>
-                <span>Deep Analysis</span>
+                <span>{getModelModeLabel(answer) ?? "Deep Analysis"}</span>
                 <span>{getProviderLabel(answer.provider)}</span>
+                {answer.modelUsed && <span>{answer.modelUsed}</span>}
+                {answer.stale && <span>Stale</span>}
                 <span>{getCacheLabel(answer.cache)}</span>
               </div>
             </div>
@@ -649,16 +727,20 @@ export function TokenAIChat({
             ))}
           </div>
 
-          {answer.warnings.length > 0 && (
+          {visibleWarnings.length > 0 && (
             <div className={styles.warnings}>
               <div className={styles.warningHeader}>
                 <span className={styles.warningIcon} aria-hidden="true">
                   !
                 </span>
-                <h3>Warnings / Data Limitations</h3>
+                <h3>
+                  {hasSecurityLimitationWarning(visibleWarnings)
+                    ? "Data Limitations"
+                    : "Warnings / Data Limitations"}
+                </h3>
               </div>
               <ul>
-                {answer.warnings.map((warning, idx) => (
+                {visibleWarnings.map((warning, idx) => (
                   <li key={idx}>
                     <TokenAiRichText text={warning} inline />
                   </li>
@@ -791,12 +873,12 @@ export function TokenAIChat({
               <TokenAiRichText text={answer.disclaimer} />
             </div>
             <span className={styles.footerMeta}>
-              Provider: {answer.provider}
+              Provider: {getProviderLabel(answer.provider)}
               {answer.cache
                 ? ` | cache ${answer.cache.hit ? "hit" : "miss"}`
                 : ""}
               {answer.fallbackReason
-                ? ` | fallback: ${answer.fallbackReason.replace(/_/g, " ")}`
+                ? ` | fallback: ${formatFallbackReason(answer.fallbackReason)}`
                 : ""}
             </span>
           </div>

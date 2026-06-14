@@ -11,6 +11,7 @@ import z from "zod";
 
 const supportedTimeframes = ["24h", "7d", "1m", "3m", "1y"] as const;
 const supportedLanguages = ["en", "vi"] as const;
+const supportedModelModes = ["fast", "balanced", "deep"] as const;
 
 const tokenAiChatRequestSchema = z.object({
   address: z.string().trim().min(1),
@@ -21,6 +22,7 @@ const tokenAiChatRequestSchema = z.object({
   language: z.enum(supportedLanguages).optional(),
   includeNews: z.boolean().default(true),
   includeVolatility: z.boolean().default(true),
+  modelMode: z.enum(supportedModelModes).optional(),
 });
 
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
@@ -103,6 +105,7 @@ const app = new Hono().post("/", async (c) => {
       language: language as TokenAiLanguage,
       includeNews: parsed.data.includeNews,
       includeVolatility: parsed.data.includeVolatility,
+      modelMode: parsed.data.modelMode,
     });
 
     return c.json({ success: true, data }, statusCode.Ok);

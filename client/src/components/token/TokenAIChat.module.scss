@@ -149,11 +149,13 @@
   span {
     display: inline-flex;
     align-items: center;
+    max-width: 100%;
     min-height: 20px;
     padding: 2px 7px;
     border: 1px solid $border-subtle;
     border-radius: 999px;
     background: $layer-01;
+    overflow-wrap: anywhere;
   }
 }
 
@@ -637,6 +639,11 @@
 .evidenceTypeTrades {
   border-color: #8a3ffc;
   color: #8a3ffc;
+}
+
+.evidenceTypeSecurity {
+  border-color: $support-warning;
+  color: $support-warning;
 }
 
 .evidenceTypeMetadata,

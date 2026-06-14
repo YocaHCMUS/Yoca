@@ -45,8 +45,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
-import payment, { PaymentAppType } from "./routes/payment.route";
-import "@sv/util/util-zerion";
+import payment, { PaymentAppType } from "./routes/payment.route.js";
+import washTradingRoutes, { type WashTradingAppType } from './routes/wash-trading.route.js';
 
 const app = new Hono()
   .use("*", logger())
@@ -100,6 +100,7 @@ export type AppRoutes = {
   "/webhook": WebhookAppType;
   "/api/payment": PaymentAppType;
   "/api/chat": ChatAppType;
+  "/api/v1/wash-trading": WashTradingAppType;
 };
 
 // Then here
@@ -129,6 +130,7 @@ const routes: AppRoutes = {
   "/api/payment": payment,
   "/api/chat": chat,
   "/webhook": webhook,
+  "/api/v1/wash-trading": washTradingRoutes,
 };
 
 Object.entries(routes).forEach(([path, route]) => {

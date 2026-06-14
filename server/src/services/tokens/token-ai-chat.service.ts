@@ -16,7 +16,9 @@ import {
 } from "./token-ai-context.js";
 import {
   getTokenAiChatCacheExpiresAt,
+  readLastSuccessfulGeminiCache,
   readTokenAiChatCache,
+  writeLastSuccessfulGeminiCache,
   writeTokenAiChatCache,
 } from "./token-ai-chat-cache.js";
 import env from "@sv/util/load-env.js";
@@ -38,7 +40,10 @@ export interface TokenAiChatRequest {
   language: TokenAiLanguage;
   includeNews: boolean;
   includeVolatility: boolean;
+  modelMode?: TokenAiModelMode;
 }
+
+export type TokenAiModelMode = "fast" | "balanced" | "deep";
 
 export interface TokenAiSection {
   title: string;
@@ -80,8 +85,18 @@ export interface TokenAiChatData {
   asOf: string;
   disclaimer: string;
   generatedAt: string;
-  provider: "gemini" | "deterministic";
+  provider:
+    | "gemini"
+    | "gemini_model_fallback"
+    | "cached_gemini"
+    | "analyst_fallback"
+    | "deterministic";
   fallbackReason?: string;
+  modelModeRequested?: TokenAiModelMode;
+  modelModeUsed?: TokenAiModelMode;
+  modelRequested?: string;
+  modelUsed?: string;
+  stale?: boolean;
   cache?: {
     hit: boolean;
     expiresAt?: string;
@@ -92,8 +107,17 @@ const TOKEN_AI_CHAT_MODEL =
   process.env.TOKEN_AI_CHAT_MODEL?.trim() ||
   process.env.GEMINI_AUDIT_MODEL?.trim() ||
   WALLET_AUDIT_MODEL;
+const TOKEN_AI_CHAT_BALANCED_MODEL =
+  process.env.TOKEN_AI_CHAT_BALANCED_MODEL?.trim() ||
+  process.env.TOKEN_AI_CHAT_FALLBACK_MODEL?.trim() ||
+  "gemini-2.5-flash";
+const TOKEN_AI_CHAT_FAST_MODEL =
+  process.env.TOKEN_AI_CHAT_FAST_MODEL?.trim() ||
+  "gemini-2.5-flash-lite";
 const TOKEN_AI_CHAT_PROMPT_VERSION =
-  process.env.TOKEN_AI_CHAT_PROMPT_VERSION?.trim() || "v2";
+  process.env.TOKEN_AI_CHAT_PROMPT_VERSION?.trim() || "v4";
+const ANALYST_FALLBACK_CACHE_TTL_MS = 3 * 60 * 1000;
+const LAST_SUCCESSFUL_GEMINI_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 const TOKEN_AI_RESPONSE_LIMITS = {
   tldrItems: 3,
@@ -116,7 +140,7 @@ const TOKEN_AI_RESPONSE_LIMITS = {
   disclaimerChars: 500,
 } as const;
 
-const TRUNCATION_ELLIPSIS = "…";
+const TRUNCATION_ELLIPSIS = "\u2026";
 
 const sectionKinds = [
   "market_snapshot",
@@ -135,12 +159,42 @@ const sectionKinds = [
   "custom",
 ] as const;
 
+const NOISY_UNAVAILABLE_PATTERNS = [
+  /security information such as mint authority, freeze authority, deployer, creator, honeypot status, and other security flags are not available[^.]*\.?/gi,
+  /mint authority, freeze authority, deployer, creator, honeypot status, and security flags are not available[^.]*\.?/gi,
+  /the market capitalization rank for this token is currently unavailable[^.]*\.?/gi,
+  /market cap(?:italization)? rank (?:is )?(?:currently )?unavailable[^.]*\.?/gi,
+  /fdv rank (?:is )?(?:currently )?unavailable[^.]*\.?/gi,
+] as const;
+
+const WEAK_UNAVAILABLE_WARNING_PATTERNS = [
+  /\b(?:market cap|market capitalization|fdv)?\s*rank\b.*\bunavailable\b/i,
+  /\brank unavailable\b/i,
+  /\bcreator\b.*\bunavailable\b/i,
+  /\bdeployer\b.*\bunavailable\b/i,
+  /\bhoneypot\b.*\bunavailable\b/i,
+  /\bsecurity flags?\b.*\bunavailable\b/i,
+  /\bmint authority\b.*\bfreeze authority\b.*\b(?:deployer|creator|honeypot)\b/i,
+  /\bsecurity (?:fields?|information)\b.*\b(?:unavailable|missing|not available)\b/i,
+] as const;
+
 type TokenAiFallbackReason =
   | "missing_api_key"
   | "gemini_api_error"
+  | "gemini_retryable_error"
+  | "preferred_model_retry_failed"
+  | "preferred_model_429"
+  | "preferred_model_500"
+  | "preferred_model_502"
+  | "preferred_model_503"
+  | "preferred_model_504"
+  | "fallback_model_failed"
+  | "gemini_unavailable_using_recent_success"
+  | "all_gemini_models_unavailable"
   | "gemini_invalid_json"
   | "gemini_zod_validation_error_after_normalization"
   | "cached_deterministic_response"
+  | "cached_analyst_fallback_ignored_gemini_available"
   | "cached_deterministic_ignored_gemini_available"
   | "deterministic_fallback";
 
@@ -149,7 +203,7 @@ function shouldExposeTokenAiDiagnostics() {
 }
 
 function exposeFallbackReason(reason?: TokenAiFallbackReason) {
-  return reason && shouldExposeTokenAiDiagnostics() ? reason : undefined;
+  return reason;
 }
 
 function logGeminiFallback(
@@ -164,6 +218,119 @@ function logGeminiFallback(
     hasGoogleAiKey: Boolean(process.env.GOOGLE_AI_KEY?.trim()),
     hasGeminiApiKey: Boolean(process.env.GEMINI_API_KEY?.trim()),
     ...details,
+  });
+}
+
+function modelForMode(mode: TokenAiModelMode) {
+  if (mode === "fast") return TOKEN_AI_CHAT_FAST_MODEL;
+  if (mode === "balanced") return TOKEN_AI_CHAT_BALANCED_MODEL;
+  return TOKEN_AI_CHAT_MODEL;
+}
+
+function fallbackModelCandidate(
+  requestedMode: TokenAiModelMode,
+  requestedModel: string,
+) {
+  const candidates: Array<{ mode: TokenAiModelMode; model: string }> =
+    requestedMode === "deep"
+      ? [
+          { mode: "balanced", model: TOKEN_AI_CHAT_BALANCED_MODEL },
+          { mode: "fast", model: TOKEN_AI_CHAT_FAST_MODEL },
+        ]
+      : [
+          { mode: "fast", model: TOKEN_AI_CHAT_FAST_MODEL },
+          { mode: "balanced", model: TOKEN_AI_CHAT_BALANCED_MODEL },
+          { mode: "deep", model: TOKEN_AI_CHAT_MODEL },
+        ];
+
+  return candidates.find((candidate) => candidate.model !== requestedModel);
+}
+
+function retryDelayMs() {
+  return 700 + Math.floor(Math.random() * 801);
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function errorText(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+function parseGeminiError(error: unknown) {
+  const text = errorText(error);
+  let status: number | undefined;
+  let providerStatus: string | undefined;
+  let message = text;
+
+  const record = error && typeof error === "object"
+    ? (error as Record<string, unknown>)
+    : {};
+  if (typeof record.status === "number") status = record.status;
+
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]) as {
+        error?: { code?: number; status?: string; message?: string };
+      };
+      status = parsed.error?.code ?? status;
+      providerStatus = parsed.error?.status;
+      message = parsed.error?.message ?? message;
+    } catch {
+      // Keep the safe raw message fallback.
+    }
+  }
+
+  const normalized = `${providerStatus ?? ""} ${message}`.toLowerCase();
+  const retryable =
+    status === 429 ||
+    status === 500 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504 ||
+    normalized.includes("unavailable") ||
+    normalized.includes("resource_exhausted") ||
+    normalized.includes("high demand") ||
+    normalized.includes("try again later") ||
+    normalized.includes("overloaded");
+
+  const reason: TokenAiFallbackReason =
+    status === 429 ||
+    status === 500 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504
+      ? `preferred_model_${status}`
+      : retryable
+        ? "gemini_retryable_error"
+        : "gemini_api_error";
+
+  return {
+    status,
+    providerStatus,
+    message,
+    retryable,
+    reason,
+  };
+}
+
+function logRetryableGeminiError(
+  model: string,
+  details: ReturnType<typeof parseGeminiError>,
+) {
+  if (!shouldExposeTokenAiDiagnostics()) return;
+  console.warn("[token-ai-chat] Gemini retryable error", {
+    model,
+    status: details.status ?? details.providerStatus ?? "unknown",
+    reason: details.reason,
   });
 }
 
@@ -275,7 +442,11 @@ export function inferTokenAiLanguage(
 
 export function classifyTokenAiIntent(question: string): TokenAiIntent {
   const q = question.toLowerCase();
-  if (/\b(risk|risks|risky|safe|scam|dangerous)\b/.test(q)) {
+  if (
+    /\b(risk|risks|risky|safe|security|scam|dangerous|honeypot|freeze|mint authority|freeze authority|deployer|creator|rug|rug pull|owner|contract)\b/.test(
+      q,
+    )
+  ) {
     return "risk_overview";
   }
   if (/\b(nên mua|nên bán|giữ|chốt lời)\b/.test(q)) {
@@ -287,7 +458,7 @@ export function classifyTokenAiIntent(question: string): TokenAiIntent {
   if (/\b(tin tức|mới nhất|thông báo)\b/.test(q)) {
     return "latest_news";
   }
-  if (/\b(rủi ro|an toàn|lừa đảo|nguy hiểm)\b/.test(q)) {
+  if (/\b(rủi ro|an toàn|lừa đảo|nguy hiểm|bảo mật|đóng băng|chủ sở hữu)\b/.test(q)) {
     return "risk_overview";
   }
   if (/\b(tích cực|tiêu cực)\b/.test(q)) {
@@ -312,7 +483,11 @@ export function classifyTokenAiIntent(question: string): TokenAiIntent {
   if (/\b(news|latest|announcement|headline|tin tức|mới nhất|thông báo)\b/.test(q)) {
     return "latest_news";
   }
-  if (/\b(risk|safe|scam|dangerous|rủi ro|an toàn|lừa đảo|nguy hiểm)\b/.test(q)) {
+  if (
+    /\b(risk|safe|security|scam|dangerous|honeypot|freeze|mint authority|freeze authority|deployer|creator|rug|rug pull|owner|contract|rủi ro|an toàn|lừa đảo|nguy hiểm|bảo mật|đóng băng|chủ sở hữu)\b/.test(
+      q,
+    )
+  ) {
     return "risk_overview";
   }
   if (/\b(bullish|bearish|upside|downside|tích cực|tiêu cực)\b/.test(q)) {
@@ -362,10 +537,60 @@ function defaultDisclaimer(language: TokenAiLanguage) {
     : "For information only, not financial advice. Verify the data and consider your own risk before making decisions.";
 }
 
-function evidenceWarning(context: TokenAiContext, language: TokenAiLanguage) {
-  const warnings = context.missingSections
-    .filter((section) => section.section === "security")
-    .map((section) => section.reason);
+function isSecuritySensitiveIntent(intent: TokenAiIntent) {
+  return intent === "risk_overview";
+}
+
+function hasSecurityEvidence(context: TokenAiContext) {
+  return context.evidence.some((item) => item.type === "security");
+}
+
+function securityEvidenceBullets(context: TokenAiContext) {
+  return context.evidence
+    .filter((item) => item.type === "security")
+    .slice(0, 4)
+    .map((item) =>
+      [item.label, item.detail].filter((value) => value?.trim()).join(": "),
+    );
+}
+
+function conciseSecurityLimitation(language: TokenAiLanguage) {
+  return language === "vi"
+    ? "Yoca có thể đánh giá rủi ro thị trường, thanh khoản, holder, pool và tin tức. Kiểm tra bảo mật contract còn giới hạn nếu không có dữ liệu mint/freeze authority."
+    : "Yoca can assess visible market, liquidity, holder, pool, and news risks. Contract-level security checks are limited unless mint/freeze authority data is available.";
+}
+
+function removeNoisyUnavailableText(text: string) {
+  return NOISY_UNAVAILABLE_PATTERNS.reduce(
+    (current, pattern) => current.replace(pattern, " "),
+    text,
+  )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function warningKey(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9ăâđêôơưáàảãạắằẳẵặấầẩẫậéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ\s]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isWeakUnavailableWarning(value: string) {
+  return WEAK_UNAVAILABLE_WARNING_PATTERNS.some((pattern) => pattern.test(value));
+}
+
+function evidenceWarning(
+  context: TokenAiContext,
+  language: TokenAiLanguage,
+  intent: TokenAiIntent,
+) {
+  const warnings: string[] = [];
+
+  if (isSecuritySensitiveIntent(intent) && !hasSecurityEvidence(context)) {
+    warnings.push(conciseSecurityLimitation(language));
+  }
   if (context.latestNews.length === 0) {
     warnings.push(
       language === "vi"
@@ -380,14 +605,11 @@ function evidenceWarning(context: TokenAiContext, language: TokenAiLanguage) {
         : "Current market data is unavailable.",
     );
   }
-  return [...new Set(warnings)].slice(0, 6);
+  return normalizeWarningsForResponse(warnings);
 }
 
 function confidenceFor(context: TokenAiContext, intent: TokenAiIntent) {
-  if (
-    intent === "risk_overview" ||
-    context.missingSections.some((section) => section.section === "security")
-  ) {
+  if (intent === "risk_overview") {
     return context.market && (context.holderStats || context.pools.length > 0)
       ? "Medium"
       : "Low";
@@ -397,6 +619,31 @@ function confidenceFor(context: TokenAiContext, intent: TokenAiIntent) {
   }
   if (context.market || context.latestNews.length > 0) return "Medium";
   return "Low";
+}
+
+function lastSuccessfulGeminiWindowMs(intent: TokenAiIntent) {
+  switch (intent) {
+    case "price_move_explanation":
+    case "latest_news":
+    case "investment_guidance":
+      return 15 * 60 * 1000;
+    case "bullish_bearish":
+      return 30 * 60 * 1000;
+    case "risk_overview":
+    case "what_to_watch":
+      return 60 * 60 * 1000;
+    case "simple_explanation":
+      return 24 * 60 * 60 * 1000;
+    case "custom":
+    default:
+      return 15 * 60 * 1000;
+  }
+}
+
+function staleGeminiWarning(language: TokenAiLanguage) {
+  return language === "vi"
+    ? "Gemini tạm thời không khả dụng, nên Yoca đang hiển thị một phân tích AI gần đây. Hãy kiểm tra lại dữ liệu thị trường trực tiếp trước khi ra quyết định."
+    : "Gemini is temporarily unavailable, so Yoca is showing a recent AI analysis. Verify live market data before making decisions.";
 }
 
 function newsBullets(context: TokenAiContext) {
@@ -443,6 +690,32 @@ function topPoolData(context: TokenAiContext) {
 
 function topPoolLiquidity(context: TokenAiContext) {
   return finiteNumber(topPoolData(context).liquidityUsd);
+}
+
+function topPoolTradeCounts(context: TokenAiContext) {
+  const data = topPoolData(context);
+  return {
+    buys: finiteNumber(data.buys24h),
+    sells: finiteNumber(data.sells24h),
+  };
+}
+
+function tradeFlowInterpretation(context: TokenAiContext) {
+  const { buys, sells } = topPoolTradeCounts(context);
+  if (buys == null || sells == null) {
+    return "Top-pool buy/sell counts are unavailable, so trade-flow balance cannot be confirmed.";
+  }
+
+  const total = buys + sells;
+  const difference = buys - sells;
+  const threshold = Math.max(5, total * 0.15);
+  if (Math.abs(difference) <= threshold) {
+    return `Top-pool flow looks relatively balanced with ${buys.toLocaleString("en-US")} buys vs ${sells.toLocaleString("en-US")} sells in 24h.`;
+  }
+
+  return difference > 0
+    ? `Top-pool flow leans buy-side with ${buys.toLocaleString("en-US")} buys vs ${sells.toLocaleString("en-US")} sells in 24h, which supports demand but does not prove sustained accumulation.`
+    : `Top-pool flow leans sell-side with ${sells.toLocaleString("en-US")} sells vs ${buys.toLocaleString("en-US")} buys in 24h, which can explain pressure even without a direct news catalyst.`;
 }
 
 function holderTop10Percent(context: TokenAiContext) {
@@ -617,9 +890,6 @@ function lowDataInterpretation(context: TokenAiContext) {
   if (context.latestNews.length === 0) missing.push("recent news");
   if (!context.holderStats) missing.push("holder concentration");
   if (context.pools.length === 0) missing.push("pool liquidity");
-  if (context.missingSections.some((section) => section.section === "security")) {
-    missing.push("contract/security authority data");
-  }
 
   if (missing.length === 0) {
     return "The evidence bundle has enough market, liquidity, holder, and news context for a medium-confidence read.";
@@ -645,6 +915,7 @@ function headlineBullets(context: TokenAiContext) {
 
 function watchSignalBullets(context: TokenAiContext) {
   return [
+    tradeFlowInterpretation(context),
     "If price falls while 24h volume rises, selling pressure, liquidation, or rotation may still be active.",
     "If liquidity drops sharply, slippage and volatility risk increase even when headline news is neutral.",
     "If new headlines are unrelated to the token, avoid over-attributing price moves to news.",
@@ -744,9 +1015,6 @@ function viLowDataInterpretation(context: TokenAiContext) {
   if (context.latestNews.length === 0) missing.push("tin tức gần đây");
   if (!context.holderStats) missing.push("tập trung holder");
   if (context.pools.length === 0) missing.push("thanh khoản pool");
-  if (context.missingSections.some((section) => section.section === "security")) {
-    missing.push("dữ liệu contract/security");
-  }
 
   if (missing.length === 0) {
     return "Bằng chứng đủ để đọc rủi ro thị trường, thanh khoản, holder và tin tức ở mức trung bình.";
@@ -776,6 +1044,10 @@ function bullishBullets(context: TokenAiContext) {
   if (volume != null && volume >= 250_000) {
     bullets.push(`${compactCurrency(volume)} in 24h volume shows active trading interest.`);
   }
+  const flow = topPoolTradeCounts(context);
+  if (flow.buys != null && flow.sells != null && flow.buys > flow.sells) {
+    bullets.push(tradeFlowInterpretation(context));
+  }
   if (liquidity != null && liquidity >= 100_000) {
     bullets.push(liquidityInterpretation(context));
   }
@@ -802,11 +1074,14 @@ function bearishBullets(context: TokenAiContext) {
   if (liquidity != null && liquidity < 100_000) {
     bullets.push(liquidityInterpretation(context));
   }
+  const flow = topPoolTradeCounts(context);
+  if (flow.buys != null && flow.sells != null && flow.sells > flow.buys) {
+    bullets.push(tradeFlowInterpretation(context));
+  }
   if (context.latestNews.length === 0 || countDirectNews(context) === 0) {
     bullets.push("News evidence is missing or indirect, so there is no clear headline support for the move.");
   }
   bullets.push(holderInterpretation(context));
-  bullets.push("Contract/security authority evidence is unavailable, so safe/scam conclusions cannot be verified from this response.");
 
   return [...new Set(bullets)].slice(0, 5);
 }
@@ -820,14 +1095,13 @@ function localizedDisclaimer(language: TokenAiLanguage) {
 function localizedEvidenceWarning(
   context: TokenAiContext,
   language: TokenAiLanguage,
+  intent: TokenAiIntent,
 ) {
-  if (language !== "vi") return evidenceWarning(context, language);
+  if (language !== "vi") return evidenceWarning(context, language, intent);
 
   const warnings: string[] = [];
-  if (context.missingSections.some((section) => section.section === "security")) {
-    warnings.push(
-      "Yoca chưa có dữ liệu contract/security như mint authority, freeze authority hoặc deployer cho token này.",
-    );
+  if (isSecuritySensitiveIntent(intent) && !hasSecurityEvidence(context)) {
+    warnings.push(conciseSecurityLimitation(language));
   }
   if (context.latestNews.length === 0) {
     warnings.push("Không có tin tức gần đây trong bằng chứng Yoca cho token này.");
@@ -835,7 +1109,7 @@ function localizedEvidenceWarning(
   if (!context.market) {
     warnings.push("Dữ liệu thị trường hiện không khả dụng.");
   }
-  return [...new Set(warnings)].slice(0, 6);
+  return normalizeWarningsForResponse(warnings);
 }
 
 function buildFallbackTldr(
@@ -845,15 +1119,15 @@ function buildFallbackTldr(
 ) {
   const label = tokenLabel(context);
   const move = priceMove(context);
-  const securityGap =
-    "Security authority/deployer evidence is unavailable, so Yoca cannot verify safe/scam claims.";
+  const includeSecurityLimitation =
+    isSecuritySensitiveIntent(intent) && !hasSecurityEvidence(context);
 
   if (language === "vi") {
     return [
       `${label}: ${viPriceMovePhrase(context)}; cần đọc cùng volume, thanh khoản và tin tức thay vì chỉ nhìn giá.`,
       `${viCatalystInterpretation(context)} ${viVolumeInterpretation(context)}`,
-      "Yoca chưa có dữ liệu contract/security, nên không thể xác nhận token an toàn hay lừa đảo từ câu trả lời này.",
-    ];
+      ...(includeSecurityLimitation ? [conciseSecurityLimitation(language)] : []),
+    ].slice(0, 3);
   }
 
   if (intent === "latest_news") {
@@ -867,8 +1141,8 @@ function buildFallbackTldr(
   return [
     `${label} is ${move.phrase}; the useful read is what that implies alongside volume, liquidity, holders, and news.`,
     `${catalystInterpretation(context)} ${volumeInterpretation(context)}`,
-    securityGap,
-  ];
+    ...(includeSecurityLimitation ? [conciseSecurityLimitation(language)] : []),
+  ].slice(0, 3);
 }
 
 function buildVietnameseFallbackSections(
@@ -910,12 +1184,6 @@ function buildVietnameseFallbackSections(
               ]
             : []),
         ],
-      },
-      {
-        title: "Dữ Liệu Security Chưa Có",
-        kind: "risk_factors",
-        content:
-          "Yoca chưa có bằng chứng về mint authority, freeze authority, deployer, creator hoặc honeypot status, nên không thể kết luận token an toàn hay lừa đảo.",
       },
       {
         title: "Cần Theo Dõi",
@@ -1048,7 +1316,7 @@ function buildImprovedFallbackSections(
           title: "Balanced Conclusion",
           kind: "conclusion",
           content:
-            "The useful conclusion is not a trade command: weigh price direction against volume quality, liquidity depth, holder distribution, news relevance, and missing security evidence.",
+            "The useful conclusion is not a trade command: weigh price direction against volume quality, liquidity depth, holder distribution, news relevance, and any available authority evidence.",
         },
         {
           title: "Confirmation Signals",
@@ -1057,6 +1325,7 @@ function buildImprovedFallbackSections(
         },
       ];
     case "risk_overview":
+      const securityBullets = securityEvidenceBullets(context);
       return [
         {
           title: "Market Risk",
@@ -1082,12 +1351,15 @@ function buildImprovedFallbackSections(
           kind: "risk_factors",
           bullets: [newsInterpretation(context), ...(wrapped ? [wrapped] : [])],
         },
-        {
-          title: "Unavailable Security Evidence",
-          kind: "risk_factors",
-          content:
-            "Yoca does not have direct contract-security evidence for this token yet, so it cannot verify mint authority, freeze authority, deployer risk, creator risk, honeypot status, or whether the token is safe/scam.",
-        },
+        ...(securityBullets.length > 0
+          ? [
+              {
+                title: "Mint / Freeze Authority Evidence",
+                kind: "risk_factors" as const,
+                bullets: securityBullets,
+              },
+            ]
+          : []),
         {
           title: "Risk Signals To Watch",
           kind: "what_to_watch",
@@ -1171,7 +1443,7 @@ function buildImprovedFallbackSections(
           bullets: [
             "Do not treat this as a buy/sell instruction.",
             "Wait for confirmation from price direction, volume quality, liquidity stability, direct news, and holder concentration.",
-            "Keep security authority gaps separate from market signals; missing security data should lower confidence.",
+            "Keep market signals separate from contract-security checks; use mint/freeze authority evidence only when it is present.",
           ],
         },
       ];
@@ -1247,7 +1519,7 @@ function buildFallbackSections(
     }
     if (intent === "risk_overview") {
       return [
-        { title: "Rủi Ro Chính", kind: "risk_factors", bullets: ["Dữ liệu bảo mật như mint/freeze authority và deployer hiện chưa có.", ...drivers] },
+        { title: "Rủi Ro Chính", kind: "risk_factors", bullets: [conciseSecurityLimitation(language), ...drivers] },
         { title: "Tín Hiệu Có Dữ Liệu", kind: "deep_dive", bullets: snapshot },
         { title: "Cần Theo Dõi", kind: "what_to_watch", bullets: viWatch },
         { title: "Kết Luận", kind: "conclusion", content: "Có thể đánh giá rủi ro thị trường và thanh khoản ở mức sơ bộ, nhưng không thể kết luận token an toàn hay lừa đảo từ dữ liệu hiện có." },
@@ -1265,7 +1537,7 @@ function buildFallbackSections(
       ];
     case "risk_overview":
       return [
-        { title: "Main Risk Factors", kind: "risk_factors", bullets: ["Security fields are unavailable, so Yoca cannot verify mint authority, freeze authority, deployer, creator, honeypot status, or private insider behavior.", ...drivers] },
+        { title: "Main Risk Factors", kind: "risk_factors", bullets: [conciseSecurityLimitation(language), ...drivers] },
         { title: "Data-Backed Risk Signals", kind: "deep_dive", bullets: snapshot },
         { title: "What To Watch Next", kind: "what_to_watch", bullets: watchBullets(context) },
         { title: "Conclusion", kind: "conclusion", content: "This can support a market/liquidity risk overview, but it cannot prove whether the token is safe or unsafe." },
@@ -1273,7 +1545,7 @@ function buildFallbackSections(
     case "bullish_bearish":
       return [
         { title: "Bullish Signals", kind: "bullish_signals", bullets: [Number.isFinite(priceChange24h) && priceChange24h > 0 ? `Positive 24h price change of ${percent(priceChange24h)}.` : "No positive 24h price signal in the current market data.", context.latestNews.length > 0 ? "Recent news context is available." : "No recent news support in the evidence."] },
-        { title: "Bearish Signals", kind: "bearish_signals", bullets: [Number.isFinite(priceChange24h) && priceChange24h < 0 ? `Negative 24h price change of ${percent(priceChange24h)}.` : "No negative 24h price signal in the current market data.", "Security and authority fields are missing."] },
+        { title: "Bearish Signals", kind: "bearish_signals", bullets: [Number.isFinite(priceChange24h) && priceChange24h < 0 ? `Negative 24h price change of ${percent(priceChange24h)}.` : "No negative 24h price signal in the current market data.", holderInterpretation(context)] },
         { title: "Balance of Evidence", kind: "conclusion", content: "The evidence is mixed and should be treated as context, not a trading command." },
         { title: "What To Watch Next", kind: "what_to_watch", bullets: watchBullets(context) },
       ];
@@ -1294,7 +1566,7 @@ function buildFallbackSections(
       return [
         { title: "Market Facts and Why They Matter", kind: "market_snapshot", bullets: snapshot },
         { title: "Plausible Scenarios", kind: "scenario_analysis", bullets: ["Constructive scenario: price/volume/liquidity improve while news remains supportive.", "Cautious scenario: liquidity thins, volatility increases, or new negative evidence appears."] },
-        { title: "Practical Risk Framework", kind: "practical_framework", bullets: ["Define invalidation conditions before acting.", "Avoid relying on unavailable security fields.", "Size decisions according to risk tolerance and independent research."] },
+        { title: "Practical Risk Framework", kind: "practical_framework", bullets: ["Define invalidation conditions before acting.", "Use mint/freeze authority evidence only when it is present.", "Size decisions according to risk tolerance and independent research."] },
         { title: "What To Watch Next", kind: "what_to_watch", bullets: watchBullets(context) },
         { title: "Conclusion", kind: "conclusion", content: "Yoca can frame scenarios and risks, but it should not be used as a direct buy, sell, or hold instruction." },
       ];
@@ -1314,25 +1586,7 @@ function buildDeterministicAnswer(
   intent: TokenAiIntent,
   fallbackReason: TokenAiFallbackReason = "deterministic_fallback",
 ): TokenAiChatData {
-  const warnings = localizedEvidenceWarning(context, request.language);
-  const market = marketRecord(context);
-  const label = tokenLabel(context);
-  const tldr =
-    request.language === "vi"
-      ? [
-          `${label}: giá hiện khoảng ${compactCurrency(market.priceUsd)}, thay đổi 24h ${percent(market.priceChangePercentage24h)}.`,
-          context.latestNews.length > 0
-            ? `Có ${context.latestNews.length} tin tức gần đây trong bằng chứng.`
-            : "Không có tin tức gần đây trong bằng chứng.",
-          "Không có dữ liệu bảo mật mint/freeze/deployer, nên không thể kết luận token an toàn hay lừa đảo.",
-        ]
-      : [
-          `${label} is around ${compactCurrency(market.priceUsd)} with 24h change of ${percent(market.priceChangePercentage24h)}.`,
-          context.latestNews.length > 0
-            ? `${context.latestNews.length} recent news item(s) were included as context.`
-            : "No recent token news was available in the evidence bundle.",
-          "Security authority/deployer fields are unavailable, so Yoca cannot verify safe/scam claims.",
-        ];
+  const warnings = localizedEvidenceWarning(context, request.language, intent);
 
   return {
     token: context.token,
@@ -1343,12 +1597,19 @@ function buildDeterministicAnswer(
     evidence: normalizeEvidenceForResponse(context.evidence),
     sources: normalizeSourcesForResponse(context.sources),
     warnings: normalizeWarningsForResponse(warnings),
-    confidence: confidenceFor(context, intent),
+    confidence:
+      confidenceFor(context, intent) === "High"
+        ? "Medium"
+        : confidenceFor(context, intent),
     asOf: context.builtAt,
     disclaimer: localizedDisclaimer(request.language),
     generatedAt: new Date().toISOString(),
-    provider: "deterministic",
+    provider: "analyst_fallback",
     fallbackReason: exposeFallbackReason(fallbackReason),
+    modelModeRequested: request.modelMode ?? "deep",
+    modelModeUsed: undefined,
+    modelRequested: modelForMode(request.modelMode ?? "deep"),
+    modelUsed: undefined,
   };
 }
 
@@ -1372,6 +1633,7 @@ function compactContextForPrompt(context: TokenAiContext) {
     topHolders: context.topHolders.slice(0, 5),
     pools: context.pools.slice(0, 3),
     recentTrades: context.recentTrades.slice(0, 5),
+    security: context.security,
     missingSections: context.missingSections,
     evidence: context.evidence,
     sources: context.sources,
@@ -1405,12 +1667,18 @@ function buildPrompt({
     "If liquidity is high, explain that slippage risk may be lower, but price can still move strongly.",
     "If only wrapped-token data is available, explain that the token may reflect the underlying asset rather than an independent project.",
     "Never invent unavailable data. Never claim mint authority, freeze authority, deployer, creator, honeypot status, token security, or private insider behavior unless the evidence explicitly includes it.",
+    "If mint/freeze authority evidence is supplied, use it carefully as evidence only; do not call the token safe or unsafe based only on that.",
+    "Do not mention unavailable security fields unless the user asks about risk, safety, security, scam, honeypot, freeze authority, creator, or deployer.",
+    "Do not list every missing security field. If contract security data is limited, say it once as a concise limitation.",
+    "If the user asks whether the token is a honeypot, say honeypot detection is not included unless direct honeypot evidence is supplied; then discuss visible market, liquidity, holder, pool, and trading warning signs.",
+    "Do not mention market cap rank or FDV rank when it is missing.",
+    "Do not put missing-security limitations in TLDR unless the user specifically asked a security or risk question.",
     "Do not give direct buy, sell, or hold instructions. Do not use guaranteed, will pump, risk-free, or equivalent certainty.",
-    "If the user asks risk, safe, or scam, clearly separate available market/liquidity/holder/news risk from unavailable contract/security authority evidence.",
+    "If the user asks risk, safe, scam, or honeypot, clearly separate available market/liquidity/holder/news risks from contract-security limitations.",
     "If the user asks whether to buy, do not give a buy/sell command. Give market context, bullish case, bearish case, risk framework, and confirmation signals to wait for.",
     "For investment-like questions, use scenario framing, risk framework, and watch-next items.",
     "Sound like a crypto analyst explaining the situation to a normal user. Be direct, concrete, and careful about uncertainty.",
-    "Use intent-specific sections. Keep TLDR to 2-3 bullets. Include warnings for thin data, missing news, and missing security data.",
+    "Use intent-specific sections. Keep TLDR to 2-3 bullets. Warnings must be short, deduped, and limited to material data limitations.",
     "Keep TLDR bullets under 280 characters.",
     "Keep section bullets concise, ideally under 500 characters.",
     "Use section content for longer explanations instead of oversized bullets.",
@@ -1424,6 +1692,66 @@ function buildPrompt({
 interface GeminiAnswerResult {
   data: Omit<TokenAiChatData, "cache"> | null;
   fallbackReason: TokenAiFallbackReason;
+  retryable: boolean;
+  modelRequested?: string;
+  modelUsed?: string;
+  modeRequested?: TokenAiModelMode;
+  modeUsed?: TokenAiModelMode;
+}
+
+function geminiDataFromParsed({
+  request,
+  context,
+  intent,
+  parsed,
+  provider,
+  fallbackReason,
+  modelRequested,
+  modelUsed,
+  modeRequested,
+  modeUsed,
+}: {
+  request: TokenAiChatRequest;
+  context: TokenAiContext;
+  intent: TokenAiIntent;
+  parsed: z.infer<typeof geminiResponseSchema>;
+  provider: TokenAiChatData["provider"];
+  fallbackReason?: TokenAiFallbackReason;
+  modelRequested: string;
+  modelUsed: string;
+  modeRequested: TokenAiModelMode;
+  modeUsed: TokenAiModelMode;
+}): Omit<TokenAiChatData, "cache"> {
+  return {
+    token: context.token,
+    question: request.question,
+    intent,
+    tldr: parsed.tldr,
+    sections: parsed.sections,
+    evidence: normalizeEvidenceForResponse(context.evidence),
+    sources: normalizeSourcesForResponse(context.sources),
+    warnings: normalizeWarningsForResponse([
+      ...new Set([
+        ...parsed.warnings,
+        ...localizedEvidenceWarning(context, request.language, intent),
+      ]),
+    ]),
+    confidence:
+      intent === "risk_overview" && parsed.confidence === "High"
+        ? "Medium"
+        : parsed.confidence,
+    asOf: context.builtAt,
+    disclaimer: parsed.disclaimer || localizedDisclaimer(request.language),
+    generatedAt: new Date().toISOString(),
+    provider,
+    fallbackReason: fallbackReason
+      ? exposeFallbackReason(fallbackReason)
+      : undefined,
+    modelModeRequested: modeRequested,
+    modelModeUsed: modeUsed,
+    modelRequested,
+    modelUsed,
+  };
 }
 
 function parseGeminiJsonText(text: string) {
@@ -1492,7 +1820,9 @@ function normalizeTextValue(
   stats?: TokenAiNormalizationStats,
 ): string | undefined {
   if (typeof value !== "string" && typeof value !== "number") return undefined;
-  const text = truncateText(String(value), maxLength, stats);
+  const cleaned = removeNoisyUnavailableText(String(value));
+  if (!cleaned) return undefined;
+  const text = truncateText(cleaned, maxLength, stats);
   return text.length > 0 ? text : undefined;
 }
 
@@ -1584,6 +1914,7 @@ function normalizeRawEvidenceForValidation(
     "holders",
     "pool",
     "trades",
+    "security",
     "metadata",
     "internal",
   ]);
@@ -1762,15 +2093,36 @@ function logGeminiNormalization(stats: TokenAiNormalizationStats) {
 }
 
 function normalizeWarningsForResponse(warnings: string[]) {
-  return normalizeTextArray(
+  const normalized = normalizeTextArray(
     warnings,
-    TOKEN_AI_RESPONSE_LIMITS.warningItems,
+    TOKEN_AI_RESPONSE_LIMITS.warningItems * 2,
     TOKEN_AI_RESPONSE_LIMITS.warningChars,
   );
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+
+  for (const warning of normalized) {
+    if (isWeakUnavailableWarning(warning)) continue;
+    const key = warningKey(warning);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(warning);
+    if (deduped.length >= 3) break;
+  }
+
+  return deduped;
+}
+
+function isWeakUnavailableEvidence(item: TokenAiEvidence) {
+  const text = [item.label, item.value, item.detail].filter(Boolean).join(" ");
+  return isWeakUnavailableWarning(text);
 }
 
 function normalizeEvidenceForResponse(evidence: TokenAiEvidence[]) {
-  return evidence.slice(0, TOKEN_AI_RESPONSE_LIMITS.evidenceItems).map((item) => ({
+  return evidence
+    .filter((item) => !isWeakUnavailableEvidence(item))
+    .slice(0, TOKEN_AI_RESPONSE_LIMITS.evidenceItems)
+    .map((item) => ({
     ...item,
     label:
       normalizeTextValue(
@@ -1818,21 +2170,35 @@ function normalizeSourcesForResponse(sources: TokenAiSource[]) {
   }));
 }
 
-async function generateGeminiAnswer(
+async function generateGeminiAnswerForModel(
   request: TokenAiChatRequest,
   context: TokenAiContext,
   intent: TokenAiIntent,
+  model: string,
+  mode: TokenAiModelMode,
+  requestedModel: string,
+  requestedMode: TokenAiModelMode,
+  provider: TokenAiChatData["provider"],
+  fallbackReason?: TokenAiFallbackReason,
 ): Promise<GeminiAnswerResult> {
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     logGeminiFallback("missing_api_key");
-    return { data: null, fallbackReason: "missing_api_key" };
+    return {
+      data: null,
+      fallbackReason: "missing_api_key",
+      retryable: false,
+      modelRequested: requestedModel,
+      modelUsed: model,
+      modeRequested: requestedMode,
+      modeUsed: mode,
+    };
   }
 
   try {
     const client = new GoogleGenAI({ apiKey });
     const response = await client.models.generateContent({
-      model: TOKEN_AI_CHAT_MODEL,
+      model,
       contents: buildPrompt({ request, context, intent }),
       config: {
         temperature: 0.25,
@@ -1880,7 +2246,15 @@ async function generateGeminiAnswer(
         error: json.error,
         responseLength: rawText.length,
       });
-      return { data: null, fallbackReason: "gemini_invalid_json" };
+      return {
+        data: null,
+        fallbackReason: "gemini_invalid_json",
+        retryable: false,
+        modelRequested: requestedModel,
+        modelUsed: model,
+        modeRequested: requestedMode,
+        modeUsed: mode,
+      };
     }
 
     const normalizationStats = createTokenAiNormalizationStats();
@@ -1903,47 +2277,140 @@ async function generateGeminiAnswer(
       return {
         data: null,
         fallbackReason: "gemini_zod_validation_error_after_normalization",
+        retryable: false,
+        modelRequested: requestedModel,
+        modelUsed: model,
+        modeRequested: requestedMode,
+        modeUsed: mode,
       };
     }
 
     return {
-      data: {
-        token: context.token,
-        question: request.question,
+      data: geminiDataFromParsed({
+        request,
+        context,
         intent,
-        tldr: parsed.data.tldr,
-        sections: parsed.data.sections,
-        evidence: normalizeEvidenceForResponse(context.evidence),
-        sources: normalizeSourcesForResponse(context.sources),
-        warnings: normalizeWarningsForResponse([
-          ...new Set([
-            ...parsed.data.warnings,
-            ...localizedEvidenceWarning(context, request.language),
-          ]),
-        ]),
-        confidence:
-          intent === "risk_overview" && parsed.data.confidence === "High"
-            ? "Medium"
-            : parsed.data.confidence,
-        asOf: context.builtAt,
-        disclaimer: parsed.data.disclaimer || localizedDisclaimer(request.language),
-        generatedAt: new Date().toISOString(),
-        provider: "gemini",
-      },
+        parsed: parsed.data,
+        provider,
+        fallbackReason,
+        modelRequested: requestedModel,
+        modelUsed: model,
+        modeRequested: requestedMode,
+        modeUsed: mode,
+      }),
       fallbackReason: "deterministic_fallback",
+      retryable: false,
+      modelRequested: requestedModel,
+      modelUsed: model,
+      modeRequested: requestedMode,
+      modeUsed: mode,
     };
   } catch (err) {
-    logGeminiFallback("gemini_api_error", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return { data: null, fallbackReason: "gemini_api_error" };
+    const parsedError = parseGeminiError(err);
+    if (parsedError.retryable) {
+      logRetryableGeminiError(model, parsedError);
+    } else {
+      logGeminiFallback("gemini_api_error", {
+        status: parsedError.status ?? parsedError.providerStatus,
+        retryable: false,
+      });
+    }
+    return {
+      data: null,
+      fallbackReason: parsedError.reason as TokenAiFallbackReason,
+      retryable: parsedError.retryable,
+      modelRequested: requestedModel,
+      modelUsed: model,
+      modeRequested: requestedMode,
+      modeUsed: mode,
+    };
   }
+}
+
+async function generateGeminiAnswer(
+  request: TokenAiChatRequest,
+  context: TokenAiContext,
+  intent: TokenAiIntent,
+): Promise<GeminiAnswerResult> {
+  const requestedMode = request.modelMode ?? "deep";
+  const requestedModel = modelForMode(requestedMode);
+  const preferred = await generateGeminiAnswerForModel(
+    request,
+    context,
+    intent,
+    requestedModel,
+    requestedMode,
+    requestedModel,
+    requestedMode,
+    "gemini",
+  );
+
+  if (preferred.data || !preferred.retryable) return preferred;
+
+  if (shouldExposeTokenAiDiagnostics()) {
+    console.warn("[token-ai-chat] Retrying Gemini preferred model", {
+      model: requestedModel,
+    });
+  }
+  await sleep(retryDelayMs());
+
+  const retry = await generateGeminiAnswerForModel(
+    request,
+    context,
+    intent,
+    requestedModel,
+    requestedMode,
+    requestedModel,
+    requestedMode,
+    "gemini",
+  );
+
+  if (retry.data || !retry.retryable) {
+    return retry.data
+      ? retry
+      : { ...retry, fallbackReason: "preferred_model_retry_failed" };
+  }
+
+  const fallbackCandidate = fallbackModelCandidate(requestedMode, requestedModel);
+  if (fallbackCandidate) {
+    if (shouldExposeTokenAiDiagnostics()) {
+      console.warn("[token-ai-chat] Trying fallback Gemini model", {
+        fromModel: requestedModel,
+        toModel: fallbackCandidate.model,
+      });
+    }
+    const fallback = await generateGeminiAnswerForModel(
+      request,
+      context,
+      intent,
+      fallbackCandidate.model,
+      fallbackCandidate.mode,
+      requestedModel,
+      requestedMode,
+      "gemini_model_fallback",
+      retry.fallbackReason,
+    );
+    if (fallback.data) return fallback;
+    return {
+      ...fallback,
+      fallbackReason: fallback.retryable
+        ? "fallback_model_failed"
+        : fallback.fallbackReason,
+    };
+  }
+
+  return {
+    ...retry,
+    fallbackReason: "preferred_model_retry_failed",
+  };
 }
 
 export async function askTokenAiChat(
   request: TokenAiChatRequest,
 ): Promise<TokenAiChatData> {
   const intent = classifyTokenAiIntent(request.question);
+  const modelModeRequested = request.modelMode ?? "deep";
+  const modelRequested = modelForMode(modelModeRequested);
   const context = await buildTokenAiContext({
     address: request.address,
     symbol: request.symbol,
@@ -1959,18 +2426,28 @@ export async function askTokenAiChat(
     timeframe: request.timeframe,
     language: request.language,
     promptVersion: TOKEN_AI_CHAT_PROMPT_VERSION,
-    model: TOKEN_AI_CHAT_MODEL,
+    model: modelRequested,
     evidenceHash,
   };
   const geminiConfigured = Boolean(getGeminiApiKey());
+  const normalizedQuestionHash = hashQuestion(request.question);
 
   const cached = await readTokenAiChatCache(cacheKey);
   if (cached) {
-    if (cached.data.provider === "deterministic" && geminiConfigured) {
-      logGeminiFallback("cached_deterministic_ignored_gemini_available");
+    if (
+      (cached.data.provider === "deterministic" ||
+        cached.data.provider === "analyst_fallback") &&
+      geminiConfigured
+    ) {
+      logGeminiFallback(
+        cached.data.provider === "analyst_fallback"
+          ? "cached_analyst_fallback_ignored_gemini_available"
+          : "cached_deterministic_ignored_gemini_available",
+      );
     } else {
       const fallbackReason =
-        cached.data.provider === "deterministic"
+        cached.data.provider === "deterministic" ||
+        cached.data.provider === "analyst_fallback"
           ? cached.data.fallbackReason ??
             exposeFallbackReason("cached_deterministic_response")
           : undefined;
@@ -1986,20 +2463,70 @@ export async function askTokenAiChat(
   }
 
   const gemini = await generateGeminiAnswer(request, context, intent);
-  const fresh =
-    gemini.data ??
-    buildDeterministicAnswer(
-      request,
-      context,
-      intent,
-      gemini.fallbackReason,
-    );
+  let fresh: Omit<TokenAiChatData, "cache">;
 
-  if (fresh.provider === "deterministic" && !fresh.fallbackReason) {
-    fresh.fallbackReason = exposeFallbackReason(gemini.fallbackReason);
+  if (gemini.data) {
+    fresh = gemini.data;
+  } else {
+    const lastGood = await readLastSuccessfulGeminiCache({
+      tokenAddress: request.address,
+      intent,
+      normalizedQuestionHash,
+      timeframe: request.timeframe,
+      language: request.language,
+      promptVersion: TOKEN_AI_CHAT_PROMPT_VERSION,
+    });
+    const ageMs = lastGood?.updatedAt
+      ? Date.now() - Date.parse(lastGood.updatedAt)
+      : Number.POSITIVE_INFINITY;
+    if (lastGood && ageMs <= lastSuccessfulGeminiWindowMs(intent)) {
+      if (shouldExposeTokenAiDiagnostics()) {
+        console.warn("[token-ai-chat] Using cached Gemini fallback", {
+          ageMs,
+          intent,
+        });
+      }
+      fresh = {
+        ...lastGood.data,
+        token: context.token,
+        question: request.question,
+        intent,
+        evidence: normalizeEvidenceForResponse(context.evidence),
+        sources: normalizeSourcesForResponse(context.sources),
+        warnings: normalizeWarningsForResponse([
+          ...lastGood.data.warnings,
+          staleGeminiWarning(request.language),
+        ]),
+        provider: "cached_gemini",
+        fallbackReason: exposeFallbackReason(
+          "gemini_unavailable_using_recent_success",
+        ),
+        asOf: lastGood.data.asOf,
+        generatedAt: new Date().toISOString(),
+        stale: true,
+        modelModeRequested,
+        modelRequested,
+      };
+    } else {
+      if (shouldExposeTokenAiDiagnostics()) {
+        console.warn("[token-ai-chat] Using Yoca Analyst Fallback", {
+          reason: gemini.fallbackReason,
+          intent,
+        });
+      }
+      fresh = buildDeterministicAnswer(
+        { ...request, modelMode: modelModeRequested },
+        context,
+        intent,
+        gemini.fallbackReason || "all_gemini_models_unavailable",
+      );
+    }
   }
 
-  const expiresAt = getTokenAiChatCacheExpiresAt(request.timeframe);
+  const expiresAt =
+    fresh.provider === "analyst_fallback"
+      ? new Date(Date.now() + ANALYST_FALLBACK_CACHE_TTL_MS)
+      : getTokenAiChatCacheExpiresAt(request.timeframe);
   const data: TokenAiChatData = {
     ...fresh,
     cache: {
@@ -2010,6 +2537,23 @@ export async function askTokenAiChat(
 
   try {
     await writeTokenAiChatCache(cacheKey, data, expiresAt);
+    if (
+      data.provider === "gemini" ||
+      data.provider === "gemini_model_fallback"
+    ) {
+      await writeLastSuccessfulGeminiCache(
+        {
+          tokenAddress: request.address,
+          intent,
+          normalizedQuestionHash,
+          timeframe: request.timeframe,
+          language: request.language,
+          promptVersion: TOKEN_AI_CHAT_PROMPT_VERSION,
+        },
+        { ...data, cache: undefined },
+        new Date(Date.now() + LAST_SUCCESSFUL_GEMINI_CACHE_TTL_MS),
+      );
+    }
   } catch (err) {
     console.warn("[token-ai-chat] cache write failed", {
       error: err instanceof Error ? err.message : String(err),

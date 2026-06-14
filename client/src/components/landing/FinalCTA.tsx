@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import {
   CARD_RADIUS,
   CARD_PADDING,
@@ -11,6 +12,8 @@ import {
 } from "./tokens";
 
 export function LandingFinalCTA() {
+  const { tr } = useLocalization();
+
   return (
     <section
       id="cta"
@@ -53,14 +56,13 @@ export function LandingFinalCTA() {
               className="text-3xl font-bold tracking-tight text-(--landing-foreground) sm:text-4xl md:text-5xl"
               style={{ lineHeight: 1.15 }}
             >
-              Create off-the-chart growth
+              {tr("landing.finalCta.title")}
             </h2>
             <p
               className="mx-auto mt-5 max-w-lg text-(--landing-muted)"
               style={{ lineHeight: 1.65 }}
             >
-              Join teams who use Yoca to see wallets, tokens, and markets in
-              one coherent story.
+              {tr("landing.finalCta.subtitle")}
             </p>
             <Link
               to="/auth"
@@ -69,7 +71,7 @@ export function LandingFinalCTA() {
               onMouseEnter={(e) => btnPrimaryEnter(e.currentTarget)}
               onMouseLeave={(e) => btnPrimaryLeave(e.currentTarget)}
             >
-              Get started
+              {tr("landing.finalCta.cta")}
             </Link>
           </div>
         </div>

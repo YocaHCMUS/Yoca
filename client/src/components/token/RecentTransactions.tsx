@@ -5,8 +5,11 @@ import {
   SOLSCAN_TX_URL,
 } from "@/config/constants";
 import { Launch } from "@carbon/icons-react";
-import { useState } from "react";
+import { Pagination } from "@carbon/react";
+import { useMemo, useState } from "react";
 import styles from "./RecentTransactions.module.scss";
+
+const DEFAULT_PAGE_SIZE = 12;
 
 type PoolTrade = {
   id: string;
@@ -36,6 +39,8 @@ interface RecentTransactionsProps {
   };
 }
 
+type FilterKind = "all" | "buy" | "sell";
+
 export const RecentTransactions = ({
   trades,
   baseMeta,
@@ -43,19 +48,68 @@ export const RecentTransactions = ({
 }: RecentTransactionsProps) => {
   void quoteMeta;
   const [showBubbleMapModal, setShowBubbleMapModal] = useState(false);
+  const [filter, setFilter] = useState<FilterKind>("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const { tr, fmt } = useLocalization();
+
+  // Reset page when filter changes
+  const handleFilterChange = (f: FilterKind) => {
+    setFilter(f);
+    setPage(1);
+  };
+
+  const filteredTrades = useMemo(() => {
+    if (filter === "all") return trades;
+    return trades.filter((t) => t.kind === filter);
+  }, [trades, filter]);
+
+  const pagedTrades = filteredTrades.slice(
+    (page - 1) * pageSize,
+    page * pageSize,
+  );
+
+  const buyCount = trades.filter((t) => t.kind === "buy").length;
+  const sellCount = trades.filter((t) => t.kind === "sell").length;
 
   return (
     <div className={styles.container}>
       <div className={styles.tabsHeader}>
         <div
           className={`${styles.tab} ${styles.active}`}
-          // Always active since it's the main view now
         >
           {tr("token.recentTransactions.transactions")}
         </div>
         <div className={styles.tab} onClick={() => setShowBubbleMapModal(true)}>
           {tr("token.recentTransactions.bubblemaps")}
+        </div>
+
+        {/* Spacer */}
+        <div className={styles.headerSpacer} />
+
+        {/* Buy/Sell filter buttons */}
+        <div className={styles.filterGroup}>
+          <button
+            className={`${styles.filterBtn} ${filter === "all" ? styles.filterAll : ""}`}
+            onClick={() => handleFilterChange("all")}
+          >
+            {(tr("token.recentTransactions.all") || "LATEST").toUpperCase()}
+            <span className={styles.filterCount}>{trades.length}</span>
+          </button>
+          <button
+            className={`${styles.filterBtn} ${styles.filterBuyBtn} ${filter === "buy" ? styles.filterBuyActive : ""}`}
+            onClick={() => handleFilterChange("buy")}
+          >
+            {(tr("token.recentTransactions.buy") || "BUY").toUpperCase()}
+            <span className={`${styles.filterCount} ${styles.filterCountBuy}`}>{buyCount}</span>
+          </button>
+          <button
+            className={`${styles.filterBtn} ${styles.filterSellBtn} ${filter === "sell" ? styles.filterSellActive : ""}`}
+            onClick={() => handleFilterChange("sell")}
+          >
+            {(tr("token.recentTransactions.sell") || "SELL").toUpperCase()}
+            <span className={`${styles.filterCount} ${styles.filterCountSell}`}>{sellCount}</span>
+          </button>
         </div>
       </div>
 
@@ -73,15 +127,15 @@ export const RecentTransactions = ({
             </tr>
           </thead>
           <tbody>
-            {trades.length === 0 ? (
+            {pagedTrades.length === 0 ? (
               <tr>
                 <td colSpan={7} className={styles.emptyState}>
                   {tr("token.recentTransactions.empty")}
                 </td>
               </tr>
             ) : (
-              trades.map((trade) => (
-                <tr key={trade.id}>
+              pagedTrades.map((trade) => (
+                <tr key={trade.id} className={trade.kind === "buy" ? styles.rowBuy : styles.rowSell}>
                   <td>
                     <span className={styles.timeText}>
                       {fmt.datetime.datetime(trade.timestamp)}
@@ -138,6 +192,35 @@ export const RecentTransactions = ({
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {filteredTrades.length > pageSize && (
+        <div className={styles.paginationContainer}>
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            pageSizes={[12, 24, 48]}
+            totalItems={filteredTrades.length}
+            itemsPerPageText={tr("table.itemsPerPageText")}
+            pageRangeText={(current, total) =>
+              tr("table.pageRangeText", { count: current, total })
+            }
+            itemRangeText={(min, max, total) =>
+              tr("table.itemRangeText", { min, max, count: total })
+            }
+            forwardText={tr("table.nextPage")}
+            backwardText={tr("table.previousPage")}
+            onChange={({ page: nextPage, pageSize: nextPageSize }) => {
+              if (nextPageSize !== pageSize) {
+                setPageSize(nextPageSize);
+                setPage(1);
+              } else {
+                setPage(nextPage);
+              }
+            }}
+          />
+        </div>
+      )}
 
       {/* BubbleMaps Modal */}
       {showBubbleMapModal && (

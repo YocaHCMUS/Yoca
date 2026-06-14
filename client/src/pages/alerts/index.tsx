@@ -57,6 +57,13 @@ type AlertRuleApiRow = {
   expiryDate: string;
 };
 
+type AlertSettingsApiResponse = {
+  discordWebhookUrl: string | null;
+  registeredEmail: string | null;
+  emailAlertsEnabled: boolean;
+  emailAlertsAddress: string | null;
+};
+
 function isValidSolanaAddress(value: string): boolean {
   const trimmed = value.trim();
   if (trimmed.length < 32 || trimmed.length > 44) return false;
@@ -116,15 +123,10 @@ export default function AlertsPage() {
     try {
       const res = await (client.api.alerts as any).settings.$get();
       if (res.ok) {
-        const data = (await res.json()) as {
-          discordWebhookUrl: string | null;
-          registeredEmail: string | null;
-          emailAlertsEnabled: boolean;
-          emailAlertsAddress: string | null;
-        };
+        const data = (await res.json()) as AlertSettingsApiResponse;
         setDiscordUrl(data.discordWebhookUrl || "");
         setRegisteredEmail(data.registeredEmail);
-        setEmailEnabled(data.emailAlertsEnabled);
+        setEmailEnabled(Boolean(data.emailAlertsEnabled));
         setEmailOverride(data.emailAlertsAddress || "");
       }
     } catch {
@@ -144,6 +146,11 @@ export default function AlertsPage() {
         json: { discordWebhookUrl: trimmed || null },
       });
       if (res.ok) {
+        const data = (await res.json()) as AlertSettingsApiResponse;
+        setDiscordUrl(data.discordWebhookUrl || "");
+        setRegisteredEmail(data.registeredEmail);
+        setEmailEnabled(Boolean(data.emailAlertsEnabled));
+        setEmailOverride(data.emailAlertsAddress || "");
         setDiscordInline({
           kind: "success",
           title: tr("alertsPage.discordSaved"),
@@ -154,12 +161,14 @@ export default function AlertsPage() {
           kind: "error",
           title: body?.error || tr("alertsPage.discordSaveError"),
         });
+        void loadSettings();
       }
     } catch {
       setDiscordInline({
         kind: "error",
         title: tr("alertsPage.discordSaveError"),
       });
+      void loadSettings();
     } finally {
       setDiscordSaving(false);
     }
@@ -189,6 +198,11 @@ export default function AlertsPage() {
         },
       });
       if (res.ok) {
+        const data = (await res.json()) as AlertSettingsApiResponse;
+        setDiscordUrl(data.discordWebhookUrl || "");
+        setRegisteredEmail(data.registeredEmail);
+        setEmailEnabled(Boolean(data.emailAlertsEnabled));
+        setEmailOverride(data.emailAlertsAddress || "");
         setEmailInline({ kind: "success", title: tr("alertsPage.emailSaved") });
       } else {
         const body = (await res.json()) as { error?: string };
@@ -196,9 +210,11 @@ export default function AlertsPage() {
           kind: "error",
           title: body?.error || tr("alertsPage.emailSaveError"),
         });
+        void loadSettings();
       }
     } catch {
       setEmailInline({ kind: "error", title: tr("alertsPage.emailSaveError") });
+      void loadSettings();
     } finally {
       setEmailSaving(false);
     }

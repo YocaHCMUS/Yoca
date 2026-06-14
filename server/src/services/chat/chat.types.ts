@@ -83,12 +83,71 @@ export interface TableSpec {
   filterOp?: "eq" | "gt" | "lt" | "contains";
 }
 
+// ─── Structured Response Types ───────────────────────────────────────────
+
+export interface WalletChatSection {
+  title: string;
+  kind:
+    | "market_snapshot"
+    | "key_findings"
+    | "pnl_summary"
+    | "trading_activity"
+    | "top_holdings"
+    | "risk_factors"
+    | "what_to_watch"
+    | "conclusion"
+    | "custom";
+  content?: string;
+  bullets?: string[];
+  table?: Array<Record<string, string | number | null>>;
+}
+
+export interface ChatSource {
+  title: string;
+  url: string;
+  source: string;
+  snippet?: string;
+  publishedAt?: string;
+}
+
+export interface WalletChatEvidence {
+  type:
+    | "overview"
+    | "portfolio"
+    | "swap"
+    | "transfer"
+    | "pnl"
+    | "balance"
+    | "volume"
+    | "audit"
+    | "market";
+  label: string;
+  value?: string;
+  detail?: string;
+  toolName?: string;
+}
+
+export interface WalletWarning {
+  text: string;
+  severity: "info" | "warning" | "error";
+}
+
+export type WalletConfidence = "Low" | "Medium" | "High";
+
 export interface ChatResponse {
   text: string;
   data: Record<string, unknown>;
   charts: ChartSpec[];
   tables: TableSpec[];
   actions?: ActionSpec[];
+  tldr?: string[];
+  sections?: WalletChatSection[];
+  sources?: ChatSource[];
+  evidence?: WalletChatEvidence[];
+  warnings?: WalletWarning[];
+  confidence?: WalletConfidence;
+  asOf?: string;
+  generatedAt?: string;
 }
 
 export interface ChatMessage {
@@ -97,6 +156,21 @@ export interface ChatMessage {
   data?: Record<string, unknown>;
   charts?: ChartSpec[];
   tables?: TableSpec[];
+  actions?: ActionSpec[];
+  tldr?: string[];
+  sections?: WalletChatSection[];
+  sources?: ChatSource[];
+  evidence?: WalletChatEvidence[];
+  warnings?: WalletWarning[];
+  confidence?: WalletConfidence;
+}
+
+export interface WebSearchArticle {
+  title: string;
+  url: string;
+  description: string;
+  source: string;
+  publishedAt: string | null;
 }
 
 export interface HistoryMessage {
@@ -105,7 +179,7 @@ export interface HistoryMessage {
 }
 
 export interface ChatRequest {
-  address: string;
+  addresses: string[];
   query: string;
   language?: string;
   history?: HistoryMessage[];

@@ -203,3 +203,49 @@
         color: #5c6c7f;
     }
 }
+.aiWashButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: fit-content;
+    margin-top: 8px;
+    padding: 8px 12px;
+    border: 1px solid rgba(133, 183, 235, 0.35);
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(26, 58, 92, 0.95), rgba(69, 41, 129, 0.88));
+    color: #dbeafe;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    transition: transform 0.15s ease, opacity 0.15s ease, border-color 0.15s ease;
+
+    &:hover {
+        opacity: 0.92;
+        transform: translateY(-1px);
+        border-color: rgba(133, 183, 235, 0.65);
+        color: #ffffff;
+    }
+}
+
+.aiWashIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+
+.aiWashButtonCompact {
+    margin-top: 6px;
+    padding: 7px 10px;
+    font-size: 11px;
+}

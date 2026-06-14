@@ -16,6 +16,7 @@ import TabContainer from "@/components/tabContainer/tabContainer";
 import { PageWrapper } from "@/components/wrapper";
 import { useProfilePageData } from "@/hooks/profile/useProfilePageData";
 import { useProfileSharedData } from "@/hooks/profile/useProfileSharedData";
+import styles from "./index.module.scss";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import {
     Activity,
@@ -127,15 +128,17 @@ export default function ProfilePage() {
       {loading || profileLoading ? (
         <ProfileLoadingState />
       ) : (
-        <TabContainer
-          activeTab={activeTab}
-          names={tabsConfig.names}
-          tabIcons={tabsConfig.icons}
-          tabs={tabsConfig.nodes}
-          onTabChange={setActiveTab}
-          orientation="vertical"
-          style={{ height: "100vh" }}
-        />
+        <div className={styles.profileTabsShell}>
+          <TabContainer
+            activeTab={activeTab}
+            names={tabsConfig.names}
+            tabIcons={tabsConfig.icons}
+            tabs={tabsConfig.nodes}
+            onTabChange={setActiveTab}
+            orientation="vertical"
+            style={{ height: "100%" }}
+          />
+        </div>
       )}
     </PageWrapper>
   );

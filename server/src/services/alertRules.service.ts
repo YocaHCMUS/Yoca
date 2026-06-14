@@ -1,7 +1,7 @@
 import type { AlertRuleRow } from "@sv/db/schema.js";
 import { alertRules } from "@sv/db/schema.js";
 import { db } from "@sv/db/index.js";
-import { and, asc, eq, gt, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 
 import { getUserAlertSettings } from "./followedWallets.service.js";
 
@@ -18,6 +18,18 @@ export type NewAlertRuleInput = {
   discordWebhookOverride?: string | null;
   emailOverride?: string | null;
 };
+
+export type DeliveryResolution = {
+  discordUrl: string | null;
+  email: string | null;
+  skipReasons: string[];
+};
+
+function normalizeAddress(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
 
 /** Rules that are not expired and still eligible to fire (ONCE rules until first hit). */
 export async function listActiveAlertRules(userId: string): Promise<AlertRuleRow[]> {
@@ -69,14 +81,18 @@ export async function deleteAlertRule(id: number, userId: string): Promise<boole
 export async function findActiveRulesForAddresses(
   addresses: string[],
 ): Promise<AlertRuleRow[]> {
-  if (addresses.length === 0) return [];
+  const normalizedAddresses = new Set(
+    addresses.map(normalizeAddress).filter(Boolean) as string[],
+  );
+  if (normalizedAddresses.size === 0) return [];
+  const normalizedAddressList = [...normalizedAddresses];
   const now = new Date();
-  return db
+  const rows = await db
     .select()
     .from(alertRules)
     .where(
       and(
-        inArray(alertRules.walletAddress, addresses),
+        inArray(sql<string>`trim(${alertRules.walletAddress})`, normalizedAddressList),
         gt(alertRules.expiryDate, now),
         or(
           eq(alertRules.triggerType, "ALWAYS"),
@@ -84,6 +100,9 @@ export async function findActiveRulesForAddresses(
         ),
       ),
     );
+  return rows.filter((rule) =>
+    normalizedAddresses.has(normalizeAddress(rule.walletAddress) || ""),
+  );
 }
 
 export async function markRuleOneShotFired(id: number): Promise<void> {
@@ -93,24 +112,50 @@ export async function markRuleOneShotFired(id: number): Promise<void> {
     .where(eq(alertRules.id, id));
 }
 
-export async function resolveRuleDelivery(rule: AlertRuleRow): Promise<{
-  discordUrl: string | null;
-  email: string | null;
-}> {
+export async function resolveRuleDelivery(
+  rule: AlertRuleRow,
+): Promise<DeliveryResolution> {
+  const skipReasons: string[] = [];
   if (rule.useDefaultDelivery) {
     const s = await getUserAlertSettings(rule.userId);
-    if (!s) return { discordUrl: null, email: null };
-    const email =
-      s.emailAlertsEnabled
-        ? (s.emailAlertsAddress?.trim() || s.registeredEmail || "").trim() || null
-        : null;
+    if (!s) {
+      return {
+        discordUrl: null,
+        email: null,
+        skipReasons: [
+          "discord skipped: missing webhook",
+          "email skipped: no recipient",
+          "delivery skipped: user settings not found",
+        ],
+      };
+    }
+
+    const discordUrl = s.discordWebhookUrl?.trim() || null;
+    if (!discordUrl) skipReasons.push("discord skipped: missing webhook");
+
+    let email: string | null = null;
+    if (!s.emailAlertsEnabled) {
+      skipReasons.push("email skipped: disabled");
+    } else {
+      email =
+        (s.emailAlertsAddress?.trim() || s.registeredEmail || "").trim() ||
+        null;
+      if (!email) skipReasons.push("email skipped: no recipient");
+    }
+
     return {
-      discordUrl: s.discordWebhookUrl?.trim() || null,
+      discordUrl,
       email,
+      skipReasons,
     };
   }
+  const discordUrl = rule.discordWebhookOverride?.trim() || null;
+  const email = rule.emailOverride?.trim() || null;
+  if (!discordUrl) skipReasons.push("discord skipped: missing webhook");
+  if (!email) skipReasons.push("email skipped: no recipient");
   return {
-    discordUrl: rule.discordWebhookOverride?.trim() || null,
-    email: rule.emailOverride?.trim() || null,
+    discordUrl,
+    email,
+    skipReasons,
   };
 }

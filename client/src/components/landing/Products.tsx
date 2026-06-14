@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowUpRight, Bell, Radar, ScanSearch } from "lucide-react";
 import { Link } from "react-router";
+import { useLocalization, type TranslateFunction } from "@/contexts/LocalizationContext";
 import {
   LANDING_ACCENT,
   LANDING_ACCENT_GLOW,
@@ -12,33 +13,59 @@ import {
 
 const products = [
   {
-    tag: "Explore",
-    title: "Market Explorer",
-    description:
-      "Real-time tracking of Solana's top-performing tokens and liquidity pools.",
+    key: "marketExplorer",
     icon: Radar,
     href: "/market",
     highlight: false,
   },
   {
-    tag: "Analyze",
-    title: "Portfolio Intelligence",
-    description:
-      "Deep-dive into any wallet's history and behavior with our AI-powered behavioral tagging.",
+    key: "portfolioIntelligence",
     icon: ScanSearch,
     href: "/tokens",
     highlight: false,
   },
   {
-    tag: "Monitor",
-    title: "Smart Alerts",
-    description:
-      "Never miss a move. Set custom alerts for large swaps and whale activity delivered straight to your Discord.",
+    key: "smartAlerts",
     icon: Bell,
     href: "/market",
     highlight: true,
   },
 ] as const;
+
+type ProductKey = (typeof products)[number]["key"];
+
+function productTag(tr: TranslateFunction, key: ProductKey) {
+  switch (key) {
+    case "marketExplorer":
+      return tr("landing.products.items.marketExplorer.tag");
+    case "portfolioIntelligence":
+      return tr("landing.products.items.portfolioIntelligence.tag");
+    case "smartAlerts":
+      return tr("landing.products.items.smartAlerts.tag");
+  }
+}
+
+function productTitle(tr: TranslateFunction, key: ProductKey) {
+  switch (key) {
+    case "marketExplorer":
+      return tr("landing.products.items.marketExplorer.title");
+    case "portfolioIntelligence":
+      return tr("landing.products.items.portfolioIntelligence.title");
+    case "smartAlerts":
+      return tr("landing.products.items.smartAlerts.title");
+  }
+}
+
+function productDescription(tr: TranslateFunction, key: ProductKey) {
+  switch (key) {
+    case "marketExplorer":
+      return tr("landing.products.items.marketExplorer.description");
+    case "portfolioIntelligence":
+      return tr("landing.products.items.portfolioIntelligence.description");
+    case "smartAlerts":
+      return tr("landing.products.items.smartAlerts.description");
+  }
+}
 
 const cardVariants = {
   hidden: { opacity: 0, y: 32 },
@@ -54,6 +81,8 @@ const cardVariants = {
 };
 
 export function LandingProducts() {
+  const { tr } = useLocalization();
+
   return (
     <section
       id="products"
@@ -75,13 +104,13 @@ export function LandingProducts() {
             className="text-center text-sm font-semibold uppercase tracking-[0.22em]"
             style={{ color: LANDING_ACCENT }}
           >
-            Core Features
+            {tr("landing.products.eyebrow")}
           </p>
           <h2
             className="mx-auto mt-4 max-w-3xl text-center text-3xl font-bold tracking-tight text-(--landing-foreground) sm:text-4xl"
             style={{ lineHeight: 1.2 }}
           >
-            Everything you need to stay ahead of the market.
+            {tr("landing.products.title")}
           </h2>
         </div>
 
@@ -89,7 +118,7 @@ export function LandingProducts() {
           const Icon = p.icon;
           return (
             <motion.article
-              key={p.title}
+              key={p.key}
               custom={i}
               initial="hidden"
               whileInView="show"
@@ -125,7 +154,7 @@ export function LandingProducts() {
                   className="text-xs font-semibold uppercase tracking-wider"
                   style={{ color: p.highlight ? LANDING_ACCENT : "var(--landing-muted)" }}
                 >
-                  {p.tag}
+                  {productTag(tr, p.key)}
                 </span>
                 <Icon
                   className="h-5 w-5 shrink-0 text-(--landing-accent)"
@@ -137,17 +166,17 @@ export function LandingProducts() {
                 className="mt-5 text-xl font-bold text-(--landing-foreground)"
                 style={{ lineHeight: 1.3 }}
               >
-                {p.title}
+                {productTitle(tr, p.key)}
               </h3>
               <p className="mt-3 text-(--landing-muted)" style={{ lineHeight: 1.7 }}>
-                {p.description}
+                {productDescription(tr, p.key)}
               </p>
               <Link
                 to={p.href}
                 className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold"
                 style={{ color: LANDING_ACCENT, textDecoration: "none" }}
               >
-                Learn more
+                {tr("landing.products.learnMore")}
                 <ArrowUpRight className="h-4 w-4" aria-hidden />
               </Link>
             </motion.article>

@@ -1,13 +1,31 @@
+import { useLocalization, type TranslateFunction } from "@/contexts/LocalizationContext";
 import { SECTION_PADDING_Y, grid12Shell } from "./tokens";
 
 const stats = [
-  { value: "< 0.5s", label: "UI Latency" },
-  { value: "Real-time", label: "Data Streaming" },
-  { value: "AI-Tagged", label: "Wallet Labels" },
-  { value: "Interactive", label: "Transaction Graphs" },
+  { value: "< 0.5s", labelKey: "uiLatency" },
+  { value: "Real-time", labelKey: "dataStreaming" },
+  { value: "AI-Tagged", labelKey: "walletLabels" },
+  { value: "Interactive", labelKey: "transactionGraphs" },
 ] as const;
 
+type StatLabelKey = (typeof stats)[number]["labelKey"];
+
+function statLabel(tr: TranslateFunction, key: StatLabelKey) {
+  switch (key) {
+    case "uiLatency":
+      return tr("landing.stats.uiLatency");
+    case "dataStreaming":
+      return tr("landing.stats.dataStreaming");
+    case "walletLabels":
+      return tr("landing.stats.walletLabels");
+    case "transactionGraphs":
+      return tr("landing.stats.transactionGraphs");
+  }
+}
+
 export function LandingStatsBar() {
+  const { tr } = useLocalization();
+
   return (
     <section
       style={{
@@ -21,7 +39,7 @@ export function LandingStatsBar() {
       <div style={grid12Shell} className="landing-stats-grid">
         {stats.map((s) => (
           <div
-            key={s.label}
+            key={s.labelKey}
             className="landing-stat-cell flex flex-col items-center gap-2 text-center sm:items-start sm:text-left"
           >
             <span
@@ -31,7 +49,7 @@ export function LandingStatsBar() {
               {s.value}
             </span>
             <span className="text-xs font-semibold uppercase tracking-[0.18em] text-(--landing-muted)">
-              {s.label}
+              {statLabel(tr, s.labelKey)}
             </span>
           </div>
         ))}

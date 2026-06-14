@@ -136,7 +136,16 @@ function SubscriptionsPanel({
     );
   }
 
+  const isStripeManagedSubscription =
+    subscription.stripeSubscriptionId.startsWith("sub_");
+  const canManageStripeSubscription =
+    isStripeManagedSubscription &&
+    subscription.status === "active" &&
+    !subscription.cancelAtPeriodEnd;
+
   const handleCancel = async () => {
+    if (!isStripeManagedSubscription) return;
+
     setIsCanceling(true);
     try {
       await cancelSubscription(subscription.stripeSubscriptionId);
@@ -151,6 +160,8 @@ function SubscriptionsPanel({
   };
 
   const handleUpgrade = async (newTier: "Lite" | "Plus" | "Pro") => {
+    if (!isStripeManagedSubscription) return;
+
     setIsUpgrading(true);
     try {
       const res = await upgradeSubscription(
@@ -174,13 +185,15 @@ function SubscriptionsPanel({
     }
   };
 
-  const availableUpgrades = ["Lite", "Plus", "Pro"].filter((tier) => {
-    const tiers = { Lite: 1, Plus: 2, Pro: 3 };
-    return (
-      tiers[tier as keyof typeof tiers] >
-      tiers[subscription.planTier as keyof typeof tiers]
-    );
-  });
+  const availableUpgrades = isStripeManagedSubscription
+    ? ["Lite", "Plus", "Pro"].filter((tier) => {
+        const tiers = { Lite: 1, Plus: 2, Pro: 3 };
+        return (
+          tiers[tier as keyof typeof tiers] >
+          tiers[subscription.planTier as keyof typeof tiers]
+        );
+      })
+    : [];
 
   return (
     <div className={styles.sectionCard}>
@@ -193,20 +206,19 @@ function SubscriptionsPanel({
         }}
       >
         <h3 className={styles.emptyStateTitle}>Current Plan</h3>
-        {subscription.status === "active" &&
-          !subscription.cancelAtPeriodEnd && (
-            <button
-              className={styles.primaryButton}
-              style={{
-                backgroundColor: "#ff4d4d",
-                padding: "0.5rem 1rem",
-                fontSize: "0.875rem",
-              }}
-              onClick={() => setIsCancelModalOpen(true)}
-            >
-              Cancel Subscription
-            </button>
-          )}
+        {canManageStripeSubscription && (
+          <button
+            className={styles.primaryButton}
+            style={{
+              backgroundColor: "#ff4d4d",
+              padding: "0.5rem 1rem",
+              fontSize: "0.875rem",
+            }}
+            onClick={() => setIsCancelModalOpen(true)}
+          >
+            Cancel Subscription
+          </button>
+        )}
       </div>
       <table className={styles.simpleTable}>
         <thead>
@@ -214,7 +226,7 @@ function SubscriptionsPanel({
             <th>Tier</th>
             <th>Status</th>
             <th>Period Start</th>
-            <th>Period End</th>
+            <th>{isStripeManagedSubscription ? "Period End" : "Access Expires"}</th>
             {availableUpgrades.length > 0 && <th>Upgrade</th>}
           </tr>
         </thead>

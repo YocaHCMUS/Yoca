@@ -74,24 +74,43 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 0 16px;
+  height: 40px;
   border-bottom: 1px solid var(--cds-border-subtle-03);
   background: $layer-01;
   flex-shrink: 0;
 }
 
 .headerTitle {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: $text-primary;
   display: flex;
   align-items: center;
-  gap: 8px;
+}
+
+.walletSelect {
+  flex: 1;
+  min-width: 0;
+  max-width: 140px;
+  height: 24px;
+  font-size: 0.6875rem;
+  background: $field-01;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 4px;
+  color: $text-primary;
+  padding: 0 $spacing-02;
+  cursor: pointer;
+  outline: none;
+
+  &:focus {
+    border-color: var(--cds-interactive-focus);
+  }
 }
 
 .headerActions {
   display: flex;
-  gap: 8px;
+  gap: $spacing-02;
 }
 
 .headerBtn {
@@ -109,6 +128,11 @@
   &:hover {
     background: $layer-hover-01;
     color: $icon-primary;
+  }
+
+  &[data-active="true"] {
+    color: $interactive;
+    background: $layer-selected;
   }
 }
 
@@ -187,11 +211,22 @@
   height: 6px;
   border-radius: 50%;
   background: $text-secondary;
+  animation: wave 1.2s ease-in-out infinite;
 }
 
 .loadingLabel {
   font-size: 11px;
   margin-left: 4px;
+}
+
+.loadingChar {
+  display: inline-block;
+  animation: wave 1.2s ease-in-out infinite;
+}
+
+@keyframes wave {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }
 
 .errorMsg {
@@ -362,7 +397,7 @@
 }
 
 .assistantBubble {
-  max-width: 85%;
+  max-width: 100%;
   background: $layer-02;
   border: 1px solid var(--cds-border-subtle-03);
   border-radius: 12px 12px 12px 4px;
@@ -370,6 +405,17 @@
 }
 
 .textPart {
+  font-size: 13px;
+  line-height: 1.6;
+  color: $text-primary;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 4px;
+}
+
+.inlineFlow {
+  display: block;
+  width: 100%;
   font-size: 13px;
   line-height: 1.6;
   color: $text-primary;
@@ -498,4 +544,1069 @@
   font-size: 11px;
   color: $text-secondary;
   white-space: nowrap;
+}
+
+// ===== Rich Text =====
+.richParagraphGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.richParagraph {
+  margin: 0;
+  color: $text-secondary;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.richBulletLine {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr);
+  gap: 8px;
+  color: $text-secondary;
+  font-size: 13px;
+  line-height: 1.55;
+
+  >span:first-child {
+    width: 5px;
+    height: 5px;
+    margin-top: 9px;
+    border-radius: 999px;
+    background: var(--cds-border-strong, #6f6f6f);
+  }
+}
+
+.richList {
+  margin: 0;
+  padding-left: 18px;
+  color: $text-secondary;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.richStrong {
+  color: $text-primary;
+  font-weight: 800;
+}
+
+.metricToken {
+  display: inline-flex;
+  // align-items: center;
+  min-height: 18px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.metricPositive,
+.bullishText {
+  color: $support-success;
+}
+
+.metricNegative,
+.riskText {
+  color: $support-error;
+}
+
+.metricMoney {
+  color: $text-primary;
+  background: color-mix(in srgb, #{$support-info} 13%, transparent);
+}
+
+.metricNeutral {
+  color: $text-primary;
+}
+
+.warningText {
+  color: $support-warning;
+  background: color-mix(in srgb, #{$support-warning} 13%, transparent);
+}
+
+// ===== TLDR Block =====
+.tldr {
+  background: rgba(15, 98, 254, 0.08);
+  border-left: 3px solid #0f62fe;
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+
+  ol {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 10px;
+    align-items: flex-start;
+    color: $text-primary;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}
+
+.tldrHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+
+  h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: $text-primary;
+  }
+}
+
+.tldrIcon {
+  width: 24px;
+  height: 24px;
+  background: #0f62fe;
+  color: #fff;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.tldrNumber {
+  width: 18px;
+  height: 18px;
+  background: #0f62fe;
+  color: #fff;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  margin-right: 0;
+  flex-shrink: 0;
+}
+
+// ===== Section Rendering =====
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--cds-border-subtle-03);
+}
+
+.sectionIcon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.sectionKind {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6f6f6f;
+  // background: $layer-01;
+  // padding: 1px 6px;
+  // border-radius: 4px;
+  display: inline-block;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: $text-primary;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.sectionHeaderInner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.sectionContent {
+  margin-bottom: 0.5rem;
+}
+
+.sectionBulletList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    padding: 2px 0;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}
+
+// Kind-specific icon colors
+.kindMarket .sectionIcon {
+  background: #0f62fe;
+}
+
+.kindDrivers .sectionIcon {
+  background: #8a3ffc;
+}
+
+.kindRisk .sectionIcon {
+  background: #da1e28;
+}
+
+.kindWatch .sectionIcon {
+  background: #ff832b;
+}
+
+.kindBullish .sectionIcon {
+  background: #24a148;
+}
+
+.kindNews .sectionIcon {
+  background: #1192e8;
+}
+
+.kindDeepDive .sectionIcon {
+  background: #009d9a;
+}
+
+.kindConclusion .sectionIcon {
+  background: #6f6f6f;
+}
+
+.kindSimple .sectionIcon {
+  background: #525252;
+}
+
+// ===== Section Table =====
+.tableWrap {
+  overflow-x: auto;
+}
+
+.sectionTable {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+
+  th,
+  td {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--cds-border-subtle-02, #e0e0e0);
+    text-align: left;
+    color: $text-secondary;
+  }
+
+  th {
+    color: $text-primary;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: capitalize;
+  }
+}
+
+// ===== Warnings Block =====
+.warnings {
+  background: rgba(218, 30, 40, 0.16);
+  border-left: 3px solid #da1e28;
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+
+  ul {
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  li {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+}
+
+.warnHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+
+  h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: $text-primary;
+  }
+}
+
+.warnIcon {
+  font-weight: 700;
+  font-size: 14px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(218, 30, 39, 0.692);
+
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+
+
+
+.warnError {
+  color: #da1e28;
+}
+
+.warnWarning {
+  color: #f1c21b;
+}
+
+.warnInfo {
+  color: #8d8d8d;
+}
+
+// ===== Confidence Badge =====
+.confidenceBadge {
+  display: inline-block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-bottom: 0.5rem;
+}
+
+.confidenceHigh {
+  background: rgba(36, 161, 72, 0.15);
+  color: #24a148;
+}
+
+.confidenceMedium {
+  background: rgba(241, 194, 27, 0.15);
+  color: #f1c21b;
+}
+
+.confidenceLow {
+  background: rgba(218, 30, 40, 0.1);
+  color: #fa4d56;
+}
+
+// ===== Evidence Grid =====
+.evidenceBlock {
+  margin: 0.5rem 0;
+
+  h3 {
+    margin: 0 0 0.5rem;
+    font-size: 13px;
+    font-weight: 600;
+    color: $text-primary;
+  }
+}
+
+.evidenceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.evidenceCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--cds-border-subtle-03, #353535);
+  border-radius: 6px;
+  background: $background;
+
+  strong {
+    color: $text-primary;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+}
+
+.evidenceValue {
+  color: $text-primary;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.evidenceDetail {
+  color: $text-secondary;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.evidenceTypeBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.evidenceTypeOverview {
+  background: #0f62fe20;
+  color: #0f62fe;
+}
+
+.evidenceTypePortfolio {
+  background: #8a3ffc20;
+  color: #8a3ffc;
+}
+
+.evidenceTypeSwap {
+  background: #1192e820;
+  color: #1192e8;
+}
+
+.evidenceTypeTransfer {
+  background: #009d9a20;
+  color: #009d9a;
+}
+
+.evidenceTypePnl {
+  background: #24a14820;
+  color: #24a148;
+}
+
+.evidenceTypeBalance {
+  background: #ff832b20;
+  color: #ff832b;
+}
+
+.evidenceTypeVolume {
+  background: #f1c21b20;
+  color: #f1c21b;
+}
+
+.evidenceTypeAudit {
+  background: #da1e2820;
+  color: #da1e28;
+}
+
+.evidenceTypeMarket {
+  background: #52525220;
+  color: #525252;
+}
+
+.evidenceShowBtn {
+  font-size: 11px;
+  padding: 4px 8px;
+  border: 1px solid var(--cds-border-subtle-03, #353535);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--cds-link-primary, #78a9ff);
+  cursor: pointer;
+  margin-top: 6px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--cds-layer-hover-01, #353535);
+  }
+}
+
+// ===== Suggested Question Chips =====
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 0.5rem;
+}
+
+.chip {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid #353535;
+  background: transparent;
+  color: #c6c6c6;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: #0f62fe;
+    color: #0f62fe;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+// ===== Plain wrapper for sections with own styles (TLDR, Warnings) =====
+.sectionCopyWrapper {
+  position: relative;
+
+  &:hover .sectionCopyBtn {
+    opacity: 1;
+  }
+}
+
+// ===== Section Block Wrapper =====
+.sectionBlock {
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 14px;
+  background: $background;
+  position: relative;
+}
+
+.sectionBlock:hover .sectionCopyBtn {
+  opacity: 1;
+}
+
+// ===== Section Copy Button =====
+.sectionCopyBtn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  background: $layer-02;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: $icon-secondary;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  z-index: 1;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $icon-primary;
+  }
+}
+
+.sectionCopyBtnVisible {
+  opacity: 1;
+}
+
+// ===== Clickable Bullet / Content =====
+.clickableBullet {
+  cursor: pointer;
+  transition: background-color 0.12s;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: 0 -4px;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+}
+
+.clickableContent {
+  cursor: pointer;
+  transition: background-color 0.12s;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: 0 -4px;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+}
+
+// ===== User Bubble Actions Row =====
+.bubbleActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 0 2px;
+}
+
+.copyBtn {
+  background: none;
+  border: none;
+  color: $icon-secondary;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background-color 0.12s, color 0.12s;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $icon-primary;
+  }
+}
+
+.copyBtnCopied {
+  color: $support-success;
+}
+
+// ===== Copy button for user bubble row hover =====
+.userBubbleRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+
+.userBubbleRow .copyBtn {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.userBubbleRow:hover .copyBtn {
+  opacity: 1;
+}
+
+// ===== Input validation =====
+.inputMeta {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 4px;
+  font-size: 11px;
+  color: #6f6f6f;
+}
+
+.validationError {
+  color: #da1e28;
+}
+
+// ===== Session Selector =====
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sessionSelector {
+  position: relative;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.sessionToggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: $layer-02;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: $text-primary;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+}
+
+.sessionToggleLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 16ch;
+}
+
+.sessionDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 240px;
+  max-width: 320px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: $background;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  padding: 4px;
+  margin-top: 4px;
+}
+
+.sessionDropdownTitle {
+  font-size: 10px;
+  font-weight: 600;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 6px 8px 4px;
+}
+
+.sessionEmpty {
+  padding: 12px 8px;
+  font-size: 11px;
+  color: $text-secondary;
+  text-align: center;
+}
+
+.sessionItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.12s;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+}
+
+.sessionItemActive {
+  background: $layer-selected;
+
+  &:hover {
+    background: $layer-selected-hover;
+  }
+}
+
+.sessionItemContent {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.sessionItemTitle {
+  font-size: 12px;
+  color: $text-primary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.sessionItemTime {
+  font-size: 10px;
+  color: $text-secondary;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sessionItemDelete {
+  background: none;
+  border: none;
+  color: $icon-secondary;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.12s;
+
+  .sessionItem:hover & {
+    opacity: 1;
+  }
+
+  &:hover {
+    color: $support-error;
+  }
+}
+
+// ===== Auth Required =====
+.authRequired {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.authRequiredTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: $text-primary;
+  margin-bottom: 8px;
+}
+
+.authRequiredDesc {
+  font-size: 13px;
+  color: $text-secondary;
+  line-height: 1.5;
+  max-width: 280px;
+}
+
+// ===== Source Citations =====
+
+.citationLink {
+  color: $interactive;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 11px;
+  cursor: pointer;
+  margin: 0 1px;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.citationRef {
+  color: $text-secondary;
+  background: var(--cds-background-tertiary);
+  font-weight: 700;
+  font-size: 11px;
+  padding: 0 3px;
+  border-radius: 2px;
+  margin: 0 1px;
+}
+
+.sourcesBlock {
+  margin: 12px 0 4px;
+  padding: 10px 12px;
+  background: $background;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 8px;
+}
+
+.sourcesHeader {
+  font-size: 10px;
+  font-weight: 600;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.sourcesList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sourceItem {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.sourceIndex {
+  color: $text-secondary;
+  font-weight: 700;
+  font-size: 10px;
+  flex-shrink: 0;
+  min-width: 20px;
+}
+
+.sourceLink {
+  color: $interactive;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.sourceName {
+  color: $text-secondary;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+// ===== Cite Blocks (Gemini-style citations) =====
+
+.citeBlock {
+  display: inline;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  border-radius: 4px;
+  padding: 1px 0;
+  transition: background 0.15s ease;
+  cursor: default;
+
+  &:hover {
+    background: color-mix(in srgb, var(--cds-interactive) 18%, transparent);
+  }
+}
+
+.citeBlockHighlighted {
+  background: color-mix(in srgb, var(--cds-interactive) 22%, transparent);
+}
+
+.citePill {
+  display: inline-block;
+  vertical-align: baseline;
+  font-size: 10px;
+  font-weight: 600;
+  color: $interactive;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--cds-interactive) 30%, transparent);
+  border-radius: 10px;
+  padding: 1px 6px;
+  margin: 0 2px;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: normal;
+  transition: background 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--cds-interactive) 12%, transparent);
+    border-color: $interactive;
+  }
+}
+
+// ===== Source Panel (floating dropdown popup) =====
+
+.sourcePanelBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: transparent;
+}
+
+.sourcePanel {
+  position: fixed;
+  z-index: 1000;
+  min-width: 300px;
+  max-width: 380px;
+  padding: 10px 12px;
+  background: $background;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.sourcePanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sourcePanelTitle {
+  font-size: 10px;
+  font-weight: 600;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+// ===== Source Cards (inside panel) =====
+
+.sourceCard {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: $background;
+  transition: background 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  &:hover {
+    background: var(--cds-layer-hover-01);
+  }
+}
+
+.sourceCardHighlighted {
+  background: color-mix(in srgb, var(--cds-interactive) 15%, transparent) !important;
+  outline: 1px solid color-mix(in srgb, var(--cds-interactive) 40%, transparent);
+}
+
+.sourceCardTitle {
+  color: $interactive;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1.4;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.sourceCardDomain {
+  color: $text-secondary;
+  font-size: 11px;
+}
+
+.sourceCardSnippet {
+  color: $text-primary;
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.sourceCardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.sourceCardDate {
+  color: $text-secondary;
+  font-size: 10px;
+}
+
+.sourceCardOpen {
+  color: $interactive;
+  font-size: 11px;
+  font-weight: 500;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }

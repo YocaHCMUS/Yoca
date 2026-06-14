@@ -14,7 +14,7 @@ import { Connection, PublicKey } from "@solana/web3.js";
  * Merchant public key that receives SOL payments.
  * Loaded from SOLANA_MERCHANT_ADDRESS in server/.env.
  * Must match the client's VITE_SOLANA_MERCHANT_ADDRESS in client/.env.
- * The server is the AUTHORITATIVE source — client value is only used to build the tx.
+ * The server is the AUTHORITATIVE source - client value is only used to build the tx.
  */
 const MERCHANT_ADDRESS = process.env.SOLANA_MERCHANT_ADDRESS || "YourMerchantAddressHere";
 
@@ -29,7 +29,7 @@ const CONFIGURED_NETWORK = (process.env.SOLANA_NETWORK as "devnet" | "testnet" |
 /**
  * Tier pricing in SOL.
  *
- * ⚠️  MUST stay in sync with `TIER_SOL_AMOUNTS` in
+ * [WARNING] MUST stay in sync with `TIER_SOL_AMOUNTS` in
  *     `client/src/components/payment/SolanaPaymentFlow.tsx`.
  *     If you change a value here, update the client constant too, and vice versa.
  */
@@ -96,7 +96,10 @@ function extractNativeTransfers(
 
   try {
     const meta = transaction.meta;
-    if (!meta || !meta.innerInstructions) {
+    // Note: do NOT bail on !meta.innerInstructions here.
+    // A plain SystemProgram.transfer produces NO innerInstructions at all,
+    // so this guard was always returning an empty array for normal SOL transfers.
+    if (!meta) {
       return transfers;
     }
 
@@ -147,7 +150,7 @@ export async function verifySolanaTransaction(
   network: "devnet" | "testnet" | "mainnet-beta" = "devnet"
 ): Promise<TransactionVerification> {
   try {
-    // ── Guard 0: Network mismatch between client claim and server config ─────
+    // -- Guard 0: Network mismatch between client claim and server config -----
     // The client sends the network it signed on. The server must only accept
     // transactions on the network it is configured for (SOLANA_NETWORK in .env).
     // This prevents a client from spoofing the network field to bypass verification.
@@ -165,7 +168,7 @@ export async function verifySolanaTransaction(
       };
     }
 
-    // ── Guard 1: Validate merchant address is a valid Solana public key ─────
+    // -- Guard 1: Validate merchant address is a valid Solana public key -----
     try {
       new PublicKey(MERCHANT_ADDRESS);
     } catch (err) {
@@ -176,7 +179,7 @@ export async function verifySolanaTransaction(
       };
     }
 
-    // TODO: Replace hardcoded amounts with real USD→SOL conversion for Mainnet.
+    // TODO: Replace hardcoded amounts with real USD->SOL conversion for Mainnet.
     const expectedAmountSol = TIER_SOL_AMOUNTS[tier];
     const expectedAmountLamports = Math.floor(expectedAmountSol * LAMPORTS_PER_SOL);
 
