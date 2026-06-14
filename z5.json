@@ -1,0 +1,191 @@
+{
+    "links": {
+        "self": "https://api.zerion.io/v1/fungibles/by-implementation?currency=usd&implementation=solana%3ASo11111111111111111111111111111111111111112"
+    },
+    "data": {
+        "type": "fungibles",
+        "id": "49d64a3a-c004-485c-bd39-8f394ffd3e1c",
+        "attributes": {
+            "name": "Wrapped SOL",
+            "symbol": "WSOL",
+            "description": "Wrapped Solana ",
+            "icon": {
+                "url": "https://cdn.zerion.io/49d64a3a-c004-485c-bd39-8f394ffd3e1c.png"
+            },
+            "flags": {
+                "verified": true
+            },
+            "external_links": [
+                {
+                    "type": "website",
+                    "name": "Website",
+                    "url": "https://solana.com"
+                },
+                {
+                    "type": "twitter",
+                    "name": "Twitter",
+                    "url": "https://twitter.com/solana"
+                },
+                {
+                    "type": "discord",
+                    "name": "Discord",
+                    "url": "https://discordapp.com/invite/pquxPsq"
+                },
+                {
+                    "type": "coingecko",
+                    "name": "Coingecko",
+                    "url": "https://www.coingecko.com/en/coins/wrapped-solana"
+                },
+                {
+                    "type": "dex.guru",
+                    "name": "Dex.guru",
+                    "url": "https://dex.guru/token/fantom/0x44f7237df00e386af8e79b817d05ed9f6fe0f296"
+                }
+            ],
+            "implementations": [
+                {
+                    "chain_id": "binance-smart-chain",
+                    "address": "0x570a5d26f7765ecb712c0924e4de545b89fd43df",
+                    "decimals": 18,
+                    "market_data": {
+                        "trading_volumes": {
+                            "volume_1d": 261350.08031766137
+                        }
+                    },
+                    "deployment_date": "2021-07-05T11:36:27Z"
+                },
+                {
+                    "chain_id": "fantom",
+                    "address": "0x44f7237df00e386af8e79b817d05ed9f6fe0f296",
+                    "decimals": 18,
+                    "market_data": {
+                        "trading_volumes": {
+                            "volume_1d": 0
+                        }
+                    }
+                },
+                {
+                    "chain_id": "monad",
+                    "address": "0xea17e5a9efebf1477db45082d67010e2245217f1",
+                    "decimals": 9,
+                    "market_data": {
+                        "trading_volumes": {
+                            "volume_1d": 0
+                        }
+                    },
+                    "deployment_date": "2025-11-05T21:10:48Z"
+                },
+                {
+                    "chain_id": "solana",
+                    "address": "So11111111111111111111111111111111111111112",
+                    "decimals": 9,
+                    "market_data": {
+                        "trading_volumes": {
+                            "volume_1d": 0
+                        }
+                    },
+                    "deployment_date": "2020-03-16T14:29:00Z"
+                }
+            ],
+            "market_data": {
+                "total_supply": 0.0222579203244445,
+                "circulating_supply": 0.0222579203244445,
+                "market_cap": 1523657914.442648,
+                "fully_diluted_valuation": 1523657914.442648,
+                "price": 68.4546396174,
+                "changes": {
+                    "percent_1d": 1.5131686994165783,
+                    "percent_30d": -24.823493231922523,
+                    "percent_90d": -26.669877251279583,
+                    "percent_365d": -52.936626045325916
+                },
+                "trading_volumes": {
+                    "volume_1d": 261350.08031766137
+                }
+            }
+        },
+        "relationships": {
+            "chart_3months": {
+                "links": {
+                    "related": "https://api.zerion.io/v1/fungibles/49d64a3a-c004-485c-bd39-8f394ffd3e1c/charts/3months?currency=usd"
+                },
+                "data": {
+                    "type": "fungible_charts",
+                    "id": "49d64a3a-c004-485c-bd39-8f394ffd3e1c-3months"
+                }
+            },
+            "chart_5years": {
+                "links": {
+                    "related": "https://api.zerion.io/v1/fungibles/49d64a3a-c004-485c-bd39-8f394ffd3e1c/charts/5years?currency=usd"
+                },
+                "data": {
+                    "type": "fungible_charts",
+                    "id": "49d64a3a-c004-485c-bd39-8f394ffd3e1c-5years"
+                }
+            },
+            "chart_6months": {
+                "links": {
+                    "related": "https://api.zerion.io/v1/fungibles/49d64a3a-c004-485c-bd39-8f394ffd3e1c/charts/6months?currency=usd"
+                },
+                "data": {
+                    "type": "fungible_charts",
+                    "id": "49d64a3a-c004-485c-bd39-8f394ffd3e1c-6months"
+                }
+            },
+            "chart_day": {
+                "links": {
+                    "related": "https://api.zerion.io/v1/fungibles/49d64a3a-c004-485c-bd39-8f394ffd3e1c/charts/day?currency=usd"
+                },
+                "data": {
+                    "type": "fungible_charts",
+                    "id": "49d64a3a-c004-485c-bd39-8f394ffd3e1c-day"
+                }
+            },
+            "chart_hour": {
+                "links": {
+                    "related": "https://api.zerion.io/v1/fungibles/49d64a3a-c004-485c-bd39-8f394ffd3e1c/charts/hour?currency=usd"
+                },
+                "data": {
+                    "type": "fungible_charts",
+                    "id": "49d64a3a-c004-485c-bd39-8f394ffd3e1c-hour"
+                }
+            },
+            "chart_max": {
+                "links": {
+                    "related": "https://api.zerion.io/v1/fungibles/49d64a3a-c004-485c-bd39-8f394ffd3e1c/charts/max?currency=usd"
+                },
+                "data": {
+                    "type": "fungible_charts",
+                    "id": "49d64a3a-c004-485c-bd39-8f394ffd3e1c-max"
+                }
+            },
+            "chart_month": {
+                "links": {
+                    "related": "https://api.zerion.io/v1/fungibles/49d64a3a-c004-485c-bd39-8f394ffd3e1c/charts/month?currency=usd"
+                },
+                "data": {
+                    "type": "fungible_charts",
+                    "id": "49d64a3a-c004-485c-bd39-8f394ffd3e1c-month"
+                }
+            },
+            "chart_week": {
+                "links": {
+                    "related": "https://api.zerion.io/v1/fungibles/49d64a3a-c004-485c-bd39-8f394ffd3e1c/charts/week?currency=usd"
+                },
+                "data": {
+                    "type": "fungible_charts",
+                    "id": "49d64a3a-c004-485c-bd39-8f394ffd3e1c-week"
+                }
+            },
+            "chart_year": {
+                "links": {
+                    "related": "https://api.zerion.io/v1/fungibles/49d64a3a-c004-485c-bd39-8f394ffd3e1c/charts/year?currency=usd"
+                },
+                "data": {
+                    "type": "fungible_charts",
+                    "id": "49d64a3a-c004-485c-bd39-8f394ffd3e1c-year"
+                }
+            }
+        }
+    }
+}
