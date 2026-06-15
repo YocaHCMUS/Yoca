@@ -7,7 +7,11 @@ import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
 import { getTokenMeta, getTokenDetails } from "@sv/services/tokens/token-info.js";
 import { searchToken } from "./chat-token-search.js";
 import { searchNews, searchWeb } from "./chat-web-search.js";
-import { get24hTokenMarketChart, getHourlyTokenMarketChart, getDailyTokenMarketChart } from "@sv/services/tokens/token-chart.js";
+import { getBirdeyeChartData } from "@sv/services/wallet/providers/birdeye-chart-data.js";
+import {
+  getEndpoint as getBirdeyeEndpoint,
+  getRequiredHeaders as getBirdeyeHeaders,
+} from "@sv/util/util-birdeye.js";
 import type { ChatToolDefinition } from "./chat.types.js";
 import { isBaseAsset } from "@sv/services/wallet/walletDayActivity.service.js";
 import { z } from "zod";
@@ -173,7 +177,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_token_price",
     description:
-      "Fetch current market data for a token: price in USD, 24h change percentage, market cap, 24h volume, and market cap rank.",
+      "Fetch current market data for a token: price in USD, 24h change percentage, market cap, 24h volume, and market cap rank. Covers all Solana tokens via Birdeye (primary) + CoinGecko (fallback). When showing this data in a chart spec, PREFER type 'geckoterminal' over 'line'/'area'.",
     input_schema: {
       type: "object",
       properties: {
@@ -185,7 +189,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_token_price_24h",
     description:
-      "Fetch 24-hour intra-day price chart for a token. Returns timestamp-price points. Useful for showing today's price action.",
+      "Fetch 24-hour intra-day price chart for a token. Returns timestamp-price points. In the chart spec, ALWAYS use type 'geckoterminal' (not 'line'/'area') — set tokenAddress to show an interactive iframe. Covers all Solana tokens via Birdeye (primary) + CoinGecko (fallback).",
     input_schema: {
       type: "object",
       properties: {
@@ -197,7 +201,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_token_price_hourly",
     description:
-      "Fetch hourly price chart for a token over a number of days (max 90). Returns hourly timestamp-price points. Useful for medium-term trend charts.",
+      "Fetch hourly price chart for a token over a number of days (max 90). Returns hourly timestamp-price points. In the chart spec, ALWAYS use type 'geckoterminal' (not 'line'/'area') — set tokenAddress to show an interactive iframe. Covers all Solana tokens via Birdeye (primary) + CoinGecko (fallback).",
     input_schema: {
       type: "object",
       properties: {
@@ -210,7 +214,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_token_price_daily",
     description:
-      "Fetch daily price chart for a token over a number of days (max 365). Returns daily timestamp-price points. Useful for long-term trend charts.",
+      "Fetch daily price chart for a token over a number of days (max 365). Returns daily timestamp-price points. In the chart spec, ALWAYS use type 'geckoterminal' (not 'line'/'area') — set tokenAddress to show an interactive iframe. Covers all Solana tokens via Birdeye (primary) + CoinGecko (fallback).",
     input_schema: {
       type: "object",
       properties: {
@@ -517,6 +521,39 @@ function extractChartForLLM(data: unknown, tokenAddress?: string): unknown {
   };
 }
 
+async function fetchBirdeyeCurrentPrice(tokenAddress: string): Promise<Record<string, unknown> | null> {
+  if (!process.env.BIRDEYE_API_KEY || !process.env.BIRDEYE_API_BASE_URL) return null;
+  try {
+    const endpoint = getBirdeyeEndpoint("/defi/token_overview");
+    endpoint.searchParams.set("address", tokenAddress);
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: getBirdeyeHeaders(),
+    });
+    if (!response.ok) return null;
+    const json = await response.json() as {
+      success?: boolean;
+      data?: { price?: number; priceChange24hPercent?: number; marketCap?: number; volume24h?: number };
+    };
+    if (!json.success || !json.data) return null;
+    const price = Number(json.data.price ?? 0);
+    if (!Number.isFinite(price) || price <= 0) return null;
+    const wrapped = {
+      [tokenAddress]: {
+        priceUsd: price,
+        priceChangePercentage24h: json.data.priceChange24hPercent ?? null,
+        marketCap: json.data.marketCap ?? null,
+        volume24h: json.data.volume24h ?? null,
+        marketCapRank: null,
+        updatedAt: new Date().toISOString(),
+      },
+    } as Record<string, unknown>;
+    return wrapped;
+  } catch {
+    return null;
+  }
+}
+
 function extractWinrateForLLM(data: unknown): unknown {
   if (!data || typeof data !== "object") return null;
   const r = data as { wallets?: unknown[] };
@@ -727,24 +764,34 @@ export const TOOL_HANDLERS: Record<
   get_token_price: async (input) => {
     const { tokenAddress } = tokenAddressSchema.parse(input);
     const data = await getTokenMarketData([tokenAddress]);
+    const priceRecord = data && typeof data === "object"
+      ? (data as Record<string, Record<string, unknown>>)[tokenAddress]
+      : undefined;
+    if (priceRecord && Number(priceRecord.priceUsd) > 0) {
+      return { data, llmData: extractTokenPriceForLLM(data) };
+    }
+    const birdeyeData = await fetchBirdeyeCurrentPrice(tokenAddress);
+    if (birdeyeData) {
+      return { data: birdeyeData, llmData: extractTokenPriceForLLM(birdeyeData) };
+    }
     return { data, llmData: extractTokenPriceForLLM(data) };
   },
 
   get_token_price_24h: async (input) => {
     const { tokenAddress } = tokenAddressSchema.parse(input);
-    const data = await get24hTokenMarketChart(tokenAddress);
+    const data = await getBirdeyeChartData(tokenAddress, "15m", 1);
     return { data, llmData: extractChartForLLM(data, tokenAddress) };
   },
 
   get_token_price_hourly: async (input) => {
     const { tokenAddress, days } = tokenAddressDaysSchema.parse(input);
-    const data = await getHourlyTokenMarketChart(tokenAddress, days);
+    const data = await getBirdeyeChartData(tokenAddress, "1H", days);
     return { data, llmData: extractChartForLLM(data, tokenAddress) };
   },
 
   get_token_price_daily: async (input) => {
     const { tokenAddress, days } = tokenAddressDaysSchema.parse(input);
-    const data = await getDailyTokenMarketChart(tokenAddress, days);
+    const data = await getBirdeyeChartData(tokenAddress, "1D", days);
     return { data, llmData: extractChartForLLM(data, tokenAddress) };
   },
 

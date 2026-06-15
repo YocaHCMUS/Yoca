@@ -24,6 +24,7 @@ import { sanitizeText, sanitizeResponse } from "./chat-sanitizer.js";
 import { getMessage } from "./chat.localization.js";
 import { classifyWalletChatIntent, inferWalletChatLanguage } from "./chat-intent.js";
 import { buildWalletFallbackResponse } from "./chat-fallback.js";
+import { getTokenTopPools } from "@sv/services/tokens/token-pools.js";
 import type { WalletConfidence, WalletWarning, WalletChatSection } from "./chat.types.js";
 import { z } from "zod";
 import { WALLET_CHAT_RESPONSE_LIMITS as L } from "./chat-fallback.js";
@@ -404,6 +405,39 @@ async function generateResponse(
     if (!result || result.error || result.fullData == null) continue;
     const transformer = DATA_TRANSFORMERS[result.name];
     resolvedData[spec.dataRef] = transformer ? transformer(result.fullData) : result.fullData;
+  }
+
+  for (const chart of charts) {
+    if ((chart.type === "line" || chart.type === "area") && chart.dataRef) {
+      const idx = parseInt(chart.dataRef, 10);
+      if (!isNaN(idx) && idx < allResults.length) {
+        const result = allResults[idx];
+        if (result && !result.error && result.name?.startsWith("get_token_price_")) {
+          const tokenAddress = (result.input as Record<string, string> | undefined)?.tokenAddress;
+          if (tokenAddress) {
+            chart.type = "geckoterminal";
+            chart.tokenAddress = tokenAddress;
+            chatInfo("generateResponse: auto-converted line/area chart to geckoterminal", {
+              dataRef: chart.dataRef, tokenAddress,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  for (const chart of charts) {
+    if (chart.type === "geckoterminal" && chart.tokenAddress && !chart.poolAddress) {
+      try {
+        const pools = await getTokenTopPools(chart.tokenAddress);
+        const topPool = pools[0]?.data as { poolAddress?: string } | undefined;
+        if (topPool?.poolAddress) {
+          chart.poolAddress = topPool.poolAddress;
+        }
+      } catch {
+        chatWarn("generateResponse: failed to resolve pool for geckoterminal chart", { tokenAddress: chart.tokenAddress });
+      }
+    }
   }
 
   const response: ChatResponse = {

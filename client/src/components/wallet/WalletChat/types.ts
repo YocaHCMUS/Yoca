@@ -11,7 +11,7 @@ export interface DataActionSpec {
 
 export interface ChartSpec {
   id: string;
-  type: "line" | "bar" | "area" | "pie";
+  type: "line" | "bar" | "area" | "pie" | "geckoterminal";
   dataRef: string;
   title?: string;
   limit?: number;
@@ -19,6 +19,10 @@ export interface ChartSpec {
   xAxisType?: "category" | "time";
   yAxisFormat?: "currency" | "decimal" | "percent" | "compact-currency";
   xAxisFormat?: "datetime" | "date" | "time";
+  /** For geckoterminal chart type: token mint address */
+  tokenAddress?: string;
+  /** For geckoterminal chart type: pool address resolved server-side */
+  poolAddress?: string;
 }
 
 export interface TableFilter {

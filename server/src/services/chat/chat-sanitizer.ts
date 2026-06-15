@@ -77,7 +77,7 @@ export function sanitizeResponse(raw: string): {
   const rawCharts: unknown[] = Array.isArray(parsed.charts) ? parsed.charts : [];
   const charts: ChartSpec[] = rawCharts
     .filter((c): c is Record<string, unknown> =>
-      c !== null && typeof c === "object" && typeof (c as Record<string, unknown>).id === "string" && typeof (c as Record<string, unknown>).dataRef === "string",
+      c !== null && typeof c === "object" && typeof (c as Record<string, unknown>).id === "string" && (typeof (c as Record<string, unknown>).dataRef === "string" || (c as Record<string, unknown>).type === "geckoterminal"),
     )
     .map((c) => {
       if (c.pointActions != null) {

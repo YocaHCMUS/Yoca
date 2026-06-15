@@ -52,11 +52,15 @@ export interface DataActionSpec {
 
 export interface ChartSpec {
   id: string;
-  type: "line" | "bar" | "area" | "pie";
+  type: "line" | "bar" | "area" | "pie" | "geckoterminal";
   dataRef: string;
   title?: string;
   limit?: number;
   pointActions?: DataActionSpec;
+  /** For geckoterminal chart type: token mint address */
+  tokenAddress?: string;
+  /** For geckoterminal chart type: pool address resolved server-side */
+  poolAddress?: string;
 }
 
 export interface TableFilter {

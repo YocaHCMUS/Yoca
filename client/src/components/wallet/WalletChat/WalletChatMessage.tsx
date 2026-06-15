@@ -12,6 +12,7 @@ import type {
   WalletChatSection,
   WalletSectionKind,
 } from "./types";
+import { GeckoTerminalChart } from "@/components/charts/GeckoTerminalChart";
 import { ChartRenderer, TableRenderer } from "./WalletChatChartRenderer";
 import { SourcePanel } from "./WalletChatSourcePanel";
 import styles from "./WalletChat.module.scss";
@@ -661,13 +662,23 @@ export function WalletChatMessage({ message, onAction }: Props) {
           <WalletRichText text={only.content} />
         </div>,
       );
-    } else if (only.type === "chart" && message.data && only.id) {
+    } else if (only.type === "chart" && only.id) {
       const spec = message.charts?.find((c) => c.id === only.id) ?? {
         id: only.id, type: "line" as const, dataRef: only.id,
       };
-      elements.push(
-        <ChartRenderer key={`c-${only.id}`} spec={spec} data={message.data} onAction={onAction} />,
-      );
+      if (spec.type === "geckoterminal" && spec.poolAddress) {
+        elements.push(
+          <GeckoTerminalChart
+            key={`gc-${only.id}`}
+            poolAddress={spec.poolAddress}
+            height="400"
+          />,
+        );
+      } else if (message.data && spec.type !== "geckoterminal") {
+        elements.push(
+          <ChartRenderer key={`c-${only.id}`} spec={spec} data={message.data} onAction={onAction} />,
+        );
+      }
     } else if (only.type === "table" && message.data && only.id) {
       const spec = message.tables?.find((t) => t.id === only.id) ?? {
         id: only.id, dataRef: only.id, columns: "",
