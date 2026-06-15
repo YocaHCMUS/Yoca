@@ -63,7 +63,8 @@ export const WALLET_TOKEN_DETAILS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const WALLET_BALANCE_HISTORY_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 export const WALLET_TRANSACTION_HISTORY_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-export const ZRN_NATIVE_SOL_TOKEN_ADDRESS = ""; // yes it's empty
+export const ZRN_SOL_FUNGIBLE_ID = "11111111111111111111111111111111";
+export const WSOL_MINT = "So11111111111111111111111111111111111111112";
 
 // AI Wallet Forensic Audit
 export const WALLET_AUDIT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours

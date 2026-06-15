@@ -1,0 +1,31 @@
+{
+  "name": "evtSwap2",
+  "data": {
+    "pool": "6WE1r67zP6gipvmcLpV39pzR6nWZigsLqkA5vAhdvX9Z",
+    "tradeDirection": 1,
+    "collectFeeMode": 2,
+    "hasReferral": false,
+    "params": {
+      "amount0": "8729634",
+      "amount1": "1",
+      "swapMode": 0
+    },
+    "swapResult": {
+      "includedFeeInputAmount": "8729634",
+      "excludedFeeInputAmount": "8707806",
+      "amountLeft": "0",
+      "outputAmount": "6292700612",
+      "nextSqrtPrice": "686357748342894144",
+      "claimingFee": "8732",
+      "protocolFee": "4365",
+      "compoundingFee": "8731",
+      "referralFee": "0"
+    },
+    "includedTransferFeeAmountIn": "8729634",
+    "includedTransferFeeAmountOut": "6292700612",
+    "excludedTransferFeeAmountOut": "6261237108",
+    "currentTimestamp": "1781499514",
+    "reserveAAmount": "14397786703094",
+    "reserveBAmount": "19932298025"
+  }
+}
