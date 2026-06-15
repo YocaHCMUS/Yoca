@@ -1,6 +1,6 @@
 import { alertRules, followedWallets, users } from "@sv/db/schema.js";
 import { db } from "@sv/db/index.js";
-import { and, asc, eq, isNotNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 
 const DEFAULT_HELIUS_WEBHOOK_ID = "2b2123ed-ae76-4fcc-beaa-25e0fb3f5c48";
 const HELIUS_API_BASE =
@@ -9,10 +9,23 @@ const HELIUS_WEBHOOK_ID =
   process.env.HELIUS_WEBHOOK_ID || DEFAULT_HELIUS_WEBHOOK_ID;
 const HELIUS_API_KEY = process.env.HELIUS_API_KEY || "";
 const WEBHOOK_PUBLIC_URL = process.env.WEBHOOK_PUBLIC_URL || "";
-const WEBHOOK_AUTH_HEADER = "thisisphuonglekey";
+
+function webhookAuthHeader(): string {
+  return (
+    process.env.HELIUS_WEBHOOK_AUTH_KEY?.trim() ||
+    process.env.HELIUS_AUTH_HEADER?.trim() ||
+    "thisisphuonglekey"
+  );
+}
 
 function heliusWebhookUrl(): string {
   return `${HELIUS_API_BASE}/v0/webhooks/${HELIUS_WEBHOOK_ID}?api-key=${encodeURIComponent(HELIUS_API_KEY)}`;
+}
+
+function normalizeAddress(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 // ── Per-user CRUD ──────────────────────────────────────────────────
@@ -34,7 +47,7 @@ export async function addFollowedWallet(
     .insert(followedWallets)
     .values({
       userId,
-      address,
+      address: address.trim(),
       label: label?.trim() || null,
     })
     .returning();
@@ -61,7 +74,13 @@ export async function getFollowedWalletAddresses(): Promise<string[]> {
   const ar = await db
     .select({ address: alertRules.walletAddress })
     .from(alertRules);
-  return [...new Set([...fw.map((r) => r.address), ...ar.map((r) => r.address)])];
+  return [
+    ...new Set(
+      [...fw.map((r) => r.address), ...ar.map((r) => r.address)]
+        .map(normalizeAddress)
+        .filter(Boolean) as string[],
+    ),
+  ];
 }
 
 // ── Fan-out: Discord URLs for a given wallet address ───────────────
@@ -106,6 +125,63 @@ export async function getEmailRecipientsForAddress(
     .map((r) => (r.override?.trim() || r.email || "").trim())
     .filter((e): e is string => !!e && /.+@.+\..+/.test(e));
   return [...new Set(recipients)];
+}
+
+export interface FollowedWalletDeliveryTarget {
+  userId: string;
+  walletAddress: string;
+  label: string | null;
+  discordWebhookUrl: string | null;
+  registeredEmail: string | null;
+  emailAlertsEnabled: boolean;
+  emailAlertsAddress: string | null;
+}
+
+export async function findFollowedWalletDeliveryTargetsForAddresses(
+  addresses: string[],
+): Promise<FollowedWalletDeliveryTarget[]> {
+  const normalizedAddresses = new Set(
+    addresses.map(normalizeAddress).filter(Boolean) as string[],
+  );
+  if (normalizedAddresses.size === 0) return [];
+  const normalizedAddressList = [...normalizedAddresses];
+
+  const rows = await db
+    .select({
+      userId: followedWallets.userId,
+      walletAddress: followedWallets.address,
+      label: followedWallets.label,
+      discordWebhookUrl: users.discordWebhookUrl,
+      registeredEmail: users.email,
+      emailAlertsEnabled: users.emailAlertsEnabled,
+      emailAlertsAddress: users.emailAlertsAddress,
+    })
+    .from(followedWallets)
+    .innerJoin(users, eq(users.id, followedWallets.userId))
+    .where(
+      inArray(
+        sql<string>`trim(${followedWallets.address})`,
+        normalizedAddressList,
+      ),
+    );
+
+  return rows
+    .map((row) => {
+      const walletAddress = normalizeAddress(row.walletAddress);
+      if (!walletAddress || !normalizedAddresses.has(walletAddress)) {
+        return null;
+      }
+      return {
+        userId: row.userId,
+        walletAddress,
+        label: row.label ?? null,
+        discordWebhookUrl: row.discordWebhookUrl ?? null,
+        registeredEmail: row.registeredEmail ?? null,
+        emailAlertsEnabled: Boolean(row.emailAlertsEnabled),
+        emailAlertsAddress: row.emailAlertsAddress ?? null,
+      };
+    })
+    .filter((row): row is FollowedWalletDeliveryTarget => row != null);
 }
 
 // ── User settings ──────────────────────────────────────────────────
@@ -183,7 +259,7 @@ export async function syncHeliusWebhookAccountAddresses(): Promise<HeliusSyncRes
     transactionTypes: ["ANY"],
     accountAddresses,
     webhookType: "enhanced",
-    authHeader: WEBHOOK_AUTH_HEADER,
+    authHeader: webhookAuthHeader(),
   };
 
   try {

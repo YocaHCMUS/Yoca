@@ -28,27 +28,42 @@ const followWalletBodySchema = z.object({
   label: z.string().trim().max(120).optional().nullable(),
 });
 
-const settingsPatchSchema = z
-  .object({
-    discordWebhookUrl: z
-      .string()
-      .trim()
-      .url()
-      .refine((v) => v.includes("discord.com/api/webhooks/"), {
-        message: "Must be a Discord webhook URL",
-      })
-      .nullable()
-      .optional(),
-    emailAlertsEnabled: z.boolean().optional(),
-    emailAlertsAddress: z.string().trim().email().nullable().optional(),
-  })
-  .refine(
-    (v) =>
-      v.discordWebhookUrl !== undefined ||
-      v.emailAlertsEnabled !== undefined ||
-      v.emailAlertsAddress !== undefined,
-    { message: "At least one field must be provided" },
-  );
+const settingsPatchSchema = z.preprocess(
+  (raw) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+    const input = raw as Record<string, unknown>;
+    return {
+      ...input,
+      discordWebhookUrl:
+        input.discordWebhookUrl ?? input.discord_webhook_url,
+      emailAlertsEnabled:
+        input.emailAlertsEnabled ?? input.email_alerts_enabled,
+      emailAlertsAddress:
+        input.emailAlertsAddress ?? input.email_alerts_address,
+    };
+  },
+  z
+    .object({
+      discordWebhookUrl: z
+        .string()
+        .trim()
+        .url()
+        .refine((v) => v.includes("discord.com/api/webhooks/"), {
+          message: "Must be a Discord webhook URL",
+        })
+        .nullable()
+        .optional(),
+      emailAlertsEnabled: z.boolean().optional(),
+      emailAlertsAddress: z.string().trim().email().nullable().optional(),
+    })
+    .refine(
+      (v) =>
+        v.discordWebhookUrl !== undefined ||
+        v.emailAlertsEnabled !== undefined ||
+        v.emailAlertsAddress !== undefined,
+      { message: "At least one field must be provided" },
+    ),
+);
 
 const alertRuleBodySchema = z
   .object({

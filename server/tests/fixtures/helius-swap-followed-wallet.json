@@ -1,0 +1,61 @@
+[
+  {
+    "description": "",
+    "type": "SWAP",
+    "source": "OKX_DEX_ROUTER",
+    "fee": 5029,
+    "feePayer": "3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH",
+    "signature": "4KbYXB2PNTSVmdkoRehmsGnV8k57qRWH8tWhoMqeVPhVLfS7L58HYruLC9eqEWdyNm8ajVi2YvH4JfCSoCAV9CEc",
+    "slot": 417685262,
+    "timestamp": 1777958632,
+    "tokenTransfers": [
+      {
+        "fromTokenAccount": "AthF4CEubMxyPVkw8PKbLsPgs9sj6uRHLskGLuBybMpS",
+        "toTokenAccount": "DT2krA8vSP96D68nH86eAztZHVM18YB5i4gDXjLBDXm7",
+        "fromUserAccount": "3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH",
+        "toUserAccount": "ARu4n5mFdZogZAravu7CcizaojWnS6oqka37gdLT5SZn",
+        "tokenAmount": 6.11222722,
+        "mint": "So11111111111111111111111111111111111111112",
+        "tokenStandard": "Fungible"
+      },
+      {
+        "fromTokenAccount": "8XrtGP8RG33AnrN2yJ6H3gnXPNQ3dYXKqM72bpzhcsd6",
+        "toTokenAccount": "HNoyj2rSfaKyV8Aynzp81DdUrwMyMxLN5649Fz7Ty77D",
+        "fromUserAccount": "ARu4n5mFdZogZAravu7CcizaojWnS6oqka37gdLT5SZn",
+        "toUserAccount": "3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH",
+        "tokenAmount": 518.743347,
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "tokenStandard": "Fungible"
+      }
+    ],
+    "nativeTransfers": [
+      {
+        "fromUserAccount": "3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH",
+        "toUserAccount": "3KCKozbAaF75qEU33jtzozcJ29yJuaLJTy2jFdzUY8bT",
+        "amount": 5000
+      }
+    ],
+    "accountData": [
+      {
+        "account": "3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH",
+        "nativeBalanceChange": -10029,
+        "tokenBalanceChanges": []
+      },
+      {
+        "account": "HNoyj2rSfaKyV8Aynzp81DdUrwMyMxLN5649Fz7Ty77D",
+        "nativeBalanceChange": 0,
+        "tokenBalanceChanges": [
+          {
+            "userAccount": "3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH",
+            "tokenAccount": "HNoyj2rSfaKyV8Aynzp81DdUrwMyMxLN5649Fz7Ty77D",
+            "rawTokenAmount": {
+              "tokenAmount": "6104",
+              "decimals": 6
+            },
+            "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -73,6 +73,7 @@ export function ProfileOverview({ data, loading }: ProfileOverviewProps) {
         </div>
       </div>
 
+      {/* Temporarily hidden as requested
       <div className={styles.metricGrid}>
         <div className={styles.metricCard}>
           <p className={styles.metricLabel}>
@@ -127,6 +128,7 @@ export function ProfileOverview({ data, loading }: ProfileOverviewProps) {
           </div>
         </div>
       </div>
+      */}
     </section>
   );
 }

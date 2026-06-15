@@ -2,6 +2,13 @@ import client from "@/api/main";
 
 export type TokenAiTimeframe = "24h" | "7d" | "1m" | "3m" | "1y";
 export type TokenAiLanguage = "en" | "vi";
+export type TokenAiModelMode = "fast" | "balanced" | "deep";
+export type TokenAiProvider =
+  | "gemini"
+  | "gemini_model_fallback"
+  | "cached_gemini"
+  | "analyst_fallback"
+  | "deterministic";
 export type TokenAiIntent =
   | "price_move_explanation"
   | "latest_news"
@@ -21,6 +28,7 @@ export interface TokenAiChatPayload {
   language?: TokenAiLanguage;
   includeNews?: boolean;
   includeVolatility?: boolean;
+  modelMode?: TokenAiModelMode;
 }
 
 export interface TokenAiSection {
@@ -54,6 +62,7 @@ export interface TokenAiEvidence {
     | "holders"
     | "pool"
     | "trades"
+    | "security"
     | "metadata"
     | "internal";
   label: string;
@@ -91,8 +100,13 @@ export interface TokenAiChatData {
   asOf: string;
   disclaimer: string;
   generatedAt: string;
-  provider: "gemini" | "deterministic";
+  provider: TokenAiProvider;
   fallbackReason?: string;
+  modelModeRequested?: TokenAiModelMode;
+  modelModeUsed?: TokenAiModelMode;
+  modelRequested?: string;
+  modelUsed?: string;
+  stale?: boolean;
   cache?: {
     hit: boolean;
     expiresAt?: string;

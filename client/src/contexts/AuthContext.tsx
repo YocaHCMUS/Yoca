@@ -10,6 +10,7 @@ import React, {
 type AuthUser = {
   userId: string;
   displayName: string | null;
+  avatarUrl?: string | null;
 };
 
 type AuthContextType = {
@@ -18,6 +19,10 @@ type AuthContextType = {
   setUser: (user: AuthUser | null) => void;
   refreshUser: () => Promise<void>;
   signOut: () => Promise<void>;
+  openAuthModal: (mode?: "login" | "register") => void;
+  closeAuthModal: () => void;
+  isSignInOpen: boolean;
+  isSignUpOpen: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,6 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser({
             userId: res.id,
             displayName: res.displayName,
+            avatarUrl: res.avatarUrl,
           });
         } else {
           // API may return null for unauthenticated sessions.
@@ -65,9 +71,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const [isSignInOpen, setIsSignInOpen] = useState(false);
+  const [isSignUpOpen, setIsSignUpOpen] = useState(false);
+
+  const openAuthModal = useCallback((mode: "login" | "register" = "login") => {
+    if (mode === "login") setIsSignInOpen(true);
+    else setIsSignUpOpen(true);
+  }, []);
+
+  const closeAuthModal = useCallback(() => {
+    setIsSignInOpen(false);
+    setIsSignUpOpen(false);
+  }, []);
+
   return (
     <AuthContext.Provider
-      value={{ user, isUserLoading, setUser, refreshUser, signOut }}
+      value={{ 
+        user, 
+        isUserLoading,
+        setUser, 
+        refreshUser, 
+        signOut, 
+        openAuthModal,
+        closeAuthModal,
+        isSignInOpen,
+        isSignUpOpen 
+      }}
     >
       {children}
     </AuthContext.Provider>

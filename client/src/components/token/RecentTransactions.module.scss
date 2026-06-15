@@ -22,6 +22,8 @@ $color-sell: #f43f5e;
   border-bottom: 1px solid $border-subtle;
   background: $background;
   padding: 0;
+  gap: 0;
+  flex-wrap: wrap;
 }
 
 .tab {
@@ -32,6 +34,7 @@ $color-sell: #f43f5e;
   cursor: pointer;
   border-bottom: 2px solid transparent;
   transition: all 0.2s;
+  white-space: nowrap;
 
   &:hover {
     color: $text-primary;
@@ -43,6 +46,113 @@ $color-sell: #f43f5e;
     border-bottom-color: $focus;
     background: $background;
   }
+}
+
+.headerSpacer {
+  flex: 1;
+}
+
+// ── Filter buttons ──────────────────────────────────
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+}
+
+.filterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid $border-subtle;
+  background: transparent;
+  color: $text-secondary;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $text-primary;
+  }
+
+  // "All" active state
+  &.filterAll {
+    background: $layer-01;
+    color: $text-primary;
+    border-color: $border-strong;
+    font-weight: 600;
+  }
+
+  // Buy active state
+  &.filterBuyActive {
+    background: rgba(16, 185, 129, 0.12);
+    color: $color-buy;
+    border-color: rgba(16, 185, 129, 0.4);
+    font-weight: 600;
+  }
+
+  // Sell active state
+  &.filterSellActive {
+    background: rgba(244, 63, 94, 0.12);
+    color: $color-sell;
+    border-color: rgba(244, 63, 94, 0.4);
+    font-weight: 600;
+  }
+}
+
+.filterCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: $layer-01;
+  color: $text-helper;
+}
+
+.filterCountBuy {
+  background: rgba(16, 185, 129, 0.15);
+  color: $color-buy;
+}
+
+.filterCountSell {
+  background: rgba(244, 63, 94, 0.15);
+  color: $color-sell;
+}
+
+// ── Row tinting ─────────────────────────────────────
+.rowBuy {
+  td {
+    background: rgba(16, 185, 129, 0.028);
+  }
+
+  &:hover td {
+    background: rgba(16, 185, 129, 0.055);
+  }
+}
+
+.rowSell {
+  td {
+    background: rgba(244, 63, 94, 0.028);
+  }
+
+  &:hover td {
+    background: rgba(244, 63, 94, 0.055);
+  }
+}
+
+// ── Pagination (Carbon) ─────────────────────────────
+.paginationContainer {
+  border-top: 1px solid $border-subtle;
 }
 
 .content {

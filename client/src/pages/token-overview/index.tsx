@@ -9,6 +9,7 @@ import {
   TokenOverviewChart,
   TokenOverviewStats,
   TokenTabs,
+  TokenAllocation,
 } from "@/components/token";
 import { PageWrapper } from "@/components/wrapper/PageWrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";

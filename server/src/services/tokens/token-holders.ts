@@ -9,7 +9,7 @@ import type { MRL_TopHolders } from "../_types/token-raw-responses.js";
 
 // https://docs.moralis.com/web3-data-api/solana/reference/get-token-top-holders
 async function fetchTopHoldersForToken(tokenAddress: string) {
-  const defaultLimit = 10;
+  const defaultLimit = 50;
   const mrlUrl = mrl.getEndpoint(
     `/token/mainnet/${tokenAddress}/top-holders?limit=${defaultLimit}`,
   );
@@ -41,6 +41,7 @@ async function fetchTopHoldersForToken(tokenAddress: string) {
       tokenAddress: tokenAddress,
       rank: idx,
       percentage: Number(raw.percentageRelativeToTotalSupply),
+      balance: Number(raw.balanceFormatted) || Number(raw.balance) || 0,
     }),
   );
 

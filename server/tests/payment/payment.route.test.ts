@@ -191,6 +191,111 @@ describe("Hono Payment Route", () => {
     });
   });
 
+  describe("POST /cancel", () => {
+    it("should cancel a Stripe-managed subscription and sync the updated subscription", async () => {
+      const stripeService = await import("@sv/services/stripe.service.js");
+      const subscriptionService = await import("@sv/services/subscription.service.js");
+      const stripeSub = {
+        ...mockSelectResult,
+        stripeSubscriptionId: "sub_123",
+      };
+      const updatedStripeSub = {
+        id: "sub_123",
+        status: "active",
+        cancel_at_period_end: true,
+      };
+
+      selectWhereMock.mockResolvedValueOnce([stripeSub]);
+      vi.mocked(stripeService.cancelSubscription).mockResolvedValueOnce(
+        updatedStripeSub as any,
+      );
+
+      const response = await app.request("/cancel", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: `token=${mockToken}`,
+        },
+        body: JSON.stringify({ subscriptionId: "sub_123" }),
+      });
+
+      expect(response.status).toBe(200);
+      const data = (await response.json()) as any;
+      expect(data.success).toBe(true);
+      expect(data.cancel_at_period_end).toBe(true);
+      expect(stripeService.cancelSubscription).toHaveBeenCalledWith("sub_123");
+      expect(subscriptionService.upsertSubscription).toHaveBeenCalledWith(
+        updatedStripeSub,
+      );
+    });
+
+    it("should reject Solana subscriptions before calling Stripe", async () => {
+      const stripeService = await import("@sv/services/stripe.service.js");
+      selectWhereMock.mockResolvedValueOnce([mockSelectResult]);
+
+      const response = await app.request("/cancel", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: `token=${mockToken}`,
+        },
+        body: JSON.stringify({ subscriptionId: "solana-tx-123" }),
+      });
+
+      expect(response.status).toBe(400);
+      const data = (await response.json()) as any;
+      expect(data.errorCode).toBe("UNSUPPORTED_SUBSCRIPTION_PROVIDER");
+      expect(stripeService.cancelSubscription).not.toHaveBeenCalled();
+    });
+
+    it("should return 404 when the subscription belongs to another user", async () => {
+      const stripeService = await import("@sv/services/stripe.service.js");
+      selectWhereMock.mockResolvedValueOnce([
+        {
+          ...mockSelectResult,
+          stripeSubscriptionId: "sub_123",
+          userId: "other-user-id",
+        },
+      ]);
+
+      const response = await app.request("/cancel", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: `token=${mockToken}`,
+        },
+        body: JSON.stringify({ subscriptionId: "sub_123" }),
+      });
+
+      expect(response.status).toBe(404);
+      expect(stripeService.cancelSubscription).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("POST /upgrade", () => {
+    it("should reject Solana subscriptions before calling Stripe", async () => {
+      const stripeService = await import("@sv/services/stripe.service.js");
+      selectWhereMock.mockResolvedValueOnce([mockSelectResult]);
+
+      const response = await app.request("/upgrade", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: `token=${mockToken}`,
+        },
+        body: JSON.stringify({
+          subscriptionId: "solana-tx-123",
+          newTier: "Plus",
+        }),
+      });
+
+      expect(response.status).toBe(400);
+      const data = (await response.json()) as any;
+      expect(data.errorCode).toBe("UNSUPPORTED_SUBSCRIPTION_PROVIDER");
+      expect(stripeService.upgradeSubscription).not.toHaveBeenCalled();
+    });
+  });
+
   describe("POST /verify-solana", () => {
     it("should verify solana transaction and insert subscription", async () => {
       const response = await app.request("/verify-solana", {

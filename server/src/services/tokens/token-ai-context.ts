@@ -17,6 +17,10 @@ import {
   getTokenPriceVolatilityEvents,
   type TokenPriceVolatilityEvent,
 } from "@sv/services/tokens/token-volatility.js";
+import {
+  getTokenSecurityContext,
+  type TokenSecurityContext,
+} from "./token-security-context.js";
 
 export type TokenAiTimeframe = "24h" | "7d" | "1m" | "3m" | "1y";
 export type TokenAiLanguage = "en" | "vi";
@@ -38,6 +42,7 @@ export type TokenAiEvidenceType =
   | "holders"
   | "pool"
   | "trades"
+  | "security"
   | "metadata"
   | "internal";
 
@@ -96,6 +101,7 @@ export interface TokenAiContext {
   topHolders: unknown[];
   pools: unknown[];
   recentTrades: unknown[];
+  security: TokenSecurityContext | null;
   evidence: TokenAiEvidence[];
   sources: TokenAiSource[];
   missingSections: TokenAiMissingSection[];
@@ -311,16 +317,17 @@ export async function buildTokenAiContext(
   input: BuildTokenAiContextInput,
 ): Promise<TokenAiContext> {
   const address = input.address.trim();
-  const missingSections: TokenAiMissingSection[] = [
-    {
-      section: "security",
-      available: false,
-      reason:
-        "Mint authority, freeze authority, deployer, creator, honeypot status, and security flags are not available in the current backend.",
-    },
-  ];
+  const missingSections: TokenAiMissingSection[] = [];
 
-  const [detailsRes, metaRes, marketRes, chartRes, holdersRes, holderStatsRes] =
+  const [
+    detailsRes,
+    metaRes,
+    marketRes,
+    chartRes,
+    holdersRes,
+    holderStatsRes,
+    securityRes,
+  ] =
     await Promise.all([
       safe("metadata", () => getTokenDetails([address])),
       safe("metadata_fallback", () => getTokenMeta([address])),
@@ -328,6 +335,7 @@ export async function buildTokenAiContext(
       safe("chart", () => readChartSummary(address, input.timeframe)),
       safe("holders", () => getTopTokenHolders(address)),
       safe("holder_stats", () => getTokenHolderStats([address])),
+      safe("security", () => getTokenSecurityContext(address)),
     ]);
 
   const detailsRow =
@@ -343,6 +351,7 @@ export async function buildTokenAiContext(
       : null;
   const topHolders = holdersRes.ok ? holdersRes.value.slice(0, 10) : [];
   const chartSummary = chartRes.ok ? chartRes.value.summary : null;
+  const security = securityRes.ok ? securityRes.value : null;
 
   const token = {
     address,
@@ -385,6 +394,44 @@ export async function buildTokenAiContext(
     });
   }
 
+  if (security?.available) {
+    if (security.mintAuthorityStatus !== "unknown") {
+      evidence.push({
+        type: "security",
+        label: `Mint authority: ${security.mintAuthorityStatus}`,
+        value: security.mintAuthorityStatus,
+        detail:
+          security.mintAuthorityStatus === "active"
+            ? `Mint authority address: ${security.mintAuthority}. This is evidence only, not a safe/unsafe conclusion.`
+            : "Mint authority is revoked in parsed Solana mint data. This is evidence only, not a full safety verdict.",
+        source: "Solana RPC via Helius",
+      });
+    }
+
+    if (security.freezeAuthorityStatus !== "unknown") {
+      evidence.push({
+        type: "security",
+        label: `Freeze authority: ${security.freezeAuthorityStatus}`,
+        value: security.freezeAuthorityStatus,
+        detail:
+          security.freezeAuthorityStatus === "active"
+            ? `Freeze authority address: ${security.freezeAuthority}. This is evidence only, not a safe/unsafe conclusion.`
+            : "Freeze authority is revoked in parsed Solana mint data. This is evidence only, not a full safety verdict.",
+        source: "Solana RPC via Helius",
+      });
+    }
+
+    if (security.interpretation) {
+      evidence.push({
+        type: "security",
+        label: "Wrapped SOL context",
+        value: "Tracks native SOL",
+        detail: security.interpretation,
+        source: "Solana RPC via Helius",
+      });
+    }
+  }
+
   if (market) {
     const marketRecord = market as Record<string, unknown>;
     evidence.push(
@@ -400,7 +447,7 @@ export async function buildTokenAiContext(
         type: "market",
         label: "Market cap / FDV",
         value: compactCurrency(marketRecord.marketCap),
-        detail: `FDV: ${compactCurrency(marketRecord.fullyDilutedValuation) ?? "unavailable"}. Rank: ${marketRecord.marketCapRank ?? "unavailable"}.`,
+        detail: `FDV: ${compactCurrency(marketRecord.fullyDilutedValuation) ?? "unavailable"}.`,
         timestamp: toDate(marketRecord.updatedAt),
         source: "Yoca market data",
       },
@@ -579,6 +626,7 @@ export async function buildTokenAiContext(
     topHolders,
     pools,
     recentTrades,
+    security,
     evidence: evidence.slice(0, 30),
     sources,
     missingSections,

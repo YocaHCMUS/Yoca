@@ -1,31 +1,49 @@
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router";
+import { useLocalization, type TranslateFunction } from "@/contexts/LocalizationContext";
 import { LANDING_ACCENT, SECTION_PADDING_Y, cardSurface, grid12Shell } from "./tokens";
 
 const stories = [
   {
+    key: "base",
     org: "Base",
-    title: "How teams run onchain data transformations at scale with Yoca",
     initials: "B",
   },
   {
+    key: "blockworks",
     org: "Blockworks",
-    title: "Powering institutional crypto research with unified metrics",
     initials: "BW",
   },
   {
+    key: "opLabs",
     org: "OP Labs",
-    title: "Ecosystem growth and transparency backed by live dashboards",
     initials: "OP",
   },
   {
+    key: "oneInch",
     org: "1inch",
-    title: "Making execution and liquidity data transparent and accessible",
     initials: "1",
   },
 ] as const;
 
+type StoryKey = (typeof stories)[number]["key"];
+
+function storyTitle(tr: TranslateFunction, key: StoryKey) {
+  switch (key) {
+    case "base":
+      return tr("landing.customerStories.items.base.title");
+    case "blockworks":
+      return tr("landing.customerStories.items.blockworks.title");
+    case "opLabs":
+      return tr("landing.customerStories.items.opLabs.title");
+    case "oneInch":
+      return tr("landing.customerStories.items.oneInch.title");
+  }
+}
+
 export function LandingCustomerStories() {
+  const { tr } = useLocalization();
+
   return (
     <section
       id="stories"
@@ -46,14 +64,13 @@ export function LandingCustomerStories() {
               className="text-3xl font-bold tracking-tight text-(--landing-foreground) sm:text-4xl"
               style={{ lineHeight: 1.2 }}
             >
-              Customer stories
+              {tr("landing.customerStories.title")}
             </h2>
             <p
               className="mt-4 max-w-xl text-(--landing-muted)"
               style={{ lineHeight: 1.65 }}
             >
-              Read how teams use Yoca to turn raw chain activity into decisions
-              their whole org can trust.
+              {tr("landing.customerStories.subtitle")}
             </p>
           </div>
           <Link
@@ -61,7 +78,7 @@ export function LandingCustomerStories() {
             className="shrink-0 text-sm font-semibold"
             style={{ color: LANDING_ACCENT, textDecoration: "none" }}
           >
-            See more
+            {tr("landing.customerStories.seeMore")}
           </Link>
         </div>
 
@@ -96,13 +113,13 @@ export function LandingCustomerStories() {
               className="mt-2 flex-1 text-base font-semibold text-(--landing-foreground)"
               style={{ lineHeight: 1.45 }}
             >
-              {s.title}
+              {storyTitle(tr, s.key)}
             </h3>
             <span
               className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium"
               style={{ color: LANDING_ACCENT }}
             >
-              Read story
+              {tr("landing.customerStories.readStory")}
               <ArrowRight className="h-4 w-4" />
             </span>
           </article>
