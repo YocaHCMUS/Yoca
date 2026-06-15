@@ -1,66 +1,91 @@
 import {
-  saveSwapsCache,
-  saveTransfersCache,
+    saveSwapsCache,
+    saveTransfersCache,
 } from "@sv/services/wallet/db/walletDataCacher.js";
 import {
-  getCachedWalletTransfers,
-  getCachedWalletSwaps,
-  getCachedWalletTransfersMeta,
-  getCachedWalletSwapsMeta,
+    getCachedWalletTransfers,
+    getCachedWalletSwaps,
+    getCachedWalletTransfersMeta,
+    getCachedWalletSwapsMeta,
 } from "@sv/services/wallet/db/walletDataRetriever.js";
 import type {
-  WalletTransfersResponse,
-  WalletSwapsResponse,
-  WalletSwap,
-  WalletTransfer,
+    WalletTransfersResponse,
+    WalletSwapsResponse,
+    WalletSwap,
+    WalletTransfer,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import {
-  enrichWithSolanaTokenPrices,
-  postEnrichTransfers,
-  postEnrichSwaps,
+    enrichWithSolanaTokenPrices,
+    postEnrichTransfers,
+    postEnrichSwaps,
 } from "@sv/services/wallet/walletEnrichment.service.js";
 import { toWalletPageInfo } from "@sv/services/wallet/walletData.core.js";
 import { resolveEnhancedTransactions } from "@sv/services/wallet/providers/walletEnhancedTx.service.js";
 import { mapHeliusTxsToSwaps } from "@sv/services/wallet/providers/helius-to-swap.js";
 import { mapHeliusTxsToTransfers } from "@sv/services/wallet/providers/helius-to-transfer.js";
 import {
-  resolveRequestedRange,
-  isMissingRangeSignificant,
-  getMissingRanges,
+    resolveRequestedRange,
+    isMissingRangeSignificant,
+    getMissingRanges,
 } from "@sv/services/wallet/walletRange.utils.js";
-import { DAY_MS } from "./wallet.constants";
 import * as zrn from "@sv/util/util-zerion";
 import { rlFetch } from "@sv/util/rate-limit";
 import { getTrackedApiResult } from "@sv/middlewares/validation";
 import {
-  zrn_WalletTransactionsSchema,
-  type ZRN_WalletTransactions,
+    zrn_WalletTransactionsSchema,
+    type ZRN_WalletTransactions,
 } from "../_types/wallet-raw-responses";
 import {
-  tokenMeta,
-  TokenMetaInsert,
-  walletRecentSwaps,
-  WalletRecentSwapsInsert,
-  walletRecentTransfers,
-  WalletRecentTransfersInsert,
+    tokenMeta,
+    TokenMetaInsert,
+    walletRecentSwaps,
+    WalletRecentSwapsInsert,
+    walletRecentTransfers,
+    WalletRecentTransfersInsert,
 } from "@sv/db/schema";
 import dayjs from "dayjs";
 import { db } from "@sv/db";
 import {
-  WALLET_SWAPS_TTL_MS,
-  WALLET_TRANSFERS_TTL_MS,
-  WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
-  WALLET_RECENT_TRANSACTIONS_PRUNE_INTERVAL_MS,
-  WALLET_RECENT_TRANSACTIONS_RETENTION_MS,
-  ZERION_WALLET_TRANSACTIONS_PAGE_SIZE,
-  ZRN_NATIVE_SOL_TOKEN_ADDRESS,
+    WALLET_SWAPS_TTL_MS,
+    WALLET_TRANSFERS_TTL_MS,
+    WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
+    WALLET_RECENT_TRANSACTIONS_PRUNE_INTERVAL_MS,
+    WALLET_RECENT_TRANSACTIONS_RETENTION_MS,
+    ZERION_WALLET_TRANSACTIONS_PAGE_SIZE,
+    WSOL_MINT,
+    DAY_MS,
 } from "@sv/config/constants";
 import { and, desc, eq, gte, inArray, lt, max } from "drizzle-orm";
 
 type ZRN_WalletTransaction = ZRN_WalletTransactions["data"][number];
+type ZRN_WalletTransfer =
+  ZRN_WalletTransaction["attributes"]["transfers"][number];
+type ZRN_FungibleInfo = ZRN_WalletTransfer["fungible_info"];
 type SourcedZRNWalletTransaction = ZRN_WalletTransaction & {
   sourceEndpoint: string;
 };
+
+type ZrnTradeTransferMatch = {
+  inTransfer: ZRN_WalletTransfer;
+  outTransfer: ZRN_WalletTransfer;
+  diffUsd: number;
+};
+
+type ZrnTradeTransferMatchResult =
+  | {
+      match: ZrnTradeTransferMatch;
+      reason: null;
+    }
+  | {
+      match: null;
+      reason:
+        | "transfer_match_no_transfers"
+        | "transfer_match_missing_in_transfer"
+        | "transfer_match_missing_out_transfer"
+        | "transfer_match_no_valid_priced_pair";
+    };
+
+const ZRN_SOL_FUNGIBLE_ID = "11111111111111111111111111111111";
 
 let lastRecentTransactionsPruneAtMs = 0;
 
@@ -96,7 +121,7 @@ async function pruneStaleRecentTransactionRows(nowMs: number): Promise<void> {
   }
 }
 
-async function zrn_FetchWalletTransactions(
+async function zrn_fetchWalletTransactions(
   address: string,
   operationTypes: string,
   limit: number,
@@ -167,9 +192,59 @@ function sortTransfersByTimestampDesc(
 function sortSwapsByTimestampDesc(swaps: WalletSwap[]): WalletSwap[] {
   return [...swaps].sort(
     (left, right) =>
-      Date.parse(right.blockTimestampIso) - Date.parse(left.blockTimestampIso),
+      dayjs.utc(right.blockTimestampIso).valueOf() - dayjs.utc(left.blockTimestampIso).valueOf(),
   );
 }
+
+function zrn_getTransferTradePair(
+  transfers: ZRN_WalletTransfer[],
+): ZrnTradeTransferMatchResult {
+  if (transfers.length == 0) {
+    return { match: null, reason: "transfer_match_no_transfers" };
+  }
+
+  const ins = transfers.filter((transfer) => transfer.direction == "in" && transfer.value != null && Number.isFinite(Number(transfer.value)));
+  const outs = transfers.filter((transfer) => transfer.direction == "out" && transfer.value != null && Number.isFinite(Number(transfer.value)));
+  if (ins.length == 0) {
+    return { match: null, reason: "transfer_match_missing_in_transfer" };
+  }
+  if (outs.length == 0) {
+    return { match: null, reason: "transfer_match_missing_out_transfer" };
+  }
+
+  let best: ZrnTradeTransferMatch | null = null;
+  for (const inTransfer of ins) {
+    for (const outTransfer of outs) {
+      const diffUsd = Math.abs(
+        Number(inTransfer.value) - Number(outTransfer.value),
+      );
+      if (best == null || diffUsd < best.diffUsd) {
+        best = {
+          inTransfer,
+          outTransfer,
+          diffUsd,
+        };
+      }
+    }
+  }
+
+  if (!best) {
+    return { match: null, reason: "transfer_match_no_valid_priced_pair" };
+  }
+
+  return { match: best, reason: null };
+}
+
+function zrn_getSolanaTokenAddress(token: ZRN_FungibleInfo): string | null {
+  const solanaAddress = token.implementations.find(
+    (impl) => impl.chain_id == "solana",
+  )?.address;
+
+  if (solanaAddress) return solanaAddress;
+  if (token.id == ZRN_SOL_FUNGIBLE_ID) return WSOL_MINT;
+  return null;
+}
+
 
 export async function getWalletTransfers(
   address: string,
@@ -449,23 +524,14 @@ export async function getWalletSwaps(
 }
 
 export type WalletTransferToken =
-  | {
-      isNativeSOL: false;
-      address: string;
-      amount: number;
-      symbol: string | null;
-      name: string | null;
-      logoUri: string | null;
-      priceUsd: number | null;
-    }
-  | {
-      isNativeSOL: true;
-      amount: number;
-      symbol: "SOL";
-      name: "Solana Native";
-      logoUri: "https://cdn.zerion.io/11111111111111111111111111111111.png";
-      priceUsd: number | null;
-    };
+  {
+    address: string;
+    amount: number;
+    symbol: string | null;
+    name: string | null;
+    logoUri: string | null;
+    priceUsd: number | null;
+  };
 
 export interface WalletSwapV2 {
   transactionHash: string;
@@ -479,7 +545,7 @@ export async function fetchWalletRecentSwaps(
   address: string,
   limit: number = WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
 ): Promise<WalletSwapV2[] | null> {
-  const transactions = await zrn_FetchWalletTransactions(
+  const transactions = await zrn_fetchWalletTransactions(
     address,
     "trade",
     limit,
@@ -500,8 +566,9 @@ export async function fetchWalletRecentSwaps(
     actId: string,
     details: Record<string, unknown> = {},
   ): null {
-    if (reason == "trade_transfer_count_not_two") {
-      console.info("[zerion-wallet-swaps] trade transfer count is not two", {
+    if (reason.startsWith("transfer_match_")) {
+      console.info("[zerion-wallet-swaps] failed to match trade transfer pair", {
+        reason,
         sourceEndpoint: transaction.sourceEndpoint,
         transactionHash: transaction.attributes.hash,
         transactionOperationType: transaction.attributes.operation_type,
@@ -520,13 +587,16 @@ export async function fetchWalletRecentSwaps(
       transaction.attributes.acts
         .filter((act) => act.type == "trade")
         .map((act): CombinedValues | null => {
-          // each trade involve 2 transfer, one "in", one "out"
+          // Zerion trades are one in and one out; noisy legs are handled by
+          // picking the closest valued in/out pair.
           const transfers = transaction.attributes.transfers.filter(
-            (transfer) => transfer.act_id == act.id,
+            (transfer) =>
+              transfer.act_id == act.id,
           );
-          if (transfers.length != 2) {
+          const transferMatchResult = zrn_getTransferTradePair(transfers);
+          if (!transferMatchResult.match) {
             return logRejectedTradeAct(
-              "trade_transfer_count_not_two",
+              transferMatchResult.reason,
               transaction,
               act.id,
               {
@@ -537,37 +607,25 @@ export async function fetchWalletRecentSwaps(
                 matchedTransferSymbols: transfers.map(
                   (transfer) => transfer.fungible_info.symbol,
                 ),
+                matchedTransferValues: transfers.map(
+                  (transfer) => transfer.value,
+                ),
+                matchedTransferPrices: transfers.map(
+                  (transfer) => transfer.price,
+                ),
                 allTransferActIds: transaction.attributes.transfers.map(
                   (transfer) => transfer.act_id,
                 ),
               },
             );
           }
-          const inTransfer = transfers.find((t) => t.direction == "in");
-          const outTransfer = transfers.find((t) => t.direction == "out");
-          if (!inTransfer || !outTransfer) {
-            return logRejectedTradeAct(
-              "missing_in_or_out_transfer",
-              transaction,
-              act.id,
-              {
-                matchedTransferDirections: transfers.map(
-                  (transfer) => transfer.direction,
-                ),
-              },
-            );
-          }
+          const { inTransfer, outTransfer } = transferMatchResult.match;
 
           const tokenIn = inTransfer?.fungible_info;
           const tokenOut = outTransfer?.fungible_info;
 
-          const tokenInAddress = tokenIn.implementations.find(
-            (impl) => impl.chain_id == "solana",
-          )?.address;
-
-          const tokenOutAddress = tokenOut.implementations.find(
-            (impl) => impl.chain_id == "solana",
-          )?.address;
+          const tokenInAddress = zrn_getSolanaTokenAddress(tokenIn);
+          const tokenOutAddress = zrn_getSolanaTokenAddress(tokenOut);
 
           if (
             !tokenIn ||
@@ -655,46 +713,22 @@ export async function fetchWalletRecentSwaps(
             returnValue: {
               transactionHash: transaction.attributes.hash,
               blockTimestampMs,
-              bought:
-                tokenInAddress == ZRN_NATIVE_SOL_TOKEN_ADDRESS
-                  ? {
-                      isNativeSOL: true,
-                      amount: amountIn,
-                      symbol: "SOL",
-                      name: "Solana Native",
-                      logoUri:
-                        "https://cdn.zerion.io/11111111111111111111111111111111.png",
-                      priceUsd: tokenInPriceUsd,
-                    }
-                  : {
-                      isNativeSOL: false,
-                      address: tokenInAddress,
-                      amount: amountIn,
-                      symbol: tokenIn.symbol,
-                      name: tokenIn.name,
-                      logoUri: tokenIn.icon?.url || null,
-                      priceUsd: tokenInPriceUsd,
-                    },
-              sold:
-                tokenOutAddress == ZRN_NATIVE_SOL_TOKEN_ADDRESS
-                  ? {
-                      isNativeSOL: true,
-                      amount: amountOut,
-                      symbol: "SOL",
-                      name: "Solana Native",
-                      logoUri:
-                        "https://cdn.zerion.io/11111111111111111111111111111111.png",
-                      priceUsd: tokenOutPriceUsd,
-                    }
-                  : {
-                      isNativeSOL: false,
-                      address: tokenOutAddress,
-                      amount: amountOut,
-                      symbol: tokenOut.symbol,
-                      name: tokenOut.name,
-                      logoUri: tokenOut.icon?.url || null,
-                      priceUsd: tokenOutPriceUsd,
-                    },
+              bought: {
+                address: tokenInAddress,
+                amount: amountIn,
+                symbol: tokenIn.symbol,
+                name: tokenIn.name,
+                logoUri: tokenIn.icon?.url || null,
+                priceUsd: tokenInPriceUsd,
+              },
+              sold: {
+                address: tokenOutAddress,
+                amount: amountOut,
+                symbol: tokenOut.symbol,
+                name: tokenOut.name,
+                logoUri: tokenOut.icon?.url || null,
+                priceUsd: tokenOutPriceUsd,
+              },
               totalValueUsd: valueUsd,
             },
             insertValue: {
@@ -803,46 +837,22 @@ export async function getWalletRecentSwaps(
   return res.map((item) => ({
     transactionHash: item.transactionHash,
     blockTimestampMs: item.blockTimestampMs,
-    bought:
-      item.tokenIn == ZRN_NATIVE_SOL_TOKEN_ADDRESS
-        ? {
-            isNativeSOL: true,
-            amount: item.amountIn,
-            symbol: "SOL",
-            name: "Solana Native",
-            logoUri:
-              "https://cdn.zerion.io/11111111111111111111111111111111.png",
-            priceUsd: item.tokenInPriceUsd,
-          }
-        : {
-            isNativeSOL: false,
-            address: item.tokenIn,
-            amount: item.amountIn,
-            symbol: tokenMetaLookup[item.tokenIn]?.symbol ?? null,
-            name: tokenMetaLookup[item.tokenIn]?.name ?? null,
-            logoUri: tokenMetaLookup[item.tokenIn]?.imageUrl ?? null,
-            priceUsd: item.tokenInPriceUsd,
-          },
-    sold:
-      item.tokenOut == ZRN_NATIVE_SOL_TOKEN_ADDRESS
-        ? {
-            isNativeSOL: true,
-            amount: item.amountOut,
-            symbol: "SOL",
-            name: "Solana Native",
-            logoUri:
-              "https://cdn.zerion.io/11111111111111111111111111111111.png",
-            priceUsd: item.tokenOutPriceUsd,
-          }
-        : {
-            isNativeSOL: false,
-            address: item.tokenOut,
-            amount: item.amountOut,
-            symbol: tokenMetaLookup[item.tokenOut]?.symbol ?? null,
-            name: tokenMetaLookup[item.tokenOut]?.name ?? null,
-            logoUri: tokenMetaLookup[item.tokenOut]?.imageUrl ?? null,
-            priceUsd: item.tokenOutPriceUsd,
-          },
+    bought: {
+      address: item.tokenIn,
+      amount: item.amountIn,
+      symbol: tokenMetaLookup[item.tokenIn]?.symbol ?? null,
+      name: tokenMetaLookup[item.tokenIn]?.name ?? null,
+      logoUri: tokenMetaLookup[item.tokenIn]?.imageUrl ?? null,
+      priceUsd: item.tokenInPriceUsd,
+    },
+    sold: {
+      address: item.tokenOut,
+      amount: item.amountOut,
+      symbol: tokenMetaLookup[item.tokenOut]?.symbol ?? null,
+      name: tokenMetaLookup[item.tokenOut]?.name ?? null,
+      logoUri: tokenMetaLookup[item.tokenOut]?.imageUrl ?? null,
+      priceUsd: item.tokenOutPriceUsd,
+    },
     totalValueUsd: item.valueUsd,
   }));
 }
@@ -860,7 +870,7 @@ export async function fetchWalletRecentTransfers(
   address: string,
   limit: number = WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
 ): Promise<WalletTransferV2[] | null> {
-  const transactions = await zrn_FetchWalletTransactions(
+  const transactions = await zrn_fetchWalletTransactions(
     address,
     "receive,send",
     limit,
@@ -885,9 +895,7 @@ export async function fetchWalletRecentTransfers(
 
       const transfer = transfers[0];
       const token = transfer.fungible_info;
-      const tokenAddress = token.implementations.find(
-        (impl) => impl.chain_id == "solana",
-      )?.address;
+      const tokenAddress = zrn_getSolanaTokenAddress(token);
       if (!token || tokenAddress == null) continue;
 
       const amount = Number(transfer.quantity.numeric);
@@ -915,26 +923,14 @@ export async function fetchWalletRecentTransfers(
       const returnValue: WalletTransferV2 = {
         transactionHash: transaction.attributes.hash,
         blockTimestampMs,
-        token:
-          tokenAddress == ZRN_NATIVE_SOL_TOKEN_ADDRESS
-            ? {
-                isNativeSOL: true,
-                amount,
-                symbol: "SOL",
-                name: "Solana Native",
-                logoUri:
-                  "https://cdn.zerion.io/11111111111111111111111111111111.png",
-                priceUsd,
-              }
-            : {
-                isNativeSOL: false,
-                address: tokenAddress,
-                amount,
-                symbol: token.symbol,
-                name: token.name,
-                logoUri: token.icon?.url || null,
-                priceUsd,
-              },
+        token: {
+          address: tokenAddress,
+          amount,
+          symbol: token.symbol,
+          name: token.name,
+          logoUri: token.icon?.url || null,
+          priceUsd,
+        },
         direction,
         counterpartyAddress,
         valueUsd,
@@ -1038,26 +1034,14 @@ export async function getWalletRecentTransfers(
   return res.map((item) => ({
     transactionHash: item.transactionHash,
     blockTimestampMs: item.blockTimestampMs,
-    token:
-      item.tokenAddress == ZRN_NATIVE_SOL_TOKEN_ADDRESS
-        ? {
-            isNativeSOL: true,
-            amount: item.amount,
-            symbol: "SOL",
-            name: "Solana Native",
-            logoUri:
-              "https://cdn.zerion.io/11111111111111111111111111111111.png",
-            priceUsd: item.priceUsd,
-          }
-        : {
-            isNativeSOL: false,
-            address: item.tokenAddress,
-            amount: item.amount,
-            symbol: tokenMetaLookup[item.tokenAddress]?.symbol ?? null,
-            name: tokenMetaLookup[item.tokenAddress]?.name ?? null,
-            logoUri: tokenMetaLookup[item.tokenAddress]?.imageUrl ?? null,
-            priceUsd: item.priceUsd,
-          },
+    token: {
+      address: item.tokenAddress,
+      amount: item.amount,
+      symbol: tokenMetaLookup[item.tokenAddress]?.symbol ?? null,
+      name: tokenMetaLookup[item.tokenAddress]?.name ?? null,
+      logoUri: tokenMetaLookup[item.tokenAddress]?.imageUrl ?? null,
+      priceUsd: item.priceUsd,
+    },
     direction: item.direction,
     counterpartyAddress: item.counterpartyAddress,
     valueUsd: item.valueUsd,
