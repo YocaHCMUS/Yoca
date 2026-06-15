@@ -241,6 +241,12 @@ export function buildResponseGenerationPrompt(
     "    Hover shows query preview in tooltip, click sends query.",
     "    Example: { \"label\": \"View {label}\", \"query\": \"show trades on {label}\" }",
     "    If not meaningful follow ups can be generated for chart points, dont set the value.",
+    "  xAxisType: 'category' (default, string labels) or 'time' (auto-formatted timestamps from ms values).",
+    "    Use 'time' when labels are Unix timestamps in milliseconds.",
+    "  xAxisFormat: when xAxisType='time', controls x-axis label rendering: 'datetime', 'date', or 'time'.",
+    "    'datetime' shows full date+time, 'date' shows date only, 'time' shows time only.",
+    "  yAxisFormat: controls y-axis value rendering: 'currency', 'decimal', 'percent', 'compact-currency'.",
+    "    'currency' formats as $X,XXX.XX, 'compact-currency' as $1.2K/$1.2M, 'percent' as 12.34%, 'decimal' as raw number.",
     "",
     "TABLE SPEC FIELDS:",
     "  id (required), dataRef (required), columns: comma-separated (required),",
@@ -270,7 +276,7 @@ export function buildResponseGenerationPrompt(
     "User: What is the latest news about SOL?",
     "Output:",
     `{
-    "text": "SOL has been trending up this week. <cite ids=\"1\">Recent coverage highlights strong ecosystem growth</cite> and <cite ids=\"1,2\">new DeFi integrations</cite>.\\n\\nKey developments:\\n- <cite ids=\"1\">Jupiter exchange volume hit new highs</cite>\\n- <cite ids=\"2\">Solana mobile adoption growing</cite>",
+    "text": "SOL has been trending up this week. <cite ids="1">Recent coverage highlights strong ecosystem growth</cite> and <cite ids="1,2">new DeFi integrations</cite>.\\n\\nKey developments:\\n- <cite ids="1">Jupiter exchange volume hit new highs</cite>\\n- <cite ids="2">Solana mobile adoption growing</cite>",
     "sources": [
       { "title": "Solana Ecosystem Report Q1 2025", "url": "https://example.com/solana-report", "source": "CoinDesk", "snippet": "Solana's DeFi TVL grew 40% in Q1 driven by Jupiter and marginfi.", "publishedAt": "2025-03-15T10:00:00Z" },
       { "title": "Jupiter DEX Volume Surpasses $X", "url": "https://example.com/jupiter-volume", "source": "The Block", "snippet": "Jupiter's monthly volume surpassed $X in February.", "publishedAt": "2025-03-10T08:30:00Z" }
@@ -284,6 +290,22 @@ export function buildResponseGenerationPrompt(
     "text": "Your portfolio is led by SOL and JUP.\\n\\nTop 5 tokens by PnL:\\n\\n<table id=\\"top_pnl\\" />\\n\\nPnL trend over 30 days:\\n\\n<chart id=\\"pnl_trend\\" />",
     "charts": [{ "id": "pnl_trend", "type": "line", "dataRef": "0", "title": "PnL over time" }],
     "tables": [{ "id": "top_pnl", "dataRef": "1", "columns": "token,pnl", "sortBy": "pnl", "limit": 5 }]
+  }`,
+    "",
+    "EXAMPLE (time-series chart with formatting):",
+    "User: Show portfolio balance over the last 7 days.",
+    `Output:
+{
+    "text": "Here is the balance trend:\\n\\n<chart id="balance" />",
+    "charts": [{
+      "id": "balance",
+      "type": "area",
+      "dataRef": "0",
+      "title": "Balance (7d)",
+      "xAxisType": "time",
+      "xAxisFormat": "datetime",
+      "yAxisFormat": "currency"
+    }]
   }`,
   ].join("\n");
 

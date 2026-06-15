@@ -16,6 +16,9 @@ export interface ChartSpec {
   title?: string;
   limit?: number;
   pointActions?: DataActionSpec;
+  xAxisType?: "category" | "time";
+  yAxisFormat?: "currency" | "decimal" | "percent" | "compact-currency";
+  xAxisFormat?: "datetime" | "date" | "time";
 }
 
 export interface TableFilter {
