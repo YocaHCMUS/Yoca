@@ -542,7 +542,7 @@ async function fetchTokenTransactions(
   symbol: string,
   limit: number,
   timeframe: Timeframe,
-): Promise<{ txs: NormalizedTx[]; source: WashTradingDataSource; reason: string }> {
+): Promise<{ txs: NormalizedTx[]; source: WashTradingDataSource; reason: string; servedFromCache: boolean }> {
   const apiKey = getHeliusApiKey();
   const safeLimit = getSafeApiLimit(limit, timeframe);
   const cacheKey = getTransferCacheKey(mint, timeframe);
@@ -552,7 +552,11 @@ async function fetchTokenTransactions(
     return {
       txs: cached.txs.slice(0, safeLimit),
       source: cached.source,
-      reason: `${cached.reason} · served from 5-minute backend cache to avoid Helius rate limit.`,
+      // Do not append a hard-coded English sentence here.
+      // The cache notice is appended later by localizeDataSourceReason(...),
+      // so English/Vietnamese mode always displays the right language.
+      reason: cached.reason,
+      servedFromCache: true,
     };
   }
 
@@ -569,7 +573,7 @@ async function fetchTokenTransactions(
     const txs = createDemoTransactions(mint, symbol, safeLimit, timeframe);
     const reason = "HELIUS_API_KEY chưa được load trong backend process.";
     saveCache(txs, "demo-fallback", reason);
-    return { txs, source: "demo-fallback", reason };
+    return { txs, source: "demo-fallback", reason, servedFromCache: false };
   }
 
   // Ưu tiên Enhanced API trước vì chỉ cần ít request hơn, ổn định hơn cho demo.
@@ -583,6 +587,7 @@ async function fetchTokenTransactions(
         txs: enhancedTxs,
         source: "helius-enhanced-api",
         reason,
+        servedFromCache: false,
       };
     }
   } catch (error) {
@@ -598,6 +603,7 @@ async function fetchTokenTransactions(
         txs: rpcTxs,
         source: "helius-rpc-token-accounts",
         reason,
+        servedFromCache: false,
       };
     }
   } catch (error) {
@@ -612,6 +618,7 @@ async function fetchTokenTransactions(
     txs,
     source: "demo-fallback",
     reason,
+    servedFromCache: false,
   };
 }
 
@@ -790,25 +797,52 @@ function computeGNNScores(txs: NormalizedTx[], circularPatterns: CircularPattern
   return scores.sort((a, b) => b.score - a.score).slice(0, 25);
 }
 
-function localizeDataSourceReason(reason: string, language: WashTradingLanguage): string {
-  if (language === "vi") return reason;
+const CACHE_REASON_EN = "served from 5-minute backend cache to avoid Helius rate limit";
+const CACHE_REASON_VI = "lấy từ cache backend 5 phút để tránh giới hạn tần suất Helius";
 
-  if (reason.includes("HELIUS_API_KEY")) {
-    return "HELIUS_API_KEY is not loaded in the backend process.";
-  }
-  if (reason.includes("Enhanced Transactions API")) {
-    const count = reason.match(/\d+/)?.[0] ?? "the requested";
-    return `Fetched ${count} transaction(s) from Helius Enhanced Transactions API for this address/mint.`;
-  }
-  if (reason.includes("Helius RPC")) {
-    const count = reason.match(/\d+/)?.[0] ?? "the requested";
-    return `Fetched ${count} real transaction(s) from Helius RPC using token accounts with throttling/retry/backoff.`;
-  }
-  if (reason.includes("không lấy đủ token transfers")) {
-    return "A Helius API key exists, but there were not enough token transfers for this mint. The token may have low recent activity, the mint may not appear in swaps, or the key may be rate-limited.";
+function splitCacheReason(reason: string): { baseReason: string; servedFromCache: boolean } {
+  const cachePatterns = [
+    /\s*·\s*served from 5-minute backend cache to avoid Helius rate limit\.?/i,
+    /\s*·\s*lấy từ cache backend 5 phút để tránh giới hạn tần suất Helius\.?/i,
+  ];
+
+  let baseReason = reason;
+  let servedFromCache = false;
+
+  for (const pattern of cachePatterns) {
+    if (pattern.test(baseReason)) {
+      servedFromCache = true;
+      baseReason = baseReason.replace(pattern, "").trim();
+    }
   }
 
-  return reason;
+  return { baseReason, servedFromCache };
+}
+
+function localizeDataSourceReason(reason: string, language: WashTradingLanguage, cacheHit = false): string {
+  const { baseReason, servedFromCache: parsedCacheHit } = splitCacheReason(reason);
+  const servedFromCache = cacheHit || parsedCacheHit;
+  let localizedReason = baseReason;
+
+  if (language === "en") {
+    if (baseReason.includes("HELIUS_API_KEY")) {
+      localizedReason = "HELIUS_API_KEY is not loaded in the backend process.";
+    } else if (baseReason.includes("Enhanced Transactions API")) {
+      const count = baseReason.match(/\d+/)?.[0] ?? "the requested";
+      localizedReason = `Fetched ${count} transaction(s) from Helius Enhanced Transactions API for this address/mint.`;
+    } else if (baseReason.includes("Helius RPC")) {
+      const count = baseReason.match(/\d+/)?.[0] ?? "the requested";
+      localizedReason = `Fetched ${count} real transaction(s) from Helius RPC using token accounts with throttling/retry/backoff.`;
+    } else if (baseReason.includes("không lấy đủ token transfers")) {
+      localizedReason = "A Helius API key exists, but there were not enough token transfers for this mint. The token may have low recent activity, the mint may not appear in swaps, or the key may be rate-limited.";
+    }
+  }
+
+  if (servedFromCache) {
+    localizedReason += ` · ${language === "vi" ? CACHE_REASON_VI : CACHE_REASON_EN}.`;
+  }
+
+  return localizedReason;
 }
 
 function buildGraphData(txs: NormalizedTx[], suspiciousWallets: GNNScore[]): WashTradingAIResult["graphData"] {
@@ -1051,8 +1085,8 @@ export async function analyzeWashTradingWithAI(params: {
   addLog(language === "vi"
     ? `Bắt đầu phân tích AI Wash Trading cho ${symbol} bằng ${algorithm}`
     : `Started AI Wash Trading analysis for ${symbol} with ${algorithm}`, "info");
-  const { txs, source, reason } = await fetchTokenTransactions(mint, symbol, limit, timeframe);
-  const localizedReason = localizeDataSourceReason(reason, language);
+  const { txs, source, reason, servedFromCache } = await fetchTokenTransactions(mint, symbol, limit, timeframe);
+  const localizedReason = localizeDataSourceReason(reason, language, servedFromCache);
   addLog(`Data source: ${source} — ${localizedReason}`, source === "demo-fallback" ? "medium" : "success");
   addLog(language === "vi"
     ? `Đã chuẩn hóa ${txs.length} giao dịch token transfer`
