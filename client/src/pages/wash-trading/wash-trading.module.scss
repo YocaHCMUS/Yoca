@@ -426,7 +426,7 @@
 
 .graphContainer {
   position: relative;
-  min-height: 520px;
+  min-height: 430px;
   border-radius: 12px;
   border: 1px solid var(--border-light);
   background: var(--graph-bg);
@@ -436,8 +436,8 @@
 
 .graphEcharts {
   width: 100%;
-  height: 465px;
-  min-height: 465px;
+  height: 420px;
+  min-height: 420px;
   display: block;
 }
 
