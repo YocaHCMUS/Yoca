@@ -57,6 +57,9 @@ export interface ChartSpec {
   title?: string;
   limit?: number;
   pointActions?: DataActionSpec;
+  xAxisType?: "category" | "time";
+  yAxisFormat?: "currency" | "decimal" | "percent" | "compact-currency";
+  xAxisFormat?: "datetime" | "date" | "time";
   /** For geckoterminal chart type: token mint address */
   tokenAddress?: string;
   /** For geckoterminal chart type: pool address resolved server-side */
