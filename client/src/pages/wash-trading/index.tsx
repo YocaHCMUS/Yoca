@@ -525,7 +525,7 @@ const WashTradingPage: React.FC = () => {
           symbol: symbol || "TOKEN",
           timeframe,
           algorithm: algoTab,
-          limit: timeframe === "24h" ? 200 : timeframe === "7d" ? 300 : 500,
+          limit: timeframe === "24h" ? 80 : timeframe === "7d" ? 120 : 160,
         }),
       });
 

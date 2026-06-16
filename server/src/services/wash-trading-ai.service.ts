@@ -137,6 +137,61 @@ interface RpcParsedTransaction {
 const HELIUS_ENHANCED_BASE = "https://api.helius.xyz";
 const HELIUS_RPC_BASE = "https://mainnet.helius-rpc.com";
 
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const RPC_MIN_REQUIRED_TRANSFERS = 8;
+const API_LIMIT_BY_TIMEFRAME: Record<Timeframe, number> = {
+  "1h": 50,
+  "24h": 80,
+  "7d": 120,
+  "30d": 160,
+};
+
+const transferCache = new Map<string, {
+  createdAt: number;
+  txs: NormalizedTx[];
+  source: WashTradingDataSource;
+  reason: string;
+}>();
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function isRateLimitLike(message: string): boolean {
+  const text = message.toLowerCase();
+  return text.includes("429") || text.includes("rate limited") || text.includes("too many requests") || text.includes("overloaded");
+}
+
+async function withRetry<T>(task: () => Promise<T>, options: { label: string; retries?: number; baseDelayMs?: number } ): Promise<T> {
+  const retries = options.retries ?? 2;
+  const baseDelayMs = options.baseDelayMs ?? 700;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await task();
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      if (!isRateLimitLike(message) || attempt === retries) {
+        throw error;
+      }
+
+      const delay = baseDelayMs * 2 ** attempt + Math.round(Math.random() * 250);
+      console.warn(`[WashTradingAI] ${options.label} temporarily limited, retrying in ${delay}ms...`);
+      await sleep(delay);
+    }
+  }
+
+  throw lastError;
+}
+
+function getSafeApiLimit(limit: number, timeframe: Timeframe): number {
+  return Math.min(Math.max(limit || 50, 20), API_LIMIT_BY_TIMEFRAME[timeframe]);
+}
+
+function getTransferCacheKey(mint: string, timeframe: Timeframe): string {
+  return `${mint}:${timeframe}`;
+}
+
 function getHeliusApiKey(): string | null {
   const raw = process.env.HELIUS_API_KEY?.trim();
   if (!raw) return null;
@@ -309,69 +364,92 @@ async function fetchHeliusRpcTokenAccountTransactions(
   limit: number,
   timeframe: Timeframe,
 ): Promise<NormalizedTx[]> {
-  const largestAccounts = await heliusRpc<{ value?: RpcTokenAccount[] }>("getTokenLargestAccounts", [mint]);
+  const safeLimit = getSafeApiLimit(limit, timeframe);
+
+  const largestAccounts = await withRetry(
+    () => heliusRpc<{ value?: RpcTokenAccount[] }>("getTokenLargestAccounts", [mint]),
+    { label: "getTokenLargestAccounts", retries: 2, baseDelayMs: 1_200 },
+  );
+
   const tokenAccounts = (largestAccounts.value ?? [])
     .map((account) => account.address)
     .filter(Boolean)
-    .slice(0, 10);
+    .slice(0, 5);
 
   if (tokenAccounts.length === 0) return [];
 
-  const perAccountLimit = Math.max(8, Math.ceil(Math.min(limit, 180) / tokenAccounts.length));
+  const perAccountLimit = Math.min(18, Math.max(6, Math.ceil(safeLimit / tokenAccounts.length)));
   const signatureSet = new Set<string>();
 
   for (const tokenAccount of tokenAccounts) {
     try {
-      const signatures = await heliusRpc<Array<{ signature: string; blockTime?: number | null }>>(
-        "getSignaturesForAddress",
-        [tokenAccount, { limit: perAccountLimit }],
+      await sleep(320);
+      const signatures = await withRetry(
+        () => heliusRpc<Array<{ signature: string; blockTime?: number | null }>>(
+          "getSignaturesForAddress",
+          [tokenAccount, { limit: perAccountLimit }],
+        ),
+        { label: `getSignaturesForAddress ${shortAddress(tokenAccount)}`, retries: 2, baseDelayMs: 900 },
       );
 
       for (const item of signatures ?? []) {
         if (item.signature) signatureSet.add(item.signature);
       }
     } catch (error) {
-      console.warn("[WashTradingAI] getSignaturesForAddress failed:", tokenAccount, error instanceof Error ? error.message : error);
+      console.warn("[WashTradingAI] getSignaturesForAddress skipped:", tokenAccount, error instanceof Error ? error.message : error);
     }
   }
 
-  const signatures = [...signatureSet].slice(0, Math.min(limit, 160));
+  const signatures = [...signatureSet].slice(0, Math.min(safeLimit, 70));
   const parsed: NormalizedTx[] = [];
+  let consecutiveRateLimitFailures = 0;
 
-  for (let i = 0; i < signatures.length; i += 6) {
-    const chunk = signatures.slice(i, i + 6);
-    const results = await Promise.all(
-      chunk.map(async (signature) => {
-        try {
-          return await heliusRpc<RpcParsedTransaction | null>("getTransaction", [
-            signature,
-            {
-              encoding: "jsonParsed",
-              maxSupportedTransactionVersion: 0,
-              commitment: "confirmed",
-            },
-          ]);
-        } catch (error) {
-          console.warn("[WashTradingAI] getTransaction failed:", signature, error instanceof Error ? error.message : error);
-          return null;
-        }
-      }),
-    );
+  for (const signature of signatures) {
+    try {
+      await sleep(230);
+      const tx = await withRetry(
+        () => heliusRpc<RpcParsedTransaction | null>("getTransaction", [
+          signature,
+          {
+            encoding: "jsonParsed",
+            maxSupportedTransactionVersion: 0,
+            commitment: "confirmed",
+          },
+        ]),
+        { label: `getTransaction ${signature.slice(0, 8)}`, retries: 1, baseDelayMs: 1_100 },
+      );
 
-    for (const tx of results) {
       const normalized = parseRpcTransactionToTokenTransfer(tx, mint);
       if (normalized) parsed.push(normalized);
+      consecutiveRateLimitFailures = 0;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn("[WashTradingAI] getTransaction skipped:", signature, message);
+      if (isRateLimitLike(message)) {
+        consecutiveRateLimitFailures += 1;
+        await sleep(1_200 + consecutiveRateLimitFailures * 350);
+      }
+
+      // Khi đã có đủ dữ liệu cho demo/analysis nhưng RPC đang rate limit liên tục,
+      // dừng sớm để không đốt quota và không làm backend chậm.
+      if (consecutiveRateLimitFailures >= 4 && parsed.length >= RPC_MIN_REQUIRED_TRANSFERS) {
+        console.warn("[WashTradingAI] Stopping RPC getTransaction early because Helius is rate limiting repeatedly.");
+        break;
+      }
     }
   }
 
   const unique = new Map<string, NormalizedTx>();
   for (const tx of parsed) unique.set(tx.signature, tx);
 
-  return filterByTimeframe([...unique.values()].sort((a, b) => a.timestamp - b.timestamp), timeframe).slice(0, limit);
+  return filterByTimeframe([...unique.values()].sort((a, b) => a.timestamp - b.timestamp), timeframe).slice(0, safeLimit);
 }
 
 async function fetchHeliusEnhancedMintTransactions(mint: string, limit: number, timeframe: Timeframe): Promise<NormalizedTx[]> {
-  const raw = await heliusEnhancedAddressTransactions(mint, Math.min(limit, 100));
+  const raw = await withRetry(
+    () => heliusEnhancedAddressTransactions(mint, Math.min(getSafeApiLimit(limit, timeframe), 100)),
+    { label: "Helius Enhanced address transactions", retries: 2, baseDelayMs: 900 },
+  );
   const normalized: NormalizedTx[] = [];
 
   for (const tx of Array.isArray(raw) ? raw : []) {
@@ -465,46 +543,74 @@ async function fetchTokenTransactions(
   timeframe: Timeframe,
 ): Promise<{ txs: NormalizedTx[]; source: WashTradingDataSource; reason: string }> {
   const apiKey = getHeliusApiKey();
+  const safeLimit = getSafeApiLimit(limit, timeframe);
+  const cacheKey = getTransferCacheKey(mint, timeframe);
+  const cached = transferCache.get(cacheKey);
 
-  if (!apiKey) {
+  if (cached && Date.now() - cached.createdAt < CACHE_TTL_MS) {
     return {
-      txs: createDemoTransactions(mint, symbol, limit, timeframe),
-      source: "demo-fallback",
-      reason: "HELIUS_API_KEY chưa được load trong backend process.",
+      txs: cached.txs.slice(0, safeLimit),
+      source: cached.source,
+      reason: `${cached.reason} · served from 5-minute backend cache to avoid Helius rate limit.`,
     };
   }
 
-  try {
-    const rpcTxs = await fetchHeliusRpcTokenAccountTransactions(mint, limit, timeframe);
-    if (rpcTxs.length >= 8) {
-      return {
-        txs: rpcTxs,
-        source: "helius-rpc-token-accounts",
-        reason: `Lấy ${rpcTxs.length} giao dịch thật từ Helius RPC bằng getTokenLargestAccounts + getSignaturesForAddress + getTransaction.`,
-      };
-    }
-  } catch (error) {
-    console.warn("[WashTradingAI] Helius RPC token account strategy failed:", error instanceof Error ? error.message : error);
+  const saveCache = (txs: NormalizedTx[], source: WashTradingDataSource, reason: string) => {
+    transferCache.set(cacheKey, {
+      createdAt: Date.now(),
+      txs,
+      source,
+      reason,
+    });
+  };
+
+  if (!apiKey) {
+    const txs = createDemoTransactions(mint, symbol, safeLimit, timeframe);
+    const reason = "HELIUS_API_KEY chưa được load trong backend process.";
+    saveCache(txs, "demo-fallback", reason);
+    return { txs, source: "demo-fallback", reason };
   }
 
+  // Ưu tiên Enhanced API trước vì chỉ cần ít request hơn, ổn định hơn cho demo.
+  // RPC token-account strategy chỉ chạy khi Enhanced API không lấy đủ token transfer.
   try {
-    const enhancedTxs = await fetchHeliusEnhancedMintTransactions(mint, limit, timeframe);
-    if (enhancedTxs.length >= 8) {
+    const enhancedTxs = await fetchHeliusEnhancedMintTransactions(mint, safeLimit, timeframe);
+    if (enhancedTxs.length >= RPC_MIN_REQUIRED_TRANSFERS) {
+      const reason = `Lấy ${enhancedTxs.length} giao dịch từ Helius Enhanced Transactions API cho address/mint.`;
+      saveCache(enhancedTxs, "helius-enhanced-api", reason);
       return {
         txs: enhancedTxs,
         source: "helius-enhanced-api",
-        reason: `Lấy ${enhancedTxs.length} giao dịch từ Helius Enhanced Transactions API cho address/mint.`,
+        reason,
       };
     }
   } catch (error) {
     console.warn("[WashTradingAI] Helius Enhanced strategy failed:", error instanceof Error ? error.message : error);
   }
 
+  try {
+    const rpcTxs = await fetchHeliusRpcTokenAccountTransactions(mint, safeLimit, timeframe);
+    if (rpcTxs.length >= RPC_MIN_REQUIRED_TRANSFERS) {
+      const reason = `Lấy ${rpcTxs.length} giao dịch thật từ Helius RPC bằng token accounts với throttling/retry/backoff.`;
+      saveCache(rpcTxs, "helius-rpc-token-accounts", reason);
+      return {
+        txs: rpcTxs,
+        source: "helius-rpc-token-accounts",
+        reason,
+      };
+    }
+  } catch (error) {
+    console.warn("[WashTradingAI] Helius RPC token account strategy failed:", error instanceof Error ? error.message : error);
+  }
+
+  const txs = createDemoTransactions(mint, symbol, safeLimit, timeframe);
+  const reason =
+    "Helius API key có tồn tại nhưng không lấy đủ token transfers cho mint này. Có thể token ít giao dịch gần đây, mint address không xuất hiện trong swap, hoặc key bị giới hạn/rate limit.";
+  saveCache(txs, "demo-fallback", reason);
   return {
-    txs: createDemoTransactions(mint, symbol, limit, timeframe),
+    txs,
     source: "demo-fallback",
-    reason:
-      "Helius API key có tồn tại nhưng không lấy đủ token transfers cho mint này. Có thể token ít giao dịch gần đây, mint address không xuất hiện trong swap, hoặc key bị giới hạn/rate limit.",
+    reason,
   };
 }
 
@@ -860,7 +966,8 @@ export async function analyzeWashTradingWithAI(params: {
   const symbol = (params.symbol ?? "TOKEN").trim() || "TOKEN";
   const timeframe = params.timeframe ?? "24h";
   const algorithm: GnnAlgorithm = params.algorithm ?? "GCN";
-  const limit = Math.min(Math.max(params.limit ?? 200, 50), 500);
+  const requestedLimit = Math.min(Math.max(params.limit ?? 80, 20), 200);
+  const limit = getSafeApiLimit(requestedLimit, timeframe);
   const analyzedAt = new Date().toISOString();
   const detectionLog: WashTradingAIResult["detectionLog"] = [];
 

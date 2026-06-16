@@ -11,14 +11,14 @@ const aiAnalyzeBodySchema = z.object({
   symbol: z.string().trim().min(1).max(24).optional().default("TOKEN"),
   timeframe: timeframeSchema.optional().default("24h"),
   algorithm: algorithmSchema.optional().default("GCN"),
-  limit: z.coerce.number().int().min(50).max(500).optional().default(200),
+  limit: z.coerce.number().int().min(20).max(200).optional().default(80),
 });
 
 const aiAnalyzeQuerySchema = z.object({
   symbol: z.string().trim().min(1).max(24).optional().default("TOKEN"),
   timeframe: timeframeSchema.optional().default("24h"),
   algorithm: algorithmSchema.optional().default("GCN"),
-  limit: z.coerce.number().int().min(50).max(500).optional().default(200),
+  limit: z.coerce.number().int().min(20).max(200).optional().default(80),
 });
 
 const app = new Hono()
