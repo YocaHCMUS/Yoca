@@ -426,17 +426,18 @@
 
 .graphContainer {
   position: relative;
-  min-height: 380px;
+  min-height: 520px;
   border-radius: 12px;
   border: 1px solid var(--border-light);
   background: var(--graph-bg);
-  padding: 10px 12px 12px;
+  padding: 12px 14px 14px;
+  overflow: hidden;
 }
 
 .graphEcharts {
   width: 100%;
-  height: 330px;
-  min-height: 330px;
+  height: 465px;
+  min-height: 465px;
   display: block;
 }
 
@@ -763,10 +764,13 @@
   position: absolute;
   top: 10px;
   left: 12px;
+  right: 12px;
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
   z-index: 2;
+  pointer-events: none;
+  padding-right: 265px;
 
   span {
     padding: 4px 8px;
@@ -1092,7 +1096,7 @@
 
 .graphEchartsFullscreen {
   height: calc(100vh - 190px);
-  min-height: 520px;
+  min-height: 640px;
 }
 
 .graphModalGuide {
@@ -1185,7 +1189,16 @@
 
   .graphEchartsFullscreen {
     height: calc(100vh - 230px);
+    min-height: 460px;
+  }
+
+  .graphEcharts {
+    height: 420px;
     min-height: 420px;
+  }
+
+  .graphStats {
+    padding-right: 0;
   }
 
   .graphModalGuide {

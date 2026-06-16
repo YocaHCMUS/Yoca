@@ -173,6 +173,13 @@ const FeatureBar: React.FC<{ label: string; value: number }> = ({ label, value }
   );
 };
 
+interface ReadableGraphEdge extends GraphEdge {
+  id: string;
+  transferCount: number;
+  weight: number;
+  curveness: number;
+}
+
 const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscreen?: boolean }> = ({ nodes, edges, isFullscreen = false }) => {
   const chartRef = useRef<HTMLDivElement | null>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
@@ -185,23 +192,72 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
           { id: "empty-2", type: "normal" as const, label: "Run AI" },
         ];
 
-    return sourceNodes.slice(0, 80);
-  }, [nodes]);
+    return sourceNodes.slice(0, isFullscreen ? 120 : 80);
+  }, [nodes, isFullscreen]);
 
   const visibleNodeIds = useMemo(
     () => new Set(visibleNodes.map((node) => node.id)),
     [visibleNodes],
   );
 
-  const visibleEdges = useMemo(
-    () =>
-      edges
-        .filter((edge) => visibleNodeIds.has(edge.from) && visibleNodeIds.has(edge.to))
-        .slice(0, 160),
-    [edges, visibleNodeIds],
-  );
+  const readableEdges = useMemo<ReadableGraphEdge[]>(() => {
+    const grouped = new Map<string, ReadableGraphEdge>();
 
-  const suspiciousEdges = visibleEdges.filter((edge) => edge.suspicious).length;
+    edges
+      .filter((edge) => visibleNodeIds.has(edge.from) && visibleNodeIds.has(edge.to))
+      .forEach((edge) => {
+        const key = `${edge.from}->${edge.to}`;
+        const current = grouped.get(key);
+
+        if (!current) {
+          grouped.set(key, {
+            ...edge,
+            id: key,
+            amount: edge.amount || 0,
+            transferCount: 1,
+            weight: 0,
+            curveness: 0,
+          });
+          return;
+        }
+
+        current.amount += edge.amount || 0;
+        current.transferCount += 1;
+        current.suspicious = current.suspicious || edge.suspicious;
+      });
+
+    const groupedList = Array.from(grouped.values());
+    const maxAmount = Math.max(...groupedList.map((edge) => edge.amount || 0), 1);
+    const pairGroups = new Map<string, ReadableGraphEdge[]>();
+
+    groupedList.forEach((edge) => {
+      const pairKey = [edge.from, edge.to].sort().join("<->");
+      const pairEdges = pairGroups.get(pairKey) ?? [];
+      pairEdges.push(edge);
+      pairGroups.set(pairKey, pairEdges);
+    });
+
+    pairGroups.forEach((pairEdges) => {
+      pairEdges
+        .sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to))
+        .forEach((edge, index) => {
+          const directionSign = edge.from < edge.to ? 1 : -1;
+          const magnitude = pairEdges.length > 1 ? 0.22 + index * 0.1 : 0.12;
+          edge.curveness = directionSign * magnitude;
+        });
+    });
+
+    return groupedList
+      .map((edge) => ({
+        ...edge,
+        weight: Math.log10((edge.amount || 0) + 1) / Math.log10(maxAmount + 1),
+      }))
+      .sort((a, b) => Number(b.suspicious) - Number(a.suspicious) || b.amount - a.amount)
+      .slice(0, isFullscreen ? 140 : 90);
+  }, [edges, visibleNodeIds, isFullscreen]);
+
+  const suspiciousEdges = readableEdges.filter((edge) => edge.suspicious).length;
+  const groupedCount = Math.max(0, edges.length - readableEdges.length);
 
   const option = useMemo<echarts.EChartsOption>(() => {
     const categories = [
@@ -216,26 +272,36 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
       return 2;
     };
 
-    const graphNodes = visibleNodes.map((node) => {
-      const score = typeof node.score === "number" ? Math.round(node.score * 100) : 0;
+    const initialRadius = isFullscreen ? 650 : 430;
+    const graphNodes = visibleNodes.map((node, index) => {
+      const score = typeof node.score === "number" ? Math.round(Math.max(0, Math.min(1, node.score)) * 100) : 0;
       const isWash = node.type === "wash";
       const isBridge = node.type === "bridge";
+      const angle = (Math.PI * 2 * index) / Math.max(visibleNodes.length, 1);
+      const riskRadiusFactor = isWash ? 0.62 : isBridge ? 0.78 : 1;
+      const ringOffset = (index % 3) * (isFullscreen ? 42 : 26);
+      const radius = initialRadius * riskRadiusFactor + ringOffset;
 
       return {
         id: node.id,
         name: node.label || shortAddress(node.id),
         value: score,
         category: categoryIndex(node.type),
-        symbolSize: isWash ? Math.max(34, 24 + score * 0.28) : isBridge ? 30 : 22,
+        x: Math.cos(angle) * radius,
+        y: Math.sin(angle) * radius,
+        symbolSize: isWash ? Math.max(34, 24 + score * 0.28) : isBridge ? 32 : 24,
         draggable: true,
         label: {
-          show: isWash || isBridge,
+          show: isWash || isBridge || isFullscreen,
           formatter: "{b}",
+          position: "right",
+          distance: 8,
+          fontSize: isFullscreen ? 12 : 10,
         },
         itemStyle: {
           borderWidth: isWash ? 3 : 1.5,
           borderColor: isWash ? "#fecaca" : isBridge ? "#fde68a" : "#94a3b8",
-          shadowBlur: isWash ? 12 : 4,
+          shadowBlur: isWash ? 13 : 5,
           shadowColor: isWash ? "rgba(226, 75, 74, 0.55)" : "rgba(15, 23, 42, 0.25)",
         },
         tooltip: {
@@ -249,44 +315,68 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
       };
     });
 
-    const graphLinks = visibleEdges.map((edge) => ({
-      source: edge.from,
-      target: edge.to,
-      value: edge.amount,
-      suspicious: edge.suspicious,
-      lineStyle: {
-        width: edge.suspicious ? 2.6 : 1,
-        opacity: edge.suspicious ? 0.9 : 0.32,
-        color: edge.suspicious ? "#e24b4a" : "#64748b",
-        curveness: edge.suspicious ? 0.18 : 0.05,
-      },
-      emphasis: {
+    const graphLinks = readableEdges.map((edge) => {
+      const isLargeFlow = edge.weight >= 0.72;
+      const lineWidth = edge.suspicious
+        ? 1.8 + edge.weight * (isFullscreen ? 3.8 : 2.8)
+        : 0.8 + edge.weight * 1.4;
+
+      return {
+        source: edge.from,
+        target: edge.to,
+        value: edge.amount,
+        suspicious: edge.suspicious,
         lineStyle: {
-          width: edge.suspicious ? 4 : 2.4,
+          width: lineWidth,
+          opacity: edge.suspicious ? 0.78 : 0.24,
+          color: edge.suspicious ? "#e24b4a" : "#64748b",
+          curveness: edge.curveness,
         },
-      },
-      label: {
-        show: edge.suspicious,
-        formatter: formatNumber(edge.amount),
-        color: "#e24b4a",
-        fontSize: 10,
-      },
-      tooltip: {
-        formatter: [
-          `<strong>${edge.suspicious ? "Suspicious flow" : "Transfer flow"}</strong>`,
-          `From: ${shortAddress(edge.from)}`,
-          `To: ${shortAddress(edge.to)}`,
-          `Amount: ${formatNumber(edge.amount)}`,
-        ].join("<br/>"),
-      },
-    }));
+        emphasis: {
+          focus: "adjacency",
+          lineStyle: {
+            width: Math.max(lineWidth + 2, edge.suspicious ? 5 : 3),
+            opacity: 1,
+          },
+          label: {
+            show: true,
+            formatter: `${formatNumber(edge.amount)}${edge.transferCount > 1 ? ` · ${edge.transferCount} tx` : ""}`,
+            color: edge.suspicious ? "#dc2626" : "#334155",
+            fontSize: 11,
+            fontWeight: 700,
+            backgroundColor: "rgba(255,255,255,0.92)",
+            borderColor: "rgba(148,163,184,0.45)",
+            borderWidth: 1,
+            borderRadius: 6,
+            padding: [3, 6],
+          },
+        },
+        label: {
+          // Do not render all edge amounts by default. It prevents overlap.
+          // Amount is shown on hover/emphasis and in tooltip.
+          show: false,
+          formatter: isLargeFlow ? formatNumber(edge.amount) : "",
+        },
+        tooltip: {
+          formatter: [
+            `<strong>${edge.suspicious ? "Suspicious flow" : "Transfer flow"}</strong>`,
+            `From: ${shortAddress(edge.from)}`,
+            `To: ${shortAddress(edge.to)}`,
+            `Total amount: ${formatNumber(edge.amount)}`,
+            `Grouped transfers: ${edge.transferCount}`,
+          ].join("<br/>"),
+        },
+      };
+    });
 
     return {
       backgroundColor: "transparent",
       legend: {
-        top: 6,
-        right: 12,
+        top: 8,
+        right: 16,
         orient: "horizontal",
+        itemWidth: 18,
+        itemHeight: 10,
         textStyle: {
           color: "inherit",
           fontSize: 11,
@@ -296,8 +386,10 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
       tooltip: {
         trigger: "item",
         confine: true,
-        backgroundColor: "rgba(15, 23, 42, 0.92)",
+        enterable: false,
+        backgroundColor: "rgba(15, 23, 42, 0.94)",
         borderColor: "rgba(148, 163, 184, 0.25)",
+        extraCssText: "box-shadow: 0 16px 36px rgba(0,0,0,.28); border-radius: 10px;",
         textStyle: {
           color: "#f8fafc",
           fontSize: 12,
@@ -308,38 +400,42 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
           name: "Wallet transaction graph",
           type: "graph",
           layout: "force",
-          animation: false,
+          animation: true,
+          animationDuration: 500,
+          layoutAnimation: true,
           roam: true,
           roamTrigger: "global",
           draggable: true,
           focusNodeAdjacency: true,
           scaleLimit: {
-            min: 0.35,
-            max: 8,
+            min: 0.2,
+            max: 10,
           },
           categories,
           data: graphNodes,
           links: graphLinks,
           edgeSymbol: ["none", "arrow"],
-          edgeSymbolSize: [0, 8],
+          edgeSymbolSize: [0, isFullscreen ? 10 : 8],
           label: {
             position: "right",
             formatter: "{b}",
             color: "var(--graph-text)",
-            fontSize: 11,
+            fontSize: isFullscreen ? 12 : 11,
+            distance: 8,
+            hideOverlap: true,
           },
           edgeLabel: {
             show: false,
           },
           force: {
-            edgeLength: [45, 135],
-            repulsion: 260,
-            gravity: 0.12,
-            friction: 0.62,
+            edgeLength: isFullscreen ? [270, 560] : [190, 420],
+            repulsion: isFullscreen ? 1800 : 1250,
+            gravity: isFullscreen ? 0.025 : 0.035,
+            friction: 0.24,
           },
           lineStyle: {
             color: "source",
-            curveness: 0.08,
+            curveness: 0.18,
           },
           emphasis: {
             focus: "adjacency",
@@ -350,23 +446,10 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
               opacity: 1,
             },
           },
-        },
+        } as any,
       ],
-      // ECharts supports this in newer graph examples. It is harmless if the
-      // installed version ignores it.
-      thumbnail: {
-        width: "16%",
-        height: "16%",
-        right: 12,
-        bottom: 10,
-        windowStyle: {
-          color: "rgba(140, 212, 250, 0.28)",
-          borderColor: "rgba(30, 64, 175, 0.7)",
-          opacity: 1,
-        },
-      },
     } as echarts.EChartsOption;
-  }, [visibleNodes, visibleEdges]);
+  }, [visibleNodes, readableEdges, isFullscreen]);
 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -380,6 +463,11 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
     const chart = chartInstanceRef.current;
     chart.setOption(option, true);
 
+    const timer = window.setTimeout(() => {
+      chart.resize();
+      chart.dispatchAction({ type: "restore" });
+    }, 80);
+
     const resizeObserver = new ResizeObserver(() => {
       chart.resize();
     });
@@ -387,6 +475,7 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
     resizeObserver.observe(chartRef.current);
 
     return () => {
+      window.clearTimeout(timer);
       resizeObserver.disconnect();
     };
   }, [option]);
@@ -402,9 +491,11 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
     <div className={`${styles.graphContainer} ${isFullscreen ? styles.graphContainerFullscreen : ""}`}>
       <div className={styles.graphStats}>
         <span>{nodes.length} nodes</span>
-        <span>{edges.length} edges</span>
-        <span>{suspiciousEdges} suspicious flows visible</span>
-        <span>Force graph · draggable · zoom/pan</span>
+        <span>{edges.length} raw edges</span>
+        <span>{readableEdges.length} visible flows</span>
+        <span>{suspiciousEdges} suspicious groups</span>
+        {groupedCount > 0 && <span>{groupedCount} edges grouped</span>}
+        <span>Hover edge để xem amount</span>
       </div>
 
       <div ref={chartRef} className={`${styles.graphEcharts} ${isFullscreen ? styles.graphEchartsFullscreen : ""}`} />
