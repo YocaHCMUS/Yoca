@@ -20,6 +20,8 @@
 
 .info {
     display: flex;
+    flex: 1;
+    min-width: 0;
     flex-direction: column;
     gap: 4px;
 }
@@ -208,8 +210,8 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    width: fit-content;
-    margin-top: 8px;
+    flex-shrink: 0;
+    margin-left: auto;
     padding: 8px 12px;
     border: 1px solid rgba(133, 183, 235, 0.35);
     border-radius: 8px;
@@ -219,6 +221,7 @@
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.01em;
+    white-space: nowrap;
     transition: transform 0.15s ease, opacity 0.15s ease, border-color 0.15s ease;
 
     &:hover {
@@ -245,7 +248,23 @@
 
 
 .aiWashButtonCompact {
-    margin-top: 6px;
     padding: 7px 10px;
     font-size: 11px;
+}
+
+
+@media (max-width: 768px) {
+    .container {
+        flex-wrap: wrap;
+        align-items: flex-start;
+    }
+
+    .info {
+        flex: 1 1 calc(100% - 56px);
+    }
+
+    .aiWashButton {
+        width: 100%;
+        margin-left: 0;
+    }
 }
