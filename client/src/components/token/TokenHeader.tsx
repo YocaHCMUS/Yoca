@@ -17,6 +17,8 @@ interface TokenHeaderProps {
   marketCapRank?: number | null;
   /** If true, only show logo + symbol + name + rank (no address/icons) */
   compact?: boolean;
+  /** Sidebar layout for /tokens/:address/:poolAddress to avoid overlapping compact left panel */
+  sidebar?: boolean;
 }
 
 export const TokenHeader = ({
@@ -31,6 +33,7 @@ export const TokenHeader = ({
   tokenAge,
   marketCapRank,
   compact = false,
+  sidebar = false,
 }: TokenHeaderProps) => {
   const copyToClipboard = () => navigator.clipboard.writeText(address);
   const { tr } = useLocalization();
@@ -58,8 +61,20 @@ export const TokenHeader = ({
     symbol || name || "TOKEN",
   )}&timeframe=24h`;
 
+  const aiWashButton = (
+    <Link
+      to={washTradingUrl}
+      className={`${styles.aiWashButton} ${compact ? styles.aiWashButtonCompact : ""} ${sidebar ? styles.aiWashButtonSidebar : ""}`}
+      title="Wash Trading Detection"
+    >
+      <span className={styles.aiWashIcon}>AI</span>
+      <span className={styles.aiWashLabelFull}>Wash Trading Detection</span>
+      <span className={styles.aiWashLabelShort}>Wash Trading Detection</span>
+    </Link>
+  );
+
   return (
-    <div className={`${styles.container} ${compact ? styles.compact : ""}`}>
+    <div className={`${styles.container} ${compact ? styles.compact : ""} ${sidebar ? styles.sidebar : ""}`}>
       <img
         className={styles.image}
         src={imageUrl ?? `https://api.dicebear.com/7.x/identicon/svg?seed=${address}`}
@@ -83,6 +98,8 @@ export const TokenHeader = ({
                 {address.slice(0, 4)}...{address.slice(-4)}
               </span>
             </div>
+
+            {sidebar && aiWashButton}
 
             <div className={styles.externalLinks}>
               <button className={styles.iconBtn} title={tr("token.header.copy")} onClick={copyToClipboard}>
@@ -123,15 +140,11 @@ export const TokenHeader = ({
             </div>
           </div>
         )}
+
+        {sidebar && compact && aiWashButton}
       </div>
 
-      <Link
-        to={washTradingUrl}
-        className={`${styles.aiWashButton} ${compact ? styles.aiWashButtonCompact : ""}`}
-      >
-        <span className={styles.aiWashIcon}>AI</span>
-        Wash Trading Detection
-      </Link>
+      {!sidebar && aiWashButton}
     </div>
   );
 };
