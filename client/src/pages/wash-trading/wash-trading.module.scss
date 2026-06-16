@@ -309,7 +309,7 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 
   @media (max-width: 920px) {
     grid-template-columns: repeat(2, 1fr);
@@ -328,7 +328,7 @@
 }
 
 .metricCard {
-  padding: 14px 16px;
+  padding: 10px 20px;
 }
 
 .metricLabel {
@@ -880,4 +880,83 @@
   color: #9a3412;
   font-weight: 650;
   box-shadow: 0 8px 20px rgba(249, 115, 22, 0.10);
+}
+
+/* Collapsible AI Verdict control button in fixed topbar */
+.verdictToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(133, 183, 235, 0.26);
+  background: rgba(133, 183, 235, 0.10);
+  color: #85b7eb;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.16s ease, opacity 0.16s ease, background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    background: rgba(133, 183, 235, 0.16);
+    border-color: rgba(133, 183, 235, 0.42);
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(133, 183, 235, 0.75);
+    outline-offset: 2px;
+  }
+}
+
+.verdictToggleActive {
+  background: rgba(99, 153, 34, 0.14);
+  border-color: rgba(99, 153, 34, 0.42);
+  color: #8fcf3f;
+}
+
+.verdictToggleDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 16%, transparent);
+}
+
+.verdictToggleIcon {
+  font-size: 11px;
+  opacity: 0.86;
+  transform: translateY(-1px);
+}
+
+.light .verdictToggle {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.08);
+
+  &:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.14);
+  }
+}
+
+.light .verdictToggleActive {
+  background: #ecfdf5;
+  border-color: #86efac;
+  color: #047857;
+  box-shadow: 0 8px 18px rgba(4, 120, 87, 0.08);
+}
+
+@media (max-width: 720px) {
+  .verdictToggle {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
 }

@@ -494,9 +494,11 @@ const WashTradingPage: React.FC = () => {
   const [algoTab, setAlgoTab] = useState<GnnAlgorithm>(["GCN", "GAT", "GraphSAGE"].includes(algorithmFromUrl) ? algorithmFromUrl : "GCN");
   const [walletFilter, setWalletFilter] = useState<"All" | "High risk" | "New">("All");
   const [selectedWalletAddress, setSelectedWalletAddress] = useState<string | null>(null);
+  const [isAiVerdictOpen, setIsAiVerdictOpen] = useState(true);
 
   useEffect(() => {
     setManualMint(mint || "");
+    setIsAiVerdictOpen(true);
   }, [mint]);
 
   useEffect(() => {
@@ -638,6 +640,18 @@ const WashTradingPage: React.FC = () => {
                     Open token
                   </button>
                 )}
+                <button
+                  type="button"
+                  className={`${styles.verdictToggle} ${isAiVerdictOpen ? styles.verdictToggleActive : ""}`}
+                  onClick={() => setIsAiVerdictOpen((previous) => !previous)}
+                  aria-expanded={isAiVerdictOpen}
+                  aria-controls="ai-verdict-panel"
+                  title={isAiVerdictOpen ? "Ẩn AI Verdict" : "Hiện AI Verdict"}
+                >
+                  <span className={styles.verdictToggleDot} />
+                  <span>AI Verdict</span>
+                  <span className={styles.verdictToggleIcon}>{isAiVerdictOpen ? "▴" : "▾"}</span>
+                </button>
                 <button className={`${styles.btnPrimary} ${isAnalyzing ? styles.loading : ""}`} onClick={handleAnalyze} disabled={isAnalyzing}>
                   {isAnalyzing ? "Đang phân tích..." : "Run AI Analyze ↗"}
                 </button>
@@ -649,22 +663,24 @@ const WashTradingPage: React.FC = () => {
         <div className={styles.scrollBody}>
           {error && <div className={styles.errorBox}>{error}</div>}
 
-        <div className={styles.aiSummaryCard}>
-          <div className={styles.aiSummaryHeader}>
-            <span className={styles.aiPill}>AI Verdict</span>
-            <strong>{result?.aiAnalysis.verdict?.replaceAll("_", " ") ?? "Waiting for analysis"}</strong>
-          </div>
-          <p>{result?.aiAnalysis.summary ?? "Nhấn Run AI Analyze để phân tích circular trading, amount similarity, timing regularity và graph features của token này."}</p>
-          {result?.dataSource && (
-            <div className={`${styles.sourceNotice} ${result.dataSource === "demo-fallback" ? styles.sourceWarning : styles.sourceLive}`}>
-              Data source: <strong>{result.dataSource}</strong>
-              {result.dataSourceReason ? <span> · {result.dataSourceReason}</span> : null}
+        {isAiVerdictOpen && (
+          <div id="ai-verdict-panel" className={styles.aiSummaryCard}>
+            <div className={styles.aiSummaryHeader}>
+              <span className={styles.aiPill}>AI Verdict</span>
+              <strong>{result?.aiAnalysis.verdict?.replaceAll("_", " ") ?? "Waiting for analysis"}</strong>
             </div>
-          )}
-          {result?.aiAnalysis.recommendation && (
-            <div className={styles.recommendation}>{result.aiAnalysis.recommendation}</div>
-          )}
-        </div>
+            <p>{result?.aiAnalysis.summary ?? "Nhấn Run AI Analyze để phân tích circular trading, amount similarity, timing regularity và graph features của token này."}</p>
+            {result?.dataSource && (
+              <div className={`${styles.sourceNotice} ${result.dataSource === "demo-fallback" ? styles.sourceWarning : styles.sourceLive}`}>
+                Data source: <strong>{result.dataSource}</strong>
+                {result.dataSourceReason ? <span> · {result.dataSourceReason}</span> : null}
+              </div>
+            )}
+            {result?.aiAnalysis.recommendation && (
+              <div className={styles.recommendation}>{result.aiAnalysis.recommendation}</div>
+            )}
+          </div>
+        )}
 
         <div className={styles.metricsGrid}>
           {[
