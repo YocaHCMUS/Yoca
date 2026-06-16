@@ -591,58 +591,63 @@ const WashTradingPage: React.FC = () => {
   return (
     <PageWrapper>
       <div className={`${styles.page} ${isLight ? styles.light : ""}`}>
-        <div className={styles.breadcrumb}>
-          <Link to="/tokens" className={styles.breadcrumbLink}>Tokens</Link>
-          <span>/</span>
-          {mint ? <Link to={`/tokens/${mint}`} className={styles.breadcrumbLink}>{symbol || shortAddress(mint)}</Link> : <span>Manual token</span>}
-          <span>/</span>
-          <span>Wash Trading Detection</span>
-        </div>
-
-        <div className={styles.topbar}>
-          <div className={styles.topbarLeft}>
-            <span className={styles.pageIcon}>◎</span>
-            <div>
-              <h1 className={styles.pageTitle}>AI Wash Trading Detection</h1>
-              <p className={styles.pageSubtitle}>
-                GNN-inspired analysis for {symbol || "TOKEN"} · {shortAddress(targetMint)}
-              </p>
+        <div className={styles.fixedControls}>
+          <div className={styles.fixedControlsInner}>
+            <div className={styles.breadcrumb}>
+              <Link to="/tokens" className={styles.breadcrumbLink}>Tokens</Link>
+              <span>/</span>
+              {mint ? <Link to={`/tokens/${mint}`} className={styles.breadcrumbLink}>{symbol || shortAddress(mint)}</Link> : <span>Manual token</span>}
+              <span>/</span>
+              <span>Wash Trading Detection</span>
             </div>
-            <span className={styles.suspiciousBadge}>{suspiciousCount} Suspicious</span>
-          </div>
 
-          <div className={styles.topbarRight}>
-            {!mint && (
-              <input
-                className={styles.mintInput}
-                value={manualMint}
-                onChange={(event) => setManualMint(event.target.value)}
-                placeholder="Token mint address"
-              />
-            )}
-            <input
-              className={styles.symbolInput}
-              value={symbol}
-              onChange={(event) => setSymbol(event.target.value.toUpperCase())}
-              placeholder="Symbol"
-            />
-            <select className={styles.tokenSelect} value={timeframe} onChange={(event) => handleTimeframeChange(event.target.value as Timeframe)}>
-              <option value="24h">Last 24h</option>
-              <option value="7d">Last 7d</option>
-              <option value="30d">Last 30d</option>
-            </select>
-            {!mint && (
-              <button className={styles.btnSecondary} onClick={handleManualOpen}>
-                Open token
-              </button>
-            )}
-            <button className={`${styles.btnPrimary} ${isAnalyzing ? styles.loading : ""}`} onClick={handleAnalyze} disabled={isAnalyzing}>
-              {isAnalyzing ? "Đang phân tích..." : "Run AI Analyze ↗"}
-            </button>
+            <div className={styles.topbar}>
+              <div className={styles.topbarLeft}>
+                <span className={styles.pageIcon}>◎</span>
+                <div>
+                  <h1 className={styles.pageTitle}>AI Wash Trading Detection</h1>
+                  <p className={styles.pageSubtitle}>
+                    GNN-inspired analysis for {symbol || "TOKEN"} · {shortAddress(targetMint)}
+                  </p>
+                </div>
+                <span className={styles.suspiciousBadge}>{suspiciousCount} Suspicious</span>
+              </div>
+
+              <div className={styles.topbarRight}>
+                {!mint && (
+                  <input
+                    className={styles.mintInput}
+                    value={manualMint}
+                    onChange={(event) => setManualMint(event.target.value)}
+                    placeholder="Token mint address"
+                  />
+                )}
+                <input
+                  className={styles.symbolInput}
+                  value={symbol}
+                  onChange={(event) => setSymbol(event.target.value.toUpperCase())}
+                  placeholder="Symbol"
+                />
+                <select className={styles.tokenSelect} value={timeframe} onChange={(event) => handleTimeframeChange(event.target.value as Timeframe)}>
+                  <option value="24h">Last 24h</option>
+                  <option value="7d">Last 7d</option>
+                  <option value="30d">Last 30d</option>
+                </select>
+                {!mint && (
+                  <button className={styles.btnSecondary} onClick={handleManualOpen}>
+                    Open token
+                  </button>
+                )}
+                <button className={`${styles.btnPrimary} ${isAnalyzing ? styles.loading : ""}`} onClick={handleAnalyze} disabled={isAnalyzing}>
+                  {isAnalyzing ? "Đang phân tích..." : "Run AI Analyze ↗"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        {error && <div className={styles.errorBox}>{error}</div>}
+        <div className={styles.scrollBody}>
+          {error && <div className={styles.errorBox}>{error}</div>}
 
         <div className={styles.aiSummaryCard}>
           <div className={styles.aiSummaryHeader}>
@@ -803,6 +808,7 @@ const WashTradingPage: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </PageWrapper>

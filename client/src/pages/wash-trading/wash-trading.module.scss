@@ -26,7 +26,7 @@
   font-family: 'SF Pro Display', 'Inter', system-ui, sans-serif;
   padding: 20px 24px 40px;
   min-height: 100vh;
-  overflow-y: auto;
+  overflow: visible;
   max-width: 1440px;
   margin: 0 auto;
 
@@ -52,6 +52,73 @@
     --graph-node-stroke: #c7c7cc;
     --graph-line: #d2d2d7;
     --graph-text: #6e6e73;
+  }
+}
+
+.fixedControls {
+  position: fixed;
+  top: 3rem;
+  left: 0;
+  right: 0;
+  z-index: 7900;
+  pointer-events: none;
+}
+
+.fixedControlsInner {
+  pointer-events: auto;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 12px 24px 14px;
+  background:
+    linear-gradient(180deg, rgba(14, 14, 14, 0.98), rgba(14, 14, 14, 0.9)),
+    radial-gradient(circle at 16% 0%, rgba(133, 183, 235, 0.16), transparent 34%),
+    radial-gradient(circle at 88% 0%, rgba(239, 159, 39, 0.12), transparent 30%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.light .fixedControlsInner {
+  background:
+    linear-gradient(180deg, rgba(249, 249, 251, 0.96), rgba(249, 249, 251, 0.88)),
+    radial-gradient(circle at 16% 0%, rgba(11, 87, 208, 0.12), transparent 34%),
+    radial-gradient(circle at 88% 0%, rgba(239, 159, 39, 0.12), transparent 30%);
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+}
+
+.fixedControls .breadcrumb {
+  margin-bottom: 10px;
+}
+
+.fixedControls .topbar {
+  margin-bottom: 0;
+}
+
+.scrollBody {
+  padding-top: 85px;
+}
+
+@media (max-width: 1180px) {
+  .scrollBody {
+    padding-top: 170px;
+  }
+}
+
+@media (max-width: 720px) {
+  .fixedControlsInner {
+    padding: 10px 14px 12px;
+  }
+
+  .scrollBody {
+    padding-top: 220px;
+  }
+}
+
+@media (max-width: 420px) {
+  .scrollBody {
+    padding-top: 258px;
   }
 }
 
