@@ -173,7 +173,7 @@ const FeatureBar: React.FC<{ label: string; value: number }> = ({ label, value }
   );
 };
 
-const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[] }> = ({ nodes, edges }) => {
+const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscreen?: boolean }> = ({ nodes, edges, isFullscreen = false }) => {
   const chartRef = useRef<HTMLDivElement | null>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
 
@@ -399,7 +399,7 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[] }> = ({ no
   }, []);
 
   return (
-    <div className={styles.graphContainer}>
+    <div className={`${styles.graphContainer} ${isFullscreen ? styles.graphContainerFullscreen : ""}`}>
       <div className={styles.graphStats}>
         <span>{nodes.length} nodes</span>
         <span>{edges.length} edges</span>
@@ -407,13 +407,15 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[] }> = ({ no
         <span>Force graph · draggable · zoom/pan</span>
       </div>
 
-      <div ref={chartRef} className={styles.graphEcharts} />
+      <div ref={chartRef} className={`${styles.graphEcharts} ${isFullscreen ? styles.graphEchartsFullscreen : ""}`} />
 
-      <div className={styles.graphFooter}>
-        {nodes.length > 0
-          ? "Live force-directed graph from backend graphData. Drag nodes, zoom, pan, and hover edges/wallets to inspect flow details."
-          : "Waiting for backend graphData. Click AI Analyze to build the wallet transaction graph."}
-      </div>
+      {!isFullscreen && (
+        <div className={styles.graphFooter}>
+          {nodes.length > 0
+            ? "Live force-directed graph from backend graphData. Drag nodes, zoom, pan, and hover edges/wallets to inspect flow details."
+            : "Waiting for backend graphData. Click AI Analyze to build the wallet transaction graph."}
+        </div>
+      )}
     </div>
   );
 };
@@ -494,12 +496,32 @@ const WashTradingPage: React.FC = () => {
   const [algoTab, setAlgoTab] = useState<GnnAlgorithm>(["GCN", "GAT", "GraphSAGE"].includes(algorithmFromUrl) ? algorithmFromUrl : "GCN");
   const [walletFilter, setWalletFilter] = useState<"All" | "High risk" | "New">("All");
   const [selectedWalletAddress, setSelectedWalletAddress] = useState<string | null>(null);
+  const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
   const [isAiVerdictOpen, setIsAiVerdictOpen] = useState(true);
 
   useEffect(() => {
     setManualMint(mint || "");
     setIsAiVerdictOpen(true);
   }, [mint]);
+
+  useEffect(() => {
+    if (!isGraphModalOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsGraphModalOpen(false);
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isGraphModalOpen]);
 
   useEffect(() => {
     setSymbol(symbolFromUrl);
@@ -703,16 +725,27 @@ const WashTradingPage: React.FC = () => {
               <div className={styles.cardHeader}>
                 <span className={styles.cardIcon}>🔗</span>
                 <h2 className={styles.cardTitle}>Transaction Graph — GNN Cluster View</h2>
-                <div className={styles.algoTabs}>
-                  {(["GCN", "GAT", "GraphSAGE"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      className={`${styles.algoTab} ${algoTab === tab ? styles.algoTabActive : ""}`}
-                      onClick={() => handleAlgorithmChange(tab)}
-                    >
-                      {tab}
-                    </button>
-                  ))}
+                <div className={styles.graphActions}>
+                  <div className={styles.algoTabs}>
+                    {(["GCN", "GAT", "GraphSAGE"] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        className={`${styles.algoTab} ${algoTab === tab ? styles.algoTabActive : ""}`}
+                        onClick={() => handleAlgorithmChange(tab)}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.graphFullscreenButton}
+                    onClick={() => setIsGraphModalOpen(true)}
+                    disabled={!result?.graphData.nodes?.length}
+                    title={result?.graphData.nodes?.length ? "Mở graph toàn màn hình" : "Chạy AI Analyze để có graph"}
+                  >
+                    ⛶ Fullscreen
+                  </button>
                 </div>
               </div>
               <NetworkGraph nodes={result?.graphData.nodes ?? []} edges={result?.graphData.edges ?? []} />
@@ -826,6 +859,52 @@ const WashTradingPage: React.FC = () => {
           </div>
         </div>
         </div>
+
+        {isGraphModalOpen && (
+          <div
+            className={styles.graphModalBackdrop}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Transaction graph fullscreen view"
+            onClick={() => setIsGraphModalOpen(false)}
+          >
+            <div className={styles.graphModal} onClick={(event) => event.stopPropagation()}>
+              <div className={styles.graphModalHeader}>
+                <div>
+                  <h2 className={styles.graphModalTitle}>Transaction Graph — GNN Cluster View</h2>
+                  <p className={styles.graphModalSubtitle}>
+                    {symbol || "TOKEN"} · {shortAddress(targetMint)} · {result?.graphData.nodes.length ?? 0} nodes · {result?.graphData.edges.length ?? 0} edges
+                  </p>
+                </div>
+
+                <div className={styles.graphModalControls}>
+                  <div className={styles.algoTabs}>
+                    {(["GCN", "GAT", "GraphSAGE"] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        className={`${styles.algoTab} ${algoTab === tab ? styles.algoTabActive : ""}`}
+                        onClick={() => handleAlgorithmChange(tab)}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+                  <button type="button" className={styles.graphCloseButton} onClick={() => setIsGraphModalOpen(false)}>
+                    ✕ Close
+                  </button>
+                </div>
+              </div>
+
+              <NetworkGraph nodes={result?.graphData.nodes ?? []} edges={result?.graphData.edges ?? []} isFullscreen />
+
+              <div className={styles.graphModalGuide} aria-label="Graph fullscreen controls">
+                <span>🖱 Kéo node để tách cụm ví</span>
+                <span>🔍 Cuộn chuột để zoom</span>
+                <span>⌨ Esc hoặc Close để đóng</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </PageWrapper>
   );
