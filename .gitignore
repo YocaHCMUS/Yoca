@@ -16,7 +16,13 @@ dist-ssr
 *.local
 .gitignore
 package-lock.json
-server/postgresdb
+server/postgresdb/*
+!server/postgresdb/migrations/
+server/postgresdb/migrations/*
+!server/postgresdb/migrations/0007_managed_helius_webhooks.sql
+!server/postgresdb/migrations/meta/
+server/postgresdb/migrations/meta/*
+!server/postgresdb/migrations/meta/_journal.json
 n8n/*.yaml
 
 # Editor directories and files
