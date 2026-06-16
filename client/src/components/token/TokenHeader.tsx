@@ -65,11 +65,11 @@ export const TokenHeader = ({
     <Link
       to={washTradingUrl}
       className={`${styles.aiWashButton} ${compact ? styles.aiWashButtonCompact : ""} ${sidebar ? styles.aiWashButtonSidebar : ""}`}
-      title="Wash Trading Detection"
+      title={String(tr("token.header.aiWashTradingDetection"))}
     >
       <span className={styles.aiWashIcon}>AI</span>
-      <span className={styles.aiWashLabelFull}>Wash Trading Detection</span>
-      <span className={styles.aiWashLabelShort}>Wash Trading Detection</span>
+      <span className={styles.aiWashLabelFull}>{tr("token.header.aiWashTradingDetection")}</span>
+      <span className={styles.aiWashLabelShort}>{tr("token.header.aiWashTradingDetectionShort")}</span>
     </Link>
   );
 

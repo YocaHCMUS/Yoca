@@ -3,6 +3,7 @@ import * as echarts from "echarts";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { PageWrapper } from "@/components/wrapper/PageWrapper";
 import { useUserTheme } from "@/contexts/ThemeContext";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import styles from "./wash-trading.module.scss";
 
 const API_DOMAIN: string = import.meta.env.VITE_CLIENT_API_DOMAIN || "";
@@ -117,18 +118,27 @@ const getSeverityColor = (severity: Severity) => {
   return "var(--text-muted)";
 };
 
-const getRiskLabel = (score: number) => {
-  if (score >= 75) return "High Risk";
-  if (score >= 45) return "Medium Risk";
-  if (score > 0) return "Low Risk";
-  return "No Signal";
-};
 
 const normalizeRiskLevel = (riskLevel: string): RiskLevel => {
   if (riskLevel === "High" || riskLevel === "Medium" || riskLevel === "Low") {
     return riskLevel;
   }
   return "Low";
+};
+
+const getRiskLevelLabel = (risk: RiskLevel, tr: ReturnType<typeof useLocalization>["tr"]) => {
+  if (risk === "High") return tr("washTrading.risk.high");
+  if (risk === "Medium") return tr("washTrading.risk.medium");
+  return tr("washTrading.risk.low");
+};
+
+const getPatternLabel = (pattern: string, tr: ReturnType<typeof useLocalization>["tr"]) => {
+  if (pattern === "Circular Trade") return tr("washTrading.patterns.circularTrade");
+  if (pattern === "Hub Wallet") return tr("washTrading.patterns.hubWallet");
+  if (pattern === "Bot-like Timing") return tr("washTrading.patterns.botLikeTiming");
+  if (pattern === "Amount Mirror") return tr("washTrading.patterns.amountMirror");
+  if (pattern === "Anomalous Activity") return tr("washTrading.patterns.anomalousActivity");
+  return pattern;
 };
 
 const RiskGauge: React.FC<{ score: number; label: string }> = ({ score, label }) => {
@@ -181,6 +191,7 @@ interface ReadableGraphEdge extends GraphEdge {
 }
 
 const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscreen?: boolean }> = ({ nodes, edges, isFullscreen = false }) => {
+  const { tr } = useLocalization();
   const chartRef = useRef<HTMLDivElement | null>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
 
@@ -188,8 +199,8 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
     const sourceNodes = nodes.length > 0
       ? nodes
       : [
-          { id: "empty-1", type: "normal" as const, label: "No data" },
-          { id: "empty-2", type: "normal" as const, label: "Run AI" },
+          { id: "empty-1", type: "normal" as const, label: String(tr("common.noData")) },
+          { id: "empty-2", type: "normal" as const, label: String(tr("washTrading.inputs.runAnalyze")) },
         ];
 
     return sourceNodes.slice(0, isFullscreen ? 120 : 80);
@@ -261,9 +272,9 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
 
   const option = useMemo<echarts.EChartsOption>(() => {
     const categories = [
-      { name: "High risk wallet", itemStyle: { color: "#e24b4a" } },
-      { name: "Bridge wallet", itemStyle: { color: "#ef9f27" } },
-      { name: "Normal wallet", itemStyle: { color: "#64748b" } },
+      { name: String(tr("washTrading.graph.highRiskWallet")), itemStyle: { color: "#e24b4a" } },
+      { name: String(tr("washTrading.graph.bridgeWallet")), itemStyle: { color: "#ef9f27" } },
+      { name: String(tr("washTrading.graph.normalWallet")), itemStyle: { color: "#64748b" } },
     ];
 
     const categoryIndex = (type: GraphNode["type"]) => {
@@ -277,6 +288,7 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
       const score = typeof node.score === "number" ? Math.round(Math.max(0, Math.min(1, node.score)) * 100) : 0;
       const isWash = node.type === "wash";
       const isBridge = node.type === "bridge";
+      const typeLabel = isWash ? tr("washTrading.graph.highRiskWallet") : isBridge ? tr("washTrading.graph.bridgeWallet") : tr("washTrading.graph.normalWallet");
       const angle = (Math.PI * 2 * index) / Math.max(visibleNodes.length, 1);
       const riskRadiusFactor = isWash ? 0.62 : isBridge ? 0.78 : 1;
       const ringOffset = (index % 3) * (isFullscreen ? 42 : 26);
@@ -307,9 +319,9 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
         tooltip: {
           formatter: [
             `<strong>${node.label || shortAddress(node.id)}</strong>`,
-            `Type: ${node.type}`,
-            score ? `GNN score: ${score}/100` : "GNN score: —",
-            `Address: ${node.id}`,
+            `${tr("washTrading.graph.type")}: ${typeLabel}`,
+            score ? `${tr("washTrading.graph.gnnScore")}: ${score}/100` : `${tr("washTrading.graph.gnnScore")}: —`,
+            `${tr("washTrading.graph.address")}: ${node.id}`,
           ].join("<br/>"),
         },
       };
@@ -359,11 +371,11 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
         },
         tooltip: {
           formatter: [
-            `<strong>${edge.suspicious ? "Suspicious flow" : "Transfer flow"}</strong>`,
-            `From: ${shortAddress(edge.from)}`,
-            `To: ${shortAddress(edge.to)}`,
-            `Total amount: ${formatNumber(edge.amount)}`,
-            `Grouped transfers: ${edge.transferCount}`,
+            `<strong>${edge.suspicious ? tr("washTrading.graph.suspiciousFlow") : tr("washTrading.graph.transferFlow")}</strong>`,
+            `${tr("washTrading.graph.from")}: ${shortAddress(edge.from)}`,
+            `${tr("washTrading.graph.to")}: ${shortAddress(edge.to)}`,
+            `${tr("washTrading.graph.totalAmount")}: ${formatNumber(edge.amount)}`,
+            `${tr("washTrading.graph.groupedTransfers")}: ${edge.transferCount}`,
           ].join("<br/>"),
         },
       };
@@ -397,7 +409,7 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
       },
       series: [
         {
-          name: "Wallet transaction graph",
+          name: String(tr("washTrading.graph.walletGraphName")),
           type: "graph",
           layout: "force",
           animation: true,
@@ -449,7 +461,7 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
         } as any,
       ],
     } as echarts.EChartsOption;
-  }, [visibleNodes, readableEdges, isFullscreen]);
+  }, [visibleNodes, readableEdges, isFullscreen, tr]);
 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -490,12 +502,12 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
   return (
     <div className={`${styles.graphContainer} ${isFullscreen ? styles.graphContainerFullscreen : ""}`}>
       <div className={styles.graphStats}>
-        <span>{nodes.length} nodes</span>
-        <span>{edges.length} raw edges</span>
-        <span>{readableEdges.length} visible flows</span>
-        <span>{suspiciousEdges} suspicious groups</span>
-        {groupedCount > 0 && <span>{groupedCount} edges grouped</span>}
-        <span>Hover edge để xem amount</span>
+        <span>{tr("washTrading.graph.nodes", { count: nodes.length })}</span>
+        <span>{tr("washTrading.graph.rawEdges", { count: edges.length })}</span>
+        <span>{tr("washTrading.graph.visibleFlows", { count: readableEdges.length })}</span>
+        <span>{tr("washTrading.graph.suspiciousGroups", { count: suspiciousEdges })}</span>
+        {groupedCount > 0 && <span>{tr("washTrading.graph.edgesGrouped", { count: groupedCount })}</span>}
+        <span>{tr("washTrading.graph.hoverEdgeAmount")}</span>
       </div>
 
       <div ref={chartRef} className={`${styles.graphEcharts} ${isFullscreen ? styles.graphEchartsFullscreen : ""}`} />
@@ -503,8 +515,8 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
       {!isFullscreen && (
         <div className={styles.graphFooter}>
           {nodes.length > 0
-            ? "Live force-directed graph from backend graphData. Drag nodes, zoom, pan, and hover edges/wallets to inspect flow details."
-            : "Waiting for backend graphData. Click AI Analyze to build the wallet transaction graph."}
+            ? tr("washTrading.graph.footerReady")
+            : tr("washTrading.graph.footerWaiting")}
         </div>
       )}
     </div>
@@ -512,24 +524,26 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
 };
 
 const WalletRow: React.FC<{ wallet: SuspiciousWallet; index: number; selected?: boolean; onClick?: () => void }> = ({ wallet, index, selected = false, onClick }) => {
+  const { tr } = useLocalization();
   const risk = normalizeRiskLevel(wallet.riskLevel);
   return (
     <button type="button" className={`${styles.walletRow} ${selected ? styles.walletRowSelected : ""}`} onClick={onClick}>
       <div className={styles.walletInfo}>
         <span className={styles.walletAddr}>{shortAddress(wallet.wallet)}</span>
-        <span className={styles.walletDesc}>{wallet.pattern} · Graph rank #{index + 1}</span>
+        <span className={styles.walletDesc}>{getPatternLabel(wallet.pattern, tr)} · {tr("washTrading.wallets.graphRank", { rank: index + 1 })}</span>
       </div>
-      <span className={styles.walletGnn}>GNN: {wallet.score.toFixed(2)}</span>
-      <span className={`${styles.riskBadge} ${styles[`risk${risk}`]}`}>{risk}</span>
+      <span className={styles.walletGnn}>{tr("washTrading.wallets.gnn", { score: wallet.score.toFixed(2) })}</span>
+      <span className={`${styles.riskBadge} ${styles[`risk${risk}`]}`}>{getRiskLevelLabel(risk, tr)}</span>
     </button>
   );
 };
 
 const WalletInsightPanel: React.FC<{ wallet?: SuspiciousWallet; symbol: string }> = ({ wallet, symbol }) => {
+  const { tr } = useLocalization();
   if (!wallet) {
     return (
       <div className={styles.walletInsightEmpty}>
-        Chọn một ví trong danh sách Suspicious Wallets để xem giải thích AI chi tiết.
+        {tr("washTrading.wallets.insightEmpty")}
       </div>
     );
   }
@@ -539,21 +553,24 @@ const WalletInsightPanel: React.FC<{ wallet?: SuspiciousWallet; symbol: string }
     <div className={styles.walletInsight}>
       <div className={styles.walletInsightHeader}>
         <div>
-          <span>Selected wallet</span>
+          <span>{tr("washTrading.wallets.selectedWallet")}</span>
           <strong>{shortAddress(wallet.wallet)}</strong>
         </div>
-        <span className={`${styles.riskBadge} ${styles[`risk${normalizeRiskLevel(wallet.riskLevel)}`]}`}>{wallet.riskLevel}</span>
+        <span className={`${styles.riskBadge} ${styles[`risk${normalizeRiskLevel(wallet.riskLevel)}`]}`}>{getRiskLevelLabel(normalizeRiskLevel(wallet.riskLevel), tr)}</span>
       </div>
       <p>
-        AI đánh dấu ví này vì pattern <strong>{wallet.pattern}</strong> trên token <strong>{symbol}</strong>.
-        Điểm GNN hiện tại là <strong>{(wallet.score * 100).toFixed(0)}/100</strong>.
+        {tr("washTrading.wallets.explanation", {
+          pattern: <strong>{getPatternLabel(wallet.pattern, tr)}</strong>,
+          symbol: <strong>{symbol}</strong>,
+          score: <strong>{(wallet.score * 100).toFixed(0)}</strong>,
+        })}
       </p>
       <div className={styles.walletInsightGrid}>
-        <div><span>Top feature</span><strong>{topFeature?.[0] ?? "—"}</strong></div>
-        <div><span>Feature score</span><strong>{topFeature ? topFeature[1].toFixed(2) : "—"}</strong></div>
+        <div><span>{tr("washTrading.wallets.topFeature")}</span><strong>{topFeature?.[0] ?? "—"}</strong></div>
+        <div><span>{tr("washTrading.wallets.featureScore")}</span><strong>{topFeature ? topFeature[1].toFixed(2) : "—"}</strong></div>
       </div>
       <p className={styles.walletInsightNote}>
-        Cách đọc: ví có circularPattern cao thường tham gia vòng giao dịch khép kín; timeRegularity cao cho thấy bot-like timing; amountSimilarity cao cho thấy lượng token được lặp lại bất thường.
+        {tr("washTrading.wallets.note")}
       </p>
     </div>
   );
@@ -569,6 +586,7 @@ const LogItem: React.FC<{ time: string; text: string; color: string }> = ({ time
 
 const WashTradingPage: React.FC = () => {
   const { theme } = useUserTheme();
+  const { tr, lang } = useLocalization();
   const isLight = theme === "light";
   const navigate = useNavigate();
   const { mint } = useParams<{ mint: string }>();
@@ -623,7 +641,7 @@ const WashTradingPage: React.FC = () => {
   const handleAnalyze = useCallback(async () => {
     const selectedMint = targetMint.trim();
     if (!selectedMint) {
-      setError("Thiếu token mint address. Hãy mở trang từ Token Detail hoặc nhập mint để phân tích.");
+      setError(String(tr("washTrading.errors.missingMint")));
       return;
     }
 
@@ -640,23 +658,24 @@ const WashTradingPage: React.FC = () => {
           symbol: symbol || "TOKEN",
           timeframe,
           algorithm: algoTab,
+          language: lang,
           limit: timeframe === "24h" ? 80 : timeframe === "7d" ? 120 : 160,
         }),
       });
 
       const payload = (await response.json()) as ApiResponse;
       if (!response.ok || !payload.success || !payload.data) {
-        throw new Error(payload.message || payload.error || "AI analysis failed");
+        throw new Error(payload.message || payload.error || String(tr("washTrading.errors.analysisFailed")));
       }
 
       setResult(payload.data);
       setSelectedWalletAddress(payload.data.suspiciousWallets[0]?.wallet ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể gọi AI Wash Trading API.");
+      setError(err instanceof Error ? err.message : String(tr("washTrading.errors.apiFailed")));
     } finally {
       setIsAnalyzing(false);
     }
-  }, [symbol, targetMint, timeframe, algoTab]);
+  }, [symbol, targetMint, timeframe, algoTab, lang, tr]);
 
   useEffect(() => {
     if (mint) {
@@ -667,7 +686,7 @@ const WashTradingPage: React.FC = () => {
   const handleManualOpen = () => {
     const selectedMint = manualMint.trim();
     if (!selectedMint) {
-      setError("Vui lòng nhập token mint address.");
+      setError(String(tr("washTrading.errors.manualMissingMint")));
       return;
     }
     navigate(`/wash-trading/${selectedMint}?symbol=${encodeURIComponent(symbol || "TOKEN")}&timeframe=${timeframe}&algorithm=${algoTab}`);
@@ -702,6 +721,22 @@ const WashTradingPage: React.FC = () => {
   const summary = result?.summary;
   const riskScore = summary?.overallRiskScore ?? 0;
   const suspiciousCount = summary?.suspiciousWalletCount ?? 0;
+  const riskLabel = riskScore >= 75
+    ? tr("washTrading.risk.high")
+    : riskScore >= 45
+    ? tr("washTrading.risk.medium")
+    : riskScore > 0
+    ? tr("washTrading.risk.low")
+    : tr("washTrading.risk.noSignal");
+  const verdictLabel = result?.aiAnalysis.verdict === "HIGH_RISK"
+    ? tr("washTrading.verdict.highRisk")
+    : result?.aiAnalysis.verdict === "MEDIUM_RISK"
+    ? tr("washTrading.verdict.mediumRisk")
+    : result?.aiAnalysis.verdict === "LOW_RISK"
+    ? tr("washTrading.verdict.lowRisk")
+    : result?.aiAnalysis.verdict === "CLEAN"
+    ? tr("washTrading.verdict.clean")
+    : tr("washTrading.verdict.waiting");
 
   return (
     <PageWrapper>
@@ -709,23 +744,23 @@ const WashTradingPage: React.FC = () => {
         <div className={styles.fixedControls}>
           <div className={styles.fixedControlsInner}>
             <div className={styles.breadcrumb}>
-              <Link to="/tokens" className={styles.breadcrumbLink}>Tokens</Link>
+              <Link to="/tokens" className={styles.breadcrumbLink}>{tr("washTrading.breadcrumb.tokens")}</Link>
               <span>/</span>
-              {mint ? <Link to={`/tokens/${mint}`} className={styles.breadcrumbLink}>{symbol || shortAddress(mint)}</Link> : <span>Manual token</span>}
+              {mint ? <Link to={`/tokens/${mint}`} className={styles.breadcrumbLink}>{symbol || shortAddress(mint)}</Link> : <span>{tr("washTrading.breadcrumb.manualToken")}</span>}
               <span>/</span>
-              <span>Wash Trading Detection</span>
+              <span>{tr("washTrading.breadcrumb.page")}</span>
             </div>
 
             <div className={styles.topbar}>
               <div className={styles.topbarLeft}>
                 <span className={styles.pageIcon}>◎</span>
                 <div>
-                  <h1 className={styles.pageTitle}>AI Wash Trading Detection</h1>
+                  <h1 className={styles.pageTitle}>{tr("washTrading.title")}</h1>
                   <p className={styles.pageSubtitle}>
-                    GNN-inspired analysis for {symbol || "TOKEN"} · {shortAddress(targetMint)}
+                    {tr("washTrading.subtitle", { symbol: symbol || "TOKEN", mint: shortAddress(targetMint) })}
                   </p>
                 </div>
-                <span className={styles.suspiciousBadge}>{suspiciousCount} Suspicious</span>
+                <span className={styles.suspiciousBadge}>{tr("washTrading.suspiciousBadge", { count: suspiciousCount })}</span>
               </div>
 
               <div className={styles.topbarRight}>
@@ -734,23 +769,23 @@ const WashTradingPage: React.FC = () => {
                     className={styles.mintInput}
                     value={manualMint}
                     onChange={(event) => setManualMint(event.target.value)}
-                    placeholder="Token mint address"
+                    placeholder={String(tr("washTrading.inputs.mintPlaceholder"))}
                   />
                 )}
                 <input
                   className={styles.symbolInput}
                   value={symbol}
                   onChange={(event) => setSymbol(event.target.value.toUpperCase())}
-                  placeholder="Symbol"
+                  placeholder={String(tr("washTrading.inputs.symbolPlaceholder"))}
                 />
                 <select className={styles.tokenSelect} value={timeframe} onChange={(event) => handleTimeframeChange(event.target.value as Timeframe)}>
-                  <option value="24h">Last 24h</option>
-                  <option value="7d">Last 7d</option>
-                  <option value="30d">Last 30d</option>
+                  <option value="24h">{tr("washTrading.inputs.last24h")}</option>
+                  <option value="7d">{tr("washTrading.inputs.last7d")}</option>
+                  <option value="30d">{tr("washTrading.inputs.last30d")}</option>
                 </select>
                 {!mint && (
                   <button className={styles.btnSecondary} onClick={handleManualOpen}>
-                    Open token
+                    {tr("washTrading.inputs.openToken")}
                   </button>
                 )}
                 <button
@@ -759,14 +794,14 @@ const WashTradingPage: React.FC = () => {
                   onClick={() => setIsAiVerdictOpen((previous) => !previous)}
                   aria-expanded={isAiVerdictOpen}
                   aria-controls="ai-verdict-panel"
-                  title={isAiVerdictOpen ? "Ẩn AI Verdict" : "Hiện AI Verdict"}
+                  title={String(isAiVerdictOpen ? tr("washTrading.verdict.hide") : tr("washTrading.verdict.show"))}
                 >
                   <span className={styles.verdictToggleDot} />
-                  <span>AI Verdict</span>
+                  <span>{tr("washTrading.verdict.toggle")}</span>
                   <span className={styles.verdictToggleIcon}>{isAiVerdictOpen ? "▴" : "▾"}</span>
                 </button>
                 <button className={`${styles.btnPrimary} ${isAnalyzing ? styles.loading : ""}`} onClick={handleAnalyze} disabled={isAnalyzing}>
-                  {isAnalyzing ? "Đang phân tích..." : "Run AI Analyze ↗"}
+                  {isAnalyzing ? tr("washTrading.inputs.analyzing") : tr("washTrading.inputs.runAnalyze")}
                 </button>
               </div>
             </div>
@@ -779,13 +814,13 @@ const WashTradingPage: React.FC = () => {
         {isAiVerdictOpen && (
           <div id="ai-verdict-panel" className={styles.aiSummaryCard}>
             <div className={styles.aiSummaryHeader}>
-              <span className={styles.aiPill}>AI Verdict</span>
-              <strong>{result?.aiAnalysis.verdict?.replaceAll("_", " ") ?? "Waiting for analysis"}</strong>
+              <span className={styles.aiPill}>{tr("washTrading.verdict.toggle")}</span>
+              <strong>{verdictLabel}</strong>
             </div>
-            <p>{result?.aiAnalysis.summary ?? "Nhấn Run AI Analyze để phân tích circular trading, amount similarity, timing regularity và graph features của token này."}</p>
+            <p>{result?.aiAnalysis.summary ?? tr("washTrading.verdict.defaultSummary")}</p>
             {result?.dataSource && (
               <div className={`${styles.sourceNotice} ${result.dataSource === "demo-fallback" ? styles.sourceWarning : styles.sourceLive}`}>
-                Data source: <strong>{result.dataSource}</strong>
+                {tr("washTrading.verdict.dataSource")} <strong>{result.dataSource}</strong>
                 {result.dataSourceReason ? <span> · {result.dataSourceReason}</span> : null}
               </div>
             )}
@@ -797,10 +832,10 @@ const WashTradingPage: React.FC = () => {
 
         <div className={styles.metricsGrid}>
           {[
-            { label: "Total Transactions", value: formatNumber(summary?.totalTransactions ?? 0), sub: `${formatNumber(summary?.uniqueWallets ?? 0)} unique wallets`, subColor: "var(--text-secondary)" },
-            { label: "Wash Volume Estimate", value: formatNumber(summary?.washVolumeEstimate ?? 0), sub: `${(summary?.washVolumePercent ?? 0).toFixed(1)}% tổng volume`, subColor: "#e24b4a" },
-            { label: "Suspicious Wallets", value: String(suspiciousCount), sub: `${summary?.circularTradeCount ?? 0} circular clusters`, subColor: "#ef9f27" },
-            { label: "GNN Confidence", value: `${((summary?.gnnConfidence ?? 0) * 100).toFixed(1)}%`, sub: `Risk score: ${riskScore}/100`, subColor: "#639922" },
+            { label: String(tr("washTrading.metrics.totalTransactions")), value: formatNumber(summary?.totalTransactions ?? 0), sub: String(tr("washTrading.metrics.uniqueWallets", { count: formatNumber(summary?.uniqueWallets ?? 0) })), subColor: "var(--text-secondary)" },
+            { label: String(tr("washTrading.metrics.washVolumeEstimate")), value: formatNumber(summary?.washVolumeEstimate ?? 0), sub: String(tr("washTrading.metrics.totalVolumePercent", { percent: (summary?.washVolumePercent ?? 0).toFixed(1) })), subColor: "#e24b4a" },
+            { label: String(tr("washTrading.metrics.suspiciousWallets")), value: String(suspiciousCount), sub: String(tr("washTrading.metrics.circularClusters", { count: summary?.circularTradeCount ?? 0 })), subColor: "#ef9f27" },
+            { label: String(tr("washTrading.metrics.gnnConfidence")), value: `${((summary?.gnnConfidence ?? 0) * 100).toFixed(1)}%`, sub: String(tr("washTrading.metrics.riskScore", { score: riskScore })), subColor: "#639922" },
           ].map(({ label, value, sub, subColor }) => (
             <div key={label} className={styles.metricCard}>
               <div className={styles.metricLabel}>{label}</div>
@@ -815,7 +850,7 @@ const WashTradingPage: React.FC = () => {
             <div className={styles.card}>
               <div className={styles.cardHeader}>
                 <span className={styles.cardIcon}>🔗</span>
-                <h2 className={styles.cardTitle}>Transaction Graph — GNN Cluster View</h2>
+                <h2 className={styles.cardTitle}>{tr("washTrading.graph.title")}</h2>
                 <div className={styles.graphActions}>
                   <div className={styles.algoTabs}>
                     {(["GCN", "GAT", "GraphSAGE"] as const).map((tab) => (
@@ -833,9 +868,9 @@ const WashTradingPage: React.FC = () => {
                     className={styles.graphFullscreenButton}
                     onClick={() => setIsGraphModalOpen(true)}
                     disabled={!result?.graphData.nodes?.length}
-                    title={result?.graphData.nodes?.length ? "Mở graph toàn màn hình" : "Chạy AI Analyze để có graph"}
+                    title={String(result?.graphData.nodes?.length ? tr("washTrading.graph.fullscreenTitle") : tr("washTrading.graph.fullscreenWaitingTitle"))}
                   >
-                    ⛶ Fullscreen
+                    ⛶ {tr("washTrading.graph.fullscreen")}
                   </button>
                 </div>
               </div>
@@ -845,7 +880,7 @@ const WashTradingPage: React.FC = () => {
             <div className={styles.card}>
               <div className={styles.cardHeader}>
                 <span className={styles.cardIcon}>🔍</span>
-                <h2 className={styles.cardTitle}>Suspicious Wallets</h2>
+                <h2 className={styles.cardTitle}>{tr("washTrading.wallets.title")}</h2>
                 <div className={styles.walletTabs}>
                   {(["All", "High risk", "New"] as const).map((filter) => (
                     <button
@@ -853,7 +888,7 @@ const WashTradingPage: React.FC = () => {
                       className={`${styles.walletTab} ${walletFilter === filter ? styles.walletTabActive : ""}`}
                       onClick={() => setWalletFilter(filter)}
                     >
-                      {filter}
+                      {filter === "All" ? tr("washTrading.wallets.all") : filter === "High risk" ? tr("washTrading.wallets.highRisk") : tr("washTrading.wallets.new")}
                     </button>
                   ))}
                 </div>
@@ -871,7 +906,7 @@ const WashTradingPage: React.FC = () => {
                     />
                   ))
                 ) : (
-                  <div className={styles.emptyState}>Chưa có ví đáng ngờ. Hãy chạy phân tích AI cho token này.</div>
+                  <div className={styles.emptyState}>{tr("washTrading.wallets.empty")}</div>
                 )}
               </div>
             </div>
@@ -879,7 +914,7 @@ const WashTradingPage: React.FC = () => {
             <div className={styles.card}>
               <div className={styles.cardHeader}>
                 <span className={styles.cardIcon}>🧩</span>
-                <h2 className={styles.cardTitle}>Wallet AI Explanation</h2>
+                <h2 className={styles.cardTitle}>{tr("washTrading.wallets.insightTitle")}</h2>
               </div>
               <WalletInsightPanel wallet={selectedWallet} symbol={symbol || "TOKEN"} />
             </div>
@@ -888,7 +923,7 @@ const WashTradingPage: React.FC = () => {
               <div className={styles.card}>
                 <div className={styles.cardHeader}>
                   <span className={styles.cardIcon}>🧠</span>
-                  <h2 className={styles.cardTitle}>AI Detailed Findings</h2>
+                  <h2 className={styles.cardTitle}>{tr("washTrading.findings.title")}</h2>
                 </div>
                 <div className={styles.findingList}>
                   {result.aiAnalysis.detailedFindings.map((finding, index) => (
@@ -906,26 +941,26 @@ const WashTradingPage: React.FC = () => {
             <div className={styles.card}>
               <div className={styles.cardHeader}>
                 <span className={styles.cardIcon}>🛡</span>
-                <h2 className={styles.cardTitle}>Risk Score — {topWallet ? shortAddress(topWallet.wallet) : symbol}</h2>
+                <h2 className={styles.cardTitle}>{tr("washTrading.risk.title", { target: topWallet ? shortAddress(topWallet.wallet) : symbol })}</h2>
               </div>
-              <RiskGauge score={riskScore} label={getRiskLabel(riskScore)} />
+              <RiskGauge score={riskScore} label={String(riskLabel)} />
               <div className={styles.featuresSection}>
-                <FeatureBar label="Circular pattern" value={featureSource?.circularPattern ?? 0} />
-                <FeatureBar label="Time regularity" value={featureSource?.timeRegularity ?? 0} />
-                <FeatureBar label="Amount similarity" value={featureSource?.amountSimilarity ?? 0} />
-                <FeatureBar label="Self-loop degree" value={featureSource?.selfLoopDegree ?? 0} />
-                <FeatureBar label="Hubness" value={featureSource?.hubness ?? 0} />
+                <FeatureBar label={String(tr("washTrading.risk.circularPattern"))} value={featureSource?.circularPattern ?? 0} />
+                <FeatureBar label={String(tr("washTrading.risk.timeRegularity"))} value={featureSource?.timeRegularity ?? 0} />
+                <FeatureBar label={String(tr("washTrading.risk.amountSimilarity"))} value={featureSource?.amountSimilarity ?? 0} />
+                <FeatureBar label={String(tr("washTrading.risk.selfLoopDegree"))} value={featureSource?.selfLoopDegree ?? 0} />
+                <FeatureBar label={String(tr("washTrading.risk.hubness"))} value={featureSource?.hubness ?? 0} />
               </div>
             </div>
 
             <div className={styles.card}>
               <div className={styles.cardHeader}>
                 <span className={styles.cardIcon}>⏱</span>
-                <h2 className={styles.cardTitle}>Detection Log</h2>
+                <h2 className={styles.cardTitle}>{tr("washTrading.detectionLog.title")}</h2>
               </div>
               <div className={styles.logList}>
                 {(result?.detectionLog ?? [
-                  { time: "--:--", message: "Waiting for AI analysis request...", severity: "info" as Severity },
+                  { time: "--:--", message: String(tr("washTrading.detectionLog.waiting")), severity: "info" as Severity },
                 ]).map((item, index) => (
                   <LogItem key={`${item.time}-${index}`} time={item.time} text={item.message} color={getSeverityColor(item.severity)} />
                 ))}
@@ -935,16 +970,16 @@ const WashTradingPage: React.FC = () => {
             <div className={styles.card}>
               <div className={styles.cardHeader}>
                 <span className={styles.cardIcon}>📌</span>
-                <h2 className={styles.cardTitle}>Token Context</h2>
+                <h2 className={styles.cardTitle}>{tr("washTrading.context.title")}</h2>
               </div>
               <div className={styles.contextList}>
-                <div><span>Symbol</span><strong>{symbol || "TOKEN"}</strong></div>
-                <div><span>Mint</span><strong>{shortAddress(targetMint)}</strong></div>
-                <div><span>Timeframe</span><strong>{timeframe}</strong></div>
-                <div><span>Algorithm</span><strong>{result?.algorithm ?? algoTab}</strong></div>
-                <div><span>Data source</span><strong>{result?.dataSource ?? "—"}</strong></div>
-                <div><span>Source reason</span><strong>{result?.dataSourceReason ?? "—"}</strong></div>
-                <div><span>Analyzed at</span><strong>{result ? new Date(result.analyzedAt).toLocaleString("vi-VN") : "—"}</strong></div>
+                <div><span>{tr("washTrading.context.symbol")}</span><strong>{symbol || "TOKEN"}</strong></div>
+                <div><span>{tr("washTrading.context.mint")}</span><strong>{shortAddress(targetMint)}</strong></div>
+                <div><span>{tr("washTrading.context.timeframe")}</span><strong>{timeframe}</strong></div>
+                <div><span>{tr("washTrading.context.algorithm")}</span><strong>{result?.algorithm ?? algoTab}</strong></div>
+                <div><span>{tr("washTrading.context.dataSource")}</span><strong>{result?.dataSource ?? "—"}</strong></div>
+                <div><span>{tr("washTrading.context.sourceReason")}</span><strong>{result?.dataSourceReason ?? "—"}</strong></div>
+                <div><span>{tr("washTrading.context.analyzedAt")}</span><strong>{result ? new Date(result.analyzedAt).toLocaleString(lang === "vi" ? "vi-VN" : "en-US") : "—"}</strong></div>
               </div>
             </div>
           </div>
@@ -956,15 +991,20 @@ const WashTradingPage: React.FC = () => {
             className={styles.graphModalBackdrop}
             role="dialog"
             aria-modal="true"
-            aria-label="Transaction graph fullscreen view"
+            aria-label={String(tr("washTrading.graph.modalAria"))}
             onClick={() => setIsGraphModalOpen(false)}
           >
             <div className={styles.graphModal} onClick={(event) => event.stopPropagation()}>
               <div className={styles.graphModalHeader}>
                 <div>
-                  <h2 className={styles.graphModalTitle}>Transaction Graph — GNN Cluster View</h2>
+                  <h2 className={styles.graphModalTitle}>{tr("washTrading.graph.title")}</h2>
                   <p className={styles.graphModalSubtitle}>
-                    {symbol || "TOKEN"} · {shortAddress(targetMint)} · {result?.graphData.nodes.length ?? 0} nodes · {result?.graphData.edges.length ?? 0} edges
+                    {tr("washTrading.graph.modalSubtitle", {
+                      symbol: symbol || "TOKEN",
+                      mint: shortAddress(targetMint),
+                      nodes: result?.graphData.nodes.length ?? 0,
+                      edges: result?.graphData.edges.length ?? 0,
+                    })}
                   </p>
                 </div>
 
@@ -981,17 +1021,17 @@ const WashTradingPage: React.FC = () => {
                     ))}
                   </div>
                   <button type="button" className={styles.graphCloseButton} onClick={() => setIsGraphModalOpen(false)}>
-                    ✕ Close
+                    ✕ {tr("washTrading.graph.close")}
                   </button>
                 </div>
               </div>
 
               <NetworkGraph nodes={result?.graphData.nodes ?? []} edges={result?.graphData.edges ?? []} isFullscreen />
 
-              <div className={styles.graphModalGuide} aria-label="Graph fullscreen controls">
-                <span>🖱 Kéo node để tách cụm ví</span>
-                <span>🔍 Cuộn chuột để zoom</span>
-                <span>⌨ Esc hoặc Close để đóng</span>
+              <div className={styles.graphModalGuide} aria-label={String(tr("washTrading.graph.guideAria"))}>
+                <span>{tr("washTrading.graph.guideDrag")}</span>
+                <span>{tr("washTrading.graph.guideZoom")}</span>
+                <span>{tr("washTrading.graph.guideClose")}</span>
               </div>
             </div>
           </div>

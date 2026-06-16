@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 
 export type Timeframe = "1h" | "24h" | "7d" | "30d";
 export type GnnAlgorithm = "GCN" | "GAT" | "GraphSAGE";
+export type WashTradingLanguage = "en" | "vi";
 export type WashTradingDataSource =
   | "helius-rpc-token-accounts"
   | "helius-enhanced-api"
@@ -789,6 +790,27 @@ function computeGNNScores(txs: NormalizedTx[], circularPatterns: CircularPattern
   return scores.sort((a, b) => b.score - a.score).slice(0, 25);
 }
 
+function localizeDataSourceReason(reason: string, language: WashTradingLanguage): string {
+  if (language === "vi") return reason;
+
+  if (reason.includes("HELIUS_API_KEY")) {
+    return "HELIUS_API_KEY is not loaded in the backend process.";
+  }
+  if (reason.includes("Enhanced Transactions API")) {
+    const count = reason.match(/\d+/)?.[0] ?? "the requested";
+    return `Fetched ${count} transaction(s) from Helius Enhanced Transactions API for this address/mint.`;
+  }
+  if (reason.includes("Helius RPC")) {
+    const count = reason.match(/\d+/)?.[0] ?? "the requested";
+    return `Fetched ${count} real transaction(s) from Helius RPC using token accounts with throttling/retry/backoff.`;
+  }
+  if (reason.includes("không lấy đủ token transfers")) {
+    return "A Helius API key exists, but there were not enough token transfers for this mint. The token may have low recent activity, the mint may not appear in swaps, or the key may be rate-limited.";
+  }
+
+  return reason;
+}
+
 function buildGraphData(txs: NormalizedTx[], suspiciousWallets: GNNScore[]): WashTradingAIResult["graphData"] {
   const suspiciousSet = new Set(suspiciousWallets.slice(0, 14).map((w) => w.wallet));
   const highRiskSet = new Set(suspiciousWallets.filter((w) => w.riskLevel === "High").map((w) => w.wallet));
@@ -842,9 +864,42 @@ function buildLocalAIAnalysis(
   dataSource: WashTradingDataSource,
   dataSourceReason: string,
   algorithm: GnnAlgorithm,
+  language: WashTradingLanguage,
 ): WashTradingAIResult["aiAnalysis"] {
   const verdict: WashTradingAIResult["aiAnalysis"]["verdict"] = riskScore >= 75 ? "HIGH_RISK" : riskScore >= 45 ? "MEDIUM_RISK" : riskScore >= 20 ? "LOW_RISK" : "CLEAN";
   const highRisk = suspiciousWallets.filter((w) => w.riskLevel === "High");
+  const isVi = language === "vi";
+
+  if (!isVi) {
+    return {
+      verdict,
+      summary: `Token ${symbol} has a risk score of ${riskScore}/100. The system analyzed the transaction graph using the ${algorithm} configuration and detected ${circularPatterns.length} circular cluster(s) and ${suspiciousWallets.length} wallet(s) with abnormal signals.`,
+      detailedFindings: [
+        circularPatterns.length > 0
+          ? `Circular trading: detected ${circularPatterns.length} 3-6 hop trading loop(s) with similar amounts and close timing.`
+          : "Circular trading: no sufficiently strong closed-loop trading cycle was detected in the current dataset.",
+        highRisk.length > 0
+          ? `GNN score: ${highRisk.length} wallet(s) reached High risk, led by ${shortAddress(highRisk[0].wallet)} with score ${(highRisk[0].score * 100).toFixed(0)}/100.`
+          : "GNN score: no wallet crossed the High risk threshold; the result is closer to monitoring than a strong alert.",
+        `Algorithm: ${algorithm}. GCN prioritizes circular flow, GAT prioritizes amount similarity/attention, and GraphSAGE prioritizes hubness and neighborhood aggregation.`,
+        dataSource === "demo-fallback"
+          ? `Data source: demo fallback. Reason: ${dataSourceReason}`
+          : `Data source: real data from ${dataSource}. ${dataSourceReason}`,
+      ],
+      suspiciousPatterns: suspiciousWallets.slice(0, 6).map((w) => ({
+        patternName: w.pattern,
+        description: `Wallet ${shortAddress(w.wallet)} has ${w.txCount} transaction(s), volume ${Math.round(w.volume).toLocaleString("en-US")} token(s), and GNN score ${(w.score * 100).toFixed(0)}/100.`,
+        affectedWallets: [w.wallet],
+        severity: w.riskLevel.toUpperCase() as "HIGH" | "MEDIUM" | "LOW",
+      })),
+      recommendation: verdict === "HIGH_RISK"
+        ? "Warn users, review pool/liquidity data, and do not rely solely on this token's 24h volume."
+        : verdict === "MEDIUM_RISK"
+        ? "Continue monitoring because there are some artificial-volume signals, but they are not strong enough for a confident conclusion."
+        : "No severe wash trading signal was found in the current data; combine this with holder distribution, pool liquidity, and top trader behavior.",
+      confidenceNote: `This is a ${algorithm} GNN-inspired model using graph features: circularity, time regularity, amount similarity, self-loop, and hubness. The output is an alert signal, not a legal conclusion.`,
+    };
+  }
 
   return {
     verdict,
@@ -863,7 +918,7 @@ function buildLocalAIAnalysis(
     ],
     suspiciousPatterns: suspiciousWallets.slice(0, 6).map((w) => ({
       patternName: w.pattern,
-      description: `Ví ${shortAddress(w.wallet)} có ${w.txCount} giao dịch, volume ${Math.round(w.volume).toLocaleString()} token, GNN score ${(w.score * 100).toFixed(0)}/100.`,
+      description: `Ví ${shortAddress(w.wallet)} có ${w.txCount} giao dịch, volume ${Math.round(w.volume).toLocaleString("vi-VN")} token, GNN score ${(w.score * 100).toFixed(0)}/100.`,
       affectedWallets: [w.wallet],
       severity: w.riskLevel.toUpperCase() as "HIGH" | "MEDIUM" | "LOW",
     })),
@@ -885,27 +940,39 @@ async function tryGeminiAnalysis(base: WashTradingAIResult["aiAnalysis"], params
   dataSource: WashTradingDataSource;
   dataSourceReason: string;
   algorithm: GnnAlgorithm;
+  language: WashTradingLanguage;
 }): Promise<WashTradingAIResult["aiAnalysis"]> {
   const apiKey = GOOGLE_AI_KEY?.trim();
   if (!apiKey) return base;
 
   try {
     const ai = new GoogleGenAI({ apiKey });
+    const intro = params.language === "vi"
+      ? "Bạn là chuyên gia phân tích wash trading Solana cho dashboard fintech. Hãy trả về JSON thuần bằng tiếng Việt"
+      : "You are a Solana wash-trading analyst for a fintech dashboard. Return plain JSON in English";
+    const requirements = params.language === "vi"
+      ? [
+          "Yêu cầu:",
+          "- Không bịa rằng chắc chắn có gian lận nếu dữ liệu không đủ.",
+          "- Nếu dataSource là demo-fallback, phải nói rõ chỉ là demo UX.",
+          "- Giải thích dựa trên graph/GNN features, không nói chung chung.",
+        ].join("\n")
+      : [
+          "Requirements:",
+          "- Do not claim certain fraud if the data is insufficient.",
+          "- If dataSource is demo-fallback, clearly say it is only a UX demo.",
+          "- Explain using graph/GNN features, not generic wording.",
+        ].join("\n");
+
     const response = await ai.models.generateContent({
       model: WALLET_AUDIT_MODEL || "gemini-2.5-flash",
-      contents: `Bạn là chuyên gia phân tích wash trading Solana cho dashboard fintech. Hãy trả về JSON thuần theo cấu trúc: {"verdict":"HIGH_RISK|MEDIUM_RISK|LOW_RISK|CLEAN","summary":"...","detailedFindings":["..."],"suspiciousPatterns":[{"patternName":"...","description":"...","affectedWallets":["..."],"severity":"HIGH|MEDIUM|LOW"}],"recommendation":"...","confidenceNote":"..."}.
-
-Yêu cầu:
-- Không bịa rằng chắc chắn có gian lận nếu dữ liệu không đủ.
-- Nếu dataSource là demo-fallback, phải nói rõ chỉ là demo UX.
-- Giải thích dựa trên graph/GNN features, không nói chung chung.
-
-Dữ liệu: ${JSON.stringify({
+      contents: `${intro} theo cấu trúc: {"verdict":"HIGH_RISK|MEDIUM_RISK|LOW_RISK|CLEAN","summary":"...","detailedFindings":["..."],"suspiciousPatterns":[{"patternName":"...","description":"...","affectedWallets":["..."],"severity":"HIGH|MEDIUM|LOW"}],"recommendation":"...","confidenceNote":"..."}.\n\n${requirements}\n\nData: ${JSON.stringify({
         mint: params.mint,
         symbol: params.symbol,
         dataSource: params.dataSource,
         dataSourceReason: params.dataSourceReason,
         algorithm: params.algorithm,
+        language: params.language,
         summary: params.summary,
         circularPatterns: params.circularPatterns.slice(0, 5),
         suspiciousWallets: params.suspiciousWallets.slice(0, 8),
@@ -960,12 +1027,14 @@ export async function analyzeWashTradingWithAI(params: {
   symbol?: string;
   timeframe?: Timeframe;
   algorithm?: GnnAlgorithm;
+  language?: WashTradingLanguage;
   limit?: number;
 }): Promise<WashTradingAIResult> {
   const mint = params.mint.trim();
   const symbol = (params.symbol ?? "TOKEN").trim() || "TOKEN";
   const timeframe = params.timeframe ?? "24h";
   const algorithm: GnnAlgorithm = params.algorithm ?? "GCN";
+  const language: WashTradingLanguage = params.language ?? "en";
   const requestedLimit = Math.min(Math.max(params.limit ?? 80, 20), 200);
   const limit = getSafeApiLimit(requestedLimit, timeframe);
   const analyzedAt = new Date().toISOString();
@@ -973,28 +1042,35 @@ export async function analyzeWashTradingWithAI(params: {
 
   const addLog = (message: string, severity: WashTradingAIResult["detectionLog"][number]["severity"]) => {
     detectionLog.push({
-      time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+      time: new Date().toLocaleTimeString(language === "vi" ? "vi-VN" : "en-US", { hour: "2-digit", minute: "2-digit" }),
       message,
       severity,
     });
   };
 
-  addLog(`Bắt đầu phân tích AI Wash Trading cho ${symbol} bằng ${algorithm}`, "info");
+  addLog(language === "vi"
+    ? `Bắt đầu phân tích AI Wash Trading cho ${symbol} bằng ${algorithm}`
+    : `Started AI Wash Trading analysis for ${symbol} with ${algorithm}`, "info");
   const { txs, source, reason } = await fetchTokenTransactions(mint, symbol, limit, timeframe);
-  addLog(`Data source: ${source} — ${reason}`, source === "demo-fallback" ? "medium" : "success");
-  addLog(`Đã chuẩn hóa ${txs.length} giao dịch token transfer`, "info");
+  const localizedReason = localizeDataSourceReason(reason, language);
+  addLog(`Data source: ${source} — ${localizedReason}`, source === "demo-fallback" ? "medium" : "success");
+  addLog(language === "vi"
+    ? `Đã chuẩn hóa ${txs.length} giao dịch token transfer`
+    : `Normalized ${txs.length} token transfer transaction(s)`, "info");
 
   const circularPatterns = detectCircularPatterns(txs);
   addLog(
     circularPatterns.length > 0
-      ? `Phát hiện ${circularPatterns.length} circular trade cluster`
-      : "Không tìm thấy circular cluster rõ ràng",
+      ? (language === "vi" ? `Phát hiện ${circularPatterns.length} circular trade cluster` : `Detected ${circularPatterns.length} circular trade cluster(s)`)
+      : (language === "vi" ? "Không tìm thấy circular cluster rõ ràng" : "No clear circular cluster found"),
     circularPatterns.length > 0 ? "high" : "success",
   );
 
   const suspiciousWallets = computeGNNScores(txs, circularPatterns, algorithm);
   const highRiskCount = suspiciousWallets.filter((w) => w.riskLevel === "High").length;
-  addLog(`${algorithm} GNN-inspired scoring hoàn tất: ${suspiciousWallets.length} ví đáng ngờ`, highRiskCount > 0 ? "high" : "success");
+  addLog(language === "vi"
+    ? `${algorithm} GNN-inspired scoring hoàn tất: ${suspiciousWallets.length} ví đáng ngờ`
+    : `${algorithm} GNN-inspired scoring completed: ${suspiciousWallets.length} suspicious wallet(s)`, highRiskCount > 0 ? "high" : "success");
 
   const graphData = buildGraphData(txs, suspiciousWallets);
   addLog(`Graph built: ${graphData.nodes.length} nodes, ${graphData.edges.length} edges`, graphData.edges.length > 0 ? "success" : "medium");
@@ -1029,8 +1105,8 @@ export async function analyzeWashTradingWithAI(params: {
     gnnConfidence: avgSuspiciousScore,
   };
 
-  const localAI = buildLocalAIAnalysis(symbol, circularPatterns, suspiciousWallets, overallRiskScore, source, reason, algorithm);
-  addLog("Tạo AI explanation cho kết quả phân tích", "info");
+  const localAI = buildLocalAIAnalysis(symbol, circularPatterns, suspiciousWallets, overallRiskScore, source, localizedReason, algorithm, language);
+  addLog(language === "vi" ? "Tạo AI explanation cho kết quả phân tích" : "Generating AI explanation for analysis result", "info");
   const aiAnalysis = await tryGeminiAnalysis(localAI, {
     mint,
     symbol,
@@ -1038,10 +1114,13 @@ export async function analyzeWashTradingWithAI(params: {
     circularPatterns,
     suspiciousWallets,
     dataSource: source,
-    dataSourceReason: reason,
+    dataSourceReason: localizedReason,
     algorithm,
+    language,
   });
-  addLog(`Hoàn tất phân tích — Verdict: ${aiAnalysis.verdict}`, aiAnalysis.verdict === "HIGH_RISK" ? "high" : aiAnalysis.verdict === "MEDIUM_RISK" ? "medium" : "success");
+  addLog(language === "vi"
+    ? `Hoàn tất phân tích — Verdict: ${aiAnalysis.verdict}`
+    : `Analysis completed — Verdict: ${aiAnalysis.verdict}`, aiAnalysis.verdict === "HIGH_RISK" ? "high" : aiAnalysis.verdict === "MEDIUM_RISK" ? "medium" : "success");
 
   return {
     mint,
@@ -1049,7 +1128,7 @@ export async function analyzeWashTradingWithAI(params: {
     timeframe,
     analyzedAt,
     dataSource: source,
-    dataSourceReason: reason,
+    dataSourceReason: localizedReason,
     algorithm,
     summary,
     circularPatterns,
