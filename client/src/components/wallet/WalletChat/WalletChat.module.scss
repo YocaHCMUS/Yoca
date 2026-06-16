@@ -225,8 +225,15 @@
 }
 
 @keyframes wave {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
 }
 
 .errorMsg {
@@ -457,7 +464,7 @@
 // ===== Chart container (shared with WalletChatChartRenderer) =====
 .chartContainer {
   width: 100%;
-  height: 200px;
+  height: 260px;
   margin: 8px 0;
 }
 

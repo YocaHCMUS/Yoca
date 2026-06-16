@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import ReactECharts from "echarts-for-react";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useCarbonChartBaseOption, CHART_COLOR_PALETTE } from "@/util/carbon-chart-base";
+import { useCarbonTokens } from "@/hooks/useCarbonToken";
+import { cds } from "@/util/carbon-theme";
 import type { ChartSpec, TableFilter, TableSpec } from "./types";
 import styles from "./WalletChat.module.scss";
 
@@ -39,7 +41,7 @@ function formatYValue(val: number, format: NonNullable<ChartSpec["yAxisFormat"]>
   switch (format) {
     case "currency": return fmt.num.currency(val);
     case "compact-currency": return fmt.num.compact.currency(val);
-    case "percent": return fmt.num.percentagePoint(val);
+    case "percent": return fmt.num.percentagePoint(val * 100);
     case "decimal":
     default: return fmt.num.decimal(val);
   }
@@ -60,6 +62,7 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
     | undefined;
   const { tr, fmt } = useLocalization();
   const baseOption = useCarbonChartBaseOption();
+  const chartTokens = useCarbonTokens({ bg: cds.layer01 });
 
   const option = useMemo(() => {
     if (!raw?.labels || !raw?.datasets) return null;
@@ -69,6 +72,18 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
     const colors = CHART_COLOR_PALETTE;
 
     const isPie = spec.type === "pie";
+    const isTimeAxis = spec.xAxisType === "time";
+    const shouldTruncate = isTimeAxis && labels.length > 15;
+
+    const yAxisFmt = spec.yAxisFormat;
+    const yAxisLabel = yAxisFmt
+      ? (val: number) => formatYValue(val, yAxisFmt, fmt)
+      : undefined;
+
+    const xAxisFmt = spec.xAxisFormat;
+    const xAxisLabel = isTimeAxis && xAxisFmt
+      ? (val: number) => formatXValue(val, xAxisFmt, fmt)
+      : undefined;
 
     const tooltip: Record<string, unknown> = {
       trigger: isPie ? "item" : "axis",
@@ -78,28 +93,43 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
       tooltip.formatter = (params: unknown) => {
         const p = params as { name?: string; value?: number } | undefined;
         const label = p?.name ?? "";
-        const value = p?.value ?? "";
+        const value = p?.value ?? 0;
+        const formatted = yAxisFmt
+          ? formatYValue(value, yAxisFmt, fmt)
+          : value;
         const query = interpolate(spec.pointActions!.query, { label });
-        return `${label}: ${value}<br/><span style="color:#2a6df4;font-size:10px">${tr("chat.clickToAsk", { query })}</span>`;
+        return `${label}: ${formatted}<br/><span style="color:#2a6df4;font-size:10px">${tr("chat.clickToAsk", { query })}</span>`;
       };
     }
 
-    if (!isPie && spec.pointActions) {
+    if (!isPie) {
       tooltip.formatter = (params: unknown) => {
         const arr = Array.isArray(params) ? params : [params];
-        const p = arr[0] as { axisValueLabel?: string } | undefined;
-        const label = p?.axisValueLabel ?? "";
-        const query = interpolate(spec.pointActions!.query, { label });
+        const p = arr[0] as { axisValue?: number; axisValueLabel?: string } | undefined;
+
+        const xLabel = isTimeAxis
+          ? formatXValue(p?.axisValue ?? 0, xAxisFmt ?? "datetime", fmt)
+          : (p?.axisValueLabel ?? "");
+
+        const clickLine = spec.pointActions
+          ? (() => {
+            const label = p?.axisValueLabel ?? "";
+            const query = interpolate(spec.pointActions!.query, { label });
+            return `<br/><span style="color:#2a6df4;font-size:10px">${tr("chat.clickToAsk", { query })}</span>`;
+          })()
+          : "";
+
         const lines = arr.map((pt: unknown) => {
           const seriesName = (pt as { seriesName?: string }).seriesName ?? "";
           const value = (pt as { value?: number[] }).value;
           const v = Array.isArray(value) ? value[1] ?? value[0] ?? 0 : (value ?? 0);
-          const formatted = spec.yAxisFormat
-            ? formatYValue(v, spec.yAxisFormat, fmt)
+          const formatted = yAxisFmt
+            ? formatYValue(v, yAxisFmt, fmt)
             : v;
           return `${seriesName}: ${formatted}`;
         });
-        return `${lines.join("<br/>")}<br/><span style="color:#2a6df4;font-size:10px">${tr("chat.clickToAsk", { query })}</span>`;
+
+        return `${xLabel}<br/>${lines.join("<br/>")}${clickLine}`;
       };
     }
 
@@ -107,6 +137,7 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
       const ds = datasets[0];
       return {
         ...baseOption,
+        backgroundColor: chartTokens.bg,
         color: colors,
         xAxis: undefined,
         yAxis: undefined,
@@ -154,34 +185,34 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
       return base;
     });
 
-    const isTimeAxis = spec.xAxisType === "time";
-
-    const yAxisFmt = spec.yAxisFormat;
-    const yAxisLabel = yAxisFmt
-      ? (val: number) => formatYValue(val, yAxisFmt, fmt)
-      : undefined;
-
-    const xAxisFmt = spec.xAxisFormat;
-    const xAxisLabel = isTimeAxis && xAxisFmt
-      ? (val: number) => formatXValue(val, xAxisFmt, fmt)
-      : undefined;
-
     return {
       ...baseOption,
+      backgroundColor: chartTokens.bg,
       color: colors,
       tooltip,
+      grid: {
+        left: 10,
+        right: 10,
+        top: 20,
+        bottom: 30,
+        containLabel: true,
+      },
       xAxis: {
         ...baseOption.xAxis,
         type: isTimeAxis ? "time" : "category",
         ...(isTimeAxis ? {} : { data: labels }),
         axisLabel: {
           ...baseOption.xAxis?.axisLabel,
+          color: baseOption.textStyle?.color,
           formatter: xAxisLabel,
+          hideOverlap: true,
+          ...(shouldTruncate ? { rotate: 45 } : {}),
         },
       },
       yAxis: {
         ...baseOption.yAxis,
         type: "value",
+        position: "right",
         axisLabel: {
           ...baseOption.yAxis?.axisLabel,
           formatter: yAxisLabel,
@@ -189,7 +220,7 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
       },
       series,
     };
-  }, [raw, spec, fmt, tr, baseOption]);
+  }, [raw, spec, fmt, tr, baseOption, chartTokens]);
 
   const onEvents = useMemo(() => {
     if (!spec.pointActions || !onAction || !raw?.labels) return undefined;
@@ -213,7 +244,7 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
       )}
       <ReactECharts
         option={option}
-        style={{ height: 180 }}
+        style={{ height: 240 }}
         onEvents={onEvents}
       />
     </div>

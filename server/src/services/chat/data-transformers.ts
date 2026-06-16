@@ -54,6 +54,18 @@ const tokenPriceDailyTransformer: DataTransformer = (data) => {
   };
 };
 
+const drawdownChartTransformer: DataTransformer = (data) => {
+  const points = Array.isArray(data) ? data : [];
+  const typed = points as Array<{ timestamp: number; drawdown: number }>;
+  return {
+    labels: typed.map((p) => new Date(p.timestamp).toISOString().slice(0, 10)),
+    datasets: [{
+      name: "Drawdown",
+      values: typed.map((p) => [p.timestamp, p.drawdown]),
+    }],
+  };
+};
+
 const swapFieldMap: Record<string, string> = {
   transactionHash: "txHash",
   blockTimestampIso: "timestamp",
@@ -134,6 +146,7 @@ const tokenDetailsTransformer: DataTransformer = (data) => {
 
 export const DATA_TRANSFORMERS: Record<string, DataTransformer> = {
   get_balance_history: balanceHistoryTransformer,
+  get_drawdown_chart: drawdownChartTransformer,
   get_pnl_chart: pnlChartTransformer,
   get_token_price: tokenPriceTransformer,
   get_token_price_24h: tokenPrice24hTransformer,

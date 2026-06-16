@@ -201,4 +201,12 @@ export interface ChatCacheEntry {
   model: string;
   fetchedAt: Date;
   ttlMs: number;
+  toolsUsed: string[];
+  hasErrors: boolean;
+  responseType: string;
+}
+
+export interface ToolCachePolicy {
+  ttlMs: number;
+  cacheable: boolean;
 }

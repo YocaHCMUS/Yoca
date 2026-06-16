@@ -248,6 +248,9 @@ export function buildResponseGenerationPrompt(
     "    'datetime' shows full date+time, 'date' shows date only, 'time' shows time only.",
     "  yAxisFormat: controls y-axis value rendering: 'currency', 'decimal', 'percent', 'compact-currency'.",
     "    'currency' formats as $X,XXX.XX, 'compact-currency' as $1.2K/$1.2M, 'percent' as 12.34%, 'decimal' as raw number.",
+    "  TOOL-TO-CHART MAPPING:",
+    "    get_balance_history, get_pnl_chart, get_drawdown_chart → type: 'line'|'area', xAxisType: 'time'",
+    "    get_drawdown_chart: drawdown values are ratios (-1 to 0) → yAxisFormat: 'percent'",
     "",
     "TABLE SPEC FIELDS:",
     "  id (required), dataRef (required), columns: comma-separated (required),",
@@ -306,6 +309,22 @@ export function buildResponseGenerationPrompt(
       "xAxisType": "time",
       "xAxisFormat": "datetime",
       "yAxisFormat": "currency"
+    }]
+  }`,
+    "",
+    "EXAMPLE (drawdown chart):",
+    "User: Show the drawdown chart for this wallet.",
+    `Output:
+{
+    "text": "The wallet peaked at $37.7M and reached a max drawdown of 90%:\\n\\n<chart id="drawdown" />",
+    "charts": [{
+      "id": "drawdown",
+      "type": "area",
+      "dataRef": "0",
+      "title": "Drawdown (30d)",
+      "xAxisType": "time",
+      "xAxisFormat": "date",
+      "yAxisFormat": "percent"
     }]
   }`,
   ].join("\n");

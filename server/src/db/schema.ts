@@ -1424,6 +1424,9 @@ export const chatAnalysisCache = pgTable(
     model: varchar("model", { length: 64 }).notNull(),
     ttlMs: integer("ttl_ms").notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    toolsUsed: varchar("tools_used", { length: 64 }).array().notNull().default([]),
+    hasErrors: boolean("has_errors").notNull().default(false),
+    responseType: varchar("response_type", { length: 16 }).notNull().default("tool_generated"),
   },
 );
 

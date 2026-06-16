@@ -12,7 +12,7 @@ import {
   getEndpoint as getBirdeyeEndpoint,
   getRequiredHeaders as getBirdeyeHeaders,
 } from "@sv/util/util-birdeye.js";
-import type { ChatToolDefinition } from "./chat.types.js";
+import type { ChatToolDefinition, ToolCachePolicy } from "./chat.types.js";
 import { isBaseAsset } from "@sv/services/wallet/walletDayActivity.service.js";
 import { z } from "zod";
 
@@ -102,6 +102,23 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   //     required: ["address"],
   //   },
   // },
+  {
+    name: "get_drawdown_chart",
+    description:
+      "Fetch drawdown (peak-to-trough decline) chart data for a wallet over time. Returns daily drawdown percentages showing how far the balance has fallen from its most recent peak. Useful for risk assessment and drawdown trend charts.",
+    input_schema: {
+      type: "object",
+      properties: {
+        address: { type: "string", description: "Solana wallet address (base58)" },
+        timePeriod: {
+          type: "string",
+          enum: ["7D", "30D"],
+          description: "Time period for drawdown data (default 30D)",
+        },
+      },
+      required: ["address"],
+    },
+  },
   {
     name: "get_wallet_pnl",
     description:
@@ -431,6 +448,24 @@ function extractBalanceHistoryForLLM(data: unknown, address: string): unknown {
   };
 }
 
+function extractDrawdownForLLM(data: unknown): unknown {
+  if (!Array.isArray(data)) return null;
+  const typed = data as Array<{ timestamp: number; value: number; drawdown: number }>;
+  if (typed.length === 0) return null;
+  const maxDrawdown = Math.min(...typed.map((p) => p.drawdown));
+  const latestDrawdown = typed[typed.length - 1]?.drawdown ?? 0;
+  return {
+    dataPoints: typed.map((p) => ({
+      date: new Date(p.timestamp).toISOString().slice(0, 10),
+      drawdownPercent: p.drawdown,
+    })),
+    maxDrawdownPercent: maxDrawdown,
+    currentDrawdownPercent: latestDrawdown,
+    startDate: new Date(typed[0].timestamp).toISOString().slice(0, 10),
+    endDate: new Date(typed[typed.length - 1].timestamp).toISOString().slice(0, 10),
+  };
+}
+
 function extractPnLForLLM(data: unknown): unknown {
   if (!data || typeof data !== "object") return null;
   const p = data as Record<string, unknown>;
@@ -699,6 +734,30 @@ export const TOOL_HANDLERS: Record<
     return { data, llmData: extractBalanceHistoryForLLM(data, address) };
   },
 
+  get_drawdown_chart: async (input) => {
+    const { address, timePeriod } = periodSchema.parse(input);
+    const balanceHistory = await getWalletBalanceHistory(address, timePeriod);
+    if (!balanceHistory?.length) {
+      return { data: [], llmData: null };
+    }
+
+    let peak = balanceHistory[0].usdValue;
+    let trough = balanceHistory[0].usdValue;
+    const data = balanceHistory.map((point) => {
+      if (point.usdValue > peak) { peak = point.usdValue; trough = point.usdValue; }
+      if (point.usdValue < trough) { trough = point.usdValue; }
+      const drawdown = peak === 0 ? 0 : (point.usdValue - peak) / peak;
+      return {
+        timestamp: point.timestampMs,
+        date: new Date(point.timestampMs).toISOString(),
+        value: point.usdValue,
+        drawdown,
+      };
+    });
+
+    return { data, llmData: extractDrawdownForLLM(data) };
+  },
+
   get_wallet_pnl: async (input) => {
     const { address, fromMs, toMs, tokenAddress } = z.object({
       address: z.string().min(1),
@@ -840,6 +899,66 @@ export const TOOL_HANDLERS: Record<
   }
 };
 
+// ─── Cache Policy ────────────────────────────────────────────────────────────
+
+/**
+ * Per-tool cache TTL + cacheability policy.
+ * Used by chat.cache.ts to compute effective cache expiry.
+ */
+export const TOOL_CACHE_POLICY: Record<string, ToolCachePolicy> = {
+  // Price data — very volatile
+  get_token_price: { ttlMs: 10_000, cacheable: true },
+  get_token_price_24h: { ttlMs: 30_000, cacheable: true },
+  get_token_price_hourly: { ttlMs: 60_000, cacheable: true },
+  get_token_price_daily: { ttlMs: 120_000, cacheable: true },
+  // Web/news — live external, never cache
+  search_web: { ttlMs: 0, cacheable: false },
+  search_news: { ttlMs: 0, cacheable: false },
+  // On-chain wallet data — stable, medium TTL
+  get_wallet_swaps: { ttlMs: 300_000, cacheable: true },
+  get_wallet_transfers: { ttlMs: 300_000, cacheable: true },
+  get_wallet_pnl: { ttlMs: 300_000, cacheable: true },
+  get_wallet_winrate: { ttlMs: 300_000, cacheable: true },
+  get_pnl_chart: { ttlMs: 300_000, cacheable: true },
+  get_historical_portfolio: { ttlMs: 300_000, cacheable: true },
+  get_wallet_audit: { ttlMs: 300_000, cacheable: true },
+  // Birdeye-sourced — short TTL
+  get_wallet_overview: { ttlMs: 60_000, cacheable: true },
+  get_balance_history: { ttlMs: 60_000, cacheable: true },
+  get_wallet_portfolio: { ttlMs: 30_000, cacheable: true },
+  // Token metadata — very stable
+  get_token_meta: { ttlMs: 600_000, cacheable: true },
+  get_token_details: { ttlMs: 600_000, cacheable: true },
+  search_token: { ttlMs: 600_000, cacheable: true },
+  // Navigation — static
+  navigate_to_page: { ttlMs: 600_000, cacheable: true },
+};
+
+/**
+ * Compute effective cache TTL from a set of tools used.
+ * Returns null if any tool is uncacheable.
+ */
+export function getEffectiveCacheTtl(tools: string[]): number | null {
+  if (tools.length === 0) return 30_000; // direct-answer TTL
+  let minTtl = Infinity;
+  for (const name of tools) {
+    const policy = TOOL_CACHE_POLICY[name];
+    if (!policy || !policy.cacheable) return null;
+    if (policy.ttlMs < minTtl) minTtl = policy.ttlMs;
+  }
+  return minTtl;
+}
+
+/**
+ * Returns true if the set of tools includes any uncacheable tool.
+ */
+export function hasUncacheableTools(tools: string[]): boolean {
+  return tools.some((name) => {
+    const policy = TOOL_CACHE_POLICY[name];
+    return !policy || !policy.cacheable;
+  });
+}
+
 // ─── Router ─────────────────────────────────────────────────────────────────
 
 export function findTool(name: string): ChatToolDefinition | undefined {
@@ -855,6 +974,7 @@ const WALLET_SCOPED_TOOLS = new Set([
   "get_wallet_swaps",
   "get_wallet_transfers",
   "get_balance_history",
+  "get_drawdown_chart",
   "get_wallet_pnl",
   "get_wallet_winrate",
   "get_pnl_chart",

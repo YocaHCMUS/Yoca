@@ -515,6 +515,12 @@ export async function answerChatQuery(
           charts: [],
           tables: [],
         };
+        try {
+          await setCachedResponse(addresses, query, response, model, historyHash, intent, [], false, "direct");
+          chatDebug("answerChatQuery: direct-answer cached");
+        } catch {
+          chatWarn("answerChatQuery: direct-answer cache write failed");
+        }
         return response;
       }
       chatInfo("answerChatQuery: LLM signaled enough data", { iteration: i + 1 });
@@ -572,9 +578,12 @@ export async function answerChatQuery(
     return buildWalletFallbackResponse(query, intent, allResults, detectedLang);
   }
 
+  const toolsUsed = [...new Set(allResults.map((r) => r.name))];
+  const hasErrors = allResults.some((r) => r.error);
+
   try {
-    await setCachedResponse(addresses, query, response, model, historyHash, intent);
-    chatDebug("answerChatQuery: cache write succeeded");
+    await setCachedResponse(addresses, query, response, model, historyHash, intent, toolsUsed, hasErrors, "tool_generated");
+    chatDebug("answerChatQuery: cache write succeeded", { toolsUsed, hasErrors });
   } catch {
     chatWarn("answerChatQuery: cache write failed");
   }
