@@ -7,7 +7,7 @@ import { TOKEN_DETAILS_TTL_MS } from "@sv/config/constants.js";
 
 export interface TokenSearchResult {
   address: string;
-  symbol: string;
+  symbol: string | null;
   name: string | null;
   imageUrl: string | null;
 }
