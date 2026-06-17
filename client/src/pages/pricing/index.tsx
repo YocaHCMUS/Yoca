@@ -185,8 +185,8 @@ export default function PricingPage() {
         />
 
         {/* ── Header ── */}
-        <div className="relative z-10 flex flex-col items-center text-center w-full max-w-3xl mx-auto mb-20 sm:mb-24">
-          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-[var(--landing-foreground)] mb-4">
+        <div className="relative z-10 flex flex-col items-center gap-5 text-center w-full max-w-3xl mx-auto">
+          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-[var(--landing-foreground)]">
             {tr("pricing.title")}
           </h1>
           <p className="text-base sm:text-lg text-[var(--landing-muted)] leading-relaxed">
@@ -195,7 +195,7 @@ export default function PricingPage() {
         </div>
 
         {/* ── Cards Grid ── */}
-        <div className="relative z-10 w-full max-w-6xl mx-auto">
+        <div className="relative z-10 w-full max-w-6xl mx-auto !mt-14 sm:!mt-16 lg:!mt-20">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6">
 
             {/* ── Card 1: Dynamic Lite / Standard ── */}
