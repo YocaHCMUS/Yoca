@@ -14,7 +14,6 @@ import {
   Wallet,
   Copy,
   Information,
-  Close,
 } from "@carbon/icons-react";
 import { CopyButton, Tag, Tooltip } from "@carbon/react";
 import { PeriodSelector } from "@/components/common/PeriodSelector/PeriodSelector";
@@ -117,7 +116,6 @@ export function WalletTopbar({
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
   const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
-  const [isWinRateInfoOpen, setIsWinRateInfoOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
   const isBookmarked = walletWatchlist.some(
@@ -279,27 +277,34 @@ export function WalletTopbar({
           <div className={styles.winRateMiniCard}>
             <div className={styles.winRateMiniHeader}>
               <span>Token Win Rate</span>
-              <button
-                type="button"
-                className={styles.winRateInfoBtn}
-                onClick={() => setIsWinRateInfoOpen((previous) => !previous)}
-                aria-label="Toggle win rate explanation"
-                aria-expanded={isWinRateInfoOpen}
-              >
-                {isWinRateInfoOpen ? <Close size={13} /> : <Information size={13} />}
-              </button>
-            </div>
+              <div className={styles.winRateTooltipWrap}>
+                <button
+                  type="button"
+                  className={styles.winRateInfoBtn}
+                  aria-label="Win rate explanation"
+                  aria-describedby="wallet-win-rate-tooltip"
+                >
+                  <Information size={13} />
+                </button>
 
-            {isWinRateInfoOpen && (
-              <div className={styles.winRateMiniDisclaimer}>
-                <p>
-                  * <strong>Win Rate</strong> là tỷ lệ số lượng token có lãi (Realized PnL &gt; 0) trên tổng số token đã giao dịch trong khoảng thời gian <strong>{currentPeriod}</strong>.
-                </p>
-                <p>
-                  * <strong>Avg Win / Avg Loss</strong> là trung bình lợi nhuận/thua lỗ thực tế (Realized PnL USD) của mỗi token.
-                </p>
+                <div
+                  id="wallet-win-rate-tooltip"
+                  className={styles.winRateTooltipPanel}
+                  role="tooltip"
+                >
+                  <p>
+                    <strong>Win Rate</strong> là tỷ lệ số token có lãi
+                    <span> (realized PnL &gt; 0) </span>
+                    trên tổng số token đã giao dịch trong khoảng thời gian
+                    <strong> {currentPeriod}</strong>.
+                  </p>
+                  <p>
+                    <strong>Avg Win / Avg Loss</strong> là lợi nhuận hoặc thua lỗ
+                    trung bình đã thực hiện của mỗi token.
+                  </p>
+                </div>
               </div>
-            )}
+            </div>
 
             <div className={styles.winRateMiniBody}>
               <div className={styles.winRateMainCol}>

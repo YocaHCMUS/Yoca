@@ -232,24 +232,90 @@
     background: var(--cds-layer-hover-01, #e8e8e8);
     color: var(--cds-icon-primary, #161616);
   }
+
+  &:focus-visible {
+    outline: 2px solid var(--cds-focus, #0f62fe);
+    outline-offset: 2px;
+  }
 }
 
-.winRateMiniDisclaimer {
+.winRateTooltipWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.winRateTooltipPanel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: -4px;
+  width: 340px;
+  max-width: min(340px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border-radius: 12px;
   border: 1px solid var(--cds-border-subtle-03);
-  border-radius: 10px;
-  padding: 8px 10px;
-  background: var(--cds-layer-02, #f4f4f4);
-  color: var(--cds-text-secondary, #525252);
-  font-size: 11px;
-  line-height: 1.35;
+  background: var(--cds-layer-02, #ffffff);
+  color: var(--cds-text-primary, #161616);
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.16);
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: normal;
+  text-align: left;
+  text-transform: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+  z-index: 999;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    right: 15px;
+    width: 10px;
+    height: 10px;
+    transform: rotate(45deg);
+    background: inherit;
+    border-left: 1px solid var(--cds-border-subtle-03);
+    border-top: 1px solid var(--cds-border-subtle-03);
+  }
 
   p {
     margin: 0;
   }
 
   p + p {
-    margin-top: 4px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--cds-border-subtle-03);
   }
+
+  strong {
+    color: var(--cds-text-primary, #161616);
+    font-weight: 700;
+  }
+
+  span {
+    color: var(--cds-text-secondary, #525252);
+  }
+}
+
+.winRateTooltipPanel,
+.winRateTooltipPanel * {
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+.winRateTooltipWrap:hover .winRateTooltipPanel,
+.winRateTooltipWrap:focus-within .winRateTooltipPanel {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }
 
 .winRateMiniBody {
