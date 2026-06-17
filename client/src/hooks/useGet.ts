@@ -1,8 +1,8 @@
 // I stopped trying to understand this a while ago
 import type {
-  ClientRequest,
-  ClientRequestOptions,
-  ClientResponse,
+    ClientRequest,
+    ClientRequestOptions,
+    ClientResponse,
 } from "hono/client";
 import useSWR from "swr";
 
@@ -54,7 +54,7 @@ export function useGet<
   ...params: HasRequiredKeys<GetInput<T>> extends true
     ? [args: GetInput<T>, config?: UseGetConfig<Success, Transformed>]
     : [args?: GetInput<T>, config?: UseGetConfig<Success, Transformed>]
-): UseGetResp<Transformed, Error> {
+) {
   const [args, config] = params;
   const { options, select, enabled = true } = config ?? {};
 
