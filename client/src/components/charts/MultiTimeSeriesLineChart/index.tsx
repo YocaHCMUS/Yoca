@@ -149,7 +149,7 @@ export function MultiTimeSeriesLineChart({
         position: "right",
         axisLabel: {
           color: tokens.textSecondary,
-          formatter: (val) => fmt.num.currency(val),
+          formatter: valueFormatter,
         },
         splitLine: {
           lineStyle: { color: tokens.borderSubtle, type: "dashed" },

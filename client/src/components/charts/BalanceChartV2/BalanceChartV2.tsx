@@ -353,7 +353,7 @@ export function BalanceChartV2({
             tokenBalances.isLoading ||
             portfolio.isLoading
           }
-          valueFormatter={fmt.num.currency}
+          valueFormatter={fmt.num.compact.currency}
           onClickDay={onClickDay}
           stacked
         />
