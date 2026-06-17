@@ -105,12 +105,6 @@ const shortAddress = (address?: string) => {
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
 };
 
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat("en-US", {
-    notation: value >= 1_000_000 ? "compact" : "standard",
-    maximumFractionDigits: 2,
-  }).format(value || 0);
-
 const getSeverityColor = (severity: Severity) => {
   if (severity === "high") return "#e24b4a";
   if (severity === "medium") return "#ef9f27";
@@ -191,7 +185,7 @@ interface ReadableGraphEdge extends GraphEdge {
 }
 
 const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscreen?: boolean }> = ({ nodes, edges, isFullscreen = false }) => {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const chartRef = useRef<HTMLDivElement | null>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
 
@@ -269,6 +263,10 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
 
   const suspiciousEdges = readableEdges.filter((edge) => edge.suspicious).length;
   const groupedCount = Math.max(0, edges.length - readableEdges.length);
+  const formatGraphCurrency = useCallback(
+    (value: number) => fmt.num.compact.currency(value || 0),
+    [fmt],
+  );
 
   const option = useMemo<echarts.EChartsOption>(() => {
     const categories = [
@@ -352,7 +350,7 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
           },
           label: {
             show: true,
-            formatter: `${formatNumber(edge.amount)}${edge.transferCount > 1 ? ` · ${edge.transferCount} tx` : ""}`,
+            formatter: `${formatGraphCurrency(edge.amount)}${edge.transferCount > 1 ? ` · ${edge.transferCount} tx` : ""}`,
             color: edge.suspicious ? "#dc2626" : "#334155",
             fontSize: 11,
             fontWeight: 700,
@@ -367,14 +365,14 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
           // Do not render all edge amounts by default. It prevents overlap.
           // Amount is shown on hover/emphasis and in tooltip.
           show: false,
-          formatter: isLargeFlow ? formatNumber(edge.amount) : "",
+          formatter: isLargeFlow ? formatGraphCurrency(edge.amount) : "",
         },
         tooltip: {
           formatter: [
             `<strong>${edge.suspicious ? tr("washTrading.graph.suspiciousFlow") : tr("washTrading.graph.transferFlow")}</strong>`,
             `${tr("washTrading.graph.from")}: ${shortAddress(edge.from)}`,
             `${tr("washTrading.graph.to")}: ${shortAddress(edge.to)}`,
-            `${tr("washTrading.graph.totalAmount")}: ${formatNumber(edge.amount)}`,
+            `${tr("washTrading.graph.totalAmount")}: ${formatGraphCurrency(edge.amount)}`,
             `${tr("washTrading.graph.groupedTransfers")}: ${edge.transferCount}`,
           ].join("<br/>"),
         },
@@ -461,7 +459,7 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
         } as any,
       ],
     } as echarts.EChartsOption;
-  }, [visibleNodes, readableEdges, isFullscreen, tr]);
+  }, [visibleNodes, readableEdges, isFullscreen, tr, formatGraphCurrency]);
 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -530,7 +528,7 @@ const WalletRow: React.FC<{ wallet: SuspiciousWallet; index: number; selected?: 
     <button type="button" className={`${styles.walletRow} ${selected ? styles.walletRowSelected : ""}`} onClick={onClick}>
       <div className={styles.walletInfo}>
         <span className={styles.walletAddr}>{shortAddress(wallet.wallet)}</span>
-        <span className={styles.walletDesc}>{getPatternLabel(wallet.pattern, tr)} · {tr("washTrading.wallets.graphRank", { rank: index + 1 })}</span>
+        <span className={styles.walletDesc}>{getPatternLabel(wallet.pattern, tr)} · {tr("washTrading.wallets.graphRank", { rank: String(index + 1) })}</span>
       </div>
       <span className={styles.walletGnn}>{tr("washTrading.wallets.gnn", { score: wallet.score.toFixed(2) })}</span>
       <span className={`${styles.riskBadge} ${styles[`risk${risk}`]}`}>{getRiskLevelLabel(risk, tr)}</span>
@@ -560,9 +558,9 @@ const WalletInsightPanel: React.FC<{ wallet?: SuspiciousWallet; symbol: string }
       </div>
       <p>
         {tr("washTrading.wallets.explanation", {
-          pattern: <strong>{getPatternLabel(wallet.pattern, tr)}</strong>,
-          symbol: <strong>{symbol}</strong>,
-          score: <strong>{(wallet.score * 100).toFixed(0)}</strong>,
+          pattern: getPatternLabel(wallet.pattern, tr),
+          symbol,
+          score: (wallet.score * 100).toFixed(0),
         })}
       </p>
       <div className={styles.walletInsightGrid}>
@@ -586,7 +584,7 @@ const LogItem: React.FC<{ time: string; text: string; color: string }> = ({ time
 
 const WashTradingPage: React.FC = () => {
   const { theme } = useUserTheme();
-  const { tr, lang } = useLocalization();
+  const { tr, lang, fmt } = useLocalization();
   const isLight = theme === "light";
   const navigate = useNavigate();
   const { mint } = useParams<{ mint: string }>();
@@ -738,6 +736,19 @@ const WashTradingPage: React.FC = () => {
     ? tr("washTrading.verdict.clean")
     : tr("washTrading.verdict.waiting");
 
+  const formatCompactNumber = useCallback(
+    (value: number) => fmt.num.compact.decimal(value || 0),
+    [fmt],
+  );
+  const formatCurrency = useCallback(
+    (value: number) => fmt.num.compact.currency(value || 0),
+    [fmt],
+  );
+  const formatPercent = useCallback(
+    (value: number) => fmt.num.compact.percent(value || 0),
+    [fmt],
+  );
+
   return (
     <PageWrapper>
       <div className={`${styles.page} ${isLight ? styles.light : ""}`}>
@@ -832,10 +843,33 @@ const WashTradingPage: React.FC = () => {
 
         <div className={styles.metricsGrid}>
           {[
-            { label: String(tr("washTrading.metrics.totalTransactions")), value: formatNumber(summary?.totalTransactions ?? 0), sub: String(tr("washTrading.metrics.uniqueWallets", { count: formatNumber(summary?.uniqueWallets ?? 0) })), subColor: "var(--text-secondary)" },
-            { label: String(tr("washTrading.metrics.washVolumeEstimate")), value: formatNumber(summary?.washVolumeEstimate ?? 0), sub: String(tr("washTrading.metrics.totalVolumePercent", { percent: (summary?.washVolumePercent ?? 0).toFixed(1) })), subColor: "#e24b4a" },
-            { label: String(tr("washTrading.metrics.suspiciousWallets")), value: String(suspiciousCount), sub: String(tr("washTrading.metrics.circularClusters", { count: summary?.circularTradeCount ?? 0 })), subColor: "#ef9f27" },
-            { label: String(tr("washTrading.metrics.gnnConfidence")), value: `${((summary?.gnnConfidence ?? 0) * 100).toFixed(1)}%`, sub: String(tr("washTrading.metrics.riskScore", { score: riskScore })), subColor: "#639922" },
+            {
+              label: String(tr("washTrading.metrics.totalTransactions")),
+              value: formatCompactNumber(summary?.totalTransactions ?? 0),
+              sub: String(tr("washTrading.metrics.uniqueWallets", { wallets: formatCompactNumber(summary?.uniqueWallets ?? 0) })),
+              subColor: "var(--text-secondary)",
+            },
+            {
+              label: String(tr("washTrading.metrics.washVolumeEstimate")),
+              value: formatCurrency(summary?.washVolumeEstimate ?? 0),
+              sub: String(tr("washTrading.metrics.totalVolumePercent", {
+                percent: formatPercent(summary?.washVolumePercent ?? 0),
+                volume: formatCurrency(summary?.totalVolume ?? 0),
+              })),
+              subColor: "#e24b4a",
+            },
+            {
+              label: String(tr("washTrading.metrics.suspiciousWallets")),
+              value: formatCompactNumber(suspiciousCount),
+              sub: String(tr("washTrading.metrics.circularClusters", { count: summary?.circularTradeCount ?? 0 })),
+              subColor: "#ef9f27",
+            },
+            {
+              label: String(tr("washTrading.metrics.gnnConfidence")),
+              value: formatPercent((summary?.gnnConfidence ?? 0) * 100),
+              sub: String(tr("washTrading.metrics.riskScore", { score: formatCompactNumber(riskScore) })),
+              subColor: "#639922",
+            },
           ].map(({ label, value, sub, subColor }) => (
             <div key={label} className={styles.metricCard}>
               <div className={styles.metricLabel}>{label}</div>
@@ -979,7 +1013,7 @@ const WashTradingPage: React.FC = () => {
                 <div><span>{tr("washTrading.context.algorithm")}</span><strong>{result?.algorithm ?? algoTab}</strong></div>
                 <div><span>{tr("washTrading.context.dataSource")}</span><strong>{result?.dataSource ?? "—"}</strong></div>
                 <div><span>{tr("washTrading.context.sourceReason")}</span><strong>{result?.dataSourceReason ?? "—"}</strong></div>
-                <div><span>{tr("washTrading.context.analyzedAt")}</span><strong>{result ? new Date(result.analyzedAt).toLocaleString(lang === "vi" ? "vi-VN" : "en-US") : "—"}</strong></div>
+                <div><span>{tr("washTrading.context.analyzedAt")}</span><strong>{result ? fmt.datetime.datetime(result.analyzedAt) : "—"}</strong></div>
               </div>
             </div>
           </div>
@@ -1002,8 +1036,8 @@ const WashTradingPage: React.FC = () => {
                     {tr("washTrading.graph.modalSubtitle", {
                       symbol: symbol || "TOKEN",
                       mint: shortAddress(targetMint),
-                      nodes: result?.graphData.nodes.length ?? 0,
-                      edges: result?.graphData.edges.length ?? 0,
+                      nodes: formatCompactNumber(result?.graphData.nodes.length ?? 0),
+                      edges: formatCompactNumber(result?.graphData.edges.length ?? 0),
                     })}
                   </p>
                 </div>
