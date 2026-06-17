@@ -13,6 +13,8 @@ import {
   Tag as TagIcon,
   Wallet,
   Copy,
+  Information,
+  Close,
 } from "@carbon/icons-react";
 import { CopyButton, Tag, Tooltip } from "@carbon/react";
 import { PeriodSelector } from "@/components/common/PeriodSelector/PeriodSelector";
@@ -68,6 +70,14 @@ function resolveWalletAgeDays(firstFund: { walletAgeDays?: number | null; firstF
   return null;
 }
 
+type WalletWinRateStats = {
+  winRate?: number;
+  winCount?: number;
+  totalTraded?: number;
+  avgWinUsd?: number;
+  avgLossUsd?: number;
+};
+
 export interface WalletTopbarProps {
   address: string;
   onAiAnalysisOpen: () => void;
@@ -78,6 +88,8 @@ export interface WalletTopbarProps {
   isExporting: boolean;
   currentPeriod: WalletOverviewPeriodKey;
   onPeriodChange: (period: WalletOverviewPeriodKey) => void;
+  winRateStats?: WalletWinRateStats | null;
+  winRateLoading?: boolean;
 }
 
 export function WalletTopbar({
@@ -90,6 +102,8 @@ export function WalletTopbar({
   isExporting,
   currentPeriod = "24H",
   onPeriodChange,
+  winRateStats,
+  winRateLoading = false,
 }: WalletTopbarProps) {
   const { user } = useAuth();
   const { tr, fmt } = useLocalization();
@@ -103,6 +117,7 @@ export function WalletTopbar({
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
   const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [isWinRateInfoOpen, setIsWinRateInfoOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
   const isBookmarked = walletWatchlist.some(
@@ -125,6 +140,14 @@ export function WalletTopbar({
     : null;
 
   const displayName = label || (identityStatus === "known" && identityName ? identityName : shortenWalletAddress(address));
+  const safeWinRate = Math.max(0, Math.min(100, Number(winRateStats?.winRate ?? 0)));
+  const winCount = Number(winRateStats?.winCount ?? 0);
+  const totalTraded = Number(winRateStats?.totalTraded ?? 0);
+  const avgWinUsd = Number(winRateStats?.avgWinUsd ?? 0);
+  const avgLossUsd = Number(winRateStats?.avgLossUsd ?? 0);
+  const hasWinRateStats = Boolean(winRateStats) && Number.isFinite(safeWinRate);
+  const isHighWinRate = safeWinRate >= 50;
+  const formatUsd = (value: number) => Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   useEffect(() => {
     if (!address || address === "null") return;
@@ -251,6 +274,64 @@ export function WalletTopbar({
             </div>
           </div>
         </div>
+
+        <div className={styles.topbarCenter}>
+          <div className={styles.winRateMiniCard}>
+            <div className={styles.winRateMiniHeader}>
+              <span>Token Win Rate</span>
+              <button
+                type="button"
+                className={styles.winRateInfoBtn}
+                onClick={() => setIsWinRateInfoOpen((previous) => !previous)}
+                aria-label="Toggle win rate explanation"
+                aria-expanded={isWinRateInfoOpen}
+              >
+                {isWinRateInfoOpen ? <Close size={13} /> : <Information size={13} />}
+              </button>
+            </div>
+
+            {isWinRateInfoOpen && (
+              <div className={styles.winRateMiniDisclaimer}>
+                <p>
+                  * <strong>Win Rate</strong> là tỷ lệ số lượng token có lãi (Realized PnL &gt; 0) trên tổng số token đã giao dịch trong khoảng thời gian <strong>{currentPeriod}</strong>.
+                </p>
+                <p>
+                  * <strong>Avg Win / Avg Loss</strong> là trung bình lợi nhuận/thua lỗ thực tế (Realized PnL USD) của mỗi token.
+                </p>
+              </div>
+            )}
+
+            <div className={styles.winRateMiniBody}>
+              <div className={styles.winRateMainCol}>
+                <div className={styles.winRateValue} data-positive={isHighWinRate}>
+                  {winRateLoading ? "--" : hasWinRateStats ? `${safeWinRate.toFixed(1)}%` : "--"}
+                </div>
+                <div className={styles.winRateProgressWrap} aria-hidden="true">
+                  <div className={styles.winRateProgressWin} style={{ width: `${winRateLoading || !hasWinRateStats ? 0 : safeWinRate}%` }} />
+                  <div className={styles.winRateProgressLoss} style={{ width: `${winRateLoading || !hasWinRateStats ? 0 : 100 - safeWinRate}%` }} />
+                </div>
+                <div className={styles.winRateCounts}>
+                  <span>{winRateLoading ? "--" : winCount.toLocaleString()} win</span>
+                  <strong>/</strong>
+                  {winRateLoading ? "--" : totalTraded.toLocaleString()} traded
+                </div>
+              </div>
+
+              <div className={styles.winRateDivider} />
+
+              <div className={styles.winRateMetricCol}>
+                <span>Avg Win</span>
+                <strong className={styles.winRateMetricWin}>+${winRateLoading ? "--" : formatUsd(avgWinUsd)}</strong>
+              </div>
+
+              <div className={styles.winRateMetricCol}>
+                <span>Avg Loss</span>
+                <strong className={styles.winRateMetricLoss}>-${winRateLoading ? "--" : formatUsd(avgLossUsd)}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className={styles.topbarRight}>
           <div className={styles.topbarRow}>
             <PeriodSelector

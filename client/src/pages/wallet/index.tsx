@@ -80,7 +80,6 @@ import { AiSwapSummaryModal } from "@/components/wallet/AiSwapSummaryModal";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
 import type { WalletOverviewPeriodKey } from "@/services/wallet/walletApi.ts";
 import { TimePeriod } from "@/types/chart-filters.types.ts";
-import WalletOverviewWinRateBanner from "@/components/wallet/WalletOverview/WalletOverviewWinRateBanner";
 
 type ChatPosition = "right" | "left" | "fullscreen";
 
@@ -779,7 +778,6 @@ export default function WalletPage() {
     loadPortfolioData,
     loadActivityData,
   ]);
-  const { stats: winRateStats, loading: winRateLoading } = useWalletWinrate(walletAddress, selectedPeriod);
   const activeReportSection = useMemo<WalletReportSection>(() => {
     return "overview";
   }, []);
@@ -1290,14 +1288,9 @@ export default function WalletPage() {
             }
             currentPeriod={selectedPeriod}
             onPeriodChange={(period) => setSelectedPeriod(period)}
+            winRateStats={stats}
+            winRateLoading={loading}
           />
-          <div style={{ padding: "20px 24px 0 24px" }}>
-            <WalletOverviewWinRateBanner
-              stats={stats} // Nhận từ hook useWalletWinrate
-              selectedPeriod={selectedPeriod}
-              loading={loading} // Nhận từ hook useWalletWinrate
-            />
-          </div>
 
           <WalletHero
             overview={overviewReport}
