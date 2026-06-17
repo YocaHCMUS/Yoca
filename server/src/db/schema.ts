@@ -57,8 +57,8 @@ export const enumAlertRuleVolumeUnit = pgEnum("alert_rule_volume_unit", [
 
 export const tokenMeta = pgTable("token_meta", {
   address: varchar("address", { length: 44 }).primaryKey(),
-  name: varchar("name").notNull(),
-  symbol: varchar("symbol").notNull(),
+  name: varchar("name"),
+  symbol: varchar("symbol"),
   imageUrl: varchar("image_url"),
 
   updatedAt: timestamp("updated_at")
@@ -1457,19 +1457,16 @@ export type NewsArticleInsert = typeof newsArticles.$inferInsert;
 export type UserSourceInsert = typeof userSources.$inferInsert;
 
 // #region Chatbot
-export const chatAnalysisCache = pgTable(
-  "chat_analysis_cache",
-  {
-    key: varchar("key", { length: 64 }).primaryKey(),
-    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
-    query: text("query").notNull(),
-    response: jsonb("response").$type<Record<string, unknown>>().notNull(),
-    dataFingerprint: varchar("data_fingerprint", { length: 64 }).notNull(),
-    model: varchar("model", { length: 64 }).notNull(),
-    ttlMs: integer("ttl_ms").notNull(),
-    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
-  },
-);
+export const chatAnalysisCache = pgTable("chat_analysis_cache", {
+  key: varchar("key", { length: 64 }).primaryKey(),
+  walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+  query: text("query").notNull(),
+  response: jsonb("response").$type<Record<string, unknown>>().notNull(),
+  dataFingerprint: varchar("data_fingerprint", { length: 64 }).notNull(),
+  model: varchar("model", { length: 64 }).notNull(),
+  ttlMs: integer("ttl_ms").notNull(),
+  fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+});
 
 export const chatSessions = pgTable(
   "chat_sessions",

@@ -1,0 +1,10 @@
+.searchRow {
+  padding: 0.5rem;
+  border-block-end: 1px solid var(--cds-border-subtle-01);
+}
+
+.list {
+  padding: 0.5rem 0;
+  max-block-size: 14rem;
+  overflow-y: auto;
+}

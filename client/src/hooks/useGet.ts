@@ -47,15 +47,14 @@ export function useGet<
   SuccessResponseType = SuccessResponse<Response, SuccessStatus>,
   Success = SuccessJson<SuccessResponseType>,
   Transformed = Success,
+  Error = ErrorResponse<Response, SuccessStatus>,
 >(
   request: T,
   successStatus: SuccessStatus,
   ...params: HasRequiredKeys<GetInput<T>> extends true
     ? [args: GetInput<T>, config?: UseGetConfig<Success, Transformed>]
     : [args?: GetInput<T>, config?: UseGetConfig<Success, Transformed>]
-) {
-  type Error = ErrorResponse<Response, SuccessStatus>;
-
+): UseGetResp<Transformed, Error> {
   const [args, config] = params;
   const { options, select, enabled = true } = config ?? {};
 
@@ -79,3 +78,9 @@ export function useGet<
     },
   );
 }
+
+export type UseGetResp<Data, Error = any> = {
+  isLoading: boolean;
+  data: Data | undefined;
+  error: Error | undefined;
+};
