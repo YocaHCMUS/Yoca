@@ -1007,6 +1007,18 @@ export const translation = {
     aiAnalysisRetry: "Retry AI analysis",
     aiNoData: "No AI analysis data",
     aiSummary: "Summary",
+    tokenWinRate: {
+      title: "Token Win Rate",
+      win: "win",
+      traded: "traded",
+      avgWin: "Avg Win",
+      avgLoss: "Avg Loss",
+      explanationAria: "Win rate explanation",
+      tooltipWinRateLabel: "Win Rate",
+      tooltipWinRateDescription: "is the percentage of traded tokens with positive realized PnL (realized PnL > 0) during {{period}}.",
+      tooltipAverageLabel: "Avg Win / Avg Loss",
+      tooltipAverageDescription: "is the average realized profit or loss per traded token.",
+    },
     aiSwapSummary: {
       button: "View swap analysis",
       title: "AI Swap Summary",

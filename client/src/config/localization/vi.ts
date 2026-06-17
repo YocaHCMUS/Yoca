@@ -968,6 +968,18 @@ export const translation = defineTranslation({
     aiAnalysisRetry: "Thử lại phân tích AI",
     aiNoData: "Không có dữ liệu phân tích AI",
     aiSummary: "Tóm tắt",
+    tokenWinRate: {
+      title: "Tỷ lệ thắng token",
+      win: "token có lời",
+      traded: "token đã giao dịch",
+      avgWin: "Lãi TB",
+      avgLoss: "Lỗ TB",
+      explanationAria: "Giải thích tỷ lệ thắng",
+      tooltipWinRateLabel: "Tỷ lệ thắng",
+      tooltipWinRateDescription: "là tỷ lệ token đã giao dịch có lãi thực tế (realized PnL > 0) trong khoảng {{period}}.",
+      tooltipAverageLabel: "Lãi TB / Lỗ TB",
+      tooltipAverageDescription: "là lợi nhuận hoặc thua lỗ thực tế trung bình trên mỗi token đã giao dịch.",
+    },
     aiSwapSummary: {
       button: "Xem phân tích swap",
       title: "AI phân tích tổng quan giao dịch swap",
