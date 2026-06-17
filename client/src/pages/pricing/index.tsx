@@ -132,12 +132,12 @@ export default function PricingPage() {
   return (
     <div
       id="pricing"
-      className="landing-page min-h-screen w-full antialiased relative flex flex-col"
+      className="landing-page relative h-screen w-full overflow-y-auto antialiased"
       style={createLandingThemeStyles(theme)}
     >
       <LandingNavbar />
 
-      <main className="relative flex-grow flex flex-col items-center pt-32 pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <main className="relative flex flex-col items-center pt-32 pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* ── Background Orbs ── */}
         <div
           aria-hidden
