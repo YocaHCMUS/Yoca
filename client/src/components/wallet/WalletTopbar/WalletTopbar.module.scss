@@ -172,6 +172,46 @@
   }
 }
 
+.iconBtnActive {
+  color: var(--cds-support-success);
+  background-color: color-mix(in srgb, var(--cds-support-success) 12%, transparent);
+
+  &:hover {
+    color: var(--cds-support-success);
+    background-color: color-mix(in srgb, var(--cds-support-success) 18%, transparent);
+  }
+}
+
+.followNotice {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 20px 12px;
+  border-bottom: 1px solid var(--cds-border-subtle-03);
+
+  :global(.cds--inline-notification),
+  :global(.cds--inline-notification--low-contrast) {
+    max-width: 32rem;
+    margin: 12px 0 0 auto;
+  }
+}
+
+.noticeLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--cds-link-primary);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 .exportMenuWrapper {
   position: relative;
 }

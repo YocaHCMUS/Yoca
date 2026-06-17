@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
@@ -1022,6 +1023,43 @@ export const alertRules = pgTable("alert_rules", {
     .$onUpdate(() => new Date()),
 });
 
+/** Managed Helius webhook shards for wallet alert address fan-out. */
+export const heliusWebhooks = pgTable("helius_webhooks", {
+  id: serial("id").primaryKey(),
+  heliusWebhookId: text("helius_webhook_id").notNull().unique(),
+  webhookUrl: text("webhook_url").notNull(),
+  webhookType: text("webhook_type").notNull().default("enhanced"),
+  transactionTypes: text("transaction_types")
+    .array()
+    .notNull()
+    .default(sql`ARRAY['ANY']::text[]`),
+  accountAddresses: text("account_addresses")
+    .array()
+    .notNull()
+    .default(sql`ARRAY[]::text[]`),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const heliusWebhookAddresses = pgTable(
+  "helius_webhook_addresses",
+  {
+    id: serial("id").primaryKey(),
+    heliusWebhookId: text("helius_webhook_id")
+      .notNull()
+      .references(() => heliusWebhooks.heliusWebhookId, {
+        onDelete: "cascade",
+      }),
+    walletAddress: text("wallet_address").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.heliusWebhookId, t.walletAddress)],
+);
+
 export const walletTokenDetails = pgTable(
   "wallet_token_details",
   {
@@ -1402,6 +1440,12 @@ export type FollowedWalletInsert = typeof followedWallets.$inferInsert;
 export type FollowedWalletRow = typeof followedWallets.$inferSelect;
 export type AlertRuleInsert = typeof alertRules.$inferInsert;
 export type AlertRuleRow = typeof alertRules.$inferSelect;
+export type HeliusWebhookInsert = typeof heliusWebhooks.$inferInsert;
+export type HeliusWebhookRow = typeof heliusWebhooks.$inferSelect;
+export type HeliusWebhookAddressInsert =
+  typeof heliusWebhookAddresses.$inferInsert;
+export type HeliusWebhookAddressRow =
+  typeof heliusWebhookAddresses.$inferSelect;
 export type WalletAuditCacheInsert = typeof walletAuditCache.$inferInsert;
 export type WalletAuditCacheRow = typeof walletAuditCache.$inferSelect;
 export type WalletPnlDataCacheInsert = typeof walletPnlDataCache.$inferInsert;
