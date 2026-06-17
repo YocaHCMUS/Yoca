@@ -12,7 +12,11 @@ export type CurvedEdgeData = {
   labelShift?: number;
   tokenAddress: string;
   pairKey: string;
-  isCurved?: boolean; // true = arc, false = straight
+  isCurved?: boolean;
+  /** Current replay step (undefined = show all normally) */
+  playStep?: number | null;
+  /** Total steps (for knowing when replay is done) */
+  totalSteps?: number;
 };
 
 export function CurvedEdge({
@@ -27,6 +31,17 @@ export function CurvedEdge({
 }: EdgeProps<CurvedEdgeData>) {
   const { hoveredToken, setHoveredToken, hoveredPair, setHoveredPair, hoveredAddress } = useContext(HoverContext);
 
+  const seqNo = parseInt(data?.sequenceText ?? "0", 10);
+  const playStep = data?.playStep;
+  const isPlayMode = playStep != null;
+
+  // In play mode: hide future steps, animate current step
+  const isFutureStep = isPlayMode && seqNo > playStep!;
+  const isCurrentStep = isPlayMode && seqNo === playStep!;
+  const isPastStep = isPlayMode && seqNo < playStep!;
+
+  if (isFutureStep) return null; // Don't render future edges at all
+
   const dx = targetX - sourceX;
   const dy = targetY - sourceY;
   const length = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -37,7 +52,6 @@ export function CurvedEdge({
   const parallelOffset = data?.parallelOffset ?? 0;
   const normalizedShift = Math.max(-0.28, Math.min(0.28, data?.labelShift ?? 0));
 
-  // Build the path
   let edgePath: string;
   let labelX: number;
   let labelY: number;
@@ -46,33 +60,25 @@ export function CurvedEdge({
   let arrowAngle: number;
 
   if (isCurved || parallelOffset !== 0) {
-    // Curved: use quadratic Bézier
     const bowAmount = parallelOffset !== 0 ? parallelOffset * 1.35 : Math.min(length * 0.22, 104);
     const cx = (sourceX + targetX) / 2 + nx * bowAmount;
     const cy = (sourceY + targetY) / 2 + ny * bowAmount;
     edgePath = `M ${sourceX},${sourceY} Q ${cx},${cy} ${targetX},${targetY}`;
 
-    // Label at the middle of the curve
     const lt = 0.5 + normalizedShift;
     labelX = (1 - lt) * (1 - lt) * sourceX + 2 * (1 - lt) * lt * cx + lt * lt * targetX;
     labelY = (1 - lt) * (1 - lt) * sourceY + 2 * (1 - lt) * lt * cy + lt * lt * targetY;
 
-    // Arrow exactly at the end of the curve (t=1.0)
     arrowX = targetX;
     arrowY = targetY;
     const tanX = targetX - cx;
     const tanY = targetY - cy;
     arrowAngle = Math.atan2(tanY, tanX) * (180 / Math.PI);
   } else {
-    // Straight line
     edgePath = `M ${sourceX},${sourceY} L ${targetX},${targetY}`;
-
-    // Label in the middle
     const lt = 0.45 + normalizedShift * 0.6;
     labelX = sourceX + dx * lt;
     labelY = sourceY + dy * lt;
-
-    // Arrow exactly at the end
     arrowX = targetX;
     arrowY = targetY;
     arrowAngle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -85,31 +91,60 @@ export function CurvedEdge({
   const isDimmed = (hoveredToken || hoveredPair || hoveredAddress) && !isHovered;
   const baseColor = data?.color ?? "#94a3b8";
 
-  const strokeColor = isDimmed ? "#e5e7eb" : baseColor;
-  // Never default to 0.5 opacity. If dimmed, make it slightly transparent, else full opacity.
-  const opacity = isDimmed ? 0.35 : 1;
-  const strokeWidth = isHovered ? 2.5 : 1.2;
-  const arrowSize = isHovered ? 6 : 5;
+  // Play-mode styling
+  let strokeColor: string;
+  let opacity: number;
+  let strokeWidth: number;
+  let arrowSize: number;
+  let pathStyle: React.CSSProperties = {};
+
+  if (isCurrentStep) {
+    // Active step: bright, thick, animated draw
+    strokeColor = baseColor;
+    opacity = 1;
+    strokeWidth = 2.8;
+    arrowSize = 7;
+    pathStyle = {
+      strokeDasharray: 1000,
+      strokeDashoffset: 0,
+      animation: "drawEdge 0.55s ease-out forwards",
+    };
+  } else if (isPastStep) {
+    // Already played: show dimmed
+    strokeColor = baseColor;
+    opacity = 0.35;
+    strokeWidth = 1.2;
+    arrowSize = 5;
+  } else {
+    // Normal (no play mode)
+    strokeColor = isDimmed ? "#e5e7eb" : baseColor;
+    opacity = isDimmed ? 0.35 : 1;
+    strokeWidth = isHovered ? 2.5 : 1.2;
+    arrowSize = isHovered ? 6 : 5;
+  }
 
   return (
     <>
       {/* Path */}
       <path
+        key={isCurrentStep ? `active-${id}` : id}
         d={edgePath}
         fill="none"
         stroke={strokeColor}
         strokeWidth={strokeWidth}
-        strokeDasharray={isHovered ? "none" : "3 4"}
+        strokeDasharray={isCurrentStep ? 1000 : (isPlayMode ? "none" : "3 4")}
         strokeLinecap="round"
         opacity={opacity}
-        style={{ transition: "opacity 0.2s, stroke 0.2s, stroke-width 0.2s" }}
+        style={{
+          transition: isPlayMode ? "none" : "opacity 0.2s, stroke 0.2s, stroke-width 0.2s",
+          ...(isCurrentStep ? pathStyle : {}),
+        }}
       />
 
-      {/* Arrow head at end */}
+      {/* Arrow head */}
       <g
         transform={`translate(${arrowX},${arrowY}) rotate(${arrowAngle})`}
         opacity={opacity}
-        style={{ transition: "opacity 0.2s" }}
       >
         <polygon
           points={`0,0 ${-arrowSize * 2},${-arrowSize} ${-arrowSize * 2},${arrowSize}`}
@@ -117,7 +152,7 @@ export function CurvedEdge({
         />
       </g>
 
-      {/* Pill label near source */}
+      {/* Pill label */}
       <EdgeLabelRenderer>
         <div
           onMouseEnter={() => setHoveredToken(data?.tokenAddress || null)}
@@ -125,30 +160,33 @@ export function CurvedEdge({
           style={{
             position: "absolute",
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-            background: "#fff",
+            background: isCurrentStep ? baseColor : "#fff",
             padding: "3px 10px",
             borderRadius: 20,
             fontSize: 11,
             fontWeight: 500,
             fontFamily: "Inter, ui-sans-serif, sans-serif",
-            border: `1.5px solid ${isHovered ? strokeColor : (isDimmed ? "#f3f4f6" : "#e5e7eb")}`,
+            border: `1.5px solid ${isCurrentStep ? baseColor : (isHovered ? strokeColor : (isDimmed ? "#f3f4f6" : "#e5e7eb"))}`,
             pointerEvents: "all",
-            zIndex: isHovered ? 100 : 0,
-            opacity: isDimmed ? 0.35 : 1,
-            boxShadow: isHovered ? "0 2px 5px rgba(0,0,0,0.1)" : "0 1px 3px rgba(0,0,0,0.04)",
+            zIndex: isCurrentStep ? 200 : isHovered ? 100 : 0,
+            opacity: isPastStep ? 0.4 : (isDimmed ? 0.35 : 1),
+            boxShadow: isCurrentStep
+              ? `0 0 0 3px ${baseColor}33, 0 4px 12px rgba(0,0,0,0.15)`
+              : isHovered ? "0 2px 5px rgba(0,0,0,0.1)" : "0 1px 3px rgba(0,0,0,0.04)",
             display: "flex",
             alignItems: "center",
             gap: 5,
             whiteSpace: "nowrap",
-            color: isDimmed ? "#d0d4da" : baseColor,
-            transition: "opacity 0.2s, border-color 0.2s, box-shadow 0.2s",
+            color: isCurrentStep ? "#fff" : (isDimmed ? "#d0d4da" : baseColor),
+            transition: isPlayMode ? "none" : "opacity 0.2s, border-color 0.2s, box-shadow 0.2s",
+            animation: isCurrentStep ? "fadeInScale 0.3s ease-out" : "none",
           }}
           className="nodrag nopan"
         >
           <span style={{ fontWeight: 600 }}>{data?.amountText}</span>
           <span style={{ fontWeight: 600 }}>{data?.symbolText}</span>
           <span style={{
-            color: isDimmed ? "#e0e0e0" : "#b0b8c4",
+            color: isCurrentStep ? "rgba(255,255,255,0.7)" : (isDimmed ? "#e0e0e0" : "#b0b8c4"),
             fontSize: 10, fontWeight: 600,
           }}>
             [{data?.sequenceText}]

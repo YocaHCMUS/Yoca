@@ -221,11 +221,89 @@
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 
-  to {
-    transform: rotate(360deg);
-  }
+/* ─── Replay player bar ─── */
+.playerBar {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e5e7eb;
+  border-radius: 40px;
+  padding: 8px 18px 8px 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+  user-select: none;
+}
+
+.playBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: #111827;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  flex-shrink: 0;
+
+  &:hover { background: #374151; transform: scale(1.06); }
+  &:active { transform: scale(0.96); }
+}
+
+.playBtnActive {
+  background: #2563eb;
+  &:hover { background: #1d4ed8; }
+}
+
+.stepDots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.stepDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  transition: background 0.2s, transform 0.2s;
+  flex-shrink: 0;
+}
+
+.stepDotPlayed { background: #94a3b8; }
+
+.stepDotActive {
+  background: #2563eb;
+  transform: scale(1.35);
+}
+
+.stepCounter {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  min-width: 36px;
+  text-align: center;
+}
+
+/* ─── Edge draw animation (used in CurvedEdge during replay) ─── */
+@keyframes drawEdge {
+  from { stroke-dashoffset: 1000; opacity: 0.3; }
+  to { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
