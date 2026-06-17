@@ -29,8 +29,8 @@
     font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
     background-color: var(--landing-bg);
     background-image:
-      linear-gradient(rgba(153, 69, 255, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(20, 241, 149, 0.05) 1px, transparent 1px);
+      linear-gradient(var(--landing-grid-purple) 1px, transparent 1px),
+      linear-gradient(90deg, var(--landing-grid-green) 1px, transparent 1px);
     background-size: 40px 40px;
     background-position: center;
   }
