@@ -2419,6 +2419,25 @@ export const translation = {
     },
     graph: {
       title: "Transaction Graph — GNN Cluster View",
+      algorithmButtonAria: "Select {{algorithm}} algorithm and view explanation",
+      algorithms: {
+        bestForLabel: "Best for",
+        gcn: {
+          title: "GCN — Graph Convolutional Network",
+          description: "Aggregates signals from neighboring wallets and transfer links to estimate whether a wallet belongs to a suspicious trading cluster.",
+          bestFor: "overall cluster risk and circular-flow neighborhoods",
+        },
+        gat: {
+          title: "GAT — Graph Attention Network",
+          description: "Learns attention weights for each neighboring wallet or transfer, so stronger suspicious links influence the score more than weak links.",
+          bestFor: "dominant suspicious links, hub wallets, and high-impact flows",
+        },
+        graphsage: {
+          title: "GraphSAGE — Sample and Aggregate",
+          description: "Samples nearby wallets and learns reusable wallet embeddings, which keeps analysis scalable when the token graph is large or changes quickly.",
+          bestFor: "large token graphs and fast wallet-risk generalization",
+        },
+      },
       highRiskWallet: "High risk wallet",
       bridgeWallet: "Bridge wallet",
       normalWallet: "Normal wallet",

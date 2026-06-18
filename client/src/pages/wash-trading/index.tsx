@@ -521,6 +521,64 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
   );
 };
 
+
+const getAlgorithmTooltip = (algorithm: GnnAlgorithm, tr: ReturnType<typeof useLocalization>["tr"]) => {
+  if (algorithm === "GCN") {
+    return {
+      title: String(tr("washTrading.graph.algorithms.gcn.title")),
+      description: String(tr("washTrading.graph.algorithms.gcn.description")),
+      bestFor: String(tr("washTrading.graph.algorithms.gcn.bestFor")),
+    };
+  }
+
+  if (algorithm === "GAT") {
+    return {
+      title: String(tr("washTrading.graph.algorithms.gat.title")),
+      description: String(tr("washTrading.graph.algorithms.gat.description")),
+      bestFor: String(tr("washTrading.graph.algorithms.gat.bestFor")),
+    };
+  }
+
+  return {
+    title: String(tr("washTrading.graph.algorithms.graphsage.title")),
+    description: String(tr("washTrading.graph.algorithms.graphsage.description")),
+    bestFor: String(tr("washTrading.graph.algorithms.graphsage.bestFor")),
+  };
+};
+
+const AlgorithmTab: React.FC<{
+  algorithm: GnnAlgorithm;
+  active: boolean;
+  onSelect: (algorithm: GnnAlgorithm) => void;
+}> = ({ algorithm, active, onSelect }) => {
+  const { tr } = useLocalization();
+  const tooltip = getAlgorithmTooltip(algorithm, tr);
+  const tooltipId = `wash-trading-algorithm-${algorithm.toLowerCase()}-tooltip`;
+
+  return (
+    <div className={styles.algoTabWrap}>
+      <button
+        type="button"
+        className={`${styles.algoTab} ${active ? styles.algoTabActive : ""}`}
+        onClick={() => onSelect(algorithm)}
+        aria-describedby={tooltipId}
+        aria-label={String(tr("washTrading.graph.algorithmButtonAria", { algorithm }))}
+      >
+        {algorithm}
+      </button>
+
+      <div id={tooltipId} role="tooltip" className={styles.algoTooltip}>
+        <div className={styles.algoTooltipTitle}>{tooltip.title}</div>
+        <p>{tooltip.description}</p>
+        <div className={styles.algoTooltipBestFor}>
+          <span>{tr("washTrading.graph.algorithms.bestForLabel")}</span>
+          <strong>{tooltip.bestFor}</strong>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const WalletRow: React.FC<{ wallet: SuspiciousWallet; index: number; selected?: boolean; onClick?: () => void }> = ({ wallet, index, selected = false, onClick }) => {
   const { tr } = useLocalization();
   const risk = normalizeRiskLevel(wallet.riskLevel);
@@ -888,13 +946,12 @@ const WashTradingPage: React.FC = () => {
                 <div className={styles.graphActions}>
                   <div className={styles.algoTabs}>
                     {(["GCN", "GAT", "GraphSAGE"] as const).map((tab) => (
-                      <button
+                      <AlgorithmTab
                         key={tab}
-                        className={`${styles.algoTab} ${algoTab === tab ? styles.algoTabActive : ""}`}
-                        onClick={() => handleAlgorithmChange(tab)}
-                      >
-                        {tab}
-                      </button>
+                        algorithm={tab}
+                        active={algoTab === tab}
+                        onSelect={handleAlgorithmChange}
+                      />
                     ))}
                   </div>
                   <button
@@ -1045,13 +1102,12 @@ const WashTradingPage: React.FC = () => {
                 <div className={styles.graphModalControls}>
                   <div className={styles.algoTabs}>
                     {(["GCN", "GAT", "GraphSAGE"] as const).map((tab) => (
-                      <button
+                      <AlgorithmTab
                         key={tab}
-                        className={`${styles.algoTab} ${algoTab === tab ? styles.algoTabActive : ""}`}
-                        onClick={() => handleAlgorithmChange(tab)}
-                      >
-                        {tab}
-                      </button>
+                        algorithm={tab}
+                        active={algoTab === tab}
+                        onSelect={handleAlgorithmChange}
+                      />
                     ))}
                   </div>
                   <button type="button" className={styles.graphCloseButton} onClick={() => setIsGraphModalOpen(false)}>

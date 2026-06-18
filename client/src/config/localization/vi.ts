@@ -2406,7 +2406,7 @@ export const translation = defineTranslation({
       highRisk: "RỦI RO CAO",
       mediumRisk: "RỦI RO TRUNG BÌNH",
       lowRisk: "RỦI RO THẤP",
-      clean: "SẠCH",
+      clean: "AN TOÀN",
     },
     metrics: {
       totalTransactions: "Tổng giao dịch",
@@ -2420,6 +2420,25 @@ export const translation = defineTranslation({
     },
     graph: {
       title: "Transaction Graph — Cụm ví theo GNN",
+      algorithmButtonAria: "Chọn thuật toán {{algorithm}} và xem giải thích",
+      algorithms: {
+        bestForLabel: "Phù hợp với",
+        gcn: {
+          title: "GCN — Mạng tích chập đồ thị",
+          description: "Tổng hợp tín hiệu từ các ví lân cận và liên kết chuyển token để ước lượng ví có thuộc cụm giao dịch đáng ngờ hay không.",
+          bestFor: "đánh giá rủi ro cụm ví và các vùng giao dịch vòng lặp",
+        },
+        gat: {
+          title: "GAT — Mạng chú ý trên đồ thị",
+          description: "Học trọng số chú ý cho từng ví hoặc luồng chuyển lân cận, nên các liên kết đáng ngờ mạnh sẽ ảnh hưởng đến điểm số nhiều hơn liên kết yếu.",
+          bestFor: "liên kết đáng ngờ nổi bật, ví trung tâm và luồng giao dịch có tác động lớn",
+        },
+        graphsage: {
+          title: "GraphSAGE — Lấy mẫu và tổng hợp",
+          description: "Lấy mẫu các ví lân cận và học biểu diễn ví có thể tái sử dụng, giúp phân tích tốt hơn khi graph token lớn hoặc thay đổi nhanh.",
+          bestFor: "graph token lớn và suy luận nhanh rủi ro ví mới",
+        },
+      },
       highRiskWallet: "Ví rủi ro cao",
       bridgeWallet: "Ví trung gian",
       normalWallet: "Ví bình thường",
