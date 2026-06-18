@@ -15,6 +15,7 @@ export interface TokenVolatilityNewsSummary {
 interface RelatedNewsInput {
   title: string;
   source: string;
+  sourceType?: "news" | "web_mention" | "project_update";
   publishedAt: string | null;
   description: string;
   confidence: "high" | "medium" | "low";
@@ -167,6 +168,7 @@ function buildSummaryPrompt(input: TokenVolatilityNewsSummaryInput) {
       relatedNews: event.relatedNews.slice(0, 3).map((article) => ({
         title: article.title,
         source: article.source,
+        sourceType: article.sourceType ?? "news",
         publishedAt: article.publishedAt,
         description: article.description.slice(0, 240),
         confidence: article.confidence,
@@ -179,6 +181,8 @@ function buildSummaryPrompt(input: TokenVolatilityNewsSummaryInput) {
     "Summarize these token volatility signals and possible related news.",
     "Use only the supplied JSON. Do not infer or invent causes, partnerships, hacks, listings, future price moves, or investment advice.",
     "Use cautious wording such as possible context or news near this event.",
+    "Use sourceType to distinguish normal news from broader web mentions or project updates.",
+    "If relatedNews only contains sourceType web_mention, write that related web mentions suggest context rather than presenting it as confirmed news.",
     "Never say the news caused the price movement.",
     "Return JSON with headline, bullets, and riskNote only.",
     "",
