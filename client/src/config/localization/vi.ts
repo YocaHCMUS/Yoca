@@ -1938,6 +1938,10 @@ export const translation = defineTranslation({
     fullscreenMode: "Toàn màn hình",
     minimize: "Thu nhỏ",
     close: "Đóng",
+    redo: "Làm lại",
+    revert: "Hoàn tác",
+    revertedBanner: "Đã hoàn tác về tin nhắn trước",
+    undo: "Khôi phục",
     sourcePill: "nguồn",
     openSource: "Mở",
     prompt: {

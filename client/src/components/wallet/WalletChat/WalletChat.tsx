@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { Add, ChevronDown, Playlist, Send, TrashCan } from "@carbon/icons-react";
+import { Add, ChevronDown, Playlist, Send, TrashCan, Undo } from "@carbon/icons-react";
 import client from "@/api/main";
 import { WalletChatMessage } from "./WalletChatMessage";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
@@ -35,6 +35,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
   const [error, setError] = useState<string | null>(null);
   const [showPromptMenu, setShowPromptMenu] = useState(false);
   const [showSessionMenu, setShowSessionMenu] = useState(false);
+  const [truncatedMessages, setTruncatedMessages] = useState<ChatMessageItem[] | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const sessionMenuRef = useRef<HTMLDivElement>(null);
@@ -78,10 +79,12 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
     if (activeSession) {
       setMessages(activeSession.messages);
       setError(null);
+      setTruncatedMessages(null);
       return;
     }
     setMessages([]);
     setError(null);
+    setTruncatedMessages(null);
   }, [activeSession]);
 
   // Close session menu on outside click
@@ -103,10 +106,11 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
   }, [activeSessionId, messages, saveMessagesToSession]);
 
   const sendQuery = useCallback(
-    async (query: string) => {
+    async (query: string, opts?: { skipCache?: boolean }) => {
       if (!query.trim() || isLoading || activeAddresses.length === 0) return;
 
       setShowPromptMenu(false);
+      setTruncatedMessages(null);
 
       const userMsg: ChatMessageItem = { role: "user", content: query.trim() };
       setMessages((prev) => [...prev, userMsg]);
@@ -127,6 +131,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
             history,
             sessionId: activeSessionId ?? undefined,
             contextType,
+            skipCache: opts?.skipCache,
           },
         });
 
@@ -206,6 +211,103 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
     }
   };
 
+  const handleRedo = useCallback(async (msgIndex: number, content: string) => {
+    if (isLoading) return;
+
+    const truncated = messages.slice(0, msgIndex + 1);
+    const title = messages.find((m) => m.role === "user")?.content.slice(0, 50);
+
+    setMessages(truncated);
+    setTruncatedMessages(null);
+    setShowPromptMenu(false);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const history = messages.slice(0, msgIndex).slice(-10).map((m) => ({
+        role: m.role,
+        content: m.content.length > 2000 ? m.content.slice(0, 2000) : m.content,
+      }));
+
+      const res = await client.api.chat.index.$post({
+        json: {
+          addresses: activeAddresses,
+          query: content.trim(),
+          language: lang,
+          history,
+          sessionId: activeSessionId ?? undefined,
+          contextType,
+          skipCache: true,
+          skipSessionSave: true,
+        },
+      });
+
+      if (!res.ok) throw new Error(tr("chat.serverError", { status: String(res.status) }));
+
+      const data = (await res.json()) as ChatResponse & { sessionId?: string };
+      const assistantMsg: ChatMessageItem = {
+        role: "assistant",
+        content: data.text,
+        data: data.data,
+        charts: data.charts,
+        tables: data.tables,
+        actions: data.actions,
+        tldr: data.tldr,
+        sections: data.sections,
+        sources: data.sources,
+        evidence: data.evidence,
+        warnings: data.warnings,
+        confidence: data.confidence,
+      };
+
+      const finalMessages = [...truncated, assistantMsg];
+      setMessages(finalMessages);
+
+      if (activeSessionId) {
+        await saveMessagesToSession(activeSessionId, finalMessages, title);
+      }
+
+      if (data.sessionId && data.sessionId !== activeSessionId) {
+        changeSessionId(data.sessionId);
+      }
+
+      refreshSessions();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to send message";
+      setError(msg);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: tr("chat.errorMessage", { error: msg }) },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeAddresses, activeSessionId, changeSessionId, contextType, isLoading, lang, messages, refreshSessions, saveMessagesToSession, tr]);
+
+  const handleRevert = useCallback(async (msgIndex: number, content: string) => {
+    if (!activeSessionId) return;
+
+    const truncated = messages.slice(0, msgIndex);
+    const title = messages.find((m) => m.role === "user")?.content.slice(0, 50);
+    await saveMessagesToSession(activeSessionId, truncated, title);
+
+    const rest = messages.slice(msgIndex);
+    setTruncatedMessages(rest.length > 0 ? rest : null);
+    setMessages(truncated);
+    setInputText(content);
+    setShowPromptMenu(false);
+  }, [activeSessionId, messages, saveMessagesToSession]);
+
+  const handleUndoRevert = useCallback(() => {
+    if (!truncatedMessages) return;
+    const restored = [...messages, ...truncatedMessages];
+    setMessages(restored);
+    setTruncatedMessages(null);
+    if (activeSessionId) {
+      saveMessagesToSession(activeSessionId, restored);
+    }
+  }, [truncatedMessages, messages, activeSessionId, saveMessagesToSession]);
+
   const handleClose = async () => {
     await doSaveCurrentSession();
     setIsOpen(false);
@@ -215,6 +317,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
   const handleNewChat = async () => {
     await doSaveCurrentSession();
     setMessages([]);
+    setTruncatedMessages(null);
     setError(null);
     setShowPromptMenu(false);
     changeSessionId(null);
@@ -360,7 +463,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
   const renderMessages = () => (
     <div ref={listRef} className={styles.messagesArea}>
       {messages.map((msg, i) => (
-        <WalletChatMessage key={i} message={msg} onAction={sendQuery} />
+        <WalletChatMessage key={i} message={msg} index={i} onAction={sendQuery} onRedo={handleRedo} onRevert={handleRevert} />
       ))}
       {isLoading && (
         <div className={styles.loadingDots}>
@@ -369,18 +472,22 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
           ))}
           <span className={styles.loadingLabel}>
             {tr("chat.loadingLabel")}
-            {/* {tr("chat.loadingLabel").split("").map((char, i) => (
-              <span
-                key={i}
-                className={styles.loadingChar}
-                style={{ animationDelay: `${0.45 + i * 0.08}s` }}
-              >
-                {char === " " ? "\u00A0" : char}
-              </span>
-            ))} */}
           </span>
         </div>
       )}
+      {/* {truncatedMessages && (
+        <div className={styles.undoBanner}>
+          <span className={styles.undoBannerText}>{tr("chat.revertedBanner")}</span>
+          <button
+            type="button"
+            className={styles.undoBannerBtn}
+            onClick={handleUndoRevert}
+          >
+            <Undo size={14} />
+            {tr("chat.undo")}
+          </button>
+        </div>
+      )} */}
       {error && (
         <div className={styles.errorMsg}>{error}</div>
       )}

@@ -16,7 +16,7 @@ interface ChartRendererProps {
 }
 
 function interpolate(tpl: string, vars: Record<string, string>): string {
-  return tpl.replace(/\{(\w+)\}/g, (_, k: string) => vars[k] ?? `{${k}}`);
+  return tpl.replace(/\{([\w.]+)\}/g, (_, k: string) => vars[k] ?? `{${k}}`);
 }
 
 function applyChartLimit(
@@ -422,11 +422,15 @@ function TableRenderer({ spec, data, onAction }: TableRendererProps) {
 
   const cols = parseColumns(spec.columns);
 
-  function resolveRowVars(row: Record<string, unknown>): Record<string, string> {
+  function resolveAllRowVars(row: Record<string, unknown>): Record<string, string> {
     const vars: Record<string, string> = {};
-    for (const col of cols) {
-      const val = getNestedValue(row, col.field);
-      vars[col.field] = val != null ? String(val) : "";
+    for (const [key, value] of Object.entries(row)) {
+      if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+        for (const [nk, nv] of Object.entries(value as Record<string, unknown>)) {
+          vars[`${key}.${nk}`] = nv != null ? String(nv) : "";
+        }
+      }
+      vars[key] = value != null ? String(value) : "";
     }
     return vars;
   }
@@ -444,7 +448,7 @@ function TableRenderer({ spec, data, onAction }: TableRendererProps) {
         <tbody>
           {pageRows.map((row, i) => {
             const rowActions = Array.isArray(spec.rowActions) ? spec.rowActions[0] : spec.rowActions;
-            const rowVars = rowActions ? resolveRowVars(row) : undefined;
+            const rowVars = rowActions ? resolveAllRowVars(row) : undefined;
             const rowQuery = rowVars && rowActions
               ? interpolate(rowActions.query, rowVars)
               : null;

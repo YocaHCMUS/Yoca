@@ -397,6 +397,39 @@
   word-break: break-word;
 }
 
+.userDataPill {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.userDataPillField {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: color-mix(in srgb, #{$text-on-color} 13%, transparent);
+  border-radius: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.userDataPillLabel {
+  font-weight: 600;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.userDataPillValue {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 28ch;
+}
+
 .assistantBubbleRow {
   display: flex;
   justify-content: flex-start;
@@ -1196,6 +1229,66 @@
 
 .userBubbleRow:hover .copyBtn {
   opacity: 1;
+}
+
+// ===== Redo / Revert buttons in user bubble row =====
+.bubbleActionBtn {
+  background: none;
+  border: none;
+  color: $icon-secondary;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.15s, background-color 0.12s, color 0.12s;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $icon-primary;
+  }
+}
+
+.userBubbleRow:hover .bubbleActionBtn {
+  opacity: 1;
+}
+
+// ===== Undo revert banner =====
+.undoBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  margin: 0 8px 8px;
+  background: $layer-01;
+  border-radius: 8px;
+  border: 1px solid $border-subtle-01;
+}
+
+.undoBannerText {
+  font-size: 12px;
+  color: $text-secondary;
+}
+
+.undoBannerBtn {
+  background: none;
+  border: 1px solid $interactive;
+  color: $interactive;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: background-color 0.12s;
+
+  &:hover {
+    background: $layer-selected-inverse;
+  }
 }
 
 // ===== Input validation =====

@@ -13,7 +13,7 @@ import {
   getRequiredHeaders as getBirdeyeHeaders,
 } from "@sv/util/util-birdeye.js";
 import type { ChatToolDefinition, ToolCachePolicy } from "./chat.types.js";
-import { isBaseAsset } from "@sv/services/wallet/walletDayActivity.service.js";
+import { isBaseAsset, getWalletTxDetail } from "@sv/services/wallet/walletDayActivity.service.js";
 import { z } from "zod";
 
 const BASE58_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -329,6 +329,19 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
       required: ["page"],
     },
   },
+  {
+    name: "get_tx_detail",
+    description:
+      "Fetch full detail for a specific transaction by signature: all token transfers within the tx, fee breakdown (base + priority), fee payer, and fee receivers. Use this when the user asks about a specific swap or transfer they saw in a table, or wants to drill into a transaction. NOT for listing — use get_wallet_swaps or get_wallet_transfers for lists.",
+    input_schema: {
+      type: "object",
+      properties: {
+        address: { type: "string", description: "Solana wallet address (base58)" },
+        signature: { type: "string", description: "Transaction signature (base58) from a swap or transfer entry" },
+      },
+      required: ["address", "signature"],
+    },
+  },
 ];
 
 // ─── Tool Execution ─────────────────────────────────────────────────────────
@@ -621,6 +634,61 @@ function extractNavigationForLLM(data: unknown): unknown {
   return { path: d.path ?? "", label: d.label ?? "" };
 }
 
+function extractTxDetailForLLM(data: unknown, walletAddress: string): unknown {
+  if (!data || typeof data !== "object") return null;
+  const d = data as {
+    transactionHash?: string;
+    timestamp?: string;
+    pair?: string;
+    action?: string;
+    transfers?: Array<Record<string, unknown>>;
+    feePaid?: number;
+    feePayer?: string;
+    feeReceivers?: Array<Record<string, unknown>>;
+  };
+  if (!d.transactionHash) return null;
+
+  const transfers = (d.transfers ?? []).map((t) => {
+    const from = String(t.from ?? "");
+    const to = String(t.to ?? "");
+    const isOut = from === walletAddress;
+    const isIn = to === walletAddress;
+    let direction = "internal";
+    if (isOut && !isIn) direction = "out";
+    else if (isIn && !isOut) direction = "in";
+    return {
+      from,
+      to,
+      mint: t.mint,
+      symbol: t.symbol,
+      amount: t.amount,
+      direction,
+    };
+  });
+
+  const feeLamports = Number(d.feePaid ?? 0);
+  const BASE_FEE = 5_000;
+  const priorityFee = Math.max(0, feeLamports - BASE_FEE);
+
+  return {
+    txHash: d.transactionHash,
+    timestamp: d.timestamp,
+    pair: d.pair,
+    action: d.action,
+    tokenTransfers: transfers,
+    fees: {
+      feePaidSol: feeLamports / 1e9,
+      baseFeeSol: BASE_FEE / 1e9,
+      priorityFeeSol: priorityFee / 1e9,
+    },
+    feePayer: d.feePayer,
+    feeReceivers: (d.feeReceivers ?? []).map((r) => ({
+      address: r.address,
+      amount: r.amount,
+    })),
+  };
+}
+
 function extractTokenMetaForLLM(data: unknown): unknown {
   if (!Array.isArray(data)) return [];
   return data.map((m: Record<string, unknown>) => ({
@@ -696,6 +764,11 @@ const tokenAddressSchema = z.object({
 const tokenAddressDaysSchema = z.object({
   tokenAddress: z.string().regex(BASE58_REGEX, "Must be a valid base58 token mint address"),
   days: z.number().int().positive().max(365).optional().default(7),
+});
+
+const txDetailSchema = z.object({
+  address: z.string().min(1),
+  signature: z.string().min(1),
 });
 
 const navigatePageSchema = z.object({
@@ -896,6 +969,11 @@ export const TOOL_HANDLERS: Record<
     const { page, params } = navigatePageSchema.parse(input);
     const resolved = ROUTE_MAP[page](params);
     return { data: resolved, llmData: extractNavigationForLLM(resolved) };
+  },
+  get_tx_detail: async (input) => {
+    const { address, signature } = txDetailSchema.parse(input);
+    const data = await getWalletTxDetail(address, signature);
+    return { data, llmData: extractTxDetailForLLM(data, address) };
   }
 };
 
@@ -932,6 +1010,8 @@ export const TOOL_CACHE_POLICY: Record<string, ToolCachePolicy> = {
   search_token: { ttlMs: 600_000, cacheable: true },
   // Navigation — static
   navigate_to_page: { ttlMs: 600_000, cacheable: true },
+  // Tx detail — fairly stable per tx
+  get_tx_detail: { ttlMs: 300_000, cacheable: true },
 };
 
 /**

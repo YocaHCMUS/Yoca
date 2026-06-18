@@ -423,10 +423,9 @@ async function generateResponse(
   for (const table of tables) {
     if (!table.rowActions) {
       const fieldNames = table.columns.split(",").map((col) => col.trim().split(":")[0]!.trim());
-      const contextParts = fieldNames.map((f) => `${f}: {${f}}`);
       table.rowActions = {
         label: `View details`,
-        query: `analyze this data point — ${contextParts.join(", ")}`,
+        query: `{${fieldNames.map((f) => `${f}: {${f}}`).join(", ")}}`,
       };
     }
   }
@@ -496,6 +495,7 @@ export async function answerChatQuery(
   query: string,
   language?: string,
   history?: HistoryMessage[],
+  skipCache?: boolean,
 ): Promise<ChatResponse> {
   const model = CHAT_MODEL;
   const historyHash = history?.length
@@ -508,7 +508,7 @@ export async function answerChatQuery(
   const detectedLang = inferWalletChatLanguage(query, language);
   chatInfo("answerChatQuery: intent + language", { intent, detectedLang, originalLang: language ?? "en" });
 
-  const cached = await getCachedResponse(addresses, query, model, historyHash, intent);
+  const cached = skipCache ? null : await getCachedResponse(addresses, query, model, historyHash, intent);
   if (cached) {
     chatInfo("answerChatQuery: cache hit", {
       textLength: cached.text.length,

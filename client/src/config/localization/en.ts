@@ -1978,6 +1978,10 @@ export const translation = {
     fullscreenMode: "Fullscreen",
     minimize: "Minimize",
     close: "Close",
+    redo: "Redo",
+    revert: "Revert",
+    revertedBanner: "Reverted to an earlier message",
+    undo: "Undo",
     sourcePill: "sources",
     openSource: "Open",
     prompt: {

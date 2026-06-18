@@ -2,7 +2,7 @@ import classNames from "classnames";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import ReactDOM from "react-dom";
 import { useNavigate } from "react-router";
-import { Copy, Checkmark } from "@carbon/icons-react";
+import { Copy, Checkmark, Restart, Edit } from "@carbon/icons-react";
 import { ID_MODAL_ROOT } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type {
@@ -19,7 +19,10 @@ import styles from "./WalletChat.module.scss";
 
 interface Props {
   message: ChatMessageItem;
+  index: number;
   onAction?: (href: string) => void;
+  onRedo?: (index: number, content: string) => void;
+  onRevert?: (index: number, content: string) => void;
 }
 
 const MARKER_RE = /<(chart|table|action)\s+id="([^"]+)"\s*\/>/g;
@@ -191,6 +194,29 @@ function renderInlineRichText(value: string, keyPrefix = "rich") {
       </strong>
     );
   });
+}
+
+function parseStructuredQuery(text: string): Record<string, string> | null {
+  const t = text.trim();
+  if (!t.startsWith("{") || !t.endsWith("}") || !t.includes(": ")) return null;
+  const inner = t.slice(1, -1);
+  const pairs: Record<string, string> = {};
+  let depth = 0;
+  let current = "";
+  for (const ch of inner) {
+    if (ch === "{" || ch === "[") depth++;
+    else if (ch === "}" || ch === "]") depth--;
+    if (ch === "," && depth === 0) {
+      const sep = current.indexOf(": ");
+      if (sep > 0) { pairs[current.slice(0, sep).trim()] = current.slice(sep + 2).trim(); }
+      current = "";
+    } else { current += ch; }
+  }
+  if (current.trim()) {
+    const sep = current.indexOf(": ");
+    if (sep > 0) { pairs[current.slice(0, sep).trim()] = current.slice(sep + 2).trim(); }
+  }
+  return Object.keys(pairs).length > 0 ? pairs : null;
 }
 
 function isBulletLikeLine(value: string) {
@@ -476,7 +502,7 @@ function actionButtonGroup(actions: ActionSpec[], navigate: ReturnType<typeof us
 
 // ─── Main Component ─────────────────────────────────────────────────────
 
-export function WalletChatMessage({ message, onAction }: Props) {
+export function WalletChatMessage({ message, index, onAction, onRedo, onRevert }: Props) {
   const navigate = useNavigate();
   const { tr } = useLocalization();
   const [showAllEvidence, setShowAllEvidence] = useState(false);
@@ -574,10 +600,42 @@ export function WalletChatMessage({ message, onAction }: Props) {
   if (message.role === "user") {
     const userCopyId = "user-copy";
     const isUserCopied = copiedSectionId === userCopyId;
+    const dataPairs = parseStructuredQuery(message.content);
     return (
       <div className={styles.userBubbleRow}>
-        <div className={styles.userBubble}>{message.content}</div>
+        <div className={styles.userBubble}>
+          {dataPairs ? (
+            <div className={styles.userDataPill}>
+              {Object.entries(dataPairs).map(([field, value]) => (
+                <span key={field} className={styles.userDataPillField}>
+                  <span className={styles.userDataPillLabel}>{field}</span>
+                  <span className={styles.userDataPillValue}>{value}</span>
+                </span>
+              ))}
+            </div>
+          ) : (
+            message.content
+          )}
+        </div>
         <div className={styles.bubbleActions}>
+          <button
+            type="button"
+            className={styles.bubbleActionBtn}
+            onClick={() => onRedo?.(index, message.content)}
+            title={tr("chat.redo")}
+          >
+            <Restart size={12} />
+            {tr("chat.redo")}
+          </button>
+          <button
+            type="button"
+            className={styles.bubbleActionBtn}
+            onClick={() => onRevert?.(index, message.content)}
+            title={tr("chat.revert")}
+          >
+            <Edit size={12} />
+            {tr("chat.revert")}
+          </button>
           <button
             type="button"
             className={classNames(styles.copyBtn, { [styles.copyBtnCopied]: isUserCopied })}
