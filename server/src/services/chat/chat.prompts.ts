@@ -237,11 +237,13 @@ export function buildResponseGenerationPrompt(
     "    Use 'pie' for composition/breakdown data. 'line'/'area' for time series. 'bar' for comparisons.",
     "    Use 'geckoterminal' to render an interactive GeckoTerminal price chart (iframe). For token price queries (get_token_price_24h/hourly/daily), ALWAYS prefer 'geckoterminal' over 'line'/'area'. Set tokenAddress field. Also set dataRef to the tool result index.",
     "  title (optional), limit (optional)",
-    "  pointActions (required): { label, query } — single object, NOT array. Per-data-point follow-up action.",
-    "    Uses {label} as x-axis label variable for interpolation.",
-    "    Hover shows query preview in tooltip, click sends query.",
-    "    Example: { \"label\": \"View {label}\", \"query\": \"show trades on {label}\" }",
-    "    If not meaningful follow ups can be generated for chart points, dont set the value.",
+    "  pointActions (REQUIRED — ALWAYS include for EVERY chart):",
+    "    A single object { label, query }. NOT an array.",
+    "    Provides an interactive tooltip with query preview and click-to-drill-down on data points.",
+    "    The {label} placeholder is replaced with the x-axis label at runtime.",
+    "    ALWAYS set this. Examples:",
+    '      { "label": "View {label}", "query": "show details about {label}" }',
+    '      { "label": "Analyze {label}", "query": "what is the PnL trend for {label}?" }',
     "  xAxisType: 'category' (default, string labels) or 'time' (auto-formatted timestamps from ms values).",
     "    Use 'time' when labels are Unix timestamps in milliseconds.",
     "  xAxisFormat: when xAxisType='time', controls x-axis label rendering: 'datetime', 'date', or 'time'.",
@@ -254,11 +256,14 @@ export function buildResponseGenerationPrompt(
     "",
     "TABLE SPEC FIELDS:",
     "  id (required), dataRef (required), columns: comma-separated (required),",
-    "  rowActions (required): { label, query } — single object, NOT array. Per-row follow-up action.",
-    "    Uses {fieldName} vars from row data for interpolation.",
-    "    Hover shows query preview, click sends query.",
-    "    Example: { \"label\": \"Analyze {symbol}\", \"query\": \"Show PnL for {symbol}\" }",
-    "    If not meaningful follow ups can be generated for table rows, dont set the value.",
+    "  rowActions (REQUIRED — ALWAYS include for EVERY table):",
+    "    A single object { label, query }. NOT an array.",
+    "    Provides hover tooltip with query preview and click-to-drill-down on table rows.",
+    "    Use {fieldName} variables from row data for interpolation (e.g. {symbol}, {token}, {mint}).",
+    "    ALWAYS set this. The more fields you interpolate, the more context the follow-up has.",
+    "    Examples:",
+    '      { "label": "Analyze {symbol}", "query": "Show PnL for {symbol}" }',
+    '      { "label": "View {token}", "query": "what is the position of {token}? value: {valueUsd}" }',
     "  columns format: 'fieldName:DisplayTitle:format' or 'fieldName:DisplayTitle' or 'fieldName'",
     "    format can be: currency, decimal, percent, address, datetime, date, time, relative, text",
     "    Examples: 'totalValueUsd:Total Value:currency,token:Token,amount:Amount:decimal'",
@@ -292,8 +297,23 @@ export function buildResponseGenerationPrompt(
     "Output:",
     `{
     "text": "Your portfolio is led by SOL and JUP.\\n\\nTop 5 tokens by PnL:\\n\\n<table id=\\"top_pnl\\" />\\n\\nPnL trend over 30 days:\\n\\n<chart id=\\"pnl_trend\\" />",
-    "charts": [{ "id": "pnl_trend", "type": "line", "dataRef": "0", "title": "PnL over time" }],
-    "tables": [{ "id": "top_pnl", "dataRef": "1", "columns": "token,pnl", "sortBy": "pnl", "limit": 5 }]
+    "charts": [{
+      "id": "pnl_trend",
+      "type": "line",
+      "dataRef": "0",
+      "title": "PnL over time",
+      "xAxisType": "time",
+      "xAxisFormat": "date",
+      "pointActions": { "label": "Analyze {label}", "query": "what happened on {label} for this wallet?" }
+    }],
+    "tables": [{
+      "id": "top_pnl",
+      "dataRef": "1",
+      "columns": "token:Token,symbol:Symbol,pnl:PnL:currency",
+      "sortBy": "pnl",
+      "limit": 5,
+      "rowActions": { "label": "Analyze {symbol}", "query": "Show PnL breakdown for {symbol} ({token})" }
+    }]
   }`,
     "",
     "EXAMPLE (time-series chart with formatting):",
@@ -308,7 +328,8 @@ export function buildResponseGenerationPrompt(
       "title": "Balance (7d)",
       "xAxisType": "time",
       "xAxisFormat": "datetime",
-      "yAxisFormat": "currency"
+      "yAxisFormat": "currency",
+      "pointActions": { "label": "Check {label}", "query": "what transactions happened around {label}?" }
     }]
   }`,
     "",
@@ -324,7 +345,8 @@ export function buildResponseGenerationPrompt(
       "title": "Drawdown (30d)",
       "xAxisType": "time",
       "xAxisFormat": "date",
-      "yAxisFormat": "percent"
+      "yAxisFormat": "percent",
+      "pointActions": { "label": "See {label}", "query": "what caused the drawdown around {label}?" }
     }]
   }`,
   ].join("\n");

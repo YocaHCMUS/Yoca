@@ -407,6 +407,30 @@ async function generateResponse(
     resolvedData[spec.dataRef] = transformer ? transformer(result.fullData) : result.fullData;
   }
 
+  // Ensure every chart has pointActions for interactive drill-down
+  for (const chart of charts) {
+    if (!chart.pointActions) {
+      chart.pointActions = {
+        label: `Analyze {label}`,
+        query: chart.title
+          ? `tell me more about {label} (${chart.title})`
+          : `tell me more about {label}`,
+      };
+    }
+  }
+
+  // Ensure every table has rowActions with full row context
+  for (const table of tables) {
+    if (!table.rowActions) {
+      const fieldNames = table.columns.split(",").map((col) => col.trim().split(":")[0]!.trim());
+      const contextParts = fieldNames.map((f) => `${f}: {${f}}`);
+      table.rowActions = {
+        label: `View details`,
+        query: `analyze this data point — ${contextParts.join(", ")}`,
+      };
+    }
+  }
+
   for (const chart of charts) {
     if ((chart.type === "line" || chart.type === "area") && chart.dataRef) {
       const idx = parseInt(chart.dataRef, 10);

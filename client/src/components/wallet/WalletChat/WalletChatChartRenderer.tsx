@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import ReactECharts from "echarts-for-react";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useCarbonChartBaseOption, CHART_COLOR_PALETTE } from "@/util/carbon-chart-base";
@@ -63,6 +63,7 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
   const { tr, fmt } = useLocalization();
   const baseOption = useCarbonChartBaseOption();
   const chartTokens = useCarbonTokens({ bg: cds.layer01 });
+  const chartRef = useRef<ReactECharts>(null);
 
   const option = useMemo(() => {
     if (!raw?.labels || !raw?.datasets) return null;
@@ -160,12 +161,14 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
     }
 
     const series = datasets.map((ds, i) => {
+      const hasClick = !!spec.pointActions;
       const base: Record<string, unknown> = {
         name: ds.name ?? tr("chat.seriesLabel", { count: i + 1 }),
         type: spec.type === "area" ? "line" : spec.type,
         data: ds.values ?? [],
         smooth: false,
-        symbol: "none",
+        symbol: hasClick && labels.length <= 60 ? "emptyCircle" : "none",
+        ...(hasClick && labels.length <= 60 ? { symbolSize: 6 } : {}),
         lineStyle: { width: 2 },
       };
 
@@ -222,18 +225,22 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
     };
   }, [raw, spec, fmt, tr, baseOption, chartTokens]);
 
-  const onEvents = useMemo(() => {
-    if (!spec.pointActions || !onAction || !raw?.labels) return undefined;
-    return {
-      click: (params: { dataIndex?: number }) => {
-        const idx = params.dataIndex;
-        if (idx == null) return;
-        const label = raw.labels?.[idx] ?? "";
-        const query = interpolate(spec.pointActions!.query, { label });
-        onAction(query);
-      },
+  useEffect(() => {
+    if (!spec.pointActions || !onAction || !raw?.labels) return;
+    if (!chartRef.current) return;
+    const { labels } = applyChartLimit(raw, spec.limit);
+    if (labels.length === 0) return;
+    const chart = chartRef.current.getEchartsInstance();
+    const handler = (params: { dataIndex?: number }) => {
+      const idx = params.dataIndex;
+      if (idx == null || idx >= labels.length) return;
+      const label = labels[idx] ?? "";
+      const query = interpolate(spec.pointActions!.query, { label });
+      onAction(query);
     };
-  }, [spec.pointActions, onAction, raw?.labels]);
+    chart.on("click", handler);
+    return () => { chart.off("click", handler); };
+  }, [spec.pointActions, onAction, raw, spec.limit]);
 
   if (!option) return null;
 
@@ -243,9 +250,9 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
         <div className={styles.chartTitle}>{spec.title}</div>
       )}
       <ReactECharts
+        ref={chartRef}
         option={option}
         style={{ height: 240 }}
-        onEvents={onEvents}
       />
     </div>
   );
