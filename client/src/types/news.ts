@@ -36,6 +36,7 @@ export interface NewsArticle {
     context?: NewsTokenContext | null;
     score?: number;
     matchedBy?: string[];
+    sourceType?: 'news' | 'web_mention' | 'project_update';
     raw?: Record<string, unknown>;
 }
 
@@ -47,6 +48,7 @@ export interface TokenNewsArticle {
     description: string;
     score: number;
     matchedBy: string[];
+    sourceType: 'news' | 'web_mention' | 'project_update';
     imageUrl?: string | null;
     favicon?: string | null;
 }
@@ -61,13 +63,28 @@ export interface TokenNewsResponseData {
     updatedAt: string;
     providersUsed?: Array<'rss' | 'brave'>;
     braveFallbackUsed?: boolean;
+    braveNewsUsed?: boolean;
+    braveWebFallbackUsed?: boolean;
+    sourceTypeCounts?: {
+        news: number;
+        web_mention: number;
+        project_update: number;
+    };
     articles: TokenNewsArticle[];
     meta?: {
         rssArticles: number;
         braveArticles: number;
+        webMentionArticles?: number;
         fallbackUsed: boolean;
         braveFallbackUsed?: boolean;
+        braveNewsUsed?: boolean;
+        braveWebFallbackUsed?: boolean;
         providersUsed?: Array<'rss' | 'brave'>;
+        sourceTypeCounts?: {
+            news: number;
+            web_mention: number;
+            project_update: number;
+        };
     };
 }
 

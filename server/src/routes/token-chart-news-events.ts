@@ -38,6 +38,13 @@ interface TokenChartNewsEventsData {
   meta?: {
     providersUsed: Array<"rss" | "brave">;
     braveFallbackUsed: boolean;
+    braveNewsUsed?: boolean;
+    braveWebFallbackUsed?: boolean;
+    sourceTypeCounts?: {
+      news: number;
+      web_mention: number;
+      project_update: number;
+    };
   };
   events: TokenChartNewsEvent[];
 }
@@ -321,6 +328,9 @@ async function buildFreshChartNewsEvents({
     meta: {
       providersUsed: news.meta.providersUsed,
       braveFallbackUsed: news.meta.braveFallbackUsed,
+      braveNewsUsed: news.meta.braveNewsUsed,
+      braveWebFallbackUsed: news.meta.braveWebFallbackUsed,
+      sourceTypeCounts: news.meta.sourceTypeCounts,
     },
     events: groupArticlesByDate(news.articles, timeframe, date),
   };

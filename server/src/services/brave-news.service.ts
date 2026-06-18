@@ -6,6 +6,13 @@ interface BraveNewsSearchOptions {
   eventAt?: string;
   searchMode?: "token" | "event" | "chart";
   reason?: string;
+  maxRequests?: number;
+}
+
+interface BraveWebMentionSearchOptions {
+  identity: TokenNewsIdentity;
+  reason?: string;
+  maxRequests?: number;
 }
 
 interface BraveSearchItem {
@@ -220,6 +227,7 @@ export function buildBraveNewsQueries({
   isSolanaEcosystem,
   eventAt,
   searchMode = eventAt ? "event" : "token",
+  maxRequests = MAX_BRAVE_QUERIES,
 }: BraveNewsSearchOptions) {
   const searchName = getPrimarySearchName(identity);
   const searchSymbol =
@@ -237,18 +245,34 @@ export function buildBraveNewsQueries({
       isSolanaEcosystem
         ? `${quotedName} ${quotedSymbol} Solana news ${monthYear}`
         : "",
-    ]).slice(0, MAX_BRAVE_QUERIES);
+    ]).slice(0, Math.min(maxRequests, MAX_BRAVE_QUERIES));
   }
 
   return uniqueNonEmpty([
     `${quotedName} ${quotedSymbol} crypto news`,
     isSolanaEcosystem ? `${quotedName} ${quotedSymbol} Solana news` : "",
     `${quotedName} token latest news`,
-  ]).slice(0, MAX_BRAVE_QUERIES);
+  ]).slice(0, Math.min(maxRequests, MAX_BRAVE_QUERIES));
 }
 
 export function buildBraveNewsQuery(options: BraveNewsSearchOptions) {
   return buildBraveNewsQueries(options)[0] ?? "";
+}
+
+export function buildBraveWebMentionQueries({
+  identity,
+  maxRequests = 1,
+}: BraveWebMentionSearchOptions) {
+  const searchName = getPrimarySearchName(identity);
+  const searchSymbol =
+    identity.searchSymbols[0] ?? identity.normalizedSymbol ?? "";
+  const quotedName = `"${searchName}"`;
+  const quotedSymbol = searchSymbol ? `"${searchSymbol}"` : "";
+
+  return uniqueNonEmpty([
+    `${quotedName} ${quotedSymbol} Solana OR crypto OR pump.fun OR "meme coin"`,
+    `"${identity.address}" crypto`,
+  ]).slice(0, Math.min(maxRequests, MAX_BRAVE_QUERIES));
 }
 
 function normalizeUrl(value: string) {
@@ -392,9 +416,11 @@ export async function fetchBraveTokenNews(options: BraveNewsSearchOptions) {
   const endpointUsed = new Set<string>();
   const articles: RawNewsArticle[] = [];
   let rawResultCount = 0;
+  let requestCount = 0;
 
   for (const query of queries) {
     try {
+      requestCount += 1;
       const payload = await fetchBraveEndpoint(
         BRAVE_NEWS_SEARCH_ENDPOINT,
         query,
@@ -415,50 +441,14 @@ export async function fetchBraveTokenNews(options: BraveNewsSearchOptions) {
           .filter((article): article is RawNewsArticle => article != null),
       );
     } catch (err) {
-      if (!shouldTryWebFallback(err)) {
-        console.warn("[brave-news] news search failed without web fallback", {
-          query,
-          token: options.identity.normalizedSymbol,
-          reason: options.reason ?? options.searchMode ?? "token-news",
-          error: err instanceof Error ? err.message : String(err),
-        });
-        break;
-      }
-
-      console.warn("[brave-news] news search failed, trying web search", {
+      console.warn("[brave-news] news search failed", {
         query,
         token: options.identity.normalizedSymbol,
         reason: options.reason ?? options.searchMode ?? "token-news",
         error: err instanceof Error ? err.message : String(err),
       });
-
-      try {
-        const payload = await fetchBraveEndpoint(
-          BRAVE_WEB_SEARCH_ENDPOINT,
-          query,
-        );
-        endpointUsed.add(BRAVE_WEB_SEARCH_ENDPOINT);
-        const results = payload.web?.results ?? [];
-        rawResultCount += results.length;
-        console.info("[brave-news] query completed", {
-          query,
-          token: options.identity.normalizedSymbol,
-          reason: options.reason ?? options.searchMode ?? "token-news",
-          endpoint: "web",
-          resultCount: results.length,
-        });
-        articles.push(
-          ...results
-            .map(normalizeBraveItem)
-            .filter((article): article is RawNewsArticle => article != null),
-        );
-      } catch (webErr) {
-        console.warn("[brave-news] web search failed", {
-          query,
-          token: options.identity.normalizedSymbol,
-          reason: options.reason ?? options.searchMode ?? "token-news",
-          error: webErr instanceof Error ? webErr.message : String(webErr),
-        });
+      if (!shouldTryWebFallback(err)) {
+        break;
       }
     }
   }
@@ -468,6 +458,72 @@ export async function fetchBraveTokenNews(options: BraveNewsSearchOptions) {
     queries,
     endpointUsed: [...endpointUsed].join(","),
     rawResultCount,
+    requestCount,
+    articles: dedupeRawArticles(articles),
+  };
+}
+
+export async function fetchBraveTokenWebMentions(
+  options: BraveWebMentionSearchOptions,
+) {
+  const unavailableReason = getBraveSearchUnavailableReason();
+  if (unavailableReason) {
+    throw new Error(`Brave Search is unavailable: ${unavailableReason}`);
+  }
+
+  const maxRequests = Math.max(0, Math.min(options.maxRequests ?? 1, 2));
+  const queries = buildBraveWebMentionQueries({
+    ...options,
+    maxRequests,
+  });
+  const endpointUsed = new Set<string>();
+  const articles: RawNewsArticle[] = [];
+  let rawResultCount = 0;
+  let requestCount = 0;
+
+  for (const query of queries) {
+    if (requestCount >= maxRequests) break;
+
+    try {
+      requestCount += 1;
+      const payload = await fetchBraveEndpoint(BRAVE_WEB_SEARCH_ENDPOINT, query);
+      endpointUsed.add(BRAVE_WEB_SEARCH_ENDPOINT);
+      const results = payload.web?.results ?? [];
+      rawResultCount += results.length;
+      console.info("[brave-news] query completed", {
+        query,
+        token: options.identity.normalizedSymbol,
+        reason: options.reason ?? "web-mention-fallback",
+        endpoint: "web",
+        resultCount: results.length,
+      });
+      articles.push(
+        ...results
+          .map(normalizeBraveItem)
+          .filter((article): article is RawNewsArticle => article != null),
+      );
+
+      if (results.length > 0) break;
+    } catch (err) {
+      console.warn("[brave-news] web mention search failed", {
+        query,
+        token: options.identity.normalizedSymbol,
+        reason: options.reason ?? "web-mention-fallback",
+        error: err instanceof Error ? err.message : String(err),
+      });
+
+      if (!shouldTryWebFallback(err)) {
+        break;
+      }
+    }
+  }
+
+  return {
+    query: queries[0] ?? "",
+    queries: queries.slice(0, requestCount),
+    endpointUsed: [...endpointUsed].join(","),
+    rawResultCount,
+    requestCount,
     articles: dedupeRawArticles(articles),
   };
 }

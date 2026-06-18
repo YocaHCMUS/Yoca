@@ -84,6 +84,15 @@
     }
 }
 
+.webMentionNotice {
+    padding: 10px 12px;
+    border: 1px solid $border-subtle;
+    border-radius: 6px;
+    background: $layer-01;
+    color: $text-secondary;
+    font-size: 13px;
+}
+
 .articlesGrid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));

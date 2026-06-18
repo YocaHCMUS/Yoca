@@ -1,8 +1,11 @@
 import Parser from "rss-parser";
 import {
   fetchBraveTokenNews,
+  fetchBraveTokenWebMentions,
   getBraveSearchUnavailableReason,
 } from "./brave-news.service.js";
+
+export type TokenNewsSourceType = "news" | "web_mention" | "project_update";
 
 export interface TokenNewsArticle {
   title: string;
@@ -12,6 +15,7 @@ export interface TokenNewsArticle {
   description: string;
   score: number;
   matchedBy: string[];
+  sourceType: TokenNewsSourceType;
   imageUrl?: string | null;
   favicon?: string | null;
 }
@@ -85,6 +89,7 @@ export interface RawNewsArticle {
   publishedAt: string | null;
   description: string;
   content: string;
+  sourceType?: TokenNewsSourceType;
   imageUrl?: string | null;
   favicon?: string | null;
 }
@@ -223,6 +228,10 @@ const CRYPTO_CONTEXT_KEYWORDS = [
   "mainnet",
   "protocol",
   "liquidity",
+  "pump.fun",
+  "pump fun",
+  "meme coin",
+  "memecoin",
 ];
 
 const AMBIGUOUS_NAMES_REQUIRING_CRYPTO_CONTEXT = new Set([
@@ -246,6 +255,33 @@ const SOLANA_ECOSYSTEM_SYMBOLS = new Set([
   "ORCA",
   "HNT",
 ]);
+
+const TRUSTED_NEWS_DOMAINS = [
+  "coindesk.com",
+  "cointelegraph.com",
+  "decrypt.co",
+  "blockworks.co",
+  "cryptoslate.com",
+  "beincrypto.com",
+  "cryptobriefing.com",
+  "theblock.co",
+  "solana.com",
+  "jup.ag",
+];
+
+const PROJECT_UPDATE_DOMAINS = [
+  "x.com",
+  "twitter.com",
+  "medium.com",
+  "mirror.xyz",
+  "paragraph.xyz",
+  "substack.com",
+  "pump.fun",
+  "t.me",
+  "telegram.me",
+  "discord.gg",
+  "discord.com",
+];
 
 const WRAPPED_TOKEN_ALIASES: WrappedTokenAlias[] = [
   {
@@ -378,6 +414,48 @@ function isHttpUrl(value: string) {
   } catch {
     return false;
   }
+}
+
+function getUrlHostname(value: string) {
+  try {
+    return new URL(value).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function hostnameMatches(hostname: string, domains: string[]) {
+  return domains.some(
+    (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
+  );
+}
+
+function isTrustedNewsDomain(url: string) {
+  return hostnameMatches(getUrlHostname(url), TRUSTED_NEWS_DOMAINS);
+}
+
+function isProjectUpdateDomain(url: string) {
+  return hostnameMatches(getUrlHostname(url), PROJECT_UPDATE_DOMAINS);
+}
+
+function classifyWebFallbackSourceType(url: string): TokenNewsSourceType {
+  if (isTrustedNewsDomain(url)) return "news";
+  if (isProjectUpdateDomain(url)) return "project_update";
+  return "web_mention";
+}
+
+function getSourceTypeCounts(articles: TokenNewsArticle[]) {
+  return articles.reduce<Record<TokenNewsSourceType, number>>(
+    (counts, article) => {
+      counts[article.sourceType] += 1;
+      return counts;
+    },
+    {
+      news: 0,
+      web_mention: 0,
+      project_update: 0,
+    },
+  );
 }
 
 function normalizeImageUrl(value: unknown, articleUrl: string) {
@@ -725,6 +803,11 @@ function scoreArticle(article: RawNewsArticle, identity: TokenNewsIdentity) {
         break;
       }
     }
+
+    if (isTrustedNewsDomain(article.url)) {
+      score += 1;
+      matchedBy.push("trusted-domain");
+    }
   }
 
   for (const phrase of WEAK_GENERIC_PHRASES) {
@@ -848,6 +931,7 @@ async function fetchFeed(feed: RssFeedConfig) {
         publishedAt: parsePublishedAt(item),
         description,
         content,
+        sourceType: "news",
         imageUrl,
         favicon: getFallbackFavicon(url),
       };
@@ -987,6 +1071,93 @@ function scoreAndFilterArticles(
       description: article.description,
       score: relevance.score,
       matchedBy: relevance.matchedBy,
+      sourceType: article.sourceType ?? "news",
+      imageUrl: article.imageUrl ?? null,
+      favicon: article.favicon ?? getFallbackFavicon(article.url),
+    }));
+
+  return { scoredArticles, matchedArticles };
+}
+
+function scoreAndFilterWebMentionArticles(
+  articles: RawNewsArticle[],
+  identity: TokenNewsIdentity,
+) {
+  const scoredArticles = articles.map((article) => {
+    let score = 0;
+    const matchedBy: string[] = [];
+    const visibleText = `${article.title} ${article.description}`.toLowerCase();
+    const visibleTextUpper =
+      `${article.title} ${article.description}`.toUpperCase();
+    const urlText = article.url;
+    const hasCryptoContext = CRYPTO_CONTEXT_KEYWORDS.some((keyword) =>
+      visibleText.includes(keyword),
+    );
+    const sourceType = classifyWebFallbackSourceType(article.url);
+    let hasRequiredMatch = false;
+
+    for (const searchName of identity.searchNames) {
+      const normalizedName = searchName.trim().toLowerCase();
+      if (!normalizedName) continue;
+
+      if (hasPhrase(visibleText, normalizedName)) {
+        score += 5;
+        hasRequiredMatch = true;
+        matchedBy.push(`web-name:${searchName}`);
+      }
+    }
+
+    for (const symbol of identity.searchSymbols) {
+      const symbolRegex = getSymbolRegex(symbol);
+      if (symbolRegex?.test(visibleTextUpper) && hasCryptoContext) {
+        score += 4;
+        hasRequiredMatch = true;
+        matchedBy.push(`web-symbol-context:${symbol}`);
+      }
+    }
+
+    if (identity.address && urlText.includes(identity.address)) {
+      score += 6;
+      hasRequiredMatch = true;
+      matchedBy.push("web-mint-address");
+    }
+
+    if (sourceType === "news") {
+      score += 1;
+      matchedBy.push("trusted-domain");
+    }
+
+    if (sourceType === "project_update") {
+      score += 1;
+      matchedBy.push("project-update-domain");
+    }
+
+    return {
+      article,
+      relevance: {
+        score,
+        matchedBy: [...new Set(matchedBy)],
+        hasStrongMatch: hasRequiredMatch,
+      },
+      contentOnlyMatches: [] as string[],
+      sourceType,
+    };
+  });
+
+  const matchedArticles = scoredArticles
+    .filter(
+      ({ relevance }) =>
+        relevance.hasStrongMatch && relevance.score >= MIN_RELEVANCE_SCORE,
+    )
+    .map(({ article, relevance, sourceType }) => ({
+      title: article.title,
+      url: article.url,
+      source: article.source,
+      publishedAt: article.publishedAt,
+      description: article.description,
+      score: relevance.score,
+      matchedBy: relevance.matchedBy,
+      sourceType,
       imageUrl: article.imageUrl ?? null,
       favicon: article.favicon ?? getFallbackFavicon(article.url),
     }));
@@ -1093,8 +1264,11 @@ export async function getRssTokenNews(
 
   const rssArticles = dedupeArticles(matchedRssArticles);
   let braveArticles: TokenNewsArticle[] = [];
-  let braveFallbackUsed = false;
+  let webMentionArticles: TokenNewsArticle[] = [];
+  let braveNewsUsed = false;
+  let braveWebFallbackUsed = false;
   const providersUsed = new Set<"rss" | "brave">(["rss"]);
+  let remainingBraveRequests = 2;
   const braveFallbackReason = options.eventAt
     ? `${options.searchMode ?? "event"}-rss-below-threshold`
     : "token-rss-below-threshold";
@@ -1111,7 +1285,6 @@ export async function getRssTokenNews(
     rssArticles.length < BRAVE_MIN_ARTICLES_BEFORE_FALLBACK &&
     !braveUnavailableReason
   ) {
-    braveFallbackUsed = true;
     try {
       const braveResult = await fetchBraveTokenNews({
         identity,
@@ -1119,13 +1292,21 @@ export async function getRssTokenNews(
         eventAt: options.eventAt,
         searchMode: options.searchMode,
         reason: braveFallbackReason,
+        maxRequests: 1,
       });
+      remainingBraveRequests = Math.max(
+        0,
+        remainingBraveRequests - braveResult.requestCount,
+      );
+      braveNewsUsed = braveResult.requestCount > 0;
       const { scoredArticles, matchedArticles } = scoreAndFilterArticles(
         braveResult.articles,
         identity,
       );
       braveArticles = dedupeArticles(matchedArticles);
-      providersUsed.add("brave");
+      if (braveNewsUsed) {
+        providersUsed.add("brave");
+      }
 
       console.info("[rss-news] brave fallback", {
         used: true,
@@ -1138,13 +1319,14 @@ export async function getRssTokenNews(
         query: braveResult.query,
         queries: braveResult.queries,
         endpointUsed: braveResult.endpointUsed,
+        requestCount: braveResult.requestCount,
+        remainingBraveRequests,
         rawResults: braveResult.rawResultCount,
         normalizedResults: braveResult.articles.length,
         matchedResults: braveArticles.length,
       });
       logContentOnlyRejectedSample(scoredArticles, identity, "brave");
     } catch (err) {
-      braveFallbackUsed = false;
       console.warn("[rss-news] brave fallback failed", {
         token: {
           symbol: identity.normalizedSymbol,
@@ -1169,7 +1351,89 @@ export async function getRssTokenNews(
     });
   }
 
-  const sortedArticles = dedupeArticles([...rssArticles, ...braveArticles]).sort(
+  const strictNewsArticles = dedupeArticles([
+    ...rssArticles,
+    ...braveArticles,
+  ]);
+  const webFallbackUnavailableReason = getBraveSearchUnavailableReason();
+  if (
+    options.allowBrave !== false &&
+    strictNewsArticles.length === 0 &&
+    remainingBraveRequests > 0 &&
+    !webFallbackUnavailableReason
+  ) {
+    try {
+      const webResult = await fetchBraveTokenWebMentions({
+        identity,
+        reason: "zero-news-web-mention-fallback",
+        maxRequests: remainingBraveRequests,
+      });
+      remainingBraveRequests = Math.max(
+        0,
+        remainingBraveRequests - webResult.requestCount,
+      );
+      braveWebFallbackUsed = webResult.requestCount > 0;
+      if (braveWebFallbackUsed) {
+        providersUsed.add("brave");
+      }
+
+      const { matchedArticles } = scoreAndFilterWebMentionArticles(
+        webResult.articles,
+        identity,
+      );
+      webMentionArticles = dedupeArticles(matchedArticles);
+
+      console.info("[rss-news] brave web mention fallback", {
+        used: true,
+        token: {
+          symbol: identity.normalizedSymbol,
+          name: identity.originalName,
+          address: identity.address,
+        },
+        reason: "zero-news-web-mention-fallback",
+        queries: webResult.queries,
+        endpointUsed: webResult.endpointUsed,
+        requestCount: webResult.requestCount,
+        remainingBraveRequests,
+        rawResults: webResult.rawResultCount,
+        normalizedResults: webResult.articles.length,
+        matchedResults: webMentionArticles.length,
+      });
+    } catch (err) {
+      console.warn("[rss-news] brave web mention fallback failed", {
+        token: {
+          symbol: identity.normalizedSymbol,
+          name: identity.originalName,
+          address: identity.address,
+        },
+        reason: "zero-news-web-mention-fallback",
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  } else {
+    console.info("[rss-news] brave web mention fallback", {
+      used: false,
+      token: {
+        symbol: identity.normalizedSymbol,
+        name: identity.originalName,
+        address: identity.address,
+      },
+      reason:
+        strictNewsArticles.length > 0
+          ? "strict-news-found"
+          : remainingBraveRequests <= 0
+            ? "brave-request-budget-exhausted"
+            : webFallbackUnavailableReason ?? "disabled-by-options",
+      strictNewsArticles: strictNewsArticles.length,
+      remainingBraveRequests,
+    });
+  }
+
+  const braveFallbackUsed = braveNewsUsed || braveWebFallbackUsed;
+  const sortedArticles = dedupeArticles([
+    ...strictNewsArticles,
+    ...webMentionArticles,
+  ]).sort(
     (a, b) => {
       const dateDiff = getArticleTimestamp(b) - getArticleTimestamp(a);
       if (dateDiff !== 0) return dateDiff;
@@ -1180,6 +1444,7 @@ export async function getRssTokenNews(
   const imageEnrichedArticles = await enrichArticleImages(sortedArticles);
   const contextualArticles = applyEventContext(imageEnrichedArticles, options);
   const articles = limitArticles(contextualArticles, options.maxArticles);
+  const sourceTypeCounts = getSourceTypeCounts(articles);
 
   console.info("[rss-news] token news fetch", {
     selectedFeeds: selectedFeeds.length,
@@ -1188,8 +1453,12 @@ export async function getRssTokenNews(
     articlesMatched: articles.length,
     rssArticles: rssArticles.length,
     braveArticles: braveArticles.length,
+    webMentionArticles: webMentionArticles.length,
+    braveNewsUsed,
+    braveWebFallbackUsed,
     braveFallbackUsed,
     providersUsed: [...providersUsed],
+    sourceTypeCounts,
     failedFeeds: failedFeeds.map((feed) => feed.source),
   });
 
@@ -1207,13 +1476,20 @@ export async function getRssTokenNews(
     updatedAt: new Date().toISOString(),
     providersUsed: [...providersUsed],
     braveFallbackUsed,
+    braveNewsUsed,
+    braveWebFallbackUsed,
+    sourceTypeCounts,
     articles,
     meta: {
       rssArticles: rssArticles.length,
       braveArticles: braveArticles.length,
+      webMentionArticles: webMentionArticles.length,
       fallbackUsed: braveFallbackUsed,
       braveFallbackUsed,
+      braveNewsUsed,
+      braveWebFallbackUsed,
       providersUsed: [...providersUsed],
+      sourceTypeCounts,
     },
   };
 }
