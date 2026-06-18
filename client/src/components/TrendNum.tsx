@@ -16,9 +16,9 @@ export function TrendNum({
     return <span>{formatter(value)}</span>;
   }
   // Temporarily removed this feature
-  // if (Math.abs(value) < epsilon) {
-  //   return <span>{formatter(0)}</span>;
-  // }
+  if (Math.abs(value) < epsilon) {
+    return <span>{formatter(0)}</span>;
+  }
 
   let prefix: React.ReactNode = null;
   const formattedValue = formatter(Math.abs(value));

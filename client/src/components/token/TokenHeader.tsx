@@ -5,8 +5,8 @@ import { Link } from "react-router";
 import styles from "./TokenHeader.module.scss";
 
 interface TokenHeaderProps {
-  name: string;
-  symbol?: string;
+  name?: string | null;
+  symbol?: string | null;
   address: string;
   imageUrl?: string;
   coinGeckoId?: string | null;
@@ -40,7 +40,7 @@ export const TokenHeader = ({
   const searchOnTwitter = () => {
     const target = twitterHandle
       ? `https://twitter.com/${twitterHandle}`
-      : `https://twitter.com/search?q=${encodeURIComponent(symbol || name)}`;
+      : `https://twitter.com/search?q=${encodeURIComponent(symbol || name || address)}`;
     window.open(target, "_blank");
   };
 
@@ -64,7 +64,7 @@ export const TokenHeader = ({
         <img
           className={styles.image}
           src={imageUrl ?? `https://api.dicebear.com/7.x/identicon/svg?seed=${address}`}
-          alt={name}
+          alt={name || symbol || address}
         />
         <div className={styles.info}>
           <div className={styles.row}>

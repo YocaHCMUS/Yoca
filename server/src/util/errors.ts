@@ -6,7 +6,11 @@ export function setErr<T extends ErrCode>(code: T) {
   return { errorCode: code };
 }
 
-export function serverErr(c: Context, e: unknown) {
-  console.error(e);
+export function serverErr(
+  c: Context,
+  e: unknown,
+  serverMessage: string = "Server error: ",
+) {
+  console.error(serverMessage, e);
   return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
 }

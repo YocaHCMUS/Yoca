@@ -250,7 +250,7 @@ export function SolanaPaymentFlow({
     return (
       <div className="flex flex-col gap-4">
         {/* Header */}
-        <div className="p-4 rounded-xl bg-[#14F195]/5 border border-[#14F195]/20">
+        <div className="rounded-2xl border border-[#14F195]/20 bg-[#14F195]/5 p-4">
           <div className="flex items-center gap-3 mb-2">
             <span className="text-2xl">SOL</span>
             <div>
@@ -267,7 +267,7 @@ export function SolanaPaymentFlow({
         {/* Wallet list */}
         <div className="flex flex-col gap-2">
           {wallets.length === 0 ? (
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-center">
               <p className="text-[#64748b] text-sm">
                 {tr("payment.solana.noWallets")}
               </p>
@@ -303,7 +303,7 @@ export function SolanaPaymentFlow({
                   type="button"
                   disabled={isThisWalletConnecting}
                   onClick={() => handleWalletSelect(w.adapter.name)}
-                  className="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-200 text-left group disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left transition-all duration-200 hover:border-white/25 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {/* Wallet icon */}
                   {w.adapter.icon ? (
@@ -371,7 +371,7 @@ export function SolanaPaymentFlow({
   if (txSignature && !verifyingSignature) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30">
+        <div className="rounded-2xl border border-green-500/30 bg-green-500/10 p-4">
           <p className="font-semibold text-green-400 mb-2">
             {tr("payment.solana.transactionSubmitted")}
           </p>
@@ -645,7 +645,7 @@ export function SolanaPaymentFlow({
   return (
     <div className="flex flex-col gap-4">
       {/* -- Connected Wallet Card -- */}
-      <div className="flex items-center justify-between p-3 rounded-xl bg-[#14F195]/5 border border-[#14F195]/20">
+      <div className="flex items-center justify-between rounded-2xl border border-[#14F195]/20 bg-[#14F195]/5 p-3">
         <div className="flex items-center gap-3 min-w-0">
           {/* Wallet icon */}
           {wallet?.adapter.icon ? (
@@ -691,7 +691,7 @@ export function SolanaPaymentFlow({
       </div>
 
       {/* -- Balance Info Card -- */}
-      <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-xs">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-xs">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between text-[#94a3b8]">
             <span>{tr("payment.solana.balanceConfigured", { networkName })}:</span>
@@ -717,7 +717,7 @@ export function SolanaPaymentFlow({
       </div>
 
       {/* -- Transaction Details -- */}
-      <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b] mb-1">{tr("payment.checkout.plan")}</p>
@@ -739,7 +739,7 @@ export function SolanaPaymentFlow({
       </div>
 
       {/* -- Info Box -- */}
-      <div className="p-3 rounded-xl bg-[#14F195]/5 border border-[#14F195]/20 text-sm">
+      <div className="rounded-2xl border border-[#14F195]/20 bg-[#14F195]/5 p-3 text-sm">
         <p className="text-xs text-[#64748b]">
           {tr("payment.solana.transferNotice", {
             amount: `${solAmount} SOL`,
@@ -750,7 +750,7 @@ export function SolanaPaymentFlow({
 
       {/* -- Network Mismatch Warning -- */}
       {showNetworkMismatchAlert && (
-        <div className="flex flex-col gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300">
+        <div className="flex flex-col gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
           <div className="flex items-start gap-2">
             <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
@@ -769,7 +769,7 @@ export function SolanaPaymentFlow({
 
       {/* -- Insufficient Funds Warning -- */}
       {showInsufficientFundsAlert && (
-        <div className="flex flex-col gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400">
+        <div className="flex flex-col gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
           <div className="flex items-start gap-2">
             <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -801,7 +801,7 @@ export function SolanaPaymentFlow({
       {errorMsg && (
         <div
           role="alert"
-          className="flex items-start gap-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm"
+          className="flex items-start gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400"
         >
           <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

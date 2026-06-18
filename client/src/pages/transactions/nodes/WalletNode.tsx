@@ -12,12 +12,19 @@ type WalletNodeData = {
   label?: string | null;
   labelColor?: string;
   labelIcon?: string;
+  /** Earliest sequenceNo of any edge touching this node */
+  firstAppearStep?: number;
+  /** Current replay step (null = show all) */
+  playStep?: number | null;
 };
 
 export function WalletNode({ data }: NodeProps<WalletNodeData>) {
   const { hoveredToken, hoveredPair, hoveredAddress, setHoveredAddress } = useContext(HoverContext);
   const navigate = useNavigate();
   const [showCopied, setShowCopied] = useState(false);
+
+  const isPlayMode = data.playStep != null;
+  const isRevealed = !isPlayMode || (data.firstAppearStep != null && data.playStep! >= data.firstAppearStep);
 
   const isActiveToken = hoveredToken && data.activeTokens.includes(hoveredToken);
   const isActivePair = hoveredPair && hoveredPair.includes(data.address);
@@ -51,13 +58,14 @@ export function WalletNode({ data }: NodeProps<WalletNodeData>) {
       <Handle type="source" id="source-top" position={Position.Top} style={handleStyle} />
       <Handle type="target" id="target-top" position={Position.Top} style={handleStyle} />
 
-      {/* Container with fixed card height; top labels are absolute to keep nodes aligned */}
+      {/* Container */}
       <div style={{
         position: "relative",
         display: "flex",
         alignItems: "center",
-        opacity: isDimmed ? 0.4 : 1,
-        transition: "opacity 0.15s",
+        opacity: isPlayMode ? (isRevealed ? 1 : 0) : (isDimmed ? 0.4 : 1),
+        transition: isPlayMode ? "opacity 0.35s" : "opacity 0.15s",
+        transform: isPlayMode && isRevealed ? "scale(1)" : isPlayMode ? "scale(0.85)" : "scale(1)",
       }}>
         {/* Floating label above (absolute, doesn't change node bbox/handle center) */}
         {data.isSigner && (

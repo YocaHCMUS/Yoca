@@ -24,6 +24,8 @@ import {
 } from "@sv/services/wallet/walletOverview.service.js";
 import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
 import {
+  getWalletRecentSwaps,
+  getWalletRecentTransfers,
   getWalletSwaps,
   getWalletTransfers,
 } from "@sv/services/wallet/walletTransfersSwaps.service.js";
@@ -53,7 +55,8 @@ import {
 import { statusCode } from "@sv/util/responses.js";
 import { z } from "zod";
 import { Hono } from "hono";
-import { setErr } from "@sv/util/errors";
+import { serverErr, setErr } from "@sv/util/errors";
+import { WALLET_RECENT_TRANSACTIONS_MAX_COUNT } from "@sv/config/constants.js";
 
 const walletRequestSchema = z.object({
   address: z.string(),
@@ -240,10 +243,6 @@ const app = new Hono()
     const address = params.address;
 
     const limitParam = c.req.query("limit");
-    const cursor = c.req.query("cursor");
-    const before = c.req.query("before");
-
-    const limit = limitParam ? Number(limitParam) : undefined;
 
     try {
       const txs = await getWalletSwaps(address);
@@ -254,6 +253,70 @@ const app = new Hono()
       return c.json({ error: "Failed to get wallet swaps" }, 500);
     }
   })
+  .get(
+    "/swaps/recent/:address",
+    validate("param", addressSchema),
+    validate(
+      "query",
+      z.object({
+        limit: z.coerce
+          .number()
+          .int()
+          .min(1)
+          .max(WALLET_RECENT_TRANSACTIONS_MAX_COUNT)
+          .optional(),
+      }),
+    ),
+    async (c) => {
+      const { address } = c.req.valid("param");
+      const { limit } = c.req.valid("query");
+
+      try {
+        const txs = await getWalletRecentSwaps(address, limit);
+        if (!txs) {
+          return c.json(
+            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+            statusCode.BadGateway,
+          );
+        }
+        return c.json(txs);
+      } catch (e) {
+        return serverErr(c, e);
+      }
+    },
+  )
+  .get(
+    "/transfers/recent/:address",
+    validate("param", addressSchema),
+    validate(
+      "query",
+      z.object({
+        limit: z.coerce
+          .number()
+          .int()
+          .min(1)
+          .max(WALLET_RECENT_TRANSACTIONS_MAX_COUNT)
+          .optional(),
+      }),
+    ),
+    async (c) => {
+      const { address } = c.req.valid("param");
+      const { limit } = c.req.valid("query");
+
+      try {
+        const txs = await getWalletRecentTransfers(address, limit);
+        if (!txs) {
+          return c.json(
+            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+            statusCode.BadGateway,
+          );
+        }
+        return c.json(txs);
+      } catch (e) {
+        return serverErr(c, e);
+      }
+    },
+  )
   .get(
     "/:walletAddress/trades/:tokenAddress",
     validate("param", walletTokenTradesSchema),

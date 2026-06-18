@@ -19,6 +19,7 @@ import {
   setUserEmailAlertSettings,
   syncHeliusWebhookAccountAddresses,
 } from "@sv/services/followedWallets.service.js";
+import { getHeliusWebhookDiagnostics } from "@sv/services/heliusWebhooks.service.js";
 import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -141,6 +142,16 @@ const alertRuleBodySchema = z
     }
   });
 
+async function runHeliusAlertSync() {
+  try {
+    return await syncHeliusWebhookAccountAddresses();
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    console.error("[alerts] Helius sync failed after alert mutation:", err);
+    return { ok: false as const, error };
+  }
+}
+
 const app = new Hono()
   // ── Advanced alert rules (predicate filtering on webhook) ──────
   .get("/rules", honoJwt, userExtract, async (c) => {
@@ -175,7 +186,7 @@ const app = new Hono()
           discordWebhookOverride: body.discordWebhookOverride ?? null,
           emailOverride: body.emailOverride ?? null,
         });
-        const heliusSync = await syncHeliusWebhookAccountAddresses();
+        const heliusSync = await runHeliusAlertSync();
         return c.json({ rule, heliusSync }, statusCode.Created);
       } catch (err) {
         console.error("[alerts] POST /rules failed:", err);
@@ -194,7 +205,7 @@ const app = new Hono()
       if (!deleted) {
         return c.json({ error: "Rule not found" }, 404);
       }
-      const heliusSync = await syncHeliusWebhookAccountAddresses();
+      const heliusSync = await runHeliusAlertSync();
       return c.json({ deleted: true, heliusSync }, statusCode.Ok);
     } catch (err) {
       console.error("[alerts] DELETE /rules/:ruleId failed:", err);
@@ -202,6 +213,17 @@ const app = new Hono()
     }
   })
   // ── Wallet CRUD (auth-guarded) ───────────────────────────────
+  .get("/diagnostics", honoJwt, userExtract, async (c) => {
+    if (process.env.NODE_ENV === "production") {
+      return c.text("Not found", 404);
+    }
+    try {
+      return c.json(await getHeliusWebhookDiagnostics(), statusCode.Ok);
+    } catch (err) {
+      console.error("[alerts] GET /diagnostics failed:", err);
+      return c.json({ error: "Failed to load diagnostics" }, 500);
+    }
+  })
   .get("/", honoJwt, userExtract, async (c) => {
     const { id: userId } = c.get("userPayload");
     try {
@@ -226,7 +248,7 @@ const app = new Hono()
           address,
           label ?? undefined,
         );
-        const heliusSync = await syncHeliusWebhookAccountAddresses();
+        const heliusSync = await runHeliusAlertSync();
         return c.json({ wallet, heliusSync }, statusCode.Created);
       } catch (err) {
         if (isUniqueViolation(err)) {
@@ -251,7 +273,7 @@ const app = new Hono()
       if (!deleted) {
         return c.json({ error: "Wallet not found" }, 404);
       }
-      const heliusSync = await syncHeliusWebhookAccountAddresses();
+      const heliusSync = await runHeliusAlertSync();
       return c.json({ deleted: true, heliusSync }, statusCode.Ok);
     } catch (err) {
       console.error("[alerts] DELETE failed:", err);

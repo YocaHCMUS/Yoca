@@ -1,8 +1,34 @@
+import { getRawParsedTransaction } from "@sv/services/transactions.raw-parser.js";
 import { getTransactionBySignature } from "@sv/services/transactions.js";
 import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 
-const app = new Hono().get("/:txHash", async (c) => {
+const app = new Hono()
+
+  // ── GET /api/transactions/raw/:txHash ─────────────────────────────────────
+  // Returns transfers parsed directly from the Solana jsonParsed RPC response,
+  // preserving the exact on-chain execution order.
+  .get("/raw/:txHash", async (c) => {
+    const txHash = c.req.param("txHash");
+
+    try {
+      const tx = await getRawParsedTransaction(txHash);
+      if (!tx) {
+        return c.json({ error: "Transaction not found" }, statusCode.NotFound);
+      }
+      return c.json(tx, statusCode.Ok);
+    } catch (err) {
+      console.error("Failed to get raw transaction", err);
+      return c.json(
+        { error: "Failed to get raw transaction", details: err instanceof Error ? err.message : String(err) },
+        statusCode.InternalServerError,
+      );
+    }
+  })
+
+  // ── GET /api/transactions/:txHash ─────────────────────────────────────────
+  // Returns the Helius Enhanced Transaction (enriched with USD values etc.)
+  .get("/:txHash", async (c) => {
   const txHash = c.req.param("txHash");
 
   try {
