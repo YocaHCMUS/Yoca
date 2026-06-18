@@ -1,6 +1,7 @@
 import { mapWithConcurrency } from "@sv/util/concurrency.js";
 import type {
   BirdeyePnlDuration,
+  BirdeyePnlSummary,
   BirdeyeTokenPnlDetailsToken,
   WalletTimePeriod,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
@@ -17,13 +18,34 @@ interface WalletWinrateData {
   walletAddress: string;
   walletName?: string;
   winrate: number;
+
+  /** Total unique tokens traded in the selected period. */
   totalTrades: number;
+  /** Tokens whose realized PnL is positive. */
   winningTrades: number;
+  /** Tokens whose realized PnL is negative. */
   losingTrades: number;
+  /** Tokens with zero / missing realized PnL in the selected period. */
+  breakEvenTrades: number;
+  /** Tokens that currently have unrealized PnL below zero. This can overlap with realized buckets. */
+  unrealizedLossTrades: number;
+  /** Tokens that have a non-zero realized PnL. */
+  closedTrades: number;
+
   winningDistribution: WinrateBin[];
   losingDistribution: WinrateBin[];
   avgWinUsd: number;
   avgLossUsd: number;
+  totalWinUsd: number;
+  totalLossUsd: number;
+  /** Realized PnL explained by token-level profit/loss buckets. */
+  classifiedRealizedPnlUsd: number;
+  /** Wallet realized PnL from Birdeye summary when available; otherwise token-level classified PnL. */
+  realizedPnlUsd: number;
+  /** Difference between wallet realized PnL and token-level classified PnL. Usually fees, missing token rows, or provider scope differences. */
+  unclassifiedRealizedPnlUsd: number;
+  /** Number of token detail rows used for classification after period filtering/capping. */
+  classifiedTokenCount: number;
 }
 
 interface WinrateResponse {
@@ -35,6 +57,7 @@ interface WinrateResponse {
 }
 
 const MAX_WALLET_CHART_CONCURRENCY = 4;
+const EPSILON = 1e-9;
 
 const DISTRIBUTION_BINS = [
   { range: "0-5%", min: 0, max: 5 },
@@ -45,7 +68,9 @@ const DISTRIBUTION_BINS = [
   { range: ">100%", min: 100, max: Infinity },
 ];
 
-function mapPeriodToBirdeyeDuration(period: WalletTimePeriod): BirdeyePnlDuration {
+function mapPeriodToBirdeyeDuration(
+  period: WalletTimePeriod,
+): BirdeyePnlDuration {
   if (period === "24H") return "24h";
   if (period === "7D") return "7d";
   if (period === "30D") return "30d";
@@ -74,36 +99,124 @@ function generateDistributionBins(pnlValues: number[]): WinrateBin[] {
   return bins.filter((b) => b.count > 0);
 }
 
-function calculateWinrate(tokens: BirdeyeTokenPnlDetailsToken[]) {
+function getSummaryUniqueTokens(
+  summary: BirdeyePnlSummary | null | undefined,
+): number | null {
+  const uniqueTokens = toFiniteNumber(summary?.unique_tokens);
+  return uniqueTokens == null ? null : Math.max(0, Math.floor(uniqueTokens));
+}
+
+function getSummaryRealizedPnlUsd(
+  summary: BirdeyePnlSummary | null | undefined,
+): number | null {
+  return toFiniteNumber(summary?.pnl?.realized_profit_usd);
+}
+
+function isPositiveNumber(value: unknown): boolean {
+  const n = toFiniteNumber(value);
+  return n != null && n > EPSILON;
+}
+
+function isNonZeroNumber(value: unknown): boolean {
+  const n = toFiniteNumber(value);
+  return n != null && Math.abs(n) > EPSILON;
+}
+
+function hasPeriodTradeActivity(token: BirdeyeTokenPnlDetailsToken): boolean {
+  const counts = token.counts;
+  const cashflow = token.cashflow_usd;
+  const pnl = token.pnl;
+
+  // Birdeye may return holding rows in token PnL details. For a period-based win rate,
+  // only classify tokens with trade/cashflow evidence or non-zero realized PnL in that period.
+  return (
+    isPositiveNumber(counts?.total_trade) ||
+    isPositiveNumber(counts?.total_buy) ||
+    isPositiveNumber(counts?.total_sell) ||
+    isPositiveNumber(cashflow?.total_invested) ||
+    isPositiveNumber(cashflow?.total_sold) ||
+    isNonZeroNumber(pnl?.realized_profit_usd)
+  );
+}
+
+function getClassifiableTokens(
+  tokens: BirdeyeTokenPnlDetailsToken[],
+  summary: BirdeyePnlSummary | null | undefined,
+): BirdeyeTokenPnlDetailsToken[] {
+  const summaryUniqueTokens = getSummaryUniqueTokens(summary);
+  const activityTokens = tokens.filter(hasPeriodTradeActivity);
+  const candidates = activityTokens.length > 0 ? activityTokens : tokens;
+
+  // The wallet overview uses summary.unique_tokens as the period "tokens traded" value.
+  // Cap classified rows to the same denominator when Birdeye returns extra holding rows,
+  // otherwise the topbar can show impossible counts such as 9 classified tokens while
+  // the hero says only 4 tokens traded. Details are sorted by last_trade desc by the fetcher.
+  if (
+    summaryUniqueTokens != null &&
+    summaryUniqueTokens > 0 &&
+    candidates.length > summaryUniqueTokens
+  ) {
+    return candidates.slice(0, summaryUniqueTokens);
+  }
+
+  return candidates;
+}
+
+function calculateWinrate(
+  tokens: BirdeyeTokenPnlDetailsToken[],
+  summary: BirdeyePnlSummary | null,
+) {
   const winningPnLs: number[] = [];
   const losingPnLs: number[] = [];
-  let totalTrades = 0;
   let winningTrades = 0;
   let losingTrades = 0;
+  let unrealizedLossTrades = 0;
   let totalWinUsd = 0;
   let totalLossUsd = 0;
 
-  for (const token of tokens) {
-    // Token PnL Win Rate phải dùng cùng một chuẩn: realized_profit_usd.
-    // Không dùng total_percent để phân loại thắng/thua vì total_percent có thể lệch với PnL đã chốt.
-    const realizedPnlUsd = toFiniteNumber(token.pnl?.realized_profit_usd);
-    const realizedPnlPercent = toFiniteNumber(token.pnl?.realized_profit_percent);
+  const classifiableTokens = getClassifiableTokens(tokens, summary);
 
-    if (realizedPnlUsd == null || realizedPnlUsd === 0) continue;
+  for (const token of classifiableTokens) {
+    // Realized PnL is the only source used to classify closed profit/loss.
+    // Do not use total_percent because it can mix realized and unrealized performance.
+    const realizedPnlUsd = toFiniteNumber(token.pnl?.realized_profit_usd) ?? 0;
+    const realizedPnlPercent = toFiniteNumber(
+      token.pnl?.realized_profit_percent,
+    );
+    const unrealizedPnlUsd = toFiniteNumber(token.pnl?.unrealized_usd) ?? 0;
 
-    totalTrades++;
+    if (unrealizedPnlUsd < -EPSILON) {
+      unrealizedLossTrades++;
+    }
 
-    if (realizedPnlUsd > 0) {
+    if (realizedPnlUsd > EPSILON) {
       winningTrades++;
       winningPnLs.push(realizedPnlPercent ?? realizedPnlUsd);
       totalWinUsd += realizedPnlUsd;
       continue;
     }
 
-    losingTrades++;
-    losingPnLs.push(realizedPnlPercent ?? realizedPnlUsd);
-    totalLossUsd += Math.abs(realizedPnlUsd);
+    if (realizedPnlUsd < -EPSILON) {
+      losingTrades++;
+      losingPnLs.push(realizedPnlPercent ?? realizedPnlUsd);
+      totalLossUsd += Math.abs(realizedPnlUsd);
+    }
   }
+
+  const closedTrades = winningTrades + losingTrades;
+  const summaryUniqueTokens = getSummaryUniqueTokens(summary);
+  const totalTrades = Math.max(
+    summaryUniqueTokens ?? classifiableTokens.length,
+    closedTrades,
+  );
+  const breakEvenTrades = Math.max(totalTrades - closedTrades, 0);
+  const classifiedRealizedPnlUsd = totalWinUsd - totalLossUsd;
+
+  // Use Birdeye summary realized PnL as the wallet-level source of truth when available,
+  // because this is the same source used by the wallet overview PnL card.
+  const summaryRealizedPnlUsd = getSummaryRealizedPnlUsd(summary);
+  const realizedPnlUsd = summaryRealizedPnlUsd ?? classifiedRealizedPnlUsd;
+  const unclassifiedRealizedPnlUsd = realizedPnlUsd - classifiedRealizedPnlUsd;
 
   return {
     winningPnLs,
@@ -111,16 +224,29 @@ function calculateWinrate(tokens: BirdeyeTokenPnlDetailsToken[]) {
     totalTrades,
     winningTrades,
     losingTrades,
+    breakEvenTrades,
+    unrealizedLossTrades,
+    closedTrades,
     avgWinUsd: winningTrades > 0 ? totalWinUsd / winningTrades : 0,
     avgLossUsd: losingTrades > 0 ? totalLossUsd / losingTrades : 0,
+    totalWinUsd,
+    totalLossUsd,
+    classifiedRealizedPnlUsd,
+    realizedPnlUsd,
+    unclassifiedRealizedPnlUsd,
+    classifiedTokenCount: classifiableTokens.length,
   };
 }
 
 async function fetchAllTokenPnlDetails(
   walletAddress: string,
   duration: BirdeyePnlDuration,
-): Promise<BirdeyeTokenPnlDetailsToken[]> {
+): Promise<{
+  tokens: BirdeyeTokenPnlDetailsToken[];
+  summary: BirdeyePnlSummary | null;
+}> {
   const allTokens: BirdeyeTokenPnlDetailsToken[] = [];
+  let summary: BirdeyePnlSummary | null = null;
   let offset = 0;
   const limit = 100;
 
@@ -131,6 +257,10 @@ async function fetchAllTokenPnlDetails(
       duration,
     });
 
+    if (!summary && pnlDetails.summary) {
+      summary = pnlDetails.summary;
+    }
+
     const tokens = Array.isArray(pnlDetails.tokens) ? pnlDetails.tokens : [];
     if (tokens.length === 0) break;
 
@@ -140,7 +270,7 @@ async function fetchAllTokenPnlDetails(
     offset += limit;
   }
 
-  return allTokens;
+  return { tokens: allTokens, summary };
 }
 
 async function calculateWalletWinrate(
@@ -149,16 +279,19 @@ async function calculateWalletWinrate(
   timePeriod: WalletTimePeriod,
 ): Promise<WalletWinrateData> {
   let tokens: BirdeyeTokenPnlDetailsToken[] = [];
+  let summary: BirdeyePnlSummary | null = null;
 
   try {
     const duration = mapPeriodToBirdeyeDuration(timePeriod);
 
-    // Lấy PnL details đúng theo period hiện tại.
-    // Không lấy duration="all" rồi tự lọc last_trade, vì sẽ dùng PnL all-time của token và làm lệch Avg Win/Loss.
-    tokens = await fetchAllTokenPnlDetails(walletAddress, duration);
+    // Fetch PnL details for the exact selected period so closed Win/Loss and Avg Win/Loss
+    // use the same timeframe as the wallet overview.
+    const result = await fetchAllTokenPnlDetails(walletAddress, duration);
+    tokens = result.tokens;
+    summary = result.summary;
 
     console.log(
-      `[WalletWinrate] Fetched ${tokens.length} token PnL rows for ${walletAddress}, duration=${duration}`,
+      `[WalletWinrate] Fetched ${tokens.length} token PnL rows for ${walletAddress}, duration=${duration}, unique_tokens=${summary?.unique_tokens ?? "n/a"}`,
     );
   } catch (error) {
     console.error(
@@ -167,7 +300,7 @@ async function calculateWalletWinrate(
     );
   }
 
-  const winrateStats = calculateWinrate(tokens);
+  const winrateStats = calculateWinrate(tokens, summary);
 
   if (winrateStats.totalTrades === 0) {
     return {
@@ -177,13 +310,23 @@ async function calculateWalletWinrate(
       totalTrades: 0,
       winningTrades: 0,
       losingTrades: 0,
+      breakEvenTrades: 0,
+      unrealizedLossTrades: 0,
+      closedTrades: 0,
       winningDistribution: [],
       losingDistribution: [],
       avgWinUsd: 0,
       avgLossUsd: 0,
+      totalWinUsd: 0,
+      totalLossUsd: 0,
+      classifiedRealizedPnlUsd: 0,
+      realizedPnlUsd: 0,
+      unclassifiedRealizedPnlUsd: 0,
+      classifiedTokenCount: 0,
     };
   }
 
+  // Token Win Rate answers: among all tokens traded in this period, how many generated realized profit?
   const winrate = (winrateStats.winningTrades / winrateStats.totalTrades) * 100;
 
   return {
@@ -193,10 +336,19 @@ async function calculateWalletWinrate(
     totalTrades: winrateStats.totalTrades,
     winningTrades: winrateStats.winningTrades,
     losingTrades: winrateStats.losingTrades,
+    breakEvenTrades: winrateStats.breakEvenTrades,
+    unrealizedLossTrades: winrateStats.unrealizedLossTrades,
+    closedTrades: winrateStats.closedTrades,
     winningDistribution: generateDistributionBins(winrateStats.winningPnLs),
     losingDistribution: generateDistributionBins(winrateStats.losingPnLs),
     avgWinUsd: winrateStats.avgWinUsd,
     avgLossUsd: winrateStats.avgLossUsd,
+    totalWinUsd: winrateStats.totalWinUsd,
+    totalLossUsd: winrateStats.totalLossUsd,
+    classifiedRealizedPnlUsd: winrateStats.classifiedRealizedPnlUsd,
+    realizedPnlUsd: winrateStats.realizedPnlUsd,
+    unclassifiedRealizedPnlUsd: winrateStats.unclassifiedRealizedPnlUsd,
+    classifiedTokenCount: winrateStats.classifiedTokenCount,
   };
 }
 
@@ -223,7 +375,8 @@ export async function getWinrateData(
   const winrateItems = await mapWithConcurrency(
     normalizedWallets,
     MAX_WALLET_CHART_CONCURRENCY,
-    async (walletAddress) => calculateWalletWinrate(walletAddress, walletAddress, period),
+    async (walletAddress) =>
+      calculateWalletWinrate(walletAddress, walletAddress, period),
   );
 
   return {

@@ -26,7 +26,10 @@ import {
   type WalletOverviewMultiPeriodResponse,
   type WalletOverviewPeriodKey,
 } from "@/services/wallet/walletApi";
-import { fetchWalletTags, saveWalletTags } from "@/services/wallet/walletTagsApi";
+import {
+  fetchWalletTags,
+  saveWalletTags,
+} from "@/services/wallet/walletTagsApi";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWatchlist } from "@/contexts/WatchlistContext";
@@ -57,13 +60,27 @@ function formatLocalizedWalletAge(
   return parts.length > 0 ? parts.slice(0, 2).join(" ") : `0 ${units.day}`;
 }
 
-function resolveWalletAgeDays(firstFund: { walletAgeDays?: number | null; firstFundTimestampSec?: number | null } | null | undefined): number | null {
+function resolveWalletAgeDays(
+  firstFund:
+    | { walletAgeDays?: number | null; firstFundTimestampSec?: number | null }
+    | null
+    | undefined,
+): number | null {
   if (!firstFund) return null;
-  if (firstFund.walletAgeDays != null && Number.isFinite(firstFund.walletAgeDays)) {
+  if (
+    firstFund.walletAgeDays != null &&
+    Number.isFinite(firstFund.walletAgeDays)
+  ) {
     return Math.max(0, Math.floor(firstFund.walletAgeDays));
   }
-  if (firstFund.firstFundTimestampSec != null && Number.isFinite(firstFund.firstFundTimestampSec)) {
-    const elapsedMs = Math.max(0, Date.now() - firstFund.firstFundTimestampSec * 1000);
+  if (
+    firstFund.firstFundTimestampSec != null &&
+    Number.isFinite(firstFund.firstFundTimestampSec)
+  ) {
+    const elapsedMs = Math.max(
+      0,
+      Date.now() - firstFund.firstFundTimestampSec * 1000,
+    );
     return Math.floor(elapsedMs / (24 * 60 * 60 * 1000));
   }
   return null;
@@ -72,9 +89,19 @@ function resolveWalletAgeDays(firstFund: { walletAgeDays?: number | null; firstF
 type WalletWinRateStats = {
   winRate?: number;
   winCount?: number;
+  lossCount?: number;
+  breakEvenCount?: number;
+  unrealizedLossCount?: number;
+  closedCount?: number;
   totalTraded?: number;
   avgWinUsd?: number;
   avgLossUsd?: number;
+  totalWinUsd?: number;
+  totalLossUsd?: number;
+  classifiedRealizedPnlUsd?: number;
+  realizedPnlUsd?: number;
+  unclassifiedRealizedPnlUsd?: number;
+  classifiedTokenCount?: number;
 };
 
 export interface WalletTopbarProps {
@@ -111,7 +138,8 @@ export function WalletTopbar({
   const { walletWatchlist, walletPending, toggleWallet } = useWatchlist();
   const navigate = useNavigate();
 
-  const [intelligence, setIntelligence] = useState<WalletIntelligenceResponse | null>(null);
+  const [intelligence, setIntelligence] =
+    useState<WalletIntelligenceResponse | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const { labels, setLabel: setApiLabel } = useWalletLabels();
   const label = labels[address] ?? "";
@@ -129,22 +157,50 @@ export function WalletTopbar({
   const identityName = intelligence?.identity?.name ?? null;
   const identityCategory = intelligence?.identity?.category ?? null;
   const firstFund = intelligence?.analysis?.firstFund ?? null;
-  const firstFundLabel = firstFund?.funderLabel ?? firstFund?.funderAddress ?? null;
+  const firstFundLabel =
+    firstFund?.funderLabel ?? firstFund?.funderAddress ?? null;
   const walletAgeDays = resolveWalletAgeDays(firstFund);
-  const walletAgeLabel = walletAgeDays != null
-    ? formatLocalizedWalletAge(walletAgeDays, {
-      day: String(tr("walletPage.walletAgeUnitDay")),
-      month: String(tr("walletPage.walletAgeUnitMonth")),
-      year: String(tr("walletPage.walletAgeUnitYear")),
-    })
-    : null;
+  const walletAgeLabel =
+    walletAgeDays != null
+      ? formatLocalizedWalletAge(walletAgeDays, {
+          day: String(tr("walletPage.walletAgeUnitDay")),
+          month: String(tr("walletPage.walletAgeUnitMonth")),
+          year: String(tr("walletPage.walletAgeUnitYear")),
+        })
+      : null;
 
-  const displayName = label || (identityStatus === "known" && identityName ? identityName : shortenWalletAddress(address));
-  const safeWinRate = Math.max(0, Math.min(100, Number(winRateStats?.winRate ?? 0)));
+  const displayName =
+    label ||
+    (identityStatus === "known" && identityName
+      ? identityName
+      : shortenWalletAddress(address));
+  const safeWinRate = Math.max(
+    0,
+    Math.min(100, Number(winRateStats?.winRate ?? 0)),
+  );
   const winCount = Number(winRateStats?.winCount ?? 0);
+  const lossCount = Number(winRateStats?.lossCount ?? 0);
+  const breakEvenCount = Number(winRateStats?.breakEvenCount ?? 0);
+  const unrealizedLossCount = Number(winRateStats?.unrealizedLossCount ?? 0);
+  const closedCount = Number(winRateStats?.closedCount ?? winCount + lossCount);
   const totalTraded = Number(winRateStats?.totalTraded ?? 0);
   const avgWinUsd = Number(winRateStats?.avgWinUsd ?? 0);
   const avgLossUsd = Number(winRateStats?.avgLossUsd ?? 0);
+  const totalWinUsd = Number(winRateStats?.totalWinUsd ?? 0);
+  const totalLossUsd = Number(winRateStats?.totalLossUsd ?? 0);
+  const classifiedRealizedPnlUsd = Number(
+    winRateStats?.classifiedRealizedPnlUsd ?? totalWinUsd - totalLossUsd,
+  );
+  const walletRealizedPnlUsd = Number(
+    winRateStats?.realizedPnlUsd ?? classifiedRealizedPnlUsd,
+  );
+  const unclassifiedRealizedPnlUsd = Number(
+    winRateStats?.unclassifiedRealizedPnlUsd ??
+      walletRealizedPnlUsd - classifiedRealizedPnlUsd,
+  );
+  const classifiedTokenCount = Number(
+    winRateStats?.classifiedTokenCount ?? closedCount + breakEvenCount,
+  );
   const hasWinRateStats = Boolean(winRateStats) && Number.isFinite(safeWinRate);
   const isHighWinRate = safeWinRate >= 50;
   const localeCode = lang === "vi" ? "vi-VN" : "en-US";
@@ -154,18 +210,27 @@ export function WalletTopbar({
   const winRateSummary = winRateLoading
     ? "--"
     : String(
-      tr("walletPage.tokenWinRate.summaryShort", {
-        win: formatCount(winCount),
-        tradedCount: formatCount(totalTraded),
-      }),
-    );
-  const formatCurrencyAbs = (value: number) => fmt.num.compact.currency(Math.abs(value));
+        tr("walletPage.tokenWinRate.summaryBreakdown", {
+          profit: formatCount(winCount),
+          loss: formatCount(lossCount),
+          neutral: formatCount(breakEvenCount),
+        }),
+      );
+  const formatCurrencyAbs = (value: number) =>
+    fmt.num.compact.currency(Math.abs(value));
   const formatSignedCurrency = (value: number, sign: "+" | "-") =>
     winRateLoading ? "--" : `${sign}${formatCurrencyAbs(value)}`;
+  const formatComputedSignedCurrency = (value: number) => {
+    if (winRateLoading) return "--";
+    if (Math.abs(value) < 1e-9) return fmt.num.compact.currency(0);
+    return `${value > 0 ? "+" : "-"}${formatCurrencyAbs(value)}`;
+  };
 
   useEffect(() => {
     if (!address || address === "null") return;
-    fetchWalletIntelligence(address, "solana").then(setIntelligence).catch(() => { });
+    fetchWalletIntelligence(address, "solana")
+      .then(setIntelligence)
+      .catch(() => {});
   }, [address]);
 
   useEffect(() => {
@@ -173,18 +238,24 @@ export function WalletTopbar({
       setTags([]);
       return;
     }
-    fetchWalletTags(address).then(setTags).catch(() => setTags([]));
+    fetchWalletTags(address)
+      .then(setTags)
+      .catch(() => setTags([]));
   }, [address, user]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+      if (
+        exportMenuRef.current &&
+        !exportMenuRef.current.contains(event.target as Node)
+      ) {
         setIsExportMenuOpen(false);
       }
     };
     if (isExportMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [isExportMenuOpen]);
 
@@ -196,18 +267,24 @@ export function WalletTopbar({
     }
   }, [address]);
 
-  const handleLabelSave = useCallback((newLabel: string) => {
-    setApiLabel(address, newLabel);
-  }, [address, setApiLabel]);
+  const handleLabelSave = useCallback(
+    (newLabel: string) => {
+      setApiLabel(address, newLabel);
+    },
+    [address, setApiLabel],
+  );
 
-  const handleTagsSave = useCallback(async (newTags: string[]) => {
-    try {
-      await saveWalletTags(address, newTags);
-      setTags(newTags);
-    } catch {
-      console.error("[WalletTopbar] Failed to save tags");
-    }
-  }, [address]);
+  const handleTagsSave = useCallback(
+    async (newTags: string[]) => {
+      try {
+        await saveWalletTags(address, newTags);
+        setTags(newTags);
+      } catch {
+        console.error("[WalletTopbar] Failed to save tags");
+      }
+    },
+    [address],
+  );
 
   const handleBookmark = useCallback(() => {
     if (!user || !address || address === "null") return;
@@ -223,7 +300,10 @@ export function WalletTopbar({
 
   return (
     <>
-      <div className={styles.topbar} data-chat-docked={isAiChatDocked ? "true" : "false"}>
+      <div
+        className={styles.topbar}
+        data-chat-docked={isAiChatDocked ? "true" : "false"}
+      >
         <div className={styles.topbarLeft}>
           <div className={styles.topbarAvatar}>
             <Wallet size={16} />
@@ -231,11 +311,20 @@ export function WalletTopbar({
           <div className={styles.topbarIdentity}>
             <div className={styles.topbarAddress}>
               <span className={styles.topbarAddressText}>{displayName}</span>
-              {displayName !== shortenWalletAddress(address) && displayName !== address && (
-                <span style={{ fontSize: "12px", color: "var(--cds-text-secondary)", marginLeft: "4px", marginRight: "4px", fontFamily: "monospace" }}>
-                  {shortenWalletAddress(address)}
-                </span>
-              )}
+              {displayName !== shortenWalletAddress(address) &&
+                displayName !== address && (
+                  <span
+                    style={{
+                      fontSize: "12px",
+                      color: "var(--cds-text-secondary)",
+                      marginLeft: "4px",
+                      marginRight: "4px",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    {shortenWalletAddress(address)}
+                  </span>
+                )}
               <button
                 type="button"
                 className={styles.copyBtn}
@@ -258,16 +347,23 @@ export function WalletTopbar({
                 <span className={styles.chipGreen}>{walletAgeLabel}</span>
               )}
               {identityStatus === "unknown" && (
-                <span className={styles.chipGray}>{tr("walletPage.unknownEntity")}</span>
+                <span className={styles.chipGray}>
+                  {tr("walletPage.unknownEntity")}
+                </span>
               )}
               {identityStatus === "known" && identityCategory && (
-                <Tag size="sm" type="teal">{identityCategory}</Tag>
+                <Tag size="sm" type="teal">
+                  {identityCategory}
+                </Tag>
               )}
               {firstFundLabel && (
                 <button
                   type="button"
                   className={styles.inlineTagBtn}
-                  onClick={() => firstFund?.funderAddress && handleOpenFirstFunder(firstFund.funderAddress)}
+                  onClick={() =>
+                    firstFund?.funderAddress &&
+                    handleOpenFirstFunder(firstFund.funderAddress)
+                  }
                 >
                   <Tag size="sm" type="blue">
                     {String(tr("walletPage.firstFunderTag"))}: {firstFundLabel}
@@ -275,7 +371,9 @@ export function WalletTopbar({
                 </button>
               )}
               {tags.map((tag) => (
-                <Tag key={tag} size="sm" type="cyan">{tag}</Tag>
+                <Tag key={tag} size="sm" type="cyan">
+                  {tag}
+                </Tag>
               ))}
               <button
                 type="button"
@@ -297,7 +395,9 @@ export function WalletTopbar({
                 <button
                   type="button"
                   className={styles.winRateInfoBtn}
-                  aria-label={String(tr("walletPage.tokenWinRate.explanationAria"))}
+                  aria-label={String(
+                    tr("walletPage.tokenWinRate.explanationAria"),
+                  )}
                   aria-describedby="wallet-win-rate-tooltip"
                 >
                   <Information size={13} />
@@ -309,12 +409,131 @@ export function WalletTopbar({
                   role="tooltip"
                 >
                   <p>
-                    <strong>{tr("walletPage.tokenWinRate.tooltipWinRateLabel")}</strong>{" "}
-                    {tr("walletPage.tokenWinRate.tooltipWinRateDescription", { period: currentPeriod })}
+                    <strong>
+                      {tr("walletPage.tokenWinRate.tooltipWinRateLabel")}
+                    </strong>{" "}
+                    {tr("walletPage.tokenWinRate.tooltipWinRateDescription", {
+                      period: currentPeriod,
+                    })}
                   </p>
+
+                  <dl className={styles.winRateTooltipStats}>
+                    <div>
+                      <dt>
+                        {tr("walletPage.tokenWinRate.tooltipTotalTradedTokens")}
+                      </dt>
+                      <dd>
+                        {tr("walletPage.tokenWinRate.tooltipTokenValue", {
+                          value: formatCount(totalTraded),
+                        })}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>
+                        {tr(
+                          "walletPage.tokenWinRate.tooltipRealizedProfitTokens",
+                        )}
+                      </dt>
+                      <dd>
+                        {tr("walletPage.tokenWinRate.tooltipTokenValue", {
+                          value: formatCount(winCount),
+                        })}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>
+                        {tr(
+                          "walletPage.tokenWinRate.tooltipRealizedLossTokens",
+                        )}
+                      </dt>
+                      <dd>
+                        {tr("walletPage.tokenWinRate.tooltipTokenValue", {
+                          value: formatCount(lossCount),
+                        })}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>
+                        {tr("walletPage.tokenWinRate.tooltipBreakEvenTokens")}
+                      </dt>
+                      <dd>
+                        {tr("walletPage.tokenWinRate.tooltipTokenValue", {
+                          value: formatCount(breakEvenCount),
+                        })}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>
+                        {tr(
+                          "walletPage.tokenWinRate.tooltipUnrealizedLossTokens",
+                        )}
+                      </dt>
+                      <dd>
+                        {tr("walletPage.tokenWinRate.tooltipTokenValue", {
+                          value: formatCount(unrealizedLossCount),
+                        })}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>
+                        {tr("walletPage.tokenWinRate.tooltipClosedAvgLoss")}
+                      </dt>
+                      <dd>{formatSignedCurrency(avgLossUsd, "-")}</dd>
+                    </div>
+                    <div>
+                      <dt>
+                        {tr(
+                          "walletPage.tokenWinRate.tooltipClassifiedRealizedPnl",
+                        )}
+                      </dt>
+                      <dd>
+                        {formatComputedSignedCurrency(classifiedRealizedPnlUsd)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>
+                        {tr("walletPage.tokenWinRate.tooltipWalletRealizedPnl")}
+                      </dt>
+                      <dd>
+                        {formatComputedSignedCurrency(walletRealizedPnlUsd)}
+                      </dd>
+                    </div>
+                    <div
+                      data-muted={
+                        Math.abs(unclassifiedRealizedPnlUsd) < 1e-9
+                          ? "true"
+                          : "false"
+                      }
+                    >
+                      <dt>
+                        {tr(
+                          "walletPage.tokenWinRate.tooltipUnclassifiedRealizedPnl",
+                        )}
+                      </dt>
+                      <dd>
+                        {formatComputedSignedCurrency(
+                          unclassifiedRealizedPnlUsd,
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+
                   <p>
-                    <strong>{tr("walletPage.tokenWinRate.tooltipAverageLabel")}</strong>{" "}
-                    {tr("walletPage.tokenWinRate.tooltipAverageDescription")}
+                    <strong>
+                      {tr("walletPage.tokenWinRate.tooltipAverageLabel")}
+                    </strong>{" "}
+                    {tr("walletPage.tokenWinRate.tooltipAverageDescription", {
+                      closed: formatCount(closedCount),
+                      traded: formatCount(totalTraded),
+                      classifiedPnl: formatComputedSignedCurrency(
+                        classifiedRealizedPnlUsd,
+                      ),
+                      walletPnl:
+                        formatComputedSignedCurrency(walletRealizedPnlUsd),
+                      difference: formatComputedSignedCurrency(
+                        unclassifiedRealizedPnlUsd,
+                      ),
+                    })}
                   </p>
                 </div>
               </div>
@@ -322,15 +541,34 @@ export function WalletTopbar({
 
             <div className={styles.winRateMiniBody}>
               <div className={styles.winRateMainCol}>
-                <div className={styles.winRateValue} data-positive={isHighWinRate}>
-                  {winRateLoading ? "--" : hasWinRateStats ? formatWinRatePercent(safeWinRate) : "--"}
+                <div
+                  className={styles.winRateValue}
+                  data-positive={isHighWinRate}
+                >
+                  {winRateLoading
+                    ? "--"
+                    : hasWinRateStats
+                      ? formatWinRatePercent(safeWinRate)
+                      : "--"}
                 </div>
                 <div className={styles.winRateProgressWrap} aria-hidden="true">
-                  <div className={styles.winRateProgressWin} style={{ width: `${winRateLoading || !hasWinRateStats ? 0 : safeWinRate}%` }} />
-                  <div className={styles.winRateProgressLoss} style={{ width: `${winRateLoading || !hasWinRateStats ? 0 : 100 - safeWinRate}%` }} />
+                  <div
+                    className={styles.winRateProgressWin}
+                    style={{
+                      width: `${winRateLoading || !hasWinRateStats ? 0 : safeWinRate}%`,
+                    }}
+                  />
+                  <div
+                    className={styles.winRateProgressLoss}
+                    style={{
+                      width: `${winRateLoading || !hasWinRateStats ? 0 : 100 - safeWinRate}%`,
+                    }}
+                  />
                 </div>
                 <div className={styles.winRateCounts} title={winRateSummary}>
-                  <span className={styles.winRateCountsText}>{winRateSummary}</span>
+                  <span className={styles.winRateCountsText}>
+                    {winRateSummary}
+                  </span>
                 </div>
               </div>
 
@@ -338,12 +576,16 @@ export function WalletTopbar({
 
               <div className={styles.winRateMetricCol}>
                 <span>{tr("walletPage.tokenWinRate.avgWin")}</span>
-                <strong className={styles.winRateMetricWin}>{formatSignedCurrency(avgWinUsd, "+")}</strong>
+                <strong className={styles.winRateMetricWin}>
+                  {formatSignedCurrency(avgWinUsd, "+")}
+                </strong>
               </div>
 
               <div className={styles.winRateMetricCol}>
                 <span>{tr("walletPage.tokenWinRate.avgLoss")}</span>
-                <strong className={styles.winRateMetricLoss}>{formatSignedCurrency(avgLossUsd, "-")}</strong>
+                <strong className={styles.winRateMetricLoss}>
+                  {formatSignedCurrency(avgLossUsd, "-")}
+                </strong>
               </div>
             </div>
           </div>
@@ -359,14 +601,25 @@ export function WalletTopbar({
             />
           </div>
           <div className={styles.topbarRow}>
-            <Tooltip label={isBookmarked ? tr("wallet.bookmarked") : tr("wallet.bookmarkWallet")} align="bottom-left">
+            <Tooltip
+              label={
+                isBookmarked
+                  ? tr("wallet.bookmarked")
+                  : tr("wallet.bookmarkWallet")
+              }
+              align="bottom-left"
+            >
               <button
                 type="button"
                 className={styles.iconBtn}
                 onClick={handleBookmark}
                 disabled={!user || isBookmarkPending}
               >
-                {isBookmarked ? <BookmarkFilled size={16} /> : <Bookmark size={16} />}
+                {isBookmarked ? (
+                  <BookmarkFilled size={16} />
+                ) : (
+                  <Bookmark size={16} />
+                )}
               </button>
             </Tooltip>
             <Tooltip label={tr("wallet.createAlert")} align="bottom-left">
@@ -375,7 +628,15 @@ export function WalletTopbar({
               </button>
             </Tooltip>
             <Tooltip label={tr("wallet.compareWallet")} align="bottom-left">
-              <button type="button" className={styles.iconBtn} onClick={() => window.location.assign(`/comparison/wallets?wallets=${encodeURIComponent(address)}`)}>
+              <button
+                type="button"
+                className={styles.iconBtn}
+                onClick={() =>
+                  window.location.assign(
+                    `/comparison/wallets?wallets=${encodeURIComponent(address)}`,
+                  )
+                }
+              >
                 <Repeat size={16} />
               </button>
             </Tooltip>
@@ -385,7 +646,11 @@ export function WalletTopbar({
               </button>
             </Tooltip>
             <Tooltip label="AI Analysis" align="bottom-left">
-              <button type="button" className={styles.iconBtn} onClick={onAiAnalysisOpen}>
+              <button
+                type="button"
+                className={styles.iconBtn}
+                onClick={onAiAnalysisOpen}
+              >
                 <AiGenerate size={16} />
               </button>
             </Tooltip>
