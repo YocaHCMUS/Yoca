@@ -89,6 +89,7 @@ export interface WalletTopbarProps {
   onPeriodChange: (period: WalletOverviewPeriodKey) => void;
   winRateStats?: WalletWinRateStats | null;
   winRateLoading?: boolean;
+  isAiChatDocked?: boolean;
 }
 
 export function WalletTopbar({
@@ -103,6 +104,7 @@ export function WalletTopbar({
   onPeriodChange,
   winRateStats,
   winRateLoading = false,
+  isAiChatDocked = false,
 }: WalletTopbarProps) {
   const { user } = useAuth();
   const { tr, fmt, lang } = useLocalization();
@@ -149,6 +151,14 @@ export function WalletTopbar({
   const formatWinRatePercent = (value: number) =>
     `${value.toLocaleString(localeCode, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
   const formatCount = (value: number) => fmt.num.compact.decimal(value);
+  const winRateSummary = winRateLoading
+    ? "--"
+    : String(
+      tr("walletPage.tokenWinRate.summaryShort", {
+        win: formatCount(winCount),
+        tradedCount: formatCount(totalTraded),
+      }),
+    );
   const formatCurrencyAbs = (value: number) => fmt.num.compact.currency(Math.abs(value));
   const formatSignedCurrency = (value: number, sign: "+" | "-") =>
     winRateLoading ? "--" : `${sign}${formatCurrencyAbs(value)}`;
@@ -213,7 +223,7 @@ export function WalletTopbar({
 
   return (
     <>
-      <div className={styles.topbar}>
+      <div className={styles.topbar} data-chat-docked={isAiChatDocked ? "true" : "false"}>
         <div className={styles.topbarLeft}>
           <div className={styles.topbarAvatar}>
             <Wallet size={16} />
@@ -319,10 +329,8 @@ export function WalletTopbar({
                   <div className={styles.winRateProgressWin} style={{ width: `${winRateLoading || !hasWinRateStats ? 0 : safeWinRate}%` }} />
                   <div className={styles.winRateProgressLoss} style={{ width: `${winRateLoading || !hasWinRateStats ? 0 : 100 - safeWinRate}%` }} />
                 </div>
-                <div className={styles.winRateCounts}>
-                  <span>{winRateLoading ? "--" : formatCount(winCount)} {tr("walletPage.tokenWinRate.win")}</span>
-                  <strong>/</strong>
-                  {winRateLoading ? "--" : formatCount(totalTraded)} {tr("walletPage.tokenWinRate.traded")}
+                <div className={styles.winRateCounts} title={winRateSummary}>
+                  <span className={styles.winRateCountsText}>{winRateSummary}</span>
                 </div>
               </div>
 

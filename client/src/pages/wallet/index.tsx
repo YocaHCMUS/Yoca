@@ -1290,6 +1290,7 @@ export default function WalletPage() {
             onPeriodChange={(period) => setSelectedPeriod(period)}
             winRateStats={stats}
             winRateLoading={loading}
+            isAiChatDocked={isChatOpen && chatPosition !== "fullscreen"}
           />
 
           <WalletHero
