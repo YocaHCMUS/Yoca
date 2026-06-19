@@ -5,12 +5,14 @@ import { useNavigate } from "react-router";
 import { Copy, Checkmark, Restart, Edit } from "@carbon/icons-react";
 import { ID_MODAL_ROOT } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import type { TranslationKeyPath } from "@/config/localization";
 import type {
   ActionSpec,
   ChatMessageItem,
   ChatSource,
   WalletChatSection,
   WalletSectionKind,
+  WalletConfidence,
 } from "./types";
 import { GeckoTerminalChart } from "@/components/charts/GeckoTerminalChart";
 import { ChartRenderer, TableRenderer } from "./WalletChatChartRenderer";
@@ -310,17 +312,23 @@ function SectionTable({ table }: { table: Array<Record<string, string | number |
 
 // ─── Section Kind → Meta ────────────────────────────────────────────────
 
-const SECTION_KIND_META: Record<WalletSectionKind, { label: string; icon: string; className: string }> = {
-  market_snapshot: { label: "Market Snapshot", icon: "M", className: "kindMarket" },
-  key_findings: { label: "Key Findings", icon: "K", className: "kindDrivers" },
-  pnl_summary: { label: "PnL Summary", icon: "P", className: "kindBullish" },
-  trading_activity: { label: "Trading Activity", icon: "T", className: "kindNews" },
-  top_holdings: { label: "Top Holdings", icon: "H", className: "kindDeepDive" },
-  risk_factors: { label: "Risk Factors", icon: "!", className: "kindRisk" },
-  what_to_watch: { label: "What To Watch", icon: "?", className: "kindWatch" },
-  conclusion: { label: "Conclusion", icon: "\u2713", className: "kindConclusion" },
-  custom: { label: "Analysis", icon: "A", className: "kindSimple" },
-};
+const CONFIDENCE_LEVEL_KEYS = {
+  High: "chat.confidenceHigh",
+  Medium: "chat.confidenceMedium",
+  Low: "chat.confidenceLow",
+} as const satisfies Record<WalletConfidence, TranslationKeyPath>;
+
+const SECTION_KIND_META = {
+  market_snapshot: { labelKey: "chat.section.market_snapshot", icon: "M", className: "kindMarket" },
+  key_findings: { labelKey: "chat.section.key_findings", icon: "K", className: "kindDrivers" },
+  pnl_summary: { labelKey: "chat.section.pnl_summary", icon: "P", className: "kindBullish" },
+  trading_activity: { labelKey: "chat.section.trading_activity", icon: "T", className: "kindNews" },
+  top_holdings: { labelKey: "chat.section.top_holdings", icon: "H", className: "kindDeepDive" },
+  risk_factors: { labelKey: "chat.section.risk_factors", icon: "!", className: "kindRisk" },
+  what_to_watch: { labelKey: "chat.section.what_to_watch", icon: "?", className: "kindWatch" },
+  conclusion: { labelKey: "chat.section.conclusion", icon: "\u2713", className: "kindConclusion" },
+  custom: { labelKey: "chat.section.custom", icon: "A", className: "kindSimple" },
+} as const satisfies Record<WalletSectionKind, { labelKey: TranslationKeyPath; icon: string; className: string }>;
 
 // ─── Section Renderer ───────────────────────────────────────────────────
 
@@ -351,7 +359,7 @@ function WalletChatSectionRenderer({ section, onBulletClick, onCopySection, copi
       <div className={styles.sectionHeader}>
         <span className={styles.sectionIcon} aria-hidden="true">{meta.icon}</span>
         <div className={styles.sectionHeaderInner}>
-          <span className={styles.sectionKind}>{meta.label}</span>
+          <span className={styles.sectionKind}>{tr(meta.labelKey)}</span>
           {section.title && <div className={styles.sectionTitle}>{section.title}</div>}
         </div>
       </div>
@@ -692,7 +700,7 @@ export function WalletChatMessage({ message, index, onAction, onRedo, onRevert }
         key="confidence"
         className={classNames(styles.confidenceBadge, styles[`confidence${message.confidence}`])}
       >
-        {message.confidence} {tr("chat.confidence")}
+        {tr("chat.confidenceLabel", { level: tr(CONFIDENCE_LEVEL_KEYS[message.confidence]) })}
       </span>,
     );
   }

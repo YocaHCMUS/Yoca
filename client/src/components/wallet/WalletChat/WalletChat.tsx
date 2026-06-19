@@ -26,7 +26,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange }: {
   chatPosition: "right" | "left" | "fullscreen";
   onChatPositionChange: (position: "right" | "left" | "fullscreen") => void;
 }) {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const { user, isUserLoading } = useAuth();
   const [isOpen, setIsOpen] = useState(variant === "sidebar");
   const [isMinimized, setIsMinimized] = useState(false);
@@ -280,7 +280,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange }: {
               {s.title || tr("chat.newChat")}
             </span>
             <span className={styles.sessionItemTime}>
-              {new Date(s.updatedAt).toLocaleDateString()}
+              {fmt.datetime.relative(s.updatedAt)}
             </span>
           </div>
           <button
