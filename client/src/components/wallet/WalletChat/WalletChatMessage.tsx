@@ -100,7 +100,7 @@ function parseMarkers(text: string): PartType[] {
 // ─── Rich Text Helpers ──────────────────────────────────────────────────
 
 const METRIC_OR_SIGNAL_PATTERN =
-  /([+-]\d+(?:\.\d+)?%|\$\s?\d[\d,]*(?:\.\d+)?\s?(?:K|M|B|T)?|\b\d[\d,]*(?:\.\d+)?\s?(?:million|billion|trillion)?|\b(?:bearish|decline|declines|declined|drop|drops|dropped|selling|pressure|risk|risks|outflow|outflows|loss|losses)\b|\b(?:bullish|growth|increase|increases|increased|inflow|inflows|support|liquidity|adoption|profitable|win)\b|\b(?:warning|unavailable|missing|cannot verify|not available|limited data)\b)/gi;
+  /([+-]\d+(?:\.\d+)?%|[$€£¥₿]\s?\d[\d,]*(?:\.\d+)?)/gi;
 
 function stripMarkdownArtifacts(value: string) {
   return value.replace(/\*\*/g, "");
@@ -130,14 +130,9 @@ function splitBoldSegments(value: string) {
 }
 
 function getMetricClass(value: string) {
-  const normalized = value.toLowerCase();
-
   if (/^\+\d/.test(value) && value.includes("%")) return "metricPositive";
   if (/^-\d/.test(value) && value.includes("%")) return "metricNegative";
-  if (value.trim().startsWith("$")) return "metricMoney";
-  if (/\b(warning|unavailable|missing|cannot verify|not available|limited data)\b/.test(normalized)) return "warningText";
-  if (/\b(bearish|decline|declines|declined|drop|drops|dropped|selling|pressure|risk|risks|outflow|outflows|loss|losses)\b/.test(normalized)) return "riskText";
-  if (/\b(bullish|growth|increase|increases|increased|inflow|inflows|support|liquidity|adoption|profitable|win)\b/.test(normalized)) return "bullishText";
+  if (/^[$€£¥₿]/.test(value.trim())) return "metricMoney";
   return "metricNeutral";
 }
 

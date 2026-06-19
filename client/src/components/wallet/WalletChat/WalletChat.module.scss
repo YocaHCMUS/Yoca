@@ -654,13 +654,11 @@
   line-height: 1.35;
 }
 
-.metricPositive,
-.bullishText {
+.metricPositive {
   color: $support-success;
 }
 
-.metricNegative,
-.riskText {
+.metricNegative {
   color: $support-error;
 }
 
@@ -673,10 +671,7 @@
   color: $text-primary;
 }
 
-.warningText {
-  color: $support-warning;
-  background: color-mix(in srgb, #{$support-warning} 13%, transparent);
-}
+
 
 // ===== TLDR Block =====
 .tldr {

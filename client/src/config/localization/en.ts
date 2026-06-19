@@ -395,7 +395,7 @@ export const translation = {
     checkout: {
       plan: "Plan",
       total: "Total",
-        processing: "Processing…",
+      processing: "Processing…",
       subscribeNow: "Subscribe Now",
       methods: {
         card: "Cash",
@@ -1986,9 +1986,9 @@ export const translation = {
     copySection: "Copy section",
     sources: "Sources",
     fabLabel: "AI",
-    greetingTitle: "Hi, I'm YOCA AI",
-    greetingDescription: "I can help you analyze this wallet's portfolio, performance, and trading activity.",
-    greetingDescriptionComparison: "I can help you analyze these wallets' portfolios, performance, and trading activity.",
+    greetingTitle: "👋Hi, I'm YOCA AI",
+    greetingDescription: "What would you like to know about this wallet?",
+    greetingDescriptionComparison: "What would you like to know about these wallets?",
     greetingPrompt: "Try asking me:",
     serverError: "Server error: {{status}}. Please try again.",
     leftSidebar: "Left sidebar",
