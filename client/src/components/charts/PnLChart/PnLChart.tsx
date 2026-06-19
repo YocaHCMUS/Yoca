@@ -401,6 +401,8 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       onRetry={() => refetch(false)}
       toolbarLayout="stacked"
       wrapperMinHeight={chartMinHeight}
+      enableFullscreen={false}
+      enableMiniPlayer={false}
       actions={
         <Flex gap={8} align="center">
           <ContentSwitcher

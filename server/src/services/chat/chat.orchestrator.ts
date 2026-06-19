@@ -24,6 +24,7 @@ import { sanitizeText, sanitizeResponse } from "./chat-sanitizer.js";
 import { getMessage } from "./chat.localization.js";
 import { classifyWalletChatIntent, inferWalletChatLanguage } from "./chat-intent.js";
 import { buildWalletFallbackResponse } from "./chat-fallback.js";
+import { getTokenTopPools } from "@sv/services/tokens/token-pools.js";
 import type { WalletConfidence, WalletWarning, WalletChatSection } from "./chat.types.js";
 import { z } from "zod";
 import { WALLET_CHAT_RESPONSE_LIMITS as L } from "./chat-fallback.js";
@@ -406,6 +407,62 @@ async function generateResponse(
     resolvedData[spec.dataRef] = transformer ? transformer(result.fullData) : result.fullData;
   }
 
+  // Ensure every chart has pointActions for interactive drill-down
+  for (const chart of charts) {
+    if (!chart.pointActions) {
+      chart.pointActions = {
+        label: `Analyze {label}`,
+        query: chart.title
+          ? `tell me more about {label} (${chart.title})`
+          : `tell me more about {label}`,
+      };
+    }
+  }
+
+  // Ensure every table has rowActions with full row context
+  for (const table of tables) {
+    if (!table.rowActions) {
+      const fieldNames = table.columns.split(",").map((col) => col.trim().split(":")[0]!.trim());
+      table.rowActions = {
+        label: `View details`,
+        query: `{${fieldNames.map((f) => `${f}: {${f}}`).join(", ")}}`,
+      };
+    }
+  }
+
+  for (const chart of charts) {
+    if ((chart.type === "line" || chart.type === "area") && chart.dataRef) {
+      const idx = parseInt(chart.dataRef, 10);
+      if (!isNaN(idx) && idx < allResults.length) {
+        const result = allResults[idx];
+        if (result && !result.error && result.name?.startsWith("get_token_price_")) {
+          const tokenAddress = (result.input as Record<string, string> | undefined)?.tokenAddress;
+          if (tokenAddress) {
+            chart.type = "geckoterminal";
+            chart.tokenAddress = tokenAddress;
+            chatInfo("generateResponse: auto-converted line/area chart to geckoterminal", {
+              dataRef: chart.dataRef, tokenAddress,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  for (const chart of charts) {
+    if (chart.type === "geckoterminal" && chart.tokenAddress && !chart.poolAddress) {
+      try {
+        const pools = await getTokenTopPools(chart.tokenAddress);
+        const topPool = pools[0]?.data as { poolAddress?: string } | undefined;
+        if (topPool?.poolAddress) {
+          chart.poolAddress = topPool.poolAddress;
+        }
+      } catch {
+        chatWarn("generateResponse: failed to resolve pool for geckoterminal chart", { tokenAddress: chart.tokenAddress });
+      }
+    }
+  }
+
   const response: ChatResponse = {
     text: text || getMessage(language, "hereData"),
     data: resolvedData,
@@ -438,6 +495,7 @@ export async function answerChatQuery(
   query: string,
   language?: string,
   history?: HistoryMessage[],
+  skipCache?: boolean,
 ): Promise<ChatResponse> {
   const model = CHAT_MODEL;
   const historyHash = history?.length
@@ -450,7 +508,7 @@ export async function answerChatQuery(
   const detectedLang = inferWalletChatLanguage(query, language);
   chatInfo("answerChatQuery: intent + language", { intent, detectedLang, originalLang: language ?? "en" });
 
-  const cached = await getCachedResponse(addresses, query, model, historyHash, intent);
+  const cached = skipCache ? null : await getCachedResponse(addresses, query, model, historyHash, intent);
   if (cached) {
     chatInfo("answerChatQuery: cache hit", {
       textLength: cached.text.length,
@@ -481,6 +539,12 @@ export async function answerChatQuery(
           charts: [],
           tables: [],
         };
+        try {
+          await setCachedResponse(addresses, query, response, model, historyHash, intent, [], false, "direct");
+          chatDebug("answerChatQuery: direct-answer cached");
+        } catch {
+          chatWarn("answerChatQuery: direct-answer cache write failed");
+        }
         return response;
       }
       chatInfo("answerChatQuery: LLM signaled enough data", { iteration: i + 1 });
@@ -538,9 +602,12 @@ export async function answerChatQuery(
     return buildWalletFallbackResponse(query, intent, allResults, detectedLang);
   }
 
+  const toolsUsed = [...new Set(allResults.map((r) => r.name))];
+  const hasErrors = allResults.some((r) => r.error);
+
   try {
-    await setCachedResponse(addresses, query, response, model, historyHash, intent);
-    chatDebug("answerChatQuery: cache write succeeded");
+    await setCachedResponse(addresses, query, response, model, historyHash, intent, toolsUsed, hasErrors, "tool_generated");
+    chatDebug("answerChatQuery: cache write succeeded", { toolsUsed, hasErrors });
   } catch {
     chatWarn("answerChatQuery: cache write failed");
   }

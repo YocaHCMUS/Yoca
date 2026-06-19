@@ -27,6 +27,8 @@ const chatRequestSchema = z.object({
   history: z.array(historyMessageSchema).max(20).optional(),
   sessionId: z.string().optional(),
   contextType: z.enum(["wallet", "wallet-comparison"]).optional(),
+  skipCache: z.boolean().optional(),
+  skipSessionSave: z.boolean().optional(),
 });
 
 const createSessionSchema = z.object({
@@ -72,71 +74,71 @@ const chatRoute = new Hono().post("/", honoJwt, userExtract, async (c) => {
       );
     }
 
-    const { addresses, query, language, history, sessionId, contextType } = parsed.data;
-    const response = await answerChatQuery(addresses, query, language, history);
+    const { addresses, query, language, history, sessionId, contextType, skipCache, skipSessionSave } = parsed.data;
+    const response = await answerChatQuery(addresses, query, language, history, skipCache);
 
-    // Persist to session
     let activeSessionId = sessionId;
 
-    const userMsg: Record<string, unknown> = {
-      role: "user",
-      content: query,
-    };
-    const assistantMsg: Record<string, unknown> = {
-      role: "assistant",
-      content: response.text,
-      data: response.data,
-      charts: response.charts,
-      tables: response.tables,
-      actions: response.actions,
-      tldr: response.tldr,
-      sections: response.sections,
-      sources: response.sources,
-      evidence: response.evidence,
-      warnings: response.warnings,
-      confidence: response.confidence,
-    };
+    if (!skipSessionSave) {
+      const userMsg: Record<string, unknown> = {
+        role: "user",
+        content: query,
+      };
+      const assistantMsg: Record<string, unknown> = {
+        role: "assistant",
+        content: response.text,
+        data: response.data,
+        charts: response.charts,
+        tables: response.tables,
+        actions: response.actions,
+        tldr: response.tldr,
+        sections: response.sections,
+        sources: response.sources,
+        evidence: response.evidence,
+        warnings: response.warnings,
+        confidence: response.confidence,
+      };
 
-    if (activeSessionId) {
-      const existing = await getSession(activeSessionId, userId);
-      if (existing) {
-        const updatedMessages = [
-          ...existing.messages,
-          userMsg,
-          assistantMsg,
-        ];
-        const title = existing.title ?? query.slice(0, 50);
+      if (activeSessionId) {
+        const existing = await getSession(activeSessionId, userId);
+        if (existing) {
+          const updatedMessages = [
+            ...existing.messages,
+            userMsg,
+            assistantMsg,
+          ];
+          const title = existing.title ?? query.slice(0, 50);
 
-        // Check if incoming addresses introduce new wallets
-        const existingLower = existing.walletAddresses.map((a: string) => a.toLowerCase());
-        const incomingLower = addresses.map((a: string) => a.toLowerCase());
-        const allCovered = incomingLower.every((a: string) =>
-          existingLower.includes(a),
-        );
+          const existingLower = existing.walletAddresses.map((a: string) => a.toLowerCase());
+          const incomingLower = addresses.map((a: string) => a.toLowerCase());
+          const allCovered = incomingLower.every((a: string) =>
+            existingLower.includes(a),
+          );
 
-        if (!allCovered) {
-          const mergedAddrs = [...new Set([...existing.walletAddresses, ...addresses])];
-          const mergedContext = buildSessionContext(mergedAddrs, contextType);
-          await updateSession(activeSessionId, userId, {
-            messages: updatedMessages,
-            title,
-            context: mergedContext,
-          });
-        } else {
-          await updateSession(activeSessionId, userId, {
-            messages: updatedMessages,
-            title,
-          });
+          if (!allCovered) {
+            const mergedAddrs = [...new Set([...existing.walletAddresses, ...addresses])];
+            const mergedContext = buildSessionContext(mergedAddrs, contextType);
+            await updateSession(activeSessionId, userId, {
+              messages: updatedMessages,
+              title,
+              context: mergedContext,
+            });
+          } else {
+            await updateSession(activeSessionId, userId, {
+              messages: updatedMessages,
+              title,
+            });
+          }
         }
+      } else {
+        const title = query.slice(0, 50);
+        const sessionContext = buildSessionContext(addresses, contextType);
+        const session = await createSession(userId, sessionContext, title);
+        activeSessionId = session.id;
+        await updateSession(session.id, userId, {
+          messages: [userMsg, assistantMsg],
+        });
       }
-    } else {
-      const title = query.slice(0, 50);
-      const sessionContext = buildSessionContext(addresses, contextType);
-      const session = await createSession(userId, sessionContext, title);
-      activeSessionId = session.id;
-      await updateSession(session.id, userId, {
-        messages: [userMsg, assistantMsg],
-      });
     }
 
     return c.json(

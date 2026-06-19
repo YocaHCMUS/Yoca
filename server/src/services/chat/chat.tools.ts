@@ -7,9 +7,13 @@ import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
 import { getTokenMeta, getTokenDetails } from "@sv/services/tokens/token-info.js";
 import { searchToken } from "./chat-token-search.js";
 import { searchNews, searchWeb } from "./chat-web-search.js";
-import { get24hTokenMarketChart, getHourlyTokenMarketChart, getDailyTokenMarketChart } from "@sv/services/tokens/token-chart.js";
-import type { ChatToolDefinition } from "./chat.types.js";
-import { isBaseAsset } from "@sv/services/wallet/walletDayActivity.service.js";
+import { getBirdeyeChartData } from "@sv/services/wallet/providers/birdeye-chart-data.js";
+import {
+  getEndpoint as getBirdeyeEndpoint,
+  getRequiredHeaders as getBirdeyeHeaders,
+} from "@sv/util/util-birdeye.js";
+import type { ChatToolDefinition, ToolCachePolicy } from "./chat.types.js";
+import { isBaseAsset, getWalletTxDetail } from "@sv/services/wallet/walletDayActivity.service.js";
 import { z } from "zod";
 
 const BASE58_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -99,6 +103,23 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   //   },
   // },
   {
+    name: "get_drawdown_chart",
+    description:
+      "Fetch drawdown (peak-to-trough decline) chart data for a wallet over time. Returns daily drawdown percentages showing how far the balance has fallen from its most recent peak. Useful for risk assessment and drawdown trend charts.",
+    input_schema: {
+      type: "object",
+      properties: {
+        address: { type: "string", description: "Solana wallet address (base58)" },
+        timePeriod: {
+          type: "string",
+          enum: ["7D", "30D"],
+          description: "Time period for drawdown data (default 30D)",
+        },
+      },
+      required: ["address"],
+    },
+  },
+  {
     name: "get_wallet_pnl",
     description:
       "Fetch profit & loss breakdown for a wallet. Returns per-token realized PnL, trade counts, win rates, and top profitable/losing tokens. Optionally filter by time range or a specific token address.",
@@ -173,7 +194,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_token_price",
     description:
-      "Fetch current market data for a token: price in USD, 24h change percentage, market cap, 24h volume, and market cap rank.",
+      "Fetch current market data for a token: price in USD, 24h change percentage, market cap, 24h volume, and market cap rank. Covers all Solana tokens via Birdeye (primary) + CoinGecko (fallback). When showing this data in a chart spec, PREFER type 'geckoterminal' over 'line'/'area'.",
     input_schema: {
       type: "object",
       properties: {
@@ -185,7 +206,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_token_price_24h",
     description:
-      "Fetch 24-hour intra-day price chart for a token. Returns timestamp-price points. Useful for showing today's price action.",
+      "Fetch 24-hour intra-day price chart for a token. Returns timestamp-price points. In the chart spec, ALWAYS use type 'geckoterminal' (not 'line'/'area') — set tokenAddress to show an interactive iframe. Covers all Solana tokens via Birdeye (primary) + CoinGecko (fallback).",
     input_schema: {
       type: "object",
       properties: {
@@ -197,7 +218,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_token_price_hourly",
     description:
-      "Fetch hourly price chart for a token over a number of days (max 90). Returns hourly timestamp-price points. Useful for medium-term trend charts.",
+      "Fetch hourly price chart for a token over a number of days (max 90). Returns hourly timestamp-price points. In the chart spec, ALWAYS use type 'geckoterminal' (not 'line'/'area') — set tokenAddress to show an interactive iframe. Covers all Solana tokens via Birdeye (primary) + CoinGecko (fallback).",
     input_schema: {
       type: "object",
       properties: {
@@ -210,7 +231,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_token_price_daily",
     description:
-      "Fetch daily price chart for a token over a number of days (max 365). Returns daily timestamp-price points. Useful for long-term trend charts.",
+      "Fetch daily price chart for a token over a number of days (max 365). Returns daily timestamp-price points. In the chart spec, ALWAYS use type 'geckoterminal' (not 'line'/'area') — set tokenAddress to show an interactive iframe. Covers all Solana tokens via Birdeye (primary) + CoinGecko (fallback).",
     input_schema: {
       type: "object",
       properties: {
@@ -306,6 +327,19 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
         },
       },
       required: ["page"],
+    },
+  },
+  {
+    name: "get_tx_detail",
+    description:
+      "Fetch full detail for a specific transaction by signature: all token transfers within the tx, fee breakdown (base + priority), fee payer, and fee receivers. Use this when the user asks about a specific swap or transfer they saw in a table, or wants to drill into a transaction. NOT for listing — use get_wallet_swaps or get_wallet_transfers for lists.",
+    input_schema: {
+      type: "object",
+      properties: {
+        address: { type: "string", description: "Solana wallet address (base58)" },
+        signature: { type: "string", description: "Transaction signature (base58) from a swap or transfer entry" },
+      },
+      required: ["address", "signature"],
     },
   },
 ];
@@ -427,6 +461,24 @@ function extractBalanceHistoryForLLM(data: unknown, address: string): unknown {
   };
 }
 
+function extractDrawdownForLLM(data: unknown): unknown {
+  if (!Array.isArray(data)) return null;
+  const typed = data as Array<{ timestamp: number; value: number; drawdown: number }>;
+  if (typed.length === 0) return null;
+  const maxDrawdown = Math.min(...typed.map((p) => p.drawdown));
+  const latestDrawdown = typed[typed.length - 1]?.drawdown ?? 0;
+  return {
+    dataPoints: typed.map((p) => ({
+      date: new Date(p.timestamp).toISOString().slice(0, 10),
+      drawdownPercent: p.drawdown,
+    })),
+    maxDrawdownPercent: maxDrawdown,
+    currentDrawdownPercent: latestDrawdown,
+    startDate: new Date(typed[0].timestamp).toISOString().slice(0, 10),
+    endDate: new Date(typed[typed.length - 1].timestamp).toISOString().slice(0, 10),
+  };
+}
+
 function extractPnLForLLM(data: unknown): unknown {
   if (!data || typeof data !== "object") return null;
   const p = data as Record<string, unknown>;
@@ -517,6 +569,39 @@ function extractChartForLLM(data: unknown, tokenAddress?: string): unknown {
   };
 }
 
+async function fetchBirdeyeCurrentPrice(tokenAddress: string): Promise<Record<string, unknown> | null> {
+  if (!process.env.BIRDEYE_API_KEY || !process.env.BIRDEYE_API_BASE_URL) return null;
+  try {
+    const endpoint = getBirdeyeEndpoint("/defi/token_overview");
+    endpoint.searchParams.set("address", tokenAddress);
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: getBirdeyeHeaders(),
+    });
+    if (!response.ok) return null;
+    const json = await response.json() as {
+      success?: boolean;
+      data?: { price?: number; priceChange24hPercent?: number; marketCap?: number; volume24h?: number };
+    };
+    if (!json.success || !json.data) return null;
+    const price = Number(json.data.price ?? 0);
+    if (!Number.isFinite(price) || price <= 0) return null;
+    const wrapped = {
+      [tokenAddress]: {
+        priceUsd: price,
+        priceChangePercentage24h: json.data.priceChange24hPercent ?? null,
+        marketCap: json.data.marketCap ?? null,
+        volume24h: json.data.volume24h ?? null,
+        marketCapRank: null,
+        updatedAt: new Date().toISOString(),
+      },
+    } as Record<string, unknown>;
+    return wrapped;
+  } catch {
+    return null;
+  }
+}
+
 function extractWinrateForLLM(data: unknown): unknown {
   if (!data || typeof data !== "object") return null;
   const r = data as { wallets?: unknown[] };
@@ -547,6 +632,61 @@ function extractNavigationForLLM(data: unknown): unknown {
   if (!data || typeof data !== "object") return null;
   const d = data as { path?: string; label?: string };
   return { path: d.path ?? "", label: d.label ?? "" };
+}
+
+function extractTxDetailForLLM(data: unknown, walletAddress: string): unknown {
+  if (!data || typeof data !== "object") return null;
+  const d = data as {
+    transactionHash?: string;
+    timestamp?: string;
+    pair?: string;
+    action?: string;
+    transfers?: Array<Record<string, unknown>>;
+    feePaid?: number;
+    feePayer?: string;
+    feeReceivers?: Array<Record<string, unknown>>;
+  };
+  if (!d.transactionHash) return null;
+
+  const transfers = (d.transfers ?? []).map((t) => {
+    const from = String(t.from ?? "");
+    const to = String(t.to ?? "");
+    const isOut = from === walletAddress;
+    const isIn = to === walletAddress;
+    let direction = "internal";
+    if (isOut && !isIn) direction = "out";
+    else if (isIn && !isOut) direction = "in";
+    return {
+      from,
+      to,
+      mint: t.mint,
+      symbol: t.symbol,
+      amount: t.amount,
+      direction,
+    };
+  });
+
+  const feeLamports = Number(d.feePaid ?? 0);
+  const BASE_FEE = 5_000;
+  const priorityFee = Math.max(0, feeLamports - BASE_FEE);
+
+  return {
+    txHash: d.transactionHash,
+    timestamp: d.timestamp,
+    pair: d.pair,
+    action: d.action,
+    tokenTransfers: transfers,
+    fees: {
+      feePaidSol: feeLamports / 1e9,
+      baseFeeSol: BASE_FEE / 1e9,
+      priorityFeeSol: priorityFee / 1e9,
+    },
+    feePayer: d.feePayer,
+    feeReceivers: (d.feeReceivers ?? []).map((r) => ({
+      address: r.address,
+      amount: r.amount,
+    })),
+  };
 }
 
 function extractTokenMetaForLLM(data: unknown): unknown {
@@ -626,6 +766,11 @@ const tokenAddressDaysSchema = z.object({
   days: z.number().int().positive().max(365).optional().default(7),
 });
 
+const txDetailSchema = z.object({
+  address: z.string().min(1),
+  signature: z.string().min(1),
+});
+
 const navigatePageSchema = z.object({
   page: z.enum(["wallet", "token", "token_history", "market", "transactions"]),
   params: z.object({
@@ -660,6 +805,30 @@ export const TOOL_HANDLERS: Record<
     const { address, timePeriod } = periodSchema.parse(input);
     const data = await getWalletBalanceHistory(address, timePeriod);
     return { data, llmData: extractBalanceHistoryForLLM(data, address) };
+  },
+
+  get_drawdown_chart: async (input) => {
+    const { address, timePeriod } = periodSchema.parse(input);
+    const balanceHistory = await getWalletBalanceHistory(address, timePeriod);
+    if (!balanceHistory?.length) {
+      return { data: [], llmData: null };
+    }
+
+    let peak = balanceHistory[0].usdValue;
+    let trough = balanceHistory[0].usdValue;
+    const data = balanceHistory.map((point) => {
+      if (point.usdValue > peak) { peak = point.usdValue; trough = point.usdValue; }
+      if (point.usdValue < trough) { trough = point.usdValue; }
+      const drawdown = peak === 0 ? 0 : (point.usdValue - peak) / peak;
+      return {
+        timestamp: point.timestampMs,
+        date: new Date(point.timestampMs).toISOString(),
+        value: point.usdValue,
+        drawdown,
+      };
+    });
+
+    return { data, llmData: extractDrawdownForLLM(data) };
   },
 
   get_wallet_pnl: async (input) => {
@@ -727,24 +896,34 @@ export const TOOL_HANDLERS: Record<
   get_token_price: async (input) => {
     const { tokenAddress } = tokenAddressSchema.parse(input);
     const data = await getTokenMarketData([tokenAddress]);
+    const priceRecord = data && typeof data === "object"
+      ? (data as Record<string, Record<string, unknown>>)[tokenAddress]
+      : undefined;
+    if (priceRecord && Number(priceRecord.priceUsd) > 0) {
+      return { data, llmData: extractTokenPriceForLLM(data) };
+    }
+    const birdeyeData = await fetchBirdeyeCurrentPrice(tokenAddress);
+    if (birdeyeData) {
+      return { data: birdeyeData, llmData: extractTokenPriceForLLM(birdeyeData) };
+    }
     return { data, llmData: extractTokenPriceForLLM(data) };
   },
 
   get_token_price_24h: async (input) => {
     const { tokenAddress } = tokenAddressSchema.parse(input);
-    const data = await get24hTokenMarketChart(tokenAddress);
+    const data = await getBirdeyeChartData(tokenAddress, "15m", 1);
     return { data, llmData: extractChartForLLM(data, tokenAddress) };
   },
 
   get_token_price_hourly: async (input) => {
     const { tokenAddress, days } = tokenAddressDaysSchema.parse(input);
-    const data = await getHourlyTokenMarketChart(tokenAddress, days);
+    const data = await getBirdeyeChartData(tokenAddress, "1H", days);
     return { data, llmData: extractChartForLLM(data, tokenAddress) };
   },
 
   get_token_price_daily: async (input) => {
     const { tokenAddress, days } = tokenAddressDaysSchema.parse(input);
-    const data = await getDailyTokenMarketChart(tokenAddress, days);
+    const data = await getBirdeyeChartData(tokenAddress, "1D", days);
     return { data, llmData: extractChartForLLM(data, tokenAddress) };
   },
 
@@ -790,8 +969,75 @@ export const TOOL_HANDLERS: Record<
     const { page, params } = navigatePageSchema.parse(input);
     const resolved = ROUTE_MAP[page](params);
     return { data: resolved, llmData: extractNavigationForLLM(resolved) };
+  },
+  get_tx_detail: async (input) => {
+    const { address, signature } = txDetailSchema.parse(input);
+    const data = await getWalletTxDetail(address, signature);
+    return { data, llmData: extractTxDetailForLLM(data, address) };
   }
 };
+
+// ─── Cache Policy ────────────────────────────────────────────────────────────
+
+/**
+ * Per-tool cache TTL + cacheability policy.
+ * Used by chat.cache.ts to compute effective cache expiry.
+ */
+export const TOOL_CACHE_POLICY: Record<string, ToolCachePolicy> = {
+  // Price data — very volatile
+  get_token_price: { ttlMs: 10_000, cacheable: true },
+  get_token_price_24h: { ttlMs: 30_000, cacheable: true },
+  get_token_price_hourly: { ttlMs: 60_000, cacheable: true },
+  get_token_price_daily: { ttlMs: 120_000, cacheable: true },
+  // Web/news — live external, never cache
+  search_web: { ttlMs: 0, cacheable: false },
+  search_news: { ttlMs: 0, cacheable: false },
+  // On-chain wallet data — stable, medium TTL
+  get_wallet_swaps: { ttlMs: 300_000, cacheable: true },
+  get_wallet_transfers: { ttlMs: 300_000, cacheable: true },
+  get_wallet_pnl: { ttlMs: 300_000, cacheable: true },
+  get_wallet_winrate: { ttlMs: 300_000, cacheable: true },
+  get_pnl_chart: { ttlMs: 300_000, cacheable: true },
+  get_historical_portfolio: { ttlMs: 300_000, cacheable: true },
+  get_wallet_audit: { ttlMs: 300_000, cacheable: true },
+  // Birdeye-sourced — short TTL
+  get_wallet_overview: { ttlMs: 60_000, cacheable: true },
+  get_balance_history: { ttlMs: 60_000, cacheable: true },
+  get_wallet_portfolio: { ttlMs: 30_000, cacheable: true },
+  // Token metadata — very stable
+  get_token_meta: { ttlMs: 600_000, cacheable: true },
+  get_token_details: { ttlMs: 600_000, cacheable: true },
+  search_token: { ttlMs: 600_000, cacheable: true },
+  // Navigation — static
+  navigate_to_page: { ttlMs: 600_000, cacheable: true },
+  // Tx detail — fairly stable per tx
+  get_tx_detail: { ttlMs: 300_000, cacheable: true },
+};
+
+/**
+ * Compute effective cache TTL from a set of tools used.
+ * Returns null if any tool is uncacheable.
+ */
+export function getEffectiveCacheTtl(tools: string[]): number | null {
+  if (tools.length === 0) return 30_000; // direct-answer TTL
+  let minTtl = Infinity;
+  for (const name of tools) {
+    const policy = TOOL_CACHE_POLICY[name];
+    if (!policy || !policy.cacheable) return null;
+    if (policy.ttlMs < minTtl) minTtl = policy.ttlMs;
+  }
+  return minTtl;
+}
+
+/**
+ * Returns true if the set of tools includes any uncacheable tool.
+ */
+export function hasUncacheableTools(tools: string[]): boolean {
+  return tools.some((name) => {
+    const policy = TOOL_CACHE_POLICY[name];
+    return !policy || !policy.cacheable;
+  });
+}
 
 // ─── Router ─────────────────────────────────────────────────────────────────
 
@@ -808,6 +1054,7 @@ const WALLET_SCOPED_TOOLS = new Set([
   "get_wallet_swaps",
   "get_wallet_transfers",
   "get_balance_history",
+  "get_drawdown_chart",
   "get_wallet_pnl",
   "get_wallet_winrate",
   "get_pnl_chart",

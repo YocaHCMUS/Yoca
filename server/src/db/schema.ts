@@ -1457,16 +1457,22 @@ export type NewsArticleInsert = typeof newsArticles.$inferInsert;
 export type UserSourceInsert = typeof userSources.$inferInsert;
 
 // #region Chatbot
-export const chatAnalysisCache = pgTable("chat_analysis_cache", {
-  key: varchar("key", { length: 64 }).primaryKey(),
-  walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
-  query: text("query").notNull(),
-  response: jsonb("response").$type<Record<string, unknown>>().notNull(),
-  dataFingerprint: varchar("data_fingerprint", { length: 64 }).notNull(),
-  model: varchar("model", { length: 64 }).notNull(),
-  ttlMs: integer("ttl_ms").notNull(),
-  fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
-});
+export const chatAnalysisCache = pgTable(
+  "chat_analysis_cache",
+  {
+    key: varchar("key", { length: 64 }).primaryKey(),
+    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+    query: text("query").notNull(),
+    response: jsonb("response").$type<Record<string, unknown>>().notNull(),
+    dataFingerprint: varchar("data_fingerprint", { length: 64 }).notNull(),
+    model: varchar("model", { length: 64 }).notNull(),
+    ttlMs: integer("ttl_ms").notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    toolsUsed: varchar("tools_used", { length: 64 }).array().notNull().default([]),
+    hasErrors: boolean("has_errors").notNull().default(false),
+    responseType: varchar("response_type", { length: 16 }).notNull().default("tool_generated"),
+  },
+);
 
 export const chatSessions = pgTable(
   "chat_sessions",
