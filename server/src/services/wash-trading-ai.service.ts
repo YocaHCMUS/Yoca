@@ -48,6 +48,7 @@ export interface GNNScore {
     amountSimilarity: number;
     selfLoopDegree: number;
     hubness: number;
+    volumeSignal: number;
   };
   riskLevel: "High" | "Medium" | "Low";
   pattern: string;
@@ -790,7 +791,7 @@ function computeGNNScores(txs: NormalizedTx[], circularPatterns: CircularPattern
       pattern,
       txCount: f.txCount,
       volume: f.volume,
-      features: { circularPattern: circularScore, timeRegularity, amountSimilarity, selfLoopDegree, hubness },
+      features: { circularPattern: circularScore, timeRegularity, amountSimilarity, selfLoopDegree, hubness, volumeSignal },
     });
   }
 

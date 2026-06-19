@@ -2569,7 +2569,7 @@ export const translation = {
         "AI flagged this wallet because of pattern {{pattern}} on token {{symbol}}. Current GNN score is {{score}}/100.",
       topFeature: "Top feature",
       featureScore: "Feature score",
-      note: "How to read: high circularPattern usually means the wallet is involved in closed-loop trading; high timeRegularity suggests bot-like timing; high amountSimilarity suggests repeated token amounts.",
+      note: "How to read: high circularPattern usually means the wallet is involved in closed-loop trading; high timeRegularity suggests bot-like timing; high amountSimilarity suggests repeated token amounts; high volumeSignal means the wallet transfers a large share of token amount compared with the largest-volume wallet in this graph.",
     },
     patterns: {
       circularTrade: "Circular Trade",
@@ -2596,6 +2596,7 @@ export const translation = {
       amountSimilarity: "Amount similarity",
       selfLoopDegree: "Self-loop degree",
       hubness: "Hubness",
+      volumeSignal: "Volume signal",
     },
     detectionLog: {
       title: "Detection Log",

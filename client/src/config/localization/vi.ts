@@ -2567,7 +2567,7 @@ export const translation = defineTranslation({
         "AI đánh dấu ví này vì pattern {{pattern}} trên token {{symbol}}. Điểm GNN hiện tại là {{score}}/100.",
       topFeature: "Đặc trưng nổi bật",
       featureScore: "Điểm đặc trưng",
-      note: "Cách đọc: circularPattern cao thường cho thấy ví tham gia vòng giao dịch khép kín; timeRegularity cao cho thấy nhịp giao dịch giống bot; amountSimilarity cao cho thấy lượng token lặp lại bất thường.",
+      note: "Cách đọc: circularPattern cao thường cho thấy ví tham gia vòng giao dịch khép kín; timeRegularity cao cho thấy nhịp giao dịch giống bot; amountSimilarity cao cho thấy lượng token lặp lại bất thường; volumeSignal cao cho thấy ví chuyển lượng token lớn so với ví có volume lớn nhất trong graph.",
     },
     patterns: {
       circularTrade: "Giao dịch vòng lặp",
@@ -2594,6 +2594,7 @@ export const translation = defineTranslation({
       amountSimilarity: "Độ giống amount",
       selfLoopDegree: "Mức tự lặp",
       hubness: "Độ trung tâm ví",
+      volumeSignal: "Tín hiệu volume",
     },
     detectionLog: {
       title: "Nhật ký phát hiện",

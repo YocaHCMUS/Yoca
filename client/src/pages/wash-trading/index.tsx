@@ -24,6 +24,7 @@ interface SuspiciousWallet {
     amountSimilarity: number;
     selfLoopDegree: number;
     hubness: number;
+    volumeSignal?: number;
   };
 }
 
@@ -1053,6 +1054,7 @@ const WashTradingPage: React.FC = () => {
                 <FeatureBar label={String(tr("washTrading.risk.amountSimilarity"))} value={featureSource?.amountSimilarity ?? 0} />
                 <FeatureBar label={String(tr("washTrading.risk.selfLoopDegree"))} value={featureSource?.selfLoopDegree ?? 0} />
                 <FeatureBar label={String(tr("washTrading.risk.hubness"))} value={featureSource?.hubness ?? 0} />
+                <FeatureBar label={String(tr("washTrading.risk.volumeSignal"))} value={featureSource?.volumeSignal ?? 0} />
               </div>
             </div>
 
