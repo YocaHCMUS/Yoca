@@ -27,6 +27,7 @@ import {
     getWalletRecentSwaps,
     getWalletRecentTransfers,
     getWalletSwapHistory,
+    getWalletTransferHistory,
     getWalletSwaps,
     getWalletTransfers,
 } from "@sv/services/wallet/walletTransfersSwaps.service.js";
@@ -60,6 +61,7 @@ import { serverErr, setErr } from "@sv/util/errors";
 import {
   WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
   WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
+  WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
 } from "@sv/config/constants.js";
 
 const walletRequestSchema = z.object({
@@ -343,6 +345,45 @@ const app = new Hono()
 
       try {
         const txs = await getWalletRecentTransfers(address, limit);
+        if (!txs) {
+          return c.json(
+            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+            statusCode.BadGateway,
+          );
+        }
+        return c.json(txs);
+      } catch (e) {
+        return serverErr(c, e);
+      }
+    },
+  )
+  .get(
+    "/transfers/history/:address",
+    validate("param", addressSchema),
+    validate(
+      "query",
+      z.object({
+        fromMs: z.coerce.number().int().min(0).optional(),
+        toMs: z.coerce.number().int().min(0).optional(),
+        limit: z.coerce
+          .number()
+          .int()
+          .min(1)
+          .max(WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT)
+          .optional(),
+      }),
+    ),
+    async (c) => {
+      try {
+        const { address } = c.req.valid("param");
+        const { limit, fromMs, toMs } = c.req.valid("query");
+
+        const txs = await getWalletTransferHistory(
+          address,
+          fromMs,
+          toMs,
+          limit,
+        );
         if (!txs) {
           return c.json(
             setErr("FAILED_TO_FETCH_REQUESTED_DATA"),

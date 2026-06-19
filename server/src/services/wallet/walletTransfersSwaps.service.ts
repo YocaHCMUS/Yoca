@@ -42,6 +42,8 @@ import {
     WalletRecentSwapsInsert,
     walletRecentTransfers,
     WalletRecentTransfersInsert,
+    walletTransferHistory,
+    walletTransferHistoryMeta,
     walletSwapHistory,
     walletSwapHistoryMeta,
 } from "@sv/db/schema";
@@ -57,6 +59,8 @@ import {
     ZRN_SOL_FUNGIBLE_ID,
     WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
     WALLET_SWAP_HISTORY_LATEST_TOLERANCE_MS,
+    WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
+    WALLET_TRANSFER_HISTORY_LATEST_TOLERANCE_MS,
 } from "@sv/config/constants";
 import { and, desc, eq, gt, gte, inArray, lt, lte, max } from "drizzle-orm";
 
@@ -139,10 +143,11 @@ async function zrn_fetchWalletTransactionsRange(
   fromMs: number,
   toMs: number,
   limit: number,
+  maxLimit: number,
 ): Promise<ZRN_WalletTransactionsRange | null> {
   const maxTransactions = normalizeTxLimit(
     limit,
-    WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
+    maxLimit,
   );
   const firstPageUrl = zrn.getEndpoint(`/wallets/${address}/transactions/`);
   firstPageUrl.search = new URLSearchParams({
@@ -1052,6 +1057,7 @@ async function fetchWalletSwapHistoryCore(
     fromMs,
     toMs,
     limit,
+    WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
   );
 
   if (!res || res.transactions.length == 0) return null;
@@ -1336,6 +1342,314 @@ export async function getWalletSwapHistory(
 
   const returnFromExclusiveMs = safeFromExclusiveMs ?? fromMs;
   return await db_getSwapHistory(
+    address,
+    returnFromExclusiveMs,
+    toMs,
+    limit,
+  );
+}
+
+type WalletTransferHistoryFetchResult = {
+  values: WalletTransferV2[];
+  coveredFromExclusiveMs: number;
+  coveredToInclusiveMs: number;
+  cutOffByLimit: boolean;
+};
+
+async function fetchWalletTransferHistory(
+  address: string,
+  fromMs: number,
+  toMs: number,
+  limit?: number,
+): Promise<WalletTransferV2[] | null> {
+  const res = await fetchWalletTransferHistoryCore(
+    address,
+    fromMs,
+    toMs,
+    limit,
+    true,
+  );
+  return res?.values ?? null;
+}
+
+async function fetchWalletTransferHistoryGap(
+  address: string,
+  fromMs: number,
+  toMs: number,
+  limit?: number,
+): Promise<WalletTransferHistoryFetchResult | null> {
+  return await fetchWalletTransferHistoryCore(
+    address,
+    fromMs,
+    toMs,
+    limit,
+    false,
+  );
+}
+
+async function fetchWalletTransferHistoryCore(
+  address: string,
+  fromMs: number,
+  toMs: number,
+  limit: number = WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
+  writeMeta: boolean = true,
+): Promise<WalletTransferHistoryFetchResult | null> {
+  const res = await zrn_fetchWalletTransactionsRange(
+    address,
+    "receive,send",
+    fromMs,
+    toMs,
+    limit,
+    WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
+  );
+
+  if (!res || res.transactions.length == 0) return null;
+
+  const combinedValues = zrn_extractTransfers(address, res.transactions);
+  if (combinedValues.returnValues.length == 0) return null;
+
+  await db
+    .insert(walletTransferHistory)
+    .values(combinedValues.insertValues)
+    .onConflictDoUpdate({
+      target: [
+        walletTransferHistory.address,
+        walletTransferHistory.transactionHash,
+        walletTransferHistory.actId,
+      ],
+      set: {
+        fetchedAtMs: dayjs.utc().valueOf(),
+      },
+    });
+
+  if (combinedValues.tokenMetaInsertValues.length > 0) {
+    await db
+      .insert(tokenMeta)
+      .values(combinedValues.tokenMetaInsertValues)
+      .onConflictDoNothing();
+  }
+
+  if (writeMeta) {
+    await db.insert(walletTransferHistoryMeta).values({
+      address,
+      fromExclusiveMs: res.coveredFromExclusiveMs,
+      toInclusiveMs: res.coveredToInclusiveMs,
+      fetchedAtMs: dayjs.utc().valueOf(),
+    });
+  }
+
+  return {
+    values: combinedValues.returnValues,
+    coveredFromExclusiveMs: res.coveredFromExclusiveMs,
+    coveredToInclusiveMs: res.coveredToInclusiveMs,
+    cutOffByLimit: res.cutOffByLimit,
+  };
+}
+
+async function db_getTransferHistory(
+  address: string,
+  fromExclusiveMs: number,
+  toInclusiveMs: number,
+  limit: number,
+): Promise<WalletTransferV2[]> {
+  const rows = await db
+    .select()
+    .from(walletTransferHistory)
+    .where(
+      and(
+        eq(walletTransferHistory.address, address),
+        gt(walletTransferHistory.blockTimestampMs, fromExclusiveMs),
+        lte(walletTransferHistory.blockTimestampMs, toInclusiveMs),
+      ),
+    )
+    .orderBy(desc(walletTransferHistory.blockTimestampMs))
+    .limit(limit);
+
+  const tokenAddresses = new Set(rows.map((item) => item.tokenAddress));
+  const tokenMetaRes = await db
+    .select()
+    .from(tokenMeta)
+    .where(inArray(tokenMeta.address, Array.from(tokenAddresses)));
+  const tokenMetaLookup = Object.fromEntries(
+    tokenMetaRes.map((tm) => [tm.address, tm]),
+  );
+
+  return rows.map((item) => ({
+    transactionHash: item.transactionHash,
+    blockTimestampMs: item.blockTimestampMs,
+    token: {
+      address: item.tokenAddress,
+      amount: item.amount,
+      symbol: tokenMetaLookup[item.tokenAddress]?.symbol ?? null,
+      name: tokenMetaLookup[item.tokenAddress]?.name ?? null,
+      logoUri: tokenMetaLookup[item.tokenAddress]?.imageUrl ?? null,
+      priceUsd: item.priceUsd,
+    },
+    direction: item.direction,
+    counterpartyAddress: item.counterpartyAddress,
+    valueUsd: item.valueUsd,
+  }));
+}
+
+export async function getWalletTransferHistory(
+  address: string,
+  requestFromMs?: number,
+  requestToMs?: number,
+  limit = WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
+): Promise<WalletTransferV2[] | null> {
+  const requestedRange = normalizeRange(requestFromMs, requestToMs);
+  const fromMs = requestedRange.fromMs;
+  limit = normalizeTxLimit(
+    limit,
+    WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
+  );
+
+  const [latestMeta] = await db
+    .select({ toInclusiveMs: max(walletTransferHistoryMeta.toInclusiveMs) })
+    .from(walletTransferHistoryMeta)
+    .where(eq(walletTransferHistoryMeta.address, address))
+    .limit(1);
+
+  const latestCoveredToMs = latestMeta?.toInclusiveMs ?? null;
+  const toMs =
+    latestCoveredToMs != null &&
+    latestCoveredToMs < requestedRange.toMs &&
+    requestedRange.toMs - latestCoveredToMs <=
+      WALLET_TRANSFER_HISTORY_LATEST_TOLERANCE_MS
+      ? latestCoveredToMs
+      : requestedRange.toMs;
+
+  const intersecting = await db
+    .select()
+    .from(walletTransferHistoryMeta)
+    .where(
+      and(
+        eq(walletTransferHistoryMeta.address, address),
+        gt(walletTransferHistoryMeta.toInclusiveMs, fromMs),
+        lt(walletTransferHistoryMeta.fromExclusiveMs, toMs),
+      ),
+    )
+    .orderBy(desc(walletTransferHistoryMeta.toInclusiveMs));
+
+  if (intersecting.length == 0) {
+    return await fetchWalletTransferHistory(address, fromMs, toMs, limit);
+  }
+
+  const merged: { fromExclusiveMs: number; toInclusiveMs: number }[] = [];
+  for (const item of intersecting) {
+    if (
+      merged.length == 0 ||
+      item.toInclusiveMs < merged[merged.length - 1].fromExclusiveMs
+    ) {
+      merged.push({
+        fromExclusiveMs: item.fromExclusiveMs,
+        toInclusiveMs: item.toInclusiveMs,
+      });
+    } else {
+      merged[merged.length - 1].fromExclusiveMs = Math.min(
+        merged[merged.length - 1].fromExclusiveMs,
+        item.fromExclusiveMs,
+      );
+    }
+  }
+
+  let cursorMs = toMs;
+  const gaps: { fromExclusiveMs: number; toInclusiveMs: number }[] = [];
+  for (const interval of merged) {
+    if (interval.toInclusiveMs <= fromMs) continue;
+    if (interval.fromExclusiveMs >= cursorMs) continue;
+    if (interval.toInclusiveMs < cursorMs) {
+      gaps.push({
+        fromExclusiveMs: Math.max(interval.toInclusiveMs, fromMs),
+        toInclusiveMs: cursorMs,
+      });
+    }
+    if (interval.fromExclusiveMs < cursorMs) {
+      cursorMs = Math.max(interval.fromExclusiveMs, fromMs);
+    }
+  }
+
+  if (cursorMs > fromMs) {
+    gaps.push({
+      fromExclusiveMs: fromMs,
+      toInclusiveMs: cursorMs,
+    });
+  }
+
+  if (gaps.length == 0) {
+    return await db_getTransferHistory(address, fromMs, toMs, limit);
+  }
+
+  const fetchedGapIntervals: {
+    fromExclusiveMs: number;
+    toInclusiveMs: number;
+  }[] = [];
+  let safeFromExclusiveMs: number | null = null;
+  for (const gap of gaps) {
+    const gapRes = await fetchWalletTransferHistoryGap(
+      address,
+      gap.fromExclusiveMs,
+      gap.toInclusiveMs,
+      limit,
+    );
+
+    if (!gapRes) {
+      fetchedGapIntervals.push(gap);
+      continue;
+    }
+
+    fetchedGapIntervals.push({
+      fromExclusiveMs: gapRes.coveredFromExclusiveMs,
+      toInclusiveMs: gapRes.coveredToInclusiveMs,
+    });
+
+    if (gapRes.cutOffByLimit) {
+      safeFromExclusiveMs = gapRes.coveredFromExclusiveMs;
+      break;
+    }
+  }
+
+  const allIntervals = [...merged, ...fetchedGapIntervals].sort(
+    (a, b) => b.toInclusiveMs - a.toInclusiveMs,
+  );
+  const finalMerged: { fromExclusiveMs: number; toInclusiveMs: number }[] = [];
+  for (const interval of allIntervals) {
+    if (
+      finalMerged.length == 0 ||
+      interval.toInclusiveMs < finalMerged[finalMerged.length - 1].fromExclusiveMs
+    ) {
+      finalMerged.push({
+        fromExclusiveMs: interval.fromExclusiveMs,
+        toInclusiveMs: interval.toInclusiveMs,
+      });
+    } else {
+      finalMerged[finalMerged.length - 1].fromExclusiveMs = Math.min(
+        finalMerged[finalMerged.length - 1].fromExclusiveMs,
+        interval.fromExclusiveMs,
+      );
+    }
+  }
+
+  const idsToDelete = intersecting.map((row) => row.toInclusiveMs);
+  await db
+    .delete(walletTransferHistoryMeta)
+    .where(
+      and(
+        eq(walletTransferHistoryMeta.address, address),
+        inArray(walletTransferHistoryMeta.toInclusiveMs, idsToDelete),
+      ),
+    );
+
+  const mergedInsertValues = finalMerged.map((interval) => ({
+    address,
+    fromExclusiveMs: interval.fromExclusiveMs,
+    toInclusiveMs: interval.toInclusiveMs,
+    fetchedAtMs: dayjs.utc().valueOf(),
+  }));
+  await db.insert(walletTransferHistoryMeta).values(mergedInsertValues);
+
+  const returnFromExclusiveMs = safeFromExclusiveMs ?? fromMs;
+  return await db_getTransferHistory(
     address,
     returnFromExclusiveMs,
     toMs,
