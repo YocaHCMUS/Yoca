@@ -56,7 +56,6 @@ import {
     DAY_MS,
     ZRN_SOL_FUNGIBLE_ID,
     WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
-    MONTH_MS,
 } from "@sv/config/constants";
 import { and, asc, desc, eq, gte, inArray, lte, max } from "drizzle-orm";
 
@@ -129,6 +128,7 @@ async function zrn_fetchWalletTransactions(
 type ZRN_WalletTransactionsRange = {
   transactions: ZRN_WalletTransaction[];
   maxMs: number;
+  cutOffByLimit: boolean;
 };
 
 async function zrn_fetchWalletTransactionsRange(
@@ -140,7 +140,7 @@ async function zrn_fetchWalletTransactionsRange(
 ): Promise<ZRN_WalletTransactionsRange | null> {
   const maxTransactions = normalizeTxLimit(
     limit,
-    WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
+    WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
   );
   const firstPageUrl = zrn.getEndpoint(`/wallets/${address}/transactions/`);
   firstPageUrl.search = new URLSearchParams({
@@ -197,6 +197,7 @@ async function zrn_fetchWalletTransactionsRange(
   return {
     transactions,
     maxMs: cutOffByLimit ? latestFetchedMs : toMs,
+    cutOffByLimit,
   };
 }
 
@@ -1003,9 +1004,10 @@ async function zrn_extractSwaps(
   return { returnValues, insertValues, tokenMetaInsertValues };
 }
 
-type WalletSwapHistoryGapFetchResult = {
+type WalletSwapHistoryFetchResult = {
   values: WalletSwapV2[];
   toMs: number;
+  cutOffByLimit: boolean;
 };
 
 async function fetchWalletSwapHistory(
@@ -1013,22 +1015,33 @@ async function fetchWalletSwapHistory(
   fromMs: number,
   toMs: number,
   limit?: number,
-  writeMeta?: true,
-): Promise<WalletSwapV2[] | null>;
-async function fetchWalletSwapHistory(
+): Promise<WalletSwapV2[] | null> {
+  const res = await fetchWalletSwapHistoryCore(
+    address,
+    fromMs,
+    toMs,
+    limit,
+    true,
+  );
+  return res?.values ?? null;
+}
+
+async function fetchWalletSwapHistoryGap(
   address: string,
   fromMs: number,
   toMs: number,
-  limit: number,
-  writeMeta: false,
-): Promise<WalletSwapHistoryGapFetchResult | null>;
-async function fetchWalletSwapHistory(
+  limit?: number,
+): Promise<WalletSwapHistoryFetchResult | null> {
+  return await fetchWalletSwapHistoryCore(address, fromMs, toMs, limit, false);
+}
+
+async function fetchWalletSwapHistoryCore(
   address: string,
   fromMs: number,
   toMs: number,
-  limit: number = WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
+  limit: number = WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
   writeMeta: boolean = true,
-): Promise<WalletSwapV2[] | WalletSwapHistoryGapFetchResult | null> {
+): Promise<WalletSwapHistoryFetchResult | null> {
   const res = await zrn_fetchWalletTransactionsRange(
     address,
     "trade",
@@ -1076,29 +1089,83 @@ async function fetchWalletSwapHistory(
     });
   }
 
-  if (!writeMeta) {
-    return {
-      values: combinedValues.returnValues,
-      toMs: res.maxMs,
-    };
-  }
-
-  return combinedValues.returnValues;
+  return {
+    values: combinedValues.returnValues,
+    toMs: res.maxMs,
+    cutOffByLimit: res.cutOffByLimit,
+  };
 }
 
-// export function resolveRequestedRange(from?: number, to?: number): WalletRangeMs {
-//   const nowMs = Date.now();
-//   const monthMs = 30 * 24 * 60 * 60 * 1000;
+function normalizeRange(
+  fromMs?: number,
+  toMs?: number,
+): { fromMs: number; toMs: number } {
+  const nowMs = dayjs.utc().valueOf();
+  const defaultPeriodMs = DAY_MS;
 
-//   const requestedToMs = to ?? nowMs;
-//   const requestedFromMs =
-//     from ?? (to != null ? requestedToMs - monthMs : nowMs - monthMs);
+  const requestedToMs = toMs ?? nowMs;
+  const requestedFromMs =
+    fromMs ??
+    (toMs != null ? requestedToMs - defaultPeriodMs : nowMs - defaultPeriodMs);
 
-//   return {
-//     fromMs: Math.min(requestedFromMs, requestedToMs),
-//     toMs: Math.max(requestedFromMs, requestedToMs),
-//   };
-// }
+  return {
+    fromMs: Math.min(requestedFromMs, requestedToMs),
+    toMs: Math.max(requestedFromMs, requestedToMs),
+  };
+}
+
+async function db_getSwapHistory(
+  address: string,
+  fromMs: number,
+  toMs: number,
+  limit: number,
+): Promise<WalletSwapV2[]> {
+  const rows = await db
+    .select()
+    .from(walletSwapHistory)
+    .where(
+      and(
+        eq(walletSwapHistory.address, address),
+        gte(walletSwapHistory.blockTimestampMs, fromMs),
+        lte(walletSwapHistory.blockTimestampMs, toMs),
+      ),
+    )
+    .orderBy(desc(walletSwapHistory.blockTimestampMs))
+    .limit(limit);
+
+  const tokenAddresses = new Set(
+    rows.flatMap((item) => [item.tokenIn, item.tokenOut]),
+  );
+  const tokenMetaRes = await db
+    .select()
+    .from(tokenMeta)
+    .where(inArray(tokenMeta.address, Array.from(tokenAddresses)));
+  const tokenMetaLookup = Object.fromEntries(
+    tokenMetaRes.map((tm) => [tm.address, tm]),
+  );
+
+  return rows.map((item) => ({
+    transactionHash: item.transactionHash,
+    blockTimestampMs: item.blockTimestampMs,
+    bought: {
+      address: item.tokenIn,
+      amount: item.amountIn,
+      symbol: tokenMetaLookup[item.tokenIn]?.symbol ?? null,
+      name: tokenMetaLookup[item.tokenIn]?.name ?? null,
+      logoUri: tokenMetaLookup[item.tokenIn]?.imageUrl ?? null,
+      priceUsd: item.tokenInPriceUsd,
+    },
+    sold: {
+      address: item.tokenOut,
+      amount: item.amountOut,
+      symbol: tokenMetaLookup[item.tokenOut]?.symbol ?? null,
+      name: tokenMetaLookup[item.tokenOut]?.name ?? null,
+      logoUri: tokenMetaLookup[item.tokenOut]?.imageUrl ?? null,
+      priceUsd: item.tokenOutPriceUsd,
+    },
+    totalValueUsd: item.valueUsd,
+  }));
+}
 
 export async function getWalletSwapHistory(
   address: string,
@@ -1106,23 +1173,6 @@ export async function getWalletSwapHistory(
   requestToMs?: number,
   limit = WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
 ): Promise<WalletSwapV2[] | null> {
-  function normalizeRange(
-    fromMs?: number,
-    toMs?: number,
-  ): { fromMs: number; toMs: number } {
-    const nowMs = dayjs.utc().valueOf();
-    const monthMs = MONTH_MS;
-
-    const requestedToMs = toMs ?? nowMs;
-    const requestedFromMs =
-      fromMs ?? (toMs != null ? requestedToMs - monthMs : nowMs - monthMs);
-
-    return {
-      fromMs: Math.min(requestedFromMs, requestedToMs),
-      toMs: Math.max(requestedFromMs, requestedToMs),
-    };
-  }
-
   const { fromMs, toMs } = normalizeRange(
     requestFromMs,
     requestToMs,
@@ -1143,7 +1193,7 @@ export async function getWalletSwapHistory(
     .orderBy(asc(walletSwapHistoryMeta.fromInclusiveMs));
 
   if (intersecting.length == 0) {
-    return await fetchWalletSwapHistory(address, fromMs, toMs);
+    return await fetchWalletSwapHistory(address, fromMs, toMs, limit);
   }
 
   const merged: { fromMs: number; toMs: number }[] = [];
@@ -1194,69 +1244,30 @@ export async function getWalletSwapHistory(
 
   // If no gaps -> fully covered, return from db
   if (gaps.length == 0) {
-    const rows = await db
-      .select()
-      .from(walletSwapHistory)
-      .where(
-        and(
-          eq(walletSwapHistory.address, address),
-          gte(walletSwapHistory.blockTimestampMs, fromMs),
-          lte(walletSwapHistory.blockTimestampMs, toMs),
-        ),
-      )
-      .orderBy(desc(walletSwapHistory.blockTimestampMs));
-
-    const tokenAddresses = new Set(
-      rows.flatMap((item) => [item.tokenIn, item.tokenOut]),
-    );
-    const tokenMetaRes = await db
-      .select()
-      .from(tokenMeta)
-      .where(inArray(tokenMeta.address, Array.from(tokenAddresses)));
-    const tokenMetaLookup = Object.fromEntries(
-      tokenMetaRes.map((tm) => [tm.address, tm]),
-    );
-
-    return rows.map((item) => ({
-      transactionHash: item.transactionHash,
-      blockTimestampMs: item.blockTimestampMs,
-      bought: {
-        address: item.tokenIn,
-        amount: item.amountIn,
-        symbol: tokenMetaLookup[item.tokenIn]?.symbol ?? null,
-        name: tokenMetaLookup[item.tokenIn]?.name ?? null,
-        logoUri: tokenMetaLookup[item.tokenIn]?.imageUrl ?? null,
-        priceUsd: item.tokenInPriceUsd,
-      },
-      sold: {
-        address: item.tokenOut,
-        amount: item.amountOut,
-        symbol: tokenMetaLookup[item.tokenOut]?.symbol ?? null,
-        name: tokenMetaLookup[item.tokenOut]?.name ?? null,
-        logoUri: tokenMetaLookup[item.tokenOut]?.imageUrl ?? null,
-        priceUsd: item.tokenOutPriceUsd,
-      },
-      totalValueUsd: item.valueUsd,
-    }));
+    return await db_getSwapHistory(address, fromMs, toMs, limit);
   }
 
   // Insert the gaps into the DB
-  const gapValues: WalletSwapV2[] = [];
   const fetchedGapIntervals: { fromMs: number; toMs: number }[] = [];
+  let cutOffToMs: number | null = null;
   for (const gap of gaps) {
-    const gapRes = await fetchWalletSwapHistory(
+    const gapRes = await fetchWalletSwapHistoryGap(
       address,
       gap.fromMs,
       gap.toMs,
-      WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
-      false,
+      limit,
     );
+
     if (gapRes) {
-      gapValues.push(...gapRes.values);
       fetchedGapIntervals.push({
         fromMs: gap.fromMs,
         toMs: gapRes.toMs,
       });
+
+      if (gapRes.cutOffByLimit) {
+        cutOffToMs = gapRes.toMs;
+        break;
+      }
     }
   }
 
@@ -1302,5 +1313,11 @@ export async function getWalletSwapHistory(
   }));
   await db.insert(walletSwapHistoryMeta).values(mergedInsertValues);
 
-  return gapValues;
+  const returnToMs = cutOffToMs == null ? toMs : Math.min(toMs, cutOffToMs);
+  return await db_getSwapHistory(
+    address,
+    fromMs,
+    returnToMs,
+    limit,
+  );
 }

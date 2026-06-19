@@ -57,7 +57,10 @@ import { statusCode } from "@sv/util/responses.js";
 import { z } from "zod";
 import { Hono } from "hono";
 import { serverErr, setErr } from "@sv/util/errors";
-import { WALLET_RECENT_TRANSACTIONS_MAX_COUNT } from "@sv/config/constants.js";
+import {
+  WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
+  WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
+} from "@sv/config/constants.js";
 
 const walletRequestSchema = z.object({
   address: z.string(),
@@ -298,7 +301,7 @@ const app = new Hono()
           .number()
           .int()
           .min(1)
-          .max(WALLET_RECENT_TRANSACTIONS_MAX_COUNT)
+          .max(WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT)
           .optional(),
       }),
     ),
