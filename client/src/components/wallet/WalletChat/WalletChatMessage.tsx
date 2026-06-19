@@ -694,16 +694,16 @@ export function WalletChatMessage({ message, index, onAction, onRedo, onRevert }
   }
 
   // Confidence
-  if (message.confidence) {
-    elements.push(
-      <span
-        key="confidence"
-        className={classNames(styles.confidenceBadge, styles[`confidence${message.confidence}`])}
-      >
-        {tr("chat.confidenceLabel", { level: tr(CONFIDENCE_LEVEL_KEYS[message.confidence]) })}
-      </span>,
-    );
-  }
+  // if (message.confidence) {
+  //   elements.push(
+  //     <span
+  //       key="confidence"
+  //       className={classNames(styles.confidenceBadge, styles[`confidence${message.confidence}`])}
+  //     >
+  //       {tr("chat.confidenceLabel", { level: tr(CONFIDENCE_LEVEL_KEYS[message.confidence]) })}
+  //     </span>,
+  //   );
+  // }
 
   // Parsed content parts — text+cite groups rendered as inline flow
   for (const group of inlineGroups) {
@@ -855,24 +855,9 @@ export function WalletChatMessage({ message, index, onAction, onRedo, onRevert }
     );
   }
 
-  // Suggested question chips
-  const askChips = endActions.filter((a) => a.href.startsWith("#ask:"));
-  if (askChips.length > 0) {
-    elements.push(
-      <div key="chips" className={styles.chips}>
-        {askChips.map((a, i) => (
-          <button key={i} type="button" className={styles.chip} onClick={() => onAction?.(a.href.slice(5))}>
-            {a.label}
-          </button>
-        ))}
-      </div>,
-    );
-  }
-
-  // End actions (non-ask)
-  const nonAskEndActions = endActions.filter((a) => !a.href.startsWith("#ask:"));
-  if (nonAskEndActions.length > 0) {
-    elements.push(actionButtonGroup(nonAskEndActions, navigate, onAction));
+  // End actions
+  if (endActions.length > 0) {
+    elements.push(actionButtonGroup(endActions, navigate, onAction));
   }
 
   if (elements.length === 0) {

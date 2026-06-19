@@ -74,12 +74,6 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
     setTruncatedMessages(null);
   }, [activeSession]);
 
-  const doSaveCurrentSession = useCallback(async () => {
-    if (!activeSessionId || messages.length === 0) return;
-    const title = messages.find((m) => m.role === "user")?.content.slice(0, 50);
-    await saveMessagesToSession(activeSessionId, messages, title);
-  }, [activeSessionId, messages, saveMessagesToSession]);
-
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
@@ -256,19 +250,17 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
   }, [truncatedMessages, activeSessionId, saveMessagesToSession]);
 
   const handleNewChat = useCallback(async () => {
-    await doSaveCurrentSession();
     setMessages([]);
     setTruncatedMessages(null);
     setError(null);
     setShowPromptMenu(false);
     setActiveSessionId(null);
-  }, [doSaveCurrentSession, setActiveSessionId]);
+  }, [setActiveSessionId]);
 
   const handleSessionSelect = useCallback(async (sessionId: string) => {
-    await doSaveCurrentSession();
     setActiveSessionId(sessionId);
     setShowSessionMenu(false);
-  }, [doSaveCurrentSession, setActiveSessionId]);
+  }, [setActiveSessionId]);
 
   const handleDeleteSession = useCallback(async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
