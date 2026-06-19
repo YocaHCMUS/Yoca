@@ -184,7 +184,12 @@ interface ReadableGraphEdge extends GraphEdge {
   curveness: number;
 }
 
-const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscreen?: boolean }> = ({ nodes, edges, isFullscreen = false }) => {
+const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; tokenSymbol?: string; isFullscreen?: boolean }> = ({
+  nodes,
+  edges,
+  tokenSymbol,
+  isFullscreen = false,
+}) => {
   const { tr, fmt } = useLocalization();
   const chartRef = useRef<HTMLDivElement | null>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
@@ -263,9 +268,14 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
 
   const suspiciousEdges = readableEdges.filter((edge) => edge.suspicious).length;
   const groupedCount = Math.max(0, edges.length - readableEdges.length);
-  const formatGraphCurrency = useCallback(
-    (value: number) => fmt.num.compact.currency(value || 0),
-    [fmt],
+  const graphAmountUnit = useMemo(
+    () => tokenSymbol?.trim().toUpperCase() || String(tr("washTrading.graph.tokenUnit")),
+    [tokenSymbol, tr],
+  );
+
+  const formatGraphAmount = useCallback(
+    (value: number) => `${fmt.num.compact.decimal(value || 0)} ${graphAmountUnit}`,
+    [fmt, graphAmountUnit],
   );
 
   const option = useMemo<echarts.EChartsOption>(() => {
@@ -350,7 +360,7 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
           },
           label: {
             show: true,
-            formatter: `${formatGraphCurrency(edge.amount)}${edge.transferCount > 1 ? ` · ${edge.transferCount} tx` : ""}`,
+            formatter: `${formatGraphAmount(edge.amount)}${edge.transferCount > 1 ? ` · ${edge.transferCount} tx` : ""}`,
             color: edge.suspicious ? "#dc2626" : "#334155",
             fontSize: 11,
             fontWeight: 700,
@@ -365,14 +375,14 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
           // Do not render all edge amounts by default. It prevents overlap.
           // Amount is shown on hover/emphasis and in tooltip.
           show: false,
-          formatter: isLargeFlow ? formatGraphCurrency(edge.amount) : "",
+          formatter: isLargeFlow ? formatGraphAmount(edge.amount) : "",
         },
         tooltip: {
           formatter: [
             `<strong>${edge.suspicious ? tr("washTrading.graph.suspiciousFlow") : tr("washTrading.graph.transferFlow")}</strong>`,
             `${tr("washTrading.graph.from")}: ${shortAddress(edge.from)}`,
             `${tr("washTrading.graph.to")}: ${shortAddress(edge.to)}`,
-            `${tr("washTrading.graph.totalAmount")}: ${formatGraphCurrency(edge.amount)}`,
+            `${tr("washTrading.graph.totalAmount")}: ${formatGraphAmount(edge.amount)}`,
             `${tr("washTrading.graph.groupedTransfers")}: ${edge.transferCount}`,
           ].join("<br/>"),
         },
@@ -459,7 +469,7 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; isFullscr
         } as any,
       ],
     } as echarts.EChartsOption;
-  }, [visibleNodes, readableEdges, isFullscreen, tr, formatGraphCurrency]);
+  }, [visibleNodes, readableEdges, isFullscreen, tr, formatGraphAmount]);
 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -962,7 +972,7 @@ const WashTradingPage: React.FC = () => {
                   </button>
                 </div>
               </div>
-              <NetworkGraph nodes={result?.graphData.nodes ?? []} edges={result?.graphData.edges ?? []} />
+              <NetworkGraph nodes={result?.graphData.nodes ?? []} edges={result?.graphData.edges ?? []} tokenSymbol={symbol || result?.symbol} />
             </div>
 
             <div className={styles.card}>
@@ -1118,7 +1128,7 @@ const WashTradingPage: React.FC = () => {
                 </div>
               </div>
 
-              <NetworkGraph nodes={result?.graphData.nodes ?? []} edges={result?.graphData.edges ?? []} isFullscreen />
+              <NetworkGraph nodes={result?.graphData.nodes ?? []} edges={result?.graphData.edges ?? []} tokenSymbol={symbol || result?.symbol} isFullscreen />
 
               <div className={styles.graphModalGuide} aria-label={String(tr("washTrading.graph.guideAria"))}>
                 <span>{tr("washTrading.graph.guideDrag")}</span>

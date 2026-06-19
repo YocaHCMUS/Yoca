@@ -2528,14 +2528,15 @@ export const translation = {
       address: "Address",
       from: "From",
       to: "To",
-      totalAmount: "Total value",
+      totalAmount: "Total token amount",
       groupedTransfers: "Grouped transfers",
+      tokenUnit: "tokens",
       nodes: "{{count}} nodes",
       rawEdges: "{{count}} raw edges",
       visibleFlows: "{{count}} visible flows",
       suspiciousGroups: "{{count}} suspicious groups",
       edgesGrouped: "{{count}} edges grouped",
-      hoverEdgeAmount: "Hover edge to view value",
+      hoverEdgeAmount: "Hover edge to view token amount",
       footerReady:
         "Live force-directed graph from backend graphData. Drag nodes, zoom, pan, and hover edges/wallets to inspect flow details.",
       footerWaiting:

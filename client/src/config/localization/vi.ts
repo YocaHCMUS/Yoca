@@ -2527,14 +2527,15 @@ export const translation = defineTranslation({
       address: "Địa chỉ",
       from: "Từ",
       to: "Đến",
-      totalAmount: "Tổng giá trị",
+      totalAmount: "Tổng lượng token",
       groupedTransfers: "Giao dịch đã gom",
+      tokenUnit: "token",
       nodes: "{{count}} node",
       rawEdges: "{{count}} cạnh gốc",
       visibleFlows: "{{count}} luồng hiển thị",
       suspiciousGroups: "{{count}} nhóm đáng ngờ",
       edgesGrouped: "{{count}} cạnh đã gom",
-      hoverEdgeAmount: "Hover cạnh để xem giá trị",
+      hoverEdgeAmount: "Hover cạnh để xem lượng token",
       footerReady:
         "Graph force-directed lấy từ backend graphData. Kéo node, zoom, pan và hover cạnh/ví để xem chi tiết luồng giao dịch.",
       footerWaiting:
