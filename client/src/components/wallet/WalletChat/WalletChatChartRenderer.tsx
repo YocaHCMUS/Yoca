@@ -138,7 +138,7 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
       const ds = datasets[0];
       return {
         ...baseOption,
-        backgroundColor: chartTokens.bg,
+        // backgroundColor: chartTokens.bg,
         color: colors,
         xAxis: undefined,
         yAxis: undefined,
@@ -190,7 +190,7 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
 
     return {
       ...baseOption,
-      backgroundColor: chartTokens.bg,
+      // backgroundColor: chartTokens.bg,
       color: colors,
       tooltip,
       grid: {

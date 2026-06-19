@@ -136,47 +136,62 @@
   }
 }
 
-// ===== Quick Questions (column) =====
-.quickTitle {
-  font-size: 11px;
-  color: $text-secondary;
-  margin-bottom: 8px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+// ===== Greeting Bubble =====
+.greetingBubble {
+  max-width: 100%;
+  padding: 14px 0;
 }
 
-.quickList {
+.greetingTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: $text-primary;
+  margin-bottom: 6px;
+}
+
+.greetingDescription {
+  font-size: 13px;
+  color: $text-secondary;
+  line-height: 1.55;
+  margin: 0 0 12px;
+}
+
+.greetingPromptLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.greetingList {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.quickBtn {
-  background: $layer-02;
-  border: 1px solid var(--cds-border-subtle-03);
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 12px;
-  color: $text-primary;
+.greetingItem {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: $interactive;
   cursor: pointer;
   text-align: left;
   line-height: 1.4;
   transition: background-color 0.15s;
-  word-break: break-word;
-  display: -webkit-box;
-  line-clamp: 2;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  position: relative;
+
+  &::before {
+    content: "•";
+    margin-right: 8px;
+    color: $interactive;
+  }
 
   &:hover {
     background: $layer-hover-01;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 }
 
@@ -245,83 +260,81 @@
 // ===== Input bar =====
 .inputBar {
   padding: 8px 12px 12px;
-  border-top: 1px solid var(--cds-border-subtle-03);
+  // border-top: 1px solid var(--cds-border-subtle-03);
   flex-shrink: 0;
 }
 
-.inputRow {
+.inputContainer {
   display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.inputField {
-  flex: 1;
-  height: 36px;
-  box-sizing: border-box;
-  background: $field-01;
-  border: 1px solid var(--cds-border-subtle-03);
+  flex-direction: column;
+  // border: 1px solid var(--cds-border-subtle-03);
+  box-shadow: inset 0 0 0 1px var(--cds-border-subtle-03);
   border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: $text-primary;
-  outline: none;
+  background: $field-01;
+  overflow: hidden;
 
-  &::placeholder {
-    color: $text-placeholder;
-  }
-
-  &:focus {
+  &:focus-within {
     border-color: var(--interactive-focus);
   }
 }
 
-.promptMenuBtn {
-  height: 36px;
-  width: 36px;
+.inputTextarea {
+  width: 100%;
   box-sizing: border-box;
   background: transparent;
-  border: 1px solid var(--cds-border-subtle-03);
-  border-radius: 8px;
-  padding: 8px;
+  border: none;
+  padding: 8px 12px 0;
+  font-size: 13px;
+  color: $text-primary;
+  outline: none;
+  resize: none;
+  line-height: 1.5;
+  overflow-y: auto;
+
+  &::placeholder {
+    color: $text-placeholder;
+  }
+}
+
+.inputFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px 4px;
+}
+
+.charCount {
+  font-size: 11px;
+  color: $text-secondary;
+  padding: 0 4px;
+}
+
+.inputActions {
+  display: flex;
+  gap: 2px;
+}
+
+.iconBtn {
+  height: 28px;
+  width: 28px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
   color: $icon-secondary;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.15s;
-  flex-shrink: 0;
+  transition: background-color 0.15s, color 0.15s;
 
   &:hover {
     background: $layer-hover-01;
     color: $icon-primary;
   }
-}
-
-.sendBtn {
-  height: 36px;
-  width: 36px;
-  box-sizing: border-box;
-  background: $interactive;
-  border: none;
-  border-radius: 8px;
-  padding: 8px;
-  color: $text-on-color;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: opacity 0.15s;
 
   &:disabled {
-    // background: ;
     cursor: not-allowed;
-    opacity: 0.5;
-  }
-
-  &:hover:not(:disabled) {
-    opacity: 0.85;
+    opacity: 0.4;
   }
 }
 
@@ -349,16 +362,20 @@
 }
 
 .promptMenuItem {
-  background: $layer-02;
-  border: 1px solid var(--cds-border-subtle-03);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border: none;
+  border-left: 3px solid $interactive;
+  border-radius: 0;
+  // padding: 0 0 0 8px;
+  padding: 2px 8px;
+  margin-bottom: $spacing-02;
   font-size: 12px;
   color: $text-primary;
   cursor: pointer;
   text-align: left;
   line-height: 1.4;
+  background: transparent;
   transition: background-color 0.15s;
+  border-radius: 4px;
 
   &:hover {
     background: $layer-hover-01;
@@ -438,10 +455,6 @@
 
 .assistantBubble {
   max-width: 100%;
-  background: $layer-02;
-  border: 1px solid var(--cds-border-subtle-03);
-  border-radius: 12px 12px 12px 4px;
-  padding: 10px 14px;
 }
 
 .textPart {
@@ -1711,5 +1724,26 @@
 
   &:hover {
     text-decoration: underline;
+  }
+}
+
+// ===== Collapse / Expand Button =====
+.sectionCollapseBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  padding: 6px 0;
+  margin-top: 8px;
+  border: none;
+  background: transparent;
+  color: $icon-secondary;
+  cursor: pointer;
+  font-size: 10px;
+  transition: color 0.15s;
+
+  &:hover {
+    color: $icon-primary;
   }
 }

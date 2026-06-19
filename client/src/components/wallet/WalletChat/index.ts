@@ -1,4 +1,5 @@
 export { WalletChat } from "./WalletChat";
+export { ChatContextProvider } from "./ChatContext";
 export type {
   ChatMessageItem,
   ChartSpec,

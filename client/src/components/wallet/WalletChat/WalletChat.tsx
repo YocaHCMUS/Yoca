@@ -1,18 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { Add, ChevronDown, Playlist, Send, TrashCan, Undo } from "@carbon/icons-react";
-import client from "@/api/main";
+import { useContext, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { Add, ChevronDown, Maximize, OpenPanelLeft, OpenPanelRight, Playlist, Send, TrashCan } from "@carbon/icons-react";
 import { WalletChatMessage } from "./WalletChatMessage";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type { LangKeys } from "@/config/localization";
-import type { ChatMessageItem, ChatResponse } from "./types";
+import type { ChatSessionContextType } from "./useChatSessions";
 import styles from "./WalletChat.module.scss";
-import { Maximize, OpenPanelLeft, OpenPanelRight } from "@carbon/icons-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useChatSessions, type ChatSessionContextType } from "./useChatSessions";
+import { ChatContext, ChatContextProvider, MAX_INPUT_LENGTH, useChatContext } from "./ChatContext";
 
 const MAX_QUICK_QUESTIONS = 5;
-const MAX_INPUT_LENGTH = 500;
 
 interface Props {
   address?: string;
@@ -24,43 +21,39 @@ interface Props {
   contextType?: ChatSessionContextType;
 }
 
-export function WalletChat({ address, addresses, lang, variant = "widget", chatPosition, onChatPositionChange, contextType: contextTypeProp }: Props) {
-  const { tr, fmt } = useLocalization();
+function WalletChatInner({ variant, chatPosition, onChatPositionChange }: {
+  variant: "widget" | "sidebar";
+  chatPosition: "right" | "left" | "fullscreen";
+  onChatPositionChange: (position: "right" | "left" | "fullscreen") => void;
+}) {
+  const { tr } = useLocalization();
   const { user, isUserLoading } = useAuth();
   const [isOpen, setIsOpen] = useState(variant === "sidebar");
   const [isMinimized, setIsMinimized] = useState(false);
-  const [messages, setMessages] = useState<ChatMessageItem[]>([]);
-  const [inputText, setInputText] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showPromptMenu, setShowPromptMenu] = useState(false);
-  const [showSessionMenu, setShowSessionMenu] = useState(false);
-  const [truncatedMessages, setTruncatedMessages] = useState<ChatMessageItem[] | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const sessionMenuRef = useRef<HTMLDivElement>(null);
 
-  const activeAddresses = useMemo(
-    () => (addresses?.length ? addresses : address ? [address] : []).filter(Boolean),
-    [address, addresses],
-  );
-  const contextType = contextTypeProp ?? (activeAddresses.length > 1 ? "wallet-comparison" : "wallet");
-
-  const contextQuestions = useMemo(
-    () => PREDEFINED_QUESTIONS.filter((q) => !q.contextTypes || q.contextTypes.includes(contextType)),
-    [contextType],
-  );
-
   const {
+    messages,
+    inputText,
+    isLoading,
+    error,
+    showPromptMenu,
+    showSessionMenu,
     sessions,
     activeSessionId,
     activeSession,
-    setActiveSessionId: changeSessionId,
-    createNewSession,
-    saveMessagesToSession,
-    deleteSessionById,
-    refreshSessions,
-  } = useChatSessions(user?.userId ?? null);
+    setInputText,
+    setShowPromptMenu,
+    setShowSessionMenu,
+    sendQuery,
+    handleRedo,
+    handleRevert,
+    handleNewChat,
+    handleSessionSelect,
+    handleDeleteSession,
+  } = useChatContext();
 
   useEffect(() => {
     if (listRef.current) {
@@ -74,20 +67,15 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
     }
   }, [isOpen, isMinimized]);
 
-  // Load active session messages when switching sessions
   useEffect(() => {
-    if (activeSession) {
-      setMessages(activeSession.messages);
-      setError(null);
-      setTruncatedMessages(null);
-      return;
-    }
-    setMessages([]);
-    setError(null);
-    setTruncatedMessages(null);
-  }, [activeSession]);
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const lineHeight = 20;
+    const maxHeight = lineHeight * 3 + 8;
+    el.style.height = Math.min(el.scrollHeight, maxHeight) + "px";
+  }, [inputText]);
 
-  // Close session menu on outside click
   useEffect(() => {
     if (!showSessionMenu) return;
     const handler = (e: MouseEvent) => {
@@ -97,91 +85,9 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [showSessionMenu]);
+  }, [showSessionMenu, setShowSessionMenu]);
 
-  const doSaveCurrentSession = useCallback(async () => {
-    if (!activeSessionId || messages.length === 0) return;
-    const title = messages.find((m) => m.role === "user")?.content.slice(0, 50);
-    await saveMessagesToSession(activeSessionId, messages, title);
-  }, [activeSessionId, messages, saveMessagesToSession]);
-
-  const sendQuery = useCallback(
-    async (query: string, opts?: { skipCache?: boolean }) => {
-      if (!query.trim() || isLoading || activeAddresses.length === 0) return;
-
-      setShowPromptMenu(false);
-      setTruncatedMessages(null);
-
-      const userMsg: ChatMessageItem = { role: "user", content: query.trim() };
-      setMessages((prev) => [...prev, userMsg]);
-      setInputText("");
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const history = messages.slice(-10).map((m) => ({
-          role: m.role,
-          content: m.content.length > 2000 ? m.content.slice(0, 2000) : m.content,
-        }));
-        const res = await client.api.chat.index.$post({
-          json: {
-            addresses: activeAddresses,
-            query: query.trim(),
-            language: lang,
-            history,
-            sessionId: activeSessionId ?? undefined,
-            contextType,
-            skipCache: opts?.skipCache,
-          },
-        });
-
-        if (!res.ok) {
-          throw new Error(tr("chat.serverError", { status: String(res.status) }));
-        }
-
-        const data = (await res.json()) as ChatResponse & { sessionId?: string };
-        const assistantMsg: ChatMessageItem = {
-          role: "assistant",
-          content: data.text,
-          data: data.data,
-          charts: data.charts,
-          tables: data.tables,
-          actions: data.actions,
-          tldr: data.tldr,
-          sections: data.sections,
-          sources: data.sources,
-          evidence: data.evidence,
-          warnings: data.warnings,
-          confidence: data.confidence,
-        };
-
-        setMessages((prev) => [...prev, assistantMsg]);
-
-        // If backend created a new session, sync the id
-        if (data.sessionId && data.sessionId !== activeSessionId) {
-          changeSessionId(data.sessionId);
-        }
-
-        // Refresh session list so new sessions appear in selector
-        refreshSessions();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Failed to send message";
-        setError(msg);
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: tr("chat.errorMessage", { error: msg }),
-          },
-        ]);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [activeAddresses, contextType, lang, isLoading, messages, activeSessionId, changeSessionId, refreshSessions, tr],
-  );
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendQuery(inputText);
@@ -211,128 +117,11 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
     }
   };
 
-  const handleRedo = useCallback(async (msgIndex: number, content: string) => {
-    if (isLoading) return;
-
-    const truncated = messages.slice(0, msgIndex + 1);
-    const title = messages.find((m) => m.role === "user")?.content.slice(0, 50);
-
-    setMessages(truncated);
-    setTruncatedMessages(null);
-    setShowPromptMenu(false);
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const history = messages.slice(0, msgIndex).slice(-10).map((m) => ({
-        role: m.role,
-        content: m.content.length > 2000 ? m.content.slice(0, 2000) : m.content,
-      }));
-
-      const res = await client.api.chat.index.$post({
-        json: {
-          addresses: activeAddresses,
-          query: content.trim(),
-          language: lang,
-          history,
-          sessionId: activeSessionId ?? undefined,
-          contextType,
-          skipCache: true,
-          skipSessionSave: true,
-        },
-      });
-
-      if (!res.ok) throw new Error(tr("chat.serverError", { status: String(res.status) }));
-
-      const data = (await res.json()) as ChatResponse & { sessionId?: string };
-      const assistantMsg: ChatMessageItem = {
-        role: "assistant",
-        content: data.text,
-        data: data.data,
-        charts: data.charts,
-        tables: data.tables,
-        actions: data.actions,
-        tldr: data.tldr,
-        sections: data.sections,
-        sources: data.sources,
-        evidence: data.evidence,
-        warnings: data.warnings,
-        confidence: data.confidence,
-      };
-
-      const finalMessages = [...truncated, assistantMsg];
-      setMessages(finalMessages);
-
-      if (activeSessionId) {
-        await saveMessagesToSession(activeSessionId, finalMessages, title);
-      }
-
-      if (data.sessionId && data.sessionId !== activeSessionId) {
-        changeSessionId(data.sessionId);
-      }
-
-      refreshSessions();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to send message";
-      setError(msg);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: tr("chat.errorMessage", { error: msg }) },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [activeAddresses, activeSessionId, changeSessionId, contextType, isLoading, lang, messages, refreshSessions, saveMessagesToSession, tr]);
-
-  const handleRevert = useCallback(async (msgIndex: number, content: string) => {
-    if (!activeSessionId) return;
-
-    const truncated = messages.slice(0, msgIndex);
-    const title = messages.find((m) => m.role === "user")?.content.slice(0, 50);
-    await saveMessagesToSession(activeSessionId, truncated, title);
-
-    const rest = messages.slice(msgIndex);
-    setTruncatedMessages(rest.length > 0 ? rest : null);
-    setMessages(truncated);
-    setInputText(content);
-    setShowPromptMenu(false);
-  }, [activeSessionId, messages, saveMessagesToSession]);
-
-  const handleUndoRevert = useCallback(() => {
-    if (!truncatedMessages) return;
-    const restored = [...messages, ...truncatedMessages];
-    setMessages(restored);
-    setTruncatedMessages(null);
-    if (activeSessionId) {
-      saveMessagesToSession(activeSessionId, restored);
-    }
-  }, [truncatedMessages, messages, activeSessionId, saveMessagesToSession]);
-
-  const handleClose = async () => {
-    await doSaveCurrentSession();
-    setIsOpen(false);
-    setIsMinimized(false);
-  };
-
-  const handleNewChat = async () => {
-    await doSaveCurrentSession();
-    setMessages([]);
-    setTruncatedMessages(null);
-    setError(null);
-    setShowPromptMenu(false);
-    changeSessionId(null);
-  };
-
-  const handleSessionSelect = async (sessionId: string) => {
-    await doSaveCurrentSession();
-    changeSessionId(sessionId);
-    setShowSessionMenu(false);
-  };
-
-  const handleDeleteSession = async (e: React.MouseEvent, sessionId: string) => {
-    e.stopPropagation();
-    await deleteSessionById(sessionId);
-  };
+  const trimmedInput = inputText.trim();
+  const inputValidationError =
+    trimmedInput.length === 0 ? null
+      : trimmedInput.length > MAX_INPUT_LENGTH ? tr("chat.inputOverLimit", { max: MAX_INPUT_LENGTH })
+        : null;
 
   // ─── Auth gate ───────────────────────────────────────────────────────
   if (!isUserLoading && !user) {
@@ -361,7 +150,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
             {variant === "widget" && (
               <button
                 type="button"
-                onClick={handleClose}
+                onClick={handleToggle}
                 className={styles.headerBtn}
                 aria-label={tr("chat.close")}
               >
@@ -389,10 +178,8 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
     return null;
   }
 
-  // Minimized FAB (widget variant only, authenticated)
   if (variant === "widget" && (!isOpen || isMinimized)) {
     const unreadCount = messages.filter((m) => m.role === "assistant").length;
-
     return (
       <button
         type="button"
@@ -402,31 +189,21 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
       >
         <span className={styles.fabText}>{tr("chat.fabLabel")}</span>
         {unreadCount > 0 && (
-          <span className={styles.fabBadge}>
-            {unreadCount}
-          </span>
+          <span className={styles.fabBadge}>{unreadCount}</span>
         )}
       </button>
     );
   }
 
-  // Sidebar variant always renders (parent controls visibility)
   if (variant === "sidebar" && !isOpen) {
     return null;
   }
-
-  const quickItems = contextQuestions.slice(0, MAX_QUICK_QUESTIONS);
-  const trimmedInput = inputText.trim();
-  const inputValidationError =
-    trimmedInput.length === 0 ? null
-      : trimmedInput.length > MAX_INPUT_LENGTH ? tr("chat.inputOverLimit", { max: MAX_INPUT_LENGTH })
-        : null;
 
   const renderPromptMenu = () => (
     <div className={styles.promptMenuOverlay}>
       <div className={styles.promptMenuTitle}>{tr("chat.promptMenuTitle")}</div>
       <div className={styles.promptMenuList}>
-        {contextQuestions.map((q) => (
+        {PREDEFINED_QUESTIONS.map((q) => (
           <button
             key={q.id}
             type="button"
@@ -441,24 +218,31 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
     </div>
   );
 
-  const renderQuickQuestions = () => (
-    <div className={styles.messagesArea}>
-      <div className={styles.quickTitle}>{tr("chat.quickQuestionsTitle")}</div>
-      <div className={styles.quickList}>
-        {quickItems.map((q) => (
-          <button
-            key={q.id}
-            type="button"
-            onClick={() => handlePredefined(resolveQuery(q))}
-            disabled={isLoading || activeAddresses.length === 0}
-            className={styles.quickBtn}
-          >
-            {resolveLabel(q)}
-          </button>
-        ))}
+  const renderGreeting = () => {
+    const quickItems = PREDEFINED_QUESTIONS.slice(0, MAX_QUICK_QUESTIONS);
+
+    return (
+      <div ref={listRef} className={styles.messagesArea}>
+        <div className={styles.greetingBubble}>
+          <div className={styles.greetingTitle}>{tr("chat.greetingTitle")}</div>
+          <p className={styles.greetingDescription}>{tr("chat.greetingDescription")}</p>
+          <div className={styles.greetingPromptLabel}>{tr("chat.greetingPrompt")}</div>
+          <div className={styles.greetingList}>
+            {quickItems.map((q) => (
+              <button
+                key={q.id}
+                type="button"
+                onClick={() => handlePredefined(resolveQuery(q))}
+                className={styles.greetingItem}
+              >
+                {resolveQuery(q)}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderMessages = () => (
     <div ref={listRef} className={styles.messagesArea}>
@@ -470,24 +254,9 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
           {[0, 1, 2].map((i) => (
             <div key={i} className={styles.dot} style={{ animationDelay: `${i * 0.15}s` }} />
           ))}
-          <span className={styles.loadingLabel}>
-            {tr("chat.loadingLabel")}
-          </span>
+          <span className={styles.loadingLabel}>{tr("chat.loadingLabel")}</span>
         </div>
       )}
-      {/* {truncatedMessages && (
-        <div className={styles.undoBanner}>
-          <span className={styles.undoBannerText}>{tr("chat.revertedBanner")}</span>
-          <button
-            type="button"
-            className={styles.undoBannerBtn}
-            onClick={handleUndoRevert}
-          >
-            <Undo size={14} />
-            {tr("chat.undo")}
-          </button>
-        </div>
-      )} */}
       {error && (
         <div className={styles.errorMsg}>{error}</div>
       )}
@@ -511,7 +280,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
               {s.title || tr("chat.newChat")}
             </span>
             <span className={styles.sessionItemTime}>
-              {fmt.datetime.relative(s.updatedAt)}
+              {new Date(s.updatedAt).toLocaleDateString()}
             </span>
           </div>
           <button
@@ -531,14 +300,10 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
 
   return (
     <div className={wrapperClass}>
-      {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <span className={styles.headerTitle}>
-            {tr("chat.headerTitle")}
-          </span>
+          <span className={styles.headerTitle}>{tr("chat.headerTitle")}</span>
         </div>
-
         <div className={styles.headerActions}>
           <div className={styles.sessionSelector}>
             <button
@@ -597,7 +362,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
               </button>
               <button
                 type="button"
-                onClick={handleClose}
+                onClick={handleToggle}
                 className={styles.headerBtn}
                 aria-label={tr("chat.close")}
               >
@@ -609,47 +374,67 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
       </div>
 
       {showPromptMenu ? renderPromptMenu()
-        : messages.length === 0 && !isLoading ? renderQuickQuestions()
+        : messages.length === 0 && !isLoading ? renderGreeting()
           : renderMessages()}
 
-      {/* Input */}
       <div className={styles.inputBar}>
-        <div className={styles.inputRow}>
-          <input
+        <div className={styles.inputContainer}>
+          <textarea
             ref={inputRef}
-            type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={tr("chat.inputPlaceholder")}
-            disabled={isLoading || activeAddresses.length === 0}
-            className={styles.inputField}
+            disabled={isLoading}
+            className={styles.inputTextarea}
+            rows={3}
           />
-          <button
-            type="button"
-            onClick={() => setShowPromptMenu((v) => !v)}
-            disabled={isLoading || activeAddresses.length === 0}
-            className={styles.promptMenuBtn}
-            title={tr("chat.promptMenuBtn")}
-          >
-            <Playlist size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={() => sendQuery(inputText)}
-            disabled={isLoading || activeAddresses.length === 0 || !inputText.trim() || inputText.length > MAX_INPUT_LENGTH}
-            className={styles.sendBtn}
-          >
-            <Send size={16} />
-          </button>
+          <div className={styles.inputFooter}>
+            <span className={styles.charCount}>
+              {tr("chat.inputCounter", { current: String(inputText.length), max: MAX_INPUT_LENGTH })}
+            </span>
+            <div className={styles.inputActions}>
+              <button
+                type="button"
+                onClick={() => setShowPromptMenu((v) => !v)}
+                disabled={isLoading}
+                className={styles.iconBtn}
+                title={tr("chat.promptMenuBtn")}
+              >
+                <Playlist size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => sendQuery(inputText)}
+                disabled={isLoading || !inputText.trim() || inputText.length > MAX_INPUT_LENGTH}
+                className={styles.iconBtn}
+              >
+                <Send size={16} />
+              </button>
+            </div>
+          </div>
         </div>
-        <div className={styles.inputMeta}>
-          <span>{tr("chat.inputCounter", { current: String(inputText.length), max: MAX_INPUT_LENGTH })}</span>
-          {inputText.length > 0 && inputValidationError && (
-            <span className={styles.validationError}>{inputValidationError}</span>
-          )}
-        </div>
+        {inputText.length > 0 && inputValidationError && (
+          <div className={styles.validationError}>{inputValidationError}</div>
+        )}
       </div>
     </div>
+  );
+}
+
+export function WalletChat({ address, addresses, lang, variant = "widget", chatPosition, onChatPositionChange, contextType: contextTypeProp }: Props) {
+  const existingCtx = useContext(ChatContext);
+
+  if (existingCtx) {
+    return <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} />;
+  }
+
+  const activeAddresses = [address, ...(addresses ?? [])].filter(Boolean) as string[];
+  const contextType = contextTypeProp ?? (activeAddresses.length > 1 ? "wallet-comparison" : "wallet");
+
+  return (
+    <ChatContextProvider addresses={activeAddresses} contextType={contextType} lang={lang}>
+      <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} />
+    </ChatContextProvider>
   );
 }
