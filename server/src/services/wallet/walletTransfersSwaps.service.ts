@@ -42,6 +42,8 @@ import {
     WalletRecentSwapsInsert,
     walletRecentTransfers,
     WalletRecentTransfersInsert,
+    walletSwapHistory,
+    walletSwapHistoryMeta,
 } from "@sv/db/schema";
 import dayjs from "dayjs";
 import { db } from "@sv/db";
@@ -49,21 +51,19 @@ import {
     WALLET_SWAPS_TTL_MS,
     WALLET_TRANSFERS_TTL_MS,
     WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
-    WALLET_RECENT_TRANSACTIONS_PRUNE_INTERVAL_MS,
-    WALLET_RECENT_TRANSACTIONS_RETENTION_MS,
     ZERION_WALLET_TRANSACTIONS_PAGE_SIZE,
     WSOL_MINT,
     DAY_MS,
+    ZRN_SOL_FUNGIBLE_ID,
+    WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
+    MONTH_MS,
 } from "@sv/config/constants";
-import { and, desc, eq, gte, inArray, lt, max } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte, max } from "drizzle-orm";
 
 type ZRN_WalletTransaction = ZRN_WalletTransactions["data"][number];
 type ZRN_WalletTransfer =
   ZRN_WalletTransaction["attributes"]["transfers"][number];
 type ZRN_FungibleInfo = ZRN_WalletTransfer["fungible_info"];
-type SourcedZRNWalletTransaction = ZRN_WalletTransaction & {
-  sourceEndpoint: string;
-};
 
 type ZrnTradeTransferMatch = {
   inTransfer: ZRN_WalletTransfer;
@@ -71,62 +71,20 @@ type ZrnTradeTransferMatch = {
   diffUsd: number;
 };
 
-type ZrnTradeTransferMatchResult =
-  | {
-      match: ZrnTradeTransferMatch;
-      reason: null;
-    }
-  | {
-      match: null;
-      reason:
-        | "transfer_match_no_transfers"
-        | "transfer_match_missing_in_transfer"
-        | "transfer_match_missing_out_transfer"
-        | "transfer_match_no_valid_priced_pair";
-    };
-
-const ZRN_SOL_FUNGIBLE_ID = "11111111111111111111111111111111";
-
-let lastRecentTransactionsPruneAtMs = 0;
-
-function normalizeRecentTransactionsLimit(limit: number): number {
-  if (!Number.isFinite(limit)) return WALLET_RECENT_TRANSACTIONS_MAX_COUNT;
-  return Math.min(
-    Math.max(Math.trunc(limit), 1),
-    WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
-  );
-}
-
-async function pruneStaleRecentTransactionRows(nowMs: number): Promise<void> {
-  if (
-    nowMs - lastRecentTransactionsPruneAtMs <
-    WALLET_RECENT_TRANSACTIONS_PRUNE_INTERVAL_MS
-  ) {
-    return;
-  }
-
-  lastRecentTransactionsPruneAtMs = nowMs;
-  const staleBeforeMs = nowMs - WALLET_RECENT_TRANSACTIONS_RETENTION_MS;
-  try {
-    await Promise.all([
-      db
-        .delete(walletRecentSwaps)
-        .where(lt(walletRecentSwaps.fetchedAtMs, staleBeforeMs)),
-      db
-        .delete(walletRecentTransfers)
-        .where(lt(walletRecentTransfers.fetchedAtMs, staleBeforeMs)),
-    ]);
-  } catch (error) {
-    console.error("Failed to prune stale recent wallet transactions", error);
-  }
+function normalizeTxLimit(reqLimit: number, maxLimit: number): number {
+  if (!Number.isFinite(reqLimit)) return maxLimit;
+  return Math.min(Math.max(Math.trunc(reqLimit), 1), maxLimit);
 }
 
 async function zrn_fetchWalletTransactions(
   address: string,
   operationTypes: string,
   limit: number,
-): Promise<SourcedZRNWalletTransaction[] | null> {
-  const maxTransactions = normalizeRecentTransactionsLimit(limit);
+): Promise<ZRN_WalletTransaction[] | null> {
+  const maxTransactions = normalizeTxLimit(
+    limit,
+    WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
+  );
   const firstPageUrl = zrn.getEndpoint(`/wallets/${address}/transactions/`);
   firstPageUrl.search = new URLSearchParams({
     currency: "usd",
@@ -137,7 +95,7 @@ async function zrn_fetchWalletTransactions(
     ),
   }).toString();
 
-  const transactions: SourcedZRNWalletTransaction[] = [];
+  const transactions: ZRN_WalletTransaction[] = [];
   const visitedUrls = new Set<string>();
   let nextUrl: URL | null = firstPageUrl;
 
@@ -157,21 +115,8 @@ async function zrn_fetchWalletTransactions(
     if (!page) return null;
 
     transactions.push(
-      ...page.data
-        .slice(0, maxTransactions - transactions.length)
-        .map((transaction) => ({
-          ...transaction,
-          sourceEndpoint: currentUrl,
-        })),
+      ...page.data.slice(0, maxTransactions - transactions.length),
     );
-
-    // console.info("[zerion-wallet-transactions] page fetched", {
-    //   address,
-    //   operationTypes,
-    //   pageTransactionCount: page.data.length,
-    //   collectedTransactions: transactions.length,
-    //   nextLink: page.links.next ?? null,
-    // });
 
     if (transactions.length >= maxTransactions) break;
 
@@ -179,6 +124,80 @@ async function zrn_fetchWalletTransactions(
   }
 
   return transactions;
+}
+
+type ZRN_WalletTransactionsRange = {
+  transactions: ZRN_WalletTransaction[];
+  maxMs: number;
+};
+
+async function zrn_fetchWalletTransactionsRange(
+  address: string,
+  operationTypes: string,
+  fromMs: number,
+  toMs: number,
+  limit: number,
+): Promise<ZRN_WalletTransactionsRange | null> {
+  const maxTransactions = normalizeTxLimit(
+    limit,
+    WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
+  );
+  const firstPageUrl = zrn.getEndpoint(`/wallets/${address}/transactions/`);
+  firstPageUrl.search = new URLSearchParams({
+    currency: "usd",
+    "filter[operation_types]": operationTypes,
+    "filter[chain_ids]": "solana",
+    "filter[min_mined_at]": fromMs.toString(),
+    "filter[max_mined_at]": toMs.toString(),
+    "page[size]": String(
+      Math.min(maxTransactions, ZERION_WALLET_TRANSACTIONS_PAGE_SIZE),
+    ),
+  }).toString();
+
+  const transactions: ZRN_WalletTransaction[] = [];
+  const visitedUrls = new Set<string>();
+  let nextUrl: URL | null = firstPageUrl;
+  let latestFetchedMs = 0;
+  let cutOffByLimit = false;
+
+  while (nextUrl && transactions.length < maxTransactions) {
+    const currentUrl = nextUrl.toString();
+    if (visitedUrls.has(currentUrl)) {
+      break;
+    }
+    visitedUrls.add(currentUrl);
+
+    const resp = await rlFetch(nextUrl, {
+      rlLimiter: zrn.limiter,
+      method: "GET",
+      headers: zrn.getRequiredHeaders(),
+    });
+    const page = await getTrackedApiResult(zrn_WalletTransactionsSchema, resp);
+    if (!page) return null;
+
+    const remainingTransactions = maxTransactions - transactions.length;
+    const rawTxs = page.data.slice(0, remainingTransactions);
+
+    transactions.push(...rawTxs);
+
+    latestFetchedMs = Math.max(
+      latestFetchedMs,
+      ...rawTxs.map((tx) => dayjs.utc(tx.attributes.mined_at).valueOf()),
+    );
+
+    if (transactions.length >= maxTransactions) {
+      cutOffByLimit =
+        page.data.length > remainingTransactions || page.links.next != null;
+      break;
+    }
+
+    nextUrl = page.links.next ? new URL(page.links.next) : null;
+  }
+
+  return {
+    transactions,
+    maxMs: cutOffByLimit ? latestFetchedMs : toMs,
+  };
 }
 
 function sortTransfersByTimestampDesc(
@@ -192,24 +211,35 @@ function sortTransfersByTimestampDesc(
 function sortSwapsByTimestampDesc(swaps: WalletSwap[]): WalletSwap[] {
   return [...swaps].sort(
     (left, right) =>
-      dayjs.utc(right.blockTimestampIso).valueOf() - dayjs.utc(left.blockTimestampIso).valueOf(),
+      dayjs.utc(right.blockTimestampIso).valueOf() -
+      dayjs.utc(left.blockTimestampIso).valueOf(),
   );
 }
 
 function zrn_getTransferTradePair(
   transfers: ZRN_WalletTransfer[],
-): ZrnTradeTransferMatchResult {
+): ZrnTradeTransferMatch | null {
   if (transfers.length == 0) {
-    return { match: null, reason: "transfer_match_no_transfers" };
+    return null;
   }
 
-  const ins = transfers.filter((transfer) => transfer.direction == "in" && transfer.value != null && Number.isFinite(Number(transfer.value)));
-  const outs = transfers.filter((transfer) => transfer.direction == "out" && transfer.value != null && Number.isFinite(Number(transfer.value)));
+  const ins = transfers.filter(
+    (transfer) =>
+      transfer.direction == "in" &&
+      transfer.value != null &&
+      Number.isFinite(Number(transfer.value)),
+  );
+  const outs = transfers.filter(
+    (transfer) =>
+      transfer.direction == "out" &&
+      transfer.value != null &&
+      Number.isFinite(Number(transfer.value)),
+  );
   if (ins.length == 0) {
-    return { match: null, reason: "transfer_match_missing_in_transfer" };
+    return null;
   }
   if (outs.length == 0) {
-    return { match: null, reason: "transfer_match_missing_out_transfer" };
+    return null;
   }
 
   let best: ZrnTradeTransferMatch | null = null;
@@ -229,10 +259,10 @@ function zrn_getTransferTradePair(
   }
 
   if (!best) {
-    return { match: null, reason: "transfer_match_no_valid_priced_pair" };
+    return null;
   }
 
-  return { match: best, reason: null };
+  return best;
 }
 
 function zrn_getSolanaTokenAddress(token: ZRN_FungibleInfo): string | null {
@@ -244,7 +274,6 @@ function zrn_getSolanaTokenAddress(token: ZRN_FungibleInfo): string | null {
   if (token.id == ZRN_SOL_FUNGIBLE_ID) return WSOL_MINT;
   return null;
 }
-
 
 export async function getWalletTransfers(
   address: string,
@@ -523,15 +552,14 @@ export async function getWalletSwaps(
   };
 }
 
-export type WalletTransferToken =
-  {
-    address: string;
-    amount: number;
-    symbol: string | null;
-    name: string | null;
-    logoUri: string | null;
-    priceUsd: number | null;
-  };
+export type WalletTransferToken = {
+  address: string;
+  amount: number;
+  symbol: string | null;
+  name: string | null;
+  logoUri: string | null;
+  priceUsd: number | null;
+};
 
 export interface WalletSwapV2 {
   transactionHash: string;
@@ -555,211 +583,21 @@ export async function fetchWalletRecentSwaps(
   const tokenMetaInsertValues: TokenMetaInsert[] = [];
   const fetchedAtMs = dayjs.utc().valueOf();
 
-  type CombinedValues = {
-    insertValue: WalletRecentSwapsInsert;
-    returnValue: WalletSwapV2;
-  };
+  const combinedValues = await zrn_extractSwaps(address, transactions);
 
-  function logRejectedTradeAct(
-    reason: string,
-    transaction: SourcedZRNWalletTransaction,
-    actId: string,
-    details: Record<string, unknown> = {},
-  ): null {
-    if (reason.startsWith("transfer_match_")) {
-      console.info("[zerion-wallet-swaps] failed to match trade transfer pair", {
-        reason,
-        sourceEndpoint: transaction.sourceEndpoint,
-        transactionHash: transaction.attributes.hash,
-        transactionOperationType: transaction.attributes.operation_type,
-        transactionStatus: transaction.attributes.status,
-        actId,
-        transactionActTypes: transaction.attributes.acts.map((act) => act.type),
-        transactionTransferCount: transaction.attributes.transfers.length,
-        ...details,
-      });
-    }
-    return null;
-  }
-
-  const combinedValues: CombinedValues[] = transactions
-    .flatMap((transaction) =>
-      transaction.attributes.acts
-        .filter((act) => act.type == "trade")
-        .map((act): CombinedValues | null => {
-          // Zerion trades are one in and one out; noisy legs are handled by
-          // picking the closest valued in/out pair.
-          const transfers = transaction.attributes.transfers.filter(
-            (transfer) =>
-              transfer.act_id == act.id,
-          );
-          const transferMatchResult = zrn_getTransferTradePair(transfers);
-          if (!transferMatchResult.match) {
-            return logRejectedTradeAct(
-              transferMatchResult.reason,
-              transaction,
-              act.id,
-              {
-                matchedTransferCount: transfers.length,
-                matchedTransferDirections: transfers.map(
-                  (transfer) => transfer.direction,
-                ),
-                matchedTransferSymbols: transfers.map(
-                  (transfer) => transfer.fungible_info.symbol,
-                ),
-                matchedTransferValues: transfers.map(
-                  (transfer) => transfer.value,
-                ),
-                matchedTransferPrices: transfers.map(
-                  (transfer) => transfer.price,
-                ),
-                allTransferActIds: transaction.attributes.transfers.map(
-                  (transfer) => transfer.act_id,
-                ),
-              },
-            );
-          }
-          const { inTransfer, outTransfer } = transferMatchResult.match;
-
-          const tokenIn = inTransfer?.fungible_info;
-          const tokenOut = outTransfer?.fungible_info;
-
-          const tokenInAddress = zrn_getSolanaTokenAddress(tokenIn);
-          const tokenOutAddress = zrn_getSolanaTokenAddress(tokenOut);
-
-          if (
-            !tokenIn ||
-            !tokenOut ||
-            tokenInAddress == null ||
-            tokenOutAddress == null
-          ) {
-            return logRejectedTradeAct(
-              "missing_solana_token_address",
-              transaction,
-              act.id,
-              {
-                tokenInSymbol: tokenIn.symbol,
-                tokenOutSymbol: tokenOut.symbol,
-                tokenInImplementations: tokenIn.implementations,
-                tokenOutImplementations: tokenOut.implementations,
-              },
-            );
-          }
-
-          const amountIn = Number(inTransfer.quantity.numeric);
-          const amountOut = Number(outTransfer.quantity.numeric);
-          if (!Number.isFinite(amountIn) || !Number.isFinite(amountOut)) {
-            return logRejectedTradeAct(
-              "invalid_transfer_amount",
-              transaction,
-              act.id,
-              {
-                amountInRaw: inTransfer.quantity.numeric,
-                amountOutRaw: outTransfer.quantity.numeric,
-              },
-            );
-          }
-
-          const tokenInPriceUsd = inTransfer.price;
-          const tokenOutPriceUsd = outTransfer.price;
-
-          const valueUsd = Number(
-            inTransfer.value ??
-              outTransfer.value ??
-              (tokenInPriceUsd
-                ? amountIn * tokenInPriceUsd
-                : tokenOutPriceUsd
-                  ? amountOut * tokenOutPriceUsd
-                  : null),
-          );
-
-          if (!valueUsd || !Number.isFinite(valueUsd)) {
-            return logRejectedTradeAct(
-              "missing_or_invalid_usd_value",
-              transaction,
-              act.id,
-              {
-                inTransferValue: inTransfer.value,
-                outTransferValue: outTransfer.value,
-                tokenInPriceUsd,
-                tokenOutPriceUsd,
-                amountIn,
-                amountOut,
-                computedValueUsd: valueUsd,
-              },
-            );
-          }
-
-          const blockTimestampMs = dayjs
-            .utc(transaction.attributes.mined_at)
-            .valueOf();
-
-          tokenMetaInsertValues.push(
-            {
-              address: tokenInAddress,
-              symbol: tokenIn.symbol,
-              name: tokenIn.name,
-              imageUrl: tokenIn.icon?.url || null,
-            },
-            {
-              address: tokenOutAddress,
-              symbol: tokenOut.symbol,
-              name: tokenOut.name,
-              imageUrl: tokenOut.icon?.url || null,
-            },
-          );
-          return {
-            // enrich metadata
-            returnValue: {
-              transactionHash: transaction.attributes.hash,
-              blockTimestampMs,
-              bought: {
-                address: tokenInAddress,
-                amount: amountIn,
-                symbol: tokenIn.symbol,
-                name: tokenIn.name,
-                logoUri: tokenIn.icon?.url || null,
-                priceUsd: tokenInPriceUsd,
-              },
-              sold: {
-                address: tokenOutAddress,
-                amount: amountOut,
-                symbol: tokenOut.symbol,
-                name: tokenOut.name,
-                logoUri: tokenOut.icon?.url || null,
-                priceUsd: tokenOutPriceUsd,
-              },
-              totalValueUsd: valueUsd,
-            },
-            insertValue: {
-              address,
-              transactionHash: transaction.attributes.hash,
-              actId: act.id,
-              tokenIn: tokenInAddress,
-              tokenOut: tokenOutAddress,
-              amountIn,
-              amountOut,
-              tokenInPriceUsd,
-              tokenOutPriceUsd,
-              valueUsd,
-              blockTimestampMs,
-              fetchedAtMs,
-            },
-          };
-        }),
-    )
-    .filter((item) => item != null);
-
-  const insertValues = combinedValues.map((v) => v.insertValue);
-  if (insertValues.length == 0) {
+  if (combinedValues.returnValues.length == 0) {
     return [];
   }
 
   await db
     .insert(walletRecentSwaps)
-    .values(insertValues)
+    .values(combinedValues.insertValues)
     .onConflictDoUpdate({
-      target: [walletRecentSwaps.transactionHash, walletRecentSwaps.actId],
+      target: [
+        walletRecentSwaps.address,
+        walletRecentSwaps.transactionHash,
+        walletRecentSwaps.actId,
+      ],
       set: {
         fetchedAtMs,
       },
@@ -773,15 +611,17 @@ export async function fetchWalletRecentSwaps(
       .onConflictDoNothing();
   }
 
-  const returnValues = combinedValues.map((v) => v.returnValue);
-  return returnValues;
+  return combinedValues.returnValues;
 }
 
 export async function getWalletRecentSwaps(
   address: string,
   limit: number = WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
 ): Promise<WalletSwapV2[] | null> {
-  const normalizedLimit = normalizeRecentTransactionsLimit(limit);
+  const normalizedLimit = normalizeTxLimit(
+    limit,
+    WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
+  );
   const thresholdDateMs = dayjs
     .utc()
     .subtract(WALLET_SWAPS_TTL_MS, "millisecond")
@@ -799,7 +639,7 @@ export async function getWalletRecentSwaps(
     .limit(1);
 
   if (latestFetchRes == undefined || latestFetchRes.maxFetchedAtMs == null) {
-    await pruneStaleRecentTransactionRows(dayjs.utc().valueOf());
+    await db.delete(walletRecentSwaps);
     const fetched = await fetchWalletRecentSwaps(address);
     return fetched?.slice(0, normalizedLimit) ?? null;
   }
@@ -817,7 +657,7 @@ export async function getWalletRecentSwaps(
     .limit(normalizedLimit);
 
   if (res.length == 0) {
-    await pruneStaleRecentTransactionRows(dayjs.utc().valueOf());
+    await db.delete(walletRecentSwaps);
     const fetched = await fetchWalletRecentSwaps(address);
     return fetched?.slice(0, normalizedLimit) ?? null;
   }
@@ -877,110 +717,42 @@ export async function fetchWalletRecentTransfers(
   );
   if (!transactions) return null;
 
-  const tokenMetaInsertValues: TokenMetaInsert[] = [];
+  const combinedValues = zrn_extractTransfers(address, transactions);
+
+  if (combinedValues.returnValues.length == 0) return [];
+
   const fetchedAtMs = dayjs.utc().valueOf();
-  const combinedValues: {
-    insertValue: WalletRecentTransfersInsert;
-    returnValue: WalletTransferV2;
-  }[] = [];
-
-  for (const transaction of transactions) {
-    for (const act of transaction.attributes.acts) {
-      if (act.type != "receive" && act.type != "send") continue;
-
-      const transfers = transaction.attributes.transfers.filter(
-        (t) => t.act_id == act.id,
-      );
-      if (transfers.length != 1) continue; // each send/receive act has exactly one transfer
-
-      const transfer = transfers[0];
-      const token = transfer.fungible_info;
-      const tokenAddress = zrn_getSolanaTokenAddress(token);
-      if (!token || tokenAddress == null) continue;
-
-      const amount = Number(transfer.quantity.numeric);
-      if (!Number.isFinite(amount)) continue;
-
-      const priceUsd = transfer.price;
-      const valueUsd = transfer.value == null ? null : Number(transfer.value);
-      if (valueUsd == null || !Number.isFinite(valueUsd)) continue;
-
-      const blockTimestampMs = dayjs
-        .utc(transaction.attributes.mined_at)
-        .valueOf();
-
-      const direction = act.type == "receive" ? "receive" : "send";
-      const counterpartyAddress =
-        direction == "receive" ? transfer.sender : transfer.recipient;
-
-      tokenMetaInsertValues.push({
-        address: tokenAddress,
-        symbol: token.symbol,
-        name: token.name,
-        imageUrl: token.icon?.url || null,
-      });
-
-      const returnValue: WalletTransferV2 = {
-        transactionHash: transaction.attributes.hash,
-        blockTimestampMs,
-        token: {
-          address: tokenAddress,
-          amount,
-          symbol: token.symbol,
-          name: token.name,
-          logoUri: token.icon?.url || null,
-          priceUsd,
-        },
-        direction,
-        counterpartyAddress,
-        valueUsd,
-      };
-
-      const insertValue: WalletRecentTransfersInsert = {
-        address,
-        transactionHash: transaction.attributes.hash,
-        actId: act.id,
-        blockTimestampMs,
-        tokenAddress,
-        amount,
-        valueUsd,
-        direction,
-        counterpartyAddress,
-        priceUsd,
-        fetchedAtMs,
-      };
-
-      combinedValues.push({ insertValue, returnValue });
-    }
-  }
-  if (combinedValues.length == 0) return [];
 
   await db
     .insert(walletRecentTransfers)
-    .values(combinedValues.map((v) => v.insertValue))
+    .values(combinedValues.insertValues)
     .onConflictDoUpdate({
       target: [
+        walletRecentTransfers.address,
         walletRecentTransfers.transactionHash,
         walletRecentTransfers.actId,
       ],
       set: { fetchedAtMs },
     });
 
-  if (tokenMetaInsertValues.length > 0) {
+  if (combinedValues.tokenMetaInsertValues.length > 0) {
     await db
       .insert(tokenMeta)
-      .values(tokenMetaInsertValues)
+      .values(combinedValues.tokenMetaInsertValues)
       .onConflictDoNothing();
   }
 
-  return combinedValues.map((v) => v.returnValue);
+  return combinedValues.returnValues;
 }
 
 export async function getWalletRecentTransfers(
   address: string,
   limit: number = WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
 ): Promise<WalletTransferV2[] | null> {
-  const normalizedLimit = normalizeRecentTransactionsLimit(limit);
+  const normalizedLimit = normalizeTxLimit(
+    limit,
+    WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
+  );
   const thresholdDateMs = dayjs
     .utc()
     .subtract(WALLET_TRANSFERS_TTL_MS, "millisecond")
@@ -998,7 +770,7 @@ export async function getWalletRecentTransfers(
     .limit(1);
 
   if (!latestFetchRes?.maxFetchedAtMs) {
-    await pruneStaleRecentTransactionRows(dayjs.utc().valueOf());
+    await db.delete(walletRecentTransfers);
     const fetched = await fetchWalletRecentTransfers(address);
     return fetched?.slice(0, normalizedLimit) ?? null;
   }
@@ -1016,7 +788,7 @@ export async function getWalletRecentTransfers(
     .limit(normalizedLimit);
 
   if (res.length == 0) {
-    await pruneStaleRecentTransactionRows(dayjs.utc().valueOf());
+    await db.delete(walletRecentTransfers);
     const fetched = await fetchWalletRecentTransfers(address);
     return fetched?.slice(0, normalizedLimit) ?? null;
   }
@@ -1046,4 +818,489 @@ export async function getWalletRecentTransfers(
     counterpartyAddress: item.counterpartyAddress,
     valueUsd: item.valueUsd,
   }));
+}
+
+function zrn_extractTransfers(
+  address: string,
+  transactions: ZRN_WalletTransaction[],
+): {
+  returnValues: WalletTransferV2[];
+  tokenMetaInsertValues: TokenMetaInsert[];
+  insertValues: WalletRecentTransfersInsert[];
+} {
+  const returnValues: WalletTransferV2[] = [];
+  const insertValues: WalletRecentTransfersInsert[] = [];
+  const tokenMetaInsertValues: TokenMetaInsert[] = [];
+  const fetchedAtMs = dayjs.utc().valueOf();
+
+  for (const transaction of transactions) {
+    for (const act of transaction.attributes.acts) {
+      if (act.type != "receive" && act.type != "send") continue;
+
+      const transfers = transaction.attributes.transfers.filter(
+        (t) => t.act_id == act.id,
+      );
+      if (transfers.length != 1) continue; // each send/receive act has exactly one transfer
+
+      const transfer = transfers[0];
+      const token = transfer.fungible_info;
+      const tokenAddress = zrn_getSolanaTokenAddress(token);
+      if (tokenAddress == null) continue;
+
+      const amount = Number(transfer.quantity.numeric);
+      if (!Number.isFinite(amount)) continue;
+
+      const priceUsd = transfer.price;
+      const valueUsd = transfer.value == null ? null : Number(transfer.value);
+      if (valueUsd == null || !Number.isFinite(valueUsd)) continue;
+
+      const blockTimestampMs = dayjs
+        .utc(transaction.attributes.mined_at)
+        .valueOf();
+
+      const direction = act.type == "receive" ? "receive" : "send";
+      const counterpartyAddress =
+        direction == "receive" ? transfer.sender : transfer.recipient;
+
+      tokenMetaInsertValues.push({
+        address: tokenAddress,
+        symbol: token.symbol,
+        name: token.name,
+        imageUrl: token.icon?.url || null,
+      });
+
+      returnValues.push({
+        transactionHash: transaction.attributes.hash,
+        blockTimestampMs,
+        token: {
+          address: tokenAddress,
+          amount,
+          symbol: token.symbol,
+          name: token.name,
+          logoUri: token.icon?.url || null,
+          priceUsd,
+        },
+        direction,
+        counterpartyAddress,
+        valueUsd,
+      });
+
+      insertValues.push({
+        address,
+        transactionHash: transaction.attributes.hash,
+        actId: act.id,
+        blockTimestampMs,
+        tokenAddress,
+        amount,
+        valueUsd,
+        direction,
+        counterpartyAddress,
+        priceUsd,
+        fetchedAtMs,
+      });
+    }
+  }
+
+  return { returnValues, insertValues, tokenMetaInsertValues };
+}
+
+async function zrn_extractSwaps(
+  address: string,
+  transactions: ZRN_WalletTransaction[],
+): Promise<{
+  returnValues: WalletSwapV2[];
+  tokenMetaInsertValues: TokenMetaInsert[];
+  insertValues: WalletRecentSwapsInsert[];
+}> {
+  const returnValues: WalletSwapV2[] = [];
+  const insertValues: WalletRecentSwapsInsert[] = [];
+  const tokenMetaInsertValues: TokenMetaInsert[] = [];
+  for (const transaction of transactions) {
+    for (const act of transaction.attributes.acts) {
+      if (act.type != "trade") continue;
+
+      const transfers = transaction.attributes.transfers.filter(
+        (t) => t.act_id == act.id,
+      );
+      const transferMatch = zrn_getTransferTradePair(transfers);
+      if (!transferMatch) continue;
+      const { inTransfer, outTransfer } = transferMatch;
+
+      const tokenIn = inTransfer.fungible_info;
+      const tokenOut = outTransfer.fungible_info;
+
+      const tokenInAddress = zrn_getSolanaTokenAddress(tokenIn);
+      const tokenOutAddress = zrn_getSolanaTokenAddress(tokenOut);
+      if (tokenInAddress == null || tokenOutAddress == null) continue;
+
+      tokenMetaInsertValues.push({
+        address: tokenInAddress,
+        symbol: tokenIn.symbol,
+        name: tokenIn.name,
+        imageUrl: tokenIn.icon?.url || null,
+      });
+
+      const amountIn = Number(inTransfer.quantity.numeric);
+      const amountOut = Number(outTransfer.quantity.numeric);
+      if (!Number.isFinite(amountIn) || !Number.isFinite(amountOut)) continue;
+
+      const tokenInPriceUsd = inTransfer.price;
+      const tokenOutPriceUsd = outTransfer.price;
+
+      const valueUsd = Number(
+        inTransfer.value ??
+          outTransfer.value ??
+          (tokenInPriceUsd
+            ? amountIn * tokenInPriceUsd
+            : tokenOutPriceUsd
+              ? amountOut * tokenOutPriceUsd
+              : null),
+      );
+      if (!valueUsd || !Number.isFinite(valueUsd)) continue;
+
+      const blockTimestampMs = dayjs
+        .utc(transaction.attributes.mined_at)
+        .valueOf();
+
+      returnValues.push({
+        transactionHash: transaction.attributes.hash,
+        blockTimestampMs,
+        bought: {
+          address: tokenInAddress,
+          amount: amountIn,
+          symbol: tokenIn.symbol,
+          name: tokenIn.name,
+          logoUri: tokenIn.icon?.url || null,
+          priceUsd: tokenInPriceUsd,
+        },
+        sold: {
+          address: tokenOutAddress,
+          amount: amountOut,
+          symbol: tokenOut.symbol,
+          name: tokenOut.name,
+          logoUri: tokenOut.icon?.url || null,
+          priceUsd: tokenOutPriceUsd,
+        },
+        totalValueUsd: valueUsd,
+      });
+
+      insertValues.push({
+        address,
+        transactionHash: transaction.attributes.hash,
+        actId: act.id,
+        tokenIn: tokenInAddress,
+        tokenOut: tokenOutAddress,
+        amountIn,
+        amountOut,
+        tokenInPriceUsd,
+        tokenOutPriceUsd,
+        valueUsd,
+        blockTimestampMs,
+        fetchedAtMs: dayjs.utc().valueOf(),
+      });
+    }
+  }
+  return { returnValues, insertValues, tokenMetaInsertValues };
+}
+
+type WalletSwapHistoryGapFetchResult = {
+  values: WalletSwapV2[];
+  toMs: number;
+};
+
+async function fetchWalletSwapHistory(
+  address: string,
+  fromMs: number,
+  toMs: number,
+  limit?: number,
+  writeMeta?: true,
+): Promise<WalletSwapV2[] | null>;
+async function fetchWalletSwapHistory(
+  address: string,
+  fromMs: number,
+  toMs: number,
+  limit: number,
+  writeMeta: false,
+): Promise<WalletSwapHistoryGapFetchResult | null>;
+async function fetchWalletSwapHistory(
+  address: string,
+  fromMs: number,
+  toMs: number,
+  limit: number = WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
+  writeMeta: boolean = true,
+): Promise<WalletSwapV2[] | WalletSwapHistoryGapFetchResult | null> {
+  const res = await zrn_fetchWalletTransactionsRange(
+    address,
+    "trade",
+    fromMs,
+    toMs,
+    limit,
+  );
+
+  if (!res || res.transactions.length == 0) return null;
+
+  const combinedValues = await zrn_extractSwaps(address, res.transactions);
+
+  if (combinedValues.returnValues.length == 0) {
+    return null;
+  }
+
+  await db
+    .insert(walletSwapHistory)
+    .values(combinedValues.insertValues)
+    .onConflictDoUpdate({
+      target: [
+        walletSwapHistory.address,
+        walletSwapHistory.transactionHash,
+        walletSwapHistory.actId,
+      ],
+      set: {
+        fetchedAtMs: dayjs.utc().valueOf(),
+      },
+    });
+
+  // update token meta
+  if (combinedValues.tokenMetaInsertValues.length > 0) {
+    await db
+      .insert(tokenMeta)
+      .values(combinedValues.tokenMetaInsertValues)
+      .onConflictDoNothing();
+  }
+
+  if (writeMeta) {
+    await db.insert(walletSwapHistoryMeta).values({
+      address,
+      fromInclusiveMs: fromMs,
+      toExclusiveMs: res.maxMs,
+      fetchedAtMs: dayjs.utc().valueOf(),
+    });
+  }
+
+  if (!writeMeta) {
+    return {
+      values: combinedValues.returnValues,
+      toMs: res.maxMs,
+    };
+  }
+
+  return combinedValues.returnValues;
+}
+
+// export function resolveRequestedRange(from?: number, to?: number): WalletRangeMs {
+//   const nowMs = Date.now();
+//   const monthMs = 30 * 24 * 60 * 60 * 1000;
+
+//   const requestedToMs = to ?? nowMs;
+//   const requestedFromMs =
+//     from ?? (to != null ? requestedToMs - monthMs : nowMs - monthMs);
+
+//   return {
+//     fromMs: Math.min(requestedFromMs, requestedToMs),
+//     toMs: Math.max(requestedFromMs, requestedToMs),
+//   };
+// }
+
+export async function getWalletSwapHistory(
+  address: string,
+  requestFromMs?: number,
+  requestToMs?: number,
+  limit = WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
+): Promise<WalletSwapV2[] | null> {
+  function normalizeRange(
+    fromMs?: number,
+    toMs?: number,
+  ): { fromMs: number; toMs: number } {
+    const nowMs = dayjs.utc().valueOf();
+    const monthMs = MONTH_MS;
+
+    const requestedToMs = toMs ?? nowMs;
+    const requestedFromMs =
+      fromMs ?? (toMs != null ? requestedToMs - monthMs : nowMs - monthMs);
+
+    return {
+      fromMs: Math.min(requestedFromMs, requestedToMs),
+      toMs: Math.max(requestedFromMs, requestedToMs),
+    };
+  }
+
+  const { fromMs, toMs } = normalizeRange(
+    requestFromMs,
+    requestToMs,
+  );
+
+  limit = normalizeTxLimit(limit, WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT);
+
+  const intersecting = await db
+    .select()
+    .from(walletSwapHistoryMeta)
+    .where(
+      and(
+        eq(walletSwapHistoryMeta.address, address),
+        gte(walletSwapHistoryMeta.toExclusiveMs, fromMs),
+        lte(walletSwapHistoryMeta.fromInclusiveMs, toMs),
+      ),
+    )
+    .orderBy(asc(walletSwapHistoryMeta.fromInclusiveMs));
+
+  if (intersecting.length == 0) {
+    return await fetchWalletSwapHistory(address, fromMs, toMs);
+  }
+
+  const merged: { fromMs: number; toMs: number }[] = [];
+  for (const item of intersecting) {
+    if (
+      merged.length == 0 ||
+      item.fromInclusiveMs > merged[merged.length - 1].toMs
+    ) {
+      merged.push({
+        fromMs: item.fromInclusiveMs,
+        toMs: item.toExclusiveMs,
+      });
+    } else {
+      merged[merged.length - 1].toMs = Math.max(
+        merged[merged.length - 1].toMs,
+        item.toExclusiveMs,
+      );
+    }
+  }
+
+  // Check coverage and compute gaps
+  let current = fromMs;
+  const gaps: { fromMs: number; toMs: number }[] = [];
+  for (const interval of merged) {
+    if (interval.fromMs >= toMs) {
+      break;
+    }
+    if (interval.toMs <= fromMs) {
+      continue;
+    }
+    if (interval.fromMs > current) {
+      gaps.push({
+        fromMs: current,
+        toMs: interval.fromMs,
+      });
+    }
+    if (interval.toMs > current) {
+      current = interval.toMs;
+    }
+  }
+
+  if (current < toMs) {
+    gaps.push({
+      fromMs: current,
+      toMs: toMs,
+    });
+  }
+
+  // If no gaps -> fully covered, return from db
+  if (gaps.length == 0) {
+    const rows = await db
+      .select()
+      .from(walletSwapHistory)
+      .where(
+        and(
+          eq(walletSwapHistory.address, address),
+          gte(walletSwapHistory.blockTimestampMs, fromMs),
+          lte(walletSwapHistory.blockTimestampMs, toMs),
+        ),
+      )
+      .orderBy(desc(walletSwapHistory.blockTimestampMs));
+
+    const tokenAddresses = new Set(
+      rows.flatMap((item) => [item.tokenIn, item.tokenOut]),
+    );
+    const tokenMetaRes = await db
+      .select()
+      .from(tokenMeta)
+      .where(inArray(tokenMeta.address, Array.from(tokenAddresses)));
+    const tokenMetaLookup = Object.fromEntries(
+      tokenMetaRes.map((tm) => [tm.address, tm]),
+    );
+
+    return rows.map((item) => ({
+      transactionHash: item.transactionHash,
+      blockTimestampMs: item.blockTimestampMs,
+      bought: {
+        address: item.tokenIn,
+        amount: item.amountIn,
+        symbol: tokenMetaLookup[item.tokenIn]?.symbol ?? null,
+        name: tokenMetaLookup[item.tokenIn]?.name ?? null,
+        logoUri: tokenMetaLookup[item.tokenIn]?.imageUrl ?? null,
+        priceUsd: item.tokenInPriceUsd,
+      },
+      sold: {
+        address: item.tokenOut,
+        amount: item.amountOut,
+        symbol: tokenMetaLookup[item.tokenOut]?.symbol ?? null,
+        name: tokenMetaLookup[item.tokenOut]?.name ?? null,
+        logoUri: tokenMetaLookup[item.tokenOut]?.imageUrl ?? null,
+        priceUsd: item.tokenOutPriceUsd,
+      },
+      totalValueUsd: item.valueUsd,
+    }));
+  }
+
+  // Insert the gaps into the DB
+  const gapValues: WalletSwapV2[] = [];
+  const fetchedGapIntervals: { fromMs: number; toMs: number }[] = [];
+  for (const gap of gaps) {
+    const gapRes = await fetchWalletSwapHistory(
+      address,
+      gap.fromMs,
+      gap.toMs,
+      WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
+      false,
+    );
+    if (gapRes) {
+      gapValues.push(...gapRes.values);
+      fetchedGapIntervals.push({
+        fromMs: gap.fromMs,
+        toMs: gapRes.toMs,
+      });
+    }
+  }
+
+  // Merge all affected ranges (merged + gaps) and replace old rows
+  const allIntervals = [...merged, ...fetchedGapIntervals].sort(
+    (a, b) => a.fromMs - b.fromMs,
+  );
+  const finalMerged: { fromMs: number; toMs: number }[] = [];
+  for (const interval of allIntervals) {
+    if (
+      finalMerged.length == 0 ||
+      interval.fromMs > finalMerged[finalMerged.length - 1].toMs
+    ) {
+      finalMerged.push({
+        fromMs: interval.fromMs,
+        toMs: interval.toMs,
+      });
+    } else {
+      finalMerged[finalMerged.length - 1].toMs = Math.max(
+        finalMerged[finalMerged.length - 1].toMs,
+        interval.toMs,
+      );
+    }
+  }
+
+  // Delete the old rows that were fetched
+  const idsToDelete = intersecting.map((row) => row.fromInclusiveMs);
+  await db
+    .delete(walletSwapHistoryMeta)
+    .where(
+      and(
+        eq(walletSwapHistoryMeta.address, address),
+        inArray(walletSwapHistoryMeta.fromInclusiveMs, idsToDelete),
+      ),
+    );
+
+  // Insert the new merged intervals
+  const mergedInsertValues = finalMerged.map((interval) => ({
+    address,
+    fromInclusiveMs: interval.fromMs,
+    toExclusiveMs: interval.toMs,
+    fetchedAtMs: dayjs.utc().valueOf(),
+  }));
+  await db.insert(walletSwapHistoryMeta).values(mergedInsertValues);
+
+  return gapValues;
 }
