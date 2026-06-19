@@ -62,27 +62,39 @@ export async function rlFetch(
       try {
         const resp = await fetchWithTimeout(url, fetchInit, rlTimeoutMs);
 
-        if (resp.status == 429) {
+        if (resp.status == 429 || (resp.status >= 500 && resp.status <= 599)) {
           if (attempt == rlRetries) {
             return resp;
           }
 
-          const waitMs = computeBackoff(attempt, rlRetryDelayMs);
+          const retryAfter = resp.headers.get("Retry-After");
+          let waitMs = computeBackoff(attempt, rlRetryDelayMs);
+          let delaySource = "exponential backoff";
 
-          console.warn(`Rate Limit Fetch: 429 retry in ${waitMs}ms`);
+          if (retryAfter !== null) {
+            const normalizedRetryAfter = retryAfter.trim();
+            const retryAfterSeconds = Number(normalizedRetryAfter);
 
-          await sleep(waitMs);
-          continue;
-        }
+            if (/^\d+$/.test(normalizedRetryAfter)) {
+              waitMs = retryAfterSeconds * 1_000;
+              delaySource = "Retry-After seconds";
+            } else {
+              const retryAfterDate = Date.parse(normalizedRetryAfter);
 
-        if (resp.status >= 500 && resp.status <= 599) {
-          if (attempt == rlRetries) {
-            return resp;
+              if (!Number.isNaN(retryAfterDate)) {
+                waitMs = Math.max(0, retryAfterDate - Date.now());
+                delaySource = "Retry-After date";
+              } else {
+                console.warn(
+                  `Rate Limit Fetch: ${resp.status} received invalid Retry-After header "${retryAfter}", using exponential backoff`,
+                );
+              }
+            }
           }
 
-          const waitMs = computeBackoff(attempt, rlRetryDelayMs);
-
-          console.warn(`Rate Limit Fetch: ${resp.status} retry in ${waitMs}ms`);
+          console.warn(
+            `Rate Limit Fetch: ${resp.status} retry in ${waitMs}ms using ${delaySource}`,
+          );
 
           await sleep(waitMs);
           continue;

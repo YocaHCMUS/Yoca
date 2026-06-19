@@ -56,6 +56,7 @@ import {
     DAY_MS,
     ZRN_SOL_FUNGIBLE_ID,
     WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
+    WALLET_SWAP_HISTORY_LATEST_TOLERANCE_MS,
 } from "@sv/config/constants";
 import { and, desc, eq, gt, gte, inArray, lt, lte, max } from "drizzle-orm";
 
@@ -1177,12 +1178,28 @@ export async function getWalletSwapHistory(
   requestToMs?: number,
   limit = WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
 ): Promise<WalletSwapV2[] | null> {
-  const { fromMs, toMs } = normalizeRange(
+  const requestedRange = normalizeRange(
     requestFromMs,
     requestToMs,
   );
+  const fromMs = requestedRange.fromMs;
 
   limit = normalizeTxLimit(limit, WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT);
+
+  const [latestMeta] = await db
+    .select({ toInclusiveMs: max(walletSwapHistoryMeta.toInclusiveMs) })
+    .from(walletSwapHistoryMeta)
+    .where(eq(walletSwapHistoryMeta.address, address))
+    .limit(1);
+
+  const latestCoveredToMs = latestMeta?.toInclusiveMs ?? null;
+  const toMs =
+    latestCoveredToMs != null &&
+    latestCoveredToMs < requestedRange.toMs &&
+    requestedRange.toMs - latestCoveredToMs <=
+      WALLET_SWAP_HISTORY_LATEST_TOLERANCE_MS
+      ? latestCoveredToMs
+      : requestedRange.toMs;
 
   const intersecting = await db
     .select()
