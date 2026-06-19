@@ -57,7 +57,7 @@ import {
     ZRN_SOL_FUNGIBLE_ID,
     WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
 } from "@sv/config/constants";
-import { and, asc, desc, eq, gte, inArray, lte, max } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, lt, lte, max } from "drizzle-orm";
 
 type ZRN_WalletTransaction = ZRN_WalletTransactions["data"][number];
 type ZRN_WalletTransfer =
@@ -127,7 +127,8 @@ async function zrn_fetchWalletTransactions(
 
 type ZRN_WalletTransactionsRange = {
   transactions: ZRN_WalletTransaction[];
-  maxMs: number;
+  coveredFromExclusiveMs: number;
+  coveredToInclusiveMs: number;
   cutOffByLimit: boolean;
 };
 
@@ -157,7 +158,7 @@ async function zrn_fetchWalletTransactionsRange(
   const transactions: ZRN_WalletTransaction[] = [];
   const visitedUrls = new Set<string>();
   let nextUrl: URL | null = firstPageUrl;
-  let latestFetchedMs = 0;
+  let oldestFetchedMs = toMs;
   let cutOffByLimit = false;
 
   while (nextUrl && transactions.length < maxTransactions) {
@@ -180,8 +181,8 @@ async function zrn_fetchWalletTransactionsRange(
 
     transactions.push(...rawTxs);
 
-    latestFetchedMs = Math.max(
-      latestFetchedMs,
+    oldestFetchedMs = Math.min(
+      oldestFetchedMs,
       ...rawTxs.map((tx) => dayjs.utc(tx.attributes.mined_at).valueOf()),
     );
 
@@ -196,7 +197,8 @@ async function zrn_fetchWalletTransactionsRange(
 
   return {
     transactions,
-    maxMs: cutOffByLimit ? latestFetchedMs : toMs,
+    coveredFromExclusiveMs: cutOffByLimit ? oldestFetchedMs : fromMs,
+    coveredToInclusiveMs: toMs,
     cutOffByLimit,
   };
 }
@@ -1006,7 +1008,8 @@ async function zrn_extractSwaps(
 
 type WalletSwapHistoryFetchResult = {
   values: WalletSwapV2[];
-  toMs: number;
+  coveredFromExclusiveMs: number;
+  coveredToInclusiveMs: number;
   cutOffByLimit: boolean;
 };
 
@@ -1083,15 +1086,16 @@ async function fetchWalletSwapHistoryCore(
   if (writeMeta) {
     await db.insert(walletSwapHistoryMeta).values({
       address,
-      fromInclusiveMs: fromMs,
-      toExclusiveMs: res.maxMs,
+      fromExclusiveMs: res.coveredFromExclusiveMs,
+      toInclusiveMs: res.coveredToInclusiveMs,
       fetchedAtMs: dayjs.utc().valueOf(),
     });
   }
 
   return {
     values: combinedValues.returnValues,
-    toMs: res.maxMs,
+    coveredFromExclusiveMs: res.coveredFromExclusiveMs,
+    coveredToInclusiveMs: res.coveredToInclusiveMs,
     cutOffByLimit: res.cutOffByLimit,
   };
 }
@@ -1116,8 +1120,8 @@ function normalizeRange(
 
 async function db_getSwapHistory(
   address: string,
-  fromMs: number,
-  toMs: number,
+  fromExclusiveMs: number,
+  toInclusiveMs: number,
   limit: number,
 ): Promise<WalletSwapV2[]> {
   const rows = await db
@@ -1126,8 +1130,8 @@ async function db_getSwapHistory(
     .where(
       and(
         eq(walletSwapHistory.address, address),
-        gte(walletSwapHistory.blockTimestampMs, fromMs),
-        lte(walletSwapHistory.blockTimestampMs, toMs),
+        gt(walletSwapHistory.blockTimestampMs, fromExclusiveMs),
+        lte(walletSwapHistory.blockTimestampMs, toInclusiveMs),
       ),
     )
     .orderBy(desc(walletSwapHistory.blockTimestampMs))
@@ -1186,138 +1190,138 @@ export async function getWalletSwapHistory(
     .where(
       and(
         eq(walletSwapHistoryMeta.address, address),
-        gte(walletSwapHistoryMeta.toExclusiveMs, fromMs),
-        lte(walletSwapHistoryMeta.fromInclusiveMs, toMs),
+        gt(walletSwapHistoryMeta.toInclusiveMs, fromMs),
+        lt(walletSwapHistoryMeta.fromExclusiveMs, toMs),
       ),
     )
-    .orderBy(asc(walletSwapHistoryMeta.fromInclusiveMs));
+    .orderBy(desc(walletSwapHistoryMeta.toInclusiveMs));
 
   if (intersecting.length == 0) {
     return await fetchWalletSwapHistory(address, fromMs, toMs, limit);
   }
 
-  const merged: { fromMs: number; toMs: number }[] = [];
+  const merged: { fromExclusiveMs: number; toInclusiveMs: number }[] = [];
   for (const item of intersecting) {
     if (
       merged.length == 0 ||
-      item.fromInclusiveMs > merged[merged.length - 1].toMs
+      item.toInclusiveMs < merged[merged.length - 1].fromExclusiveMs
     ) {
       merged.push({
-        fromMs: item.fromInclusiveMs,
-        toMs: item.toExclusiveMs,
+        fromExclusiveMs: item.fromExclusiveMs,
+        toInclusiveMs: item.toInclusiveMs,
       });
     } else {
-      merged[merged.length - 1].toMs = Math.max(
-        merged[merged.length - 1].toMs,
-        item.toExclusiveMs,
+      merged[merged.length - 1].fromExclusiveMs = Math.min(
+        merged[merged.length - 1].fromExclusiveMs,
+        item.fromExclusiveMs,
       );
     }
   }
 
-  // Check coverage and compute gaps
-  let current = fromMs;
-  const gaps: { fromMs: number; toMs: number }[] = [];
+  let cursorMs = toMs;
+  const gaps: { fromExclusiveMs: number; toInclusiveMs: number }[] = [];
   for (const interval of merged) {
-    if (interval.fromMs >= toMs) {
-      break;
-    }
-    if (interval.toMs <= fromMs) {
+    if (interval.toInclusiveMs <= fromMs) {
       continue;
     }
-    if (interval.fromMs > current) {
+    if (interval.fromExclusiveMs >= cursorMs) {
+      continue;
+    }
+    if (interval.toInclusiveMs < cursorMs) {
       gaps.push({
-        fromMs: current,
-        toMs: interval.fromMs,
+        fromExclusiveMs: Math.max(interval.toInclusiveMs, fromMs),
+        toInclusiveMs: cursorMs,
       });
     }
-    if (interval.toMs > current) {
-      current = interval.toMs;
+    if (interval.fromExclusiveMs < cursorMs) {
+      cursorMs = Math.max(interval.fromExclusiveMs, fromMs);
     }
   }
 
-  if (current < toMs) {
+  if (cursorMs > fromMs) {
     gaps.push({
-      fromMs: current,
-      toMs: toMs,
+      fromExclusiveMs: fromMs,
+      toInclusiveMs: cursorMs,
     });
   }
 
-  // If no gaps -> fully covered, return from db
   if (gaps.length == 0) {
     return await db_getSwapHistory(address, fromMs, toMs, limit);
   }
 
-  // Insert the gaps into the DB
-  const fetchedGapIntervals: { fromMs: number; toMs: number }[] = [];
-  let cutOffToMs: number | null = null;
+  const fetchedGapIntervals: {
+    fromExclusiveMs: number;
+    toInclusiveMs: number;
+  }[] = [];
+  let safeFromExclusiveMs: number | null = null;
   for (const gap of gaps) {
     const gapRes = await fetchWalletSwapHistoryGap(
       address,
-      gap.fromMs,
-      gap.toMs,
+      gap.fromExclusiveMs,
+      gap.toInclusiveMs,
       limit,
     );
 
-    if (gapRes) {
-      fetchedGapIntervals.push({
-        fromMs: gap.fromMs,
-        toMs: gapRes.toMs,
-      });
+    if (!gapRes) {
+      fetchedGapIntervals.push(gap);
+      continue;
+    }
 
-      if (gapRes.cutOffByLimit) {
-        cutOffToMs = gapRes.toMs;
-        break;
-      }
+    fetchedGapIntervals.push({
+      fromExclusiveMs: gapRes.coveredFromExclusiveMs,
+      toInclusiveMs: gapRes.coveredToInclusiveMs,
+    });
+
+    if (gapRes.cutOffByLimit) {
+      safeFromExclusiveMs = gapRes.coveredFromExclusiveMs;
+      break;
     }
   }
 
-  // Merge all affected ranges (merged + gaps) and replace old rows
   const allIntervals = [...merged, ...fetchedGapIntervals].sort(
-    (a, b) => a.fromMs - b.fromMs,
+    (a, b) => b.toInclusiveMs - a.toInclusiveMs,
   );
-  const finalMerged: { fromMs: number; toMs: number }[] = [];
+  const finalMerged: { fromExclusiveMs: number; toInclusiveMs: number }[] = [];
   for (const interval of allIntervals) {
     if (
       finalMerged.length == 0 ||
-      interval.fromMs > finalMerged[finalMerged.length - 1].toMs
+      interval.toInclusiveMs < finalMerged[finalMerged.length - 1].fromExclusiveMs
     ) {
       finalMerged.push({
-        fromMs: interval.fromMs,
-        toMs: interval.toMs,
+        fromExclusiveMs: interval.fromExclusiveMs,
+        toInclusiveMs: interval.toInclusiveMs,
       });
     } else {
-      finalMerged[finalMerged.length - 1].toMs = Math.max(
-        finalMerged[finalMerged.length - 1].toMs,
-        interval.toMs,
+      finalMerged[finalMerged.length - 1].fromExclusiveMs = Math.min(
+        finalMerged[finalMerged.length - 1].fromExclusiveMs,
+        interval.fromExclusiveMs,
       );
     }
   }
 
-  // Delete the old rows that were fetched
-  const idsToDelete = intersecting.map((row) => row.fromInclusiveMs);
+  const idsToDelete = intersecting.map((row) => row.toInclusiveMs);
   await db
     .delete(walletSwapHistoryMeta)
     .where(
       and(
         eq(walletSwapHistoryMeta.address, address),
-        inArray(walletSwapHistoryMeta.fromInclusiveMs, idsToDelete),
+        inArray(walletSwapHistoryMeta.toInclusiveMs, idsToDelete),
       ),
     );
 
-  // Insert the new merged intervals
   const mergedInsertValues = finalMerged.map((interval) => ({
     address,
-    fromInclusiveMs: interval.fromMs,
-    toExclusiveMs: interval.toMs,
+    fromExclusiveMs: interval.fromExclusiveMs,
+    toInclusiveMs: interval.toInclusiveMs,
     fetchedAtMs: dayjs.utc().valueOf(),
   }));
   await db.insert(walletSwapHistoryMeta).values(mergedInsertValues);
 
-  const returnToMs = cutOffToMs == null ? toMs : Math.min(toMs, cutOffToMs);
+  const returnFromExclusiveMs = safeFromExclusiveMs ?? fromMs;
   return await db_getSwapHistory(
     address,
-    fromMs,
-    returnToMs,
+    returnFromExclusiveMs,
+    toMs,
     limit,
   );
 }

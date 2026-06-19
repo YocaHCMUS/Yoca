@@ -248,9 +248,9 @@ export const walletSwapHistory = pgTable(
   },
   (t) => [
     primaryKey({ columns: [t.address, t.transactionHash, t.actId] }),
-    index("wallet_swap_history_address_fetched_at_idx").on(
+    index("wallet_swap_history_address_block_timestamp_idx").on(
       t.address,
-      t.fetchedAtMs,
+      t.blockTimestampMs,
     ),
   ],
 );
@@ -259,13 +259,13 @@ export const walletSwapHistoryMeta = pgTable(
   "wallet_swap_history_meta",
   {
     address: varchar("address", { length: 44 }).notNull(),
-    fromInclusiveMs: bigint("from_inclusive_ms", { mode: "number" }).notNull(),
-    toExclusiveMs: bigint("to_exclusive_ms", { mode: "number" }).notNull(),
+    fromExclusiveMs: bigint("from_exclusive_ms", { mode: "number" }).notNull(),
+    toInclusiveMs: bigint("to_inclusive_ms", { mode: "number" }).notNull(),
     fetchedAtMs: bigint("fetched_at_ms", { mode: "number" })
       .notNull()
       .$onUpdate(() => dayjs.utc().valueOf()),
   },
   (t) => [
-    primaryKey({ columns: [t.address, t.fromInclusiveMs] }),
+    primaryKey({ columns: [t.address, t.toInclusiveMs] }),
   ],
 );
