@@ -2580,6 +2580,10 @@ export const translation = defineTranslation({
     },
     risk: {
       title: "Điểm rủi ro — {{target}}",
+      walletTitle: "Điểm GNN của ví — {{target}}",
+      tokenRiskScore: "Điểm rủi ro token",
+      scoreOutOf100: "{{score}}/100",
+      walletFeatureTitle: "Đặc trưng hành vi của ví đã chọn",
       high: "Rủi ro cao",
       medium: "Rủi ro trung bình",
       low: "Rủi ro thấp",

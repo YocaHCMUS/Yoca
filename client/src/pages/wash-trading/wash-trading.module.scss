@@ -689,6 +689,37 @@
   gap: 12px;
 }
 
+.riskScoreMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -4px 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--hover-bg);
+  border: 1px solid var(--border-light);
+
+  span {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  strong {
+    color: var(--text-title);
+    font-size: 13px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+}
+
+.featuresTitle {
+  color: var(--text-title);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .featureRow {
   display: grid;
   grid-template-columns: 120px 1fr 42px;

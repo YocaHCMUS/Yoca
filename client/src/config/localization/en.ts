@@ -2582,6 +2582,10 @@ export const translation = {
     },
     risk: {
       title: "Risk Score — {{target}}",
+      walletTitle: "Wallet GNN Score — {{target}}",
+      tokenRiskScore: "Token risk score",
+      scoreOutOf100: "{{score}}/100",
+      walletFeatureTitle: "Selected wallet behavior features",
       high: "High Risk",
       medium: "Medium Risk",
       low: "Low Risk",

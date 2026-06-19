@@ -777,12 +777,9 @@ const WashTradingPage: React.FC = () => {
   const summary = result?.summary;
   const riskScore = summary?.overallRiskScore ?? 0;
   const suspiciousCount = summary?.suspiciousWalletCount ?? 0;
-  const riskLabel = riskScore >= 75
-    ? tr("washTrading.risk.high")
-    : riskScore >= 45
-    ? tr("washTrading.risk.medium")
-    : riskScore > 0
-    ? tr("washTrading.risk.low")
+  const walletGnnScore = topWallet ? Math.round(Math.max(0, Math.min(1, topWallet.score || 0)) * 100) : 0;
+  const walletRiskLabel = topWallet
+    ? getRiskLevelLabel(normalizeRiskLevel(topWallet.riskLevel), tr)
     : tr("washTrading.risk.noSignal");
   const verdictLabel = result?.aiAnalysis.verdict === "HIGH_RISK"
     ? tr("washTrading.verdict.highRisk")
@@ -1032,10 +1029,15 @@ const WashTradingPage: React.FC = () => {
             <div className={styles.card}>
               <div className={styles.cardHeader}>
                 <span className={styles.cardIcon}>🛡</span>
-                <h2 className={styles.cardTitle}>{tr("washTrading.risk.title", { target: topWallet ? shortAddress(topWallet.wallet) : symbol })}</h2>
+                <h2 className={styles.cardTitle}>{tr("washTrading.risk.walletTitle", { target: topWallet ? shortAddress(topWallet.wallet) : "—" })}</h2>
               </div>
-              <RiskGauge score={riskScore} label={String(riskLabel)} />
+              <RiskGauge score={walletGnnScore} label={String(walletRiskLabel)} />
+              <div className={styles.riskScoreMeta}>
+                <span>{tr("washTrading.risk.tokenRiskScore")}</span>
+                <strong>{tr("washTrading.risk.scoreOutOf100", { score: formatCompactNumber(riskScore) })}</strong>
+              </div>
               <div className={styles.featuresSection}>
+                <div className={styles.featuresTitle}>{tr("washTrading.risk.walletFeatureTitle")}</div>
                 <FeatureBar label={String(tr("washTrading.risk.circularPattern"))} value={featureSource?.circularPattern ?? 0} />
                 <FeatureBar label={String(tr("washTrading.risk.timeRegularity"))} value={featureSource?.timeRegularity ?? 0} />
                 <FeatureBar label={String(tr("washTrading.risk.amountSimilarity"))} value={featureSource?.amountSimilarity ?? 0} />
