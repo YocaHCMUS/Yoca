@@ -1,10 +1,10 @@
 import client from "@/api/main";
 import { ProfitableTradersView } from "@/components/market/ProfitableTradersView";
 import {
-  DexTable,
-  INITIAL_FILTERS,
-  SortKey,
-  TableFilters,
+    DexTable,
+    INITIAL_FILTERS,
+    SortKey,
+    TableFilters,
 } from "@/components/market/DexTable";
 import { Txt } from "@/components/Txt";
 import { PageWrapper } from "@/components/wrapper";
@@ -12,15 +12,15 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import overwriteStyles from "@/styles/_overwrite.module.scss";
 import {
-  ArrowUp,
-  ChartBar,
-  Checkmark,
-  ChevronDown,
-  Close,
-  Growth,
-  SettingsAdjust,
-  Star,
-  Trophy,
+    ArrowUp,
+    ChartBar,
+    Checkmark,
+    ChevronDown,
+    Close,
+    Growth,
+    SettingsAdjust,
+    Star,
+    Trophy,
 } from "@carbon/icons-react";
 import { Column, Grid, Section, Stack } from "@carbon/react";
 import classNames from "classnames";

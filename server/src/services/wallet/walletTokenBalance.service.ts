@@ -170,7 +170,6 @@ export async function getWalletTokenBalanceHistory(
       missingTokens,
       zrnPeriod,
     );
-    console.log("Fetch new tokens: ", missingTokens);
     const merged = { ...grouped, ...fetched };
     const normalizedGrouped = normalizeByDay(merged);
     return alignEndTimestamps(normalizedGrouped);

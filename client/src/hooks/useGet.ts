@@ -1,8 +1,8 @@
 // I stopped trying to understand this a while ago
 import type {
-  ClientRequest,
-  ClientRequestOptions,
-  ClientResponse,
+    ClientRequest,
+    ClientRequestOptions,
+    ClientResponse,
 } from "hono/client";
 import useSWR from "swr";
 
@@ -47,6 +47,7 @@ export function useGet<
   SuccessResponseType = SuccessResponse<Response, SuccessStatus>,
   Success = SuccessJson<SuccessResponseType>,
   Transformed = Success,
+  Error = ErrorResponse<Response, SuccessStatus>,
 >(
   request: T,
   successStatus: SuccessStatus,
@@ -54,8 +55,6 @@ export function useGet<
     ? [args: GetInput<T>, config?: UseGetConfig<Success, Transformed>]
     : [args?: GetInput<T>, config?: UseGetConfig<Success, Transformed>]
 ) {
-  type Error = ErrorResponse<Response, SuccessStatus>;
-
   const [args, config] = params;
   const { options, select, enabled = true } = config ?? {};
 
@@ -79,3 +78,9 @@ export function useGet<
     },
   );
 }
+
+export type UseGetResp<Data, Error = any> = {
+  isLoading: boolean;
+  data: Data | undefined;
+  error: Error | undefined;
+};

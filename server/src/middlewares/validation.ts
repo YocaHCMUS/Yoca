@@ -391,9 +391,14 @@ export const envSchema = z.object({
   ZERION_API_KEY: z.string(),
 
   HELIUS_API_KEY: z.string(),
+  HELIUS_API_BASE: z
+    .url()
+    .optional()
+    .default("https://api.helius.xyz"),
   HELIUS_AUTH_HEADER: z.string().optional().default(""),
   HELIUS_WEBHOOK_AUTH_KEY: z.string(),
-  HELIUS_WEBHOOK_ID: z.string(),
+  HELIUS_WEBHOOK_ID: z.string().optional().default(""),
+  PUBLIC_WEBHOOK_URL: z.string().optional().default(""),
   WEBHOOK_PUBLIC_URL: z.string().optional().default(""),
   WEBHOOK_SOL_PRICE_USD: z.coerce.number().positive().optional().default(150),
   MORALIS_API_BASE_URL: z.url().default("https://solana-gateway.moralis.io"),

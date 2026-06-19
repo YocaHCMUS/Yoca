@@ -12,6 +12,7 @@ const serviceMocks = vi.hoisted(() => ({
   setUserDiscordUrl: vi.fn(),
   setUserEmailAlertSettings: vi.fn(),
   syncHeliusWebhookAccountAddresses: vi.fn(),
+  getHeliusWebhookDiagnostics: vi.fn(),
 }));
 
 vi.mock("@sv/middlewares/validation.js", async () => {
@@ -67,6 +68,10 @@ vi.mock("@sv/services/followedWallets.service.js", () => ({
     serviceMocks.syncHeliusWebhookAccountAddresses,
 }));
 
+vi.mock("@sv/services/heliusWebhooks.service.js", () => ({
+  getHeliusWebhookDiagnostics: serviceMocks.getHeliusWebhookDiagnostics,
+}));
+
 import alertsRoute from "@sv/routes/alerts.route.js";
 
 describe("alerts settings route", () => {
@@ -77,6 +82,29 @@ describe("alerts settings route", () => {
       registeredEmail: "alerts@example.com",
       emailAlertsEnabled: false,
       emailAlertsAddress: null,
+    });
+    serviceMocks.getHeliusWebhookDiagnostics.mockResolvedValue({
+      totalWatchedAddressCount: 26,
+      maxAddressesPerWebhook: 25,
+      requiredHeliusWebhookCount: 2,
+      managedHeliusWebhookCount: 2,
+      shardAddressCounts: [],
+      oldEnvWebhookConfigured: false,
+      oldEnvWebhookIdPresent: false,
+      legacyCutoverRequired: false,
+      publicWebhookUrlConfigured: true,
+      publicWebhookUrlLooksLocalhost: false,
+      lastShardSyncStatus: "ok",
+      lastShardSyncError: null,
+      lastSuccessfulShardSyncAt: "2026-06-11T00:00:00.000Z",
+      warnings: [],
+      lastSyncStatus: "ok",
+      lastSyncError: null,
+      configured: {
+        publicWebhookUrl: true,
+        heliusApiKey: true,
+        heliusWebhookAuthKey: true,
+      },
     });
   });
 
@@ -134,5 +162,50 @@ describe("alerts settings route", () => {
         emailAlertsAddress: "override@example.com",
       },
     );
+  });
+
+  it("returns dev-only Helius shard diagnostics without exposing env values", async () => {
+    const response = await alertsRoute.request("/diagnostics");
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      totalWatchedAddressCount: 26,
+      maxAddressesPerWebhook: 25,
+      requiredHeliusWebhookCount: 2,
+      oldEnvWebhookConfigured: false,
+      legacyCutoverRequired: false,
+      publicWebhookUrlConfigured: true,
+      configured: {
+        publicWebhookUrl: true,
+        heliusApiKey: true,
+      },
+    });
+  });
+
+  it("returns the saved wallet when Helius sync throws after insert", async () => {
+    serviceMocks.addFollowedWallet.mockResolvedValue({
+      id: 1,
+      userId: "user-1",
+      address: "Wallet0001",
+      label: null,
+    });
+    serviceMocks.syncHeliusWebhookAccountAddresses.mockRejectedValue(
+      new Error('relation "helius_webhooks" does not exist'),
+    );
+
+    const response = await alertsRoute.request("/", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ address: "Wallet0001", label: null }),
+    });
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({
+      wallet: { address: "Wallet0001" },
+      heliusSync: {
+        ok: false,
+        error: expect.stringContaining("helius_webhooks"),
+      },
+    });
   });
 });

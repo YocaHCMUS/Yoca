@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { CheckCircle2 } from "lucide-react";
 import { useLocalization } from "@/contexts/LocalizationContext";
 
 type PaymentSuccessModalProps = {
@@ -34,7 +35,7 @@ export function PaymentSuccessModal({ open, tierName, onClose }: PaymentSuccessM
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className={`absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity duration-700 ${
+        className={`absolute inset-0 bg-[#050509]/85 backdrop-blur-md transition-opacity duration-700 ${
           showContent ? "opacity-100" : "opacity-0"
         }`}
         onClick={onClose}
@@ -42,7 +43,7 @@ export function PaymentSuccessModal({ open, tierName, onClose }: PaymentSuccessM
 
       {/* Modal Card */}
       <div 
-        className={`relative w-full max-w-md bg-[#0f0f17] border border-white/5 shadow-[0_0_100px_rgba(20,241,149,0.15)] overflow-hidden transition-all duration-500 ease-out transform ${
+        className={`relative w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-[#0f0f17]/95 shadow-[0_30px_100px_-42px_rgba(20,241,149,0.55)] backdrop-blur-xl transition-all duration-500 ease-out transform ${
           showContent ? "scale-100 opacity-100 translate-y-0" : "scale-95 opacity-0 translate-y-8"
         }`}
       >
@@ -52,20 +53,15 @@ export function PaymentSuccessModal({ open, tierName, onClose }: PaymentSuccessM
         <div className="!px-10 !py-12 sm:!px-16 sm:!py-14 flex flex-col items-center text-center">
           {/* Success Icon Animation */}
           <div className="relative mb-8">
-            <div className={`w-20 h-20 rounded-full border-2 border-[#14F195]/30 flex items-center justify-center transition-all duration-1000 delay-300 ${
+            <div className={`flex h-20 w-20 items-center justify-center rounded-2xl border border-[#14F195]/30 bg-[#14F195]/10 transition-all duration-1000 delay-300 ${
               showContent ? "scale-110 border-[#14F195]" : "scale-50 border-transparent"
             }`}>
-              <svg 
-                className={`w-10 h-10 text-[#14F195] transition-all duration-700 delay-700 ${
+              <CheckCircle2
+                className={`h-10 w-10 text-[#14F195] transition-all duration-700 delay-700 ${
                   showContent ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
                 }`}
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth={3} 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
+                aria-hidden="true"
+              />
             </div>
             {/* Pulsing rings */}
             <div className="absolute inset-0 rounded-full bg-[#14F195]/20 animate-ping opacity-20" />
@@ -93,13 +89,13 @@ export function PaymentSuccessModal({ open, tierName, onClose }: PaymentSuccessM
           }`}>
             <button
               onClick={() => window.location.href = "/profile"}
-              className="w-full py-4 rounded-none bg-[#14F195] text-[#0a0a0f] font-bold text-xs uppercase tracking-[0.2em] hover:bg-[#0fd484] transition-all duration-300 shadow-[0_10px_20px_rgba(20,241,149,0.2)]"
+              className="w-full rounded-full bg-[#14F195] py-4 text-xs font-bold uppercase tracking-[0.18em] text-[#0a0a0f] shadow-[0_14px_36px_-20px_rgba(20,241,149,0.9)] transition-all duration-300 hover:bg-[#0fd484]"
             >
               {tr("payment.success.goToProfile")}
             </button>
             <button
               onClick={onClose}
-              className="w-full py-4 rounded-none border border-white/10 text-[#64748b] font-bold text-xs uppercase tracking-[0.2em] hover:text-white hover:bg-white/5 transition-all duration-200"
+              className="w-full rounded-full border border-white/10 py-4 text-xs font-bold uppercase tracking-[0.18em] text-[#64748b] transition-all duration-200 hover:bg-white/5 hover:text-white"
             >
               {tr("payment.shared.maybeLater")}
             </button>

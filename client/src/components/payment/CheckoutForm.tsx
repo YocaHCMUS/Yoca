@@ -1,5 +1,6 @@
 import { PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { useState } from "react";
+import { Building2, CreditCard, Wallet } from "lucide-react";
 import client from "@/api/main";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { SolanaPaymentFlow } from "./SolanaPaymentFlow";
@@ -141,7 +142,7 @@ export function CheckoutForm({
   return (
     <div className="flex flex-col gap-6">
       {/* Order Summary */}
-      <div className="flex items-center justify-between !p-6 rounded-2xl bg-white/5 border border-white/10 shadow-inner">
+      <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] !p-5 shadow-inner">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b]">
             {tr("payment.checkout.plan")}
@@ -157,7 +158,7 @@ export function CheckoutForm({
       </div>
 
       {/* Payment Method Cards Grid */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="mb-5 grid grid-cols-3 gap-3">
         {/* Cash Payment Method */}
         <button
           type="button"
@@ -165,19 +166,13 @@ export function CheckoutForm({
             onMethodChange("card");
             setErrorMsg(null);
           }}
-          className={`relative px-3 py-4 !rounded-[22px] overflow-hidden border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2 text-center ${
+          className={`relative flex min-h-24 flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border px-3 py-4 text-center transition-all duration-300 ${
             activeMethod === "card"
-              ? "bg-[#14F195] border-[#14F195] shadow-[0_0_24px_rgba(20,241,149,0.4)]"
-              : "bg-transparent border-white/20 hover:border-white/30 hover:bg-white/5"
+              ? "bg-[#14F195] border-[#14F195] shadow-[0_16px_34px_-22px_rgba(20,241,149,0.95)]"
+              : "bg-white/[0.03] border-white/10 hover:border-white/25 hover:bg-white/[0.06]"
           }`}
         >
-          <div
-            className={`text-3xl ${
-              activeMethod === "card" ? "text-[#0a0a0f]" : "text-[#64748b]"
-            }`}
-          >
-            💳
-          </div>
+          <CreditCard className={`h-5 w-5 ${activeMethod === "card" ? "text-[#0a0a0f]" : "text-[#94a3b8]"}`} aria-hidden="true" />
           <div>
             <p
               className={`text-sm font-bold tracking-wide ${
@@ -196,19 +191,13 @@ export function CheckoutForm({
             onMethodChange("bank");
             setErrorMsg(null);
           }}
-          className={`relative px-3 py-4 !rounded-[22px] overflow-hidden border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2 text-center ${
+          className={`relative flex min-h-24 flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border px-3 py-4 text-center transition-all duration-300 ${
             activeMethod === "bank"
-              ? "bg-[#14F195] border-[#14F195] shadow-[0_0_24px_rgba(20,241,149,0.4)]"
-              : "bg-transparent border-white/20 hover:border-white/30 hover:bg-white/5"
+              ? "bg-[#14F195] border-[#14F195] shadow-[0_16px_34px_-22px_rgba(20,241,149,0.95)]"
+              : "bg-white/[0.03] border-white/10 hover:border-white/25 hover:bg-white/[0.06]"
           }`}
         >
-          <div
-            className={`text-3xl ${
-              activeMethod === "bank" ? "text-[#0a0a0f]" : "text-[#64748b]"
-            }`}
-          >
-            🏦
-          </div>
+          <Building2 className={`h-5 w-5 ${activeMethod === "bank" ? "text-[#0a0a0f]" : "text-[#94a3b8]"}`} aria-hidden="true" />
           <div>
             <p
               className={`text-sm font-bold tracking-wide ${
@@ -236,19 +225,13 @@ export function CheckoutForm({
             onMethodChange("solana");
             setErrorMsg(null);
           }}
-          className={`relative px-3 py-4 !rounded-[22px] overflow-hidden border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2 text-center ${
+          className={`relative flex min-h-24 flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border px-3 py-4 text-center transition-all duration-300 ${
             activeMethod === "solana"
-              ? "bg-[#14F195] border-[#14F195] shadow-[0_0_24px_rgba(20,241,149,0.4)]"
-              : "bg-transparent border-white/20 hover:border-white/30 hover:bg-white/5"
+              ? "bg-[#14F195] border-[#14F195] shadow-[0_16px_34px_-22px_rgba(20,241,149,0.95)]"
+              : "bg-white/[0.03] border-white/10 hover:border-white/25 hover:bg-white/[0.06]"
           }`}
         >
-          <div
-            className={`text-3xl ${
-              activeMethod === "solana" ? "text-[#0a0a0f]" : "text-[#64748b]"
-            }`}
-          >
-            ◎
-          </div>
+          <Wallet className={`h-5 w-5 ${activeMethod === "solana" ? "text-[#0a0a0f]" : "text-[#94a3b8]"}`} aria-hidden="true" />
           <div>
             <p
               className={`text-sm font-bold tracking-wide ${
@@ -264,7 +247,7 @@ export function CheckoutForm({
       {/* Card Payment Form */}
       {activeMethod === "card" && (
         <form onSubmit={handleStripeSubmit} className="flex flex-col gap-4">
-          <div className="rounded-xl overflow-hidden">
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
             <PaymentElement
               id="stripe-payment-element-card"
               options={{
@@ -278,7 +261,7 @@ export function CheckoutForm({
           {errorMsg && (
             <div
               role="alert"
-              className="flex items-start gap-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm"
+              className="flex items-start gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400"
             >
               <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -315,7 +298,7 @@ export function CheckoutForm({
       {/* Bank Account Payment Form */}
       {activeMethod === "bank" && (
         <form onSubmit={handleStripeSubmit} className="flex flex-col gap-4">
-          <div className="rounded-xl overflow-hidden">
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
             <PaymentElement
               id="stripe-payment-element-bank"
               options={{
@@ -329,7 +312,7 @@ export function CheckoutForm({
           {errorMsg && (
             <div
               role="alert"
-              className="flex items-start gap-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm"
+              className="flex items-start gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400"
             >
               <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

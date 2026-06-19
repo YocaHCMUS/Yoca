@@ -1,5 +1,5 @@
 import { ChevronDown, WarningFilled } from "@carbon/icons-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
 
 import styles from "./DropdownPanelField.module.scss";
 
@@ -17,10 +17,15 @@ interface DropdownPanelFieldProps<TValue> {
   helperText?: string;
   invalid?: boolean;
   invalidText?: ReactNode;
+  // Uncontrolled: initial value
   initialValue?: TValue | null;
+  // Controlled: current value
+  value?: TValue | null;
+  // Callback when value changes (works for both modes)
   onValueChange?: (value: TValue | null) => void;
   renderValue?: (value: TValue) => ReactNode;
   renderPanel: (params: DropdownPanelFieldRenderParams<TValue>) => ReactNode;
+  style?: CSSProperties
 }
 
 export default function DropdownPanelField<TValue = string>({
@@ -31,17 +36,34 @@ export default function DropdownPanelField<TValue = string>({
   invalid = false,
   invalidText,
   initialValue,
+  value: controlledValue,
   onValueChange,
   renderValue,
   renderPanel,
+  style,
 }: DropdownPanelFieldProps<TValue>) {
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   const [isOpen, setIsOpen] = useState(false);
-  const [value, setValueState] = useState<TValue | null>(initialValue ?? null);
+  // Internal state for uncontrolled mode
+  const [internalValue, setInternalValue] = useState<TValue | null>(
+    initialValue ?? null
+  );
 
+  // Determine if component is controlled
+  const isControlled = controlledValue !== undefined;
+  const currentValue = isControlled ? controlledValue : internalValue;
+
+  // Sync internal state when controlled value changes (optional, for convenience)
+  useEffect(() => {
+    if (isControlled) {
+      setInternalValue(controlledValue);
+    }
+  }, [isControlled, controlledValue]);
+
+  // Close panel on outside click / escape (unchanged)
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -55,7 +77,7 @@ export default function DropdownPanelField<TValue = string>({
     };
 
     const onEscape = (event: KeyboardEvent) => {
-      if (event.key == "Escape") {
+      if (event.key === "Escape") {
         setIsOpen(false);
       }
     };
@@ -69,17 +91,24 @@ export default function DropdownPanelField<TValue = string>({
     };
   }, []);
 
+  // Function to update value (works for both controlled/uncontrolled)
   const setValue = (nextValue: TValue | null) => {
-    setValueState(nextValue);
-    onValueChange?.(nextValue);
+    if (isControlled) {
+      // Controlled mode: just notify parent, no internal state change
+      onValueChange?.(nextValue);
+    } else {
+      // Uncontrolled mode: update internal state and notify
+      setInternalValue(nextValue);
+      onValueChange?.(nextValue);
+    }
   };
 
   const selectedValueNode =
-    value == null
+    currentValue == null
       ? placeholder
       : renderValue
-        ? renderValue(value)
-        : String(value);
+        ? renderValue(currentValue)
+        : String(currentValue);
 
   const resolvedInvalidText = invalidText ?? "A valid value is required";
   const helperTextId = `${id}-helper`;
@@ -91,7 +120,7 @@ export default function DropdownPanelField<TValue = string>({
       : undefined;
 
   return (
-    <div className="cds--form-item" ref={rootRef}>
+    <div className="cds--form-item" ref={rootRef} style={style}>
       <div
         className={`cds--select ${invalid ? "cds--select--invalid" : ""} ${styles.container}`}
       >
@@ -149,7 +178,7 @@ export default function DropdownPanelField<TValue = string>({
           {renderPanel({
             closePanel: () => setIsOpen(false),
             setValue,
-            value,
+            value: currentValue,
             isOpen,
           })}
         </div>

@@ -42,7 +42,7 @@ type ChatClient = ClientTypeOf<"/api/chat">;
 type PaymentClient = ClientTypeOf<"/api/payment">;
 type WashTradingClient = ClientTypeOf<"/api/v1/wash-trading">;
 
-export type ApiClient = {
+type ApiClient = {
   api: {
     users: UsersClient;
     auth: AuthClient;

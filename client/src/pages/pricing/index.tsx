@@ -1,11 +1,9 @@
 import "@/styles/landing-tailwind.css";
 import { useState, useEffect } from "react";
+import { Zap } from "lucide-react";
 import { LandingFooter, LandingNavbar } from "@/components/landing";
 import {
   LANDING_ACCENT_GLOW,
-  btnPrimaryBase,
-  btnPrimaryEnter,
-  btnPrimaryLeave,
 } from "@/components/landing/tokens";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
@@ -38,59 +36,13 @@ const PRO_TIER = {
   accentColor: "#14F195" as const,
 };
 
-// ─── Icons ─────────────────────────────────────────────────────────────────────
-
-function CheckIcon({ color = "#14F195" }: { color?: string }) {
-  return (
-    <svg
-      className="w-4 h-4 shrink-0 mt-0.5"
-      fill="none"
-      stroke={color}
-      strokeWidth={2}
-      viewBox="0 0 24 24"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-    </svg>
-  );
-}
-
-function BoltIcon({ color = "#14F195" }: { color?: string }) {
-  return (
-    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-    </svg>
-  );
-}
-
-// ─── Metric Row ────────────────────────────────────────────────────────────────
-
-function MetricRow({
-  label,
-  value,
-  accent = false,
-  color = "#14F195",
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-  color?: string;
-}) {
-  return (
-    <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-[#64748b] mb-1">
-        {label}
-      </p>
-      <p
-        className="text-[15px] font-semibold"
-        style={{ color: accent ? color : "#f8fafc" }}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
 // ─── Main Component ────────────────────────────────────────────────────────────
+
+const pricingCardClass =
+  "flex flex-col !p-7 lg:!p-8 rounded-2xl border border-[var(--landing-card-border)] bg-[var(--landing-card-bg)] backdrop-blur-xl shadow-[var(--landing-card-shadow)] transition-all duration-300 hover:-translate-y-1 hover:border-[#14F195]/45 hover:shadow-[0_22px_70px_-44px_rgba(20,241,149,0.65)]";
+
+const pricingCtaClass =
+  "w-full min-h-11 py-3 rounded-full text-xs font-bold uppercase tracking-[0.18em] bg-[var(--landing-button-secondary-bg)] border border-[var(--landing-button-secondary-border)] hover:bg-[var(--landing-button-secondary-hover-bg)] hover:border-[var(--landing-button-secondary-hover-border)] transition-all duration-300 text-[var(--landing-foreground)]";
 
 export default function PricingPage() {
   const { user } = useAuth();
@@ -134,6 +86,10 @@ export default function PricingPage() {
     features: [placeholder, placeholder, placeholder, placeholder, placeholder],
   };
   const col1 = isStandard ? localizedStandard : localizedLite;
+  const isLightTheme = theme === "light";
+  const purpleOrb = isLightTheme ? "rgba(153,69,255,0.08)" : "rgba(153,69,255,0.2)";
+  const greenOrb = isLightTheme ? "rgba(20,241,149,0.07)" : "rgba(20,241,149,0.10)";
+  const centerGlow = isLightTheme ? "rgba(20,241,149,0.11)" : LANDING_ACCENT_GLOW;
 
   // Payment flow state
   const [isAuthReminderOpen, setIsAuthReminderOpen] = useState(false);
@@ -176,12 +132,12 @@ export default function PricingPage() {
   return (
     <div
       id="pricing"
-      className="landing-page min-h-screen w-full antialiased relative flex flex-col"
+      className="landing-page relative h-screen w-full overflow-y-auto antialiased"
       style={createLandingThemeStyles(theme)}
     >
       <LandingNavbar />
 
-      <main className="relative flex-grow flex flex-col items-center pt-32 pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <main className="relative flex flex-col items-center pt-32 pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* ── Background Orbs ── */}
         <div
           aria-hidden
@@ -191,7 +147,7 @@ export default function PricingPage() {
             top: "4rem",
             width: 500,
             height: 500,
-            background: "rgba(153,69,255,0.2)",
+            background: purpleOrb,
             filter: "blur(110px)",
           }}
         />
@@ -203,7 +159,7 @@ export default function PricingPage() {
             top: "8rem",
             width: 420,
             height: 420,
-            background: "rgba(20,241,149,0.10)",
+            background: greenOrb,
             filter: "blur(110px)",
           }}
         />
@@ -216,7 +172,7 @@ export default function PricingPage() {
             width: 700,
             height: 350,
             transform: "translate(-50%, -50%)",
-            background: LANDING_ACCENT_GLOW,
+            background: centerGlow,
             filter: "blur(90px)",
           }}
         />
@@ -229,34 +185,34 @@ export default function PricingPage() {
         />
 
         {/* ── Header ── */}
-        <div className="relative z-10 flex flex-col items-center text-center w-full max-w-3xl mx-auto mb-20">
-          <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-[var(--landing-)] mb-5">
+        <div className="relative z-10 flex flex-col items-center gap-5 text-center w-full max-w-3xl mx-auto">
+          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-[var(--landing-foreground)]">
             {tr("pricing.title")}
           </h1>
-          <p className="text-lg text-[#94a3b8] leading-relaxed">
+          <p className="text-base sm:text-lg text-[var(--landing-muted)] leading-relaxed">
             {tr("pricing.subtitle")}
           </p>
         </div>
 
         {/* ── Cards Grid ── */}
-        <div className="relative z-10 w-full max-w-6xl mx-auto !mt-20">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
+        <div className="relative z-10 w-full max-w-6xl mx-auto !mt-14 sm:!mt-16 lg:!mt-20">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6">
 
             {/* ── Card 1: Dynamic Lite / Standard ── */}
-            <div className="flex flex-col !p-8 lg:!p-10 rounded-3xl border border-[var(--landing-)] bg-[var(--landing-)] backdrop-blur-xl shadow-2xl hover:border-[#14F195]/40 transition-all duration-300">
+            <div className={pricingCardClass}>
               <div className="flex flex-col flex-1 gap-6">
 
                 {/* Tier name + price */}
-                <div className="space-y-3 pb-6 border-b border-[var(--landing-)]">
+                <div className="space-y-3 pb-6 border-b border-[var(--landing-border)]">
                   <div className="flex items-center gap-2">
-                    <BoltIcon color="#14F195" />
-                    <h3 className="text-lg font-semibold text-[var(--landing-)]">{col1.name}</h3>
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#14F195]/25 bg-[#14F195]/10 text-[#14F195]">
+                      <Zap className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <h3 className="text-xl font-semibold text-[var(--landing-foreground)]">{col1.name}</h3>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-extrabold text-[var(--landing-)]">{col1.price}</span>
-                    {col1.period && (
-                      <span className="text-sm text-[#64748b] font-medium">{col1.period}</span>
-                    )}
+                    <span className="text-4xl font-semibold text-[var(--landing-foreground)]">{col1.price}</span>
+                    {col1.period && <span className="text-sm text-[var(--landing-muted)] font-medium">{col1.period}</span>}
                   </div>
                 </div>
 
@@ -268,21 +224,21 @@ export default function PricingPage() {
                 </div>
 
                 {/* Toggle + CTA */}
-                <div className="space-y-4 pt-6 border-t border-[var(--landing-)]">
+                <div className="space-y-4 pt-6 border-t border-[var(--landing-border)]">
                   {/* Pill toggle */}
                   <button
                     type="button"
                     role="switch"
                     aria-checked={isStandard}
                     onClick={() => setIsStandard((v) => !v)}
-                    className="w-full flex items-center justify-between bg-[var(--landing-)] hover:bg-[var(--landing-)] border border-[var(--landing-)] !rounded-full px-4 py-2.5 transition-all duration-200 cursor-pointer"
+                    className="w-full flex items-center justify-between bg-[var(--landing-button-secondary-bg)] hover:bg-[var(--landing-button-secondary-hover-bg)] border border-[var(--landing-button-secondary-border)] !rounded-full px-4 py-2.5 transition-all duration-200 cursor-pointer"
                   >
                     <span className="text-xs font-bold uppercase tracking-widest text-[#94a3b8]">
                       {tr("pricing.tiers.standard.name")}
                     </span>
                     <span
                       className={`relative flex items-center justify-start h-6 w-11 shrink-0 !rounded-full transition-colors duration-300 p-0.5 ${
-                        isStandard ? "bg-[#14F195]" : "bg-[var(--landing-border)]"
+                        isStandard ? "bg-[#14F195]" : "bg-[var(--landing-card-border)]"
                       }`}
                     >
                       <span
@@ -299,7 +255,7 @@ export default function PricingPage() {
                       id="pricing-lite-buy-btn"
                       type="button"
                       onClick={() => handleBuyNow({ name: col1.name, price: col1.price })}
-                      className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-[var(--landing-)] border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-[var(--landing-)]"
+                      className={pricingCtaClass}
                     >
                       {col1.cta}
                     </button>
@@ -307,7 +263,7 @@ export default function PricingPage() {
                     <button
                       id="pricing-standard-try-btn"
                       type="button"
-                      className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-[var(--landing-)] border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-[var(--landing-)]"
+                      className={pricingCtaClass}
                     >
                       {col1.cta}
                     </button>
@@ -317,17 +273,19 @@ export default function PricingPage() {
             </div>
 
             {/* ── Card 2: Plus ── */}
-            <div className="flex flex-col !p-8 lg:!p-10 rounded-3xl border border-[#14F195]/30 bg-[var(--landing-)] backdrop-blur-xl shadow-[0_0_40px_rgba(20,241,149,0.08)] hover:shadow-[0_0_60px_rgba(20,241,149,0.15)] hover:border-[#14F195]/60 transition-all duration-300 relative">
+            <div className={`${pricingCardClass} relative border-[#14F195]/35 shadow-[0_22px_70px_-48px_rgba(20,241,149,0.8)]`}>
               <div className="flex flex-col flex-1 gap-6">
                 {/* Tier name + price */}
-                <div className="space-y-3 pb-6 border-b border-[var(--landing-)]">
+                <div className="space-y-3 pb-6 border-b border-[var(--landing-border)]">
                   <div className="flex items-center gap-2">
-                    <BoltIcon color="#14F195" />
-                    <h3 className="text-lg font-semibold text-[var(--landing-)]">{localizedPlus.name}</h3>
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#14F195]/25 bg-[#14F195]/10 text-[#14F195]">
+                      <Zap className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <h3 className="text-xl font-semibold text-[var(--landing-foreground)]">{localizedPlus.name}</h3>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-extrabold text-[var(--landing-)]">{localizedPlus.price}</span>
-                    <span className="text-sm text-[#64748b] font-medium">{localizedPlus.period}</span>
+                    <span className="text-4xl font-semibold text-[var(--landing-foreground)]">{localizedPlus.price}</span>
+                    <span className="text-sm text-[var(--landing-muted)] font-medium">{localizedPlus.period}</span>
                   </div>
                 </div>
 
@@ -338,12 +296,12 @@ export default function PricingPage() {
                 </div>
 
                 {/* CTA */}
-                <div className="pt-4 border-t border-[var(--landing-)]">
+                <div className="pt-4 border-t border-[var(--landing-border)]">
                   <button
                     id="pricing-plus-buy-btn"
                     type="button"
                     onClick={() => handleBuyNow({ name: localizedPlus.name, price: localizedPlus.price })}
-                    className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-[var(--landing-)] border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-[var(--landing-)]"
+                    className={pricingCtaClass}
                   >
                     {tr("pricing.cta.buyNow")}
                   </button>
@@ -352,17 +310,19 @@ export default function PricingPage() {
             </div>
 
             {/* ── Card 3: Pro ── */}
-            <div className="flex flex-col !p-8 lg:!p-10 rounded-3xl border border-[#14F195]/30 bg-[var(--landing-)] backdrop-blur-xl shadow-[0_0_30px_rgba(20,241,149,0.08)] hover:shadow-[0_0_50px_rgba(20,241,149,0.15)] hover:border-[#14F195]/60 transition-all duration-300 relative">
+            <div className={`${pricingCardClass} relative`}>
               <div className="flex flex-col flex-1 gap-6">
                 {/* Tier name + price */}
-                <div className="space-y-3 pb-6 border-b border-[var(--landing-)]">
+                <div className="space-y-3 pb-6 border-b border-[var(--landing-border)]">
                   <div className="flex items-center gap-2">
-                    <BoltIcon color="#14F195" />
-                    <h3 className="text-lg font-semibold text-[var(--landing-)]">{localizedPro.name}</h3>
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#14F195]/25 bg-[#14F195]/10 text-[#14F195]">
+                      <Zap className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <h3 className="text-xl font-semibold text-[var(--landing-foreground)]">{localizedPro.name}</h3>
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-extrabold text-[var(--landing-)]">{localizedPro.price}</span>
-                    <span className="text-sm text-[#64748b] font-medium">{localizedPro.period}</span>
+                    <span className="text-4xl font-semibold text-[var(--landing-foreground)]">{localizedPro.price}</span>
+                    <span className="text-sm text-[var(--landing-muted)] font-medium">{localizedPro.period}</span>
                   </div>
                 </div>
 
@@ -373,12 +333,12 @@ export default function PricingPage() {
                 </div>
 
                 {/* CTA */}
-                <div className="pt-4 border-t border-[var(--landing-)]">
+                <div className="pt-4 border-t border-[var(--landing-border)]">
                   <button
                     id="pricing-pro-buy-btn"
                     type="button"
                     onClick={() => handleBuyNow({ name: localizedPro.name, price: localizedPro.price })}
-                    className="w-full py-3 rounded-full text-sm font-bold uppercase tracking-widest bg-[var(--landing-)] border border-[#14F195]/40 hover:bg-[#14F195]/10 hover:border-[#14F195] transition-all duration-300 text-[var(--landing-)]"
+                    className={pricingCtaClass}
                   >
                     {tr("pricing.cta.buyNow")}
                   </button>

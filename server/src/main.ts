@@ -14,30 +14,30 @@ import misc, { type MiscAppType } from "@sv/routes/misc.js";
 import news, { type NewsAppType } from "@sv/routes/news.js";
 import tokenNews, { type TokenNewsAppType } from "@sv/routes/token-news.js";
 import tokenChartNewsEvents, {
-  type TokenChartNewsEventsAppType,
+    type TokenChartNewsEventsAppType,
 } from "@sv/routes/token-chart-news-events.js";
 import tokenVolatility, {
-  type TokenVolatilityAppType,
+    type TokenVolatilityAppType,
 } from "@sv/routes/token-volatility.js";
 import tokenVolatilityNews, {
-  type TokenVolatilityNewsAppType,
+    type TokenVolatilityNewsAppType,
 } from "@sv/routes/token-volatility-news.js";
 import tokenAiChat, {
-  type TokenAiChatAppType,
+    type TokenAiChatAppType,
 } from "@sv/routes/token-ai-chat.js";
 import profile, { type ProfileAppType } from "@sv/routes/profile.js";
 import search, { type SearchAppType } from "@sv/routes/search.js";
 import trades, { type TradesAppType } from "@sv/routes/trades.js";
 import transactions, {
-  type TransactionsAppType,
+    type TransactionsAppType,
 } from "@sv/routes/transactions.js";
 import transfers, { type TransfersAppType } from "@sv/routes/transfers.js";
 import wallets, { type WalletsAppType } from "@sv/routes/wallets.route.js";
 import walletTags, {
-  type WalletTagsAppType,
+    type WalletTagsAppType,
 } from "@sv/routes/walletTags.route.js";
 import walletAnalysis, {
-  type WalletAnalysisAppType,
+    type WalletAnalysisAppType,
 } from "@sv/modules/wallet-analysis/routes/walletAnalysis.routes.js";
 import webhook, { type WebhookAppType } from "@sv/routes/webhook.js";
 import chat, { type ChatAppType } from "@sv/routes/chat.route.js";
@@ -47,6 +47,9 @@ import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
 import payment, { PaymentAppType } from "./routes/payment.route.js";
 import washTradingRoutes, { type WashTradingAppType } from './routes/wash-trading.route.js';
+import { warnIfLegacyHeliusWebhookConfigured } from "@sv/services/heliusWebhooks.service.js";
+
+warnIfLegacyHeliusWebhookConfigured();
 
 const app = new Hono()
   .use("*", logger())

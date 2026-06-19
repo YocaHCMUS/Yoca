@@ -31,9 +31,9 @@ interface FlexProps extends HTMLAttributes<HTMLDivElement> {
   mBlockEnd?: Spacing;
   mInlineStart?: Spacing;
   mInlineEnd?: Spacing;
-  width?: CSSProperties["width"];
-  minWidth?: CSSProperties["minWidth"];
-  maxWidth?: CSSProperties["maxWidth"];
+  inlineSize?: CSSProperties["inlineSize"];
+  minInlineSize?: CSSProperties["minInlineSize"];
+  maxBlockSize?: CSSProperties["maxBlockSize"];
   inline?: boolean;
 }
 
@@ -81,9 +81,9 @@ export function Flex({
   mBlockEnd,
   mInlineStart,
   mInlineEnd,
-  width,
-  minWidth,
-  maxWidth,
+  inlineSize,
+  minInlineSize,
+  maxBlockSize,
   inline = false,
   className,
   style,
@@ -137,9 +137,9 @@ export function Flex({
     marginBlockEnd: marginBlockEndValue,
     marginInlineStart: marginInlineStartValue,
     marginInlineEnd: marginInlineEndValue,
-    width,
-    minWidth,
-    maxWidth,
+    inlineSize,
+    minInlineSize,
+    maxBlockSize,
     ...style,
   };
 

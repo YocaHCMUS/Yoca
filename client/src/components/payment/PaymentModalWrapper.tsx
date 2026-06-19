@@ -1,6 +1,7 @@
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import { useEffect, useState } from "react";
+import { AlertCircle, X } from "lucide-react";
 import { CheckoutForm } from "./CheckoutForm";
 import client from "@/api/main";
 import { useLocalization } from "@/contexts/LocalizationContext";
@@ -83,7 +84,7 @@ export function PaymentModalWrapper({
   return (
     <>
       <div
-        className="fixed inset-0 z-[200] bg-black/75 backdrop-blur-sm"
+        className="fixed inset-0 z-[200] bg-[#050509]/80 backdrop-blur-md"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -94,9 +95,9 @@ export function PaymentModalWrapper({
         aria-labelledby="payment-modal-title"
         className="fixed inset-0 z-[201] flex items-center justify-center p-4 pointer-events-none"
       >
-        <div className="pointer-events-auto w-full max-w-xl bg-[#0f0f17] border border-white/5 shadow-[0_0_80px_rgba(20,241,149,0.12)] rounded-none overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="pointer-events-auto flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0f0f17]/95 shadow-[0_28px_100px_-44px_rgba(20,241,149,0.55)] backdrop-blur-xl">
           {/* Header */}
-          <div className="!px-6 !py-6 sm:!px-10 sm:!py-8 border-b border-white/5">
+          <div className="border-b border-white/10 !px-6 !py-6 sm:!px-8 sm:!py-7">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#64748b] mb-1">
@@ -113,44 +114,20 @@ export function PaymentModalWrapper({
                 id="payment-modal-close-btn"
                 type="button"
                 onClick={onClose}
-                className="text-[#64748b] hover:text-white transition-colors p-2 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10"
+                className="rounded-full border border-transparent p-2 text-[#64748b] transition-colors hover:border-white/10 hover:bg-white/5 hover:text-white"
                 aria-label={tr("payment.modal.close")}
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
           </div>
 
           {/* Body */}
-          <div className="!px-6 !py-6 sm:!px-10 sm:!py-8 overflow-y-auto custom-scrollbar">
+          <div className="custom-scrollbar overflow-y-auto !px-6 !py-6 sm:!px-8 sm:!py-7">
             {intentState.status === "error" && (
               <div className="flex flex-col items-center gap-4 py-8 text-center">
-                <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
-                  <svg
-                    className="w-6 h-6 text-red-400"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10">
+                  <AlertCircle className="h-6 w-6 text-red-400" aria-hidden="true" />
                 </div>
                 <p className="text-red-400 text-sm">{intentState.message}</p>
                 <button

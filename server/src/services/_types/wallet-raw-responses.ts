@@ -216,3 +216,143 @@ export const zrn_WalletBalanceChartSchema = z.object({
 export type ZRN_WalletBalanceChart = z.output<
   typeof zrn_WalletBalanceChartSchema
 >;
+
+export const zrn_WalletTransactionsSchema = z.object({
+  links: z.object({
+    self: z.url(),
+    next: z.url().nullable().optional(),
+  }),
+  data: z.array(
+    z.object({
+      type: z.literal("transactions"),
+      id: z.string(),
+      attributes: z.object({
+        address: z.string(),
+        operation_type: z.union([
+          z.literal("trade"),
+          z.literal("receive"),
+          z.literal("send"),
+          z.literal("execute"),
+          z.literal("approve"),
+          z.literal("deposit"),
+          z.literal("withdraw"),
+          z.literal("mint"),
+          z.literal("burn"),
+          z.literal("claim"),
+          z.literal("deploy"),
+          z.string(), // fallback
+        ]),
+        hash: z.string(),
+        mined_at_block: z.number().int(),
+        mined_at: z.string(),
+        sent_from: z.string(),
+        sent_to: z.string(),
+        status: z.union([z.literal("confirmed"), z.literal("failed")]),
+        nonce: z.number().int(),
+        fee: z.object({
+          fungible_info: z.object({
+            id: z.string(),
+            name: z.string(),
+            symbol: z.string(),
+            icon: z.object({ url: z.string().nullable() }).nullable(),
+            flags: z.object({ verified: z.boolean() }),
+            implementations: z.array(
+              z.object({
+                chain_id: z.string(),
+                address: z.string().nullable(),
+                decimals: z.number().int(),
+              }),
+            ),
+          }),
+          quantity: z.object({
+            int: z.string(),
+            decimals: z.number().int(),
+            float: z.number(),
+            numeric: z.string(),
+          }),
+          price: z.number().nullable(),
+          value: z.number().nullable(),
+        }),
+        transfers: z.array(
+          z.object({
+            fungible_info: z.object({
+              id: z.string(),
+              name: z.string(),
+              symbol: z.string(),
+              icon: z.object({ url: z.string().nullable() }).nullable(),
+              flags: z.object({ verified: z.boolean() }),
+              implementations: z.array(
+                z.object({
+                  chain_id: z.string(),
+                  address: z.string().nullable(),
+                  decimals: z.number().int(),
+                }),
+              ),
+            }),
+            direction: z.union([z.literal("in"), z.literal("out")]),
+            quantity: z.object({
+              int: z.string(),
+              decimals: z.number().int(),
+              float: z.number(),
+              numeric: z.string(),
+            }),
+            value: z.number().nullable(),
+            price: z.number().nullable(),
+            sender: z.string(),
+            recipient: z.string(),
+            act_id: z.string(),
+          }),
+        ),
+        approvals: z.array(z.unknown()),
+        flags: z.object({
+          is_trash: z.boolean(),
+        }),
+        acts: z.array(
+          z.object({
+            id: z.string(),
+            type: z.enum([
+              "trade",
+              "receive",
+              "send",
+              "execute",
+              "approve",
+              "deposit",
+              "withdraw",
+              "mint",
+              "burn",
+              "claim",
+              "deploy",
+              "fee",
+            ]),
+            // .or(z.string()),
+            fee_kind: z
+              .enum(["jito", "priority", "base"])
+              .or(z.string())
+              .optional(),
+            application_metadata: z
+              .object({
+                contract_address: z.string(),
+              })
+              .nullable()
+              .optional(),
+          }),
+        ),
+      }),
+      relationships: z.object({
+        chain: z.object({
+          links: z.object({
+            related: z.string(),
+          }),
+          data: z.object({
+            type: z.literal("chains"),
+            id: z.string(),
+          }),
+        }),
+      }),
+    }),
+  ),
+});
+
+export type ZRN_WalletTransactions = z.output<
+  typeof zrn_WalletTransactionsSchema
+>;

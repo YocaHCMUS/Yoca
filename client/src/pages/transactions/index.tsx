@@ -17,6 +17,39 @@ import { WalletNode } from "./nodes/WalletNode";
 import { HoverContext } from "./shared/HoverContext";
 import type { SummaryFlow } from "./shared/types";
 
+/** Mirrors server/src/services/transactions.raw-parser.ts */
+type ParsedTransfer = {
+  order: number;
+  level: "inner" | "outer";
+  stackHeight: number;
+  fromAddr: string;
+  toAddr: string;
+  /** Raw ATA address (original source) when resolved to wallet owner */
+  fromTokenAddr?: string;
+  /** Raw ATA address (original destination) when resolved to wallet owner */
+  toTokenAddr?: string;
+  mint: string;
+  amount: number;
+  rawAmount: string;
+  decimals: number;
+  kind: "spl" | "native";
+  programId: string;
+};
+
+type RawParsedTransaction = {
+  signature: string;
+  slot: number;
+  blockTime: number | null;
+  feePayer: string;
+  fee: number;
+  err: unknown;
+  transfers: ParsedTransfer[];
+  /** mint → symbol from server DB lookup */
+  mintSymbols: Record<string, string>;
+  preTokenBalances?: unknown[];
+  postTokenBalances?: unknown[];
+};
+
 /* ─── Per-token color palette ─── */
 const TOKEN_COLORS = [
   "#f43f5e", // rose
@@ -808,7 +841,7 @@ const edgeTypes = { curved: CurvedEdge };
 export function TransactionGraphPage() {
   const { txHash } = useParams<{ txHash: string }>();
   const { fmt } = useLocalization();
-  const [transactionDetails, setTransactionDetails] = useState<any | null>(null);
+  const [transactionDetails, setTransactionDetails] = useState<RawParsedTransaction | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<Error | null>(null);
 
@@ -830,8 +863,9 @@ export function TransactionGraphPage() {
         setIsLoading(true);
         setLoadError(null);
 
+        // Use /raw/:txHash — transfers are already in correct on-chain execution order
         const response = await fetch(
-          `${base}/api/transactions/${encodeURIComponent(txHash)}`,
+          `${base}/api/transactions/raw/${encodeURIComponent(txHash)}`,
           {
             credentials: "include",
             signal: controller.signal,
@@ -842,8 +876,8 @@ export function TransactionGraphPage() {
           throw new Error(`Failed to load transaction (${response.status})`);
         }
 
-        const data = await response.json();
-        setTransactionDetails(Array.isArray(data) ? data[0] : data);
+        const data = await response.json() as RawParsedTransaction;
+        setTransactionDetails(data);
       } catch (error) {
         if ((error as Error).name === "AbortError") {
           return;
@@ -867,12 +901,48 @@ export function TransactionGraphPage() {
     return () => controller.abort();
   }, [txHash]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
   const [hoveredToken, setHoveredToken] = useState<string | null>(null);
   const [hoveredPair, setHoveredPair] = useState<string | null>(null);
   const [hoveredAddress, setHoveredAddress] = useState<string | null>(null);
   const [actionsList, setActionsList] = useState<SummaryFlow[]>([]);
+  /** null = show all; 1..n = replay step */
+  const [playStep, setPlayStep] = useState<number | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [totalSteps, setTotalSteps] = useState(0);
+
+  // Reset replay when tx changes
+  useEffect(() => { setPlayStep(null); setIsPlaying(false); }, [txHash]);
+
+  // Auto-advance playStep while playing
+  useEffect(() => {
+    if (!isPlaying) return;
+    if (playStep !== null && playStep >= totalSteps) {
+      setIsPlaying(false);
+      return;
+    }
+    const t = setTimeout(() => {
+      setPlayStep(prev => (prev == null ? 1 : prev + 1));
+    }, 750);
+    return () => clearTimeout(t);
+  }, [isPlaying, playStep, totalSteps]);
+
+  // Sync playStep into edge data whenever it changes
+  useEffect(() => {
+    setEdges(prev => prev.map(e => ({
+      ...e,
+      data: { ...e.data, playStep, totalSteps },
+    })));
+  }, [playStep, totalSteps]);
+
+  // Sync playStep into node data whenever it changes
+  useEffect(() => {
+    setNodes(prev => prev.map(n => ({
+      ...n,
+      data: { ...n.data, playStep },
+    })));
+  }, [playStep]);
 
   useEffect(() => {
     if (!transactionDetails || !txHash) {
@@ -880,51 +950,79 @@ export function TransactionGraphPage() {
       return;
     }
 
-    const tx = transactionDetails as any;
-    const signer: string = tx.info?.feePayer ?? "";
-    const txFeeLamports = Number(tx.info?.fee ?? tx.fee ?? Number.NaN);
-    const tokenTransfers = tx.tokenTransfers ?? [];
-    const nativeTransfers = tx.nativeTransfers ?? [];
+    const tx = transactionDetails;
+    const signer: string = tx.feePayer ?? "";
+    const mintSymbols = tx.mintSymbols ?? {};
 
-    if (tokenTransfers.length === 0 && nativeTransfers.length === 0) {
+    const rawTransfers = tx.transfers ?? [];
+    if (rawTransfers.length === 0) {
       setNodes([]); setEdges([]); setActionsList([]);
       return;
     }
 
-    /* Build summary flows */
-    const rawFlows = buildSummaryFlows(
-      tokenTransfers,
-      nativeTransfers,
-      tx.instructions ?? [],
-      signer,
-      txFeeLamports,
-      tx.accountData ?? [],
-    );
-
-    /* Assign per-token colors */
-    const uniqueMints = Array.from(new Set(rawFlows.map(f => f.tokenMint)));
+    /* ── Direct mapper from ParsedTransfer[] → SummaryFlow[] ──
+     * Transfers are already in correct on-chain execution order (from the raw parser).
+     * No heuristics needed — just assign sequenceNo = order. */
+    const uniqueMints = Array.from(new Set(rawTransfers.map((t: ParsedTransfer) => t.mint)));
     const mintColorMap: Record<string, string> = {};
-    uniqueMints.forEach((mint) => {
-      mintColorMap[mint] = mintColor(mint);
-    });
+    uniqueMints.forEach((mint: string) => { mintColorMap[mint] = mintColor(mint); });
 
-    const flows: SummaryFlow[] = rawFlows.map(f => {
-      const pair = [f.fromAddr, f.toAddr].sort().join('-');
+    const flows: SummaryFlow[] = rawTransfers.map((t: ParsedTransfer, i: number) => {
+      const pair = [t.fromAddr, t.toAddr].sort().join("-");
+      const displaySymbol =
+        t.mint === "SOL" ? "SOL" : (mintSymbols[t.mint] ?? shortAddr(t.mint, 4));
       return {
-        ...f,
-        color: mintColorMap[f.tokenMint] ?? "#94a3b8",
-        pairKey: pair
+        id: `flow-${i}`,
+        sequenceNo: t.order,
+        rawIndex: t.order,
+        fromAddr: t.fromAddr,
+        toAddr: t.toAddr,
+        fromTokenAddr: undefined,
+        toTokenAddr: undefined,
+        amount: t.amount,
+        valueUsd: 0,
+        valueUsdSource: "none" as const,
+        symbol: displaySymbol,
+        tokenMint: t.mint,
+        isNative: t.kind === "native",
+        color: mintColorMap[t.mint] ?? "#94a3b8",
+        pairKey: pair,
       };
     });
 
+    // Actions list shows ALL transfers (wallet-resolved addresses, correct sequence)
     setActionsList(flows);
 
+    /* ── Graph flow builder ──────────────────────────────────────────────────
+     * Self-loops (fromAddr === toAddr) happen when a wallet sends to its own ATA.
+     * Instead of hiding them, use the raw ATA address as the graph TARGET so we
+     * get a visible edge (e.g. 7zMABP → 7QM7cd for the SOL→WSOL wrap).
+     *
+     * Crucially: subsequent transfers still use the resolved wallet as source,
+     * NOT the ATA. This matches Solscan Tx Maps exactly.
+     * ─────────────────────────────────────────────────────────────────────────*/
+    const graphFlows: SummaryFlow[] = rawTransfers.map((t: ParsedTransfer, i: number) => {
+      const f = flows[i];
+
+      let graphFrom = f.fromAddr;
+      let graphTo   = f.toAddr;
+
+      // Self-loop: wallet → own ATA. Use the raw ATA address as target.
+      if (graphFrom === graphTo && t.toTokenAddr) {
+        graphTo = t.toTokenAddr;
+      }
+
+      const pair = [graphFrom, graphTo].sort().join("-");
+      return { ...f, fromAddr: graphFrom, toAddr: graphTo, pairKey: pair };
+    });
+
+
     /* Build graph nodes */
-    const positions = buildGraphLayout(flows, signer);
+    const positions = buildGraphLayout(graphFlows, signer);
 
     const walletTokens: Record<string, Set<string>> = {};
     positions.forEach(p => walletTokens[p.addr] = new Set());
-    flows.forEach(f => {
+    graphFlows.forEach(f => {
       if (walletTokens[f.fromAddr]) walletTokens[f.fromAddr].add(f.tokenMint);
       if (walletTokens[f.toAddr]) walletTokens[f.toAddr].add(f.tokenMint);
     });
@@ -934,6 +1032,18 @@ export function TransactionGraphPage() {
     positions.forEach(p => xPosMap[p.addr] = p.x);
     positions.forEach(p => yPosMap[p.addr] = p.y);
 
+    // Compute the first step at which each node becomes visible (min sequenceNo of touching edges)
+    const firstAppearByAddr = new Map<string, number>();
+    graphFlows.forEach(f => {
+      const seq = f.sequenceNo;
+      if (!firstAppearByAddr.has(f.fromAddr) || seq < firstAppearByAddr.get(f.fromAddr)!) {
+        firstAppearByAddr.set(f.fromAddr, seq);
+      }
+      if (!firstAppearByAddr.has(f.toAddr) || seq < firstAppearByAddr.get(f.toAddr)!) {
+        firstAppearByAddr.set(f.toAddr, seq);
+      }
+    });
+
     const nodesData: Node[] = positions.map(({ addr, x, y }) => {
       return {
         id: addr,
@@ -941,37 +1051,40 @@ export function TransactionGraphPage() {
         position: { x, y: y - 30 },
         data: {
           address: addr,
-          shortAddress: addr === signer ? shortAddr(addr, 6) : shortAddr(addr, 6),
+          shortAddress: shortAddr(addr, 6),
           isSigner: addr === signer,
           activeTokens: Array.from(walletTokens[addr] ?? []),
           label: null,
           labelColor: null,
           labelIcon: null,
+          firstAppearStep: firstAppearByAddr.get(addr) ?? 1,
+          playStep: null, // will be synced by separate useEffect
         },
       };
     });
+
 
     /* Build graph edges */
     // Detect bidirectional pairs: if A→B and B→A both exist,
     // the first one seen is straight, the rest are curved arcs.
     const directedSet = new Set<string>();
-    flows.forEach(f => directedSet.add(`${f.fromAddr}→${f.toAddr}`));
+    graphFlows.forEach(f => directedSet.add(`${f.fromAddr}→${f.toAddr}`));
 
     // Track how many edges share the same undirected pair
     const pairTotals = new Map<string, number>();
-    flows.forEach(f => {
+    graphFlows.forEach(f => {
       const key = f.fromAddr < f.toAddr ? `${f.fromAddr}-${f.toAddr}` : `${f.toAddr}-${f.fromAddr}`;
       pairTotals.set(key, (pairTotals.get(key) || 0) + 1);
     });
     const pairSeen = new Map<string, number>();
     const directionTotals = new Map<string, number>();
-    flows.forEach((f) => {
+    graphFlows.forEach((f) => {
       const key = `${f.fromAddr}→${f.toAddr}`;
       directionTotals.set(key, (directionTotals.get(key) ?? 0) + 1);
     });
     const directionSeen = new Map<string, number>();
 
-    const edgesData: Edge[] = flows.map((flow, i) => {
+    const edgesData: Edge[] = graphFlows.map((flow, i) => {
       const sourceX = xPosMap[flow.fromAddr] ?? 0;
       const targetX = xPosMap[flow.toAddr] ?? 0;
       const sourceY = yPosMap[flow.fromAddr] ?? 0;
@@ -1011,8 +1124,6 @@ export function TransactionGraphPage() {
       let labelShift = 0;
 
       if (reverseExists) {
-        // Rule: for A↔B, keep one direction straight (left→right), reverse direction slightly curved.
-        // If a direction has multiple transfers, only the first keeps this rule and the rest fan out.
         const isPrimaryStraightDirection = isSourceLeft;
         if (isPrimaryStraightDirection && directionIndex === 0) {
           isCurved = false;
@@ -1032,14 +1143,12 @@ export function TransactionGraphPage() {
         isCurved = true;
         const centeredLane = directionIndex - (directionCount - 1) / 2;
         parallelOffset = centeredLane * 32;
-        // Avoid perfectly straight center lane when multiple labels would stack.
         if (Math.abs(parallelOffset) < 6) {
           parallelOffset = centeredLane >= 0 ? 16 : -16;
         }
         labelShift = centeredLane * 0.14;
       }
 
-      // Add a tiny fallback offset when many edges share a pair.
       if (total > 3) {
         parallelOffset += (seen - (total - 1) / 2) * 4;
       }
@@ -1061,13 +1170,19 @@ export function TransactionGraphPage() {
           parallelOffset,
           isCurved,
           labelShift,
+          playStep: null,          // synced by useEffect
+          totalSteps: graphFlows.length,
         },
       };
     });
 
     setNodes(nodesData);
     setEdges(edgesData);
+    setTotalSteps(graphFlows.length);
+    setPlayStep(null);
+    setIsPlaying(false);
   }, [transactionDetails, txHash]);
+
 
   /* Loading / error states */
   if (!txHash) return <div className={styles.state}>Missing transaction hash in URL.</div>;
@@ -1077,14 +1192,17 @@ export function TransactionGraphPage() {
     return <div className={styles.state}>No transfer data found for this transaction.</div>;
   }
 
-  const tx = (transactionDetails ?? {}) as any;
-  const txSigner = String(tx.info?.feePayer ?? tx.feePayer ?? "").trim();
-  const txTimestamp = Number(tx.info?.timestamp ?? tx.timestamp ?? 0);
-  const txFeeLamports = Number(tx.info?.fee ?? tx.fee ?? Number.NaN);
-  const txStatus = tx.transactionError ? "Failed" : "Success";
-  const txTimeText = `${formatRelativeMinutes(txTimestamp)} • ${formatUtcTimestamp(txTimestamp)}`;
+  const tx = transactionDetails;
+  const txSigner = String(tx?.feePayer ?? "").trim();
+  const txTimestamp = Number(tx?.blockTime ?? 0);
+  const txFeeLamports = Number(tx?.fee ?? Number.NaN);
+  const txStatus = tx?.err ? "Failed" : "Success";
+  const txTimeText = `${formatRelativeMinutes(txTimestamp)} \u2022 ${formatUtcTimestamp(txTimestamp)}`;
   const txFeeText = formatLamportsFee(txFeeLamports);
-  const txSummaryText = buildTransactionSummaryText(tx, txSigner);
+  const txSummaryText = tx ? buildTransactionSummaryText(tx as any, txSigner) : "";
+  const txSummaryFallback = tx?.transfers?.[0]
+    ? `${tx.transfers.length} transfer${tx.transfers.length > 1 ? "s" : ""} parsed`
+    : "Summary unavailable";
 
   /* Render */
   return (
@@ -1115,8 +1233,86 @@ export function TransactionGraphPage() {
               <Background color="#e5e7eb" gap={20} size={1} />
               <Controls showInteractive={false} />
             </ReactFlow>
+
+            {/* Replay player bar */}
+            {totalSteps > 0 && (
+              <div className={styles.playerBar}>
+                {/* Play / Pause / Restart button */}
+                <button
+                  className={`${styles.playBtn} ${isPlaying ? styles.playBtnActive : ""}`}
+                  title={isPlaying ? "Pause" : playStep !== null && playStep >= totalSteps ? "Restart" : "Play transaction"}
+                  onClick={() => {
+                    if (playStep !== null && playStep >= totalSteps && !isPlaying) {
+                      // Restart
+                      setPlayStep(0);
+                      setIsPlaying(true);
+                    } else {
+                      setIsPlaying(p => !p);
+                      if (playStep === null) setPlayStep(0);
+                    }
+                  }}
+                >
+                  {isPlaying ? (
+                    /* Pause icon */
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="6" y="4" width="4" height="16" rx="1" />
+                      <rect x="14" y="4" width="4" height="16" rx="1" />
+                    </svg>
+                  ) : playStep !== null && playStep >= totalSteps ? (
+                    /* Restart icon */
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.5 2.5L3 8" />
+                      <path d="M3 3v5h5" />
+                    </svg>
+                  ) : (
+                    /* Play icon */
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <polygon points="5,3 19,12 5,21" />
+                    </svg>
+                  )}
+                </button>
+
+                {/* Step dots */}
+                <div className={styles.stepDots}>
+                  {Array.from({ length: totalSteps }, (_, i) => {
+                    const stepNum = i + 1;
+                    const isActive = playStep === stepNum;
+                    const isPlayed = playStep !== null && stepNum < playStep;
+                    return (
+                      <div
+                        key={i}
+                        className={`${styles.stepDot} ${isPlayed ? styles.stepDotPlayed : ""} ${isActive ? styles.stepDotActive : ""}`}
+                        title={`Step ${stepNum}`}
+                        onClick={() => { setPlayStep(stepNum); setIsPlaying(false); }}
+                        style={{ cursor: "pointer" }}
+                      />
+                    );
+                  })}
+                </div>
+
+                {/* Step counter */}
+                <span className={styles.stepCounter}>
+                  {playStep == null ? `${totalSteps} steps` : `${Math.min(playStep, totalSteps)} / ${totalSteps}`}
+                </span>
+
+                {/* Reset to show-all */}
+                {playStep !== null && (
+                  <button
+                    onClick={() => { setPlayStep(null); setIsPlaying(false); }}
+                    title="Show all"
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 0, display: "flex", alignItems: "center" }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            )}
           </HoverContext.Provider>
         </div>
+
 
         {/* Transaction Actions panel */}
         <div className={styles.actionsPanel}>
@@ -1126,7 +1322,7 @@ export function TransactionGraphPage() {
             txTimeText={txTimeText}
             txFeeText={txFeeText}
             txStatus={txStatus}
-            txSummaryText={txSummaryText}
+            txSummaryText={txSummaryText || txSummaryFallback}
           />
 
           <TransactionActionsList
