@@ -7,6 +7,10 @@
 }
 
 .pageLayout {
+  --chat-panel-top-offset: calc(3.5rem + 16px);
+  --chat-panel-right-offset: 96px;
+  --chat-panel-left-offset: 16px;
+  --chat-panel-bottom-offset: 16px;
   display: flex;
   flex-direction: row;
   width: 100%;
@@ -510,7 +514,7 @@
 }
 
 .exportMenu {
-  position: absolute;
+  position: fixed;
   right: 0;
   top: calc(100% + 6px);
   min-width: 240px;
@@ -548,7 +552,7 @@
 
 // ===== Utility styles =====
 .hiddenReportTemplate {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: -9999px;
   width: 0;
@@ -580,7 +584,7 @@
 
 .tooltipTip {
   display: none;
-  position: absolute;
+  position: fixed;
   bottom: calc(100% + 5px);
   left: 50%;
   transform: translateX(-50%);
@@ -654,7 +658,7 @@
 
 // ===== Chat Modal Launcher =====
 .chatLauncher {
-  position: absolute;
+  position: fixed;
   right: 56px;
   bottom: 24px;
   z-index: 70;
@@ -698,22 +702,22 @@
 
 // ===== Chat Modal Overlay =====
 .chatOverlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 80;
   pointer-events: none;
 }
 
 .chatBackdrop {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
-  background: rgba(0, 0, 0, 0.24);
-  pointer-events: auto;
+  background: transparent;
+  pointer-events: none;
 }
 
 .chatPanel {
-  position: absolute;
+  position: fixed;
   z-index: 1;
   display: flex;
   flex-direction: column;
@@ -727,21 +731,24 @@
 }
 
 .chatOverlay[data-position="right"] .chatPanel {
-  top: 16px;
-  right: 56px;
-  bottom: 16px;
-  width: min(460px, calc(100% - 88px));
+  top: var(--chat-panel-top-offset);
+  right: var(--chat-panel-right-offset);
+  bottom: var(--chat-panel-bottom-offset);
+  width: min(460px, calc(100% - var(--chat-panel-right-offset) - 32px));
 }
 
 .chatOverlay[data-position="left"] .chatPanel {
-  top: 16px;
-  bottom: 16px;
-  left: 16px;
-  width: min(460px, calc(100% - 88px));
+  top: var(--chat-panel-top-offset);
+  bottom: var(--chat-panel-bottom-offset);
+  left: var(--chat-panel-left-offset);
+  width: min(460px, calc(100% - 48px));
 }
 
 .chatOverlay[data-position="fullscreen"] .chatPanel {
-  inset: 24px;
+  top: var(--chat-panel-top-offset);
+  right: 24px;
+  bottom: 24px;
+  left: 24px;
   width: calc(100% - 48px);
   max-width: 900px;
   margin: 0 auto;
@@ -768,7 +775,10 @@
   .chatOverlay[data-position="right"] .chatPanel,
   .chatOverlay[data-position="left"] .chatPanel,
   .chatOverlay[data-position="fullscreen"] .chatPanel {
-    inset: 12px;
+    top: 12px;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
     width: auto;
     max-width: none;
     margin: 0;

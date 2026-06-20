@@ -1492,6 +1492,7 @@ export default function WalletPage() {
                   variant="sidebar"
                   chatPosition={chatPosition}
                   onChatPositionChange={setChatPosition}
+                  onRequestClose={() => setIsChatOpen(false)}
                 />
               </div>
             </div>
