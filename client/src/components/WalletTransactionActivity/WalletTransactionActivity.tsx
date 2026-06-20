@@ -167,8 +167,8 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           tx.totalValueUsd >= 1,
       )
       .map(({ tx, index }) => {
-        const soldSym = tx.sold.symbol?.toUpperCase() ?? "Unknown";
-        const boughtSym = tx.bought.symbol?.toUpperCase() ?? "Unknown";
+        const soldSym = tx.sold.symbol?.toUpperCase() ?? tx.sold.address;
+        const boughtSym = tx.bought.symbol?.toUpperCase() ?? tx.bought.address;
         const time = (
           <Txt size="sm">
             {fmt.datetime.relativeShort(tx.blockTimestampMs, true)}
@@ -216,7 +216,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
       .map((tx, index) => ({ tx, index }))
       .filter(({ tx }) => !hideLowValue || tx.valueUsd >= 1)
       .map(({ tx, index }) => {
-        const tokenSym = tx.token.symbol?.toUpperCase() ?? "Unknown";
+        const tokenSym = tx.token.symbol?.toUpperCase() ?? tx.token.address;
         const time = (
           <Txt size="sm">
             {fmt.datetime.relativeShort(tx.blockTimestampMs, true)}

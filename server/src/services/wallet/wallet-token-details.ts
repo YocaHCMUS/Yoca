@@ -1,4 +1,7 @@
-import { WALLET_TOKEN_DETAILS_TTL_MS } from "@sv/config/constants.js";
+import {
+  WALLET_TOKEN_DETAILS_BIRDEYE_LIMIT,
+  WALLET_TOKEN_DETAILS_TTL_MS,
+} from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
   walletTokenDetails,
@@ -36,7 +39,7 @@ export async function getTokenDetails(wallet: string) {
       duration: "all",
       sort_type: "desc",
       sort_by: "last_trade",
-      limit: 100,
+      limit: WALLET_TOKEN_DETAILS_BIRDEYE_LIMIT,
       wallet,
     }),
   });

@@ -17,6 +17,10 @@ import {
 } from "@sv/db/schema.js";
 import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
+import * as moralis from "@sv/util/util-moralis.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { moralis_TokenMetadataSchema } from "../_types/token-raw-responses.js";
 import { and, eq, gte, inArray } from "drizzle-orm";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 import { fetchCgMarketDataBatched } from "./token-market-data.js";
@@ -268,46 +272,109 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
 }
 
 export async function getTokenMeta(tokenAddresses: string[]) {
-  if (tokenAddresses.length == 0) {
+  const uniqueAddresses = Array.from(
+    new Set(tokenAddresses.map((address) => address.trim()).filter(Boolean)),
+  );
+  if (uniqueAddresses.length == 0) {
     return [];
   }
 
   const thresholdDate = new Date(Date.now() - TOKEN_DETAILS_TTL_MS);
-
-  const res = await db
+  const cachedRows = await db
     .select()
     .from(tokenMeta)
-    .where(
-      and(
-        inArray(tokenMeta.address, tokenAddresses),
-        gte(tokenMeta.updatedAt, thresholdDate),
-      ),
-    )
-    .limit(tokenAddresses.length);
-
-  const addressToMeta = Object.fromEntries(
-    res.map((meta) => [meta.address, meta]),
+    .where(inArray(tokenMeta.address, uniqueAddresses))
+    .limit(uniqueAddresses.length);
+  const cachedByAddress = new Map(
+    cachedRows.map((meta) => [meta.address, meta]),
   );
+  const resolvedByAddress = new Map<string, TokenMetaSelect>();
 
-  const staleAddresses = tokenAddresses.filter(
-    (address) => !addressToMeta[address],
-  );
-
-  let refreshed: Awaited<ReturnType<typeof fetchTokenMeta>> = [];
-  try {
-    refreshed = await fetchTokenMeta(staleAddresses);
-  } catch (error) {
-    if (isCgRateLimitError(error)) {
-      return res;
+  for (const meta of cachedRows) {
+    if (meta.updatedAt >= thresholdDate) {
+      resolvedByAddress.set(meta.address, meta);
     }
-    throw error;
   }
 
-  if (!refreshed || refreshed.length == 0) {
-    return res;
-  } else {
-    return [...res, ...refreshed];
+  const staleAddresses = uniqueAddresses.filter(
+    (address) => !resolvedByAddress.has(address),
+  );
+  let coinGeckoRows: Awaited<ReturnType<typeof fetchTokenMeta>> = [];
+  try {
+    coinGeckoRows = await fetchTokenMeta(staleAddresses);
+  } catch (error) {
+    if (!isCgRateLimitError(error)) {
+      console.warn("Failed to refresh token metadata from CoinGecko", error);
+    }
   }
+
+  for (const meta of coinGeckoRows) {
+    resolvedByAddress.set(meta.address, meta);
+  }
+
+  const moralisAddresses = uniqueAddresses.filter(
+    (address) => !resolvedByAddress.has(address),
+  );
+  const moralisValues = await Promise.all(
+    moralisAddresses.map(async (address): Promise<TokenMetaInsert | null> => {
+      try {
+        const endpoint = moralis.getEndpoint(
+          `/token/mainnet/${address}/metadata`,
+        );
+        const response = await rlFetch(endpoint, {
+          method: "GET",
+          headers: moralis.getRequiredHeaders(),
+          rlLimiter: moralis.limiter,
+        });
+        const parsed = await getTrackedApiResult(
+          moralis_TokenMetadataSchema,
+          response,
+        );
+        if (!parsed) return null;
+
+        return {
+          address,
+          symbol: parsed.symbol.toUpperCase(),
+          name: parsed.name?.trim() || null,
+          imageUrl: parsed.logo?.trim() || null,
+        };
+      } catch {
+        return null;
+      }
+    }),
+  );
+  const validMoralisValues = moralisValues.filter(
+    (value): value is TokenMetaInsert => value != null,
+  );
+  if (validMoralisValues.length > 0) {
+    const moralisRows = await db
+      .insert(tokenMeta)
+      .values(validMoralisValues)
+      .onConflictDoUpdate({
+        target: [tokenMeta.address],
+        set: excludedAutoFromInsert(
+          tokenMeta,
+          tokenMeta.address,
+          validMoralisValues,
+        ),
+      })
+      .returning();
+    for (const meta of moralisRows) {
+      resolvedByAddress.set(meta.address, meta);
+    }
+  }
+
+  for (const address of uniqueAddresses) {
+    if (resolvedByAddress.has(address)) continue;
+    const stale = cachedByAddress.get(address);
+    if (stale) {
+      resolvedByAddress.set(address, stale);
+    }
+  }
+
+  return uniqueAddresses
+    .map((address) => resolvedByAddress.get(address))
+    .filter((meta): meta is TokenMetaSelect => meta != null);
 }
 
 export async function getTokenDetails(tokenAddresses: string[]) {

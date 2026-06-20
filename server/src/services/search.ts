@@ -1,12 +1,7 @@
-import {
-  getTrackedApiResult,
-  solanaBase58Schema,
-} from "@sv/middlewares/validation";
+import { solanaBase58Schema } from "@sv/middlewares/validation";
 import { getAddressesByCoinGeckoIds } from "@sv/services/tokens/token-list.js";
 import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
-import * as bds from "@sv/util/util-birdeye.js";
 import * as cg from "@sv/util/util-coingecko.js";
-import { bds_WalletSearchSchema } from "./_types/wallet-raw-responses";
 
 type TokenMetaSearchResult = {
   address: string;
@@ -40,28 +35,7 @@ async function getSearchWalletsResult(
     return [];
   }
   const walletAddress = parseRes.data;
-
-  const endpoint = bds.getEndpoint("/wallet/v2/pnl/details");
-  const req = new Request(endpoint, {
-    method: "POST",
-    headers: bds.getRequiredHeaders(),
-    body: JSON.stringify({
-      duration: "all",
-      sort_type: "desc",
-      sort_by: "last_trade",
-      limit: 1,
-      wallet: walletAddress,
-    }),
-  });
-
-  const resp = await fetch(req);
-  const res = await getTrackedApiResult(bds_WalletSearchSchema, resp);
-
-  if (!res) {
-    return [];
-  }
-
-  return [{ address: res.data.meta.address }];
+  return [{ address: walletAddress }];
 }
 async function getSearchPoolsResult(q: string): Promise<PoolSearchResult[]> {
   const res = await cg.client.onchain.search.pools.get({

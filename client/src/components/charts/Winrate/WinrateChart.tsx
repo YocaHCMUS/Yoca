@@ -26,7 +26,7 @@ export function WinrateChart({
     timePeriod: "30D",
     wallets: [],
   },
-  autoRefresh = true,
+  autoRefresh = false,
   refreshInterval = 30000,
   className,
 }: ChartProps) {

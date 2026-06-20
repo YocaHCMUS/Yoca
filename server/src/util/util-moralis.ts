@@ -2,6 +2,7 @@ import { trackApiCallResponse } from "@sv/services/tracking/apiCallTracker.servi
 import { mergeOutboundFetchTimeout } from "@sv/util/outbound-fetch.js";
 import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.js";
 import { apiKeyManager, buildApiKeyMetadata } from "./api-key-manager.js";
+import Bottleneck from "bottleneck";
 
 const DEFAULT_MORALIS_SOLANA_GATEWAY_BASE_URL =
   "https://solana-gateway.moralis.io";
@@ -12,6 +13,11 @@ let moralisKeysInitialized = false;
 const DEFAULT_429_WAIT_MS = 65_000; // ~1 min for Moralis rate limit reset
 const MAX_429_RETRIES = 2;
 const MAX_RETRY_WAIT_MS = 120_000;
+
+export const limiter = new Bottleneck({
+  maxConcurrent: 5,
+  minTime: 100,
+});
 
 function parseRetryAfterMs(retryAfterHeader: string | null): number {
   if (retryAfterHeader != null && /^\d+$/.test(retryAfterHeader)) {

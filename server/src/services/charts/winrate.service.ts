@@ -2,6 +2,7 @@ import { mapWithConcurrency } from "@sv/util/concurrency.js";
 import type { WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import type { BirdeyeTokenPnlDetailsToken } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { fetchBirdeyeTokenPnLDetails } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
+import { WALLET_WINRATE_TTL_MS } from "@sv/config/constants.js";
 
 interface WinrateBin {
   range: string;
@@ -33,6 +34,10 @@ interface WinrateResponse {
 
 const MAX_WALLET_CHART_CONCURRENCY = 4;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const walletWinrateCache = new Map<
+  string,
+  { expiresAtMs: number; value: Promise<WalletWinrateData> }
+>();
 
 type WinrateRange = "24H" | "7D" | "30D" | "All";
 
@@ -280,15 +285,35 @@ export async function getWinrateData(
     };
   }
 
+  const nowMs = Date.now();
+  for (const [cacheKey, cached] of walletWinrateCache) {
+    if (cached.expiresAtMs <= nowMs) {
+      walletWinrateCache.delete(cacheKey);
+    }
+  }
+
   const winrateItems = await mapWithConcurrency(
     normalizedWallets,
     MAX_WALLET_CHART_CONCURRENCY,
-    async (walletAddress) =>
-      calculateWalletWinrate(
+    async (walletAddress) => {
+      const cacheKey = `${walletAddress}:${period}`;
+      const cached = walletWinrateCache.get(cacheKey);
+      if (cached && cached.expiresAtMs > Date.now()) {
+        return cached.value;
+      }
+
+      const value = calculateWalletWinrate(
         walletAddress,
         walletAddress,
-        period
-      )
+        period,
+      );
+      walletWinrateCache.set(cacheKey, {
+        expiresAtMs: Date.now() + WALLET_WINRATE_TTL_MS,
+        value,
+      });
+
+      return value;
+    },
   );
 
   const response: WinrateResponse = {
