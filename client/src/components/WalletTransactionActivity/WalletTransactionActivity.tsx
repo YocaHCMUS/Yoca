@@ -73,6 +73,8 @@ function LowValueFilter({
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
+  const { tr } = useLocalization();
+
   return (
     <Flex
       align="center"
@@ -83,7 +85,7 @@ function LowValueFilter({
     >
       <Checkbox
         id={id}
-        labelText="Hide Low Value"
+        labelText={tr("walletPage.hideLowValue")}
         checked={checked}
         onChange={(_, { checked: nextChecked }) => onChange(nextChecked)}
       />

@@ -942,6 +942,7 @@ export const translation = {
     holding: "Holding",
     value: "Value",
     change24h: "Change (24h)",
+    hideLowValue: "Hide Low Value",
     // Token Details Demo
     tokensLastTraded: "Last traded tokens",
     tokensLastTradedDescription: "Tokens with recent trading activity",
@@ -1697,6 +1698,7 @@ export const translation = {
       title: "Balance History",
       totalBalance: "Total Balance",
       change: "Change",
+      change24h: "24h Change",
       date: "Date",
       balance: "Balance",
       selectTokenLabel: "Select token",

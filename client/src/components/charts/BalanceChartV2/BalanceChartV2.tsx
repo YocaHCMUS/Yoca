@@ -290,8 +290,7 @@ export function BalanceChartV2({
 
         <Flex dir="row" gap={4} align="center">
           <Txt size="md" secondary>
-            {/* // TODO: Localize */}
-            24h Change:
+            {tr("charts.balanceChart.change24h")}:
           </Txt>
           <Flex dir="row" gap={2}>
             {balanceSeries.map((series) => {

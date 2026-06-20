@@ -903,6 +903,7 @@ export const translation = defineTranslation({
     holding: "Đang nắm giữ",
     value: "Giá trị",
     change24h: "Thay đổi (24h)",
+    hideLowValue: "Ẩn giá trị thấp",
     // Token Details Demo
     tokensLastTraded: "Những token giao dịch gần nhất",
     tokensLastTradedDescription: "Token có hoạt động giao dịch gần đây",
@@ -1658,6 +1659,7 @@ export const translation = defineTranslation({
       title: "Lịch sử số dư",
       totalBalance: "Tổng số dư",
       change: "Thay đổi",
+      change24h: "Thay đổi 24 giờ",
       date: "Ngày",
       balance: "Số dư",
       selectTokenLabel: "Chọn token",
