@@ -725,7 +725,7 @@ function extractTokenDetailsForLLM(data: unknown): unknown {
 
 const swapsFilterSchema = z.object({
   address: z.string().min(1),
-  limit: z.number().optional().default(3000),
+  limit: z.number().optional().default(500),
   tokenAddress: z.string().regex(BASE58_REGEX, "Must be a valid base58 token mint address").optional(),
   type: z.enum(["buy", "sell"]).optional(),
   fromMs: z.number().optional(),
@@ -734,7 +734,7 @@ const swapsFilterSchema = z.object({
 
 const transfersFilterSchema = z.object({
   address: z.string().min(1),
-  limit: z.number().optional().default(3000),
+  limit: z.number().optional().default(500),
   tokenAddress: z.string().regex(BASE58_REGEX, "Must be a valid base58 token mint address").optional(),
   direction: z.enum(["in", "out"]).optional(),
   fromMs: z.number().optional(),

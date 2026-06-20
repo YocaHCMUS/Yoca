@@ -20,9 +20,6 @@ import {
     postEnrichSwaps,
 } from "@sv/services/wallet/walletEnrichment.service.js";
 import { toWalletPageInfo } from "@sv/services/wallet/walletData.core.js";
-import { resolveEnhancedTransactions } from "@sv/services/wallet/providers/walletEnhancedTx.service.js";
-import { mapHeliusTxsToSwaps } from "@sv/services/wallet/providers/helius-to-swap.js";
-import { mapHeliusTxsToTransfers } from "@sv/services/wallet/providers/helius-to-transfer.js";
 import {
     resolveRequestedRange,
     isMissingRangeSignificant,
@@ -86,6 +83,7 @@ type ZrnTradeTransferMatchResult =
     };
 
 const ZRN_SOL_FUNGIBLE_ID = "11111111111111111111111111111111";
+const ZRN_BATCH_LIMIT = 500;
 
 let lastRecentTransactionsPruneAtMs = 0;
 
@@ -245,6 +243,137 @@ function zrn_getSolanaTokenAddress(token: ZRN_FungibleInfo): string | null {
   return null;
 }
 
+function zrnMapToWalletSwaps(
+  transactions: SourcedZRNWalletTransaction[],
+  address: string,
+): WalletSwap[] {
+  const result: WalletSwap[] = [];
+
+  for (const transaction of transactions) {
+    for (const act of transaction.attributes.acts) {
+      if (act.type !== "trade") continue;
+
+      const transfers = transaction.attributes.transfers.filter(
+        (t) => t.act_id === act.id,
+      );
+      const matchResult = zrn_getTransferTradePair(transfers);
+      if (!matchResult.match) continue;
+
+      const { inTransfer, outTransfer } = matchResult.match;
+      const tokenIn = inTransfer.fungible_info;
+      const tokenOut = outTransfer.fungible_info;
+      const tokenInAddress = zrn_getSolanaTokenAddress(tokenIn);
+      const tokenOutAddress = zrn_getSolanaTokenAddress(tokenOut);
+
+      if (!tokenIn || !tokenOut || !tokenInAddress || !tokenOutAddress) continue;
+
+      const amountIn = Number(inTransfer.quantity.numeric);
+      const amountOut = Number(outTransfer.quantity.numeric);
+      if (!Number.isFinite(amountIn) || !Number.isFinite(amountOut)) continue;
+
+      const tokenInPriceUsd = inTransfer.price;
+      const tokenOutPriceUsd = outTransfer.price;
+
+      const valueUsd = Number(
+        inTransfer.value ??
+          outTransfer.value ??
+          (tokenInPriceUsd
+            ? amountIn * tokenInPriceUsd
+            : tokenOutPriceUsd
+              ? amountOut * tokenOutPriceUsd
+              : null),
+      );
+      if (!valueUsd || !Number.isFinite(valueUsd)) continue;
+
+      const blockTimestampIso = transaction.attributes.mined_at;
+
+      result.push({
+        transactionHash: transaction.attributes.hash,
+        transactionType: "trade",
+        blockTimestampIso,
+        subcategory: null,
+        walletAddress: address,
+        pairAddress: "",
+        tokensInvolved: `${tokenIn.symbol ?? "?"}/${tokenOut.symbol ?? "?"}`,
+        bought: {
+          address: tokenInAddress,
+          amount: amountIn,
+          symbol: tokenIn.symbol,
+          name: tokenIn.name,
+          logoUri: tokenIn.icon?.url || null,
+          priceUsd: tokenInPriceUsd ?? 0,
+          valueUsd: tokenInPriceUsd ? amountIn * tokenInPriceUsd : 0,
+        },
+        sold: {
+          address: tokenOutAddress,
+          amount: amountOut,
+          symbol: tokenOut.symbol,
+          name: tokenOut.name,
+          logoUri: tokenOut.icon?.url || null,
+          priceUsd: tokenOutPriceUsd ?? 0,
+          valueUsd: tokenOutPriceUsd ? amountOut * tokenOutPriceUsd : 0,
+        },
+        totalValueUsd: valueUsd,
+        baseQuotePrice: null,
+      });
+    }
+  }
+
+  return result;
+}
+
+function zrnMapToWalletTransfers(
+  transactions: SourcedZRNWalletTransaction[],
+  address: string,
+): WalletTransfer[] {
+  const result: WalletTransfer[] = [];
+  let instructionIndex = 0;
+
+  for (const transaction of transactions) {
+    for (const act of transaction.attributes.acts) {
+      if (act.type !== "receive" && act.type !== "send") continue;
+
+      const transfers = transaction.attributes.transfers.filter(
+        (t) => t.act_id === act.id,
+      );
+      if (transfers.length !== 1) continue;
+
+      const transfer = transfers[0];
+      const token = transfer.fungible_info;
+      const tokenAddress = zrn_getSolanaTokenAddress(token);
+      if (!token || !tokenAddress) continue;
+
+      const amount = Number(transfer.quantity.numeric);
+      if (!Number.isFinite(amount)) continue;
+
+      const valueUsd = transfer.value == null ? null : Number(transfer.value);
+      if (valueUsd == null || !Number.isFinite(valueUsd)) continue;
+
+      const direction = act.type;
+      const from = direction === "send" ? address : (transfer.sender ?? "");
+      const to = direction === "receive" ? address : (transfer.recipient ?? "");
+
+      result.push({
+        from,
+        to,
+        amount,
+        amountUsd: valueUsd,
+        timestamp: transaction.attributes.mined_at,
+        tokenAddress,
+        tokenSymbol: token.symbol,
+        tokenName: token.name ?? undefined,
+        tokenLogoUri: token.icon?.url ?? undefined,
+        priceUsd: transfer.price ?? undefined,
+        transactionSignature: transaction.attributes.hash,
+        instructionIndex,
+      });
+
+      instructionIndex++;
+    }
+  }
+
+  return result;
+}
 
 export async function getWalletTransfers(
   address: string,
@@ -316,13 +445,19 @@ export async function getWalletTransfers(
   const fetchedTransfers: WalletTransfer[] = [];
   for (const range of missingRanges) {
     if (isMissingRangeSignificant(range.fromMs, range.toMs)) {
-      const txs = await resolveEnhancedTransactions(
+      const zrnTxs = await zrn_fetchWalletTransactions(
         address,
-        range.fromMs,
-        range.toMs,
+        "receive,send",
+        ZRN_BATCH_LIMIT,
       );
-      const segment = mapHeliusTxsToTransfers(txs, address);
-      fetchedTransfers.push(...segment);
+      if (zrnTxs) {
+        const mapped = zrnMapToWalletTransfers(zrnTxs, address);
+        const inRange = mapped.filter((t) => {
+          const ts = Date.parse(t.timestamp);
+          return ts >= range.fromMs && ts <= range.toMs;
+        });
+        fetchedTransfers.push(...inRange);
+      }
     }
   }
 
@@ -454,13 +589,19 @@ export async function getWalletSwaps(
   const fetchedSwaps: WalletSwap[] = [];
   for (const range of missingRanges) {
     if (isMissingRangeSignificant(range.fromMs, range.toMs)) {
-      const txs = await resolveEnhancedTransactions(
+      const zrnTxs = await zrn_fetchWalletTransactions(
         address,
-        range.fromMs,
-        range.toMs,
+        "trade",
+        ZRN_BATCH_LIMIT,
       );
-      const mapped = mapHeliusTxsToSwaps(txs, address);
-      fetchedSwaps.push(...mapped);
+      if (zrnTxs) {
+        const mapped = zrnMapToWalletSwaps(zrnTxs, address);
+        const inRange = mapped.filter((s) => {
+          const ts = new Date(s.blockTimestampIso).getTime();
+          return ts >= range.fromMs && ts <= range.toMs;
+        });
+        fetchedSwaps.push(...inRange);
+      }
     }
   }
 
