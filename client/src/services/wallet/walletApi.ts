@@ -541,7 +541,7 @@ export function fetchWalletTransfers(
       return resp.json().then(transfers => ({
         address,
         chain: params?.chain,
-        transfers: transfers.map(transfer => ({
+        transfers: transfers.transactions.map(transfer => ({
           from:
             transfer.direction === "send"
               ? address
@@ -594,7 +594,7 @@ export function fetchWalletSwaps(
     if (resp.ok) {
       return resp.json().then(swaps => ({
         address,
-        swaps: swaps.map(swap => {
+        swaps: swaps.transactions.map(swap => {
           const boughtLabel =
             swap.bought.symbol ?? swap.bought.name ?? swap.bought.address;
           const soldLabel =
