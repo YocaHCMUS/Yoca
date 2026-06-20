@@ -403,6 +403,8 @@ export const envSchema = z.object({
   WEBHOOK_SOL_PRICE_USD: z.coerce.number().positive().optional().default(150),
   MORALIS_API_BASE_URL: z.url().default("https://solana-gateway.moralis.io"),
   MORALIS_API_KEY: z.string(),
+  MOBULA_API_BASE_URL: z.url().default("https://api.mobula.io/api"),
+  MOBULA_API_KEY: z.string().trim().min(1),
   N8N_ANALYSE_WALLET_URL: z
     .url()
     .default("http://localhost:5678/webhook/analyse-wallet"),
