@@ -126,6 +126,38 @@ export const mbl_WalletAnalysisSchema = z.object({
 
 export type MBL_WalletAnalysis = z.infer<typeof mbl_WalletAnalysisSchema>;
 
+export const mbl_WalletPositionsSchema = z.object({
+  data: z.array(
+    z.object({
+      token: z.object({
+        address: z.string(),
+        symbol: z.string().nullish(),
+      }),
+      balance: z.number(),
+      amountUSD: z.number(),
+      buys: z.number(),
+      sells: z.number(),
+      volumeBuyToken: z.number(),
+      volumeSellToken: z.number(),
+      volumeBuy: z.number(),
+      volumeSell: z.number(),
+      avgBuyPriceUSD: z.number().nullish(),
+      avgSellPriceUSD: z.number().nullish(),
+      realizedPnlUSD: z.number(),
+      unrealizedPnlUSD: z.number(),
+      lastDate: z.string().nullish(),
+    }),
+  ),
+  pagination: z.object({
+    page: z.number(),
+    offset: z.number(),
+    limit: z.number(),
+    pageEntries: z.number(),
+  }),
+});
+
+export type MBL_WalletPositions = z.infer<typeof mbl_WalletPositionsSchema>;
+
 export const bds_WalletFirstFundSchema = z.object({
   success: z.boolean(),
   data: z.record(

@@ -1,10 +1,10 @@
 import {
-  userAlertConditionOps,
-  userAlertPeriods,
-  userAlertTokenMetric,
-  userAlertTriggerModes,
-  userTradeDirections,
-  userTradingAggregations,
+    userAlertConditionOps,
+    userAlertPeriods,
+    userAlertTokenMetric,
+    userAlertTriggerModes,
+    userTradeDirections,
+    userTradingAggregations,
 } from "@sv/db/alerts.js";
 import { userAlertStatus } from "@sv/db/schema.js";
 import { setErr } from "@sv/util/errors.js";
@@ -48,7 +48,7 @@ export const addressSchema = z.object({
 export const addressListSchema = z.object({
   addresses: z
     .string()
-    .transform((v) => v.split(","))
+    .transform((val) => val.split(",").filter(Boolean))
     .pipe(solanaBase58Schema.array()),
 });
 
