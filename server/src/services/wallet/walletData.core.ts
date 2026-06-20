@@ -10,7 +10,6 @@ import { and, eq } from "drizzle-orm";
 import { getTokenMeta } from "../tokens/token-info.js";
 import {
   fetchBirdeyeOverallPnL,
-  fetchBirdeyePortfolio,
   fetchHeliusSolanaPortfolio,
 
 } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
@@ -542,30 +541,19 @@ export async function buildHoldingsSnapshotFromProviders(
   cacheRow: WalletOverviewCacheRow | null,
 ): Promise<OverviewHoldingsSnapshot> {
   try {
-    const birdeyePortfolio = await fetchBirdeyePortfolio(address);
-    if (birdeyePortfolio.items.length > 0 || Number(birdeyePortfolio.totalAssetValueUsd ?? 0) > 0) {
+    const heliusPortfolio = await fetchHeliusSolanaPortfolio(address);
+    const totalAssetValueUsd = heliusPortfolio.reduce(
+      (sum, item) => sum + Number(item.valueUsd ?? 0),
+      0,
+    );
+    if (heliusPortfolio.length > 0 || totalAssetValueUsd > 0) {
       return {
-        totalAssetValueUsd: toFiniteNumber(birdeyePortfolio.totalAssetValueUsd, 0),
-        change24hPercent: toNullableFiniteNumber(birdeyePortfolio.totalAssetValueChange24hPercent),
-        tokensHoldingCount: birdeyePortfolio.items.length,
-        source: "birdeye-portfolio",
+        totalAssetValueUsd,
+        change24hPercent: null,
+        tokensHoldingCount: heliusPortfolio.length,
+        source: "helius-portfolio-fallback",
       };
     }
-  } catch (err) {
-    console.error("Failed to fetch Birdeye portfolio for overview holdings", err);
-  }
-
-  try {
-    const heliusPortfolio = await fetchHeliusSolanaPortfolio(address);
-    return {
-      totalAssetValueUsd: heliusPortfolio.reduce(
-        (sum, item) => sum + Number(item.valueUsd ?? 0),
-        0,
-      ),
-      change24hPercent: null,
-      tokensHoldingCount: heliusPortfolio.length,
-      source: "helius-portfolio-fallback",
-    };
   } catch (err) {
     console.error("Failed to fetch Solana portfolio for overview holdings", err);
   }

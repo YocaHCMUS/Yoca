@@ -1,5 +1,32 @@
 import { z } from "zod";
 
+const heliusNumberishSchema = z.union([z.number(), z.string()]);
+
+export const hls_WalletBalancesSchema = z.object({
+  balances: z.array(
+    z.object({
+      mint: z.string().nullish(),
+      symbol: z.string().nullish(),
+      name: z.string().nullish(),
+      balance: heliusNumberishSchema.nullish(),
+      pricePerToken: heliusNumberishSchema.nullish(),
+      usdValue: heliusNumberishSchema.nullish(),
+      logoURI: z.string().nullish(),
+      logoUri: z.string().nullish(),
+      logo_uri: z.string().nullish(),
+      image: z.string().nullish(),
+    }),
+  ),
+  pagination: z
+    .object({
+      page: heliusNumberishSchema.nullish(),
+      hasMore: z.boolean().nullish(),
+    })
+    .nullish(),
+});
+
+export type HLS_WalletBalances = z.infer<typeof hls_WalletBalancesSchema>;
+
 export const bds_WalletFirstFundSchema = z.object({
   success: z.boolean(),
   data: z.record(
