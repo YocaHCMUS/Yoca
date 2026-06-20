@@ -124,12 +124,14 @@ export async function fetchWalletAnalysis(
   );
   const fetchedAtMs = dayjs.utc().valueOf();
 
+  const winrate = totalTrades > 0 ? winningTrades / totalTrades * 100 : 0;
+
   const rows = await db
     .insert(walletAnalyses)
     .values({
       walletAddress,
       period,
-      winrate: result.data.stat.winRealizedPnlRate,
+      winrate,
       totalTrades,
       winningTrades,
       losingTrades,
@@ -158,7 +160,7 @@ export async function fetchWalletAnalysis(
     .onConflictDoUpdate({
       target: [walletAnalyses.walletAddress, walletAnalyses.period],
       set: {
-        winrate: result.data.stat.winRealizedPnlRate,
+        winrate,
         totalTrades,
         winningTrades,
         losingTrades,

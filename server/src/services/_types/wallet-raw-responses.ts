@@ -98,7 +98,7 @@ export const mbl_WalletAnalysisSchema = z.object({
         .object({
           rawBalance: z.string(),
           formattedBalance: z.number(),
-          assetId: z.number(),
+          assetId: z.number().nullable(),
           chainId: z.string(),
           address: z.string(),
           decimals: z.number(),

@@ -14,13 +14,13 @@ export const cg_TokenMarketChartSchema = z.object({
 });
 export type CG_TokenMarketChart = z.infer<typeof cg_TokenMarketChartSchema>;
 
-export const moralis_TokenMetadataSchema = z.object({
-  symbol: z.string().trim().min(1),
-  name: z.string().nullish(),
-  logo: z.string().nullish(),
+export const mrl_tokenMetadataSchema = z.object({
+  symbol: z.string().trim().nullish(),
+  name: z.string().trim().nullish(),
+  logo: z.string().trim().nullish(),
 });
-export type MoralisTokenMetadata = z.infer<
-  typeof moralis_TokenMetadataSchema
+export type MRL_TokenMetadata = z.infer<
+  typeof mrl_tokenMetadataSchema
 >;
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-markets

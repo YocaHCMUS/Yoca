@@ -1,11 +1,11 @@
 import {
-  WALLET_TOKEN_DETAILS_BIRDEYE_LIMIT,
-  WALLET_TOKEN_DETAILS_TTL_MS,
+    WALLET_TOKEN_DETAILS_BIRDEYE_LIMIT,
+    WALLET_TOKEN_DETAILS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-  walletTokenDetails,
-  type WalletTokenDetailsInsert,
+    walletTokenDetails,
+    type WalletTokenDetailsInsert,
 } from "@sv/db/schema.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
@@ -13,7 +13,34 @@ import * as bds from "@sv/util/util-birdeye.js";
 import { eq } from "drizzle-orm";
 import { bds_WalletTokenDetailsSchema } from "../_types/wallet-raw-responses.js";
 
-export async function getTokenDetails(wallet: string) {
+type TokenDetailsData = {
+    address: string;
+    avgBuyCost: number;
+    avgSellCost: number;
+    balanceAmount: number;
+    costOfQuantitySold: number;
+    currentValue: number;
+    lastTradeUnixTime: number;
+    realizedProfitPercent: number;
+    realizedProfitUsd: number;
+    symbol: string | null;
+    tokenAddress: string;
+    totalBoughtAmount: number;
+    totalBoughtUsd: number;
+    totalBuyCount: number;
+    totalSellCount: number;
+    totalSoldAmount: number;
+    totalSoldUsd: number;
+    totalTradeCount: number;
+    unrealizedProfitPercent: number;
+    unrealizedProfitUsd: number;
+    updatedAt: Date;
+};
+
+// This endpoint will be migrated to new provider, currently unavailable for new users, so we will keep it as is for now.
+export async function getTokenDetails(wallet: string) : Promise<TokenDetailsData[] | null> {
+  return [];
+  // dead code
   const dbRes = await db
     .select()
     .from(walletTokenDetails)

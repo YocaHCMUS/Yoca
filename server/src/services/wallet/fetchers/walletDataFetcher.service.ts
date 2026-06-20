@@ -1,50 +1,46 @@
 import type {
-  BirdeyeNetworthDirection,
-  BirdeyeNetworthHistoryPoint,
-  BirdeyeNetworthHistoryResult,
-  BirdeyeNetworthType,
-  BirdeyePortfolioSnapshotResult,
-  BirdeyeSortType,
-  BirdeyeTokenPnlDetailsOptions,
-  BirdeyeTokenPnlDetailsResult,
-  HeliusWalletFirstFund,
-  WalletPortfolioItem,
-  WalletSwap,
-  WalletTransaction,
-  WalletTransactionHelius,
-  WalletTransfer,
+    BirdeyeNetworthDirection,
+    BirdeyeNetworthHistoryPoint,
+    BirdeyeNetworthHistoryResult,
+    BirdeyeNetworthType,
+    BirdeyePortfolioSnapshotResult,
+    BirdeyeSortType,
+    HeliusWalletFirstFund,
+    WalletPortfolioItem,
+    WalletSwap,
+    WalletTransactionHelius,
+    WalletTransfer
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import {
-  runCursorPagination,
-  runOffsetPagination,
+    runCursorPagination
 } from "@sv/services/wallet/fetchers/walletPagination.js";
 import {
-  getNextCursor,
-  getTokenLogoUri,
-  mapHeliusTransferEntry,
-  mapMoralisSwapEntry,
-  toFiniteNumber,
-  toIsoTimestamp,
-  toOptionalNumber,
+    getNextCursor,
+    getTokenLogoUri,
+    mapHeliusTransferEntry,
+    mapMoralisSwapEntry,
+    toFiniteNumber,
+    toIsoTimestamp,
+    toOptionalNumber,
 } from "@sv/services/wallet/fetchers/walletProviderMappers.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import { hls_WalletBalancesSchema } from "@sv/services/_types/wallet-raw-responses.js";
 import { callBirdeye } from "@sv/services/wallet/providers/adapters/birdeye.adapter.js";
 import {
-  birdeyeGetJson,
-  birdeyePostJson,
+    birdeyeGetJson,
+    birdeyePostJson,
 } from "@sv/services/wallet/providers/birdeye.client.js";
 import { heliusGetJson } from "@sv/services/wallet/providers/helius.client.js";
 import { normalizeBirdeyeTimeParam } from "@sv/util/util-birdeye.js";
 import {
-  getEndpoint,
-  getRequiredHeaders,
-  heliusFetch,
+    getEndpoint,
+    getRequiredHeaders,
+    heliusFetch,
 } from "@sv/util/util-helius.js";
 import * as moralis from "@sv/util/util-moralis.js";
 import type {
-  MoralisSwapResponseRoot,
-  MoralisSwapResult,
+    MoralisSwapResponseRoot,
+    MoralisSwapResult,
 } from "./walletThirdPartyResponses";
 
 
@@ -910,43 +906,6 @@ export async function fetchBirdeyePortfolioSnapshot(
       valueUsd: toFiniteNumber(asset?.value, 0),
     })),
   };
-}
-
-export async function fetchBirdeyeTokenPnLDetails(
-  address: string,
-  options?: BirdeyeTokenPnlDetailsOptions,
-): Promise<BirdeyeTokenPnlDetailsResult> {
-  const limit = Math.min(Math.max(Math.floor(options?.limit ?? 10), 1), 100);
-  const offset = Math.max(Math.floor(options?.offset ?? 0), 0);
-
-  const body = {
-    wallet: address,
-    token_addresses: options?.tokenAddresses,
-    duration: options?.duration ?? "all",
-    sort_type: options?.sortType ?? "desc",
-    sort_by: options?.sortBy ?? "last_trade",
-    limit,
-    offset,
-  };
-
-  console.log(`[fetchBirdeyeTokenPnLDetails] Fetching PnL data for wallet ${address}. Options:`, body);
-
-  const json = await fetchBirdeyeJson("/wallet/v2/pnl/details", "POST", {
-    body,
-  });
-
-  const data = json?.data ?? {};
-
-  console.log(`[fetchBirdeyeTokenPnLDetails] Birdeye response received. Tokens count: ${Array.isArray(data?.tokens) ? data.tokens.length : 0}`);
-  console.log(`[fetchBirdeyeTokenPnLDetails] RAW BIRDEYE RESPONSE - data.tokens:`, JSON.stringify(data?.tokens, null, 2));
-
-  const result = {
-    meta: data?.meta ?? null,
-    tokens: Array.isArray(data?.tokens) ? data.tokens : [],
-    summary: data?.summary ?? null,
-  };
-
-  return result;
 }
 
 export async function fetchHeliusWalletFirstFund(address: string) {

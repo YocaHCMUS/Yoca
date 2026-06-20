@@ -84,4 +84,5 @@ export type UseGetResp<Data, Error = any> = {
   isValidating: boolean;
   data: Data | undefined;
   error: Error | undefined;
+  mutate: () => void;
 };

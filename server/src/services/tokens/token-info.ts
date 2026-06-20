@@ -1,26 +1,26 @@
 import {
-  TOKEN_DETAILS_TTL_MS,
-  TOP_TOKEN_HOLDER_STATS_TTL_MS,
+    TOKEN_DETAILS_TTL_MS,
+    TOP_TOKEN_HOLDER_STATS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-  TokenDetailedInfoSelect,
-  tokenDetails,
-  tokenHolderStats,
-  tokenMarketData,
-  tokenMeta,
-  TokenMetaSelect,
-  type TokenDetailedInfoInsert,
-  type TokenHolderStatsInsert,
-  type TokenMarketDataInsert,
-  type TokenMetaInsert,
+    TokenDetailedInfoSelect,
+    tokenDetails,
+    tokenHolderStats,
+    tokenMarketData,
+    tokenMeta,
+    TokenMetaSelect,
+    type TokenDetailedInfoInsert,
+    type TokenHolderStatsInsert,
+    type TokenMarketDataInsert,
+    type TokenMetaInsert,
 } from "@sv/db/schema.js";
 import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import * as moralis from "@sv/util/util-moralis.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
-import { moralis_TokenMetadataSchema } from "../_types/token-raw-responses.js";
+import { mrl_tokenMetadataSchema } from "../_types/token-raw-responses.js";
 import { and, eq, gte, inArray } from "drizzle-orm";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 import { fetchCgMarketDataBatched } from "./token-market-data.js";
@@ -327,16 +327,16 @@ export async function getTokenMeta(tokenAddresses: string[]) {
           rlLimiter: moralis.limiter,
         });
         const parsed = await getTrackedApiResult(
-          moralis_TokenMetadataSchema,
+          mrl_tokenMetadataSchema,
           response,
         );
         if (!parsed) return null;
 
         return {
           address,
-          symbol: parsed.symbol.toUpperCase(),
-          name: parsed.name?.trim() || null,
-          imageUrl: parsed.logo?.trim() || null,
+          symbol: parsed.symbol || null,
+          name: parsed.name || null,
+          imageUrl: parsed.logo || null,
         };
       } catch {
         return null;

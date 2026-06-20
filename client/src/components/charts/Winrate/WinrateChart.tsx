@@ -8,16 +8,39 @@ import {
     CHART_COLOR_PALETTE,
     useCarbonChartBaseOption,
 } from '@/util/carbon-chart-base';
-import { fetchWinrate, type InferFetcherData } from '@/services/chart/chartApi';
-import { isChartSuccess } from '@/util/chart-helpers';
 import type { WinrateRequestParams } from '@/types/chart-api.types';
-import { useStandardChartController } from '@/hooks/useChartController';
 import { ChartWrapper, ChartContainer, ChartSection, ChartGrid, ChartGridItem } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
 import { FilterSwitch } from '@/components/FilterSwitch';
 import { Layer } from '@carbon/react';
+import { useGet, UseGetResp } from '@/hooks/useGet';
+import client from '@/api/main';
 
-type WinrateData = InferFetcherData<typeof fetchWinrate>;
+interface WinrateBin {
+    range: string;
+    count: number;
+    min: number;
+    max: number;
+}
+
+type WinrateData =  {
+    wallets: {
+        walletAddress: string;
+        walletName?: string | undefined;
+        winrate: number;
+        totalTrades: number;
+        winningTrades: number;
+        losingTrades: number;
+        winningDistribution: WinrateBin[];
+        losingDistribution: WinrateBin[];
+        avgWinUsd: number;
+        avgLossUsd: number;
+    }[];
+    metadata: {
+        period: string;
+        timestamp: number;
+    };
+}
 
 export function WinrateChart({
   title,
@@ -40,7 +63,7 @@ export function WinrateChart({
   const overallChartRef = useRef<ReactECharts>(null);
   const baseOption = useCarbonChartBaseOption();
 
-  const { filters, walletsString } = useChartFiltersSync({
+  const { walletsString } = useChartFiltersSync({
     initialFilters,
     debounceDelay: 300,
   });
@@ -53,20 +76,19 @@ export function WinrateChart({
     [timeRange, walletsString],
   );
 
-  const { data, loadingState, refetch } = useStandardChartController<
-    WinrateData,
-    WinrateRequestParams
-  >({
-    fetcher: fetchWinrate,
-    query,
-    autoRefresh,
-    refreshInterval,
-  });
+  const winRateData : UseGetResp<WinrateData> = useGet(client.api.charts.winrate, 200, {
+    query: {
+      wallets: walletsString ?? "",
+      period: timeRange,
+    }
+  })
 
   const overallWinrateOption = useMemo((): EChartsOption | null => {
-    if (!isChartSuccess(data, 'wallets') || data.wallets.length == 0) {
+    if (!winRateData.data || winRateData.data.wallets.length == 0) {
       return null;
     }
+
+    const data = winRateData.data;
 
     const categories = data.wallets.map(w => fmt.text.address(w.walletAddress));
     const winrateValues = data.wallets.map(w => w.winrate);
@@ -126,11 +148,13 @@ export function WinrateChart({
         },
       },
     };
-  }, [data, baseOption]);
+  }, [winRateData.data, baseOption]);
 
   const distributionCharts = useMemo(() => {
-    if (!isChartSuccess(data, "wallets") || data.wallets.length === 0)
+    if (!winRateData.data || winRateData.data.wallets.length == 0) {
       return [];
+    }
+    const data = winRateData.data;
 
     return data.wallets.map((wallet) => {
       const categories = [
@@ -236,16 +260,19 @@ export function WinrateChart({
         option,
       };
     });
-  }, [data, baseOption]);
+  }, [winRateData.data, baseOption]);
 
   const timeRangeOptions = WINRATE_TIME_RANGES.map(r => ({ value: r, label: r }));
 
   return (
     <ChartWrapper
       title={chartTitle}
-      loadingState={loadingState}
-      isEmpty={!isChartSuccess(data, "wallets") || data.wallets.length === 0}
-      onRetry={() => refetch(false)}
+      loadingState={{
+        status: winRateData.isLoading ? "loading" : "idle",
+        retryCount: 0,
+      }}
+      isEmpty={winRateData.data ? winRateData.data.wallets.length > 0 : false}
+      onRetry={() => winRateData.mutate()}
       toolbarLayout="stacked"
       actions={
         <Layer style={{ width: 200 }}>
@@ -286,7 +313,7 @@ export function WinrateChart({
         </ChartSection>
 
         <ChartGrid
-          itemCount={distributionCharts.length}
+          itemCount={distributionCharts?.length}
           autoFit
           minColumnWidth="400px"
         >

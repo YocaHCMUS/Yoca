@@ -442,7 +442,11 @@ export interface WalletOverviewPeriodStats {
     realizedUsd: number | null;
     unrealizedUsd: number | null;
   };
-  source: "birdeye-overall-pnl" | "overview-cache" | "none";
+  source:
+    | "mobula-wallet-analysis"
+    | "birdeye-overall-pnl"
+    | "overview-cache"
+    | "none";
   winRateStats?: WalletOverviewWinRateStats;
 }
 
@@ -451,6 +455,7 @@ export interface WalletOverviewHoldingsStats {
   change24hPercent: number | null;
   tokensHoldingCount: number;
   source:
+    | "mobula-wallet-analysis" 
     | "birdeye-portfolio"
     | "helius-portfolio-fallback"
     | "overview-cache"
@@ -496,8 +501,9 @@ export function fetchWalletOverview(
       address,
       period: "24H",
     },
-  }).then(resp => {
+  }).then(async (resp) => {
     if (resp.ok) return resp.json();
+
     console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });

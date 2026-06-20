@@ -375,30 +375,3 @@ export async function fetchStablecoinRatio(
   const data = await response.json();
   return data;
 }
-
-export const chartApi = {
-  fetchBalanceTrend,
-  fetchAssetDistribution,
-  fetchPnLChart,
-  fetchTransactionDistribution,
-  // fetchPriceHistory,
-  fetchTradingVolumeDistribution,
-  fetchTradingVolumePerTransaction,
-  fetchRollingAnnualReturn,
-  fetchWinrate,
-  fetchDrawdown,
-  fetchTotalTradingVolume,
-  fetchStablecoinRatio,
-  // Aliases for convenience
-  getBalance: fetchBalanceTrend,
-  getDistribution: fetchAssetDistribution,
-  getPnL: fetchPnLChart,
-  getTransactionDistribution: fetchTransactionDistribution,
-  getTradingVolumeDistribution: fetchTradingVolumeDistribution,
-  getTradingVolumePerTransaction: fetchTradingVolumePerTransaction,
-  getRollingAnualReturn: fetchRollingAnnualReturn,
-  getWinrate: fetchWinrate,
-  getDrawdown: fetchDrawdown,
-  getTotalTradingVolume: fetchTotalTradingVolume,
-  getStablecoinRatio: fetchStablecoinRatio,
-};

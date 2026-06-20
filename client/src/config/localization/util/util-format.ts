@@ -95,10 +95,6 @@ function formatSmallCompact(value: number): string {
   if (value == 0) {
     return "0";
   }
-  // TODO: handle value that is very small
-  if (value < 1e-8) {
-    return "0.0";
-  }
 
   const str = value.toPrecision(16);
 
