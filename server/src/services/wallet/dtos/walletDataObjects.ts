@@ -42,7 +42,7 @@ export interface WalletOverviewPeriodStats {
         realizedUsd: number | null;
         unrealizedUsd: number | null;
     };
-    source: "birdeye-overall-pnl" | "overview-cache" | "none";
+    source: "mobula-wallet-analysis" | "birdeye-overall-pnl" | "overview-cache" | "none";
     winRateStats?: WalletOverviewWinRateStats;
 }
 
@@ -50,7 +50,7 @@ export interface WalletOverviewHoldingsStats {
     totalAssetValueUsd: number;
     change24hPercent: number | null;
     tokensHoldingCount: number;
-    source: "birdeye-portfolio" | "helius-portfolio-fallback" | "overview-cache" | "none";
+    source: "mobula-wallet-analysis" | "birdeye-portfolio" | "helius-portfolio-fallback" | "overview-cache" | "none";
 }
 
 export interface WalletOverviewLegacy {
@@ -535,7 +535,7 @@ export type OverviewActivitySnapshot = {
     pnlTotalUsd: number | null;
     pnlRealizedUsd: number | null;
     pnlUnrealizedUsd: number | null;
-    source: "birdeye-overall-pnl" | "overview-cache" | "none";
+    source: "mobula-wallet-analysis" | "birdeye-overall-pnl" | "overview-cache" | "none";
 };
 
 export type SwapProviderSource = "helius" | "moralis";

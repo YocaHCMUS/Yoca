@@ -3,8 +3,6 @@ import type {
   BirdeyeNetworthHistoryPoint,
   BirdeyeNetworthHistoryResult,
   BirdeyeNetworthType,
-  BirdeyeOverallPnlResult,
-  BirdeyePnlDuration,
   BirdeyePortfolioSnapshotResult,
   BirdeyeSortType,
   BirdeyeTokenPnlDetailsOptions,
@@ -911,29 +909,6 @@ export async function fetchBirdeyePortfolioSnapshot(
       priceUsd: toOptionalNumber(asset?.price),
       valueUsd: toFiniteNumber(asset?.value, 0),
     })),
-  };
-}
-
-export async function fetchBirdeyeOverallPnL(
-  address: string,
-  options?: {
-    duration?: BirdeyePnlDuration;
-  },
-): Promise<BirdeyeOverallPnlResult> {
-  const duration = options?.duration ?? "all";
-
-  const json = await fetchBirdeyeJson("/wallet/v2/pnl/summary", "GET", {
-    searchParams: {
-      wallet: address,
-      duration,
-    },
-  });
-  const summary = json?.data?.summary ?? null;
-
-  return {
-    address,
-    duration,
-    summary,
   };
 }
 

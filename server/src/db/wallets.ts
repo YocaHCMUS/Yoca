@@ -225,8 +225,8 @@ export type WalletRecentTransfersSelect =
 export type WalletRecentTransfersInsert =
   typeof walletRecentTransfers.$inferInsert;
 
-export const walletWinrates = pgTable(
-  "wallet_winrates",
+export const walletAnalyses = pgTable(
+  "wallet_analyses",
   {
     walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
     period: varchar("period", { length: 3 }).notNull(),
@@ -242,13 +242,22 @@ export const walletWinrates = pgTable(
     winOver500Count: integer("win_over_500_count").notNull(),
     loss0To50Count: integer("loss_0_to_50_count").notNull(),
     lossOver50Count: integer("loss_over_50_count").notNull(),
+    buyVolumeUsd: decimal("buy_volume_usd").notNull(),
+    sellVolumeUsd: decimal("sell_volume_usd").notNull(),
+    buyTransactionCount: integer("buy_transaction_count").notNull(),
+    sellTransactionCount: integer("sell_transaction_count").notNull(),
+    transactionCount: integer("transaction_count").notNull(),
+    tokensTradedCount: integer("tokens_traded_count").notNull(),
+    pnlTotalUsd: decimal("pnl_total_usd").notNull(),
+    pnlRealizedUsd: decimal("pnl_realized_usd").notNull(),
+    pnlUnrealizedUsd: decimal("pnl_unrealized_usd").notNull(),
     fetchedAtMs: bigint("fetched_at_ms", { mode: "number" }).notNull(),
   },
   (t) => [primaryKey({ columns: [t.walletAddress, t.period] })],
 );
 
-export type WalletWinrateSelect = typeof walletWinrates.$inferSelect;
-export type WalletWinrateInsert = typeof walletWinrates.$inferInsert;
+export type WalletAnalysisSelect = typeof walletAnalyses.$inferSelect;
+export type WalletAnalysisInsert = typeof walletAnalyses.$inferInsert;
 
 export const walletTransferHistory = pgTable(
   "wallet_transfer_history",

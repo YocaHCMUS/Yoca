@@ -9,10 +9,11 @@ import {
 import { and, eq } from "drizzle-orm";
 import { getTokenMeta } from "../tokens/token-info.js";
 import {
-  fetchBirdeyeOverallPnL,
   fetchHeliusSolanaPortfolio,
 
 } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
+import { getWalletAnalysis } from "@sv/services/charts/winrate.service.js";
+import type { WalletAnalysisSelect } from "@sv/db/schema.js";
 import type {
   ChartAggregation,
   PnLAggregation,
@@ -583,7 +584,7 @@ export async function buildActivitySnapshotFromProviders(
   providerFailuresByPeriod: Record<WalletOverviewPeriodKey, boolean>;
 }> {
   const maxConcurrency = 2;
-  const results = new Array<PromiseSettledResult<Awaited<ReturnType<typeof fetchBirdeyeOverallPnL>>>>(
+  const results = new Array<PromiseSettledResult<Awaited<ReturnType<typeof getWalletAnalysis>>>>(
     OVERVIEW_PERIOD_KEYS.length,
   );
 
@@ -598,10 +599,15 @@ export async function buildActivitySnapshotFromProviders(
       }
 
       const period = OVERVIEW_PERIOD_KEYS[current];
+      if (period === "All") {
+        results[current] = {
+          status: "rejected",
+          reason: new Error("All-time wallet analysis is unsupported"),
+        };
+        continue;
+      }
       try {
-        const value = await fetchBirdeyeOverallPnL(address, {
-          duration: mapPeriodToCacheColumnSuffix(period),
-        });
+        const value = await getWalletAnalysis(address, period);
         results[current] = { status: "fulfilled", value };
       } catch (reason) {
         results[current] = { status: "rejected", reason };
@@ -623,47 +629,12 @@ export async function buildActivitySnapshotFromProviders(
     const result = results[index];
 
     if (result.status === "fulfilled") {
-      const summary = result.value?.summary;
-
-      // If Birdeye returned empty/null summary (e.g., for "90d" or "all" durations),
-      // treat as provider failure and fall back to cache
-      if (!summary) {
-        console.warn("[wallet-overview] Empty summary from Birdeye for period", {
-          address,
-          period,
-          duration: mapPeriodToCacheColumnSuffix(period),
-        });
-
-        providerFailuresByPeriod[period] = true;
-        if (cacheRow) {
-          periodSnapshots[period] = mapPeriodStatsToActivitySnapshot(
-            getOverviewPeriodStatsFromCache(cacheRow, period),
-          );
-          return;
-        }
-
-        periodSnapshots[period] = {
-          tradingVolumeUsd: null,
-          buyTransactionCount: null,
-          buyVolumeUsd: null,
-          sellTransactionCount: null,
-          sellVolumeUsd: null,
-          transactionCount: null,
-          tokensTradedCount: null,
-          pnlTotalUsd: null,
-          pnlRealizedUsd: null,
-          pnlUnrealizedUsd: null,
-          source: "none",
-        };
-        return;
-      }
-
-      periodSnapshots[period] = mapBirdeyeSummaryToPeriodStats(summary);
+      periodSnapshots[period] = mapWalletAnalysisToPeriodStats(result.value);
       providerFailuresByPeriod[period] = false;
       return;
     }
 
-    console.error("[wallet-overview] Failed to compute activity snapshot from Birdeye", {
+    console.error("[wallet-overview] Failed to load Mobula wallet analysis", {
       address,
       period,
       error: result.reason,
@@ -698,38 +669,21 @@ export async function buildActivitySnapshotFromProviders(
   };
 }
 
-export function mapBirdeyeSummaryToPeriodStats(summary: unknown): OverviewActivitySnapshot {
-  const summaryObj = (summary ?? {}) as Record<string, unknown>;
-  const counts = (summaryObj.counts ?? {}) as Record<string, unknown>;
-  const cashflowUsd = (summaryObj.cashflow_usd ?? {}) as Record<string, unknown>;
-  const pnl = (summaryObj.pnl ?? {}) as Record<string, unknown>;
-
-  const buyTransactionCount = toNullableFiniteNumber(counts?.total_buy);
-  const sellTransactionCount = toNullableFiniteNumber(counts?.total_sell);
-  const totalTrade = toNullableFiniteNumber(counts?.total_trade);
-  const buyVolumeUsd = toNullableFiniteNumber(cashflowUsd?.total_invested);
-  const sellVolumeUsd = toNullableFiniteNumber(cashflowUsd?.total_sold);
-  const tradingVolumeUsd =
-    buyVolumeUsd != null || sellVolumeUsd != null
-      ? (buyVolumeUsd ?? 0) + (sellVolumeUsd ?? 0)
-      : null;
-
+export function mapWalletAnalysisToPeriodStats(
+  analysis: WalletAnalysisSelect,
+): OverviewActivitySnapshot {
   return {
-    tradingVolumeUsd,
-    buyTransactionCount,
-    buyVolumeUsd,
-    sellTransactionCount,
-    sellVolumeUsd,
-    transactionCount:
-      totalTrade ??
-      (buyTransactionCount != null || sellTransactionCount != null
-        ? (buyTransactionCount ?? 0) + (sellTransactionCount ?? 0)
-        : null),
-    tokensTradedCount: toNullableFiniteNumber(summaryObj.unique_tokens),
-    pnlTotalUsd: toNullableFiniteNumber(pnl?.total_usd),
-    pnlRealizedUsd: toNullableFiniteNumber(pnl?.realized_profit_usd),
-    pnlUnrealizedUsd: toNullableFiniteNumber(pnl?.unrealized_usd),
-    source: "birdeye-overall-pnl",
+    tradingVolumeUsd: analysis.buyVolumeUsd + analysis.sellVolumeUsd,
+    buyTransactionCount: analysis.buyTransactionCount,
+    buyVolumeUsd: analysis.buyVolumeUsd,
+    sellTransactionCount: analysis.sellTransactionCount,
+    sellVolumeUsd: analysis.sellVolumeUsd,
+    transactionCount: analysis.transactionCount,
+    tokensTradedCount: analysis.tokensTradedCount,
+    pnlTotalUsd: analysis.pnlTotalUsd,
+    pnlRealizedUsd: analysis.pnlRealizedUsd,
+    pnlUnrealizedUsd: analysis.pnlUnrealizedUsd,
+    source: "mobula-wallet-analysis",
   };
 }
 

@@ -6,8 +6,8 @@ import {
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-    walletWinrates,
-    type WalletWinrateSelect,
+    walletAnalyses,
+    type WalletAnalysisSelect,
 } from "@sv/db/schema.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import { mbl_WalletAnalysisSchema } from "@sv/services/_types/wallet-raw-responses.js";
@@ -61,7 +61,7 @@ const MOBULA_PERIOD_BY_WINRATE_PERIOD: Record<WinratePeriod, string> = {
 };
 
 function mapStoredWinrateToResponse(
-  row: WalletWinrateSelect,
+  row: WalletAnalysisSelect,
 ): WalletWinrateData {
   return {
     walletAddress: row.walletAddress,
@@ -85,10 +85,10 @@ function mapStoredWinrateToResponse(
   };
 }
 
-export async function fetchWalletWinrateData(
+export async function fetchWalletAnalysis(
   walletAddress: string,
   period: WinratePeriod,
-): Promise<WalletWinrateData> {
+): Promise<WalletAnalysisSelect> {
   const endpoint = mobula.getEndpoint("/2/wallet/analysis");
   endpoint.search = new URLSearchParams({
     wallet: walletAddress,
@@ -125,7 +125,7 @@ export async function fetchWalletWinrateData(
   const fetchedAtMs = dayjs.utc().valueOf();
 
   const rows = await db
-    .insert(walletWinrates)
+    .insert(walletAnalyses)
     .values({
       walletAddress,
       period,
@@ -141,10 +141,22 @@ export async function fetchWalletWinrateData(
       winOver500Count,
       loss0To50Count,
       lossOver50Count,
+      buyVolumeUsd: result.data.stat.periodVolumeBuy,
+      sellVolumeUsd: result.data.stat.periodVolumeSell,
+      buyTransactionCount: result.data.stat.periodBuys,
+      sellTransactionCount: result.data.stat.periodSells,
+      transactionCount:
+        result.data.stat.periodBuys + result.data.stat.periodSells,
+      tokensTradedCount: result.data.stat.periodTradingTokens,
+      pnlTotalUsd: result.data.stat.periodTotalPnlUSD,
+      pnlRealizedUsd: result.data.stat.periodRealizedPnlUSD,
+      pnlUnrealizedUsd:
+        result.data.stat.periodTotalPnlUSD -
+        result.data.stat.periodRealizedPnlUSD,
       fetchedAtMs,
     })
     .onConflictDoUpdate({
-      target: [walletWinrates.walletAddress, walletWinrates.period],
+      target: [walletAnalyses.walletAddress, walletAnalyses.period],
       set: {
         winrate: result.data.stat.winRealizedPnlRate,
         totalTrades,
@@ -158,6 +170,18 @@ export async function fetchWalletWinrateData(
         winOver500Count,
         loss0To50Count,
         lossOver50Count,
+        buyVolumeUsd: result.data.stat.periodVolumeBuy,
+        sellVolumeUsd: result.data.stat.periodVolumeSell,
+        buyTransactionCount: result.data.stat.periodBuys,
+        sellTransactionCount: result.data.stat.periodSells,
+        transactionCount:
+          result.data.stat.periodBuys + result.data.stat.periodSells,
+        tokensTradedCount: result.data.stat.periodTradingTokens,
+        pnlTotalUsd: result.data.stat.periodTotalPnlUSD,
+        pnlRealizedUsd: result.data.stat.periodRealizedPnlUSD,
+        pnlUnrealizedUsd:
+          result.data.stat.periodTotalPnlUSD -
+          result.data.stat.periodRealizedPnlUSD,
         fetchedAtMs,
       },
     })
@@ -168,20 +192,29 @@ export async function fetchWalletWinrateData(
     throw new Error("Failed to persist Mobula wallet analysis");
   }
 
-  return mapStoredWinrateToResponse(saved);
+  return saved;
 }
 
-export async function getWalletWinrateData(
+export async function fetchWalletWinrateData(
   walletAddress: string,
   period: WinratePeriod,
 ): Promise<WalletWinrateData> {
+  return mapStoredWinrateToResponse(
+    await fetchWalletAnalysis(walletAddress, period),
+  );
+}
+
+export async function getWalletAnalysis(
+  walletAddress: string,
+  period: WinratePeriod,
+): Promise<WalletAnalysisSelect> {
   const storedRows = await db
     .select()
-    .from(walletWinrates)
+    .from(walletAnalyses)
     .where(
       and(
-        eq(walletWinrates.walletAddress, walletAddress),
-        eq(walletWinrates.period, period),
+        eq(walletAnalyses.walletAddress, walletAddress),
+        eq(walletAnalyses.period, period),
       ),
     )
     .limit(1);
@@ -192,11 +225,11 @@ export async function getWalletWinrateData(
     stored.fetchedAtMs >=
       dayjs.utc().valueOf() - WINRATE_TTL_BY_PERIOD[period]
   ) {
-    return mapStoredWinrateToResponse(stored);
+    return stored;
   }
 
   try {
-    return await fetchWalletWinrateData(walletAddress, period);
+    return await fetchWalletAnalysis(walletAddress, period);
   } catch (error) {
     if (stored) {
       console.warn("Mobula win-rate refresh failed; returning stored data", {
@@ -204,11 +237,20 @@ export async function getWalletWinrateData(
         period,
         error,
       });
-      return mapStoredWinrateToResponse(stored);
+      return stored;
     }
 
     throw error;
   }
+}
+
+export async function getWalletWinrateData(
+  walletAddress: string,
+  period: WinratePeriod,
+): Promise<WalletWinrateData> {
+  return mapStoredWinrateToResponse(
+    await getWalletAnalysis(walletAddress, period),
+  );
 }
 
 export async function getWinrateData(
