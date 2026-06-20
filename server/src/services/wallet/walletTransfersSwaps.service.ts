@@ -103,9 +103,9 @@ export type WalletTransactionHistory<T> = {
 
 const walletHistoryCursorSchema = z
   .tuple([
-    z.literal(1),
-    z.number().int().min(0),
-    z.number().int().min(0),
+    z.literal("1"),
+    z.coerce.number<string>().int().min(0),
+    z.coerce.number<string>().int().min(0),
     z.string().min(1),
     z.string().min(1),
   ])
@@ -114,7 +114,7 @@ const walletHistoryCursorSchema = z
     "Cursor row must be inside its history range",
   )
   .transform((cursor): WalletHistoryCursor => ({
-    version: cursor[0],
+    version: 1,
     fromExclusiveMs: cursor[1],
     blockTimestampMs: cursor[2],
     transactionHash: cursor[3],
@@ -126,17 +126,7 @@ export const walletHistoryCursorQuerySchema = z
   .trim()
   .min(1)
   .max(2048)
-  .transform((rawCursor, context): unknown => {
-    try {
-      return JSON.parse(Buffer.from(rawCursor, "base64url").toString("utf8"));
-    } catch {
-      context.addIssue({
-        code: "custom",
-        message: "Invalid wallet history cursor",
-      });
-      return z.NEVER;
-    }
-  })
+  .transform((rawCursor) => rawCursor.split(","))
   .pipe(walletHistoryCursorSchema);
 
 function postProcessWalletTxHistory<T>(data: {
@@ -153,15 +143,13 @@ function postProcessWalletTxHistory<T>(data: {
     transactions: pageEntries.map((entry) => entry.transaction),
     cursor:
       hasMore && lastEntry
-        ? Buffer.from(
-            JSON.stringify([
-              1,
-              data.fromExclusiveMs,
-              lastEntry.blockTimestampMs,
-              lastEntry.transactionHash,
-              lastEntry.actId,
-            ]),
-          ).toString("base64url")
+        ? [
+            1,
+            data.fromExclusiveMs,
+            lastEntry.blockTimestampMs,
+            lastEntry.transactionHash,
+            lastEntry.actId,
+          ].join(",")
         : null,
   };
 }

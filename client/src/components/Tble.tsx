@@ -2,26 +2,26 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import overwriteStyles from "@/styles/_overwrite.module.scss";
 import { cds } from "@/util/carbon-theme";
 import {
-  DataTable,
-  InlineLoading,
-  Layer,
-  Pagination,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableHeader,
-  TableRow,
-  type DataTableProps,
+    DataTable,
+    InlineLoading,
+    Layer,
+    Pagination,
+    Stack,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableHeader,
+    TableRow,
+    type DataTableProps,
 } from "@carbon/react";
 import {
-  useEffect,
-  useMemo,
-  useState,
-  type CSSProperties,
-  type ReactNode,
+    useEffect,
+    useMemo,
+    useState,
+    type CSSProperties,
+    type ReactNode,
 } from "react";
 
 interface TblHdr {
@@ -55,6 +55,7 @@ interface TblProps
   boxed?: boolean;
   pageSizes?: number[];
   marginTop?: number;
+  pageUnknown?: boolean;
   onRowClick?: (row: TblRw, rowIndex: number) => void;
 }
 
@@ -72,6 +73,7 @@ export default function Tble({
   enablePagination = false,
   pageSize = 16,
   pageSizes = [8, 16, 24, 32],
+  pageUnknown = false,
   marginTop = 0,
   onRowClick,
   ...dataTableProps
@@ -191,81 +193,95 @@ export default function Tble({
               style={{
                 height,
                 width: "100%",
-                overflowX: stickyHeader ? "visible" : "auto",
-                overflowY: "auto",
+                display: "flex",
+                flexDirection: "column",
               }}
             >
-              <Table {...getTableProps()}>
-                <TableHead hidden={hideHeaders}>
-                  <TableRow
-                    className={
-                      stickyHeader ? overwriteStyles.stickyHeaderRow : undefined
-                    }
-                  >
-                    {internalHeaders.map((header) => {
-                      const config = getCellConfiguration(header.key);
-                      return (
-                        <TableHeader
-                          {...getHeaderProps({ header })}
-                          key={header.key}
-                          className={`${overwriteStyles.headerCell} ${config.headerClassName}`}
-                          style={config.style}
-                          title={
-                            typeof header.header === "string"
-                              ? header.header
-                              : undefined
-                          }
-                        >
-                          {header.header}
-                        </TableHeader>
-                      );
-                    })}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {internalRows.map((row) => (
+              <div
+                style={{
+                  flex: "1 1 auto",
+                  minHeight: 0,
+                  overflowX: stickyHeader ? "visible" : "auto",
+                  overflowY: "auto",
+                }}
+              >
+                <Table {...getTableProps()}>
+                  <TableHead hidden={hideHeaders}>
                     <TableRow
-                      {...getRowProps({ row })}
-                      key={row.id}
-                      onClick={
-                        onRowClick
-                          ? () => {
-                              const rowIndex = rowsToRender.findIndex(
-                                (item) => item.id === row.id,
-                              );
-
-                              if (rowIndex >= 0) {
-                                onRowClick(rowsToRender[rowIndex], rowIndex);
-                              }
-                            }
-                          : undefined
+                      className={
+                        stickyHeader ? overwriteStyles.stickyHeaderRow : undefined
                       }
-                      style={onRowClick ? { cursor: "pointer" } : undefined}
                     >
-                      {row.cells.map((cell) => {
-                        const config = getCellConfiguration(cell.info.header);
+                      {internalHeaders.map((header) => {
+                        const config = getCellConfiguration(header.key);
                         return (
-                          <TableCell
-                            {...getCellProps({ cell })}
-                            key={cell.id}
-                            className={config.bodyClassName}
+                          <TableHeader
+                            {...getHeaderProps({ header })}
+                            key={header.key}
+                            className={`${overwriteStyles.headerCell} ${config.headerClassName}`}
                             style={config.style}
+                            title={
+                              typeof header.header === "string"
+                                ? header.header
+                                : undefined
+                            }
                           >
-                            {cell.value}
-                          </TableCell>
+                            {header.header}
+                          </TableHeader>
                         );
                       })}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHead>
+                  <TableBody>
+                    {internalRows.map((row) => (
+                      <TableRow
+                        {...getRowProps({ row })}
+                        key={row.id}
+                        onClick={
+                          onRowClick
+                            ? () => {
+                                const rowIndex = rowsToRender.findIndex(
+                                  (item) => item.id === row.id,
+                                );
+
+                                if (rowIndex >= 0) {
+                                  onRowClick(rowsToRender[rowIndex], rowIndex);
+                                }
+                              }
+                            : undefined
+                        }
+                        style={onRowClick ? { cursor: "pointer" } : undefined}
+                      >
+                        {row.cells.map((cell) => {
+                          const config = getCellConfiguration(cell.info.header);
+                          return (
+                            <TableCell
+                              {...getCellProps({ cell })}
+                              key={cell.id}
+                              className={config.bodyClassName}
+                              style={config.style}
+                            >
+                              {cell.value}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
               {enablePagination && (
                 <Pagination
-                  style={{ height: "3rem", background: cds.layer01 }}
+                  style={{
+                    height: "3rem",
+                    flexShrink: 0,
+                    background: cds.layer01,
+                  }}
                   page={currentPage}
                   pageSize={currentPageSize}
                   pageSizes={pageSizes}
                   totalItems={rows.length}
+                  pageText={((page) => tr("table.page", {count: page}))}
                   forwardText={tr("table.nextPage")}
                   backwardText={tr("table.previousPage")}
                   itemsPerPageText={tr("table.itemsPerPageText")}
@@ -279,6 +295,7 @@ export default function Tble({
                     setCurrentPage(page);
                     setCurrentPageSize(pageSize);
                   }}
+                  pagesUnknown={pageUnknown}
                 />
               )}
             </div>

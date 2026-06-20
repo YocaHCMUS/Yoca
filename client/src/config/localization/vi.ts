@@ -3,9 +3,9 @@ import "dayjs/locale/vi";
 import { defineTranslation } from "./en";
 import { getUsdToVndRate } from "./util/exchange-service";
 import {
-  defineDateTimeFormat,
-  defineNumberFormat,
-  defineTextFormat,
+    defineDateTimeFormat,
+    defineNumberFormat,
+    defineTextFormat,
 } from "./util/util-format";
 
 export const langCode = "vi-VN";
@@ -112,6 +112,7 @@ export const translation = defineTranslation({
     selectAll: "Chọn tất cả",
     from: "Từ",
     to: "Đến",
+    page: "Trang {{count}}"
   },
   // Authentication
   auth: {
@@ -930,8 +931,8 @@ export const translation = defineTranslation({
     filter90d: "90 ngày",
     exchange: "Sàn giao dịch",
     pair: "Cặp giao dịch",
-    tokenSold: "Token đã bán",
-    tokenBought: "Token đã mua",
+    tokenSold: "Bán",
+    tokenBought: "Mua",
     totalValueUSD: "Tổng giá trị (USD)",
     feeInLamports: "Phí (lamport)",
     identity: "Định danh",
