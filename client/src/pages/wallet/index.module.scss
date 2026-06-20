@@ -1,5 +1,5 @@
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/theme' as *;
+@use "@carbon/react/scss/spacing" as *;
+@use "@carbon/react/scss/theme" as *;
 
 // ===== Page Layout (outer flex for shell + sidebar) =====
 :global(.cds--content:has(.pageLayout)) {
@@ -171,7 +171,9 @@
   justify-content: center;
   padding: 5px;
   border-radius: 4px;
-  transition: color 0.15s, background-color 0.15s;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
   flex-shrink: 0;
 
   &:hover {
@@ -193,7 +195,7 @@
   // background: $layer-01;
 }
 
-.heroCell+.heroCell {
+.heroCell + .heroCell {
   border-left: 1px solid var(--cds-border-subtle-03);
 }
 
@@ -431,7 +433,7 @@
 
 .pfValue {
   font-size: 12px;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: "IBM Plex Mono", monospace;
   color: $text-primary;
 }
 
@@ -564,7 +566,7 @@
 
 .swapTokenAmount {
   color: $text-secondary;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: "IBM Plex Mono", monospace;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
@@ -650,72 +652,126 @@
   }
 }
 
-// ===== Chat Inline (layout-integrated, right/left dock) =====
-.chatInline {
-  flex-shrink: 0;
-  max-width: 0;
-  overflow: hidden;
-  transition: max-width 0.3s ease;
-  display: flex;
-  border-left: 1px solid var(--cds-border-subtle-03);
-
-  &[data-open="true"] {
-    max-width: 460px;
-  }
-
-  &[data-side="left"] {
-    order: -1;
-    border-right: 1px solid var(--cds-border-subtle-03);
-    border-left: none;
-  }
-}
-
-.chatInlineInner {
-  width: 460px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+// ===== Chat Modal Launcher =====
+.chatLauncher {
+  position: absolute;
+  right: 56px;
+  bottom: 24px;
+  z-index: 70;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  max-width: min(320px, calc(100% - 88px));
+  padding: 0 12px;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 8px;
   background: $background;
+  color: $text-primary;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    transform 0.15s;
+
+  &:hover {
+    background: $layer-hover-01;
+    border-color: var(--cds-border-strong-01);
+    transform: translateY(-1px);
+  }
+
+  kbd {
+    flex-shrink: 0;
+    padding: 2px 6px;
+    border: 1px solid var(--cds-border-subtle-03);
+    border-radius: 4px;
+    color: $text-secondary;
+    background: $layer-01;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    font-weight: 500;
+  }
 }
 
-// ===== Chat Fullscreen Overlay =====
+// ===== Chat Modal Overlay =====
 .chatOverlay {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: 60;
-  display: flex;
-
-  &[data-position="fullscreen"] {
-    left: 0;
-    right: 0;
-  }
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
 }
 
 .chatBackdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
   z-index: 0;
+  background: rgba(0, 0, 0, 0.24);
+  pointer-events: auto;
 }
 
 .chatPanel {
   position: absolute;
-  inset: 0;
   z-index: 1;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: $background;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.38);
+  pointer-events: auto;
+  animation: chatPanelReveal 0.22s ease-out;
+}
 
-  .chatOverlay[data-position="fullscreen"] & {
-    inset: 24px;
-    // border-radius: 16px;
-    border: 1px solid var(--cds-border-subtle-03);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    max-width: 900px;
-    margin: 0 auto;
-    width: calc(100% - 48px);
+.chatOverlay[data-position="right"] .chatPanel {
+  top: 16px;
+  right: 56px;
+  bottom: 16px;
+  width: min(460px, calc(100% - 88px));
+}
+
+.chatOverlay[data-position="left"] .chatPanel {
+  top: 16px;
+  bottom: 16px;
+  left: 16px;
+  width: min(460px, calc(100% - 88px));
+}
+
+.chatOverlay[data-position="fullscreen"] .chatPanel {
+  inset: 24px;
+  width: calc(100% - 48px);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+@keyframes chatPanelReveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .chatLauncher {
+    right: 52px;
+    bottom: 16px;
+  }
+
+  .chatOverlay[data-position="right"] .chatPanel,
+  .chatOverlay[data-position="left"] .chatPanel,
+  .chatOverlay[data-position="fullscreen"] .chatPanel {
+    inset: 12px;
+    width: auto;
+    max-width: none;
+    margin: 0;
   }
 }
 
