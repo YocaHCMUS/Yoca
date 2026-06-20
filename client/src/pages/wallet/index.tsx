@@ -3,25 +3,10 @@ import { PnLChart } from "@/components/charts/PnLChart/index.ts";
 import { WalletTopbar } from "@/components/wallet/WalletTopbar/WalletTopbar.tsx";
 import { WalletHero } from "@/components/wallet/WalletHero/WalletHero.tsx";
 import { WalletHoldingsPanel } from "@/components/wallet/WalletHoldingsPanel/WalletHoldingsPanel.tsx";
-import { TabContainer } from "@/components/tabContainer/tabContainer.tsx";
 import { RightSidebar } from "./RightSidebar.tsx";
 import { WalletChat, ChatContextProvider } from "@/components/wallet/WalletChat";
 import { AiAnalysisModal } from "@/components/wallet/AiAnalysisModal/AiAnalysisModal.tsx";
-import {
-  FilterType,
-  type FilterConfig,
-  SortType,
-  Table,
-  tableHeaderLabel,
-} from "@/components/tables/Table.tsx";
-import {
-  renderBase,
-  renderCode,
-  renderDateTime,
-  renderHash,
-  renderTokenCell,
-} from "@/components/tables/TableCellRenderer.tsx";
-import { SwapPairCell } from "@/components/wallet/SwapPairCell/SwapPairCell.tsx";
+import { tableHeaderLabel } from "@/components/tables/Table.tsx";
 import { useWalletWinrate } from "@/hooks/useWalletWinrate";
 import {
   WalletReportTemplate,
@@ -45,11 +30,9 @@ import {
   type WalletIntelligenceResponse,
   type WalletOverviewMultiPeriodResponse,
   type WalletPageInfo,
-  type WalletSwapTokenChange,
-  type WalletSwapTokenInfo,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
-import { User, Close } from "@carbon/icons-react";
+import { Close } from "@carbon/icons-react";
 import { Button } from "@carbon/react";
 import JSZip from "jszip";
 import {
@@ -81,6 +64,7 @@ import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV
 import type { WalletOverviewPeriodKey } from "@/services/wallet/walletApi.ts";
 import { TimePeriod } from "@/types/chart-filters.types.ts";
 import WalletOverviewWinRateBanner from "@/components/wallet/WalletOverview/WalletOverviewWinRateBanner";
+import { WalletTransactionActivity } from "@/components/WalletTransactionActivity/WalletTransactionActivity";
 
 type ChatPosition = "right" | "left" | "fullscreen";
 
@@ -113,30 +97,9 @@ function flattenLoadedPages<T>(pages: Record<number, T[]>): T[] {
     .flatMap((page) => pages[page] ?? []);
 }
 
-const WSOL_MINT = "So11111111111111111111111111111111111111112";
 const PDF_TABLE_ROWS_PER_PAGE = 20;
 const PDF_CHUNK_PAGE_BASE_CLASS = "break-inside-avoid print:break-inside-avoid";
 const PDF_CHUNK_PAGE_BREAK_CLASS = "break-after-page print:break-after-page";
-
-function resolveTokenMetaLookupAddress(
-  tokenAddress: string | undefined,
-): string | undefined {
-  if (!tokenAddress) {
-    return undefined;
-  }
-
-  const normalized = tokenAddress.trim().toLowerCase();
-  if (
-    normalized === "native" ||
-    normalized === "sol" ||
-    normalized === "11111111111111111111111111111111" ||
-    normalized === "so11111111111111111111111111111111111111111"
-  ) {
-    return WSOL_MINT;
-  }
-
-  return tokenAddress;
-}
 
 export default function WalletPage() {
   const { tr, fmt, lang } = useLocalization();
@@ -171,7 +134,6 @@ export default function WalletPage() {
     useState<WalletOverviewPeriodKey>("24H");
   const [aiAnalysisOpen, setAiAnalysisOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
-  const [activeActivityTab, setActiveActivityTab] = useState<number>(0);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [chatPosition, setChatPosition] = useState<ChatPosition>("right");
@@ -283,25 +245,6 @@ export default function WalletPage() {
     return Number.isFinite(parsed) ? parsed : undefined;
   };
 
-  const swapData = useMemo(
-    () =>
-      loadedSwaps.map((swap) => {
-        const totalValueUsd = toOptionalFiniteNumber(swap.totalValueUsd);
-        return [
-          String(swap.blockTimestampIso ?? ""), // time column
-          formatSwapPair(swap), // pair column
-          Object.assign(swap.sold, {
-            toString: () => swap.sold.symbol ?? "Unknown",
-          }), // sold column
-          Object.assign(swap.bought, {
-            toString: () => swap.bought.symbol ?? "Unknown",
-          }), // bought column
-          totalValueUsd ?? "—",
-        ];
-      }),
-    [loadedSwaps],
-  );
-
   const swapReportRows = useMemo(
     () =>
       loadedSwaps.map((swap) => [
@@ -312,51 +255,6 @@ export default function WalletPage() {
         swap.totalValueUsd != null ? fmt.num.currency(swap.totalValueUsd) : "—",
       ]),
     [fmt, loadedSwaps],
-  );
-
-  const transferData = useMemo(
-    () =>
-      loadedTransfers.map((transfer) => {
-        const tokenMetaLookupAddress = resolveTokenMetaLookupAddress(
-          transfer.tokenAddress,
-        );
-        const fallbackLogoUri = tokenMetaLookupAddress
-          ? tokenMeta.data?.[tokenMetaLookupAddress]?.imageUrl
-          : undefined;
-        const tokenSymbol =
-          typeof transfer.tokenSymbol === "string" &&
-            transfer.tokenSymbol.trim().length > 0
-            ? transfer.tokenSymbol
-            : "Unknown";
-        const tokenAmount = transfer.amount;
-        const transferValueUsd =
-          transfer.amountUsd ??
-          (transfer.priceUsd != null ? tokenAmount * transfer.priceUsd : null);
-        const tokenCell = {
-          address: transfer.tokenAddress,
-          amount: tokenAmount,
-          symbol: tokenSymbol,
-          name: transfer.tokenName ?? null,
-          logoUri: transfer.tokenLogoUri ?? fallbackLogoUri ?? null,
-          priceUsd: transfer.priceUsd ?? 0,
-          valueUsd: transferValueUsd ?? 0,
-          toString: () => {
-            return tokenSymbol;
-          },
-          valueOf: () => {
-            return tokenAmount;
-          },
-        };
-
-        return [
-          transfer.timestamp,
-          transfer.from,
-          transfer.to,
-          tokenCell,
-          transferValueUsd ?? "—",
-        ];
-      }),
-    [loadedTransfers],
   );
 
   const swapHeaders = [
@@ -374,198 +272,6 @@ export default function WalletPage() {
     tr("walletPage.token"),
     tr("walletPage.value"),
   ];
-
-  const isSortableSwaps = [true, false, true, true, true];
-  const isSortableTransfers = [true, false, false, true, true];
-
-  const swapSortConfigs = {
-    0: { type: SortType.Date },
-    2: { type: SortType.Number, field: "amount" },
-    3: { type: SortType.Number, field: "amount" },
-    4: { type: SortType.Number },
-  };
-  const transferSortConfigs = {
-    0: { type: SortType.Date },
-    2: { type: SortType.Number },
-    4: { type: SortType.Number },
-  };
-  const renderSwapTokenInfoClassnames = {
-    container: styles.swapTokenCell,
-    amount: styles.swapTokenAmount,
-  };
-  const swapCellRenderers = [
-    (value: string) => renderDateTime(value, fmt.datetime["relative"]),
-    (value: string, row?: any[]) => {
-      const soldToken = Array.isArray(row)
-        ? (row[2] as WalletSwapTokenChange | undefined)
-        : undefined;
-      const boughtToken = Array.isArray(row)
-        ? (row[3] as WalletSwapTokenChange | undefined)
-        : undefined;
-      const pairLabel = String(value || "").replace(/,/g, " → ");
-
-      return (
-        <SwapPairCell
-          soldToken={soldToken ?? null}
-          boughtToken={boughtToken ?? null}
-          pairLabel={pairLabel}
-        />
-      );
-    },
-    (value: WalletSwapTokenInfo, row?: any) => {
-      if (!value || typeof value !== "object") return renderCode(String(value));
-      const token = value;
-      return renderTokenCell(
-        token,
-        fmt.num.compact.decimal,
-        renderSwapTokenInfoClassnames,
-        30,
-        true,
-        "negative",
-      )(String(token.symbol ?? ""), row ?? null);
-    },
-    (value: WalletSwapTokenInfo, row?: any) => {
-      if (!value || typeof value !== "object") return renderCode(String(value));
-      const token = value;
-      return renderTokenCell(
-        token,
-        fmt.num.compact.decimal,
-        renderSwapTokenInfoClassnames,
-        30,
-        true,
-        "positive",
-      )(String(token.symbol ?? ""), row ?? null);
-    },
-    (value: number | string) => {
-      if (typeof value === "number" && Number.isFinite(value)) {
-        return renderBase(fmt.num.currency(value));
-      }
-      return renderBase(String(value));
-    },
-  ];
-
-  const transferCellRenderers = [
-    (value: string) => renderDateTime(value, fmt.datetime["relative"]),
-    (value: string) => {
-      const isCurrentWallet = value === walletAddress;
-      return renderHash(
-        value,
-        6,
-        4,
-        isCurrentWallet ? <User size={12} /> : undefined,
-        isCurrentWallet ? tr("walletPage.currentWallet") : undefined,
-        isCurrentWallet,
-      );
-    },
-    (value: string) => {
-      const isCurrentWallet = value === walletAddress;
-      return renderHash(
-        value,
-        6,
-        4,
-        isCurrentWallet ? <User size={12} /> : undefined,
-        isCurrentWallet ? tr("walletPage.currentWallet") : undefined,
-        isCurrentWallet,
-      );
-    },
-    (value: WalletSwapTokenInfo, row?: any) => {
-      if (!value || typeof value !== "object") return renderCode(String(value));
-      return renderTokenCell(
-        value,
-        fmt.num.compact.decimal,
-        renderSwapTokenInfoClassnames,
-        30,
-        true,
-      )(String(value.symbol ?? ""), row ?? null);
-    },
-    (value: number | null) => {
-      if (value == null) return renderBase("—");
-      return renderBase(fmt.num.currency(value));
-    },
-  ];
-
-  const swapFilterSchema: Record<number, FilterConfig | null> = {
-    0: { type: FilterType.Date },
-    1: {
-      type: FilterType.Composite,
-      filters: {
-        name: { type: FilterType.Select, field: "name" },
-        logo: null,
-      },
-    },
-    2: {
-      type: FilterType.Composite,
-      filters: {
-        address: null,
-        amount: {
-          type: FilterType.Range,
-          field: "amount",
-          min: 0,
-          max: 10_000,
-          step: 0.01,
-        },
-        symbol: { type: FilterType.Select, field: "symbol" },
-        name: { type: FilterType.Select, field: "name" },
-        logoUri: null,
-        priceUsd: null,
-        valueUsd: null,
-      },
-    },
-    3: {
-      type: FilterType.Composite,
-      filters: {
-        address: null,
-        amount: {
-          type: FilterType.Range,
-          field: "amount",
-          min: 0,
-          max: 10_000,
-          step: 0.01,
-        },
-        symbol: { type: FilterType.Select, field: "symbol" },
-        name: { type: FilterType.Select, field: "name" },
-        logoUri: null,
-        priceUsd: null,
-        valueUsd: null,
-      },
-    },
-    4: {
-      type: FilterType.Range,
-      min: 0,
-      max: 1_000_000,
-      step: 0.01,
-    },
-  };
-
-  const transferFilterSchema: Record<number, FilterConfig | null> = {
-    0: { type: FilterType.Date },
-    1: { type: FilterType.Select },
-    2: { type: FilterType.Select },
-    3: {
-      type: FilterType.Composite,
-      filters: {
-        symbol: { type: FilterType.Select, field: "symbol" },
-        name: { type: FilterType.Select, field: "name" },
-        amount: {
-          type: FilterType.Range,
-          field: "amount",
-          min: 0,
-          max: 10_000,
-          step: 0.01,
-        },
-        logoUri: null,
-        address: null,
-        priceUsd: null,
-        valueUsd: null,
-      },
-    },
-    4: {
-      type: FilterType.Range,
-      min: 0,
-      max: 1_000_000,
-      step: 0.01,
-    },
-  };
 
   // const handleSwapPageChange = async (): Promise<boolean> => {
   //   if (!address || swapLoading) return false;
@@ -1334,76 +1040,7 @@ export default function WalletPage() {
 
               {/* Activity Tables */}
               <div className={styles.section}>
-                <TabContainer
-                  activeTab={activeActivityTab}
-                  names={[
-                    `${tr("walletPage.swap")} (${loadedSwaps.length})`,
-                    `${tr("walletPage.transfer")} (${loadedTransfers.length})`,
-                  ]}
-                  actions={
-                    <Button
-                      size="sm"
-                      kind="tertiary"
-                      onClick={() => setAiSwapSummaryOpen(true)}
-                    >
-                      {/* {tr("walletPage.aiSwapSummary")}
-                       */}
-                      {tr("walletPage.aiSwapSummary.button")}
-                    </Button>
-                  }
-                  onTabChange={(index) => setActiveActivityTab(index)}
-                  tabs={[
-                    <Table
-                      key="swaps-tab" // Need to set key to prevent React from reusing the same Table instance for both tabs, which causes issues with independent loading states and data
-                      maxHeight={400}
-                      title={tr("walletPage.swap")}
-                      headers={swapHeaders}
-                      initialFilters={{}}
-                      fetcher={Promise.resolve(swapData)}
-                      filterSchema={swapFilterSchema}
-                      cellRenderers={swapCellRenderers}
-                      dataEntries={swapData}
-                      isSortable={isSortableSwaps}
-                      sortConfigs={swapSortConfigs}
-                      onRowClick={(_row, rowIndex) => {
-                        const swap = loadedSwaps[rowIndex >= 0 ? rowIndex : -1];
-                        if (swap) {
-                          setSelectedSwap(swap);
-                          setSwapModalOpen(true);
-                        }
-                      }}
-                      enableExport={false}
-                      loading={swapLoading && loadedSwaps.length === 0}
-                    />,
-                    // <div className={styles.chartSection} style={{ borderRadius: "0 0 12px 12px" }}>
-                    // </div>
-                    <Table
-                      key="transfers-tab" // Need to set key to prevent React from reusing the same Table instance for both tabs, which causes issues with independent loading states and data
-                      maxHeight={400}
-                      title={tr("walletPage.transfer")}
-                      headers={transferHeaders}
-                      initialFilters={{}}
-                      fetcher={Promise.resolve(transferData)}
-                      filterSchema={transferFilterSchema}
-                      cellRenderers={transferCellRenderers}
-                      dataEntries={transferData}
-                      isSortable={isSortableTransfers}
-                      sortConfigs={transferSortConfigs}
-                      onRowClick={(_row, rowIndex) => {
-                        const transfer =
-                          loadedTransfers[rowIndex >= 0 ? rowIndex : -1];
-                        if (transfer) {
-                          setSelectedTransfer(transfer);
-                          setTransferModalOpen(true);
-                        }
-                      }}
-                      enableExport={false}
-                      loading={transferLoading && loadedTransfers.length === 0}
-                    />,
-                    // <div className={styles.chartSection} style={{ borderRadius: "0 0 12px 12px" }}>
-                    // </div>,
-                  ]}
-                />
+                <WalletTransactionActivity address={walletAddress} />
               </div>
             </div>
 

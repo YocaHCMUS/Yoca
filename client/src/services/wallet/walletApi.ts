@@ -522,7 +522,7 @@ export function fetchWalletPortfolio(
 
 /**
  * Fetch wallet transfers
- * GET /api/wallets/transfers
+ * GET /api/wallets/transfers/history/:address
  */
 export function fetchWalletTransfers(
   address: string,
@@ -533,10 +533,42 @@ export function fetchWalletTransfers(
     before?: string;
   },
 ): Promise<WalletTransfersResponse> {
-  return client.api.wallets.transfers.$get({
-    query: { address, ...params },
+  return client.api.wallets.transfers.history[":address"].$get({
+    param: { address },
+    query: { limit: params?.limit },
   }).then(resp => {
-    if (resp.ok) return resp.json();
+    if (resp.ok) {
+      return resp.json().then(transfers => ({
+        address,
+        chain: params?.chain,
+        transfers: transfers.transactions.map(transfer => ({
+          from:
+            transfer.direction === "send"
+              ? address
+              : transfer.counterpartyAddress,
+          to:
+            transfer.direction === "receive"
+              ? address
+              : transfer.counterpartyAddress,
+          amount: transfer.token.amount,
+          amountUsd: transfer.valueUsd,
+          timestamp: new Date(transfer.blockTimestampMs).toISOString(),
+          tokenAddress: transfer.token.address,
+          tokenSymbol: transfer.token.symbol ?? "",
+          tokenName: transfer.token.name ?? undefined,
+          tokenLogoUri: transfer.token.logoUri ?? undefined,
+          priceUsd: transfer.token.priceUsd ?? undefined,
+          transactionSignature: transfer.transactionHash,
+          instructionIndex: 0,
+        })),
+        pageInfo: {
+          pageSize: 100,
+          hasMore: false,
+          nextCursor: null,
+          source: "cache",
+        },
+      }));
+    }
     console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });
@@ -544,7 +576,7 @@ export function fetchWalletTransfers(
 
 /**
  * Fetch wallet swaps
- * GET /api/wallets/swap
+ * GET /api/wallets/swaps/history/:address
  */
 export function fetchWalletSwaps(
   address: string,
@@ -555,10 +587,57 @@ export function fetchWalletSwaps(
     before?: string;
   },
 ): Promise<WalletSwapsResponse> {
-  return client.api.wallets.swap.$get({
-    query: { address, ...params },
+  return client.api.wallets.swaps.history[":address"].$get({
+    param: { address },
+    query: { limit: params?.limit },
   }).then(resp => {
-    if (resp.ok) return resp.json();
+    if (resp.ok) {
+      return resp.json().then(swaps => ({
+        address,
+        swaps: swaps.transactions.map(swap => {
+          const boughtLabel =
+            swap.bought.symbol ?? swap.bought.name ?? swap.bought.address;
+          const soldLabel =
+            swap.sold.symbol ?? swap.sold.name ?? swap.sold.address;
+
+          return {
+            transactionHash: swap.transactionHash,
+            transactionType: "SWAP",
+            blockTimestampIso: new Date(
+              swap.blockTimestampMs,
+            ).toISOString(),
+            subcategory: null,
+            walletAddress: address,
+            pairAddress: "",
+            tokensInvolved: `${soldLabel},${boughtLabel}`,
+            bought: {
+              ...swap.bought,
+              priceUsd: swap.bought.priceUsd ?? 0,
+              valueUsd:
+                swap.bought.priceUsd == null
+                  ? 0
+                  : swap.bought.amount * swap.bought.priceUsd,
+            },
+            sold: {
+              ...swap.sold,
+              priceUsd: swap.sold.priceUsd ?? 0,
+              valueUsd:
+                swap.sold.priceUsd == null
+                  ? 0
+                  : swap.sold.amount * swap.sold.priceUsd,
+            },
+            totalValueUsd: swap.totalValueUsd,
+            baseQuotePrice: null,
+          };
+        }),
+        pageInfo: {
+          pageSize: 100,
+          hasMore: false,
+          nextCursor: null,
+          source: "cache",
+        },
+      }));
+    }
     console.error(`API Error: ${resp.status}`);
     throw new Error(`API Error: ${resp.status}`);
   });

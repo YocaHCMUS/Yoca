@@ -3,9 +3,9 @@ import "dayjs/locale/vi";
 import { defineTranslation } from "./en";
 import { getUsdToVndRate } from "./util/exchange-service";
 import {
-  defineDateTimeFormat,
-  defineNumberFormat,
-  defineTextFormat,
+    defineDateTimeFormat,
+    defineNumberFormat,
+    defineTextFormat,
 } from "./util/util-format";
 
 export const langCode = "vi-VN";
@@ -112,6 +112,7 @@ export const translation = defineTranslation({
     selectAll: "Chọn tất cả",
     from: "Từ",
     to: "Đến",
+    page: "Trang {{count}}"
   },
   // Authentication
   auth: {
@@ -902,6 +903,7 @@ export const translation = defineTranslation({
     holding: "Đang nắm giữ",
     value: "Giá trị",
     change24h: "Thay đổi (24h)",
+    hideLowValue: "Ẩn giá trị thấp",
     // Token Details Demo
     tokensLastTraded: "Những token giao dịch gần nhất",
     tokensLastTradedDescription: "Token có hoạt động giao dịch gần đây",
@@ -930,8 +932,8 @@ export const translation = defineTranslation({
     filter90d: "90 ngày",
     exchange: "Sàn giao dịch",
     pair: "Cặp giao dịch",
-    tokenSold: "Token đã bán",
-    tokenBought: "Token đã mua",
+    tokenSold: "Bán",
+    tokenBought: "Mua",
     totalValueUSD: "Tổng giá trị (USD)",
     feeInLamports: "Phí (lamport)",
     identity: "Định danh",
@@ -1657,6 +1659,7 @@ export const translation = defineTranslation({
       title: "Lịch sử số dư",
       totalBalance: "Tổng số dư",
       change: "Thay đổi",
+      change24h: "Thay đổi 24 giờ",
       date: "Ngày",
       balance: "Số dư",
       selectTokenLabel: "Chọn token",

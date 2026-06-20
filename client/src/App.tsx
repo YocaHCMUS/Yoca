@@ -1,8 +1,8 @@
 import {
-  createBrowserRouter,
-  Outlet,
-  RouterProvider,
-  useNavigation,
+    createBrowserRouter,
+    Outlet,
+    RouterProvider,
+    useNavigation,
 } from "react-router";
 
 import { Loading } from "@carbon/react";
@@ -25,6 +25,7 @@ import WashTradingPage from "./pages/wash-trading";
 import { AuthGuard } from "./components/auth";
 import { useLocalization } from "./contexts/LocalizationContext";
 import { BalanceChartV2 } from "./components/charts/BalanceChartV2/BalanceChartV2";
+import { WalletTransactionActivity } from "./components/WalletTransactionActivity/WalletTransactionActivity";
 
 function RootLayout() {
   const navigation = useNavigation();
@@ -159,6 +160,13 @@ const router = createBrowserRouter([
         path: "balance",
         element: (
           <BalanceChartV2 address="3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH" />
+        ),
+      },
+
+      {
+        path: "wallet-act",
+        element: (
+          <WalletTransactionActivity address="3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH" />
         ),
       },
 

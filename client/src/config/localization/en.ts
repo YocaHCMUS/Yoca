@@ -1,8 +1,8 @@
 import type { ApiErrCode } from "@/api/main";
 import {
-  defineDateTimeFormat,
-  defineNumberFormat,
-  defineTextFormat,
+    defineDateTimeFormat,
+    defineNumberFormat,
+    defineTextFormat,
 } from "./util/util-format";
 import { defineTranslationWithBase } from "./util/util-translation";
 
@@ -151,6 +151,7 @@ export const translation = {
     selectAll: "Select All",
     from: "From",
     to: "To",
+    page: "Page {{count}}"
   },
   // Authentication
   auth: {
@@ -941,6 +942,7 @@ export const translation = {
     holding: "Holding",
     value: "Value",
     change24h: "Change (24h)",
+    hideLowValue: "Hide Low Value",
     // Token Details Demo
     tokensLastTraded: "Last traded tokens",
     tokensLastTradedDescription: "Tokens with recent trading activity",
@@ -969,8 +971,8 @@ export const translation = {
     filter30d: "30d",
     filter90d: "90d",
     pair: "Pair",
-    tokenSold: "Token Sold",
-    tokenBought: "Token Bought",
+    tokenSold: "Sold",
+    tokenBought: "Bought",
     totalValueUSD: "Total Value (USD)",
     feeInLamports: "Fee (lamport)",
     identity: "Identity",
@@ -1696,6 +1698,7 @@ export const translation = {
       title: "Balance History",
       totalBalance: "Total Balance",
       change: "Change",
+      change24h: "24h Change",
       date: "Date",
       balance: "Balance",
       selectTokenLabel: "Select token",
