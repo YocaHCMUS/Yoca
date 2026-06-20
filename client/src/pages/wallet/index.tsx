@@ -63,7 +63,6 @@ import { AiSwapSummaryModal } from "@/components/wallet/AiSwapSummaryModal";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
 import type { WalletOverviewPeriodKey } from "@/services/wallet/walletApi.ts";
 import { TimePeriod } from "@/types/chart-filters.types.ts";
-import WalletOverviewWinRateBanner from "@/components/wallet/WalletOverview/WalletOverviewWinRateBanner";
 import { WalletTransactionActivity } from "@/components/WalletTransactionActivity/WalletTransactionActivity";
 
 type ChatPosition = "right" | "left" | "fullscreen";
@@ -145,7 +144,10 @@ export default function WalletPage() {
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
   const reportTemplateRef = useRef<HTMLDivElement | null>(null);
 
-  const { stats, loading } = useWalletWinrate(walletAddress, selectedPeriod);
+  const { stats, loading } = useWalletWinrate(
+    walletAddress,
+    selectedPeriod === "All" ? "90D" : selectedPeriod,
+  );
   const [selectedToken, setSelectedToken] = useState<{
     address: string;
     symbol: string;
@@ -485,7 +487,6 @@ export default function WalletPage() {
     loadPortfolioData,
     loadActivityData,
   ]);
-  const { stats: winRateStats, loading: winRateLoading } = useWalletWinrate(walletAddress, selectedPeriod);
   const activeReportSection = useMemo<WalletReportSection>(() => {
     return "overview";
   }, []);
@@ -995,15 +996,12 @@ export default function WalletPage() {
               isPagePdfExporting || isDataExporting || isChartsExporting
             }
             currentPeriod={selectedPeriod}
+            winRatePeriod={selectedPeriod === "All" ? "90D" : selectedPeriod}
             onPeriodChange={(period) => setSelectedPeriod(period)}
+            winRateStats={stats}
+            winRateLoading={loading}
+            isAiChatDocked={isChatOpen && chatPosition !== "fullscreen"}
           />
-          <div style={{ padding: "20px 24px 0 24px" }}>
-            <WalletOverviewWinRateBanner
-              stats={stats} // Nhận từ hook useWalletWinrate
-              selectedPeriod={selectedPeriod}
-              loading={loading} // Nhận từ hook useWalletWinrate
-            />
-          </div>
 
           <WalletHero
             overview={overviewReport}

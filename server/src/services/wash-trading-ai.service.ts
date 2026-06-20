@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 
 export type Timeframe = "1h" | "24h" | "7d" | "30d";
 export type GnnAlgorithm = "GCN" | "GAT" | "GraphSAGE";
+export type WashTradingLanguage = "en" | "vi";
 export type WashTradingDataSource =
   | "helius-rpc-token-accounts"
   | "helius-enhanced-api"
@@ -47,6 +48,7 @@ export interface GNNScore {
     amountSimilarity: number;
     selfLoopDegree: number;
     hubness: number;
+    volumeSignal: number;
   };
   riskLevel: "High" | "Medium" | "Low";
   pattern: string;
@@ -136,6 +138,61 @@ interface RpcParsedTransaction {
 
 const HELIUS_ENHANCED_BASE = "https://api.helius.xyz";
 const HELIUS_RPC_BASE = "https://mainnet.helius-rpc.com";
+
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const RPC_MIN_REQUIRED_TRANSFERS = 8;
+const API_LIMIT_BY_TIMEFRAME: Record<Timeframe, number> = {
+  "1h": 50,
+  "24h": 80,
+  "7d": 120,
+  "30d": 160,
+};
+
+const transferCache = new Map<string, {
+  createdAt: number;
+  txs: NormalizedTx[];
+  source: WashTradingDataSource;
+  reason: string;
+}>();
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function isRateLimitLike(message: string): boolean {
+  const text = message.toLowerCase();
+  return text.includes("429") || text.includes("rate limited") || text.includes("too many requests") || text.includes("overloaded");
+}
+
+async function withRetry<T>(task: () => Promise<T>, options: { label: string; retries?: number; baseDelayMs?: number } ): Promise<T> {
+  const retries = options.retries ?? 2;
+  const baseDelayMs = options.baseDelayMs ?? 700;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await task();
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      if (!isRateLimitLike(message) || attempt === retries) {
+        throw error;
+      }
+
+      const delay = baseDelayMs * 2 ** attempt + Math.round(Math.random() * 250);
+      console.warn(`[WashTradingAI] ${options.label} temporarily limited, retrying in ${delay}ms...`);
+      await sleep(delay);
+    }
+  }
+
+  throw lastError;
+}
+
+function getSafeApiLimit(limit: number, timeframe: Timeframe): number {
+  return Math.min(Math.max(limit || 50, 20), API_LIMIT_BY_TIMEFRAME[timeframe]);
+}
+
+function getTransferCacheKey(mint: string, timeframe: Timeframe): string {
+  return `${mint}:${timeframe}`;
+}
 
 function getHeliusApiKey(): string | null {
   const raw = process.env.HELIUS_API_KEY?.trim();
@@ -309,69 +366,92 @@ async function fetchHeliusRpcTokenAccountTransactions(
   limit: number,
   timeframe: Timeframe,
 ): Promise<NormalizedTx[]> {
-  const largestAccounts = await heliusRpc<{ value?: RpcTokenAccount[] }>("getTokenLargestAccounts", [mint]);
+  const safeLimit = getSafeApiLimit(limit, timeframe);
+
+  const largestAccounts = await withRetry(
+    () => heliusRpc<{ value?: RpcTokenAccount[] }>("getTokenLargestAccounts", [mint]),
+    { label: "getTokenLargestAccounts", retries: 2, baseDelayMs: 1_200 },
+  );
+
   const tokenAccounts = (largestAccounts.value ?? [])
     .map((account) => account.address)
     .filter(Boolean)
-    .slice(0, 10);
+    .slice(0, 5);
 
   if (tokenAccounts.length === 0) return [];
 
-  const perAccountLimit = Math.max(8, Math.ceil(Math.min(limit, 180) / tokenAccounts.length));
+  const perAccountLimit = Math.min(18, Math.max(6, Math.ceil(safeLimit / tokenAccounts.length)));
   const signatureSet = new Set<string>();
 
   for (const tokenAccount of tokenAccounts) {
     try {
-      const signatures = await heliusRpc<Array<{ signature: string; blockTime?: number | null }>>(
-        "getSignaturesForAddress",
-        [tokenAccount, { limit: perAccountLimit }],
+      await sleep(320);
+      const signatures = await withRetry(
+        () => heliusRpc<Array<{ signature: string; blockTime?: number | null }>>(
+          "getSignaturesForAddress",
+          [tokenAccount, { limit: perAccountLimit }],
+        ),
+        { label: `getSignaturesForAddress ${shortAddress(tokenAccount)}`, retries: 2, baseDelayMs: 900 },
       );
 
       for (const item of signatures ?? []) {
         if (item.signature) signatureSet.add(item.signature);
       }
     } catch (error) {
-      console.warn("[WashTradingAI] getSignaturesForAddress failed:", tokenAccount, error instanceof Error ? error.message : error);
+      console.warn("[WashTradingAI] getSignaturesForAddress skipped:", tokenAccount, error instanceof Error ? error.message : error);
     }
   }
 
-  const signatures = [...signatureSet].slice(0, Math.min(limit, 160));
+  const signatures = [...signatureSet].slice(0, Math.min(safeLimit, 70));
   const parsed: NormalizedTx[] = [];
+  let consecutiveRateLimitFailures = 0;
 
-  for (let i = 0; i < signatures.length; i += 6) {
-    const chunk = signatures.slice(i, i + 6);
-    const results = await Promise.all(
-      chunk.map(async (signature) => {
-        try {
-          return await heliusRpc<RpcParsedTransaction | null>("getTransaction", [
-            signature,
-            {
-              encoding: "jsonParsed",
-              maxSupportedTransactionVersion: 0,
-              commitment: "confirmed",
-            },
-          ]);
-        } catch (error) {
-          console.warn("[WashTradingAI] getTransaction failed:", signature, error instanceof Error ? error.message : error);
-          return null;
-        }
-      }),
-    );
+  for (const signature of signatures) {
+    try {
+      await sleep(230);
+      const tx = await withRetry(
+        () => heliusRpc<RpcParsedTransaction | null>("getTransaction", [
+          signature,
+          {
+            encoding: "jsonParsed",
+            maxSupportedTransactionVersion: 0,
+            commitment: "confirmed",
+          },
+        ]),
+        { label: `getTransaction ${signature.slice(0, 8)}`, retries: 1, baseDelayMs: 1_100 },
+      );
 
-    for (const tx of results) {
       const normalized = parseRpcTransactionToTokenTransfer(tx, mint);
       if (normalized) parsed.push(normalized);
+      consecutiveRateLimitFailures = 0;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn("[WashTradingAI] getTransaction skipped:", signature, message);
+      if (isRateLimitLike(message)) {
+        consecutiveRateLimitFailures += 1;
+        await sleep(1_200 + consecutiveRateLimitFailures * 350);
+      }
+
+      // Khi đã có đủ dữ liệu cho demo/analysis nhưng RPC đang rate limit liên tục,
+      // dừng sớm để không đốt quota và không làm backend chậm.
+      if (consecutiveRateLimitFailures >= 4 && parsed.length >= RPC_MIN_REQUIRED_TRANSFERS) {
+        console.warn("[WashTradingAI] Stopping RPC getTransaction early because Helius is rate limiting repeatedly.");
+        break;
+      }
     }
   }
 
   const unique = new Map<string, NormalizedTx>();
   for (const tx of parsed) unique.set(tx.signature, tx);
 
-  return filterByTimeframe([...unique.values()].sort((a, b) => a.timestamp - b.timestamp), timeframe).slice(0, limit);
+  return filterByTimeframe([...unique.values()].sort((a, b) => a.timestamp - b.timestamp), timeframe).slice(0, safeLimit);
 }
 
 async function fetchHeliusEnhancedMintTransactions(mint: string, limit: number, timeframe: Timeframe): Promise<NormalizedTx[]> {
-  const raw = await heliusEnhancedAddressTransactions(mint, Math.min(limit, 100));
+  const raw = await withRetry(
+    () => heliusEnhancedAddressTransactions(mint, Math.min(getSafeApiLimit(limit, timeframe), 100)),
+    { label: "Helius Enhanced address transactions", retries: 2, baseDelayMs: 900 },
+  );
   const normalized: NormalizedTx[] = [];
 
   for (const tx of Array.isArray(raw) ? raw : []) {
@@ -463,48 +543,83 @@ async function fetchTokenTransactions(
   symbol: string,
   limit: number,
   timeframe: Timeframe,
-): Promise<{ txs: NormalizedTx[]; source: WashTradingDataSource; reason: string }> {
+): Promise<{ txs: NormalizedTx[]; source: WashTradingDataSource; reason: string; servedFromCache: boolean }> {
   const apiKey = getHeliusApiKey();
+  const safeLimit = getSafeApiLimit(limit, timeframe);
+  const cacheKey = getTransferCacheKey(mint, timeframe);
+  const cached = transferCache.get(cacheKey);
 
-  if (!apiKey) {
+  if (cached && Date.now() - cached.createdAt < CACHE_TTL_MS) {
     return {
-      txs: createDemoTransactions(mint, symbol, limit, timeframe),
-      source: "demo-fallback",
-      reason: "HELIUS_API_KEY chưa được load trong backend process.",
+      txs: cached.txs.slice(0, safeLimit),
+      source: cached.source,
+      // Do not append a hard-coded English sentence here.
+      // The cache notice is appended later by localizeDataSourceReason(...),
+      // so English/Vietnamese mode always displays the right language.
+      reason: cached.reason,
+      servedFromCache: true,
     };
   }
 
-  try {
-    const rpcTxs = await fetchHeliusRpcTokenAccountTransactions(mint, limit, timeframe);
-    if (rpcTxs.length >= 8) {
-      return {
-        txs: rpcTxs,
-        source: "helius-rpc-token-accounts",
-        reason: `Lấy ${rpcTxs.length} giao dịch thật từ Helius RPC bằng getTokenLargestAccounts + getSignaturesForAddress + getTransaction.`,
-      };
-    }
-  } catch (error) {
-    console.warn("[WashTradingAI] Helius RPC token account strategy failed:", error instanceof Error ? error.message : error);
+  const saveCache = (txs: NormalizedTx[], source: WashTradingDataSource, reason: string) => {
+    transferCache.set(cacheKey, {
+      createdAt: Date.now(),
+      txs,
+      source,
+      reason,
+    });
+  };
+
+  if (!apiKey) {
+    const txs = createDemoTransactions(mint, symbol, safeLimit, timeframe);
+    const reason = "HELIUS_API_KEY chưa được load trong backend process.";
+    saveCache(txs, "demo-fallback", reason);
+    return { txs, source: "demo-fallback", reason, servedFromCache: false };
   }
 
+  // Ưu tiên Enhanced API trước vì chỉ cần ít request hơn, ổn định hơn cho demo.
+  // RPC token-account strategy chỉ chạy khi Enhanced API không lấy đủ token transfer.
   try {
-    const enhancedTxs = await fetchHeliusEnhancedMintTransactions(mint, limit, timeframe);
-    if (enhancedTxs.length >= 8) {
+    const enhancedTxs = await fetchHeliusEnhancedMintTransactions(mint, safeLimit, timeframe);
+    if (enhancedTxs.length >= RPC_MIN_REQUIRED_TRANSFERS) {
+      const reason = `Lấy ${enhancedTxs.length} giao dịch từ Helius Enhanced Transactions API cho address/mint.`;
+      saveCache(enhancedTxs, "helius-enhanced-api", reason);
       return {
         txs: enhancedTxs,
         source: "helius-enhanced-api",
-        reason: `Lấy ${enhancedTxs.length} giao dịch từ Helius Enhanced Transactions API cho address/mint.`,
+        reason,
+        servedFromCache: false,
       };
     }
   } catch (error) {
     console.warn("[WashTradingAI] Helius Enhanced strategy failed:", error instanceof Error ? error.message : error);
   }
 
+  try {
+    const rpcTxs = await fetchHeliusRpcTokenAccountTransactions(mint, safeLimit, timeframe);
+    if (rpcTxs.length >= RPC_MIN_REQUIRED_TRANSFERS) {
+      const reason = `Lấy ${rpcTxs.length} giao dịch thật từ Helius RPC bằng token accounts với throttling/retry/backoff.`;
+      saveCache(rpcTxs, "helius-rpc-token-accounts", reason);
+      return {
+        txs: rpcTxs,
+        source: "helius-rpc-token-accounts",
+        reason,
+        servedFromCache: false,
+      };
+    }
+  } catch (error) {
+    console.warn("[WashTradingAI] Helius RPC token account strategy failed:", error instanceof Error ? error.message : error);
+  }
+
+  const txs = createDemoTransactions(mint, symbol, safeLimit, timeframe);
+  const reason =
+    "Helius API key có tồn tại nhưng không lấy đủ token transfers cho mint này. Có thể token ít giao dịch gần đây, mint address không xuất hiện trong swap, hoặc key bị giới hạn/rate limit.";
+  saveCache(txs, "demo-fallback", reason);
   return {
-    txs: createDemoTransactions(mint, symbol, limit, timeframe),
+    txs,
     source: "demo-fallback",
-    reason:
-      "Helius API key có tồn tại nhưng không lấy đủ token transfers cho mint này. Có thể token ít giao dịch gần đây, mint address không xuất hiện trong swap, hoặc key bị giới hạn/rate limit.",
+    reason,
+    servedFromCache: false,
   };
 }
 
@@ -676,11 +791,59 @@ function computeGNNScores(txs: NormalizedTx[], circularPatterns: CircularPattern
       pattern,
       txCount: f.txCount,
       volume: f.volume,
-      features: { circularPattern: circularScore, timeRegularity, amountSimilarity, selfLoopDegree, hubness },
+      features: { circularPattern: circularScore, timeRegularity, amountSimilarity, selfLoopDegree, hubness, volumeSignal },
     });
   }
 
   return scores.sort((a, b) => b.score - a.score).slice(0, 25);
+}
+
+const CACHE_REASON_EN = "served from 5-minute backend cache to avoid Helius rate limit";
+const CACHE_REASON_VI = "lấy từ cache backend 5 phút để tránh giới hạn tần suất Helius";
+
+function splitCacheReason(reason: string): { baseReason: string; servedFromCache: boolean } {
+  const cachePatterns = [
+    /\s*·\s*served from 5-minute backend cache to avoid Helius rate limit\.?/i,
+    /\s*·\s*lấy từ cache backend 5 phút để tránh giới hạn tần suất Helius\.?/i,
+  ];
+
+  let baseReason = reason;
+  let servedFromCache = false;
+
+  for (const pattern of cachePatterns) {
+    if (pattern.test(baseReason)) {
+      servedFromCache = true;
+      baseReason = baseReason.replace(pattern, "").trim();
+    }
+  }
+
+  return { baseReason, servedFromCache };
+}
+
+function localizeDataSourceReason(reason: string, language: WashTradingLanguage, cacheHit = false): string {
+  const { baseReason, servedFromCache: parsedCacheHit } = splitCacheReason(reason);
+  const servedFromCache = cacheHit || parsedCacheHit;
+  let localizedReason = baseReason;
+
+  if (language === "en") {
+    if (baseReason.includes("HELIUS_API_KEY")) {
+      localizedReason = "HELIUS_API_KEY is not loaded in the backend process.";
+    } else if (baseReason.includes("Enhanced Transactions API")) {
+      const count = baseReason.match(/\d+/)?.[0] ?? "the requested";
+      localizedReason = `Fetched ${count} transaction(s) from Helius Enhanced Transactions API for this address/mint.`;
+    } else if (baseReason.includes("Helius RPC")) {
+      const count = baseReason.match(/\d+/)?.[0] ?? "the requested";
+      localizedReason = `Fetched ${count} real transaction(s) from Helius RPC using token accounts with throttling/retry/backoff.`;
+    } else if (baseReason.includes("không lấy đủ token transfers")) {
+      localizedReason = "A Helius API key exists, but there were not enough token transfers for this mint. The token may have low recent activity, the mint may not appear in swaps, or the key may be rate-limited.";
+    }
+  }
+
+  if (servedFromCache) {
+    localizedReason += ` · ${language === "vi" ? CACHE_REASON_VI : CACHE_REASON_EN}.`;
+  }
+
+  return localizedReason;
 }
 
 function buildGraphData(txs: NormalizedTx[], suspiciousWallets: GNNScore[]): WashTradingAIResult["graphData"] {
@@ -736,9 +899,42 @@ function buildLocalAIAnalysis(
   dataSource: WashTradingDataSource,
   dataSourceReason: string,
   algorithm: GnnAlgorithm,
+  language: WashTradingLanguage,
 ): WashTradingAIResult["aiAnalysis"] {
   const verdict: WashTradingAIResult["aiAnalysis"]["verdict"] = riskScore >= 75 ? "HIGH_RISK" : riskScore >= 45 ? "MEDIUM_RISK" : riskScore >= 20 ? "LOW_RISK" : "CLEAN";
   const highRisk = suspiciousWallets.filter((w) => w.riskLevel === "High");
+  const isVi = language === "vi";
+
+  if (!isVi) {
+    return {
+      verdict,
+      summary: `Token ${symbol} has a risk score of ${riskScore}/100. The system analyzed the transaction graph using the ${algorithm} configuration and detected ${circularPatterns.length} circular cluster(s) and ${suspiciousWallets.length} wallet(s) with abnormal signals.`,
+      detailedFindings: [
+        circularPatterns.length > 0
+          ? `Circular trading: detected ${circularPatterns.length} 3-6 hop trading loop(s) with similar amounts and close timing.`
+          : "Circular trading: no sufficiently strong closed-loop trading cycle was detected in the current dataset.",
+        highRisk.length > 0
+          ? `GNN score: ${highRisk.length} wallet(s) reached High risk, led by ${shortAddress(highRisk[0].wallet)} with score ${(highRisk[0].score * 100).toFixed(0)}/100.`
+          : "GNN score: no wallet crossed the High risk threshold; the result is closer to monitoring than a strong alert.",
+        `Algorithm: ${algorithm}. GCN prioritizes circular flow, GAT prioritizes amount similarity/attention, and GraphSAGE prioritizes hubness and neighborhood aggregation.`,
+        dataSource === "demo-fallback"
+          ? `Data source: demo fallback. Reason: ${dataSourceReason}`
+          : `Data source: real data from ${dataSource}. ${dataSourceReason}`,
+      ],
+      suspiciousPatterns: suspiciousWallets.slice(0, 6).map((w) => ({
+        patternName: w.pattern,
+        description: `Wallet ${shortAddress(w.wallet)} has ${w.txCount} transaction(s), volume ${Math.round(w.volume).toLocaleString("en-US")} token(s), and GNN score ${(w.score * 100).toFixed(0)}/100.`,
+        affectedWallets: [w.wallet],
+        severity: w.riskLevel.toUpperCase() as "HIGH" | "MEDIUM" | "LOW",
+      })),
+      recommendation: verdict === "HIGH_RISK"
+        ? "Warn users, review pool/liquidity data, and do not rely solely on this token's 24h volume."
+        : verdict === "MEDIUM_RISK"
+        ? "Continue monitoring because there are some artificial-volume signals, but they are not strong enough for a confident conclusion."
+        : "No severe wash trading signal was found in the current data; combine this with holder distribution, pool liquidity, and top trader behavior.",
+      confidenceNote: `This is a ${algorithm} GNN-inspired model using graph features: circularity, time regularity, amount similarity, self-loop, and hubness. The output is an alert signal, not a legal conclusion.`,
+    };
+  }
 
   return {
     verdict,
@@ -757,7 +953,7 @@ function buildLocalAIAnalysis(
     ],
     suspiciousPatterns: suspiciousWallets.slice(0, 6).map((w) => ({
       patternName: w.pattern,
-      description: `Ví ${shortAddress(w.wallet)} có ${w.txCount} giao dịch, volume ${Math.round(w.volume).toLocaleString()} token, GNN score ${(w.score * 100).toFixed(0)}/100.`,
+      description: `Ví ${shortAddress(w.wallet)} có ${w.txCount} giao dịch, volume ${Math.round(w.volume).toLocaleString("vi-VN")} token, GNN score ${(w.score * 100).toFixed(0)}/100.`,
       affectedWallets: [w.wallet],
       severity: w.riskLevel.toUpperCase() as "HIGH" | "MEDIUM" | "LOW",
     })),
@@ -779,27 +975,39 @@ async function tryGeminiAnalysis(base: WashTradingAIResult["aiAnalysis"], params
   dataSource: WashTradingDataSource;
   dataSourceReason: string;
   algorithm: GnnAlgorithm;
+  language: WashTradingLanguage;
 }): Promise<WashTradingAIResult["aiAnalysis"]> {
   const apiKey = GOOGLE_AI_KEY?.trim();
   if (!apiKey) return base;
 
   try {
     const ai = new GoogleGenAI({ apiKey });
+    const intro = params.language === "vi"
+      ? "Bạn là chuyên gia phân tích wash trading Solana cho dashboard fintech. Hãy trả về JSON thuần bằng tiếng Việt"
+      : "You are a Solana wash-trading analyst for a fintech dashboard. Return plain JSON in English";
+    const requirements = params.language === "vi"
+      ? [
+          "Yêu cầu:",
+          "- Không bịa rằng chắc chắn có gian lận nếu dữ liệu không đủ.",
+          "- Nếu dataSource là demo-fallback, phải nói rõ chỉ là demo UX.",
+          "- Giải thích dựa trên graph/GNN features, không nói chung chung.",
+        ].join("\n")
+      : [
+          "Requirements:",
+          "- Do not claim certain fraud if the data is insufficient.",
+          "- If dataSource is demo-fallback, clearly say it is only a UX demo.",
+          "- Explain using graph/GNN features, not generic wording.",
+        ].join("\n");
+
     const response = await ai.models.generateContent({
       model: WALLET_AUDIT_MODEL || "gemini-2.5-flash",
-      contents: `Bạn là chuyên gia phân tích wash trading Solana cho dashboard fintech. Hãy trả về JSON thuần theo cấu trúc: {"verdict":"HIGH_RISK|MEDIUM_RISK|LOW_RISK|CLEAN","summary":"...","detailedFindings":["..."],"suspiciousPatterns":[{"patternName":"...","description":"...","affectedWallets":["..."],"severity":"HIGH|MEDIUM|LOW"}],"recommendation":"...","confidenceNote":"..."}.
-
-Yêu cầu:
-- Không bịa rằng chắc chắn có gian lận nếu dữ liệu không đủ.
-- Nếu dataSource là demo-fallback, phải nói rõ chỉ là demo UX.
-- Giải thích dựa trên graph/GNN features, không nói chung chung.
-
-Dữ liệu: ${JSON.stringify({
+      contents: `${intro} theo cấu trúc: {"verdict":"HIGH_RISK|MEDIUM_RISK|LOW_RISK|CLEAN","summary":"...","detailedFindings":["..."],"suspiciousPatterns":[{"patternName":"...","description":"...","affectedWallets":["..."],"severity":"HIGH|MEDIUM|LOW"}],"recommendation":"...","confidenceNote":"..."}.\n\n${requirements}\n\nData: ${JSON.stringify({
         mint: params.mint,
         symbol: params.symbol,
         dataSource: params.dataSource,
         dataSourceReason: params.dataSourceReason,
         algorithm: params.algorithm,
+        language: params.language,
         summary: params.summary,
         circularPatterns: params.circularPatterns.slice(0, 5),
         suspiciousWallets: params.suspiciousWallets.slice(0, 8),
@@ -854,40 +1062,50 @@ export async function analyzeWashTradingWithAI(params: {
   symbol?: string;
   timeframe?: Timeframe;
   algorithm?: GnnAlgorithm;
+  language?: WashTradingLanguage;
   limit?: number;
 }): Promise<WashTradingAIResult> {
   const mint = params.mint.trim();
   const symbol = (params.symbol ?? "TOKEN").trim() || "TOKEN";
   const timeframe = params.timeframe ?? "24h";
   const algorithm: GnnAlgorithm = params.algorithm ?? "GCN";
-  const limit = Math.min(Math.max(params.limit ?? 200, 50), 500);
+  const language: WashTradingLanguage = params.language ?? "en";
+  const requestedLimit = Math.min(Math.max(params.limit ?? 80, 20), 200);
+  const limit = getSafeApiLimit(requestedLimit, timeframe);
   const analyzedAt = new Date().toISOString();
   const detectionLog: WashTradingAIResult["detectionLog"] = [];
 
   const addLog = (message: string, severity: WashTradingAIResult["detectionLog"][number]["severity"]) => {
     detectionLog.push({
-      time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+      time: new Date().toLocaleTimeString(language === "vi" ? "vi-VN" : "en-US", { hour: "2-digit", minute: "2-digit" }),
       message,
       severity,
     });
   };
 
-  addLog(`Bắt đầu phân tích AI Wash Trading cho ${symbol} bằng ${algorithm}`, "info");
-  const { txs, source, reason } = await fetchTokenTransactions(mint, symbol, limit, timeframe);
-  addLog(`Data source: ${source} — ${reason}`, source === "demo-fallback" ? "medium" : "success");
-  addLog(`Đã chuẩn hóa ${txs.length} giao dịch token transfer`, "info");
+  addLog(language === "vi"
+    ? `Bắt đầu phân tích AI Wash Trading cho ${symbol} bằng ${algorithm}`
+    : `Started AI Wash Trading analysis for ${symbol} with ${algorithm}`, "info");
+  const { txs, source, reason, servedFromCache } = await fetchTokenTransactions(mint, symbol, limit, timeframe);
+  const localizedReason = localizeDataSourceReason(reason, language, servedFromCache);
+  addLog(`Data source: ${source} — ${localizedReason}`, source === "demo-fallback" ? "medium" : "success");
+  addLog(language === "vi"
+    ? `Đã chuẩn hóa ${txs.length} giao dịch token transfer`
+    : `Normalized ${txs.length} token transfer transaction(s)`, "info");
 
   const circularPatterns = detectCircularPatterns(txs);
   addLog(
     circularPatterns.length > 0
-      ? `Phát hiện ${circularPatterns.length} circular trade cluster`
-      : "Không tìm thấy circular cluster rõ ràng",
+      ? (language === "vi" ? `Phát hiện ${circularPatterns.length} circular trade cluster` : `Detected ${circularPatterns.length} circular trade cluster(s)`)
+      : (language === "vi" ? "Không tìm thấy circular cluster rõ ràng" : "No clear circular cluster found"),
     circularPatterns.length > 0 ? "high" : "success",
   );
 
   const suspiciousWallets = computeGNNScores(txs, circularPatterns, algorithm);
   const highRiskCount = suspiciousWallets.filter((w) => w.riskLevel === "High").length;
-  addLog(`${algorithm} GNN-inspired scoring hoàn tất: ${suspiciousWallets.length} ví đáng ngờ`, highRiskCount > 0 ? "high" : "success");
+  addLog(language === "vi"
+    ? `${algorithm} GNN-inspired scoring hoàn tất: ${suspiciousWallets.length} ví đáng ngờ`
+    : `${algorithm} GNN-inspired scoring completed: ${suspiciousWallets.length} suspicious wallet(s)`, highRiskCount > 0 ? "high" : "success");
 
   const graphData = buildGraphData(txs, suspiciousWallets);
   addLog(`Graph built: ${graphData.nodes.length} nodes, ${graphData.edges.length} edges`, graphData.edges.length > 0 ? "success" : "medium");
@@ -922,8 +1140,8 @@ export async function analyzeWashTradingWithAI(params: {
     gnnConfidence: avgSuspiciousScore,
   };
 
-  const localAI = buildLocalAIAnalysis(symbol, circularPatterns, suspiciousWallets, overallRiskScore, source, reason, algorithm);
-  addLog("Tạo AI explanation cho kết quả phân tích", "info");
+  const localAI = buildLocalAIAnalysis(symbol, circularPatterns, suspiciousWallets, overallRiskScore, source, localizedReason, algorithm, language);
+  addLog(language === "vi" ? "Tạo AI explanation cho kết quả phân tích" : "Generating AI explanation for analysis result", "info");
   const aiAnalysis = await tryGeminiAnalysis(localAI, {
     mint,
     symbol,
@@ -931,10 +1149,13 @@ export async function analyzeWashTradingWithAI(params: {
     circularPatterns,
     suspiciousWallets,
     dataSource: source,
-    dataSourceReason: reason,
+    dataSourceReason: localizedReason,
     algorithm,
+    language,
   });
-  addLog(`Hoàn tất phân tích — Verdict: ${aiAnalysis.verdict}`, aiAnalysis.verdict === "HIGH_RISK" ? "high" : aiAnalysis.verdict === "MEDIUM_RISK" ? "medium" : "success");
+  addLog(language === "vi"
+    ? `Hoàn tất phân tích — Verdict: ${aiAnalysis.verdict}`
+    : `Analysis completed — Verdict: ${aiAnalysis.verdict}`, aiAnalysis.verdict === "HIGH_RISK" ? "high" : aiAnalysis.verdict === "MEDIUM_RISK" ? "medium" : "success");
 
   return {
     mint,
@@ -942,7 +1163,7 @@ export async function analyzeWashTradingWithAI(params: {
     timeframe,
     analyzedAt,
     dataSource: source,
-    dataSourceReason: reason,
+    dataSourceReason: localizedReason,
     algorithm,
     summary,
     circularPatterns,

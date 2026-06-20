@@ -254,6 +254,7 @@ export default function TokenPage() {
               discordInvite={meta.linkDiscord}
               websiteUrl={meta.linkHomepage}
               twitterHandle={meta.twitterScreenName}
+              sidebar
             />
 
             <PoolSelector

@@ -26,7 +26,7 @@
   font-family: 'SF Pro Display', 'Inter', system-ui, sans-serif;
   padding: 20px 24px 40px;
   min-height: 100vh;
-  overflow-y: auto;
+  overflow: visible;
   max-width: 1440px;
   margin: 0 auto;
 
@@ -52,6 +52,73 @@
     --graph-node-stroke: #c7c7cc;
     --graph-line: #d2d2d7;
     --graph-text: #6e6e73;
+  }
+}
+
+.fixedControls {
+  position: fixed;
+  top: 3rem;
+  left: 0;
+  right: 0;
+  z-index: 7900;
+  pointer-events: none;
+}
+
+.fixedControlsInner {
+  pointer-events: auto;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 12px 24px 14px;
+  background:
+    linear-gradient(180deg, rgba(14, 14, 14, 0.98), rgba(14, 14, 14, 0.9)),
+    radial-gradient(circle at 16% 0%, rgba(133, 183, 235, 0.16), transparent 34%),
+    radial-gradient(circle at 88% 0%, rgba(239, 159, 39, 0.12), transparent 30%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.light .fixedControlsInner {
+  background:
+    linear-gradient(180deg, rgba(249, 249, 251, 0.96), rgba(249, 249, 251, 0.88)),
+    radial-gradient(circle at 16% 0%, rgba(11, 87, 208, 0.12), transparent 34%),
+    radial-gradient(circle at 88% 0%, rgba(239, 159, 39, 0.12), transparent 30%);
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+}
+
+.fixedControls .breadcrumb {
+  margin-bottom: 10px;
+}
+
+.fixedControls .topbar {
+  margin-bottom: 0;
+}
+
+.scrollBody {
+  padding-top: 85px;
+}
+
+@media (max-width: 1180px) {
+  .scrollBody {
+    padding-top: 170px;
+  }
+}
+
+@media (max-width: 720px) {
+  .fixedControlsInner {
+    padding: 10px 14px 12px;
+  }
+
+  .scrollBody {
+    padding-top: 220px;
+  }
+}
+
+@media (max-width: 420px) {
+  .scrollBody {
+    padding-top: 258px;
   }
 }
 
@@ -242,7 +309,7 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 
   @media (max-width: 920px) {
     grid-template-columns: repeat(2, 1fr);
@@ -261,7 +328,7 @@
 }
 
 .metricCard {
-  padding: 14px 16px;
+  padding: 10px 20px;
 }
 
 .metricLabel {
@@ -351,6 +418,127 @@
   }
 }
 
+.algoTabWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.algoTooltip {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 10px);
+  width: min(320px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.96);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.34);
+  color: #e5edf7;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+  z-index: 80;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-50%, 6px);
+  transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s ease;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -6px;
+    width: 10px;
+    height: 10px;
+    border-left: 1px solid rgba(148, 163, 184, 0.28);
+    border-top: 1px solid rgba(148, 163, 184, 0.28);
+    background: inherit;
+    transform: translateX(-50%) rotate(45deg);
+  }
+
+  p {
+    margin: 6px 0 0;
+    color: rgba(226, 232, 240, 0.88);
+  }
+}
+
+.algoTabWrap:hover .algoTooltip,
+.algoTabWrap:focus-within .algoTooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+.algoTabWrap:first-child .algoTooltip {
+  left: 0;
+  transform: translate(0, 6px);
+
+  &::before {
+    left: 22px;
+    transform: rotate(45deg);
+  }
+}
+
+.algoTabWrap:first-child:hover .algoTooltip,
+.algoTabWrap:first-child:focus-within .algoTooltip {
+  transform: translate(0, 0);
+}
+
+.algoTabWrap:last-child .algoTooltip {
+  left: auto;
+  right: 0;
+  transform: translate(0, 6px);
+
+  &::before {
+    left: auto;
+    right: 32px;
+    transform: rotate(45deg);
+  }
+}
+
+.algoTabWrap:last-child:hover .algoTooltip,
+.algoTabWrap:last-child:focus-within .algoTooltip {
+  transform: translate(0, 0);
+}
+
+.algoTooltipTitle {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.algoTooltipBestFor {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+
+  span {
+    color: rgba(148, 163, 184, 0.95);
+    font-size: 10px;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  strong {
+    color: #bfdbfe;
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.4;
+  }
+}
+
 .algoTabActive,
 .walletTabActive {
   background: var(--bg-tab-active);
@@ -359,17 +547,18 @@
 
 .graphContainer {
   position: relative;
-  min-height: 380px;
+  min-height: 430px;
   border-radius: 12px;
   border: 1px solid var(--border-light);
   background: var(--graph-bg);
-  padding: 10px 12px 12px;
+  padding: 12px 14px 14px;
+  overflow: hidden;
 }
 
 .graphEcharts {
   width: 100%;
-  height: 330px;
-  min-height: 330px;
+  height: 420px;
+  min-height: 420px;
   display: block;
 }
 
@@ -498,6 +687,37 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.riskScoreMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -4px 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--hover-bg);
+  border: 1px solid var(--border-light);
+
+  span {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  strong {
+    color: var(--text-title);
+    font-size: 13px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+}
+
+.featuresTitle {
+  color: var(--text-title);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .featureRow {
@@ -696,10 +916,13 @@
   position: absolute;
   top: 10px;
   left: 12px;
+  right: 12px;
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
   z-index: 2;
+  pointer-events: none;
+  padding-right: 265px;
 
   span {
     padding: 4px 8px;
@@ -736,4 +959,441 @@
 .sourceWarning {
   background: rgba(239, 159, 39, 0.12);
   border-color: rgba(239, 159, 39, 0.35);
+}
+
+/* Light mode clarity fixes for AI Verdict summary card */
+.light .aiSummaryCard {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(239, 246, 255, 0.98), rgba(255, 255, 255, 0.98) 48%, rgba(255, 247, 237, 0.96));
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.10);
+}
+
+.light .aiSummaryCard::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: linear-gradient(180deg, #2563eb, #f59e0b);
+}
+
+.light .aiSummaryCard p {
+  color: #334155;
+  font-weight: 500;
+}
+
+.light .aiSummaryHeader strong {
+  color: #0f172a;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.light .aiPill {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #93c5fd;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.14);
+}
+
+.light .sourceNotice {
+  color: #1e293b;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.light .sourceNotice strong {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.light .sourceNotice span {
+  color: #475569;
+  font-weight: 500;
+}
+
+.light .sourceLive {
+  background: #ecfdf5;
+  border-color: #86efac;
+  color: #064e3b;
+}
+
+.light .sourceLive strong {
+  color: #047857;
+}
+
+.light .sourceWarning {
+  background: #fff7ed;
+  border-color: #fdba74;
+  color: #7c2d12;
+}
+
+.light .recommendation {
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+  font-weight: 650;
+  box-shadow: 0 8px 20px rgba(249, 115, 22, 0.10);
+}
+
+/* Collapsible AI Verdict control button in fixed topbar */
+.verdictToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(133, 183, 235, 0.26);
+  background: rgba(133, 183, 235, 0.10);
+  color: #85b7eb;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.16s ease, opacity 0.16s ease, background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    background: rgba(133, 183, 235, 0.16);
+    border-color: rgba(133, 183, 235, 0.42);
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(133, 183, 235, 0.75);
+    outline-offset: 2px;
+  }
+}
+
+.verdictToggleActive {
+  background: rgba(99, 153, 34, 0.14);
+  border-color: rgba(99, 153, 34, 0.42);
+  color: #8fcf3f;
+}
+
+.verdictToggleDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 16%, transparent);
+}
+
+.verdictToggleIcon {
+  font-size: 11px;
+  opacity: 0.86;
+  transform: translateY(-1px);
+}
+
+.light .verdictToggle {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.08);
+
+  &:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.14);
+  }
+}
+
+.light .verdictToggleActive {
+  background: #ecfdf5;
+  border-color: #86efac;
+  color: #047857;
+  box-shadow: 0 8px 18px rgba(4, 120, 87, 0.08);
+}
+
+@media (max-width: 720px) {
+  .verdictToggle {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}
+
+/* Transaction graph fullscreen modal */
+.graphActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.graphFullscreenButton,
+.graphCloseButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  border-radius: 9px;
+  border: 1px solid rgba(133, 183, 235, 0.28);
+  background: rgba(133, 183, 235, 0.10);
+  color: #85b7eb;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    background: rgba(133, 183, 235, 0.17);
+    border-color: rgba(133, 183, 235, 0.48);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(133, 183, 235, 0.76);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.46;
+    cursor: not-allowed;
+  }
+}
+
+.graphFullscreenButton {
+  padding: 6px 11px;
+}
+
+.graphModalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(12px) saturate(1.15);
+  -webkit-backdrop-filter: blur(12px) saturate(1.15);
+}
+
+.graphModal {
+  width: min(1680px, 100%);
+  height: calc(100vh - 36px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(133, 183, 235, 0.14), transparent 32%),
+    radial-gradient(circle at 82% 0%, rgba(239, 159, 39, 0.10), transparent 28%),
+    rgba(13, 13, 13, 0.97);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.graphModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px 0;
+  flex-wrap: wrap;
+}
+
+.graphModalTitle {
+  margin: 0;
+  color: var(--text-title);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.graphModalSubtitle {
+  margin: 5px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.graphModalControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.graphCloseButton {
+  padding: 7px 12px;
+  border-color: rgba(226, 75, 74, 0.34);
+  background: rgba(226, 75, 74, 0.12);
+  color: #fca5a5;
+
+  &:hover:not(:disabled) {
+    background: rgba(226, 75, 74, 0.18);
+    border-color: rgba(226, 75, 74, 0.54);
+  }
+}
+
+.graphContainerFullscreen {
+  flex: 1;
+  min-height: 0;
+  margin: 0 18px;
+  padding: 12px 14px 14px;
+  border-radius: 16px;
+}
+
+.graphContainerFullscreen .graphFooter {
+  display: none;
+}
+
+.graphEchartsFullscreen {
+  height: calc(100vh - 190px);
+  min-height: 640px;
+}
+
+.graphModalGuide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 0 18px 16px;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: rgba(255, 255, 255, 0.055);
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+}
+
+.light .graphModalGuide span {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+}
+
+.light .graphFullscreenButton,
+.light .graphCloseButton {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.07);
+
+  &:hover:not(:disabled) {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.12);
+  }
+}
+
+.light .graphModalBackdrop {
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.light .graphModal {
+  border-color: rgba(148, 163, 184, 0.42);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(219, 234, 254, 0.92), transparent 32%),
+    radial-gradient(circle at 82% 0%, rgba(255, 247, 237, 0.96), transparent 28%),
+    rgba(255, 255, 255, 0.98);
+  box-shadow: 0 30px 90px rgba(15, 23, 42, 0.26);
+}
+
+.light .graphCloseButton {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #be123c;
+
+  &:hover:not(:disabled) {
+    background: #ffe4e6;
+    border-color: #fda4af;
+  }
+}
+
+.light .algoTooltip {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(148, 163, 184, 0.34);
+  color: #0f172a;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18);
+
+  p {
+    color: #475569;
+  }
+}
+
+.light .algoTooltipTitle {
+  color: #0f172a;
+}
+
+.light .algoTooltipBestFor {
+  border-top-color: rgba(148, 163, 184, 0.26);
+
+  span {
+    color: #64748b;
+  }
+
+  strong {
+    color: #1d4ed8;
+  }
+}
+
+
+@media (max-width: 640px) {
+  .algoTooltip {
+    width: min(290px, calc(100vw - 28px));
+  }
+}
+
+@media (max-width: 900px) {
+  .graphActions,
+  .graphModalControls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .graphFullscreenButton {
+    flex: 1;
+  }
+
+  .graphModalBackdrop {
+    padding: 8px;
+  }
+
+  .graphModal {
+    height: calc(100vh - 16px);
+    border-radius: 14px;
+  }
+
+  .graphEchartsFullscreen {
+    height: calc(100vh - 230px);
+    min-height: 460px;
+  }
+
+  .graphEcharts {
+    height: 420px;
+    min-height: 420px;
+  }
+
+  .graphStats {
+    padding-right: 0;
+  }
+
+  .graphModalGuide {
+    padding: 0 12px 12px;
+    justify-content: flex-start;
+
+    span {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 }

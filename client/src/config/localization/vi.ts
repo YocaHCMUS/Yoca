@@ -227,16 +227,19 @@ export const translation = defineTranslation({
       readStory: "Đọc câu chuyện",
       items: {
         base: {
-          title: "Cách các đội ngũ vận hành chuyển đổi dữ liệu on-chain ở quy mô lớn với Yoca",
+          title:
+            "Cách các đội ngũ vận hành chuyển đổi dữ liệu on-chain ở quy mô lớn với Yoca",
         },
         blockworks: {
           title: "Hỗ trợ nghiên cứu crypto tổ chức bằng các chỉ số thống nhất",
         },
         opLabs: {
-          title: "Tăng trưởng hệ sinh thái và tính minh bạch dựa trên dashboard trực tiếp",
+          title:
+            "Tăng trưởng hệ sinh thái và tính minh bạch dựa trên dashboard trực tiếp",
         },
         oneInch: {
-          title: "Làm cho dữ liệu thực thi và thanh khoản minh bạch, dễ tiếp cận hơn",
+          title:
+            "Làm cho dữ liệu thực thi và thanh khoản minh bạch, dễ tiếp cận hơn",
         },
       },
     },
@@ -403,9 +406,11 @@ export const translation = defineTranslation({
       balanceLoading: "Đang tải số dư...",
       balanceUnreachable: "Không thể kết nối",
       mismatchDetected: "Phát hiện sai lệch mạng!",
-      mismatchExplanation: "Ví của bạn đang có {{balance}} SOL ở mạng {{alternateNetwork}}, nhưng ứng dụng này được thiết lập dùng mạng {{networkName}}. Vui lòng mở Settings -> Developer Settings -> Solana network và đổi sang mạng {{networkName}} (hoặc nạp thêm SOL vào tài khoản mạng {{networkName}} của bạn).",
+      mismatchExplanation:
+        "Ví của bạn đang có {{balance}} SOL ở mạng {{alternateNetwork}}, nhưng ứng dụng này được thiết lập dùng mạng {{networkName}}. Vui lòng mở Settings -> Developer Settings -> Solana network và đổi sang mạng {{networkName}} (hoặc nạp thêm SOL vào tài khoản mạng {{networkName}} của bạn).",
       insufficientBalanceDetected: "Phát hiện không đủ số dư!",
-      insufficientBalanceExplanation: "Tài khoản của bạn chỉ có {{balance}} SOL trên mạng {{networkName}}, nhưng cần tối thiểu {{required}} SOL để thanh toán gói này. Vui lòng nhận SOL miễn phí từ faucet chính thức của {{networkName}}.",
+      insufficientBalanceExplanation:
+        "Tài khoản của bạn chỉ có {{balance}} SOL trên mạng {{networkName}}, nhưng cần tối thiểu {{required}} SOL để thanh toán gói này. Vui lòng nhận SOL miễn phí từ faucet chính thức của {{networkName}}.",
       faucetButton: "Nhận SOL miễn phí (Faucet)",
     },
     transactionId: {
@@ -429,8 +434,7 @@ export const translation = defineTranslation({
       cardSetupIncomplete: "Thiết lập thẻ chưa hoàn tất. Vui lòng thử lại.",
       missingPaymentMethod:
         "Không lấy được phương thức thanh toán. Vui lòng thử lại.",
-      activateSubscription:
-        "Kích hoạt gói đăng ký thất bại. Vui lòng thử lại.",
+      activateSubscription: "Kích hoạt gói đăng ký thất bại. Vui lòng thử lại.",
       network: "Đã xảy ra lỗi mạng. Vui lòng thử lại.",
     },
   },
@@ -522,7 +526,8 @@ export const translation = defineTranslation({
     metrics: {
       ariaLabel: "Chỉ số phân tích AI",
       trustScore: "Điểm tin cậy",
-      trustScoreHelper: "Càng cao nghĩa là càng ít tín hiệu rủi ro quan sát được",
+      trustScoreHelper:
+        "Càng cao nghĩa là càng ít tín hiệu rủi ro quan sát được",
       trustScoreTooltip:
         "Điểm tin cậy được tính bằng 100 trừ Điểm rủi ro. Điểm cao hơn nghĩa là có ít tín hiệu rủi ro hơn trong khoảng giao dịch được phân tích.",
       riskLevel: "Mức rủi ro",
@@ -538,7 +543,8 @@ export const translation = defineTranslation({
       personaConfidenceTooltip:
         "Độ tin cậy kiểu hành vi ước tính các chỉ số hiện có hỗ trợ kiểu hành vi đã chọn mạnh đến đâu so với các lựa chọn khác. Đây không phải sự chắc chắn pháp lý hay danh tính.",
       dataCompleteness: "Độ đầy đủ dữ liệu",
-      dataCompletenessHelper: "Chất lượng dữ liệu đầu vào có thể dùng để phân tích",
+      dataCompletenessHelper:
+        "Chất lượng dữ liệu đầu vào có thể dùng để phân tích",
       dataCompletenessTooltip:
         "Độ đầy đủ dữ liệu ước tính mức dữ liệu phân tích có thể sử dụng. Chỉ số này giảm khi thiếu giá, có giao dịch chưa hỗ trợ, cảnh báo phân tích cú pháp hoặc giao dịch thất bại.",
       analyzedTransactions: "Giao dịch đã phân tích",
@@ -576,8 +582,7 @@ export const translation = defineTranslation({
     },
     findings: {
       title: "Phát hiện chính",
-      description:
-        "Các quan sát có bằng chứng hỗ trợ, được tạo từ hồ sơ ví.",
+      description: "Các quan sát có bằng chứng hỗ trợ, được tạo từ hồ sơ ví.",
       empty: "Không có phát hiện lớn có bằng chứng hỗ trợ cho ví này.",
       fallbackTitle: "Phát hiện",
       fallbackExplanation: "Không có giải thích được cung cấp.",
@@ -708,9 +713,9 @@ export const translation = defineTranslation({
     severityTooltips: {
       findingHigh:
         "Tín hiệu mạnh. Nên xem trước. Đây không phải bằng chứng về hành vi sai phạm.",
-      findingMedium:
-        "Tín hiệu có ý nghĩa, đóng góp vào phần diễn giải.",
-      findingLow: "Tín hiệu bối cảnh, hữu ích nhưng không quyết định nếu đứng riêng lẻ.",
+      findingMedium: "Tín hiệu có ý nghĩa, đóng góp vào phần diễn giải.",
+      findingLow:
+        "Tín hiệu bối cảnh, hữu ích nhưng không quyết định nếu đứng riêng lẻ.",
       findingNeutral:
         "Mức độ cho biết tín hiệu này quan trọng thế nào trong phân tích hiện tại.",
       riskHigh:
@@ -719,23 +724,27 @@ export const translation = defineTranslation({
         "Mức trung bình nghĩa là yếu tố này cộng từ 8 đến 14 điểm vào Điểm rủi ro.",
       riskLow:
         "Mức thấp nghĩa là yếu tố này cộng từ 1 đến 7 điểm vào Điểm rủi ro.",
-      riskNeutral:
-        "Mức độ dựa trên số điểm rủi ro mà yếu tố này cộng thêm.",
+      riskNeutral: "Mức độ dựa trên số điểm rủi ro mà yếu tố này cộng thêm.",
     },
     personaExplanations: {
       unknown: {
         meaning: "Không có đủ hành vi rõ ràng để gán một kiểu hành vi cụ thể.",
-        commonSignals: "Số giao dịch thấp, dữ liệu chưa đầy đủ hoặc tín hiệu lẫn lộn.",
-        caution: "Không xác định không nên được hiểu riêng lẻ là an toàn hay rủi ro.",
+        commonSignals:
+          "Số giao dịch thấp, dữ liệu chưa đầy đủ hoặc tín hiệu lẫn lộn.",
+        caution:
+          "Không xác định không nên được hiểu riêng lẻ là an toàn hay rủi ro.",
       },
       longTermHolder: {
-        meaning: "Hành vi ví giống việc nắm giữ tài sản trong thời gian dài hơn.",
+        meaning:
+          "Hành vi ví giống việc nắm giữ tài sản trong thời gian dài hơn.",
         commonSignals:
           "Số swap thấp, thời gian nắm giữ dài hơn, tỷ lệ giao dịch ngắn hạn thấp, tài sản tập trung.",
-        caution: "Mục này chỉ mô tả hành vi quan sát được trong khoảng phân tích.",
+        caution:
+          "Mục này chỉ mô tả hành vi quan sát được trong khoảng phân tích.",
       },
       casualUser: {
-        meaning: "Hành vi ví giống việc sử dụng không thường xuyên, cường độ thấp hơn.",
+        meaning:
+          "Hành vi ví giống việc sử dụng không thường xuyên, cường độ thấp hơn.",
         commonSignals:
           "Hoạt động thấp hoặc trung bình, ít swap hơn, ít đa dạng token, ít vị thế đã đóng.",
         caution:
@@ -746,7 +755,8 @@ export const translation = defineTranslation({
           "Ví thường xuyên tương tác với các giao thức giao dịch phi tập trung.",
         commonSignals:
           "Nhiều swap, sử dụng DEX nhiều, giao dịch nhiều token, khối lượng giao dịch đáng kể.",
-        caution: "Nhãn này mô tả việc dùng giao thức và hành vi giao dịch, không phải kỹ năng giao dịch.",
+        caution:
+          "Nhãn này mô tả việc dùng giao thức và hành vi giao dịch, không phải kỹ năng giao dịch.",
       },
       memecoinTrader: {
         meaning:
@@ -768,7 +778,8 @@ export const translation = defineTranslation({
           "Hành vi ví giống hoạt động nhằm nhận hoặc claim phân phối token.",
         commonSignals:
           "Claim airdrop lặp lại, nhiều chuyển khoản token vào, phạm vi token rộng, hoạt động theo cụm.",
-        caution: "Điều này không chứng minh ý định; nó chỉ mô tả hành vi giống claim.",
+        caution:
+          "Điều này không chứng minh ý định; nó chỉ mô tả hành vi giống claim.",
       },
       botLikeTrader: {
         meaning:
@@ -795,8 +806,7 @@ export const translation = defineTranslation({
           "Ví có các mẫu hành vi có thể liên quan đến hành vi thị trường đáng ngờ.",
         commonSignals:
           "Điểm nghi vấn cao, đối tác lặp lại, tín hiệu dòng tiền vòng tròn hoặc qua lại.",
-        caution:
-          "Đây không phải bằng chứng wash trading hay hành vi đáng ngờ.",
+        caution: "Đây không phải bằng chứng wash trading hay hành vi đáng ngờ.",
       },
     },
     riskFactorExplanations: {
@@ -824,7 +834,8 @@ export const translation = defineTranslation({
           "Tỷ lệ thắng thấp chỉ có ý nghĩa khi có đủ vị thế đã đóng.",
       },
       highTokenDiversity: {
-        meaning: "Ví đã giao dịch nhiều token khác nhau trong khoảng phân tích.",
+        meaning:
+          "Ví đã giao dịch nhiều token khác nhau trong khoảng phân tích.",
         whyItMatters:
           "Giao dịch nhiều token khác nhau có thể cho thấy hành vi đầu cơ rộng.",
       },
@@ -841,7 +852,8 @@ export const translation = defineTranslation({
           "Đây có thể là tín hiệu ưu tiên xem xét, nhưng không phải bằng chứng wash trading.",
       },
       missingData: {
-        meaning: "Một phần dữ liệu không thể được phân tích hoặc định giá đầy đủ.",
+        meaning:
+          "Một phần dữ liệu không thể được phân tích hoặc định giá đầy đủ.",
         whyItMatters:
           "Điều này ảnh hưởng đến độ tin cậy, không phải bản thân hành vi ví.",
       },
@@ -858,8 +870,7 @@ export const translation = defineTranslation({
       unsupported:
         "{{unsupported}} giao dịch chưa hỗ trợ trên {{txTotal}} giao dịch đã phân tích.",
       missingPrices: "{{count}} giao dịch bị thiếu dữ liệu giá.",
-      none:
-        "Không phát hiện thiếu giá hoặc giao dịch chưa hỗ trợ trong khoảng phân tích này.",
+      none: "Không phát hiện thiếu giá hoặc giao dịch chưa hỗ trợ trong khoảng phân tích này.",
     },
     riskLevelExplanation: {
       unknown:
@@ -980,6 +991,33 @@ export const translation = defineTranslation({
     aiAnalysisRetry: "Thử lại phân tích AI",
     aiNoData: "Không có dữ liệu phân tích AI",
     aiSummary: "Tóm tắt",
+    tokenWinRate: {
+      title: "Tỷ lệ thắng token",
+      win: "token sinh lời",
+      traded: "token đã giao dịch",
+      summaryShort:
+        "{{win}} token sinh lời / {{tradedCount}} token đã giao dịch",
+      summaryBreakdown: "{{profit}} lời · {{loss}} lỗ · {{neutral}} hòa vốn",
+      avgWin: "Lãi TB",
+      avgLoss: "Lỗ TB đã chốt",
+      explanationAria: "Giải thích tỷ lệ thắng token",
+      tooltipWinRateLabel: "Tỷ lệ thắng token",
+      tooltipWinRateDescription:
+        "được tính theo PnL đã chốt trong khoảng {{period}}. Token chỉ được tính là sinh lời khi PnL đã chốt lớn hơn 0.",
+      tooltipTotalTradedTokens: "Token đã giao dịch trong kỳ",
+      tooltipRealizedProfitTokens: "Token sinh lời đã chốt",
+      tooltipRealizedLossTokens: "Token sinh lỗ đã chốt",
+      tooltipBreakEvenTokens: "Token hòa vốn / chưa có PnL đã chốt",
+      tooltipUnrealizedLossTokens: "Token đang lỗ chưa chốt",
+      tooltipTokenValue: "{{value}} token",
+      tooltipClosedAvgLoss: "Lỗ TB đã chốt",
+      tooltipClassifiedRealizedPnl: "PnL đã phân loại theo token",
+      tooltipWalletRealizedPnl: "PnL đã chốt của ví",
+      tooltipUnclassifiedRealizedPnl: "Chưa phân loại / phí / thiếu dòng",
+      tooltipAverageLabel: "Cách đọc chỉ số",
+      tooltipAverageDescription:
+        "Lãi TB và Lỗ TB đã chốt chỉ dùng {{closed}} token đã có PnL đóng trong tổng {{traded}} token đã giao dịch. PnL đã phân loại theo token là {{classifiedPnl}}. PnL đã chốt của ví là {{walletPnl}}. Phần chênh lệch {{difference}} được tách riêng để các nhóm khớp với tổng PnL của ví.",
+    },
     aiSwapSummary: {
       button: "Xem phân tích swap",
       title: "AI phân tích tổng quan giao dịch swap",
@@ -1291,8 +1329,7 @@ export const translation = defineTranslation({
     topPools: "Top pool",
     topPoolsSubtitle: "Top pool theo Khối lượng, Giao dịch hoặc Vốn hóa.",
     topGainerPools: "Pool tăng mạnh nhất",
-    topGainerPoolsSubtitle:
-      "Các pool tăng giá mạnh nhất trong 24 giờ qua.",
+    topGainerPoolsSubtitle: "Các pool tăng giá mạnh nhất trong 24 giờ qua.",
     newPairsSubtitle: "Các pool mới được tạo gần đây.",
     profitableTradersPoolsSubtitle:
       "Các ví có lợi nhuận giao dịch (PnL) cao nhất và thấp nhất.",
@@ -1939,7 +1976,8 @@ export const translation = defineTranslation({
     tableNullValue: "-",
     newChat: "Hội thoại mới",
     signInRequired: "Yêu cầu đăng nhập",
-    signInRequiredDesc: "Vui lòng đăng nhập để sử dụng trợ lý AI Chat. Lịch sử trò chuyện sẽ được lưu lại.",
+    signInRequiredDesc:
+      "Vui lòng đăng nhập để sử dụng trợ lý AI Chat. Lịch sử trò chuyện sẽ được lưu lại.",
     sessions: "Phiên trò chuyện",
     noSessions: "Chưa có phiên nào",
     deleteSession: "Xóa phiên",
@@ -1977,18 +2015,63 @@ export const translation = defineTranslation({
       custom: "Phân tích",
     },
     prompt: {
-      overview: { label: "Tổng quan", query: "Cung cấp tổng quan về danh mục đầu tư của ví này bao gồm tổng số dư, biến động 24h và khối lượng giao dịch." },
-      pnl: { label: "Tổng lãi/lỗ", query: "Lãi và lỗ của ví này là gì? Hiển thị phân tích theo token với PnL đã thực hiện và tỷ lệ thắng." },
-      trades: { label: "Giao dịch gần đây", query: "Hiển thị các giao dịch swap gần đây của ví này với chi tiết token và giá trị USD." },
-      tokens: { label: "Token hàng đầu", query: "Các token của ví này đang nắm giữ theo giá trị USD là gì?" },
-      balance: { label: "Xu hướng số dư", query: "Hiển thị biểu đồ lịch sử số dư của ví này trong 30 ngày qua." },
-      portfolioChange: { label: "Biến động danh mục", query: "So sánh danh mục hiện tại của ví này với ví trong 7 ngày trước. Có thay đổi đáng kể nào không?" },
-      tokenPrices: { label: "Giá token", query: "Kiểm tra giá hiện tại và dữ liệu thị trường của 5 token quan trọng nhất trong ví này." },
-      compareOverview: { label: "So sánh danh mục", query: "So sánh danh mục đầu tư của các ví — ví nào có tổng giá trị và biến động 24h tốt nhất?" },
-      comparePnl: { label: "So sánh lãi/lỗ", query: "So sánh PnL giữa các ví — ví nào có lợi nhuận thực tế và tỷ lệ thắng cao nhất?" },
-      commonHoldings: { label: "Token chung", query: "Token nào được nắm giữ phổ biến ở các ví này và có sự trùng lặp như thế nào?" },
-      topPerformer: { label: "Hiệu suất tốt nhất", query: "Ví nào có ROI và hiệu suất giao dịch tốt nhất trên tất cả các chỉ số?" },
-      riskComparison: { label: "So sánh rủi ro", query: "So sánh mức độ đa dạng hóa và hồ sơ rủi ro giữa các ví này." },
+      overview: {
+        label: "Tổng quan",
+        query:
+          "Cung cấp tổng quan về danh mục đầu tư của ví này bao gồm tổng số dư, biến động 24h và khối lượng giao dịch.",
+      },
+      pnl: {
+        label: "Tổng lãi/lỗ",
+        query:
+          "Lãi và lỗ của ví này là gì? Hiển thị phân tích theo token với PnL đã thực hiện và tỷ lệ thắng.",
+      },
+      trades: {
+        label: "Giao dịch gần đây",
+        query:
+          "Hiển thị các giao dịch swap gần đây của ví này với chi tiết token và giá trị USD.",
+      },
+      tokens: {
+        label: "Token hàng đầu",
+        query: "Các token của ví này đang nắm giữ theo giá trị USD là gì?",
+      },
+      balance: {
+        label: "Xu hướng số dư",
+        query: "Hiển thị biểu đồ lịch sử số dư của ví này trong 30 ngày qua.",
+      },
+      portfolioChange: {
+        label: "Biến động danh mục",
+        query:
+          "So sánh danh mục hiện tại của ví này với ví trong 7 ngày trước. Có thay đổi đáng kể nào không?",
+      },
+      tokenPrices: {
+        label: "Giá token",
+        query:
+          "Kiểm tra giá hiện tại và dữ liệu thị trường của 5 token quan trọng nhất trong ví này.",
+      },
+      compareOverview: {
+        label: "So sánh danh mục",
+        query:
+          "So sánh danh mục đầu tư của các ví — ví nào có tổng giá trị và biến động 24h tốt nhất?",
+      },
+      comparePnl: {
+        label: "So sánh lãi/lỗ",
+        query:
+          "So sánh PnL giữa các ví — ví nào có lợi nhuận thực tế và tỷ lệ thắng cao nhất?",
+      },
+      commonHoldings: {
+        label: "Token chung",
+        query:
+          "Token nào được nắm giữ phổ biến ở các ví này và có sự trùng lặp như thế nào?",
+      },
+      topPerformer: {
+        label: "Hiệu suất tốt nhất",
+        query:
+          "Ví nào có ROI và hiệu suất giao dịch tốt nhất trên tất cả các chỉ số?",
+      },
+      riskComparison: {
+        label: "So sánh rủi ro",
+        query: "So sánh mức độ đa dạng hóa và hồ sơ rủi ro giữa các ví này.",
+      },
     },
   },
   ERROR: {
@@ -2065,6 +2148,8 @@ export const translation = defineTranslation({
       searchX: "Tìm trên X",
       discord: "Tham gia Discord",
       coingecko: "Xem trên CoinGecko",
+      aiWashTradingDetection: "Phát hiện giao dịch ảo",
+      aiWashTradingDetectionShort: "Phát hiện giao dịch ảo",
     },
     chart: {
       loadingPool: "Đang tải biểu đồ...",
@@ -2391,6 +2476,175 @@ export const translation = defineTranslation({
     unavailableState: {
       defaultTitle: "Dữ liệu không có sẵn",
       defaultDescription: "Không có dữ liệu hồ sơ nào có sẵn ngay bây giờ.",
+    },
+  },
+  washTrading: {
+    breadcrumb: {
+      tokens: "Token",
+      manualToken: "Token nhập thủ công",
+      page: "Phát hiện giao dịch ảo",
+    },
+    title: "AI phát hiện giao dịch ảo",
+    subtitle: "Phân tích theo mô hình GNN cho {{symbol}} · {{mint}}",
+    suspiciousBadge: "{{count}} đáng ngờ",
+    inputs: {
+      mintPlaceholder: "Địa chỉ token mint",
+      symbolPlaceholder: "Ký hiệu",
+      last24h: "24 giờ qua",
+      last7d: "7 ngày qua",
+      last30d: "30 ngày qua",
+      openToken: "Mở token",
+      runAnalyze: "Chạy phân tích AI ↗",
+      analyzing: "Đang phân tích...",
+    },
+    errors: {
+      missingMint:
+        "Thiếu địa chỉ token mint. Hãy mở trang từ Token Detail hoặc nhập mint để phân tích.",
+      manualMissingMint: "Vui lòng nhập địa chỉ token mint.",
+      apiFailed: "Không thể gọi AI Wash Trading API.",
+      analysisFailed: "Phân tích AI thất bại",
+    },
+    verdict: {
+      toggle: "Kết luận AI",
+      hide: "Ẩn kết luận AI",
+      show: "Hiện kết luận AI",
+      waiting: "Đang chờ phân tích",
+      defaultSummary:
+        "Nhấn Chạy phân tích AI để phân tích giao dịch vòng lặp, độ tương đồng khối lượng, nhịp giao dịch và đặc trưng graph của token này.",
+      dataSource: "Nguồn dữ liệu:",
+      highRisk: "RỦI RO CAO",
+      mediumRisk: "RỦI RO TRUNG BÌNH",
+      lowRisk: "RỦI RO THẤP",
+      clean: "AN TOÀN",
+    },
+    metrics: {
+      totalTransactions: "Tổng giao dịch",
+      uniqueWallets: "{{wallets}} ví duy nhất",
+      washVolumeEstimate: "Ước tính giá trị giao dịch ảo",
+      totalVolumePercent: "{{percent}} trên tổng volume {{volume}}",
+      suspiciousWallets: "Ví đáng ngờ",
+      circularClusters: "{{count}} cụm vòng lặp",
+      gnnConfidence: "Độ tin cậy GNN",
+      riskScore: "Điểm rủi ro: {{score}}/100",
+    },
+    graph: {
+      title: "Transaction Graph — Cụm ví theo GNN",
+      algorithmButtonAria: "Chọn thuật toán {{algorithm}} và xem giải thích",
+      algorithms: {
+        bestForLabel: "Phù hợp với",
+        gcn: {
+          title: "GCN — Mạng tích chập đồ thị",
+          description:
+            "Tổng hợp tín hiệu từ các ví lân cận và liên kết chuyển token để ước lượng ví có thuộc cụm giao dịch đáng ngờ hay không.",
+          bestFor: "đánh giá rủi ro cụm ví và các vùng giao dịch vòng lặp",
+        },
+        gat: {
+          title: "GAT — Mạng chú ý trên đồ thị",
+          description:
+            "Học trọng số chú ý cho từng ví hoặc luồng chuyển lân cận, nên các liên kết đáng ngờ mạnh sẽ ảnh hưởng đến điểm số nhiều hơn liên kết yếu.",
+          bestFor:
+            "liên kết đáng ngờ nổi bật, ví trung tâm và luồng giao dịch có tác động lớn",
+        },
+        graphsage: {
+          title: "GraphSAGE — Lấy mẫu và tổng hợp",
+          description:
+            "Lấy mẫu các ví lân cận và học biểu diễn ví có thể tái sử dụng, giúp phân tích tốt hơn khi graph token lớn hoặc thay đổi nhanh.",
+          bestFor: "graph token lớn và suy luận nhanh rủi ro ví mới",
+        },
+      },
+      highRiskWallet: "Ví rủi ro cao",
+      bridgeWallet: "Ví trung gian",
+      normalWallet: "Ví bình thường",
+      walletGraphName: "Graph giao dịch ví",
+      suspiciousFlow: "Luồng đáng ngờ",
+      transferFlow: "Luồng chuyển token",
+      type: "Loại",
+      gnnScore: "Điểm GNN",
+      address: "Địa chỉ",
+      from: "Từ",
+      to: "Đến",
+      totalAmount: "Tổng lượng token",
+      groupedTransfers: "Giao dịch đã gom",
+      tokenUnit: "token",
+      nodes: "{{count}} node",
+      rawEdges: "{{count}} cạnh gốc",
+      visibleFlows: "{{count}} luồng hiển thị",
+      suspiciousGroups: "{{count}} nhóm đáng ngờ",
+      edgesGrouped: "{{count}} cạnh đã gom",
+      hoverEdgeAmount: "Hover cạnh để xem lượng token",
+      footerReady:
+        "Graph force-directed lấy từ backend graphData. Kéo node, zoom, pan và hover cạnh/ví để xem chi tiết luồng giao dịch.",
+      footerWaiting:
+        "Đang chờ backend graphData. Nhấn Chạy phân tích AI để tạo graph giao dịch ví.",
+      fullscreen: "Toàn màn hình",
+      fullscreenTitle: "Mở graph toàn màn hình",
+      fullscreenWaitingTitle: "Chạy phân tích AI để có graph",
+      modalAria: "Chế độ toàn màn hình của transaction graph",
+      modalSubtitle: "{{symbol}} · {{mint}} · {{nodes}} node · {{edges}} cạnh",
+      close: "Đóng",
+      guideAria: "Điều khiển graph toàn màn hình",
+      guideDrag: "🖱 Kéo node để tách cụm ví",
+      guideZoom: "🔍 Cuộn chuột để zoom",
+      guideClose: "⌨ Esc hoặc Đóng để thoát",
+    },
+    wallets: {
+      title: "Ví đáng ngờ",
+      all: "Tất cả",
+      highRisk: "Rủi ro cao",
+      new: "Mới",
+      graphRank: "Hạng graph #{{rank}}",
+      gnn: "GNN: {{score}}",
+      empty: "Chưa có ví đáng ngờ. Hãy chạy phân tích AI cho token này.",
+      insightTitle: "Giải thích AI cho ví",
+      insightEmpty:
+        "Chọn một ví trong danh sách Ví đáng ngờ để xem giải thích AI chi tiết.",
+      selectedWallet: "Ví đã chọn",
+      explanation:
+        "AI đánh dấu ví này vì pattern {{pattern}} trên token {{symbol}}. Điểm GNN hiện tại là {{score}}/100.",
+      topFeature: "Đặc trưng nổi bật",
+      featureScore: "Điểm đặc trưng",
+      note: "Cách đọc: circularPattern cao thường cho thấy ví tham gia vòng giao dịch khép kín; timeRegularity cao cho thấy nhịp giao dịch giống bot; amountSimilarity cao cho thấy lượng token lặp lại bất thường; volumeSignal cao cho thấy ví chuyển lượng token lớn so với ví có volume lớn nhất trong graph.",
+    },
+    patterns: {
+      circularTrade: "Giao dịch vòng lặp",
+      hubWallet: "Ví trung tâm",
+      botLikeTiming: "Nhịp giống bot",
+      amountMirror: "Amount lặp lại",
+      anomalousActivity: "Hoạt động bất thường",
+    },
+    findings: {
+      title: "Phát hiện chi tiết từ AI",
+    },
+    risk: {
+      title: "Điểm rủi ro — {{target}}",
+      walletTitle: "Điểm GNN của ví — {{target}}",
+      tokenRiskScore: "Điểm rủi ro token",
+      scoreOutOf100: "{{score}}/100",
+      walletFeatureTitle: "Đặc trưng hành vi của ví đã chọn",
+      high: "Rủi ro cao",
+      medium: "Rủi ro trung bình",
+      low: "Rủi ro thấp",
+      noSignal: "Không có tín hiệu",
+      circularPattern: "Mẫu vòng lặp",
+      timeRegularity: "Độ đều thời gian",
+      amountSimilarity: "Độ giống amount",
+      selfLoopDegree: "Mức tự lặp",
+      hubness: "Độ trung tâm ví",
+      volumeSignal: "Tín hiệu volume",
+    },
+    detectionLog: {
+      title: "Nhật ký phát hiện",
+      waiting: "Đang chờ yêu cầu phân tích AI...",
+    },
+    context: {
+      title: "Ngữ cảnh token",
+      symbol: "Ký hiệu",
+      mint: "Mint",
+      timeframe: "Khung thời gian",
+      algorithm: "Thuật toán",
+      dataSource: "Nguồn dữ liệu",
+      sourceReason: "Lý do nguồn dữ liệu",
+      analyzedAt: "Thời điểm phân tích",
     },
   },
   errorPages: {

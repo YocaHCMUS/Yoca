@@ -5,20 +5,23 @@ import { washTradingService } from "@sv/services/wash-trading.service.js";
 
 const timeframeSchema = z.enum(["1h", "24h", "7d", "30d"]).default("24h");
 const algorithmSchema = z.enum(["GCN", "GAT", "GraphSAGE"]).default("GCN");
+const languageSchema = z.enum(["en", "vi"]).default("en");
 
 const aiAnalyzeBodySchema = z.object({
   mint: z.string().trim().min(32, "Invalid Solana token mint address"),
   symbol: z.string().trim().min(1).max(24).optional().default("TOKEN"),
   timeframe: timeframeSchema.optional().default("24h"),
   algorithm: algorithmSchema.optional().default("GCN"),
-  limit: z.coerce.number().int().min(50).max(500).optional().default(200),
+  language: languageSchema.optional().default("en"),
+  limit: z.coerce.number().int().min(20).max(200).optional().default(80),
 });
 
 const aiAnalyzeQuerySchema = z.object({
   symbol: z.string().trim().min(1).max(24).optional().default("TOKEN"),
   timeframe: timeframeSchema.optional().default("24h"),
   algorithm: algorithmSchema.optional().default("GCN"),
-  limit: z.coerce.number().int().min(50).max(500).optional().default(200),
+  language: languageSchema.optional().default("en"),
+  limit: z.coerce.number().int().min(20).max(200).optional().default(80),
 });
 
 const app = new Hono()
@@ -105,6 +108,7 @@ const app = new Hono()
         symbol: c.req.query("symbol") ?? undefined,
         timeframe: c.req.query("timeframe") ?? undefined,
         algorithm: c.req.query("algorithm") ?? undefined,
+        language: c.req.query("language") ?? undefined,
         limit: c.req.query("limit") ?? undefined,
       });
 

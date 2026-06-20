@@ -128,6 +128,7 @@ function renderTopbar() {
       onExportPdf={vi.fn()}
       isExporting={false}
       currentPeriod="24H"
+      winRatePeriod="24H"
       onPeriodChange={vi.fn()}
     />,
   );
