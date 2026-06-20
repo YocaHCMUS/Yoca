@@ -30,6 +30,7 @@ import {
     getWalletTransferHistory,
     getWalletSwaps,
     getWalletTransfers,
+    walletHistoryCursorQuerySchema,
 } from "@sv/services/wallet/walletTransfersSwaps.service.js";
 import {
     WALLET_IDENTITY_MAX_BATCH_SIZE,
@@ -59,9 +60,9 @@ import { z } from "zod";
 import { Hono } from "hono";
 import { serverErr, setErr } from "@sv/util/errors";
 import {
-  WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
-  WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
-  WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
+    WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
+    WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
+    WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
 } from "@sv/config/constants.js";
 
 const walletRequestSchema = z.object({
@@ -305,14 +306,21 @@ const app = new Hono()
           .min(1)
           .max(WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT)
           .optional(),
+        cursor: walletHistoryCursorQuerySchema.optional(),
       }),
     ),
     async (c) => {
       try {
         const { address } = c.req.valid("param");
-        const { limit, fromMs, toMs } = c.req.valid("query");        
-        
-        const txs = await getWalletSwapHistory(address, fromMs, toMs, limit);
+        const { limit, fromMs, toMs, cursor } = c.req.valid("query");
+
+        const txs = await getWalletSwapHistory(
+          address,
+          fromMs,
+          toMs,
+          limit,
+          cursor,
+        );
         if (!txs) {
           return c.json(
             setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
@@ -371,18 +379,20 @@ const app = new Hono()
           .min(1)
           .max(WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT)
           .optional(),
+        cursor: walletHistoryCursorQuerySchema.optional(),
       }),
     ),
     async (c) => {
       try {
         const { address } = c.req.valid("param");
-        const { limit, fromMs, toMs } = c.req.valid("query");
+        const { limit, fromMs, toMs, cursor } = c.req.valid("query");
 
         const txs = await getWalletTransferHistory(
           address,
           fromMs,
           toMs,
           limit,
+          cursor,
         );
         if (!txs) {
           return c.json(
