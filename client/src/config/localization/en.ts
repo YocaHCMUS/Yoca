@@ -1997,6 +1997,7 @@ export const translation = {
     sendButtonTitle: "Send",
     promptMenuBtn: "Prompt menu",
     fabTitle: "Open AI Chat",
+    launcherLabel: "Ask YOCA AI",
     seriesLabel: "Series {{count}}",
     tldr: "TLDR",
     warnings: "Warnings",
