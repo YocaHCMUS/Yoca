@@ -4,7 +4,7 @@ import { WalletTopbar } from "@/components/wallet/WalletTopbar/WalletTopbar.tsx"
 import { WalletHero } from "@/components/wallet/WalletHero/WalletHero.tsx";
 import { WalletHoldingsPanel } from "@/components/wallet/WalletHoldingsPanel/WalletHoldingsPanel.tsx";
 import { RightSidebar } from "./RightSidebar.tsx";
-import { WalletChat } from "@/components/wallet/WalletChat";
+import { WalletChat, ChatContextProvider } from "@/components/wallet/WalletChat";
 import { AiAnalysisModal } from "@/components/wallet/AiAnalysisModal/AiAnalysisModal.tsx";
 import { tableHeaderLabel } from "@/components/tables/Table.tsx";
 import { useWalletWinrate } from "@/hooks/useWalletWinrate";
@@ -1060,31 +1060,35 @@ export default function WalletPage() {
         </div>
 
         {/* Layout-integrated chat panel (right/left dock) */}
-        <div
-          className={styles.chatInline}
-          data-side={chatPosition}
-          data-open={isChatOpen && chatPosition !== "fullscreen"}
-        >
-          <div className={styles.chatInlineInner}>
-            <WalletChat address={walletAddress} variant="sidebar" lang={lang} contextType="wallet" chatPosition={chatPosition} onChatPositionChange={setChatPosition} />
-          </div>
-        </div>
-
-        <RightSidebar
-          onToggle={setIsRightSidebarOpen}
-          isChatOpen={isChatOpen}
-          onChatToggle={() => setIsChatOpen((v) => !v)}
-        />
-
-        {/* Fullscreen overlay */}
-        {isChatOpen && chatPosition === "fullscreen" && (
-          <div className={styles.chatOverlay} data-position="fullscreen">
-            <div className={styles.chatBackdrop} onClick={() => setIsChatOpen(false)} />
-            <div className={styles.chatPanel}>
-              <WalletChat address={walletAddress} variant="sidebar" lang={lang} contextType="wallet" chatPosition={chatPosition} onChatPositionChange={setChatPosition} />
+        <ChatContextProvider addresses={[walletAddress]} contextType="wallet" lang={lang}>
+          {isChatOpen && chatPosition !== "fullscreen" && (
+            <div
+              className={styles.chatInline}
+              data-side={chatPosition}
+              data-open={true}
+            >
+              <div className={styles.chatInlineInner}>
+                <WalletChat variant="sidebar" chatPosition={chatPosition} onChatPositionChange={setChatPosition} />
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          <RightSidebar
+            onToggle={setIsRightSidebarOpen}
+            isChatOpen={isChatOpen}
+            onChatToggle={() => setIsChatOpen((v) => !v)}
+          />
+
+          {/* Fullscreen overlay */}
+          {isChatOpen && chatPosition === "fullscreen" && (
+            <div className={styles.chatOverlay} data-position="fullscreen">
+              <div className={styles.chatBackdrop} onClick={() => setIsChatOpen(false)} />
+              <div className={styles.chatPanel}>
+                <WalletChat variant="sidebar" chatPosition={chatPosition} onChatPositionChange={setChatPosition} />
+              </div>
+            </div>
+          )}
+        </ChatContextProvider>
       </div>
 
       <div

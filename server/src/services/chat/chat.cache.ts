@@ -3,7 +3,8 @@ import { db } from "@sv/db/index.js";
 import { chatAnalysisCache } from "@sv/db/schema.js";
 import { eq } from "drizzle-orm";
 import type { ChatResponse } from "./chat.types.js";
-import { CHAT_CACHE_TTL_MS, CHAT_CACHE_HARD_TTL_MS } from "@sv/config/constants.js";
+import { CHAT_CACHE_HARD_TTL_MS } from "@sv/config/constants.js";
+import { getEffectiveCacheTtl, hasUncacheableTools } from "./chat.tools.js";
 
 export interface CacheDependency {
   type: "wallet_swaps" | "wallet_transfers" | "wallet_balance";
@@ -21,10 +22,10 @@ export interface CacheMeta {
   ttlMs: number;
 }
 
-/**
- * Compute a data fingerprint for wallets based on easily-checked metrics.
- * Hashes latest swap data across ALL addresses for staleness detection.
- */
+function sortedAddressesKey(addresses: string[]): string {
+  return [...addresses].sort().join("|");
+}
+
 async function computeDataFingerprint(addresses: string[]): Promise<string> {
   const hash = createHash("sha256");
 
@@ -51,22 +52,18 @@ async function computeDataFingerprint(addresses: string[]): Promise<string> {
   return hash.digest("hex").slice(0, 16);
 }
 
-function sortedAddressesKey(addresses: string[]): string {
-  return [...addresses].sort().join("|");
-}
-
-export async function computeCacheKey(
+function computeKey(
   addresses: string[],
   query: string,
   model: string,
+  fingerprint: string,
+  historyHash?: string,
   intent?: string,
-): Promise<string> {
+): string {
   const addrsKey = sortedAddressesKey(addresses);
-  const fingerprint = await computeDataFingerprint(addresses);
-  const hash = createHash("sha256")
-    .update(`${addrsKey}|${query.trim().toLowerCase()}|${model}|${fingerprint}|${intent ?? "custom"}`)
+  return createHash("sha256")
+    .update(`${addrsKey}|${query.trim().toLowerCase()}|${model}|${fingerprint}|${historyHash ?? ""}|${intent ?? ""}`)
     .digest("hex");
-  return hash;
 }
 
 export async function getCachedResponse(
@@ -76,11 +73,8 @@ export async function getCachedResponse(
   historyHash?: string,
   intent?: string,
 ): Promise<ChatResponse | null> {
-  const addrsKey = sortedAddressesKey(addresses);
   const fingerprint = await computeDataFingerprint(addresses);
-  const key = createHash("sha256")
-    .update(`${addrsKey}|${query.trim().toLowerCase()}|${model}|${fingerprint}|${historyHash ?? ""}|${intent ?? ""}`)
-    .digest("hex");
+  const key = computeKey(addresses, query, model, fingerprint, historyHash, intent);
 
   const rows = await db
     .select()
@@ -91,11 +85,23 @@ export async function getCachedResponse(
   if (rows.length === 0) return null;
 
   const row = rows[0];
+
+  // Entries with errors should never be served — force re-fetch
+  if (row.hasErrors) return null;
+
   const ageMs = Date.now() - new Date(row.fetchedAt).getTime();
 
-  if (ageMs > CHAT_CACHE_HARD_TTL_MS) return null;
+  // Compute effective TTL from the tools that were used
+  const effectiveTtl = getEffectiveCacheTtl(row.toolsUsed ?? []);
+  const effectiveHardTtl = effectiveTtl != null
+    ? Math.max(effectiveTtl * 3, 60_000)
+    : CHAT_CACHE_HARD_TTL_MS;
 
-  if (ageMs > CHAT_CACHE_TTL_MS) {
+  // Hard TTL — unconditional miss
+  if (effectiveHardTtl > 0 && ageMs > effectiveHardTtl) return null;
+
+  // Soft TTL — re-check fingerprint
+  if (effectiveTtl != null && ageMs > effectiveTtl) {
     const currentFingerprint = await computeDataFingerprint(addresses);
     if (row.dataFingerprint !== currentFingerprint) return null;
   }
@@ -110,12 +116,21 @@ export async function setCachedResponse(
   model: string,
   historyHash?: string,
   intent?: string,
+  toolsUsed?: string[],
+  hasErrors?: boolean,
+  responseType?: string,
 ): Promise<void> {
-  const addrsKey = sortedAddressesKey(addresses);
+  // Skip caching if any tools errored — force re-fetch next time
+  if (hasErrors) return;
+
+  const resolvedTools = toolsUsed ?? [];
+
+  // Skip caching if any tool is uncacheable (e.g. web/news search)
+  if (hasUncacheableTools(resolvedTools)) return;
+
+  const effectiveTtl = getEffectiveCacheTtl(resolvedTools) ?? CHAT_CACHE_HARD_TTL_MS;
   const fingerprint = await computeDataFingerprint(addresses);
-  const key = createHash("sha256")
-    .update(`${addrsKey}|${query.trim().toLowerCase()}|${model}|${fingerprint}|${historyHash ?? ""}|${intent ?? ""}`)
-    .digest("hex");
+  const key = computeKey(addresses, query, model, fingerprint, historyHash, intent);
 
   await db
     .insert(chatAnalysisCache)
@@ -126,8 +141,11 @@ export async function setCachedResponse(
       response: response as unknown as Record<string, unknown>,
       dataFingerprint: fingerprint,
       model,
-      ttlMs: CHAT_CACHE_HARD_TTL_MS,
+      ttlMs: effectiveTtl,
       fetchedAt: new Date(),
+      toolsUsed: resolvedTools,
+      hasErrors: false,
+      responseType: responseType ?? "tool_generated",
     })
     .onConflictDoUpdate({
       target: [chatAnalysisCache.key],
@@ -135,8 +153,21 @@ export async function setCachedResponse(
         response: response as unknown as Record<string, unknown>,
         dataFingerprint: fingerprint,
         model,
-        ttlMs: CHAT_CACHE_HARD_TTL_MS,
+        ttlMs: effectiveTtl,
         fetchedAt: new Date(),
+        toolsUsed: resolvedTools,
+        hasErrors: false,
+        responseType: responseType ?? "tool_generated",
       },
     });
+}
+
+export async function computeCacheKey(
+  addresses: string[],
+  query: string,
+  model: string,
+  intent?: string,
+): Promise<string> {
+  const fingerprint = await computeDataFingerprint(addresses);
+  return computeKey(addresses, query, model, fingerprint, undefined, intent);
 }

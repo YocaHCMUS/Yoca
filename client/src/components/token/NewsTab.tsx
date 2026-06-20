@@ -66,6 +66,8 @@ export function NewsTab({ address, symbol, name }: NewsTabProps) {
     const start = String(sortedArticles.length === 0 ? 0 : currentNewsPage * NEWS_PAGE_SIZE + 1);
     const end = String(Math.min(currentNewsPage * NEWS_PAGE_SIZE + NEWS_PAGE_SIZE, sortedArticles.length));
     const count = String(sortedArticles.length);
+    const noMajorNewsResults = sortedArticles.length > 0
+        && sortedArticles.every((article) => article.sourceType !== 'news');
     const actionIconDescription = news.hasLoaded
         ? tr('token.news.refreshTooltip')
         : tr('token.news.fetchTooltip');
@@ -114,7 +116,7 @@ export function NewsTab({ address, symbol, name }: NewsTabProps) {
 
             {news.hasLoaded && !news.isLoading && !news.error && sortedArticles.length === 0 && (
                 <div className={styles.empty}>
-                    <p>{tr('token.news.empty', { name })}</p>
+                    <p>No verified news or related web mentions found for this token.</p>
                     <Button
                         kind="primary"
                         size="sm"
@@ -127,6 +129,12 @@ export function NewsTab({ address, symbol, name }: NewsTabProps) {
 
             {sortedArticles.length > 0 && (
                 <>
+                    {noMajorNewsResults && (
+                        <div className={styles.webMentionNotice}>
+                            No major news found. Showing related web mentions.
+                        </div>
+                    )}
+
                     <div className={styles.articlesGrid}>
                         {visibleArticles.map((article, idx) => (
                             <NewsCard

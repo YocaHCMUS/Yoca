@@ -2,23 +2,29 @@ import classNames from "classnames";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import ReactDOM from "react-dom";
 import { useNavigate } from "react-router";
-import { Copy, Checkmark } from "@carbon/icons-react";
+import { Copy, Checkmark, Restart, Edit } from "@carbon/icons-react";
 import { ID_MODAL_ROOT } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import type { TranslationKeyPath } from "@/config/localization";
 import type {
   ActionSpec,
   ChatMessageItem,
   ChatSource,
   WalletChatSection,
   WalletSectionKind,
+  WalletConfidence,
 } from "./types";
+import { GeckoTerminalChart } from "@/components/charts/GeckoTerminalChart";
 import { ChartRenderer, TableRenderer } from "./WalletChatChartRenderer";
 import { SourcePanel } from "./WalletChatSourcePanel";
 import styles from "./WalletChat.module.scss";
 
 interface Props {
   message: ChatMessageItem;
+  index: number;
   onAction?: (href: string) => void;
+  onRedo?: (index: number, content: string) => void;
+  onRevert?: (index: number, content: string) => void;
 }
 
 const MARKER_RE = /<(chart|table|action)\s+id="([^"]+)"\s*\/>/g;
@@ -94,7 +100,7 @@ function parseMarkers(text: string): PartType[] {
 // ─── Rich Text Helpers ──────────────────────────────────────────────────
 
 const METRIC_OR_SIGNAL_PATTERN =
-  /([+-]\d+(?:\.\d+)?%|\$\s?\d[\d,]*(?:\.\d+)?\s?(?:K|M|B|T)?|\b\d[\d,]*(?:\.\d+)?\s?(?:million|billion|trillion)?|\b(?:bearish|decline|declines|declined|drop|drops|dropped|selling|pressure|risk|risks|outflow|outflows|loss|losses)\b|\b(?:bullish|growth|increase|increases|increased|inflow|inflows|support|liquidity|adoption|profitable|win)\b|\b(?:warning|unavailable|missing|cannot verify|not available|limited data)\b)/gi;
+  /([+-]\d+(?:\.\d+)?%|[$€£¥₿]\s?\d[\d,]*(?:\.\d+)?)/gi;
 
 function stripMarkdownArtifacts(value: string) {
   return value.replace(/\*\*/g, "");
@@ -124,14 +130,9 @@ function splitBoldSegments(value: string) {
 }
 
 function getMetricClass(value: string) {
-  const normalized = value.toLowerCase();
-
   if (/^\+\d/.test(value) && value.includes("%")) return "metricPositive";
   if (/^-\d/.test(value) && value.includes("%")) return "metricNegative";
-  if (value.trim().startsWith("$")) return "metricMoney";
-  if (/\b(warning|unavailable|missing|cannot verify|not available|limited data)\b/.test(normalized)) return "warningText";
-  if (/\b(bearish|decline|declines|declined|drop|drops|dropped|selling|pressure|risk|risks|outflow|outflows|loss|losses)\b/.test(normalized)) return "riskText";
-  if (/\b(bullish|growth|increase|increases|increased|inflow|inflows|support|liquidity|adoption|profitable|win)\b/.test(normalized)) return "bullishText";
+  if (/^[$€£¥₿]/.test(value.trim())) return "metricMoney";
   return "metricNeutral";
 }
 
@@ -190,6 +191,29 @@ function renderInlineRichText(value: string, keyPrefix = "rich") {
       </strong>
     );
   });
+}
+
+function parseStructuredQuery(text: string): Record<string, string> | null {
+  const t = text.trim();
+  if (!t.startsWith("{") || !t.endsWith("}") || !t.includes(": ")) return null;
+  const inner = t.slice(1, -1);
+  const pairs: Record<string, string> = {};
+  let depth = 0;
+  let current = "";
+  for (const ch of inner) {
+    if (ch === "{" || ch === "[") depth++;
+    else if (ch === "}" || ch === "]") depth--;
+    if (ch === "," && depth === 0) {
+      const sep = current.indexOf(": ");
+      if (sep > 0) { pairs[current.slice(0, sep).trim()] = current.slice(sep + 2).trim(); }
+      current = "";
+    } else { current += ch; }
+  }
+  if (current.trim()) {
+    const sep = current.indexOf(": ");
+    if (sep > 0) { pairs[current.slice(0, sep).trim()] = current.slice(sep + 2).trim(); }
+  }
+  return Object.keys(pairs).length > 0 ? pairs : null;
 }
 
 function isBulletLikeLine(value: string) {
@@ -283,17 +307,23 @@ function SectionTable({ table }: { table: Array<Record<string, string | number |
 
 // ─── Section Kind → Meta ────────────────────────────────────────────────
 
-const SECTION_KIND_META: Record<WalletSectionKind, { label: string; icon: string; className: string }> = {
-  market_snapshot: { label: "Market Snapshot", icon: "M", className: "kindMarket" },
-  key_findings: { label: "Key Findings", icon: "K", className: "kindDrivers" },
-  pnl_summary: { label: "PnL Summary", icon: "P", className: "kindBullish" },
-  trading_activity: { label: "Trading Activity", icon: "T", className: "kindNews" },
-  top_holdings: { label: "Top Holdings", icon: "H", className: "kindDeepDive" },
-  risk_factors: { label: "Risk Factors", icon: "!", className: "kindRisk" },
-  what_to_watch: { label: "What To Watch", icon: "?", className: "kindWatch" },
-  conclusion: { label: "Conclusion", icon: "\u2713", className: "kindConclusion" },
-  custom: { label: "Analysis", icon: "A", className: "kindSimple" },
-};
+const CONFIDENCE_LEVEL_KEYS = {
+  High: "chat.confidenceHigh",
+  Medium: "chat.confidenceMedium",
+  Low: "chat.confidenceLow",
+} as const satisfies Record<WalletConfidence, TranslationKeyPath>;
+
+const SECTION_KIND_META = {
+  market_snapshot: { labelKey: "chat.section.market_snapshot", icon: "M", className: "kindMarket" },
+  key_findings: { labelKey: "chat.section.key_findings", icon: "K", className: "kindDrivers" },
+  pnl_summary: { labelKey: "chat.section.pnl_summary", icon: "P", className: "kindBullish" },
+  trading_activity: { labelKey: "chat.section.trading_activity", icon: "T", className: "kindNews" },
+  top_holdings: { labelKey: "chat.section.top_holdings", icon: "H", className: "kindDeepDive" },
+  risk_factors: { labelKey: "chat.section.risk_factors", icon: "!", className: "kindRisk" },
+  what_to_watch: { labelKey: "chat.section.what_to_watch", icon: "?", className: "kindWatch" },
+  conclusion: { labelKey: "chat.section.conclusion", icon: "\u2713", className: "kindConclusion" },
+  custom: { labelKey: "chat.section.custom", icon: "A", className: "kindSimple" },
+} as const satisfies Record<WalletSectionKind, { labelKey: TranslationKeyPath; icon: string; className: string }>;
 
 // ─── Section Renderer ───────────────────────────────────────────────────
 
@@ -324,7 +354,7 @@ function WalletChatSectionRenderer({ section, onBulletClick, onCopySection, copi
       <div className={styles.sectionHeader}>
         <span className={styles.sectionIcon} aria-hidden="true">{meta.icon}</span>
         <div className={styles.sectionHeaderInner}>
-          <span className={styles.sectionKind}>{meta.label}</span>
+          <span className={styles.sectionKind}>{tr(meta.labelKey)}</span>
           {section.title && <div className={styles.sectionTitle}>{section.title}</div>}
         </div>
       </div>
@@ -475,7 +505,7 @@ function actionButtonGroup(actions: ActionSpec[], navigate: ReturnType<typeof us
 
 // ─── Main Component ─────────────────────────────────────────────────────
 
-export function WalletChatMessage({ message, onAction }: Props) {
+export function WalletChatMessage({ message, index, onAction, onRedo, onRevert }: Props) {
   const navigate = useNavigate();
   const { tr } = useLocalization();
   const [showAllEvidence, setShowAllEvidence] = useState(false);
@@ -573,10 +603,42 @@ export function WalletChatMessage({ message, onAction }: Props) {
   if (message.role === "user") {
     const userCopyId = "user-copy";
     const isUserCopied = copiedSectionId === userCopyId;
+    const dataPairs = parseStructuredQuery(message.content);
     return (
       <div className={styles.userBubbleRow}>
-        <div className={styles.userBubble}>{message.content}</div>
+        <div className={styles.userBubble}>
+          {dataPairs ? (
+            <div className={styles.userDataPill}>
+              {Object.entries(dataPairs).map(([field, value]) => (
+                <span key={field} className={styles.userDataPillField}>
+                  <span className={styles.userDataPillLabel}>{field}</span>
+                  <span className={styles.userDataPillValue}>{value}</span>
+                </span>
+              ))}
+            </div>
+          ) : (
+            message.content
+          )}
+        </div>
         <div className={styles.bubbleActions}>
+          <button
+            type="button"
+            className={styles.bubbleActionBtn}
+            onClick={() => onRedo?.(index, message.content)}
+            title={tr("chat.redo")}
+          >
+            <Restart size={12} />
+            {tr("chat.redo")}
+          </button>
+          <button
+            type="button"
+            className={styles.bubbleActionBtn}
+            onClick={() => onRevert?.(index, message.content)}
+            title={tr("chat.revert")}
+          >
+            <Edit size={12} />
+            {tr("chat.revert")}
+          </button>
           <button
             type="button"
             className={classNames(styles.copyBtn, { [styles.copyBtnCopied]: isUserCopied })}
@@ -627,16 +689,16 @@ export function WalletChatMessage({ message, onAction }: Props) {
   }
 
   // Confidence
-  if (message.confidence) {
-    elements.push(
-      <span
-        key="confidence"
-        className={classNames(styles.confidenceBadge, styles[`confidence${message.confidence}`])}
-      >
-        {message.confidence} {tr("chat.confidence")}
-      </span>,
-    );
-  }
+  // if (message.confidence) {
+  //   elements.push(
+  //     <span
+  //       key="confidence"
+  //       className={classNames(styles.confidenceBadge, styles[`confidence${message.confidence}`])}
+  //     >
+  //       {tr("chat.confidenceLabel", { level: tr(CONFIDENCE_LEVEL_KEYS[message.confidence]) })}
+  //     </span>,
+  //   );
+  // }
 
   // Parsed content parts — text+cite groups rendered as inline flow
   for (const group of inlineGroups) {
@@ -661,13 +723,23 @@ export function WalletChatMessage({ message, onAction }: Props) {
           <WalletRichText text={only.content} />
         </div>,
       );
-    } else if (only.type === "chart" && message.data && only.id) {
+    } else if (only.type === "chart" && only.id) {
       const spec = message.charts?.find((c) => c.id === only.id) ?? {
         id: only.id, type: "line" as const, dataRef: only.id,
       };
-      elements.push(
-        <ChartRenderer key={`c-${only.id}`} spec={spec} data={message.data} onAction={onAction} />,
-      );
+      if (spec.type === "geckoterminal" && spec.poolAddress) {
+        elements.push(
+          <GeckoTerminalChart
+            key={`gc-${only.id}`}
+            poolAddress={spec.poolAddress}
+            height="400"
+          />,
+        );
+      } else if (message.data && spec.type !== "geckoterminal") {
+        elements.push(
+          <ChartRenderer key={`c-${only.id}`} spec={spec} data={message.data} onAction={onAction} />,
+        );
+      }
     } else if (only.type === "table" && message.data && only.id) {
       const spec = message.tables?.find((t) => t.id === only.id) ?? {
         id: only.id, dataRef: only.id, columns: "",
@@ -778,24 +850,9 @@ export function WalletChatMessage({ message, onAction }: Props) {
     );
   }
 
-  // Suggested question chips
-  const askChips = endActions.filter((a) => a.href.startsWith("#ask:"));
-  if (askChips.length > 0) {
-    elements.push(
-      <div key="chips" className={styles.chips}>
-        {askChips.map((a, i) => (
-          <button key={i} type="button" className={styles.chip} onClick={() => onAction?.(a.href.slice(5))}>
-            {a.label}
-          </button>
-        ))}
-      </div>,
-    );
-  }
-
-  // End actions (non-ask)
-  const nonAskEndActions = endActions.filter((a) => !a.href.startsWith("#ask:"));
-  if (nonAskEndActions.length > 0) {
-    elements.push(actionButtonGroup(nonAskEndActions, navigate, onAction));
+  // End actions
+  if (endActions.length > 0) {
+    elements.push(actionButtonGroup(endActions, navigate, onAction));
   }
 
   if (elements.length === 0) {

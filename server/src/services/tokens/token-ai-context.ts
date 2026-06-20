@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { getRssTokenNews, type TokenNewsArticle } from "@sv/services/rss-news.service.js";
+import { getBirdeyeChartData, type BirdeyeInterval } from "@sv/services/wallet/providers/birdeye-chart-data.js";
 import {
   get24hTokenMarketChart,
   getDailyTokenMarketChart,
@@ -232,16 +233,48 @@ function getChartDays(timeframe: TokenAiTimeframe) {
   return timeframeDays[timeframe];
 }
 
+function timeframeToInterval(days: number): BirdeyeInterval {
+  if (days <= 1) return "15m";
+  if (days <= 7) return "1H";
+  if (days <= 30) return "4H";
+  return "1D";
+}
+
 async function readChartSummary(address: string, timeframe: TokenAiTimeframe) {
   const days = getChartDays(timeframe);
-  const rows =
-    timeframe === "24h"
-      ? await get24hTokenMarketChart(address)
-      : days <= 90
-        ? await getHourlyTokenMarketChart(address, days)
-        : await getDailyTokenMarketChart(address, days);
+  const interval = timeframe === "24h" ? "15m" : timeframeToInterval(days);
 
-  const points = rows
+  let rows: { unixTimestampMs: unknown; price: unknown }[] | null = null;
+  let source = "";
+
+  try {
+    const birdeyePoints = await getBirdeyeChartData(address, interval, days);
+    if (birdeyePoints.length > 0) {
+      rows = birdeyePoints;
+      source = "Birdeye Solana price feed";
+    }
+  } catch {
+    // Birdeye fetch failed — fallback to CoinGecko
+  }
+
+  if (!rows) {
+    try {
+      const cgRows =
+        timeframe === "24h"
+          ? await get24hTokenMarketChart(address)
+          : days <= 90
+            ? await getHourlyTokenMarketChart(address, days)
+            : await getDailyTokenMarketChart(address, days);
+      if (cgRows && cgRows.length > 0) {
+        rows = cgRows;
+        source = "CoinGecko (fallback)";
+      }
+    } catch {
+      // CoinGecko fallback also failed
+    }
+  }
+
+  const points = (rows ?? [])
     .map((row) => ({
       timestampMs: Number(row.unixTimestampMs),
       price: Number(row.price),
@@ -287,7 +320,7 @@ async function readChartSummary(address: string, timeframe: TokenAiTimeframe) {
       value: percent(changePercent),
       detail: `${points.length} price points from ${new Date(first.timestampMs).toISOString()} to ${new Date(last.timestampMs).toISOString()}.`,
       timestamp: new Date(last.timestampMs).toISOString(),
-      source: "Yoca chart cache/provider",
+      source,
     },
   };
 }

@@ -9,7 +9,7 @@ const balanceHistoryTransformer: DataTransformer = (data) => {
     datasets: [
       {
         name: "Balance",
-        values: (points as Array<{ usdValue: number }>).map((p) => p.usdValue),
+        values: (points as Array<{ usdValue: number; timestampMs: number }>).map((p) => [p.timestampMs, p.usdValue]),
       },
     ],
   };
@@ -25,11 +25,11 @@ const pnlChartTransformer: DataTransformer = (data) => {
     datasets: [
       {
         name: "Daily PnL",
-        values: allTimestamps.map((ts) => daily.find((p) => p.timestamp === ts)?.value ?? null),
+        values: allTimestamps.map((ts) => [ts, daily.find((p) => p.timestamp === ts)?.value ?? null]),
       },
       {
         name: "Cumulative PnL",
-        values: allTimestamps.map((ts) => cumulative.find((p) => p.timestamp === ts)?.value ?? null),
+        values: allTimestamps.map((ts) => [ts, cumulative.find((p) => p.timestamp === ts)?.value ?? null]),
       },
     ],
   };
@@ -38,9 +38,10 @@ const pnlChartTransformer: DataTransformer = (data) => {
 const tokenPrice24hTransformer: DataTransformer = (data) => {
   const points = Array.isArray(data) ? data : [];
   const typed = points as Array<{ unixTimestampMs: number; price: number }>;
+  const labels = typed.map((p) => new Date(p.unixTimestampMs).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
   return {
-    labels: typed.map((p) => new Date(p.unixTimestampMs).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })),
-    datasets: [{ name: "Price", values: typed.map((p) => p.price) }],
+    labels,
+    datasets: [{ name: "Price", values: typed.map((p) => [p.unixTimestampMs, p.price]) }],
   };
 };
 
@@ -49,7 +50,19 @@ const tokenPriceDailyTransformer: DataTransformer = (data) => {
   const typed = points as Array<{ unixTimestampMs: number; price: number }>;
   return {
     labels: typed.map((p) => new Date(p.unixTimestampMs).toISOString().slice(0, 10)),
-    datasets: [{ name: "Price", values: typed.map((p) => p.price) }],
+    datasets: [{ name: "Price", values: typed.map((p) => [p.unixTimestampMs, p.price]) }],
+  };
+};
+
+const drawdownChartTransformer: DataTransformer = (data) => {
+  const points = Array.isArray(data) ? data : [];
+  const typed = points as Array<{ timestamp: number; drawdown: number }>;
+  return {
+    labels: typed.map((p) => new Date(p.timestamp).toISOString().slice(0, 10)),
+    datasets: [{
+      name: "Drawdown",
+      values: typed.map((p) => [p.timestamp, p.drawdown]),
+    }],
   };
 };
 
@@ -133,6 +146,7 @@ const tokenDetailsTransformer: DataTransformer = (data) => {
 
 export const DATA_TRANSFORMERS: Record<string, DataTransformer> = {
   get_balance_history: balanceHistoryTransformer,
+  get_drawdown_chart: drawdownChartTransformer,
   get_pnl_chart: pnlChartTransformer,
   get_token_price: tokenPriceTransformer,
   get_token_price_24h: tokenPrice24hTransformer,

@@ -1,6 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import ReactECharts from "echarts-for-react";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { useCarbonChartBaseOption, CHART_COLOR_PALETTE } from "@/util/carbon-chart-base";
+import { useCarbonTokens } from "@/hooks/useCarbonToken";
+import { cds } from "@/util/carbon-theme";
 import type { ChartSpec, TableFilter, TableSpec } from "./types";
 import styles from "./WalletChat.module.scss";
 
@@ -13,7 +16,7 @@ interface ChartRendererProps {
 }
 
 function interpolate(tpl: string, vars: Record<string, string>): string {
-  return tpl.replace(/\{(\w+)\}/g, (_, k: string) => vars[k] ?? `{${k}}`);
+  return tpl.replace(/\{([\w.]+)\}/g, (_, k: string) => vars[k] ?? `{${k}}`);
 }
 
 function applyChartLimit(
@@ -34,60 +37,111 @@ function applyChartLimit(
   return { labels, datasets };
 }
 
+function formatYValue(val: number, format: NonNullable<ChartSpec["yAxisFormat"]>, fmt: ReturnType<typeof useLocalization>["fmt"]): string {
+  switch (format) {
+    case "currency": return fmt.num.currency(val);
+    case "compact-currency": return fmt.num.compact.currency(val);
+    case "percent": return fmt.num.percentagePoint(val * 100);
+    case "decimal":
+    default: return fmt.num.decimal(val);
+  }
+}
+
+function formatXValue(val: number, format: NonNullable<ChartSpec["xAxisFormat"]>, fmt: ReturnType<typeof useLocalization>["fmt"]): string {
+  switch (format) {
+    case "datetime": return fmt.datetime.fromUnixMilliseconds(val);
+    case "date": return fmt.datetime.date(val);
+    case "time": return fmt.datetime.time(val);
+    default: return fmt.datetime.fromUnixMilliseconds(val);
+  }
+}
+
 function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
   const raw = data[spec.dataRef] as
     | { labels?: string[]; datasets?: { name?: string; values?: number[] }[] }
     | undefined;
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
+  const baseOption = useCarbonChartBaseOption();
+  const chartTokens = useCarbonTokens({ bg: cds.layer01 });
+  const chartRef = useRef<ReactECharts>(null);
 
   const option = useMemo(() => {
     if (!raw?.labels || !raw?.datasets) return null;
 
     const { labels, datasets } = applyChartLimit(raw, spec.limit);
 
-    const colors = ["#0f62fe", "#24a148", "#da1e28", "#8a3ffc", "#ff832b", "#f1c21b"];
+    const colors = CHART_COLOR_PALETTE;
 
     const isPie = spec.type === "pie";
+    const isTimeAxis = spec.xAxisType === "time";
+    const shouldTruncate = isTimeAxis && labels.length > 15;
+
+    const yAxisFmt = spec.yAxisFormat;
+    const yAxisLabel = yAxisFmt
+      ? (val: number) => formatYValue(val, yAxisFmt, fmt)
+      : undefined;
+
+    const xAxisFmt = spec.xAxisFormat;
+    const xAxisLabel = isTimeAxis && xAxisFmt
+      ? (val: number) => formatXValue(val, xAxisFmt, fmt)
+      : undefined;
 
     const tooltip: Record<string, unknown> = {
       trigger: isPie ? "item" : "axis",
-      backgroundColor: "rgba(22,22,22,0.95)",
-      borderColor: "#333",
-      textStyle: { color: "#fff", fontSize: 11 },
-      ...(isPie && spec.pointActions
-        ? {
-            formatter: (params: unknown) => {
-              const p = params as { name?: string; value?: number } | undefined;
-              const label = p?.name ?? "";
-              const value = p?.value ?? "";
-              const query = interpolate(spec.pointActions!.query, { label });
-              return `${label}: ${value}<br/><span style="color:#2a6df4;font-size:10px">${tr("chat.clickToAsk", { query })}</span>`;
-            },
-          }
-        : {}),
     };
 
-    if (!isPie && spec.pointActions) {
+    if (isPie && spec.pointActions) {
+      tooltip.formatter = (params: unknown) => {
+        const p = params as { name?: string; value?: number } | undefined;
+        const label = p?.name ?? "";
+        const value = p?.value ?? 0;
+        const formatted = yAxisFmt
+          ? formatYValue(value, yAxisFmt, fmt)
+          : value;
+        const query = interpolate(spec.pointActions!.query, { label });
+        return `${label}: ${formatted}<br/><span style="color:#2a6df4;font-size:10px">${tr("chat.clickToAsk", { query })}</span>`;
+      };
+    }
+
+    if (!isPie) {
       tooltip.formatter = (params: unknown) => {
         const arr = Array.isArray(params) ? params : [params];
-        const p = arr[0] as { axisValueLabel?: string } | undefined;
-        const label = p?.axisValueLabel ?? "";
-        const query = interpolate(spec.pointActions!.query, { label });
+        const p = arr[0] as { axisValue?: number; axisValueLabel?: string } | undefined;
+
+        const xLabel = isTimeAxis
+          ? formatXValue(p?.axisValue ?? 0, xAxisFmt ?? "datetime", fmt)
+          : (p?.axisValueLabel ?? "");
+
+        const clickLine = spec.pointActions
+          ? (() => {
+            const label = p?.axisValueLabel ?? "";
+            const query = interpolate(spec.pointActions!.query, { label });
+            return `<br/><span style="color:#2a6df4;font-size:10px">${tr("chat.clickToAsk", { query })}</span>`;
+          })()
+          : "";
+
         const lines = arr.map((pt: unknown) => {
           const seriesName = (pt as { seriesName?: string }).seriesName ?? "";
           const value = (pt as { value?: number[] }).value;
-          const v = Array.isArray(value) ? value[1] ?? value[0] : value;
-          return `${seriesName}: ${v}`;
+          const v = Array.isArray(value) ? value[1] ?? value[0] ?? 0 : (value ?? 0);
+          const formatted = yAxisFmt
+            ? formatYValue(v, yAxisFmt, fmt)
+            : v;
+          return `${seriesName}: ${formatted}`;
         });
-        return `${lines.join("<br/>")}<br/><span style="color:#2a6df4;font-size:10px">${tr("chat.clickToAsk", { query })}</span>`;
+
+        return `${xLabel}<br/>${lines.join("<br/>")}${clickLine}`;
       };
     }
 
     if (isPie) {
       const ds = datasets[0];
       return {
-        backgroundColor: "transparent",
+        ...baseOption,
+        // backgroundColor: chartTokens.bg,
         color: colors,
+        xAxis: undefined,
+        yAxis: undefined,
         tooltip,
         series: [{
           type: "pie",
@@ -107,12 +161,14 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
     }
 
     const series = datasets.map((ds, i) => {
+      const hasClick = !!spec.pointActions;
       const base: Record<string, unknown> = {
         name: ds.name ?? tr("chat.seriesLabel", { count: i + 1 }),
         type: spec.type === "area" ? "line" : spec.type,
         data: ds.values ?? [],
-        smooth: true,
-        symbol: "none",
+        smooth: false,
+        symbol: hasClick && labels.length <= 60 ? "emptyCircle" : "none",
+        ...(hasClick && labels.length <= 60 ? { symbolSize: 6 } : {}),
         lineStyle: { width: 2 },
       };
 
@@ -122,8 +178,8 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
             type: "linear",
             x: 0, y: 0, x2: 0, y2: 1,
             colorStops: [
-              { offset: 0, color: colors[i % colors.length] + "40" },
-              { offset: 1, color: colors[i % colors.length] + "05" },
+              { offset: 0, color: colors[i % colors.length] + "4D" },
+              { offset: 1, color: colors[i % colors.length] + "0D" },
             ],
           },
         };
@@ -133,38 +189,58 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
     });
 
     return {
-      backgroundColor: "transparent",
+      ...baseOption,
+      // backgroundColor: chartTokens.bg,
       color: colors,
-      grid: { left: 40, right: 8, top: 24, bottom: 24 },
       tooltip,
+      grid: {
+        left: 10,
+        right: 10,
+        top: 20,
+        bottom: 30,
+        containLabel: true,
+      },
       xAxis: {
-        type: "category",
-        data: labels,
-        axisLine: { show: false },
-        axisTick: { show: false },
-        axisLabel: { fontSize: 10, color: "#888" },
+        ...baseOption.xAxis,
+        type: isTimeAxis ? "time" : "category",
+        ...(isTimeAxis ? {} : { data: labels }),
+        axisLabel: {
+          ...baseOption.xAxis?.axisLabel,
+          color: baseOption.textStyle?.color,
+          formatter: xAxisLabel,
+          hideOverlap: true,
+          ...(shouldTruncate ? { rotate: 45 } : {}),
+        },
       },
       yAxis: {
+        ...baseOption.yAxis,
         type: "value",
-        splitLine: { lineStyle: { color: "#2a2a2a", type: "dashed" } },
-        axisLabel: { fontSize: 10, color: "#888" },
+        position: "right",
+        axisLabel: {
+          ...baseOption.yAxis?.axisLabel,
+          formatter: yAxisLabel,
+        },
       },
       series,
     };
-  }, [raw, spec]);
+  }, [raw, spec, fmt, tr, baseOption, chartTokens]);
 
-  const onEvents = useMemo(() => {
-    if (!spec.pointActions || !onAction || !raw?.labels) return undefined;
-    return {
-      click: (params: { dataIndex?: number }) => {
-        const idx = params.dataIndex;
-        if (idx == null) return;
-        const label = raw.labels?.[idx] ?? "";
-        const query = interpolate(spec.pointActions!.query, { label });
-        onAction(query);
-      },
+  useEffect(() => {
+    if (!spec.pointActions || !onAction || !raw?.labels) return;
+    if (!chartRef.current) return;
+    const { labels } = applyChartLimit(raw, spec.limit);
+    if (labels.length === 0) return;
+    const chart = chartRef.current.getEchartsInstance();
+    const handler = (params: { dataIndex?: number }) => {
+      const idx = params.dataIndex;
+      if (idx == null || idx >= labels.length) return;
+      const label = labels[idx] ?? "";
+      const query = interpolate(spec.pointActions!.query, { label });
+      onAction(query);
     };
-  }, [spec.pointActions, onAction, raw?.labels]);
+    chart.on("click", handler);
+    return () => { chart.off("click", handler); };
+  }, [spec.pointActions, onAction, raw, spec.limit]);
 
   if (!option) return null;
 
@@ -174,9 +250,9 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
         <div className={styles.chartTitle}>{spec.title}</div>
       )}
       <ReactECharts
+        ref={chartRef}
         option={option}
-        style={{ height: 180 }}
-        onEvents={onEvents}
+        style={{ height: 240 }}
       />
     </div>
   );
@@ -346,11 +422,15 @@ function TableRenderer({ spec, data, onAction }: TableRendererProps) {
 
   const cols = parseColumns(spec.columns);
 
-  function resolveRowVars(row: Record<string, unknown>): Record<string, string> {
+  function resolveAllRowVars(row: Record<string, unknown>): Record<string, string> {
     const vars: Record<string, string> = {};
-    for (const col of cols) {
-      const val = getNestedValue(row, col.field);
-      vars[col.field] = val != null ? String(val) : "";
+    for (const [key, value] of Object.entries(row)) {
+      if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+        for (const [nk, nv] of Object.entries(value as Record<string, unknown>)) {
+          vars[`${key}.${nk}`] = nv != null ? String(nv) : "";
+        }
+      }
+      vars[key] = value != null ? String(value) : "";
     }
     return vars;
   }
@@ -368,7 +448,7 @@ function TableRenderer({ spec, data, onAction }: TableRendererProps) {
         <tbody>
           {pageRows.map((row, i) => {
             const rowActions = Array.isArray(spec.rowActions) ? spec.rowActions[0] : spec.rowActions;
-            const rowVars = rowActions ? resolveRowVars(row) : undefined;
+            const rowVars = rowActions ? resolveAllRowVars(row) : undefined;
             const rowQuery = rowVars && rowActions
               ? interpolate(rowActions.query, rowVars)
               : null;
