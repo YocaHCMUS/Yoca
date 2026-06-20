@@ -1491,4 +1491,28 @@ export const chatSessions = pgTable(
     index("chat_sessions_user_id_idx").on(table.userId),
   ],
 );
+
+export const chatPrompts = pgTable(
+  "chat_prompts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    label: varchar("label", { length: 255 }).notNull(),
+    query: text("query").notNull(),
+    contextTypes: jsonb("context_types").$type<string[]>().notNull().default(["wallet"]),
+    walletAddress: varchar("wallet_address", { length: 44 }),
+    forkedFrom: uuid("forked_from"),
+    isPublic: boolean("is_public").notNull().default(false),
+    usageCount: integer("usage_count").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("chat_prompts_user_id_idx").on(table.userId),
+    index("chat_prompts_public_usage_idx").on(table.isPublic, table.usageCount),
+  ],
+);
+
+export type ChatPromptInsert = typeof chatPrompts.$inferInsert;
+export type ChatPromptRow = typeof chatPrompts.$inferSelect;
 // #endregion
