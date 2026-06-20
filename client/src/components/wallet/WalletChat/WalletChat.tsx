@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router";
-import { Add, ChevronDown, Maximize, OpenPanelLeft, OpenPanelRight, Playlist, Send, TrashCan } from "@carbon/icons-react";
+import { Add, ChevronDown, Close, Maximize, OpenPanelLeft, OpenPanelRight, Playlist, Send, TrashCan } from "@carbon/icons-react";
 import { WalletChatMessage } from "./WalletChatMessage";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
 import { ChatPromptMenu } from "./ChatPromptMenu";
@@ -22,13 +22,15 @@ interface Props {
   chatPosition: "right" | "left" | "fullscreen";
   onChatPositionChange: (position: "right" | "left" | "fullscreen") => void;
   contextType?: ChatSessionContextType;
+  onRequestClose?: () => void;
 }
 
-function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAddresses }: {
+function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAddresses, onRequestClose }: {
   variant: "widget" | "sidebar";
   chatPosition: "right" | "left" | "fullscreen";
   onChatPositionChange: (position: "right" | "left" | "fullscreen") => void;
   walletAddresses: string[];
+  onRequestClose?: () => void;
 }) {
   const { tr, fmt } = useLocalization();
   const { user, isUserLoading } = useAuth();
@@ -448,6 +450,17 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
           >
             <Add size={16} />
           </button>
+          {onRequestClose && (
+            <button
+              type="button"
+              onClick={onRequestClose}
+              className={styles.headerBtn}
+              aria-label={tr("chat.close")}
+              title={tr("chat.close")}
+            >
+              <Close size={16} />
+            </button>
+          )}
           {variant === "widget" && (
             <>
               <button
@@ -521,11 +534,11 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
   );
 }
 
-export function WalletChat({ address, addresses, lang, variant = "widget", chatPosition, onChatPositionChange, contextType: contextTypeProp }: Props) {
+export function WalletChat({ address, addresses, lang, variant = "widget", chatPosition, onChatPositionChange, contextType: contextTypeProp, onRequestClose }: Props) {
   const existingCtx = useContext(ChatContext);
 
   if (existingCtx) {
-    return <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} walletAddresses={existingCtx.addresses} />;
+    return <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} walletAddresses={existingCtx.addresses} onRequestClose={onRequestClose} />;
   }
 
   const activeAddresses = [address, ...(addresses ?? [])].filter(Boolean) as string[];
@@ -533,7 +546,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
 
   return (
     <ChatContextProvider addresses={activeAddresses} contextType={contextType} lang={lang}>
-      <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} walletAddresses={activeAddresses} />
+      <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} walletAddresses={activeAddresses} onRequestClose={onRequestClose} />
     </ChatContextProvider>
   );
 }
