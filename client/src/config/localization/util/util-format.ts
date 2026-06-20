@@ -95,8 +95,8 @@ function formatSmallCompact(value: number): string {
   if (value == 0) {
     return "0";
   }
-  if (value < 1e-16) {
-    return "> 0.0₁₆1";
+  if (value < 1e-4) {
+    return "> 0.0₄1";
   }
 
   const str = value.toPrecision(16);

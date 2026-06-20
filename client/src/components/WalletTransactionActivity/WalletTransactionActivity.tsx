@@ -294,7 +294,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
               rows={swapRows}
               headers={swapHeaders}
               loading={swapLoading}
-              height={400}
+              height={480}
               enablePagination
               pageSize={16}
               stickyHeader
@@ -357,7 +357,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
               rows={transferRows}
               headers={transferHeaders}
               loading={transferLoading}
-              height={400}
+              height={480}
               enablePagination
               pageSize={16}
               stickyHeader
