@@ -30,12 +30,12 @@ export function WinrateChart({
   refreshInterval = 30000,
   className,
 }: ChartProps) {
-  const WINRATE_TIME_RANGES = ["24H", "7D", "30D", "All"] as const;
-  type WinrateTimeRange = (typeof WINRATE_TIME_RANGES)[number];
+  type WinrateTimeRange = "24H" | "7D" | "30D" | "90D";
+  const WINRATE_TIME_RANGES: WinrateTimeRange[] = ["24H", "7D", "30D", "90D"];
 
   const { tr, fmt } = useLocalization();
   const chartTitle = title || tr("charts.winrateChart.title");
-  const [timeRange, setTimeRange] = useState<WinrateTimeRange>("All");
+  const [timeRange, setTimeRange] = useState<WinrateTimeRange>("30D");
 
   const overallChartRef = useRef<ReactECharts>(null);
   const baseOption = useCarbonChartBaseOption();
@@ -133,9 +133,18 @@ export function WinrateChart({
       return [];
 
     return data.wallets.map((wallet) => {
-      const categories = wallet.winningDistribution.map(d => d.range);
-      const winningCounts = wallet.winningDistribution.map(d => d.count);
-      const losingCounts = wallet.losingDistribution.map(d => -d.count);
+      const categories = [
+        ...wallet.losingDistribution.map(d => d.range),
+        ...wallet.winningDistribution.map(d => d.range),
+      ];
+      const winningCounts = [
+        ...wallet.losingDistribution.map(() => 0),
+        ...wallet.winningDistribution.map(d => d.count),
+      ];
+      const losingCounts = [
+        ...wallet.losingDistribution.map(d => -d.count),
+        ...wallet.winningDistribution.map(() => 0),
+      ];
 
       const option: EChartsOption = {
         ...baseOption,
@@ -243,7 +252,16 @@ export function WinrateChart({
           <FilterSwitch
             options={timeRangeOptions}
             value={timeRange}
-            onChange={(v) => setTimeRange(v as WinrateTimeRange)}
+            onChange={(value) => {
+              if (
+                value === "24H" ||
+                value === "7D" ||
+                value === "30D" ||
+                value === "90D"
+              ) {
+                setTimeRange(value);
+              }
+            }}
           />
         </Layer>
       }

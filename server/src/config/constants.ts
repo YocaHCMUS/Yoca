@@ -64,7 +64,10 @@ export const WALLET_EXCHANGE_COUNTS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const WALLET_IDENTITY_KNOWN_TTL_MS = 6 * 60 * 60 * 1000; // 72 hours
 export const WALLET_IDENTITY_UNKNOWN_TTL_MS = 2 * 60 * 60 * 1000; // 24 hours
 
-export const WALLET_WINRATE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+export const WALLET_WINRATE_24H_TTL_MS = 6 * 60 * 60 * 1000;
+export const WALLET_WINRATE_7D_TTL_MS = 12 * 60 * 60 * 1000;
+export const WALLET_WINRATE_30D_TTL_MS = 24 * 60 * 60 * 1000;
+export const WALLET_WINRATE_90D_TTL_MS = 48 * 60 * 60 * 1000;
 export const WALLET_TOKEN_DETAILS_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 export const WALLET_TOKEN_DETAILS_BIRDEYE_LIMIT = 20;
 export const WALLET_BALANCE_HISTORY_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours

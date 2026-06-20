@@ -133,12 +133,12 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_wallet_winrate",
     description:
-      "Fetch winrate (win/loss ratio) for a wallet. Returns winrate %, total trades, winning/losing trade counts, and average win/loss amounts in USD. Data sourced from Birdeye for comprehensive coverage across all tokens ever traded. Supports time periods: 24H, 7D, 30D, All.",
+      "Fetch winrate (win/loss ratio) for a wallet. Returns winrate %, total trades, winning/losing trade counts, and average win/loss amounts in USD. Data is sourced from Mobula for a bounded period. Supports time periods: 24H, 7D, 30D, 90D.",
     input_schema: {
       type: "object",
       properties: {
         address: { type: "string", description: "Solana wallet address (base58)" },
-        period: { type: "string", enum: ["24H", "7D", "30D", "All"], description: "Time period for winrate calculation (default 30D)" },
+        period: { type: "string", enum: ["24H", "7D", "30D", "90D"], description: "Time period for winrate calculation (default 30D)" },
       },
       required: ["address"],
     },
@@ -811,7 +811,7 @@ export const TOOL_HANDLERS: Record<
   get_wallet_winrate: async (input) => {
     const { address, period } = z.object({
       address: z.string().min(1),
-      period: z.enum(["24H", "7D", "30D", "All"]).optional().default("30D"),
+      period: z.enum(["24H", "7D", "30D", "90D"]).optional().default("30D"),
     }).parse(input);
     const data = await getWinrateData([address], period);
     return { data, llmData: extractWinrateForLLM(data) };

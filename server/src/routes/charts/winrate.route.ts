@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { getWinrateData } from '@sv/services/charts/winrate.service.js';
 
 const winrateRequestSchema = z.object({
-  period: z.enum(['24H', '7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
+  period: z.enum(['24H', '7D', '30D', '90D']).optional().default('30D'),
   wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
 });
 
@@ -23,7 +23,7 @@ const app = new Hono()
 
       const data = await getWinrateData(
         params.wallets,
-        params.period as any
+        params.period,
       );
 
       return c.json(data, 200);

@@ -3,6 +3,7 @@ import {
     bigint,
     decimal as dec,
     index,
+    integer,
     pgEnum,
     pgTable,
     primaryKey,
@@ -223,6 +224,31 @@ export type WalletRecentTransfersSelect =
   typeof walletRecentTransfers.$inferSelect;
 export type WalletRecentTransfersInsert =
   typeof walletRecentTransfers.$inferInsert;
+
+export const walletWinrates = pgTable(
+  "wallet_winrates",
+  {
+    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+    period: varchar("period", { length: 3 }).notNull(),
+    winrate: decimal("winrate").notNull(),
+    totalTrades: integer("total_trades").notNull(),
+    winningTrades: integer("winning_trades").notNull(),
+    losingTrades: integer("losing_trades").notNull(),
+    avgWinUsd: decimal("avg_win_usd").notNull(),
+    avgLossUsd: decimal("avg_loss_usd").notNull(),
+    win0To50Count: integer("win_0_to_50_count").notNull(),
+    win50To200Count: integer("win_50_to_200_count").notNull(),
+    win200To500Count: integer("win_200_to_500_count").notNull(),
+    winOver500Count: integer("win_over_500_count").notNull(),
+    loss0To50Count: integer("loss_0_to_50_count").notNull(),
+    lossOver50Count: integer("loss_over_50_count").notNull(),
+    fetchedAtMs: bigint("fetched_at_ms", { mode: "number" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.walletAddress, t.period] })],
+);
+
+export type WalletWinrateSelect = typeof walletWinrates.$inferSelect;
+export type WalletWinrateInsert = typeof walletWinrates.$inferInsert;
 
 export const walletTransferHistory = pgTable(
   "wallet_transfer_history",
