@@ -167,8 +167,10 @@
 }
 
 .tbl.tblBoxed {
-  border-radius: 4px;
+  // border radius is useless since the inner content didn't have roubd border yet
+  // border-radius: 4px;
   border: solid 1px var(--cds-border-subtle-03);
+  overflow: hidden;
 }
 
 .tbl:global(.cds--data-table-container) {

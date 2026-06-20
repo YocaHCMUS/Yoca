@@ -125,16 +125,18 @@ export default function Tble({
     };
   };
 
-  const RenderHeader = title && (
+  const RenderHeader = (title || toolBar) && (
     <Stack gap={1}>
-      <Stack
-        gap={1}
-        className={overwriteStyles.titleContainer}
-        style={{ paddingLeft: boxed ? 16 : undefined }}
-      >
-        <strong className={overwriteStyles.titleText}>{title}</strong>
-        <span className={overwriteStyles.tblDsc}>{description}</span>
-      </Stack>
+      {title && (
+        <Stack
+          gap={1}
+          className={overwriteStyles.titleContainer}
+          style={{ paddingLeft: boxed ? 16 : undefined }}
+        >
+          <strong className={overwriteStyles.titleText}>{title}</strong>
+          <span className={overwriteStyles.tblDsc}>{description}</span>
+        </Stack>
+      )}
       <div className={overwriteStyles.tblToolbar}>
         <div
           className={overwriteStyles.tblToolbarContent}

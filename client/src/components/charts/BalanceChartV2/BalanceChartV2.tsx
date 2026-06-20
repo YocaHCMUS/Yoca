@@ -42,6 +42,7 @@ type TokenPortpofilo = {
 type BalanceSeries = {
   key: string;
   label: string;
+  color?: string;
   data: {
     unixTimeMs: number;
     value: number;
@@ -135,6 +136,8 @@ export function BalanceChartV2({
       select: (data) => ({
         key: "_total",
         label: "Total Balance",
+        // Todo: tokenize me
+        color: "#0f62fe",
         data:
           data?.[address]?.map((point) => ({
             unixTimeMs: point.timestampMs,
@@ -336,6 +339,7 @@ export function BalanceChartV2({
                     <TrendNum
                       value={displayValue}
                       prefixes={prefixMode}
+                      size="sm"
                       formatter={displayFormatter}
                     />
                   </Flex>
