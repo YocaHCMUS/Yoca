@@ -174,6 +174,24 @@ const formatAiFindingText = (value: string, tr: ReturnType<typeof useLocalizatio
   return clean;
 };
 
+
+const getWalletFeatureLabel = (
+  feature: string | undefined,
+  tr: ReturnType<typeof useLocalization>["tr"],
+) => {
+  const labels: Record<string, string> = {
+    circularPattern: String(tr("washTrading.risk.circularPattern")),
+    timeRegularity: String(tr("washTrading.risk.timeRegularity")),
+    amountSimilarity: String(tr("washTrading.risk.amountSimilarity")),
+    selfLoopDegree: String(tr("washTrading.risk.selfLoopDegree")),
+    volumeSignal: String(tr("washTrading.risk.volumeSignal")),
+    hubness: String(tr("washTrading.risk.hubness")),
+  };
+
+  if (!feature) return "—";
+  return labels[feature] ?? feature.replace(/([a-z])([A-Z])/g, "$1 $2");
+};
+
 const RiskGauge: React.FC<{ score: number; label: string }> = ({ score, label }) => {
   const safeScore = Math.max(0, Math.min(100, Math.round(score || 0)));
   const dashOffset = 170 - (170 * safeScore) / 100;
@@ -980,29 +998,52 @@ const WalletInsightPanel: React.FC<{ wallet?: SuspiciousWallet; symbol: string }
   }
 
   const topFeature = (Object.entries(wallet.features) as [string, number][]).sort((a, b) => b[1] - a[1])[0];
+  const topFeatureScore = Math.max(0, Math.min(1, topFeature?.[1] ?? 0));
+  const topFeaturePercent = Math.round(topFeatureScore * 100);
+
   return (
     <div className={styles.walletInsight}>
       <div className={styles.walletInsightHeader}>
-        <div>
+        <div className={styles.walletIdentity}>
           <span>{tr("washTrading.wallets.selectedWallet")}</span>
-          <strong>{shortAddress(wallet.wallet)}</strong>
+          <strong title={wallet.wallet}>{shortAddress(wallet.wallet)}</strong>
         </div>
-        <span className={`${styles.riskBadge} ${styles[`risk${normalizeRiskLevel(wallet.riskLevel)}`]}`}>{getRiskLevelLabel(normalizeRiskLevel(wallet.riskLevel), tr)}</span>
+        <span className={`${styles.riskBadge} ${styles[`risk${normalizeRiskLevel(wallet.riskLevel)}`]}`}>
+          {getRiskLevelLabel(normalizeRiskLevel(wallet.riskLevel), tr)}
+        </span>
       </div>
-      <p>
+
+      <p className={styles.walletInsightSummary}>
         {tr("washTrading.wallets.explanation", {
           pattern: getPatternLabel(wallet.pattern, tr),
           symbol,
           score: (wallet.score * 100).toFixed(0),
         })}
       </p>
+
       <div className={styles.walletInsightGrid}>
-        <div><span>{tr("washTrading.wallets.topFeature")}</span><strong>{topFeature?.[0] ?? "—"}</strong></div>
-        <div><span>{tr("washTrading.wallets.featureScore")}</span><strong>{topFeature ? topFeature[1].toFixed(2) : "—"}</strong></div>
+        <div className={styles.walletInsightMetric}>
+          <span>{tr("washTrading.wallets.topFeature")}</span>
+          <strong>{getWalletFeatureLabel(topFeature?.[0], tr)}</strong>
+        </div>
+
+        <div className={styles.walletInsightMetric}>
+          <span>{tr("washTrading.wallets.featureScore")}</span>
+          <div className={styles.walletFeatureScore}>
+            <strong>{topFeature ? `${topFeaturePercent}%` : "—"}</strong>
+            {topFeature ? (
+              <span className={styles.walletFeatureScoreTrack} aria-hidden="true">
+                <span style={{ width: `${topFeaturePercent}%` }} />
+              </span>
+            ) : null}
+          </div>
+        </div>
       </div>
-      <p className={styles.walletInsightNote}>
-        {tr("washTrading.wallets.note")}
-      </p>
+
+      <div className={styles.walletInsightNote}>
+        <span className={styles.walletInsightNoteIcon} aria-hidden="true">✦</span>
+        <p>{tr("washTrading.wallets.note")}</p>
+      </div>
     </div>
   );
 };
