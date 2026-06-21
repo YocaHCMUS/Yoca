@@ -1,15 +1,14 @@
+import dayjs from "dayjs";
+
 export type WalletRangeMs = {
   fromMs: number;
   toMs: number;
 };
 
 export function resolveRequestedRange(from?: number, to?: number): WalletRangeMs {
-  const nowMs = Date.now();
-  const monthMs = 30 * 24 * 60 * 60 * 1000;
-
-  const requestedToMs = to ?? nowMs;
+  const requestedToMs = to ?? dayjs.utc().valueOf();
   const requestedFromMs =
-    from ?? (to != null ? requestedToMs - monthMs : nowMs - monthMs);
+    from ?? dayjs.utc(requestedToMs).subtract(30, "day").valueOf();
 
   return {
     fromMs: Math.min(requestedFromMs, requestedToMs),

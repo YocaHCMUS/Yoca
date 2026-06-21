@@ -1,30 +1,11 @@
-import {
-    saveSwapsCache,
-    saveTransfersCache,
-} from "@sv/services/wallet/db/walletDataCacher.js";
-import {
-    getCachedWalletTransfers,
-    getCachedWalletSwaps,
-    getCachedWalletTransfersMeta,
-    getCachedWalletSwapsMeta,
-} from "@sv/services/wallet/db/walletDataRetriever.js";
 import type {
     WalletTransfersResponse,
     WalletSwapsResponse,
     WalletSwap,
     WalletTransfer,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import {
-    enrichWithSolanaTokenPrices,
-    postEnrichTransfers,
-    postEnrichSwaps,
-} from "@sv/services/wallet/walletEnrichment.service.js";
 import { toWalletPageInfo } from "@sv/services/wallet/walletData.core.js";
-import {
-    resolveRequestedRange,
-    isMissingRangeSignificant,
-    getMissingRanges,
-} from "@sv/services/wallet/walletRange.utils.js";
+import { resolveRequestedRange } from "@sv/services/wallet/walletRange.utils.js";
 import * as zrn from "@sv/util/util-zerion";
 import { rlFetch } from "@sv/util/rate-limit";
 import { getTrackedApiResult } from "@sv/middlewares/validation";
@@ -72,8 +53,6 @@ type ZrnTradeTransferMatch = {
   outTransfer: ZRN_WalletTransfer;
   diffUsd: number;
 };
-
-const ZRN_BATCH_LIMIT = 500;
 
 function normalizeTxLimit(reqLimit: number, maxLimit: number): number {
   if (!Number.isFinite(reqLimit)) return maxLimit;
@@ -279,22 +258,6 @@ async function zrn_fetchWalletTransactionsRange(
   };
 }
 
-function sortTransfersByTimestampDesc(
-  transfers: WalletTransfer[],
-): WalletTransfer[] {
-  return [...transfers].sort(
-    (left, right) => Date.parse(right.timestamp) - Date.parse(left.timestamp),
-  );
-}
-
-function sortSwapsByTimestampDesc(swaps: WalletSwap[]): WalletSwap[] {
-  return [...swaps].sort(
-    (left, right) =>
-      dayjs.utc(right.blockTimestampIso).valueOf() -
-      dayjs.utc(left.blockTimestampIso).valueOf(),
-  );
-}
-
 function zrn_getTransferTradePair(
   transfers: ZRN_WalletTransfer[],
 ): ZrnTradeTransferMatch | null {
@@ -354,138 +317,6 @@ function zrn_getSolanaTokenAddress(token: ZRN_FungibleInfo): string | null {
   return null;
 }
 
-function zrnMapToWalletSwaps(
-  transactions: ZRN_WalletTransaction[],
-  address: string,
-): WalletSwap[] {
-  const result: WalletSwap[] = [];
-
-  for (const transaction of transactions) {
-    for (const act of transaction.attributes.acts) {
-      if (act.type !== "trade") continue;
-
-      const transfers = transaction.attributes.transfers.filter(
-        (t) => t.act_id === act.id,
-      );
-      const transferMatch = zrn_getTransferTradePair(transfers);
-      if (!transferMatch) continue;
-
-      const { inTransfer, outTransfer } = transferMatch;
-      const tokenIn = inTransfer.fungible_info;
-      const tokenOut = outTransfer.fungible_info;
-      const tokenInAddress = zrn_getSolanaTokenAddress(tokenIn);
-      const tokenOutAddress = zrn_getSolanaTokenAddress(tokenOut);
-
-      if (!tokenIn || !tokenOut || !tokenInAddress || !tokenOutAddress) continue;
-
-      const amountIn = Number(inTransfer.quantity.numeric);
-      const amountOut = Number(outTransfer.quantity.numeric);
-      if (!Number.isFinite(amountIn) || !Number.isFinite(amountOut)) continue;
-
-      const tokenInPriceUsd = inTransfer.price;
-      const tokenOutPriceUsd = outTransfer.price;
-
-      const valueUsd = Number(
-        inTransfer.value ??
-          outTransfer.value ??
-          (tokenInPriceUsd
-            ? amountIn * tokenInPriceUsd
-            : tokenOutPriceUsd
-              ? amountOut * tokenOutPriceUsd
-              : null),
-      );
-      if (!valueUsd || !Number.isFinite(valueUsd)) continue;
-
-      const blockTimestampIso = transaction.attributes.mined_at;
-
-      result.push({
-        transactionHash: transaction.attributes.hash,
-        transactionType: "trade",
-        blockTimestampIso,
-        subcategory: null,
-        walletAddress: address,
-        pairAddress: "",
-        tokensInvolved: `${tokenIn.symbol ?? "?"}/${tokenOut.symbol ?? "?"}`,
-        bought: {
-          address: tokenInAddress,
-          amount: amountIn,
-          symbol: tokenIn.symbol,
-          name: tokenIn.name,
-          logoUri: tokenIn.icon?.url || null,
-          priceUsd: tokenInPriceUsd ?? 0,
-          valueUsd: tokenInPriceUsd ? amountIn * tokenInPriceUsd : 0,
-        },
-        sold: {
-          address: tokenOutAddress,
-          amount: amountOut,
-          symbol: tokenOut.symbol,
-          name: tokenOut.name,
-          logoUri: tokenOut.icon?.url || null,
-          priceUsd: tokenOutPriceUsd ?? 0,
-          valueUsd: tokenOutPriceUsd ? amountOut * tokenOutPriceUsd : 0,
-        },
-        totalValueUsd: valueUsd,
-        baseQuotePrice: null,
-      });
-    }
-  }
-
-  return result;
-}
-
-function zrnMapToWalletTransfers(
-  transactions: ZRN_WalletTransaction[],
-  address: string,
-): WalletTransfer[] {
-  const result: WalletTransfer[] = [];
-  let instructionIndex = 0;
-
-  for (const transaction of transactions) {
-    for (const act of transaction.attributes.acts) {
-      if (act.type !== "receive" && act.type !== "send") continue;
-
-      const transfers = transaction.attributes.transfers.filter(
-        (t) => t.act_id === act.id,
-      );
-      if (transfers.length !== 1) continue;
-
-      const transfer = transfers[0];
-      const token = transfer.fungible_info;
-      const tokenAddress = zrn_getSolanaTokenAddress(token);
-      if (!token || !tokenAddress) continue;
-
-      const amount = Number(transfer.quantity.numeric);
-      if (!Number.isFinite(amount)) continue;
-
-      const valueUsd = transfer.value == null ? null : Number(transfer.value);
-      if (valueUsd == null || !Number.isFinite(valueUsd)) continue;
-
-      const direction = act.type;
-      const from = direction === "send" ? address : (transfer.sender ?? "");
-      const to = direction === "receive" ? address : (transfer.recipient ?? "");
-
-      result.push({
-        from,
-        to,
-        amount,
-        amountUsd: valueUsd,
-        timestamp: transaction.attributes.mined_at,
-        tokenAddress,
-        tokenSymbol: token.symbol,
-        tokenName: token.name ?? undefined,
-        tokenLogoUri: token.icon?.url ?? undefined,
-        priceUsd: transfer.price ?? undefined,
-        transactionSignature: transaction.attributes.hash,
-        instructionIndex,
-      });
-
-      instructionIndex++;
-    }
-  }
-
-  return result;
-}
-
 export async function getWalletTransfers(
   address: string,
   from?: number,
@@ -494,143 +325,55 @@ export async function getWalletTransfers(
   direction?: "in" | "out",
   minAmountUsd?: number,
 ): Promise<WalletTransfersResponse> {
-  const metaRows = await getCachedWalletTransfersMeta(address);
-  const walletTransferMeta = metaRows.length > 0 ? metaRows[0] : null;
-
   const requestedRange = resolveRequestedRange(from, to);
-  const coveredRange =
-    walletTransferMeta?.coveredFromSec != null &&
-    walletTransferMeta?.coveredToSec != null
-      ? {
-          fromMs: walletTransferMeta.coveredFromSec * 1000,
-          toMs: walletTransferMeta.coveredToSec * 1000,
-        }
-      : null;
-
-  const cachedRange = coveredRange
-    ? {
-        fromMs: Math.max(requestedRange.fromMs, coveredRange.fromMs),
-        toMs: Math.min(requestedRange.toMs, coveredRange.toMs),
-      }
-    : null;
-  const cachedTransfers =
-    cachedRange != null && cachedRange.fromMs <= cachedRange.toMs
-      ? ((await getCachedWalletTransfers(
-          address,
-          cachedRange.fromMs,
-          cachedRange.toMs,
-          tokenAddress,
-          direction,
-          minAmountUsd,
-        )) ?? [])
-      : [];
-
-  const missingRanges = getMissingRanges(requestedRange, coveredRange);
-  if (missingRanges.length === 0) {
-    if (cachedTransfers.length === 0) {
-      return {
-        address,
-        transfers: [],
-        pageInfo: toWalletPageInfo({
-          hasMore: false,
-          nextCursor: null,
-          source: "cache",
-        }),
-      };
-    }
-
-    const transfers = sortTransfersByTimestampDesc(cachedTransfers);
-    await enrichWithSolanaTokenPrices(transfers);
-    await postEnrichTransfers(transfers);
-    return {
-      address,
-      transfers,
-      pageInfo: toWalletPageInfo({
-        hasMore: false,
-        nextCursor: null,
-        source: "cache",
-      }),
-    };
+  const history = await getWalletTransferHistory(
+    address,
+    requestedRange.fromMs,
+    requestedRange.toMs,
+    WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
+  );
+  if (history == null) {
+    throw new Error(`Failed to get wallet transfer history for ${address}`);
   }
 
-  const fetchedTransfers: WalletTransfer[] = [];
-  for (const range of missingRanges) {
-    if (isMissingRangeSignificant(range.fromMs, range.toMs)) {
-      const zrnTxs = await zrn_fetchWalletTransactions(
-        address,
-        "receive,send",
-        ZRN_BATCH_LIMIT,
-      );
-      if (zrnTxs) {
-        const mapped = zrnMapToWalletTransfers(zrnTxs, address);
-        const inRange = mapped.filter((t) => {
-          const ts = Date.parse(t.timestamp);
-          return ts >= range.fromMs && ts <= range.toMs;
-        });
-        fetchedTransfers.push(...inRange);
-      }
-    }
-  }
-
-  let combinedTransfers = sortTransfersByTimestampDesc([
-    ...cachedTransfers,
-    ...fetchedTransfers,
-  ]);
-
-  if (tokenAddress != null || direction != null || minAmountUsd != null) {
-    combinedTransfers = combinedTransfers.filter((tr) => {
-      if (tokenAddress != null && tr.tokenAddress !== tokenAddress)
+  const transfers = history.transactions
+    .filter((transfer) => {
+      if (tokenAddress != null && transfer.token.address !== tokenAddress) {
         return false;
-      if (direction === "in" && tr.to !== address) return false;
-      if (direction === "out" && tr.from !== address) return false;
-      if (minAmountUsd != null) {
-        const usd = tr.amountUsd;
-        if (usd == null || usd < minAmountUsd) return false;
       }
+      if (direction == "in" && transfer.direction !== "receive") return false;
+      if (direction == "out" && transfer.direction !== "send") return false;
+      if (minAmountUsd != null && transfer.valueUsd < minAmountUsd) return false;
       return true;
-    });
-  }
+    })
+    .map((transfer): WalletTransfer => ({
+      from:
+        transfer.direction == "send"
+          ? address
+          : transfer.counterpartyAddress,
+      to:
+        transfer.direction == "receive"
+          ? address
+          : transfer.counterpartyAddress,
+      amount: transfer.token.amount,
+      amountUsd: transfer.valueUsd,
+      timestamp: new Date(transfer.blockTimestampMs).toISOString(),
+      tokenAddress: transfer.token.address,
+      tokenSymbol: transfer.token.symbol ?? "",
+      tokenName: transfer.token.name ?? undefined,
+      tokenLogoUri: transfer.token.logoUri ?? undefined,
+      priceUsd: transfer.token.priceUsd ?? undefined,
+      transactionSignature: transfer.transactionHash,
+      instructionIndex: 0,
+    }));
 
-  if (combinedTransfers.length === 0) {
-    return {
-      address,
-      transfers: [],
-      pageInfo: toWalletPageInfo({
-        hasMore: false,
-        nextCursor: null,
-        source: cachedTransfers.length > 0 ? "mixed" : "provider",
-      }),
-    };
-  }
-
-  const cacheTo = to || Date.now();
-  const fromDate = new Date(cacheTo - 30 * 24 * 60 * 60 * 1000);
-  const cachefrom =
-    from ||
-    Date.UTC(
-      fromDate.getUTCFullYear(),
-      fromDate.getUTCMonth(),
-      fromDate.getUTCDate(),
-      0,
-      0,
-      0,
-      0,
-    );
-  await enrichWithSolanaTokenPrices(combinedTransfers);
-  await postEnrichTransfers(combinedTransfers);
-  await saveTransfersCache(address, combinedTransfers, cachefrom, cacheTo);
   return {
     address,
-    transfers: combinedTransfers,
+    transfers,
     pageInfo: toWalletPageInfo({
-      hasMore: false,
-      nextCursor: null,
-      source:
-        cachedTransfers.length > 0 && fetchedTransfers.length > 0
-          ? "mixed"
-          : fetchedTransfers.length > 0
-            ? "provider"
-            : "cache",
+      hasMore: history.cursor != null,
+      nextCursor: history.cursor,
+      source: "cache",
     }),
   };
 }
@@ -641,136 +384,66 @@ export async function getWalletSwaps(
   to?: number,
   tokenAddress?: string,
 ): Promise<WalletSwapsResponse> {
-  const metaRows = await getCachedWalletSwapsMeta(address);
-  const walletSwapMeta = metaRows.length > 0 ? metaRows[0] : null;
   const requestedRange = resolveRequestedRange(from, to);
-  const coveredRange =
-    walletSwapMeta?.coveredFromSec != null &&
-    walletSwapMeta?.coveredToSec != null
-      ? {
-          fromMs: walletSwapMeta.coveredFromSec * 1000,
-          toMs: walletSwapMeta.coveredToSec * 1000,
-        }
-      : null;
+  const history = await getWalletSwapHistory(
+    address,
+    requestedRange.fromMs,
+    requestedRange.toMs,
+    WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
+  );
+  if (history == null) {
+    throw new Error(`Failed to get wallet swap history for ${address}`);
+  }
 
-  const cachedRange = coveredRange
-    ? {
-        fromMs: Math.max(requestedRange.fromMs, coveredRange.fromMs),
-        toMs: Math.min(requestedRange.toMs, coveredRange.toMs),
-      }
-    : null;
-  const cachedSwaps =
-    cachedRange != null && cachedRange.fromMs <= cachedRange.toMs
-      ? ((await getCachedWalletSwaps(
-          address,
-          cachedRange.fromMs,
-          cachedRange.toMs,
-          tokenAddress,
-        )) ?? [])
-      : [];
+  const swaps = history.transactions
+    .filter(
+      (swap) =>
+        tokenAddress == null ||
+        swap.bought.address == tokenAddress ||
+        swap.sold.address == tokenAddress,
+    )
+    .map((swap): WalletSwap => {
+      const boughtLabel =
+        swap.bought.symbol ?? swap.bought.name ?? swap.bought.address;
+      const soldLabel =
+        swap.sold.symbol ?? swap.sold.name ?? swap.sold.address;
 
-  const missingRanges = getMissingRanges(requestedRange, coveredRange);
-  if (missingRanges.length === 0) {
-    if (cachedSwaps.length === 0) {
       return {
-        address,
-        swaps: [],
-        pageInfo: toWalletPageInfo({
-          hasMore: false,
-          nextCursor: null,
-          source: "cache",
-        }),
+        transactionHash: swap.transactionHash,
+        transactionType: "trade",
+        blockTimestampIso: new Date(swap.blockTimestampMs).toISOString(),
+        subcategory: null,
+        walletAddress: address,
+        pairAddress: "",
+        tokensInvolved: `${boughtLabel}/${soldLabel}`,
+        bought: {
+          ...swap.bought,
+          priceUsd: swap.bought.priceUsd ?? 0,
+          valueUsd:
+            swap.bought.priceUsd == null
+              ? 0
+              : swap.bought.amount * swap.bought.priceUsd,
+        },
+        sold: {
+          ...swap.sold,
+          priceUsd: swap.sold.priceUsd ?? 0,
+          valueUsd:
+            swap.sold.priceUsd == null
+              ? 0
+              : swap.sold.amount * swap.sold.priceUsd,
+        },
+        totalValueUsd: swap.totalValueUsd,
+        baseQuotePrice: null,
       };
-    }
-
-    const swaps = sortSwapsByTimestampDesc(cachedSwaps);
-    await enrichWithSolanaTokenPrices(swaps);
-    await postEnrichSwaps(swaps);
-    return {
-      address,
-      swaps,
-      pageInfo: toWalletPageInfo({
-        hasMore: false,
-        nextCursor: null,
-        source: "cache",
-      }),
-    };
-  }
-
-  const fetchedSwaps: WalletSwap[] = [];
-  for (const range of missingRanges) {
-    if (isMissingRangeSignificant(range.fromMs, range.toMs)) {
-      const zrnTxs = await zrn_fetchWalletTransactions(
-        address,
-        "trade",
-        ZRN_BATCH_LIMIT,
-      );
-      if (zrnTxs) {
-        const mapped = zrnMapToWalletSwaps(zrnTxs, address);
-        const inRange = mapped.filter((s) => {
-          const ts = new Date(s.blockTimestampIso).getTime();
-          return ts >= range.fromMs && ts <= range.toMs;
-        });
-        fetchedSwaps.push(...inRange);
-      }
-    }
-  }
-
-  let combinedSwaps = sortSwapsByTimestampDesc([
-    ...cachedSwaps,
-    ...fetchedSwaps,
-  ]);
-
-  if (tokenAddress != null) {
-    combinedSwaps = combinedSwaps.filter((s) => {
-      if (s.bought.address === tokenAddress || s.sold.address === tokenAddress)
-        return true;
-      return false;
     });
-  }
 
-  if (combinedSwaps.length === 0) {
-    return {
-      address,
-      swaps: [],
-      pageInfo: toWalletPageInfo({
-        hasMore: false,
-        nextCursor: null,
-        source: cachedSwaps.length > 0 ? "mixed" : "provider",
-      }),
-    };
-  }
-
-  const cacheTo = to || Date.now();
-  const fromDate = new Date(cacheTo - 30 * DAY_MS);
-  const cachefrom =
-    from ||
-    Date.UTC(
-      fromDate.getUTCFullYear(),
-      fromDate.getUTCMonth(),
-      fromDate.getUTCDate(),
-      0,
-      0,
-      0,
-      0,
-    );
-  await enrichWithSolanaTokenPrices(combinedSwaps);
-  await postEnrichSwaps(combinedSwaps);
-  await saveSwapsCache(address, combinedSwaps, cachefrom, cacheTo);
-
-  const source =
-    cachedSwaps.length > 0 && fetchedSwaps.length > 0
-      ? "mixed"
-      : fetchedSwaps.length > 0
-        ? "provider"
-        : "cache";
   return {
     address,
-    swaps: combinedSwaps,
+    swaps,
     pageInfo: toWalletPageInfo({
-      hasMore: false,
-      nextCursor: null,
-      source,
+      hasMore: history.cursor != null,
+      nextCursor: history.cursor,
+      source: "cache",
     }),
   };
 }
