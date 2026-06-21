@@ -6,7 +6,6 @@ type FetchRetryOptions = {
   rlRetries?: number;
   rlRetryDelayMs?: number;
   rlTimeoutMs?: number;
-  /** Safe request metadata for retry logs. Do not include credentials or full URLs. */
   rlLogContext?: {
     provider: string;
     endpointPath: string;

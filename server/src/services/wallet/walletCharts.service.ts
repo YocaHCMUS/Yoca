@@ -1,8 +1,8 @@
 import type {
-  BalanceDataPoint,
-  WalletTimePeriod,
-  WalletCumulativePnLResult,
-  PnLDataPoint,
+    BalanceDataPoint,
+    WalletTimePeriod,
+    WalletCumulativePnLResult,
+    PnLDataPoint,
 } from "./dtos/walletDataObjects.js";
 import { getRangeStartMs } from "@sv/services/wallet/walletData.core.js";
 import { roundUsd } from "./walletNormalization.utils.js";
@@ -10,112 +10,16 @@ import { getWalletTransfers } from "./walletTransfersSwaps.service.js";
 import { getWalletOverview } from "./walletOverview.service.js";
 import { db } from "@sv/db/index.js";
 import {
-  walletBalanceMonthHistory,
-  walletBalanceWeekHistory,
+    walletBalanceMonthHistory,
+    walletBalanceWeekHistory,
 } from "@sv/db/schema.js";
-import { and, between, eq, gte } from "drizzle-orm";
+import { and, between, eq } from "drizzle-orm";
 import * as zrn from "@sv/util/util-zerion.js";
 import { zrn_WalletBalanceChartSchema } from "../_types/wallet-raw-responses.js";
-import { rlFetch } from "@sv/util/rate-limit.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import dayjs from "dayjs";
 import { WALLET_BALANCE_HISTORY_CACHE_TTL_MS } from "@sv/config/constants.js";
-
-type ZerionErrorSummary = {
-  title?: string;
-  detail?: string;
-};
-
-/**
- * Safe, typed representation of a failed Zerion balance-chart request.
- * It intentionally excludes request headers, credentials, and raw response bodies.
- */
-export class ZerionUpstreamError extends Error {
-  readonly provider = "zerion";
-  readonly upstreamStatus?: number;
-  readonly upstreamStatusText?: string;
-  readonly endpointPath: string;
-  readonly errorTitle?: string;
-  readonly errorDetail?: string;
-  readonly reason: "upstream_response" | "invalid_response" | "network_error";
-
-  constructor(input: {
-    upstreamStatus?: number;
-    upstreamStatusText?: string;
-    endpointPath: string;
-    errorSummary?: ZerionErrorSummary;
-    reason: ZerionUpstreamError["reason"];
-  }) {
-    super(
-      input.reason == "network_error"
-        ? "Zerion balance chart request failed"
-        : `Zerion balance chart request failed with status ${input.upstreamStatus}`,
-    );
-    this.name = "ZerionUpstreamError";
-    this.upstreamStatus = input.upstreamStatus;
-    this.upstreamStatusText = input.upstreamStatusText;
-    this.endpointPath = input.endpointPath;
-    this.errorTitle = input.errorSummary?.title;
-    this.errorDetail = input.errorSummary?.detail;
-    this.reason = input.reason;
-  }
-}
-
-function truncateLogValue(value: string, maxLength = 500): string {
-  return value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
-}
-
-function parseZerionErrorSummary(body: string): ZerionErrorSummary {
-  try {
-    const parsed = JSON.parse(body) as {
-      errors?: Array<{ title?: unknown; detail?: unknown }>;
-    };
-    const firstError = parsed.errors?.[0];
-    return {
-      title:
-        typeof firstError?.title == "string"
-          ? truncateLogValue(firstError.title)
-          : undefined,
-      detail:
-        typeof firstError?.detail == "string"
-          ? truncateLogValue(firstError.detail)
-          : undefined,
-    };
-  } catch {
-    return {};
-  }
-}
-
-function logZerionBalanceFailure(error: ZerionUpstreamError) {
-  console.warn("Zerion balance chart request failed", {
-    provider: error.provider,
-    endpointPath: error.endpointPath,
-    upstreamStatus: error.upstreamStatus,
-    upstreamStatusText: error.upstreamStatusText,
-    errorTitle: error.errorTitle,
-    errorDetail: error.errorDetail,
-    reason: error.reason,
-  });
-}
-
-async function parseZerionBalanceChartSuccessResponse(resp: Response) {
-  let body: string;
-  try {
-    body = await resp.text();
-  } catch {
-    return;
-  }
-
-  if (!body) {
-    return;
-  }
-
-  try {
-    const parsed = zrn_WalletBalanceChartSchema.safeParse(JSON.parse(body));
-    return parsed.success ? parsed.data : undefined;
-  } catch {
-    return;
-  }
-}
+import { rlFetch } from "@sv/util/rate-limit.js";
 
 /**
  * Get UTC start-of-day timestamp (ms) for a given timestamp.
@@ -226,10 +130,12 @@ async function computeDailyNetInflow(
   return dailyNetInflow;
 }
 
-type WalletBalanceHistory = {
-  usdValue: number;
-  timestampMs: number;
-}[];
+type WalletBalanceHistory =
+  | {
+      usdValue: number;
+      timestampMs: number;
+    }[]
+  | null;
 
 export async function getWalletBalanceHistory(
   address: string,
@@ -285,62 +191,15 @@ async function fetchWalletBalanceHistory(
     "filter[chain_ids]": "solana",
   }).toString();
 
-  let resp: Response;
-  try {
-    resp = await rlFetch(req, {
-      rlLimiter: zrn.limiter,
-      method: "GET",
-      headers: zrn.getRequiredHeaders(),
-      rlRetries: 3,
-      rlRetryDelayMs: 500,
-      rlTimeoutMs: 30_000,
-      rlLogContext: {
-        provider: "zerion",
-        endpointPath: req.pathname,
-      },
-    });
-  } catch {
-    const error = new ZerionUpstreamError({
-      endpointPath: req.pathname,
-      reason: "network_error",
-    });
-    logZerionBalanceFailure(error);
-    throw error;
-  }
+  const resp = await rlFetch(req, {
+    method: "GET",
+    headers: zrn.getRequiredHeaders(),
+    rlLimiter: zrn.limiter
+  });
 
-  if (!resp.ok) {
-    let body = "";
-    try {
-      body = await resp.text();
-    } catch {
-      // The status and endpoint path below are sufficient for safe diagnostics.
-    }
-
-    const error = new ZerionUpstreamError({
-      upstreamStatus: resp.status,
-      upstreamStatusText: resp.statusText
-        ? truncateLogValue(resp.statusText)
-        : undefined,
-      endpointPath: req.pathname,
-      errorSummary: parseZerionErrorSummary(body),
-      reason: "upstream_response",
-    });
-    logZerionBalanceFailure(error);
-    throw error;
-  }
-
-  const res = await parseZerionBalanceChartSuccessResponse(resp);
+  const res = await getTrackedApiResult(zrn_WalletBalanceChartSchema, resp);
   if (!res) {
-    const error = new ZerionUpstreamError({
-      upstreamStatus: resp.status,
-      upstreamStatusText: resp.statusText
-        ? truncateLogValue(resp.statusText)
-        : undefined,
-      endpointPath: req.pathname,
-      reason: "invalid_response",
-    });
-    logZerionBalanceFailure(error);
-    throw error;
+    return null;
   }
 
   const insertValues = res.data.attributes.points.map((point) => ({
