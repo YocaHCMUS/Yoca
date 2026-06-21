@@ -96,7 +96,7 @@ function formatSmallCompact(value: number): string {
     return "0";
   }
 
-  const str = value.toPrecision(16);
+  const str = value.toFixed(16);
 
   const match = str.match(/^0\.0+/);
   if (!match) return value.toString();
