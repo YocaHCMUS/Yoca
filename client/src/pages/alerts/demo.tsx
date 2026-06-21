@@ -17,7 +17,7 @@ import {
   Stack,
 } from "@carbon/react";
 import { Add } from "@carbon/react/icons";
-import { ComponentType, useMemo, useState } from "react";
+import { ComponentType, useMemo, useState, type ReactNode } from "react";
 import TokenStatsConfig from "./components/TokenStatsConfig";
 import { TradingEventsConfig } from "./components/TradingEventsConfig";
 import styles from "./demo.module.scss";
@@ -25,11 +25,12 @@ import { type AlertType } from "./form-schema";
 
 interface AlertRow {
   id: string;
-  type: string;
-  target: string;
-  alertName: string;
-  createdAt: string;
-  [key: string]: string;
+  type: ReactNode;
+  target: ReactNode;
+  alertName: ReactNode;
+  createdAt: ReactNode;
+  actions?: ReactNode;
+  [key: string]: ReactNode | undefined;
 }
 
 type ConfigComponentProps = {
@@ -121,6 +122,11 @@ function AlertTypeSelection({
 export default function AlertsDemo() {
   const { fmt } = useLocalization();
   const { user } = useAuth();
+  const [deletingAlertId, setDeletingAlertId] = useState<string | null>(null);
+  const [deleteFeedback, setDeleteFeedback] = useState<{
+    kind: "success" | "error";
+    message: string;
+  } | null>(null);
   const [selectedAlertType, setSelectedAlertType] = useState<AlertType | null>(
     null,
   );
@@ -146,6 +152,47 @@ export default function AlertsDemo() {
     },
   );
 
+  const refreshAlerts = async () => {
+    await Promise.all([tokenAlerts.mutate(), tradingAlerts.mutate()]);
+  };
+
+  const handleDeleteTokenAlert = async (alertId: string) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this token alert?",
+    );
+    if (!confirmed) return;
+
+    setDeleteFeedback(null);
+    setDeletingAlertId(alertId);
+
+    try {
+      const response = await (client.api.alertsHp.tokens as any)[":id"].$delete({
+        param: { id: alertId },
+      });
+
+      if (!response.ok) {
+        setDeleteFeedback({
+          kind: "error",
+          message: "Failed to delete token alert.",
+        });
+        return;
+      }
+
+      setDeleteFeedback({
+        kind: "success",
+        message: "Token alert deleted.",
+      });
+      await refreshAlerts();
+    } catch {
+      setDeleteFeedback({
+        kind: "error",
+        message: "Failed to delete token alert.",
+      });
+    } finally {
+      setDeletingAlertId(null);
+    }
+  };
+
   const rows: AlertRow[] = useMemo(() => {
     const tokenRows = (tokenAlerts.data ?? []).map((alertDetails) => ({
       id: alertDetails.alertId,
@@ -153,6 +200,19 @@ export default function AlertsDemo() {
       target: alertDetails.tokenTarget?.tokenAddress || "-",
       alertName: alertDetails.alert.alertName,
       createdAt: fmt.datetime.datetime(alertDetails.alert.createdAt),
+      actions: (
+        <Button
+          kind="danger--ghost"
+          size="sm"
+          disabled={deletingAlertId !== null}
+          onClick={(event) => {
+            event.stopPropagation();
+            void handleDeleteTokenAlert(alertDetails.alertId);
+          }}
+        >
+          {deletingAlertId === alertDetails.alertId ? "Deleting..." : "Delete"}
+        </Button>
+      ),
     }));
 
     const tradingRows = (tradingAlerts.data ?? []).map((alertDetails) => {
@@ -170,11 +230,16 @@ export default function AlertsDemo() {
         target,
         alertName: alertDetails.alert.name,
         createdAt: fmt.datetime.datetime(alertDetails.alert.createdAt),
+        actions: (
+          <Txt secondary size="sm">
+            -
+          </Txt>
+        ),
       };
     });
 
     return [...tokenRows, ...tradingRows];
-  }, [fmt, tokenAlerts.data, tradingAlerts.data]);
+  }, [deletingAlertId, fmt, tokenAlerts.data, tradingAlerts.data]);
 
   const headers = useMemo(
     () => [
@@ -182,6 +247,7 @@ export default function AlertsDemo() {
       { header: "Target", key: "target" },
       { header: "Alert Name", key: "alertName" },
       { header: "Created At", key: "createdAt" },
+      { header: "Actions", key: "actions", align: "end" as const },
     ],
     [],
   );
@@ -273,8 +339,7 @@ export default function AlertsDemo() {
                             onReturn={() => setStep("type-selection")}
                             onFinish={() => {
                               onModalClose();
-                              tokenAlerts.mutate();
-                              tradingAlerts.mutate();
+                              void refreshAlerts();
                               setOpen(false);
                             }}
                           />
@@ -303,6 +368,21 @@ export default function AlertsDemo() {
                 enablePagination
                 pageSize={10}
               />
+
+              {deleteFeedback && (
+                <Txt
+                  block
+                  secondary={deleteFeedback.kind !== "error"}
+                  style={{
+                    color:
+                      deleteFeedback.kind === "error"
+                        ? "#da1e28"
+                        : undefined,
+                  }}
+                >
+                  {deleteFeedback.message}
+                </Txt>
+              )}
 
               {(tokenAlerts.error || tradingAlerts.error) && (
                 <Txt block secondary>
