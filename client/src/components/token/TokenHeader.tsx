@@ -75,11 +75,13 @@ export const TokenHeader = ({
 
   return (
     <div className={`${styles.container} ${compact ? styles.compact : ""} ${sidebar ? styles.sidebar : ""}`}>
+      <Link to={`/tokens/${address}`}>
       <img
         className={styles.image}
         src={imageUrl ?? `https://api.dicebear.com/7.x/identicon/svg?seed=${address}`}
         alt={name || symbol || address}
-      />
+        />
+      </Link>
 
       <div className={styles.info}>
         <div className={styles.row}>
