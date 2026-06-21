@@ -37,7 +37,7 @@ export function getRequiredHeadersWithMetadata(): {
   if (!birdeyeKeysInitialized) {
     apiKeyManager.initializeKeys(
       BIRDEYE_SERVICE_NAME,
-      process.env.BIRDEYE_API_KEY,
+      env.BIRDEYE_API_KEY,
     );
     birdeyeKeysInitialized = true;
   }

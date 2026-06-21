@@ -391,10 +391,7 @@ export const envSchema = z.object({
   ZERION_API_KEY: z.string(),
 
   HELIUS_API_KEY: z.string(),
-  HELIUS_API_BASE: z
-    .url()
-    .optional()
-    .default("https://api.helius.xyz"),
+  HELIUS_API_BASE_URL: z.url().optional().default("https://api.helius.xyz"),
   HELIUS_AUTH_HEADER: z.string().optional().default(""),
   HELIUS_WEBHOOK_AUTH_KEY: z.string(),
   HELIUS_WEBHOOK_ID: z.string().optional().default(""),
@@ -405,6 +402,10 @@ export const envSchema = z.object({
   MORALIS_API_KEY: z.string(),
   MOBULA_API_BASE_URL: z.url().default("https://api.mobula.io/api"),
   MOBULA_API_KEY: z.string().trim().min(1),
+  WALLET_AI_ANALYSIS_WEBHOOK_URL: z
+    .url()
+    .default("http://localhost:5678/webhook/analyse-wallet"),
+
   N8N_ANALYSE_WALLET_URL: z
     .url()
     .default("http://localhost:5678/webhook/analyse-wallet"),

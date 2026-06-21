@@ -4,6 +4,7 @@ import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.
 import { mergeOutboundFetchTimeout } from "@sv/util/outbound-fetch.js";
 import { createHelius } from "helius-sdk";
 import { apiKeyManager, buildApiKeyMetadata } from "./api-key-manager.js";
+import env from "./load-env.js";
 
 const HELIUS_SERVICE_NAME = "helius";
 let heliusKeysInitialized = false;
@@ -63,12 +64,7 @@ export async function heliusFetch(
 }
 
 export function getEndpoint(path: string): URL {
-  const base =
-    process.env.HELIUS_API_BASE_URL &&
-      process.env.HELIUS_API_BASE_URL.length > 0
-      ? process.env.HELIUS_API_BASE_URL
-      : DEFAULT_HELIUS_API_BASE_URL;
-
+  const base = env.HELIUS_API_BASE_URL;
   return new URL(`${base}${path}`);
 }
 
@@ -76,7 +72,7 @@ export function getRequiredHeaders() {
   if (!heliusKeysInitialized) {
     apiKeyManager.initializeKeys(
       HELIUS_SERVICE_NAME,
-      process.env.HELIUS_API_KEY,
+      env.HELIUS_API_KEY,
     );
     heliusKeysInitialized = true;
   }
@@ -97,7 +93,7 @@ export function getNextkey() {
   if (!heliusKeysInitialized) {
     apiKeyManager.initializeKeys(
       HELIUS_SERVICE_NAME,
-      process.env.HELIUS_API_KEY,
+      env.HELIUS_API_KEY,
     );
     heliusKeysInitialized = true;
   }
@@ -117,7 +113,7 @@ export function getRequiredHeadersWithMetadata(): {
   if (!heliusKeysInitialized) {
     apiKeyManager.initializeKeys(
       HELIUS_SERVICE_NAME,
-      process.env.HELIUS_API_KEY,
+      env.HELIUS_API_KEY,
     );
     heliusKeysInitialized = true;
   }
@@ -149,7 +145,7 @@ function getApiKeyMetadataFromHeaders(
 }
 
 const client = createHelius({
-  apiKey: process.env.HELIUS_API_KEY!,
+  apiKey: env.HELIUS_API_KEY!,
 });
 
 export { client };

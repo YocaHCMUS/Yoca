@@ -3,9 +3,8 @@ import type {
     WalletAiAnalysisResponse,
 } from "@sv/services/wallet/dtos/walletAnalysisObjects.js";
 import { walletAiAnalysisWebhookPayloadSchema, walletAiAnalysisResponseSchema } from "@sv/services/wallet/dtos/walletAnalysisObjects.js";
+import env from "@sv/util/load-env";
 
-const DEFAULT_WALLET_AI_ANALYSIS_WEBHOOK_URL =
-    "http://localhost:5678/webhook/analyse-wallet";
 
 export function createWalletAiAnalysisRequestId(): string {
     return `wai-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -16,10 +15,7 @@ export function isAbortError(error: unknown): boolean {
 }
 
 export function resolveWalletAiAnalysisWebhookEndpoint(): string {
-    const configured = process.env.WALLET_AI_ANALYSIS_WEBHOOK_URL?.trim();
-    return configured && configured.length > 0
-        ? configured
-        : DEFAULT_WALLET_AI_ANALYSIS_WEBHOOK_URL;
+    return env.WALLET_AI_ANALYSIS_WEBHOOK_URL;
 }
 
 export function normalizeWalletAiLanguage(
