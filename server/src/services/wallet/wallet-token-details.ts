@@ -1,17 +1,17 @@
 import {
-  WALLET_TOKEN_DETAILS_FETCH_LIMIT,
-  WALLET_TOKEN_DETAILS_TTL_MS,
+    WALLET_TOKEN_DETAILS_FETCH_LIMIT,
+    WALLET_TOKEN_DETAILS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-  walletTokenDetails,
-  type WalletTokenDetailsInsert,
-  type WalletTokenDetailsSelect,
+    walletTokenDetails,
+    type WalletTokenDetailsInsert,
+    type WalletTokenDetailsSelect,
 } from "@sv/db/schema.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import {
-  mbl_WalletPositionsSchema,
-  type MBL_WalletPositions,
+    mbl_WalletPositionsSchema,
+    type MBL_WalletPositions,
 } from "@sv/services/_types/wallet-raw-responses.js";
 import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
@@ -22,38 +22,30 @@ import { eq } from "drizzle-orm";
 export async function fetchTokenDetails(
   wallet: string,
 ): Promise<WalletTokenDetailsSelect[] | null> {
-  const positions: MBL_WalletPositions["data"] = [];
-  let offset = 0;
+  const endpoint = mobula.getEndpoint("/2/wallet/positions");
+  endpoint.search = new URLSearchParams({
+    wallet,
+    blockchains: "solana:solana",
+    limit: String(WALLET_TOKEN_DETAILS_FETCH_LIMIT),
+    sortBy: "lastActivity",
+    order: "desc",
+    includeFees: "false",
+    includeAllBalances: "false",
+    onlyOpen: "false",
+  }).toString();
 
-  while (true) {
-    const endpoint = mobula.getEndpoint("/2/wallet/positions");
-    endpoint.search = new URLSearchParams({
-      wallet,
-      blockchains: "solana:solana",
-      limit: String(WALLET_TOKEN_DETAILS_FETCH_LIMIT),
-      offset: String(offset),
-      sortBy: "lastActivity",
-      order: "desc",
-      includeFees: "false",
-      includeAllBalances: "false",
-      onlyOpen: "false",
-    }).toString();
+  const response = await rlFetch(endpoint, {
+    method: "GET",
+    headers: mobula.getRequiredHeaders(),
+    rlLimiter: mobula.limiter,
+  });
+  const result = await getTrackedApiResult(
+    mbl_WalletPositionsSchema,
+    response,
+  );
+  if (!result) return null;
 
-    const response = await rlFetch(endpoint, {
-      method: "GET",
-      headers: mobula.getRequiredHeaders(),
-      rlLimiter: mobula.limiter,
-    });
-    const result = await getTrackedApiResult(
-      mbl_WalletPositionsSchema,
-      response,
-    );
-    if (!result) return null;
-
-    positions.push(...result.data);
-    if (result.data.length < WALLET_TOKEN_DETAILS_FETCH_LIMIT) break;
-    offset += result.data.length;
-  }
+  const positions: MBL_WalletPositions["data"] = result.data;
 
   const updatedAtMs = dayjs.utc().valueOf();
   const values = positions.map((position): WalletTokenDetailsInsert => {
@@ -99,7 +91,7 @@ export async function fetchTokenDetails(
     };
   });
 
-  if (values.length === 0) return [];
+  if (values.length == 0) return [];
 
   return db
     .insert(walletTokenDetails)
