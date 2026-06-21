@@ -96,7 +96,10 @@ describe("CheckoutForm Component", () => {
     mockStripe = {
       confirmSetup: vi.fn().mockResolvedValue(makeStripeSetupIntentResponse()),
     };
-    mockElements = { getElement: vi.fn() };
+    mockElements = {
+      getElement: vi.fn(),
+      submit: vi.fn().mockResolvedValue({ error: undefined }),
+    };
 
     vi.mocked(useStripe).mockReturnValue(mockStripe);
     vi.mocked(useElements).mockReturnValue(mockElements);
@@ -139,7 +142,7 @@ describe("CheckoutForm Component", () => {
 
     it("should render all three payment method buttons", () => {
       render(<CheckoutForm {...defaultProps} />);
-      expect(screen.getByRole("button", { name: /cash/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /card/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /bank/i })).toBeInTheDocument();
       // Wallet button (Solana) — uses aria fallback
       expect(screen.getByText("Wallet")).toBeInTheDocument();
@@ -182,11 +185,11 @@ describe("CheckoutForm Component", () => {
   // Tab / Method Switching
   // ─────────────────────────────────────────────────────────────────────────
   describe("Payment Method Switching", () => {
-    it("should call onMethodChange('card') when Cash button is clicked", async () => {
+    it("should call onMethodChange('card') when Card button is clicked", async () => {
       const onMethodChangeMock = vi.fn();
       render(<CheckoutForm {...defaultProps} activeMethod="solana" onMethodChange={onMethodChangeMock} />);
 
-      await userEvent.click(screen.getByRole("button", { name: /cash/i }));
+      await userEvent.click(screen.getByRole("button", { name: /card/i }));
       expect(onMethodChangeMock).toHaveBeenCalledWith("card");
     });
 
@@ -236,10 +239,15 @@ describe("CheckoutForm Component", () => {
       fireEvent.submit(form);
 
       await waitFor(() => {
+        expect(mockElements.submit).toHaveBeenCalledTimes(1);
         expect(mockStripe.confirmSetup).toHaveBeenCalledTimes(1);
         expect(client.api.payment["activate-subscription"].$post).toHaveBeenCalledTimes(1);
         expect(defaultProps.onSuccess).toHaveBeenCalledTimes(1);
       });
+
+      expect(mockElements.submit.mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(client.api.payment["setup-intent"].$post).mock.invocationCallOrder[0],
+      );
     });
 
     it("should pass the paymentMethodId from the SetupIntent to activate-subscription", async () => {
