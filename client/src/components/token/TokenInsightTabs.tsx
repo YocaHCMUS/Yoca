@@ -18,13 +18,6 @@ type TopHoldersData = InferResponseType<
   200
 >;
 
-type HoldersInfo =
-  | InferResponseType<
-      (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
-      200
-    >[number]
-  | null;
-
 interface MarketData {
   priceUsd: number;
   priceChangePercentage24h: number | null;
@@ -59,7 +52,6 @@ interface TokenInsightTabsProps {
   meta: MetaData;
   market: MarketData | null;
   holders: TopHoldersData;
-  holdersInfo?: HoldersInfo | null;
   holdersLoading?: boolean;
 }
 

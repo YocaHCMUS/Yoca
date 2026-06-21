@@ -109,9 +109,10 @@ export const MarketStats = ({
   void marketsCount;
   const { tr, fmt } = useLocalization();
 
-  const top10HoldersPercent = holdersInfo?.top10Percent
-    ? Number(holdersInfo.top10Percent)
-    : (topHolders?.reduce((acc, curr) => acc + curr.percentage, 0) ?? 0);
+  const top10HoldersPercent =
+    topHolders
+      ?.slice(0, 10)
+      .reduce((acc, curr) => acc + curr.percentage, 0) ?? 0;
 
   return (
     <div

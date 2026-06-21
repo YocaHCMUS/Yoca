@@ -70,7 +70,7 @@ function useTokenPageData(address: string, poolAddress: string) {
   const error = baseMeta.error || topPools.error || marketData.error;
   const pairError = trades.error || poolData.error;
 
-  if (isLoading || error) {
+  if (isLoading || error || pairLoading) {
     return {
       isLoading,
       error,
@@ -285,7 +285,7 @@ export default function TokenPage() {
               marketsCount={topPools.length}
             />
 
-            <TopHolders holders={holders} holdersInfo={holdersInfo} />
+            <TopHolders holders={holders} />
 
             <NewsTab address={address} symbol={meta.symbol} name={meta.name} />
           </div>

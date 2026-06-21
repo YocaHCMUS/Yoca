@@ -39,14 +39,6 @@ function useTokenOverviewData(address: string) {
     param: { address },
   });
 
-  const holdersStats = useGet(
-    client.api.tokens.holders.stats[":addresses"],
-    200,
-    {
-      param: { addresses: address },
-    },
-  );
-
   const marketData = useGet(client.api.tokens.markets[":addresses"], 200, {
     param: { addresses: address },
   });
@@ -67,10 +59,6 @@ function useTokenOverviewData(address: string) {
   const details = Array.isArray(tokenDetails.data)
     ? (tokenDetails.data[0] ?? null)
     : (tokenDetails.data ?? null);
-  const holdersInfo = Array.isArray(holdersStats.data)
-    ? (holdersStats.data[0] ?? null)
-    : (holdersStats.data ?? null);
-
   return {
     isLoading,
     isFirstLoad: false,
@@ -78,7 +66,6 @@ function useTokenOverviewData(address: string) {
     data: {
       details,
       holders: holders.data ?? [],
-      holdersInfo,
       market: marketData.data?.[address] ?? null,
     },
   };
@@ -221,7 +208,6 @@ export default function TokenOverviewPage() {
                 }}
                 market={market ?? null}
                 holders={result.data?.holders ?? []}
-                holdersInfo={result.data?.holdersInfo ?? null}
                 holdersLoading={result.isFirstLoad}
               />
             </div>
