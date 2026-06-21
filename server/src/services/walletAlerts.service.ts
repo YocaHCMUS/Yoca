@@ -537,11 +537,19 @@ export async function sendToDiscordUrl(
   alert: StructuredAlert,
   discordUrl: string,
 ): Promise<DiscordSendResult> {
+  return sendDiscordWebhookPayload(discordUrl, toDiscordPayload(alert));
+}
+
+/** Shared Discord webhook transport for transaction and token-stat alerts. */
+export async function sendDiscordWebhookPayload(
+  discordUrl: string,
+  payload: unknown,
+): Promise<DiscordSendResult> {
   try {
     const res = await fetch(discordUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(toDiscordPayload(alert)),
+      body: JSON.stringify(payload),
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");

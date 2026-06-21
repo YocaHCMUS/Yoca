@@ -25,6 +25,7 @@ function normalizeCreatePayload(
     expiresAt: body.expiresAt,
     alertName: body.name,
     email: body.delivery.email,
+    discord: body.delivery.discord,
     conditions: body.conditions.map((condition) => ({
       period: condition.period,
       metric: condition.metric,

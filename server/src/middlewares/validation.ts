@@ -208,6 +208,9 @@ const tradingAlertConditionSchema = z.object({
 
 const alertDeliverySchema = z.object({
   email: z.email().optional(),
+  discord: z.boolean().optional().default(false),
+}).refine((delivery) => Boolean(delivery.email) || delivery.discord, {
+  message: "Select at least one delivery channel",
 });
 
 const alertBaseSchema = {

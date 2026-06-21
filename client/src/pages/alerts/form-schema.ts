@@ -126,9 +126,19 @@ const baseAlertSchema = z
     alertName: z.string().trim().min(1),
     emailEnabled: z.boolean(),
     email: z.string().optional(),
+    discordEnabled: z.boolean(),
   })
   .superRefine((data, ctx) => {
     const email = data.email?.trim();
+
+    if (!data.emailEnabled && !data.discordEnabled) {
+      ctx.addIssue({
+        path: ["emailEnabled"],
+        code: "custom",
+        message: "Select email and/or Discord delivery",
+      });
+      return;
+    }
 
     if (!data.emailEnabled) return;
 

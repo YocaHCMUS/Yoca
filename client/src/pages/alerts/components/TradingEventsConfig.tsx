@@ -370,12 +370,13 @@ export function createTradingEventsDefaultValues(): TradingAlertForm {
     alertName: "",
     emailEnabled: true,
     email: "",
+    discordEnabled: false,
   };
 }
 
 const stepFields: Record<number, (keyof TradingAlertForm)[]> = {
   1: ["tradingConditions", "tradingScope"],
-  2: ["email", "emailEnabled"],
+  2: ["email", "emailEnabled", "discordEnabled"],
 };
 
 const finalStepNum = 2;
@@ -416,6 +417,7 @@ export function TradingEventsConfig({
           })),
           delivery: {
             email: data.emailEnabled ? data.email! : undefined,
+            discord: data.discordEnabled,
           },
           expiresAt: combineLocalDateAndTime(
             data.expiresAtDate,

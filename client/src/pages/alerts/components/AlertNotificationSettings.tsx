@@ -65,11 +65,21 @@ export default function AlertNotificationSettings() {
             labelText="Telegram"
             disabled
           />
-          <Checkbox
-            id="delivery-channel-discord"
-            labelText="Discord"
-            disabled
+          <Controller
+            name="discordEnabled"
+            control={control}
+            render={({ field }) => (
+              <Checkbox
+                id="delivery-channel-discord"
+                labelText="Discord"
+                checked={field.value}
+                onChange={(_, data) => field.onChange(data.checked)}
+              />
+            )}
           />
+          <small>
+            Discord uses the webhook configured in the existing Alerts page.
+          </small>
         </CheckboxGroup>
       </FormGroup>
 

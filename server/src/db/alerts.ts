@@ -1,6 +1,8 @@
 import {
+  boolean,
   decimal as dec,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -75,7 +77,8 @@ export const alertDelivery = pgTable("alert_delivery", {
   alertId: uuid("alert_id")
     .notNull()
     .references(() => alerts.id, { onDelete: "cascade" }),
-  email: varchar("email", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }),
+  discordEnabled: boolean("discord_enabled").notNull().default(false),
 });
 
 export const alertState = pgTable("alert_state", {
@@ -179,6 +182,7 @@ export const alertHistory = pgTable("alert_history", {
     .references(() => users.id, { onDelete: "cascade" }),
   alertName: varchar("alert_name", { length: 255 }).notNull(),
   message: varchar("message", { length: 1000 }).notNull(),
+  metadata: jsonb("metadata"),
   sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
   readAt: timestamp("read_at"),
 });

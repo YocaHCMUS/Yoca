@@ -84,6 +84,7 @@ function createTokenStatsDefaultValues(): TokenAlertForm {
     // should automatically choose the signed in email if it was the case
     emailEnabled: true,
     email: "",
+    discordEnabled: false,
   };
 }
 
@@ -103,7 +104,7 @@ const stepFields: Record<number, (keyof TokenAlertForm)[]> = {
     "expiresAtDate",
     "expiresAtTime",
   ],
-  2: ["alertName", "email", "emailEnabled"],
+  2: ["alertName", "email", "emailEnabled", "discordEnabled"],
 };
 
 export function TokenStatsConfigContent() {
@@ -362,6 +363,7 @@ export default function TokenStatsConfig({
           triggerMode: data.triggerMode,
           delivery: {
             email: data.emailEnabled ? data.email : undefined,
+            discord: data.discordEnabled,
           },
           expiresAt: combineLocalDateAndTime(
             data.expiresAtDate,

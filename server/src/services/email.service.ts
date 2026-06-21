@@ -28,6 +28,15 @@ export interface AlertEmailInput {
   emittedAt: string;
 }
 
+export interface TokenAlertEmailInput {
+  alertName: string;
+  tokenAddress: string;
+  tokenLabel: string;
+  message: string;
+  currentPriceUsd: number;
+  emittedAt: string;
+}
+
 function severityColor(severity: AlertEmailInput["severity"]): string {
   if (severity === "high") return "#ed4245";
   if (severity === "medium") return "#eab308";
@@ -113,6 +122,36 @@ export async function sendAlertEmail(
     return true;
   } catch (error) {
     console.error("[email] failed to send to", to, error);
+    return false;
+  }
+}
+
+export async function sendTokenAlertEmail(
+  to: string,
+  alert: TokenAlertEmailInput,
+): Promise<boolean> {
+  const client = getResend();
+  if (!client) {
+    console.warn("[email] RESEND_API_KEY is not set; skipping token alert email", {
+      hasRecipient: Boolean(to),
+    });
+    return false;
+  }
+
+  try {
+    const result = await client.emails.send({
+      from: RESEND_FROM,
+      to,
+      subject: `[Yoca Token Alert] ${alert.alertName}`,
+      html: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;color:#1f2937"><h2>${escapeHtml(alert.alertName)}</h2><p>${escapeHtml(alert.message)}</p><table><tr><td><strong>Token</strong></td><td>${escapeHtml(alert.tokenLabel)}</td></tr><tr><td><strong>Mint</strong></td><td>${escapeHtml(alert.tokenAddress)}</td></tr><tr><td><strong>Current price</strong></td><td>$${alert.currentPriceUsd.toFixed(8)}</td></tr><tr><td><strong>Triggered at</strong></td><td>${escapeHtml(alert.emittedAt)}</td></tr></table></body></html>`,
+    });
+    if (result.error) {
+      console.error("[email] failed to send token alert to", to, result.error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("[email] failed to send token alert to", to, error);
     return false;
   }
 }

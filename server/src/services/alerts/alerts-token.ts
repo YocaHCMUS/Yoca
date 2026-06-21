@@ -21,6 +21,7 @@ export type TokenAlertInput = {
   expiresAt: Date | string;
   alertName: string;
   email?: string;
+  discord?: boolean;
   tokenAddress: string;
   conditions: Array<
     Omit<TokenAlertConditionInsert, "id" | "alertId"> & {
@@ -117,10 +118,11 @@ export async function createTokenAlert(input: TokenAlertInput) {
       status: "running",
     });
 
-    if (input.email) {
+    if (input.email || input.discord) {
       await tx.insert(alertDelivery).values({
         alertId: alert.id,
-        email: input.email,
+        email: input.email || null,
+        discordEnabled: Boolean(input.discord),
       });
     }
 
@@ -165,10 +167,11 @@ export async function updateTokenAlert(
 
     await tx.delete(alertDelivery).where(eq(alertDelivery.alertId, alertId));
 
-    if (alert.email) {
+    if (alert.email || alert.discord) {
       await tx.insert(alertDelivery).values({
         alertId,
-        email: alert.email,
+        email: alert.email || null,
+        discordEnabled: Boolean(alert.discord),
       });
     }
 

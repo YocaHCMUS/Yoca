@@ -48,6 +48,7 @@ import { logger } from "hono/logger";
 import payment, { PaymentAppType } from "./routes/payment.route.js";
 import washTradingRoutes, { type WashTradingAppType } from './routes/wash-trading.route.js';
 import { warnIfLegacyHeliusWebhookConfigured } from "@sv/services/heliusWebhooks.service.js";
+import { startTokenPolling } from "@sv/services/tokens/token-data-polling.js";
 
 warnIfLegacyHeliusWebhookConfigured();
 
@@ -62,8 +63,6 @@ const app = new Hono()
   .get("/", (c) => c.redirect("/api"))
   .get("/api", (c) => c.json({ status: "ok" }));
 
-// startTokenPolling();
-
 // Server
 serve(
   {
@@ -73,6 +72,7 @@ serve(
   },
   (info) => {
     console.log(`Server is running on http://localhost:${info.port}`);
+    void startTokenPolling();
   },
 );
 
