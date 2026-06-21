@@ -42,6 +42,11 @@ interface GraphEdge {
   suspicious: boolean;
 }
 
+interface CircularGraphHighlight {
+  nodeIds: Set<string>;
+  edgeKeys: Set<string>;
+}
+
 interface WashTradingResult {
   mint: string;
   symbol: string;
@@ -185,9 +190,16 @@ interface ReadableGraphEdge extends GraphEdge {
   curveness: number;
 }
 
-const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; tokenSymbol?: string; isFullscreen?: boolean }> = ({
+const NetworkGraph: React.FC<{
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  circularPatterns?: WashTradingResult["circularPatterns"];
+  tokenSymbol?: string;
+  isFullscreen?: boolean;
+}> = ({
   nodes,
   edges,
+  circularPatterns = [],
   tokenSymbol,
   isFullscreen = false,
 }) => {
@@ -210,6 +222,31 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; tokenSymb
     () => new Set(visibleNodes.map((node) => node.id)),
     [visibleNodes],
   );
+
+  const circularHighlight = useMemo<CircularGraphHighlight>(() => {
+    const nodeIds = new Set<string>();
+    const edgeKeys = new Set<string>();
+
+    circularPatterns.forEach((pattern) => {
+      const cycle = (pattern.cycle || []).filter(Boolean);
+      if (cycle.length < 2) return;
+
+      cycle.forEach((wallet) => {
+        if (visibleNodeIds.has(wallet)) nodeIds.add(wallet);
+      });
+
+      const closesAtStart = cycle[0] === cycle[cycle.length - 1];
+      const edgeCount = closesAtStart ? cycle.length - 1 : cycle.length;
+
+      for (let index = 0; index < edgeCount; index += 1) {
+        const from = cycle[index];
+        const to = closesAtStart ? cycle[index + 1] : cycle[(index + 1) % cycle.length];
+        if (from && to) edgeKeys.add(`${from}->${to}`);
+      }
+    });
+
+    return { nodeIds, edgeKeys };
+  }, [circularPatterns, visibleNodeIds]);
 
   const readableEdges = useMemo<ReadableGraphEdge[]>(() => {
     const grouped = new Map<string, ReadableGraphEdge>();
@@ -297,6 +334,7 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; tokenSymb
       const score = typeof node.score === "number" ? Math.round(Math.max(0, Math.min(1, node.score)) * 100) : 0;
       const isWash = node.type === "wash";
       const isBridge = node.type === "bridge";
+      const isCircular = circularHighlight.nodeIds.has(node.id);
       const typeLabel = isWash ? tr("washTrading.graph.highRiskWallet") : isBridge ? tr("washTrading.graph.bridgeWallet") : tr("washTrading.graph.normalWallet");
       const angle = (Math.PI * 2 * index) / Math.max(visibleNodes.length, 1);
       const riskRadiusFactor = isWash ? 0.62 : isBridge ? 0.78 : 1;
@@ -320,10 +358,12 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; tokenSymb
           fontSize: isFullscreen ? 12 : 10,
         },
         itemStyle: {
-          borderWidth: isWash ? 3 : 1.5,
-          borderColor: isWash ? "#fecaca" : isBridge ? "#fde68a" : "#94a3b8",
-          shadowBlur: isWash ? 13 : 5,
-          shadowColor: isWash ? "rgba(226, 75, 74, 0.55)" : "rgba(15, 23, 42, 0.25)",
+          // Keep the wallet fill colour from its risk category. Circular membership is
+          // expressed only by a purple ring/glow so High/Bridge/Normal remain readable.
+          borderWidth: isCircular ? 3.5 : isWash ? 3 : 1.5,
+          borderColor: isCircular ? "#c084fc" : isWash ? "#fecaca" : isBridge ? "#fde68a" : "#94a3b8",
+          shadowBlur: isCircular ? 16 : isWash ? 13 : 5,
+          shadowColor: isCircular ? "rgba(168, 85, 247, 0.58)" : isWash ? "rgba(226, 75, 74, 0.55)" : "rgba(15, 23, 42, 0.25)",
         },
         tooltip: {
           formatter: [
@@ -338,31 +378,40 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; tokenSymb
 
     const graphLinks = readableEdges.map((edge) => {
       const isLargeFlow = edge.weight >= 0.72;
-      const lineWidth = edge.suspicious
-        ? 1.8 + edge.weight * (isFullscreen ? 3.8 : 2.8)
-        : 0.8 + edge.weight * 1.4;
+      const isCircularEdge = circularHighlight.edgeKeys.has(`${edge.from}->${edge.to}`);
+      const lineWidth = isCircularEdge
+        ? 2.5 + edge.weight * (isFullscreen ? 4.2 : 3.2)
+        : edge.suspicious
+          ? 1.8 + edge.weight * (isFullscreen ? 3.8 : 2.8)
+          : 0.8 + edge.weight * 1.4;
 
       return {
+        id: edge.id,
         source: edge.from,
         target: edge.to,
         value: edge.amount,
         suspicious: edge.suspicious,
+        circular: isCircularEdge,
         lineStyle: {
+          // This is the original ECharts graph edge, not a second drawn edge.
           width: lineWidth,
-          opacity: edge.suspicious ? 0.78 : 0.24,
-          color: edge.suspicious ? "#e24b4a" : "#64748b",
+          opacity: isCircularEdge ? 0.96 : edge.suspicious ? 0.78 : 0.24,
+          color: isCircularEdge ? "#a855f7" : edge.suspicious ? "#e24b4a" : "#64748b",
           curveness: edge.curveness,
+          shadowBlur: isCircularEdge ? 12 : 0,
+          shadowColor: isCircularEdge ? "rgba(168, 85, 247, 0.62)" : "transparent",
         },
         emphasis: {
           focus: "adjacency",
           lineStyle: {
-            width: Math.max(lineWidth + 2, edge.suspicious ? 5 : 3),
+            width: Math.max(lineWidth + 2, isCircularEdge ? 6 : edge.suspicious ? 5 : 3),
             opacity: 1,
+            color: isCircularEdge ? "#a855f7" : undefined,
           },
           label: {
             show: true,
             formatter: `${formatGraphAmount(edge.amount)}${edge.transferCount > 1 ? ` · ${edge.transferCount} tx` : ""}`,
-            color: edge.suspicious ? "#dc2626" : "#334155",
+            color: isCircularEdge ? "#7e22ce" : edge.suspicious ? "#dc2626" : "#334155",
             fontSize: 11,
             fontWeight: 700,
             backgroundColor: "rgba(255,255,255,0.92)",
@@ -380,7 +429,7 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; tokenSymb
         },
         tooltip: {
           formatter: [
-            `<strong>${edge.suspicious ? tr("washTrading.graph.suspiciousFlow") : tr("washTrading.graph.transferFlow")}</strong>`,
+            `<strong>${isCircularEdge ? "Circular cluster flow" : edge.suspicious ? tr("washTrading.graph.suspiciousFlow") : tr("washTrading.graph.transferFlow")}</strong>`,
             `${tr("washTrading.graph.from")}: ${shortAddress(edge.from)}`,
             `${tr("washTrading.graph.to")}: ${shortAddress(edge.to)}`,
             `${tr("washTrading.graph.totalAmount")}: ${formatGraphAmount(edge.amount)}`,
@@ -470,7 +519,7 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; tokenSymb
         } as any,
       ],
     } as echarts.EChartsOption;
-  }, [visibleNodes, readableEdges, isFullscreen, tr, formatGraphAmount]);
+  }, [visibleNodes, readableEdges, isFullscreen, tr, formatGraphAmount, circularHighlight]);
 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -500,6 +549,132 @@ const NetworkGraph: React.FC<{ nodes: GraphNode[]; edges: GraphEdge[]; tokenSymb
       resizeObserver.disconnect();
     };
   }, [option]);
+
+  useEffect(() => {
+    const chart = chartInstanceRef.current as any;
+    if (!chart || (!circularHighlight.nodeIds.size && !circularHighlight.edgeKeys.size)) return;
+
+    let animationFrame = 0;
+    let overlayGroup: any = null;
+    let isDisposed = false;
+
+    const resolvePath = (element: any): any => {
+      if (!element) return null;
+      if (element.shape && typeof element.shape.x1 === "number") return element;
+      const children = typeof element.childrenRef === "function" ? element.childrenRef() : element.children;
+      if (!children) return null;
+      for (const child of children) {
+        const resolved = resolvePath(child);
+        if (resolved) return resolved;
+      }
+      return null;
+    };
+
+    const attachToGraphView = () => {
+      if (isDisposed) return;
+
+      const seriesModel = chart.getModel?.().getSeriesByIndex?.(0);
+      const graphView = seriesModel ? chart.getViewOfSeriesModel?.(seriesModel) : null;
+      const graphGroup = graphView?.group;
+
+      // Adding the particles to the graph view group is essential: it makes them
+      // inherit the exact same roam/zoom/pan transform as the real graph edges.
+      if (!graphGroup) {
+        animationFrame = window.requestAnimationFrame(attachToGraphView);
+        return;
+      }
+
+      overlayGroup = new (echarts.graphic.Group as any)({ silent: true });
+      overlayGroup.z2 = 100;
+      graphGroup.add(overlayGroup);
+
+      const drawFrame = (timestamp: number) => {
+        if (isDisposed || !overlayGroup) return;
+        overlayGroup.removeAll();
+
+        const model = chart.getModel?.().getSeriesByIndex?.(0);
+        const nodeData = model?.getData?.();
+        const edgeData = model?.getGraph?.().edgeData;
+
+        if (nodeData) {
+          const nodeCount = nodeData.count?.() ?? 0;
+          for (let index = 0; index < nodeCount; index += 1) {
+            const rawNode = nodeData.getRawDataItem?.(index) as { id?: string } | undefined;
+            const nodeId = rawNode?.id || nodeData.getId?.(index);
+            const layout = nodeData.getItemLayout?.(index) as [number, number] | undefined;
+            if (!nodeId || !layout || !circularHighlight.nodeIds.has(nodeId)) continue;
+
+            const pulse = 1 + Math.sin(timestamp / 440 + index * 0.9) * 0.07;
+            const renderedSize = nodeData.getItemVisual?.(index, "symbolSize");
+            const symbolDiameter = typeof renderedSize === "number"
+              ? renderedSize
+              : Array.isArray(renderedSize)
+                ? Math.max(...renderedSize)
+                : 24;
+            const baseRadius = symbolDiameter / 2 + 6;
+
+            overlayGroup.add(new (echarts.graphic.Circle as any)({
+              silent: true,
+              z2: 90,
+              shape: { cx: layout[0], cy: layout[1], r: baseRadius * pulse },
+              style: {
+                fill: "rgba(168, 85, 247, 0)",
+                stroke: "rgba(192, 132, 252, 0.92)",
+                lineWidth: 1.8,
+                shadowBlur: 16,
+                shadowColor: "rgba(168, 85, 247, 0.55)",
+              },
+            }));
+          }
+        }
+
+        if (edgeData) {
+          const edgeCount = edgeData.count?.() ?? 0;
+          for (let index = 0; index < edgeCount; index += 1) {
+            const renderedEdge = readableEdges[index];
+            const edgeKey = renderedEdge ? `${renderedEdge.from}->${renderedEdge.to}` : "";
+            if (!edgeKey || !circularHighlight.edgeKeys.has(edgeKey)) continue;
+
+            const path = resolvePath(edgeData.getItemGraphicEl?.(index));
+            const shape = path?.shape;
+            if (!shape || typeof shape.x1 !== "number" || typeof shape.y1 !== "number" || typeof shape.x2 !== "number" || typeof shape.y2 !== "number") continue;
+
+            const progress = ((timestamp / 1850) + index * 0.19) % 1;
+            const cpx1 = typeof shape.cpx1 === "number" ? shape.cpx1 : (shape.x1 + shape.x2) / 2;
+            const cpy1 = typeof shape.cpy1 === "number" ? shape.cpy1 : (shape.y1 + shape.y2) / 2;
+            const inverse = 1 - progress;
+            const x = inverse * inverse * shape.x1 + 2 * inverse * progress * cpx1 + progress * progress * shape.x2;
+            const y = inverse * inverse * shape.y1 + 2 * inverse * progress * cpy1 + progress * progress * shape.y2;
+
+            // This is only the moving particle. The purple edge itself remains the
+            // original ECharts graph link configured in graphLinks above.
+            overlayGroup.add(new (echarts.graphic.Circle as any)({
+              silent: true,
+              z2: 110,
+              shape: { cx: x, cy: y, r: 4.2 },
+              style: {
+                fill: "rgba(237, 233, 254, 0.98)",
+                shadowBlur: 16,
+                shadowColor: "rgba(168, 85, 247, 0.98)",
+              },
+            }));
+          }
+        }
+
+        animationFrame = window.requestAnimationFrame(drawFrame);
+      };
+
+      animationFrame = window.requestAnimationFrame(drawFrame);
+    };
+
+    animationFrame = window.requestAnimationFrame(attachToGraphView);
+
+    return () => {
+      isDisposed = true;
+      window.cancelAnimationFrame(animationFrame);
+      if (overlayGroup?.parent) overlayGroup.parent.remove(overlayGroup);
+    };
+  }, [circularHighlight, readableEdges, isFullscreen]);
 
   useEffect(() => {
     return () => {
@@ -973,7 +1148,7 @@ const WashTradingPage: React.FC = () => {
                   </button>
                 </div>
               </div>
-              <NetworkGraph nodes={result?.graphData.nodes ?? []} edges={result?.graphData.edges ?? []} tokenSymbol={symbol || result?.symbol} />
+              <NetworkGraph nodes={result?.graphData.nodes ?? []} edges={result?.graphData.edges ?? []} circularPatterns={result?.circularPatterns ?? []} tokenSymbol={symbol || result?.symbol} />
             </div>
 
             <div className={styles.card}>
@@ -1130,7 +1305,7 @@ const WashTradingPage: React.FC = () => {
                 </div>
               </div>
 
-              <NetworkGraph nodes={result?.graphData.nodes ?? []} edges={result?.graphData.edges ?? []} tokenSymbol={symbol || result?.symbol} isFullscreen />
+              <NetworkGraph nodes={result?.graphData.nodes ?? []} edges={result?.graphData.edges ?? []} circularPatterns={result?.circularPatterns ?? []} tokenSymbol={symbol || result?.symbol} isFullscreen />
 
               <div className={styles.graphModalGuide} aria-label={String(tr("washTrading.graph.guideAria"))}>
                 <span>{tr("washTrading.graph.guideDrag")}</span>
