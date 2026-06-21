@@ -49,10 +49,11 @@ const updatePromptSchema = z.object({
 });
 
 const listPromptSchema = z.object({
-  scope: z.enum(["mine", "public", "popular"]).default("public"),
+  scope: z.enum(["mine", "new", "popular"]).default("new"),
   walletAddress: z.string().optional(),
   contextType: z.enum(["wallet", "wallet-comparison"]).optional(),
   sort: z.enum(["usage", "recent", "trending"]).optional(),
+  search: z.string().trim().max(255).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
