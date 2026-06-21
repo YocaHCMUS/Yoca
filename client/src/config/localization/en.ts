@@ -2566,7 +2566,7 @@ export const translation = {
       graphRank: "Graph rank #{{rank}}",
       gnn: "GNN: {{score}}",
       empty: "No suspicious wallets yet. Run AI analysis for this token.",
-      insightTitle: "Wallet AI Explanation",
+      insightTitle: "Wallet Risk Explanation",
       insightEmpty:
         "Select a wallet from Suspicious Wallets to view the detailed AI explanation.",
       selectedWallet: "Selected wallet",

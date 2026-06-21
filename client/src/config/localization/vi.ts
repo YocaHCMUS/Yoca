@@ -2564,7 +2564,7 @@ export const translation = defineTranslation({
       graphRank: "Hạng graph #{{rank}}",
       gnn: "GNN: {{score}}",
       empty: "Chưa có ví đáng ngờ. Hãy chạy phân tích AI cho token này.",
-      insightTitle: "Giải thích AI cho ví",
+      insightTitle: "Giải thích về rủi ro ví",
       insightEmpty:
         "Chọn một ví trong danh sách Ví đáng ngờ để xem giải thích AI chi tiết.",
       selectedWallet: "Ví đã chọn",
