@@ -6,10 +6,6 @@ type FetchRetryOptions = {
   rlRetries?: number;
   rlRetryDelayMs?: number;
   rlTimeoutMs?: number;
-  rlLogContext?: {
-    provider: string;
-    endpointPath: string;
-  };
 };
 
 export type RateLimitedFetchOptions = RequestInit &
@@ -56,23 +52,41 @@ export async function rlFetch(
     rlRetries = 3,
     rlRetryDelayMs = 500,
     rlTimeoutMs = 30_000,
-    rlLogContext,
     ...fetchInit
   } = options;
 
   return rlLimiter.schedule(async () => {
     let lastErr: unknown;
+    const requestStartedAtMs = Date.now();
+    const requestUrl = url.toString();
+    const requestMethod = fetchInit.method ?? "GET";
 
     for (let attempt = 0; attempt <= rlRetries; attempt++) {
+      const attemptStartedAtMs = Date.now();
+
       try {
         const resp = await fetchWithTimeout(url, fetchInit, rlTimeoutMs);
 
         if (resp.status == 429 || (resp.status >= 500 && resp.status <= 599)) {
+          const retryAfter = resp.headers.get("Retry-After");
+
           if (attempt == rlRetries) {
+            console.error(
+              "Outbound request returned retryable status after retries",
+              {
+                url: requestUrl,
+                method: requestMethod,
+                status: resp.status,
+                attempt: attempt + 1,
+                retriesRemaining: 0,
+                retryAfter,
+                attemptDurationMs: Date.now() - attemptStartedAtMs,
+                totalDurationMs: Date.now() - requestStartedAtMs,
+              },
+            );
             return resp;
           }
 
-          const retryAfter = resp.headers.get("Retry-After");
           let waitMs = computeBackoff(attempt, rlRetryDelayMs);
           let delaySource = "exponential backoff";
 
@@ -91,9 +105,9 @@ export async function rlFetch(
                 delaySource = "Retry-After date";
               } else {
                 console.warn("Outbound request received invalid Retry-After", {
-                  provider: rlLogContext?.provider,
-                  endpointPath: rlLogContext?.endpointPath,
-                  upstreamStatus: resp.status,
+                  url: requestUrl,
+                  method: requestMethod,
+                  status: resp.status,
                   retryAfter: normalizedRetryAfter,
                 });
               }
@@ -101,18 +115,30 @@ export async function rlFetch(
           }
 
           console.warn("Outbound request retry", {
-            provider: rlLogContext?.provider,
-            endpointPath: rlLogContext?.endpointPath,
-            upstreamStatus: resp.status,
+            url: requestUrl,
+            method: requestMethod,
+            status: resp.status,
             attempt: attempt + 1,
+            retriesRemaining: rlRetries - attempt,
+            retryAfter,
             retryInMs: waitMs,
             delaySource,
+            attemptDurationMs: Date.now() - attemptStartedAtMs,
+            totalDurationMs: Date.now() - requestStartedAtMs,
           });
 
           await sleep(waitMs);
           continue;
         }
 
+        console.info("Outbound request completed", {
+          url: requestUrl,
+          method: requestMethod,
+          status: resp.status,
+          attempt: attempt + 1,
+          attemptDurationMs: Date.now() - attemptStartedAtMs,
+          totalDurationMs: Date.now() - requestStartedAtMs,
+        });
         return resp;
       } catch (e) {
         lastErr = e;
@@ -124,11 +150,17 @@ export async function rlFetch(
         const waitMs = computeBackoff(attempt, rlRetryDelayMs);
 
         console.warn("Outbound request network-error retry", {
-          provider: rlLogContext?.provider,
-          endpointPath: rlLogContext?.endpointPath,
+          url: requestUrl,
+          method: requestMethod,
+          status: null,
           attempt: attempt + 1,
+          retriesRemaining: rlRetries - attempt,
           retryInMs: waitMs,
           errorName: e instanceof Error ? e.name : "UnknownError",
+          errorMessage: e instanceof Error ? e.message : String(e),
+          error: e,
+          attemptDurationMs: Date.now() - attemptStartedAtMs,
+          totalDurationMs: Date.now() - requestStartedAtMs,
         });
 
         await sleep(waitMs);
@@ -136,9 +168,15 @@ export async function rlFetch(
     }
 
     console.error("Outbound request failed after retries", {
-      provider: rlLogContext?.provider,
-      endpointPath: rlLogContext?.endpointPath,
+      url: requestUrl,
+      method: requestMethod,
+      status: null,
+      attempts: rlRetries + 1,
       errorName: lastErr instanceof Error ? lastErr.name : "UnknownError",
+      errorMessage:
+        lastErr instanceof Error ? lastErr.message : String(lastErr),
+      error: lastErr,
+      totalDurationMs: Date.now() - requestStartedAtMs,
     });
 
     throw lastErr;
