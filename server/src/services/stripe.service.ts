@@ -128,7 +128,7 @@ export async function activateSubscription(
       tier: opts.tier,
     },
     // Expand to ensure we get all fields
-    expand: ["latest_invoice", "latest_invoice.payment_intent"],
+    expand: ["latest_invoice"],
   });
 
   console.log("[activateSubscription] Subscription created:", subscription.id, "Status:", subscription.status);
@@ -209,16 +209,36 @@ export async function upgradeSubscription(
       ...subscription.metadata,
       tier: newTier,
     },
-    expand: ["latest_invoice.payment_intent"],
+    expand: ["latest_invoice"],
   });
 
-  const invoice = updatedSubscription.latest_invoice as Stripe.Invoice;
-  const paymentIntent = invoice ? (invoice as any).payment_intent as Stripe.PaymentIntent : undefined;
+  const latestInvoice = updatedSubscription.latest_invoice;
+  const invoiceId =
+    typeof latestInvoice === "string" ? latestInvoice : latestInvoice?.id;
+  const invoice = invoiceId
+    ? await stripe.invoices.retrieve(invoiceId, {
+        expand: ["payments.data.payment.payment_intent"],
+      })
+    : undefined;
+  const invoicePayment = (invoice as any)?.payments?.data?.find(
+    (payment: any) => payment.is_default,
+  ) ?? (invoice as any)?.payments?.data?.[0];
+  const paymentIntent = invoicePayment?.payment?.payment_intent as
+    | Stripe.PaymentIntent
+    | string
+    | undefined;
 
   return {
     subscription: updatedSubscription,
-    clientSecret: paymentIntent?.client_secret,
+    invoice,
+    clientSecret:
+      typeof paymentIntent === "object"
+        ? paymentIntent.client_secret
+        : (invoice as any)?.confirmation_secret?.client_secret,
     applied: !updatedSubscription.pending_update,
-    processing: isBankPayment && paymentIntent?.status === "processing",
+    processing:
+      isBankPayment &&
+      typeof paymentIntent === "object" &&
+      paymentIntent.status === "processing",
   };
 }

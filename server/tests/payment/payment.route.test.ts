@@ -172,6 +172,7 @@ describe("Hono Payment Route", () => {
 
   describe("POST /activate-subscription", () => {
     it("should activate subscription successfully", async () => {
+      const subscriptionService = await import("@sv/services/subscription.service.js");
       const response = await app.request("/activate-subscription", {
         method: "POST",
         headers: {
@@ -188,6 +189,9 @@ describe("Hono Payment Route", () => {
       const data = (await response.json()) as any;
       expect(data.success).toBe(true);
       expect(data.subscriptionId).toBe("sub_123");
+      expect(subscriptionService.recordInvoicePayment).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "inv_123" }),
+      );
     });
   });
 

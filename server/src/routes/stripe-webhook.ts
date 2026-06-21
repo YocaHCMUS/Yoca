@@ -7,7 +7,7 @@ import {
   enumSubscriptionStatus, 
   enumPaymentStatus 
 } from "@sv/db/schema.js";
-import { constructEvent } from "@sv/services/stripe.service.js";
+import { constructEvent, getStripe } from "@sv/services/stripe.service.js";
 import { upsertSubscription, recordInvoicePayment } from "@sv/services/subscription.service.js";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
@@ -52,10 +52,29 @@ app.post("/", async (c) => {
       console.log(`[stripe-webhook] Successfully processed subscription ${subscription.id}`);
     }
 
-    if (event.type === "invoice.payment_succeeded" || event.type === "invoice.payment_failed") {
+    if (
+      event.type === "invoice.paid" ||
+      event.type === "invoice.payment_succeeded" ||
+      event.type === "invoice.payment_failed"
+    ) {
       const invoice = event.data.object as Stripe.Invoice;
-      await recordInvoicePayment(invoice);
+      await recordInvoicePayment(
+        invoice,
+        event.type === "invoice.payment_failed" ? "failed" : "succeeded",
+      );
       console.log(`[stripe-webhook] Successfully processed invoice payment ${invoice.id}`);
+    }
+
+    if (event.type === "invoice_payment.paid") {
+      const invoicePayment = event.data.object as Stripe.InvoicePayment;
+      const invoiceId =
+        typeof invoicePayment.invoice === "string"
+          ? invoicePayment.invoice
+          : invoicePayment.invoice.id;
+      const invoice = await getStripe().invoices.retrieve(invoiceId, {
+        expand: ["payments.data.payment.payment_intent"],
+      });
+      await recordInvoicePayment(invoice, "succeeded");
     }
 
     return c.text("OK", 200);
