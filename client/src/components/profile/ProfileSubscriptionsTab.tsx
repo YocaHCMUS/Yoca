@@ -499,6 +499,11 @@ function PaymentHistoryPanel({
     const directPlan = item.planName ?? item.planTier;
     if (directPlan) return directPlan;
 
+    const amountCents = (item.amountCents ?? item.amount ?? 0) as number;
+    if (amountCents === 3900) return "Lite";
+    if (amountCents === 19900) return "Plus";
+    if (amountCents === 49900) return "Pro";
+
     if (item.subscriptionId) {
       const mappedPlan = planBySubscriptionId.get(item.subscriptionId);
       if (mappedPlan) return mappedPlan;
@@ -514,10 +519,6 @@ function PaymentHistoryPanel({
       if (solSub) return solSub.planTier;
     }
 
-    const amountCents = (item.amountCents ?? item.amount ?? 0) as number;
-    if (amountCents === 3900) return "Lite";
-    if (amountCents === 19900) return "Plus";
-    if (amountCents === 49900) return "Pro";
     return "-";
   };
 

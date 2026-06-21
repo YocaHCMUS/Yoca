@@ -54,6 +54,7 @@ import {
   getUserSubscription,
   getUserPaymentHistory,
   getUserSubscriptions,
+  refreshPendingPaymentHistory,
   repairPaymentHistorySubscriptionLinks,
   syncUserSubscriptionsFromStripe,
 } from "@sv/services/subscription.service.js";
@@ -854,6 +855,14 @@ const app = new Hono()
       }
 
       let history = await getUserPaymentHistory(userId);
+      if (history.some((row) => row.status === "pending")) {
+        try {
+          await refreshPendingPaymentHistory(history);
+          history = await getUserPaymentHistory(userId);
+        } catch (refreshErr) {
+          console.warn("Failed to refresh pending payment history", refreshErr);
+        }
+      }
 
       if (history.length === 0) {
         try {

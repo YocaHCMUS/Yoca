@@ -52,6 +52,22 @@ export async function getUserPaymentHistory(userId: string) {
     .orderBy(desc(paymentHistory.createdAt));
 }
 
+export async function refreshPendingPaymentHistory(historyRows: Array<any>) {
+  const pendingInvoiceIds = historyRows
+    .filter((row) => row.status === "pending" && row.stripeInvoiceId)
+    .map((row) => row.stripeInvoiceId as string);
+  if (pendingInvoiceIds.length === 0) return;
+
+  const { getStripe } = await import("@sv/services/stripe.service.js");
+  const stripe = getStripe();
+  for (const invoiceId of pendingInvoiceIds) {
+    const invoice = await stripe.invoices.retrieve(invoiceId, {
+      expand: ["payments.data.payment.payment_intent"],
+    });
+    await recordInvoicePayment(invoice);
+  }
+}
+
 export async function enrichPaymentHistoryWithStripeProduct(
   historyRows: Array<any>,
 ) {
@@ -61,84 +77,45 @@ export async function enrichPaymentHistoryWithStripeProduct(
   const stripe = getStripe();
 
   const resolvePlanFromInvoice = async (invoice: any) => {
-    const firstLine = invoice?.lines?.data?.[0] as any;
+    const lines = invoice?.lines?.data ?? [];
+    const getPrice = (line: any) =>
+      line?.price ?? line?.pricing?.price_details?.price;
+    const selectedLine =
+      lines.find(
+        (line: any) =>
+          line.amount > 0 &&
+          mapTierFromPriceId(
+            typeof getPrice(line) === "string"
+              ? getPrice(line)
+              : getPrice(line)?.id,
+          ),
+      ) ?? lines.find((line: any) => line.amount > 0);
+    const linePrice = getPrice(selectedLine);
+    const linePriceId =
+      typeof linePrice === "string" ? linePrice : linePrice?.id;
+    const planTier = mapTierFromPriceId(linePriceId);
+    if (planTier) return { planName: planTier, planTier };
 
-    // 1) Directly from invoice line price -> product
-    const linePrice = firstLine?.price;
-    const linePriceId = linePrice?.id as string | undefined;
-    const lineProduct = linePrice?.product;
-
+    const lineProduct =
+      selectedLine?.pricing?.price_details?.product ?? linePrice?.product;
     if (typeof lineProduct === "object" && lineProduct?.name) {
-      return {
-        planName: String(lineProduct.name),
-        planTier: mapTierFromPriceId(linePriceId),
-      };
+      return { planName: String(lineProduct.name), planTier: undefined };
     }
-
     if (typeof lineProduct === "string") {
       try {
         const product = await stripe.products.retrieve(lineProduct);
         return {
           planName: product?.name ? String(product.name) : null,
-          planTier: mapTierFromPriceId(linePriceId),
+          planTier: undefined,
         };
       } catch {
-        // continue with other fallbacks
-      }
-    }
-
-    // 2) Fallback from invoice subscription -> subscription metadata / item price
-    const invoiceSubscription = invoice?.subscription;
-    const stripeSubId =
-      typeof invoiceSubscription === "string"
-        ? invoiceSubscription
-        : invoiceSubscription?.id;
-
-    if (stripeSubId) {
-      try {
-        const sub = await stripe.subscriptions.retrieve(stripeSubId, {
-          expand: ["items.data.price.product"],
-        });
-
-        const subTier = (sub as any)?.metadata?.tier as string | undefined;
-        const subPrice = sub?.items?.data?.[0]?.price as any;
-        const subPriceId = subPrice?.id as string | undefined;
-        const subProduct = subPrice?.product;
-
-        if (typeof subProduct === "object" && subProduct?.name) {
-          return {
-            planName: String(subProduct.name),
-            planTier: (subTier as any) ?? mapTierFromPriceId(subPriceId),
-          };
-        }
-
-        if (typeof subProduct === "string") {
-          try {
-            const product = await stripe.products.retrieve(subProduct);
-            return {
-              planName: product?.name ? String(product.name) : null,
-              planTier: (subTier as any) ?? mapTierFromPriceId(subPriceId),
-            };
-          } catch {
-            return {
-              planName: subTier ?? mapTierFromPriceId(subPriceId) ?? null,
-              planTier: (subTier as any) ?? mapTierFromPriceId(subPriceId),
-            };
-          }
-        }
-
-        return {
-          planName: subTier ?? mapTierFromPriceId(subPriceId) ?? null,
-          planTier: (subTier as any) ?? mapTierFromPriceId(subPriceId),
-        };
-      } catch {
-        // continue to final fallback
+        // Product lookup is optional; the invoice amount fallback remains available.
       }
     }
 
     return {
       planName: null,
-      planTier: mapTierFromPriceId(linePriceId),
+      planTier: undefined,
     };
   };
 
@@ -152,9 +129,7 @@ export async function enrichPaymentHistoryWithStripeProduct(
       }
 
       try {
-        const invoice = await stripe.invoices.retrieve(row.stripeInvoiceId, {
-          expand: ["subscription", "lines.data.price.product"],
-        });
+        const invoice = await stripe.invoices.retrieve(row.stripeInvoiceId);
 
         const { planName, planTier } = await resolvePlanFromInvoice(
           invoice as any,
@@ -162,13 +137,14 @@ export async function enrichPaymentHistoryWithStripeProduct(
 
         return {
           ...row,
-          planTier: row?.planTier ?? planTier ?? null,
-          planName: planName ?? planTier ?? row?.planTier ?? null,
+          planTier: planTier ?? null,
+          planName: planName ?? planTier ?? null,
         };
       } catch {
         return {
           ...row,
-          planName: row?.planTier ?? null,
+          planTier: null,
+          planName: null,
         };
       }
     }),
@@ -203,6 +179,13 @@ function mapTierFromPriceId(
   if (priceId === process.env.STRIPE_PRICE_PLUS) return "Plus";
   if (priceId === process.env.STRIPE_PRICE_PRO) return "Pro";
   return undefined;
+}
+
+function getInvoiceSubscriptionId(invoice: any): string | undefined {
+  const subscription =
+    invoice?.subscription ??
+    invoice?.parent?.subscription_details?.subscription;
+  return typeof subscription === "string" ? subscription : subscription?.id;
 }
 
 function resolveSubscriptionPeriodUnix(stripeSub: any): {
@@ -344,14 +327,14 @@ export async function upsertSubscription(stripeSub: any) {
   return updated;
 }
 
-export async function recordInvoicePayment(invoice: any) {
-  if (!invoice.subscription && !invoice.customer) return null;
+export async function recordInvoicePayment(
+  invoice: any,
+  statusOverride?: "succeeded" | "failed" | "pending",
+) {
+  if (!invoice.customer) return null;
 
   // We need to find the user id from the subscription
-  const subId =
-    typeof invoice.subscription === "string"
-      ? invoice.subscription
-      : invoice.subscription?.id;
+  const subId = getInvoiceSubscriptionId(invoice);
   const [sub] = subId
     ? await db
         .select()
@@ -378,20 +361,35 @@ export async function recordInvoicePayment(invoice: any) {
 
   if (!userId) return null;
 
-  const paymentIntentId = invoice.payment_intent
-    ? typeof invoice.payment_intent === "string"
-      ? invoice.payment_intent
-      : invoice.payment_intent.id
+  const invoicePayment =
+    invoice.payments?.data?.find((payment: any) => payment.is_default) ??
+    invoice.payments?.data?.[0];
+  const paymentIntent =
+    invoice.payment_intent ?? invoicePayment?.payment?.payment_intent;
+  const paymentIntentId = paymentIntent
+    ? typeof paymentIntent === "string"
+      ? paymentIntent
+      : paymentIntent.id
     : null;
 
   let brand, last4;
   if (
-    typeof invoice.payment_intent === "object" &&
-    invoice.payment_intent.payment_method_details
+    typeof paymentIntent === "object" &&
+    paymentIntent.payment_method_details
   ) {
-    brand = invoice.payment_intent.payment_method_details?.card?.brand;
-    last4 = invoice.payment_intent.payment_method_details?.card?.last4;
+    brand = paymentIntent.payment_method_details?.card?.brand;
+    last4 = paymentIntent.payment_method_details?.card?.last4;
   }
+
+  const paymentStatus =
+    statusOverride ??
+    (invoice.status === "paid" || invoicePayment?.status === "paid"
+      ? "succeeded"
+      : invoice.status === "void" ||
+          invoice.status === "uncollectible" ||
+          invoicePayment?.status === "canceled"
+        ? "failed"
+        : "pending");
 
   await db
     .insert(paymentHistory)
@@ -400,12 +398,22 @@ export async function recordInvoicePayment(invoice: any) {
       subscriptionId,
       stripePaymentIntentId: paymentIntentId,
       stripeInvoiceId: invoice.id,
-      amountCents: invoice.amount_paid,
+      amountCents: invoice.amount_paid || invoice.amount_due || invoice.total || 0,
       currency: invoice.currency,
-      status: invoice.status === "paid" ? "succeeded" : "failed",
+      status: paymentStatus,
       paymentMethodDetails: brand || last4 ? { brand, last4 } : null,
     })
-    .onConflictDoNothing({ target: paymentHistory.stripeInvoiceId });
+    .onConflictDoUpdate({
+      target: paymentHistory.stripeInvoiceId,
+      set: {
+        amountCents: invoice.amount_paid || invoice.amount_due || invoice.total || 0,
+        currency: invoice.currency,
+        status: paymentStatus,
+        ...(subscriptionId ? { subscriptionId } : {}),
+        ...(paymentIntentId ? { stripePaymentIntentId: paymentIntentId } : {}),
+        ...(brand || last4 ? { paymentMethodDetails: { brand, last4 } } : {}),
+      },
+    });
 }
 
 export async function backfillUserPaymentHistory(userId: string) {
@@ -427,12 +435,8 @@ export async function backfillUserPaymentHistory(userId: string) {
       seenInvoiceIds.add(stripeInvoice.id);
 
       // Ensure corresponding subscription exists/updated in our DB first.
-      if (stripeInvoice.subscription) {
-        const stripeSubId =
-          typeof stripeInvoice.subscription === "string"
-            ? stripeInvoice.subscription
-            : stripeInvoice.subscription.id;
-
+      const stripeSubId = getInvoiceSubscriptionId(stripeInvoice);
+      if (stripeSubId) {
         try {
           const stripeSub = await stripe.subscriptions.retrieve(stripeSubId);
           await upsertSubscription(stripeSub);
@@ -445,7 +449,7 @@ export async function backfillUserPaymentHistory(userId: string) {
       }
 
       const fullInvoice = await stripe.invoices.retrieve(stripeInvoice.id, {
-        expand: ["payment_intent"],
+        expand: ["payments.data.payment.payment_intent"],
       });
       await recordInvoicePayment(fullInvoice);
     }
@@ -469,7 +473,7 @@ export async function backfillUserPaymentHistory(userId: string) {
       if (seenInvoiceIds.has(stripeInvoice.id)) continue;
 
       const fullInvoice = await stripe.invoices.retrieve(stripeInvoice.id, {
-        expand: ["payment_intent"],
+        expand: ["payments.data.payment.payment_intent"],
       });
       await recordInvoicePayment(fullInvoice);
     }
@@ -505,10 +509,7 @@ export async function repairPaymentHistorySubscriptionLinks(userId: string) {
         expand: ["subscription"],
       });
 
-      const stripeSubId =
-        typeof (invoice as any).subscription === "string"
-          ? (invoice as any).subscription
-          : (invoice as any).subscription?.id;
+      const stripeSubId = getInvoiceSubscriptionId(invoice);
 
       if (!stripeSubId) continue;
 
