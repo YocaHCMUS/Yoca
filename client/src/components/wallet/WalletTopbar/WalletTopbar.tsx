@@ -12,7 +12,6 @@ import {
   ChevronDown,
   Edit,
   Tag as TagIcon,
-  Wallet,
   Copy,
   Information,
 } from "@carbon/icons-react";
@@ -451,9 +450,11 @@ export function WalletTopbar({
         data-chat-docked={isAiChatDocked ? "true" : "false"}
       >
         <div className={styles.topbarLeft}>
-          <div className={styles.topbarAvatar}>
-            <Wallet size={16} />
-          </div>
+          <img
+            className={styles.topbarAvatar}
+            src={`https://api.dicebear.com/9.x/identicon/svg?seed=${encodeURIComponent(address)}`}
+            alt=""
+          />
           <div className={styles.topbarIdentity}>
             <div className={styles.topbarAddress}>
               <span className={styles.topbarAddressText}>{displayName}</span>
