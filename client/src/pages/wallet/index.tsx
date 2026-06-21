@@ -997,17 +997,15 @@ export default function WalletPage() {
               isPagePdfExporting || isDataExporting || isChartsExporting
             }
             currentPeriod={selectedPeriod}
-            winRatePeriod={selectedPeriod === "All" ? "90D" : selectedPeriod}
             onPeriodChange={(period) => setSelectedPeriod(period)}
-            winRateStats={stats}
-            winRateLoading={loading}
-            isAiChatDocked={isChatOpen && chatPosition !== "fullscreen"}
           />
 
           <WalletHero
             overview={overviewReport}
             selectedPeriod={selectedPeriod}
             loading={false}
+            winRateStats={stats}
+            winRateLoading={loading}
           />
 
           <div className={styles.body}>

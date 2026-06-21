@@ -13,7 +13,6 @@ import {
   Edit,
   Tag as TagIcon,
   Copy,
-  Information,
 } from "@carbon/icons-react";
 import { InlineNotification, Tag, Tooltip } from "@carbon/react";
 import client from "@/api/main";
@@ -125,15 +124,6 @@ function resolveWalletAgeDays(
   return null;
 }
 
-type WalletWinRateStats = {
-  winRate?: number;
-  winCount?: number;
-  lossCount?: number;
-  totalTraded?: number;
-  avgWinUsd?: number;
-  avgLossUsd?: number;
-};
-
 export interface WalletTopbarProps {
   address: string;
   onAiAnalysisOpen: () => void;
@@ -143,11 +133,7 @@ export interface WalletTopbarProps {
   onExportPdf: () => void;
   isExporting: boolean;
   currentPeriod: WalletOverviewPeriodKey;
-  winRatePeriod: "24H" | "7D" | "30D" | "90D";
   onPeriodChange: (period: WalletOverviewPeriodKey) => void;
-  winRateStats?: WalletWinRateStats | null;
-  winRateLoading?: boolean;
-  isAiChatDocked?: boolean;
 }
 
 export function WalletTopbar({
@@ -159,14 +145,10 @@ export function WalletTopbar({
   onExportPdf,
   isExporting,
   currentPeriod = "24H",
-  winRatePeriod,
   onPeriodChange,
-  winRateStats,
-  winRateLoading = false,
-  isAiChatDocked = false,
 }: WalletTopbarProps) {
   const { user } = useAuth();
-  const { tr, fmt, lang } = useLocalization();
+  const { tr } = useLocalization();
   const { walletWatchlist, walletPending, toggleWallet } = useWatchlist();
   const navigate = useNavigate();
 
@@ -226,34 +208,6 @@ export function WalletTopbar({
     (identityStatus === "known" && identityName
       ? identityName
       : shortenWalletAddress(address));
-  const safeWinRate = Math.max(
-    0,
-    Math.min(100, Number(winRateStats?.winRate ?? 0)),
-  );
-  const winCount = Number(winRateStats?.winCount ?? 0);
-  const lossCount = Number(winRateStats?.lossCount ?? 0);
-  const totalTraded = Number(winRateStats?.totalTraded ?? 0);
-  const avgWinUsd = Number(winRateStats?.avgWinUsd ?? 0);
-  const avgLossUsd = Number(winRateStats?.avgLossUsd ?? 0);
-  const hasWinRateStats = Boolean(winRateStats) && Number.isFinite(safeWinRate);
-  const isHighWinRate = safeWinRate >= 50;
-  const localeCode = lang === "vi" ? "vi-VN" : "en-US";
-  const formatWinRatePercent = (value: number) =>
-    `${value.toLocaleString(localeCode, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
-  const formatCount = (value: number) => fmt.num.compact.decimal(value);
-  const winRateSummary = winRateLoading
-    ? "--"
-    : String(
-        tr("walletPage.tokenWinRate.summaryShort", {
-          win: formatCount(winCount),
-          tradedCount: formatCount(totalTraded),
-        }),
-      );
-  const formatCurrencyAbs = (value: number) =>
-    fmt.num.compact.currency(Math.abs(value));
-  const formatSignedCurrency = (value: number, sign: "+" | "-") =>
-    winRateLoading ? "--" : `${sign}${formatCurrencyAbs(value)}`;
-
   useEffect(() => {
     if (!address || address === "null") return;
     fetchWalletIntelligence(address, "solana")
@@ -445,10 +399,7 @@ export function WalletTopbar({
 
   return (
     <>
-      <div
-        className={styles.topbar}
-        data-chat-docked={isAiChatDocked ? "true" : "false"}
-      >
+      <div className={styles.topbar}>
         <div className={styles.topbarLeft}>
           <img
             className={styles.topbarAvatar}
@@ -530,134 +481,6 @@ export function WalletTopbar({
               >
                 <TagIcon size={16} />
               </button>
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.topbarCenter}>
-          <div className={styles.winRateMiniCard}>
-            <div className={styles.winRateMiniHeader}>
-              <span>{tr("walletPage.tokenWinRate.title")}</span>
-              <div className={styles.winRateTooltipWrap}>
-                <button
-                  type="button"
-                  className={styles.winRateInfoBtn}
-                  aria-label={String(
-                    tr("walletPage.tokenWinRate.explanationAria"),
-                  )}
-                  aria-describedby="wallet-win-rate-tooltip"
-                >
-                  <Information size={13} />
-                </button>
-
-                <div
-                  id="wallet-win-rate-tooltip"
-                  className={styles.winRateTooltipPanel}
-                  role="tooltip"
-                >
-                  <p>
-                    <strong>
-                      {tr("walletPage.tokenWinRate.tooltipWinRateLabel")}
-                    </strong>{" "}
-                    {tr("walletPage.tokenWinRate.tooltipWinRateDescription", {
-                      period: winRatePeriod,
-                    })}
-                  </p>
-
-                  <dl className={styles.winRateTooltipStats}>
-                    <div>
-                      <dt>
-                        {tr("walletPage.tokenWinRate.tooltipTotalTradedTokens")}
-                      </dt>
-                      <dd>
-                        {tr("walletPage.tokenWinRate.tooltipTokenValue", {
-                          value: formatCount(totalTraded),
-                        })}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>
-                        {tr(
-                          "walletPage.tokenWinRate.tooltipRealizedProfitTokens",
-                        )}
-                      </dt>
-                      <dd>
-                        {tr("walletPage.tokenWinRate.tooltipTokenValue", {
-                          value: formatCount(winCount),
-                        })}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>
-                        {tr(
-                          "walletPage.tokenWinRate.tooltipRealizedLossTokens",
-                        )}
-                      </dt>
-                      <dd>
-                        {tr("walletPage.tokenWinRate.tooltipTokenValue", {
-                          value: formatCount(lossCount),
-                        })}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>
-                        {tr("walletPage.tokenWinRate.tooltipClosedAvgLoss")}
-                      </dt>
-                      <dd>{formatSignedCurrency(avgLossUsd, "-")}</dd>
-                    </div>
-                  </dl>
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.winRateMiniBody}>
-              <div className={styles.winRateMainCol}>
-                <div
-                  className={styles.winRateValue}
-                  data-positive={isHighWinRate}
-                >
-                  {winRateLoading
-                    ? "--"
-                    : hasWinRateStats
-                      ? formatWinRatePercent(safeWinRate)
-                      : "--"}
-                </div>
-                <div className={styles.winRateProgressWrap} aria-hidden="true">
-                  <div
-                    className={styles.winRateProgressWin}
-                    style={{
-                      width: `${winRateLoading || !hasWinRateStats ? 0 : safeWinRate}%`,
-                    }}
-                  />
-                  <div
-                    className={styles.winRateProgressLoss}
-                    style={{
-                      width: `${winRateLoading || !hasWinRateStats ? 0 : 100 - safeWinRate}%`,
-                    }}
-                  />
-                </div>
-                <div className={styles.winRateCounts} title={winRateSummary}>
-                  <span className={styles.winRateCountsText}>
-                    {winRateSummary}
-                  </span>
-                </div>
-              </div>
-
-              <div className={styles.winRateDivider} />
-
-              <div className={styles.winRateMetricCol}>
-                <span>{tr("walletPage.tokenWinRate.avgWin")}</span>
-                <strong className={styles.winRateMetricWin}>
-                  {formatSignedCurrency(avgWinUsd, "+")}
-                </strong>
-              </div>
-
-              <div className={styles.winRateMetricCol}>
-                <span>{tr("walletPage.tokenWinRate.avgLoss")}</span>
-                <strong className={styles.winRateMetricLoss}>
-                  {formatSignedCurrency(avgLossUsd, "-")}
-                </strong>
-              </div>
             </div>
           </div>
         </div>
