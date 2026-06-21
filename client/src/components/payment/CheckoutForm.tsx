@@ -58,6 +58,13 @@ export function CheckoutForm({
     setErrorMsg(null);
 
     try {
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        setErrorMsg(submitError.message ?? tr("payment.errors.cardSetupFailed"));
+        setIsProcessing(false);
+        return;
+      }
+
       // Step 1: Create the SetupIntent on the backend with the selected paymentMethodTypes
       // This ensures Stripe only includes the method the user selected
       const setupResp = await client.api.payment["setup-intent"].$post({
@@ -159,7 +166,7 @@ export function CheckoutForm({
 
       {/* Payment Method Cards Grid */}
       <div className="mb-5 grid grid-cols-3 gap-3">
-        {/* Cash Payment Method */}
+        {/* Card Payment Method */}
         <button
           type="button"
           onClick={() => {

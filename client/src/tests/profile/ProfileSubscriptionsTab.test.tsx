@@ -3,6 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 vi.mock("@carbon/react", () => ({
+  InlineNotification: ({ title, subtitle }: any) => (
+    <div role="status">
+      {title}: {subtitle}
+    </div>
+  ),
   Modal: ({
     open,
     children,
@@ -47,6 +52,7 @@ vi.mock("@/services/profile/subscriptionApi", () => ({
   getUserSubscriptions: vi.fn(),
   getUserPaymentHistory: vi.fn(),
   cancelSubscription: vi.fn(),
+  previewSubscriptionUpgrade: vi.fn(),
   upgradeSubscription: vi.fn(),
 }));
 
@@ -56,6 +62,8 @@ import {
   getUserPaymentHistory,
   getUserSubscription,
   getUserSubscriptions,
+  previewSubscriptionUpgrade,
+  upgradeSubscription,
   type Subscription,
 } from "@/services/profile/subscriptionApi";
 
@@ -89,6 +97,21 @@ function mockSubscriptionData(subscription: Subscription) {
 describe("ProfileSubscriptionsTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(previewSubscriptionUpgrade).mockResolvedValue({
+      amountDue: 4200,
+      creditAmount: 1300,
+      chargeAmount: 5500,
+      currency: "usd",
+      prorationDate: 1782000000,
+    });
+    vi.mocked(upgradeSubscription).mockResolvedValue({
+      success: true,
+      applied: true,
+      processing: false,
+      subscriptionId: "sub_123",
+      clientSecret: null,
+      status: "active",
+    });
   });
 
   it("renders cancel and upgrade actions for Stripe-managed subscriptions", async () => {
@@ -108,6 +131,14 @@ describe("ProfileSubscriptionsTab", () => {
     expect(await screen.findByText("Access Expires")).toBeInTheDocument();
     expect(screen.getByText("formatted:2026-07-08T00:00:00.000Z")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Cancel Subscription" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Upgrade to/i })).not.toBeInTheDocument();
+  });
+
+  it("labels past-due subscriptions clearly and disables upgrades", async () => {
+    mockSubscriptionData({ ...stripeSubscription, status: "past_due" });
+    render(<ProfileSubscriptionsTab />);
+
+    expect(await screen.findByText("Payment overdue")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Upgrade to/i })).not.toBeInTheDocument();
   });
 
@@ -133,5 +164,66 @@ describe("ProfileSubscriptionsTab", () => {
     await waitFor(() => {
       expect(cancelSubscription).toHaveBeenCalledWith("sub_123");
     });
+  });
+
+  it("previews the prorated price and upgrades only after confirmation", async () => {
+    mockSubscriptionData(stripeSubscription);
+    render(<ProfileSubscriptionsTab />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Upgrade to Plus" }));
+
+    expect(await screen.findByRole("dialog")).toHaveTextContent("Amount due now");
+    expect(screen.getByRole("dialog")).toHaveTextContent("$42.00");
+    expect(upgradeSubscription).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Confirm upgrade" }));
+
+    await waitFor(() => {
+      expect(upgradeSubscription).toHaveBeenCalledWith("sub_123", "Plus", 1782000000);
+    });
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Upgrade complete: Your subscription is now on the Plus plan.",
+    );
+  });
+
+  it("keeps the previous plan when Stripe leaves the upgrade pending", async () => {
+    mockSubscriptionData(stripeSubscription);
+    vi.mocked(upgradeSubscription).mockResolvedValue({
+      success: false,
+      applied: false,
+      processing: false,
+      subscriptionId: "sub_123",
+      clientSecret: "pi_secret",
+      status: "active",
+    });
+
+    render(<ProfileSubscriptionsTab />);
+    await userEvent.click(await screen.findByRole("button", { name: "Upgrade to Plus" }));
+    await userEvent.click(screen.getByRole("button", { name: "Confirm upgrade" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Payment not completed",
+    );
+    expect(getUserSubscription).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows bank upgrades as processing instead of failed", async () => {
+    mockSubscriptionData(stripeSubscription);
+    vi.mocked(upgradeSubscription).mockResolvedValue({
+      success: true,
+      applied: true,
+      processing: true,
+      subscriptionId: "sub_123",
+      clientSecret: "pi_secret",
+      status: "active",
+    });
+
+    render(<ProfileSubscriptionsTab />);
+    await userEvent.click(await screen.findByRole("button", { name: "Upgrade to Plus" }));
+    await userEvent.click(screen.getByRole("button", { name: "Confirm upgrade" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Upgrade submitted: Your Plus upgrade is active while the bank payment is processing.",
+    );
   });
 });

@@ -98,9 +98,23 @@ export async function cancelSubscription(subscriptionId: string) {
     return resp.json();
 }
 
-export async function upgradeSubscription(subscriptionId: string, newTier: "Lite" | "Plus" | "Pro") {
-    const resp = await client.api.payment.upgrade.$post({
+export async function previewSubscriptionUpgrade(subscriptionId: string, newTier: "Lite" | "Plus" | "Pro") {
+    const resp = await client.api.payment["upgrade-preview"].$post({
         json: { subscriptionId, newTier },
+    });
+    if (!resp.ok) {
+        throw new Error(`Failed to preview subscription upgrade: ${resp.status}`);
+    }
+    return resp.json();
+}
+
+export async function upgradeSubscription(
+    subscriptionId: string,
+    newTier: "Lite" | "Plus" | "Pro",
+    prorationDate?: number,
+) {
+    const resp = await client.api.payment.upgrade.$post({
+        json: { subscriptionId, newTier, prorationDate },
     });
     if (!resp.ok) {
         throw new Error(`Failed to upgrade subscription: ${resp.status}`);

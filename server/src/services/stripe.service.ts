@@ -152,10 +152,47 @@ export async function cancelSubscription(subscriptionId: string) {
   });
 }
 
-export async function upgradeSubscription(subscriptionId: string, newTier: string) {
+export async function previewSubscriptionUpgrade(subscriptionId: string, newTier: string) {
+  const stripe = getStripe();
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const prorationDate = Math.floor(Date.now() / 1000);
+  const preview = await stripe.invoices.createPreview({
+    subscription: subscriptionId,
+    subscription_details: {
+      items: [{
+        id: subscription.items.data[0].id,
+        price: getPriceIdForTier(newTier),
+      }],
+      proration_behavior: "always_invoice",
+      proration_date: prorationDate,
+    },
+  });
+  const prorations = preview.lines.data.filter(
+    (line) => line.parent?.subscription_item_details?.proration,
+  );
+
+  return {
+    amountDue: preview.amount_due,
+    creditAmount: Math.abs(prorations.filter((line) => line.amount < 0).reduce((sum, line) => sum + line.amount, 0)),
+    chargeAmount: prorations.filter((line) => line.amount > 0).reduce((sum, line) => sum + line.amount, 0),
+    currency: preview.currency,
+    prorationDate,
+  };
+}
+
+export async function upgradeSubscription(
+  subscriptionId: string,
+  newTier: string,
+  prorationDate?: number,
+) {
   const stripe = getStripe();
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
   const newPriceId = getPriceIdForTier(newTier);
+  const defaultPaymentMethod = subscription.default_payment_method;
+  const paymentMethod = typeof defaultPaymentMethod === "string"
+    ? await stripe.paymentMethods.retrieve(defaultPaymentMethod)
+    : defaultPaymentMethod;
+  const isBankPayment = paymentMethod?.type === "us_bank_account";
 
   const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
     items: [
@@ -164,8 +201,10 @@ export async function upgradeSubscription(subscriptionId: string, newTier: strin
         price: newPriceId,
       },
     ],
-    proration_behavior: "create_prorations",
-    payment_behavior: "default_incomplete",
+    proration_behavior: "always_invoice",
+    ...(prorationDate ? { proration_date: prorationDate } : {}),
+    // Stripe pending updates don't support US bank accounts.
+    payment_behavior: isBankPayment ? "error_if_incomplete" : "pending_if_incomplete",
     metadata: {
       ...subscription.metadata,
       tier: newTier,
@@ -179,5 +218,7 @@ export async function upgradeSubscription(subscriptionId: string, newTier: strin
   return {
     subscription: updatedSubscription,
     clientSecret: paymentIntent?.client_secret,
+    applied: !updatedSubscription.pending_update,
+    processing: isBankPayment && paymentIntent?.status === "processing",
   };
 }
