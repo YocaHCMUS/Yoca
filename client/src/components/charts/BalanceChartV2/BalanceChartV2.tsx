@@ -182,6 +182,22 @@ export function BalanceChartV2({
     return tokenBalances.data ?? [];
   }, [selectedTokens, totalBalance.data, tokenBalances.data]);
 
+  const totalBalanceLoadingState = totalBalance.error
+    ? {
+        status: "error" as const,
+        retryCount: 0,
+        error: {
+          code: "BALANCE_HISTORY_UNAVAILABLE",
+          message:
+            "Balance history is temporarily unavailable. Please try again.",
+          retryable: true,
+        },
+      }
+    : {
+        status: "success" as const,
+        retryCount: 0,
+      };
+
   const series24hChanges = useMemo(() => {
     return balanceSeries.reduce<Record<string, ChangeMetric | null>>(
       (acc, series) => {
@@ -198,6 +214,14 @@ export function BalanceChartV2({
     <ChartWrapper
       title={tr("charts.balanceChart.title")}
       wrapperMinHeight={minHeight}
+      loadingState={totalBalanceLoadingState}
+      onRetry={
+        totalBalance.error
+          ? () => {
+              void totalBalance.mutate();
+            }
+          : undefined
+      }
       enableExport={false}
       enableFullscreen={false}
       enableMiniPlayer={false}

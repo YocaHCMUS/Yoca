@@ -136,8 +136,34 @@ export function MultiWalletBalanceChart({
     );
   }, [balanceSeries]);
 
+  const balanceHistoryLoadingState = balanceHistory.error
+    ? {
+        status: "error" as const,
+        retryCount: 0,
+        error: {
+          code: "BALANCE_HISTORY_UNAVAILABLE",
+          message:
+            "Balance history is temporarily unavailable. Please try again.",
+          retryable: true,
+        },
+      }
+    : {
+        status: "success" as const,
+        retryCount: 0,
+      };
+
   return (
-    <ChartWrapper title="Combined Balance History">
+    <ChartWrapper
+      title="Combined Balance History"
+      loadingState={balanceHistoryLoadingState}
+      onRetry={
+        balanceHistory.error
+          ? () => {
+              void balanceHistory.mutate();
+            }
+          : undefined
+      }
+    >
       <Flex dir="column" gap={8}>
         <Flex justify="end">
           <FilterSwitch

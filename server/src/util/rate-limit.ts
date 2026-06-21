@@ -6,6 +6,11 @@ type FetchRetryOptions = {
   rlRetries?: number;
   rlRetryDelayMs?: number;
   rlTimeoutMs?: number;
+  /** Safe request metadata for retry logs. Do not include credentials or full URLs. */
+  rlLogContext?: {
+    provider: string;
+    endpointPath: string;
+  };
 };
 
 export type RateLimitedFetchOptions = RequestInit &
@@ -52,6 +57,7 @@ export async function rlFetch(
     rlRetries = 3,
     rlRetryDelayMs = 500,
     rlTimeoutMs = 30_000,
+    rlLogContext,
     ...fetchInit
   } = options;
 
@@ -85,16 +91,24 @@ export async function rlFetch(
                 waitMs = Math.max(0, retryAfterDate - Date.now());
                 delaySource = "Retry-After date";
               } else {
-                console.warn(
-                  `Rate Limit Fetch: ${resp.status} received invalid Retry-After header "${retryAfter}", using exponential backoff`,
-                );
+                console.warn("Outbound request received invalid Retry-After", {
+                  provider: rlLogContext?.provider,
+                  endpointPath: rlLogContext?.endpointPath,
+                  upstreamStatus: resp.status,
+                  retryAfter: normalizedRetryAfter,
+                });
               }
             }
           }
 
-          console.warn(
-            `Rate Limit Fetch: ${resp.status} retry in ${waitMs}ms using ${delaySource}`,
-          );
+          console.warn("Outbound request retry", {
+            provider: rlLogContext?.provider,
+            endpointPath: rlLogContext?.endpointPath,
+            upstreamStatus: resp.status,
+            attempt: attempt + 1,
+            retryInMs: waitMs,
+            delaySource,
+          });
 
           await sleep(waitMs);
           continue;
@@ -110,13 +124,23 @@ export async function rlFetch(
 
         const waitMs = computeBackoff(attempt, rlRetryDelayMs);
 
-        console.warn(`Rate Limit Fetch: network error retry in ${waitMs}ms`, e);
+        console.warn("Outbound request network-error retry", {
+          provider: rlLogContext?.provider,
+          endpointPath: rlLogContext?.endpointPath,
+          attempt: attempt + 1,
+          retryInMs: waitMs,
+          errorName: e instanceof Error ? e.name : "UnknownError",
+        });
 
         await sleep(waitMs);
       }
     }
 
-    console.error("Rate Limit Fetch: failed after retries", lastErr);
+    console.error("Outbound request failed after retries", {
+      provider: rlLogContext?.provider,
+      endpointPath: rlLogContext?.endpointPath,
+      errorName: lastErr instanceof Error ? lastErr.name : "UnknownError",
+    });
 
     throw lastErr;
   });

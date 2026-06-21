@@ -1,5 +1,8 @@
 import { solanaBase58Schema, validate } from "@sv/middlewares/validation";
-import { getWalletBalanceHistory } from "@sv/services/wallet/walletCharts.service";
+import {
+  getWalletBalanceHistory,
+  ZerionUpstreamError,
+} from "@sv/services/wallet/walletCharts.service";
 import { getWalletTokenBalanceHistory } from "@sv/services/wallet/walletTokenBalance.service";
 import { serverErr, setErr } from "@sv/util/errors";
 import { statusCode } from "@sv/util/responses";
@@ -42,6 +45,11 @@ const app = new Hono()
 
       return c.json(res, statusCode.Ok);
     } catch (e) {
+      if (e instanceof ZerionUpstreamError) {
+        // Keep the successful response shape unchanged. A partial response would
+        // otherwise make a failed wallet indistinguishable from an empty chart.
+        return c.json(setErr("BAD_GATEWAY"), statusCode.BadGateway);
+      }
       return serverErr(c, e);
     }
   })
