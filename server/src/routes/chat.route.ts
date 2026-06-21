@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { answerChatQuery } from "@sv/services/chat/index.js";
+import { answerChatQuery, createPrompt, deletePrompt, forkPrompt, getPrompt, incrementPromptUsage, listPrompts, updatePrompt } from "@sv/services/chat/index.js";
 import { honoJwt } from "@sv/middlewares/validation.js";
 import userExtract from "@sv/middlewares/user-extract.js";
 import { setErr } from "@sv/util/errors.js";
@@ -12,7 +12,6 @@ import {
   getSession,
   getUserSessions,
   updateSession,
-  type ChatSessionContextType,
 } from "@sv/services/chat/chat-session.js";
 
 const historyMessageSchema = z.object({
@@ -29,6 +28,33 @@ const chatRequestSchema = z.object({
   contextType: z.enum(["wallet", "wallet-comparison"]).optional(),
   skipCache: z.boolean().optional(),
   skipSessionSave: z.boolean().optional(),
+  promptId: z.string().optional(),
+});
+
+const createPromptSchema = z.object({
+  label: z.string().min(1).max(255),
+  query: z.string().min(1).max(2000),
+  contextTypes: z.array(z.enum(["wallet", "wallet-comparison"])).min(1).optional(),
+  walletAddress: z.string().min(32).max(48).optional().nullable(),
+  isPublic: z.boolean().optional(),
+  forkedFrom: z.string().optional().nullable(),
+});
+
+const updatePromptSchema = z.object({
+  label: z.string().min(1).max(255).optional(),
+  query: z.string().min(1).max(2000).optional(),
+  contextTypes: z.array(z.enum(["wallet", "wallet-comparison"])).min(1).optional(),
+  walletAddress: z.string().min(32).max(48).optional().nullable(),
+  isPublic: z.boolean().optional(),
+});
+
+const listPromptSchema = z.object({
+  scope: z.enum(["mine", "public", "popular"]).default("public"),
+  walletAddress: z.string().optional(),
+  contextType: z.enum(["wallet", "wallet-comparison"]).optional(),
+  sort: z.enum(["usage", "recent", "trending"]).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
 const createSessionSchema = z.object({
@@ -74,8 +100,12 @@ const chatRoute = new Hono().post("/", honoJwt, userExtract, async (c) => {
       );
     }
 
-    const { addresses, query, language, history, sessionId, contextType, skipCache, skipSessionSave } = parsed.data;
+    const { addresses, query, language, history, sessionId, contextType, skipCache, skipSessionSave, promptId } = parsed.data;
     const response = await answerChatQuery(addresses, query, language, history, skipCache);
+
+    if (promptId) {
+      incrementPromptUsage(promptId).catch(() => {});
+    }
 
     let activeSessionId = sessionId;
 
@@ -228,7 +258,117 @@ const sessionRoutes = new Hono()
     return c.json({ success: true }, 200);
   });
 
-const app = chatRoute.route("/sessions", sessionRoutes);
+// ─── Prompt CRUD sub-routes ──────────────────────────────────────────────
+const promptRoutes = new Hono()
+  .get("/", honoJwt, userExtract, async (c) => {
+    const { id: userId } = c.get("userPayload")!;
+    const query = c.req.query();
+    const parsed = listPromptSchema.safeParse(query);
+
+    if (!parsed.success) {
+      return c.json(
+        { error: "Validation error", details: parsed.error.issues },
+        400,
+      );
+    }
+
+    const result = await listPrompts({
+      userId,
+      ...parsed.data,
+    });
+    return c.json(result, 200);
+  })
+  .post("/", honoJwt, userExtract, async (c) => {
+    const { id: userId } = c.get("userPayload")!;
+    const body = await c.req.json();
+    const parsed = createPromptSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return c.json(
+        { error: "Validation error", details: parsed.error.issues },
+        400,
+      );
+    }
+
+    const prompt = await createPrompt({
+      userId,
+      label: parsed.data.label,
+      query: parsed.data.query,
+      contextTypes: parsed.data.contextTypes,
+      walletAddress: parsed.data.walletAddress,
+      isPublic: parsed.data.isPublic,
+      forkedFrom: parsed.data.forkedFrom,
+    });
+    return c.json(prompt, 201);
+  })
+  .get("/:id", honoJwt, userExtract, async (c) => {
+    const promptId = c.req.param("id")!;
+    const prompt = await getPrompt(promptId);
+
+    if (!prompt) {
+      return c.json(setErr("NOT_FOUND"), statusCode.NotFound);
+    }
+
+    return c.json(prompt, 200);
+  })
+  .put("/:id", honoJwt, userExtract, async (c) => {
+    const { id: userId } = c.get("userPayload")!;
+    const promptId = c.req.param("id")!;
+    const body = await c.req.json();
+    const parsed = updatePromptSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return c.json(
+        { error: "Validation error", details: parsed.error.issues },
+        400,
+      );
+    }
+
+    const prompt = await updatePrompt(promptId, userId, parsed.data);
+
+    if (!prompt) {
+      return c.json(setErr("NOT_FOUND"), statusCode.NotFound);
+    }
+
+    return c.json(prompt, 200);
+  })
+  .delete("/:id", honoJwt, userExtract, async (c) => {
+    const { id: userId } = c.get("userPayload")!;
+    const promptId = c.req.param("id")!;
+
+    const existing = await getPrompt(promptId);
+    if (!existing || existing.userId !== userId) {
+      return c.json(setErr("NOT_FOUND"), statusCode.NotFound);
+    }
+
+    await deletePrompt(promptId, userId);
+    return c.json({ success: true }, 200);
+  })
+  .post("/:id/fork", honoJwt, userExtract, async (c) => {
+    const { id: userId } = c.get("userPayload")!;
+    const promptId = c.req.param("id")!;
+
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = z.object({
+      label: z.string().max(255).optional(),
+      isPublic: z.boolean().optional(),
+    }).safeParse(body);
+
+    const prompt = await forkPrompt(promptId, userId, {
+      label: parsed.success ? parsed.data.label : undefined,
+      isPublic: parsed.success ? parsed.data.isPublic : undefined,
+    });
+
+    if (!prompt) {
+      return c.json(setErr("NOT_FOUND"), statusCode.NotFound);
+    }
+
+    return c.json(prompt, 201);
+  });
+
+const app = chatRoute
+  .route("/sessions", sessionRoutes)
+  .route("/prompts", promptRoutes);
 
 export default app;
 export type ChatAppType = typeof app;

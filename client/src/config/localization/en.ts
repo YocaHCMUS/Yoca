@@ -2053,66 +2053,48 @@ export const translation = {
       custom: "Analysis",
     },
     prompt: {
-      overview: {
-        label: "Overview",
-        query:
-          "Give a portfolio overview of this wallet including total balance, 24h change, and trading volume.",
-      },
-      pnl: {
-        label: "PnL Summary",
-        query:
-          "What is the profit and loss for this wallet? Show per-token breakdown with realized PnL and win rate.",
-      },
-      trades: {
-        label: "Recent Trades",
-        query:
-          "Show the recent swap transactions for this wallet with token details and USD values.",
-      },
-      tokens: {
-        label: "Top Tokens",
-        query:
-          "What are the current token holdings of this wallet by USD value?",
-      },
-      balance: {
-        label: "Balance Trend",
-        query:
-          "Show the balance history chart for this wallet over the last 30 days.",
-      },
-      portfolioChange: {
-        label: "Portfolio Change",
-        query:
-          "Compare this wallet's current portfolio to a 7 days ago. Have holdings changed significantly?",
-      },
-      tokenPrices: {
-        label: "Token Prices",
-        query:
-          "Check the current prices and market data for 5 most significant tokens held by this wallet.",
-      },
-      compareOverview: {
-        label: "Compare Portfolios",
-        query:
-          "Compare the portfolios of these wallets — which has the best total value and 24h change?",
-      },
-      comparePnl: {
-        label: "PnL Comparison",
-        query:
-          "Compare PnL across these wallets — which has the highest realized profit and win rate?",
-      },
-      commonHoldings: {
-        label: "Common Holdings",
-        query:
-          "Which tokens are commonly held across these wallets and what are the overlaps?",
-      },
-      topPerformer: {
-        label: "Top Performer",
-        query:
-          "Which wallet has the best ROI and trading performance across all metrics?",
-      },
-      riskComparison: {
-        label: "Risk Comparison",
-        query:
-          "Compare diversification and risk profiles across these wallets.",
-      },
+      overview: { label: "Overview", query: "Give a portfolio overview of this wallet including total balance, 24h change, and trading volume." },
+      pnl: { label: "PnL Summary", query: "What is the profit and loss for this wallet? Show per-token breakdown with realized PnL and win rate." },
+      trades: { label: "Recent Trades", query: "Show the recent swap transactions for this wallet with token details and USD values." },
+      tokens: { label: "Top Tokens", query: "What are the current token holdings of this wallet by USD value?" },
+      balance: { label: "Balance Trend", query: "Show the balance history chart for this wallet over the last 30 days." },
+      portfolioChange: { label: "Portfolio Change", query: "Compare this wallet's current portfolio to a 7 days ago. Have holdings changed significantly?" },
+      tokenPrices: { label: "Token Prices", query: "Check the current prices and market data for 5 most significant tokens held by this wallet." },
+      compareOverview: { label: "Compare Portfolios", query: "Compare the portfolios of these wallets — which has the best total value and 24h change?" },
+      comparePnl: { label: "PnL Comparison", query: "Compare PnL across these wallets — which has the highest realized profit and win rate?" },
+      commonHoldings: { label: "Common Holdings", query: "Which tokens are commonly held across these wallets and what are the overlaps?" },
+      topPerformer: { label: "Top Performer", query: "Which wallet has the best ROI and trading performance across all metrics?" },
+      riskComparison: { label: "Risk Comparison", query: "Compare diversification and risk profiles across these wallets." },
+      tabMine: "My Prompts",
+      tabExplore: "Explore",
+      exploreSubtabCommunity: "Community",
+      exploreSubtabSystem: "System",
+      searchPlaceholder: "Search prompts...",
+      createBtn: "+ Create",
+      loading: "Loading prompts...",
+      emptyMine: "No prompts yet. Create one!",
+      empty: "No prompts found.",
+      uses: "{{count}} uses",
+      publicBadge: "Public",
+      scopedBadge: "Scoped",
+      fork: "Fork",
+      edit: "Edit",
+      del: "Del",
+      view: "View",
+      dialogViewTitle: "View Prompt",
+      loadMore: "Show all {{count}}",
+      dialogCreateTitle: "Create Prompt",
+      dialogEditTitle: "Edit Prompt",
+      dialogForkTitle: "Fork Prompt",
+      dialogLabel: "Label",
+      dialogQuery: "Query",
+      dialogPublic: "Make public (visible to all users)",
+      dialogCreate: "Create",
+      dialogSave: "Save",
+      dialogSaving: "Saving...",
+      dialogRequired: "Label and query are required.",
+      dialogSaveError: "Failed to save prompt. Please try again.",
+      forkedFrom: 'Forked from "{{label}}"',
     },
   },
   token: {

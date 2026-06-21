@@ -2,6 +2,7 @@ import { useContext, useEffect, useRef, useState, type KeyboardEvent } from "rea
 import { Add, ChevronDown, Maximize, OpenPanelLeft, OpenPanelRight, Playlist, Send, TrashCan } from "@carbon/icons-react";
 import { WalletChatMessage } from "./WalletChatMessage";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
+import { ChatPromptMenu } from "./ChatPromptMenu";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type { LangKeys } from "@/config/localization";
 import type { ChatSessionContextType } from "./useChatSessions";
@@ -21,10 +22,11 @@ interface Props {
   contextType?: ChatSessionContextType;
 }
 
-function WalletChatInner({ variant, chatPosition, onChatPositionChange }: {
+function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAddresses }: {
   variant: "widget" | "sidebar";
   chatPosition: "right" | "left" | "fullscreen";
   onChatPositionChange: (position: "right" | "left" | "fullscreen") => void;
+  walletAddresses: string[];
 }) {
   const { tr, fmt } = useLocalization();
   const { user, isUserLoading } = useAuth();
@@ -94,16 +96,12 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange }: {
     }
   };
 
-  const handlePredefined = (query: string) => {
-    sendQuery(query);
+  const handlePredefined = (query: string, promptId?: string) => {
+    sendQuery(query, promptId ? { promptId } : undefined);
   };
 
   const resolveQuery = (q: typeof PREDEFINED_QUESTIONS[number]): string => {
     return q.queryKey ? tr(q.queryKey as "chat.prompt.overview.query") : q.query;
-  };
-
-  const resolveLabel = (q: typeof PREDEFINED_QUESTIONS[number]): string => {
-    return q.labelKey ? tr(q.labelKey as "chat.prompt.overview.label") : q.label;
   };
 
   const handleToggle = () => {
@@ -200,22 +198,11 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange }: {
   }
 
   const renderPromptMenu = () => (
-    <div className={styles.promptMenuOverlay}>
-      <div className={styles.promptMenuTitle}>{tr("chat.promptMenuTitle")}</div>
-      <div className={styles.promptMenuList}>
-        {PREDEFINED_QUESTIONS.map((q) => (
-          <button
-            key={q.id}
-            type="button"
-            className={styles.promptMenuItem}
-            onClick={() => handlePredefined(resolveQuery(q))}
-          >
-            <div className={styles.promptMenuItemLabel}>{resolveLabel(q)}</div>
-            <div className={styles.promptMenuItemQuery}>{resolveQuery(q)}</div>
-          </button>
-        ))}
-      </div>
-    </div>
+    <ChatPromptMenu
+      walletAddress={walletAddresses[0]}
+      onSelect={handlePredefined}
+      onClose={() => setShowPromptMenu(false)}
+    />
   );
 
   const renderGreeting = () => {
@@ -426,7 +413,8 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
   const existingCtx = useContext(ChatContext);
 
   if (existingCtx) {
-    return <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} />;
+    const ctxAddrs: string[] = [];
+    return <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} walletAddresses={ctxAddrs} />;
   }
 
   const activeAddresses = [address, ...(addresses ?? [])].filter(Boolean) as string[];
@@ -434,7 +422,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
 
   return (
     <ChatContextProvider addresses={activeAddresses} contextType={contextType} lang={lang}>
-      <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} />
+      <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} walletAddresses={activeAddresses} />
     </ChatContextProvider>
   );
 }

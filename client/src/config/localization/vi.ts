@@ -2015,63 +2015,48 @@ export const translation = defineTranslation({
       custom: "Phân tích",
     },
     prompt: {
-      overview: {
-        label: "Tổng quan",
-        query:
-          "Cung cấp tổng quan về danh mục đầu tư của ví này bao gồm tổng số dư, biến động 24h và khối lượng giao dịch.",
-      },
-      pnl: {
-        label: "Tổng lãi/lỗ",
-        query:
-          "Lãi và lỗ của ví này là gì? Hiển thị phân tích theo token với PnL đã thực hiện và tỷ lệ thắng.",
-      },
-      trades: {
-        label: "Giao dịch gần đây",
-        query:
-          "Hiển thị các giao dịch swap gần đây của ví này với chi tiết token và giá trị USD.",
-      },
-      tokens: {
-        label: "Token hàng đầu",
-        query: "Các token của ví này đang nắm giữ theo giá trị USD là gì?",
-      },
-      balance: {
-        label: "Xu hướng số dư",
-        query: "Hiển thị biểu đồ lịch sử số dư của ví này trong 30 ngày qua.",
-      },
-      portfolioChange: {
-        label: "Biến động danh mục",
-        query:
-          "So sánh danh mục hiện tại của ví này với ví trong 7 ngày trước. Có thay đổi đáng kể nào không?",
-      },
-      tokenPrices: {
-        label: "Giá token",
-        query:
-          "Kiểm tra giá hiện tại và dữ liệu thị trường của 5 token quan trọng nhất trong ví này.",
-      },
-      compareOverview: {
-        label: "So sánh danh mục",
-        query:
-          "So sánh danh mục đầu tư của các ví — ví nào có tổng giá trị và biến động 24h tốt nhất?",
-      },
-      comparePnl: {
-        label: "So sánh lãi/lỗ",
-        query:
-          "So sánh PnL giữa các ví — ví nào có lợi nhuận thực tế và tỷ lệ thắng cao nhất?",
-      },
-      commonHoldings: {
-        label: "Token chung",
-        query:
-          "Token nào được nắm giữ phổ biến ở các ví này và có sự trùng lặp như thế nào?",
-      },
-      topPerformer: {
-        label: "Hiệu suất tốt nhất",
-        query:
-          "Ví nào có ROI và hiệu suất giao dịch tốt nhất trên tất cả các chỉ số?",
-      },
-      riskComparison: {
-        label: "So sánh rủi ro",
-        query: "So sánh mức độ đa dạng hóa và hồ sơ rủi ro giữa các ví này.",
-      },
+      overview: { label: "Tổng quan", query: "Cung cấp tổng quan về danh mục đầu tư của ví này bao gồm tổng số dư, biến động 24h và khối lượng giao dịch." },
+      pnl: { label: "Tổng lãi/lỗ", query: "Lãi và lỗ của ví này là gì? Hiển thị phân tích theo token với PnL đã thực hiện và tỷ lệ thắng." },
+      trades: { label: "Giao dịch gần đây", query: "Hiển thị các giao dịch swap gần đây của ví này với chi tiết token và giá trị USD." },
+      tokens: { label: "Token hàng đầu", query: "Các token của ví này đang nắm giữ theo giá trị USD là gì?" },
+      balance: { label: "Xu hướng số dư", query: "Hiển thị biểu đồ lịch sử số dư của ví này trong 30 ngày qua." },
+      portfolioChange: { label: "Biến động danh mục", query: "So sánh danh mục hiện tại của ví này với ví trong 7 ngày trước. Có thay đổi đáng kể nào không?" },
+      tokenPrices: { label: "Giá token", query: "Kiểm tra giá hiện tại và dữ liệu thị trường của 5 token quan trọng nhất trong ví này." },
+      compareOverview: { label: "So sánh danh mục", query: "So sánh danh mục đầu tư của các ví — ví nào có tổng giá trị và biến động 24h tốt nhất?" },
+      comparePnl: { label: "So sánh lãi/lỗ", query: "So sánh PnL giữa các ví — ví nào có lợi nhuận thực tế và tỷ lệ thắng cao nhất?" },
+      commonHoldings: { label: "Token chung", query: "Token nào được nắm giữ phổ biến ở các ví này và có sự trùng lặp như thế nào?" },
+      topPerformer: { label: "Hiệu suất tốt nhất", query: "Ví nào có ROI và hiệu suất giao dịch tốt nhất trên tất cả các chỉ số?" },
+      riskComparison: { label: "So sánh rủi ro", query: "So sánh mức độ đa dạng hóa và hồ sơ rủi ro giữa các ví này." },
+      tabMine: "Prompt của tôi",
+      tabExplore: "Khám phá",
+      exploreSubtabCommunity: "Cộng đồng",
+      exploreSubtabSystem: "Hệ thống",
+      searchPlaceholder: "Tìm kiếm prompt...",
+      createBtn: "+ Tạo mới",
+      loading: "Đang tải prompt...",
+      emptyMine: "Chưa có prompt nào. Hãy tạo một cái!",
+      empty: "Không tìm thấy prompt nào.",
+      uses: "{{count}} lượt dùng",
+      publicBadge: "Công khai",
+      scopedBadge: "Theo ví",
+      fork: "Sao chép",
+      edit: "Sửa",
+      del: "Xóa",
+      view: "Xem",
+      dialogViewTitle: "Xem Prompt",
+      loadMore: "Hiện tất cả {{count}}",
+      dialogCreateTitle: "Tạo Prompt",
+      dialogEditTitle: "Sửa Prompt",
+      dialogForkTitle: "Sao chép Prompt",
+      dialogLabel: "Tiêu đề",
+      dialogQuery: "Câu hỏi",
+      dialogPublic: "Công khai (hiển thị với mọi người dùng)",
+      dialogCreate: "Tạo",
+      dialogSave: "Lưu",
+      dialogSaving: "Đang lưu...",
+      dialogRequired: "Tiêu đề và câu hỏi là bắt buộc.",
+      dialogSaveError: "Không thể lưu prompt. Vui lòng thử lại.",
+      forkedFrom: 'Sao chép từ "{{label}}"',
     },
   },
   ERROR: {

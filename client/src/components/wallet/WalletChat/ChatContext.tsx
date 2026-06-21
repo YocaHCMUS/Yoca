@@ -22,7 +22,7 @@ interface ChatContextValue {
   setShowPromptMenu: React.Dispatch<React.SetStateAction<boolean>>;
   setShowSessionMenu: React.Dispatch<React.SetStateAction<boolean>>;
   setActiveSessionId: (id: string | null) => void;
-  sendQuery: (query: string, opts?: { skipCache?: boolean }) => Promise<void>;
+  sendQuery: (query: string, opts?: { skipCache?: boolean; promptId?: string }) => Promise<void>;
   handleRedo: (msgIndex: number, content: string) => Promise<void>;
   handleRevert: (msgIndex: number, content: string) => Promise<void>;
   handleUndoRevert: () => Promise<void>;
@@ -78,7 +78,7 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
   messagesRef.current = messages;
 
   const sendQuery = useCallback(
-    async (query: string, opts?: { skipCache?: boolean }) => {
+    async (query: string, opts?: { skipCache?: boolean; promptId?: string }) => {
       if (!query.trim() || isLoading || addresses.length === 0) return;
 
       setShowPromptMenu(false);
@@ -105,6 +105,7 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
             sessionId: activeSessionId ?? undefined,
             contextType,
             skipCache: opts?.skipCache,
+            promptId: opts?.promptId,
           },
         });
 
