@@ -34,6 +34,7 @@ interface WalletHoldingsPanelProps {
   portfolio: WalletPortfolioItem[];
   portfolioMeta: Map<number, { tokenAddress: string; logoUri: string | null; fullName: string | null }>;
   loading: boolean;
+  actions?: React.ReactNode;
 }
 
 function resolveTokenMetaLookupAddress(
@@ -57,6 +58,7 @@ export function WalletHoldingsPanel({
   portfolio,
   portfolioMeta,
   loading,
+  actions,
 }: WalletHoldingsPanelProps) {
   const { tr, fmt, lang } = useLocalization();
   const { user } = useAuth();
@@ -175,6 +177,7 @@ export function WalletHoldingsPanel({
       <div className={styles.holdingsPanel}>
         <div className={styles.holdingsHeader}>
           <span className={styles.holdingsTitle}>Holdings</span>
+          {actions && <div>{actions}</div>}
         </div>
         <div className={styles.loadingSkeleton}>
           {Array.from({ length: 4 }).map((_, i) => (

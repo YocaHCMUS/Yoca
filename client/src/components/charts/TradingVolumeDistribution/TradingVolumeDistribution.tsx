@@ -31,6 +31,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
   refreshInterval = 30000,
   fetchEnabled = true,
   className,
+  actions,
 }) => {
   const { tr, fmt } = useLocalization();
   const chartTitle = tr('charts.tradingVolumeDistributionChart.title');
@@ -290,6 +291,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
       onRetry={() => refetch(false)}
       onExport={handleExport}
       className={className}
+      actions={actions}
     >
       <div data-html2canvas-ignore="true" style={{ padding: '0.5rem' }}>
         <PeriodSelector value={filters.timePeriod} onChange={(k) => setTimePeriod(k)} compact />

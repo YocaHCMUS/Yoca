@@ -48,6 +48,9 @@ export interface ChartProps {
 
   /** Callback when an error occurs */
   onError?: (error: Error) => void;
+
+  /** Extra toolbar actions (AI button, etc.) */
+  actions?: React.ReactNode;
 }
 
 /**

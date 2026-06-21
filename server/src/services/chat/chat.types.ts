@@ -160,6 +160,10 @@ export interface ChatResponse {
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  context?: {
+    contextType: "wallet" | "wallet-comparison";
+    walletAddresses: string[];
+  };
   data?: Record<string, unknown>;
   charts?: ChartSpec[];
   tables?: TableSpec[];

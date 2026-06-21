@@ -79,10 +79,12 @@ export function BalanceChartV2({
   address,
   onClickDay,
   minHeight = 500,
+  actions,
 }: {
   address: string;
   onClickDay?: (timestamp: number) => void;
   minHeight?: number;
+  actions?: React.ReactNode;
 }) {
   const { tr, fmt } = useLocalization();
 
@@ -198,6 +200,7 @@ export function BalanceChartV2({
       enableExport={false}
       enableFullscreen={false}
       enableMiniPlayer={false}
+      actions={actions}
     >
       <Flex dir="column" gap={8}>
         <Flex justify="between" align="end">

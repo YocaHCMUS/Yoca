@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useContext, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Add, ChevronDown, Maximize, OpenPanelLeft, OpenPanelRight, Playlist, Send, TrashCan } from "@carbon/icons-react";
 import { WalletChatMessage } from "./WalletChatMessage";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
@@ -6,6 +6,7 @@ import { ChatPromptMenu } from "./ChatPromptMenu";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type { LangKeys } from "@/config/localization";
 import type { ChatSessionContextType } from "./useChatSessions";
+import type { ChatMessageItem } from "./types";
 import styles from "./WalletChat.module.scss";
 import { useAuth } from "@/contexts/AuthContext";
 import { ChatContext, ChatContextProvider, MAX_INPUT_LENGTH, useChatContext } from "./ChatContext";
@@ -35,6 +36,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const sessionMenuRef = useRef<HTMLDivElement>(null);
+  const [activeMessageContext, setActiveMessageContext] = useState<ChatMessageItem["context"] | null>(null);
 
   const {
     messages,
@@ -46,6 +48,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
     sessions,
     activeSessionId,
     activeSession,
+    contextType,
     setInputText,
     setShowPromptMenu,
     setShowSessionMenu,
@@ -122,6 +125,115 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
         : null;
 
   // ─── Auth gate ───────────────────────────────────────────────────────
+  const getMessageContext = useCallback((msg?: ChatMessageItem): NonNullable<ChatMessageItem["context"]> => {
+    if (msg?.context) return msg.context;
+    if (activeSession) {
+      return {
+        contextType: activeSession.contextType,
+        walletAddresses: activeSession.walletAddresses,
+      };
+    }
+    return {
+      contextType: contextType ?? (walletAddresses.length > 1 ? "wallet-comparison" : "wallet"),
+      walletAddresses,
+    };
+  }, [activeSession, contextType, walletAddresses]);
+
+  const formatContextAddresses = useCallback((addressesToFormat: string[]) => {
+    if (addressesToFormat.length > 2) {
+      return `${addressesToFormat.slice(0, 2).map((a) => fmt.text.address(a)).join(", ")}, +${addressesToFormat.length - 2}`;
+    }
+    return addressesToFormat.map((a) => fmt.text.address(a)).join(", ");
+  }, [fmt.text]);
+
+  const updateActiveMessageContext = useCallback(() => {
+    const container = listRef.current;
+    if (!container || messages.length === 0) {
+      setActiveMessageContext(null);
+      return;
+    }
+
+    const containerTop = container.getBoundingClientRect().top;
+    const messageNodes = Array.from(container.querySelectorAll<HTMLElement>("[data-message-index]"));
+    let activeIndex = 0;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    messageNodes.forEach((node) => {
+      const rawIndex = Number(node.dataset.messageIndex);
+      if (!Number.isFinite(rawIndex)) return;
+      const distance = Math.abs(node.getBoundingClientRect().top - containerTop - 16);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        activeIndex = rawIndex;
+      }
+    });
+
+    setActiveMessageContext(getMessageContext(messages[activeIndex]));
+  }, [getMessageContext, messages]);
+
+  useEffect(() => {
+    updateActiveMessageContext();
+  }, [messages, activeSession, updateActiveMessageContext]);
+
+  const renderContextTags = () => {
+    const ctx = activeMessageContext ?? (messages.length > 0 ? getMessageContext(messages[messages.length - 1]) : null);
+    if (!ctx || ctx.walletAddresses.length === 0) return null;
+
+    return (
+      <div className={styles.contextTags} aria-label="Chat context">
+        <span className={styles.contextTag}>{formatContextAddresses(ctx.walletAddresses)}</span>
+      </div>
+    );
+  };
+
+  const sameMessageContext = (a: ChatMessageItem["context"], b: ChatMessageItem["context"]) => {
+    if (!a || !b) return a === b;
+    if (a.contextType !== b.contextType) return false;
+    if (a.walletAddresses.length !== b.walletAddresses.length) return false;
+    return a.walletAddresses.every((address, index) => address === b.walletAddresses[index]);
+  };
+
+  const renderMessages = () => {
+    let previousUserContext: ChatMessageItem["context"] | null = null;
+
+    return (
+      <div ref={listRef} className={styles.messagesArea} onScroll={updateActiveMessageContext}>
+        {messages.map((msg, i) => {
+          const ctx = getMessageContext(msg);
+          const shouldShowContextShift = msg.role === "user" && !!previousUserContext && !sameMessageContext(previousUserContext, ctx);
+
+          if (msg.role === "user") {
+            previousUserContext = ctx;
+          }
+
+          return (
+            <div key={i} data-message-index={i}>
+              {shouldShowContextShift && (
+                <div className={styles.contextChange}>
+                  <span className={styles.contextChangeLabel}>{tr("chat.contextChanged")}</span>
+                  <span className={styles.contextChangeAddresses}>{formatContextAddresses(ctx.walletAddresses)}</span>
+                </div>
+              )}
+              <WalletChatMessage message={msg} index={i} onAction={sendQuery} onRedo={handleRedo} onRevert={handleRevert} />
+            </div>
+          );
+        })}
+        {isLoading && (
+          <div className={styles.loadingDots}>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className={styles.dot} style={{ animationDelay: `${i * 0.15}s` }} />
+            ))}
+            <span className={styles.loadingLabel}>{tr("chat.loadingLabel")}</span>
+          </div>
+        )}
+        {error && (
+          <div className={styles.errorMsg}>{error}</div>
+        )}
+      </div>
+    );
+  };
+
+
   if (!isUserLoading && !user) {
     if (variant === "widget" && (!isOpen || isMinimized)) {
       return (
@@ -231,25 +343,6 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
     );
   };
 
-  const renderMessages = () => (
-    <div ref={listRef} className={styles.messagesArea}>
-      {messages.map((msg, i) => (
-        <WalletChatMessage key={i} message={msg} index={i} onAction={sendQuery} onRedo={handleRedo} onRevert={handleRevert} />
-      ))}
-      {isLoading && (
-        <div className={styles.loadingDots}>
-          {[0, 1, 2].map((i) => (
-            <div key={i} className={styles.dot} style={{ animationDelay: `${i * 0.15}s` }} />
-          ))}
-          <span className={styles.loadingLabel}>{tr("chat.loadingLabel")}</span>
-        </div>
-      )}
-      {error && (
-        <div className={styles.errorMsg}>{error}</div>
-      )}
-    </div>
-  );
-
   const renderSessionMenu = () => (
     <div ref={sessionMenuRef} className={styles.sessionDropdown}>
       <div className={styles.sessionDropdownTitle}>{tr("chat.sessions")}</div>
@@ -267,6 +360,12 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
               {s.title || tr("chat.newChat")}
             </span>
             <span className={styles.sessionItemTime}>
+              {s.contextType === "wallet-comparison" ? tr("chat.contextTypeComparison") : tr("chat.contextTypeWallet")}
+              {" · "}
+              {s.walletAddresses.length > 2
+                ? s.walletAddresses.slice(0, 2).map((a) => fmt.text.address(a)).join(", ") + `, +${s.walletAddresses.length - 2}`
+                : s.walletAddresses.map((a) => fmt.text.address(a)).join(", ")}
+              {" · "}
               {fmt.datetime.relative(s.updatedAt)}
             </span>
           </div>
@@ -290,6 +389,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <span className={styles.headerTitle}>{tr("chat.headerTitle")}</span>
+          {renderContextTags()}
         </div>
         <div className={styles.headerActions}>
           <div className={styles.sessionSelector}>
@@ -413,8 +513,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
   const existingCtx = useContext(ChatContext);
 
   if (existingCtx) {
-    const ctxAddrs: string[] = [];
-    return <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} walletAddresses={ctxAddrs} />;
+    return <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} walletAddresses={existingCtx.addresses} />;
   }
 
   const activeAddresses = [address, ...(addresses ?? [])].filter(Boolean) as string[];

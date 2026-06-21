@@ -5,7 +5,7 @@ import { useUserTheme } from "@/contexts/ThemeContext";
 import { TableWrapper, type ActiveFilter } from './TableWrapper';
 import type { ExportFormat } from '../charts/shared/ExportMenu';
 import { DataTable, DataTableSkeleton, Table as CarbonTable, TableHead, TableRow, TableHeader, TableBody, TableCell, Pagination, Button, IconButton, Slider, Checkbox, CheckboxGroup, TableContainer, Tag } from "@carbon/react";
-import { Filter } from "@carbon/react/icons";
+import { Filter, AiGenerate } from "@carbon/react/icons";
 import styles from './Table.module.scss';
 
 /** Rich column header (min width / alignment) — same idea as `Tble` headers. */
@@ -162,6 +162,10 @@ export interface TableProps {
     enableExport?: boolean;
     serverPagination?: ServerPaginationConfig;
     loading?: boolean;
+    /** Header AI action button */
+    onTableAiAction?: (e: React.MouseEvent<HTMLElement>) => void;
+    /** Per-row AI action button */
+    onRowAiAction?: (row: any[], rowIndex: number, e: React.MouseEvent<HTMLElement>) => void;
 }
 
 function isEnabledFilterConfig(
@@ -451,6 +455,8 @@ export const Table: React.FC<TableProps> = ({
     enableExport = true,
     serverPagination,
     loading = false,
+    onTableAiAction,
+    onRowAiAction,
 }) => {
     const { tr } = useLocalization();
     const { labels: headerLabels, minWidths: headerMinWidths, aligns: headerAligns } =
@@ -746,8 +752,9 @@ export const Table: React.FC<TableProps> = ({
         }
     };
 
+    const hasRowAi = !!onRowAiAction;
     // Transform headers for Carbon DataTable
-    const carbonHeaders = headerLabels.map((label, index) => ({
+    let carbonHeaders = headerLabels.map((label, index) => ({
         key: `header-${index}`,
         header: label,
         index: index,
@@ -756,6 +763,12 @@ export const Table: React.FC<TableProps> = ({
         minWidth: headerMinWidths[index],
         align: headerAligns[index],
     }));
+    if (hasRowAi) {
+        carbonHeaders = [
+            ...carbonHeaders,
+            { key: 'ai-action', header: '', index: carbonHeaders.length, sortConfig: undefined, isSortable: false, minWidth: 40, align: 'center' as const },
+        ];
+    }
     const skeletonHeaders = carbonHeaders.map(({ key, header }) => ({ key, header }));
 
     const rows = paginatedRows.map((row, rowIndex) => {
@@ -764,6 +777,9 @@ export const Table: React.FC<TableProps> = ({
             // Store raw data for sorting
             rowData[`header-${index}`] = entry;
         });
+        if (hasRowAi) {
+            rowData['ai-action'] = row;
+        }
         return rowData;
     });
 
@@ -1074,10 +1090,23 @@ export const Table: React.FC<TableProps> = ({
             : filteredData.length
         : filteredData.length;
 
+    const headerAiButton = onTableAiAction ? (
+      <IconButton
+        kind="ghost"
+        size="sm"
+        label="AI"
+        align="bottom"
+        onClick={(e: React.MouseEvent<HTMLButtonElement>) => onTableAiAction(e)}
+        className={styles.aiTableHeaderBtn}
+      >
+        <AiGenerate size={16} />
+      </IconButton>
+    ) : null;
+
     return (
         <TableWrapper
             title={title}
-            actions={actions}
+            actions={<>{actions}{headerAiButton}</>}
             onExport={handleExport}
             enableExport={enableExport}
             isEmpty={!loading && filteredData.length === 0}
@@ -1229,6 +1258,25 @@ export const Table: React.FC<TableProps> = ({
                                                         style={onRowClick ? { cursor: 'pointer' } : undefined}
                                                     >
                                                         {row.cells.map((cell, cellIndex) => {
+                                                            const isAiColumn = hasRowAi && cellIndex === row.cells.length - 1;
+                                                            if (isAiColumn) {
+                                                                return (
+                                                                    <TableCell key={cell.id} className={styles.aiCell}>
+                                                                        <IconButton
+                                                                            kind="ghost"
+                                                                            size="sm"
+                                                                            label="AI"
+                                                                            align="left"
+                                                            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                                                                 e.stopPropagation();
+                                                                 onRowAiAction?.(safeRow, originalIndex, e);
+                                                             }}
+                                                                        >
+                                                                            <AiGenerate size={14} />
+                                                                        </IconButton>
+                                                                    </TableCell>
+                                                                );
+                                                            }
                                                             const rawValue = cell.value;
                                                             const renderer = cellRenderers[cellIndex];
                                                             const className = classnames[cellIndex];
@@ -1248,7 +1296,7 @@ export const Table: React.FC<TableProps> = ({
 
                                             {rows.length === 0 && (
                                                 <TableRow className={styles.noHover}>
-                                                    <TableCell colSpan={headers.length} style={{ textAlign: 'center', padding: '2rem' }}>
+                                                    <TableCell colSpan={carbonHeaders.length} style={{ textAlign: 'center', padding: '2rem' }}>
                                                         <div style={{ minHeight: '222px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                             {tr("common.noData")}
                                                         </div>

@@ -63,12 +63,18 @@ const createSessionSchema = z.object({
   title: z.string().max(255).optional(),
 });
 
+const messageContextSchema = z.object({
+  contextType: z.enum(["wallet", "wallet-comparison"]),
+  walletAddresses: z.array(z.string()),
+});
+
 const updateSessionSchema = z.object({
   messages: z
     .array(
       z.object({
         role: z.enum(["user", "assistant"]),
         content: z.string(),
+        context: messageContextSchema.optional(),
         data: z.any().optional(),
         charts: z.any().optional(),
         tables: z.any().optional(),
@@ -110,13 +116,39 @@ const chatRoute = new Hono().post("/", honoJwt, userExtract, async (c) => {
     let activeSessionId = sessionId;
 
     if (!skipSessionSave) {
+      // Resolve the context that will be stamped on messages
+      let resolvedContext = buildSessionContext(addresses, contextType);
+
+      if (activeSessionId) {
+        const existing = await getSession(activeSessionId, userId);
+        if (existing) {
+          const existingLower = existing.walletAddresses.map((a: string) => a.toLowerCase());
+          const incomingLower = addresses.map((a: string) => a.toLowerCase());
+          const allCovered = incomingLower.every((a: string) =>
+            existingLower.includes(a),
+          );
+
+          if (!allCovered) {
+            const mergedAddrs = [...new Set([...existing.walletAddresses, ...addresses])];
+            resolvedContext = buildSessionContext(mergedAddrs, contextType);
+          }
+        }
+      }
+
+      const contextInfo = {
+        contextType: resolvedContext.contextType,
+        walletAddresses: resolvedContext.walletAddresses,
+      };
+
       const userMsg: Record<string, unknown> = {
         role: "user",
         content: query,
+        context: contextInfo,
       };
       const assistantMsg: Record<string, unknown> = {
         role: "assistant",
         content: response.text,
+        context: contextInfo,
         data: response.data,
         charts: response.charts,
         tables: response.tables,
@@ -139,31 +171,15 @@ const chatRoute = new Hono().post("/", honoJwt, userExtract, async (c) => {
           ];
           const title = existing.title ?? query.slice(0, 50);
 
-          const existingLower = existing.walletAddresses.map((a: string) => a.toLowerCase());
-          const incomingLower = addresses.map((a: string) => a.toLowerCase());
-          const allCovered = incomingLower.every((a: string) =>
-            existingLower.includes(a),
-          );
-
-          if (!allCovered) {
-            const mergedAddrs = [...new Set([...existing.walletAddresses, ...addresses])];
-            const mergedContext = buildSessionContext(mergedAddrs, contextType);
-            await updateSession(activeSessionId, userId, {
-              messages: updatedMessages,
-              title,
-              context: mergedContext,
-            });
-          } else {
-            await updateSession(activeSessionId, userId, {
-              messages: updatedMessages,
-              title,
-            });
-          }
+          await updateSession(activeSessionId, userId, {
+            messages: updatedMessages,
+            title,
+            context: resolvedContext,
+          });
         }
       } else {
         const title = query.slice(0, 50);
-        const sessionContext = buildSessionContext(addresses, contextType);
-        const session = await createSession(userId, sessionContext, title);
+        const session = await createSession(userId, resolvedContext, title);
         activeSessionId = session.id;
         await updateSession(session.id, userId, {
           messages: [userMsg, assistantMsg],

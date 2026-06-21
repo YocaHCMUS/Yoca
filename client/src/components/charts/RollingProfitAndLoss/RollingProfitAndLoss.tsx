@@ -41,6 +41,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
   refreshInterval = 30000,
   fetchEnabled = true,
   className,
+  actions,
 }) => {
   const { tr, fmt } = useLocalization();
   const chartTitle =
@@ -257,6 +258,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
       loadingState={loadingState}
       isEmpty={isEmpty}
       onRetry={() => refetch(false)}
+      actions={actions}
     >
       <div
         className={`${sharedStyles.chartControls} ${sharedStyles["chartControls--end"]} ${sharedStyles["chartControls--withBackground"]}`}

@@ -5,6 +5,9 @@ import RollingProfitAndLoss from "@/components/charts/RollingProfitAndLoss/Rolli
 import React from "react";
 import styles from "./GeneralTab.module.scss";
 import type WalletComparisonProp from "./WalletComparisonProp";
+import { AiGenerate } from '@carbon/icons-react';
+import { IconButton } from '@carbon/react';
+import { useLocalization } from '@/contexts/LocalizationContext';
 
 const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
 
@@ -12,7 +15,9 @@ export const RiskTab: React.FC<WalletComparisonProp> = ({
   walletAddresses,
   fetchEnabled = true,
   onDayClick,
+  onAiAction,
 }) => {
+  const { tr } = useLocalization();
   if (!walletAddresses || walletAddresses.length === 0) {
     return (
       <div className={styles.emptyState}>
@@ -35,6 +40,12 @@ export const RiskTab: React.FC<WalletComparisonProp> = ({
             wallets: walletAddresses,
           }}
           fetchEnabled={fetchEnabled}
+          actions={onAiAction ? (
+            <IconButton kind="ghost" size="sm" label="AI" align="bottom"
+              onClick={(e) => onAiAction(e, tr("charts.rollingAnnualReturn.title"), ["comparePnl"])}>
+              <AiGenerate size={16} />
+            </IconButton>
+          ) : undefined}
         />
       </div>
 
@@ -52,7 +63,14 @@ export const RiskTab: React.FC<WalletComparisonProp> = ({
 
       {/* Profit and loss */}
       <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
-        <PnLChart minHeight={300} initialWallets={walletAddresses} fetchEnabled={fetchEnabled} onDayClick={onDayClick} />
+        <PnLChart minHeight={300} initialWallets={walletAddresses} fetchEnabled={fetchEnabled} onDayClick={onDayClick}
+          actions={onAiAction ? (
+            <IconButton kind="ghost" size="sm" label="AI" align="bottom"
+              onClick={(e) => onAiAction(e, tr("charts.pnlChart.title"), ["comparePnl"])}>
+              <AiGenerate size={16} />
+            </IconButton>
+          ) : undefined}
+        />
       </div>
 
       {/* Winrate */}
@@ -63,6 +81,12 @@ export const RiskTab: React.FC<WalletComparisonProp> = ({
             timePeriod: '30D',
             wallets: walletAddresses,
           }}
+          actions={onAiAction ? (
+            <IconButton kind="ghost" size="sm" label="AI" align="bottom"
+              onClick={(e) => onAiAction(e, tr("charts.winrateChart.title"), ["comparePnl", "topPerformer"])}>
+              <AiGenerate size={16} />
+            </IconButton>
+          ) : undefined}
         />
       </div>
 
@@ -75,6 +99,12 @@ export const RiskTab: React.FC<WalletComparisonProp> = ({
             wallets: walletAddresses,
           }}
           fetchEnabled={fetchEnabled}
+          actions={onAiAction ? (
+            <IconButton kind="ghost" size="sm" label="AI" align="bottom"
+              onClick={(e) => onAiAction(e, tr("charts.drawdownChart.title"), ["riskComparison"])}>
+              <AiGenerate size={16} />
+            </IconButton>
+          ) : undefined}
         />
       </div>
     </div>

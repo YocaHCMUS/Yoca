@@ -5,7 +5,9 @@ import { WalletHero } from "@/components/wallet/WalletHero/WalletHero.tsx";
 import { WalletHoldingsPanel } from "@/components/wallet/WalletHoldingsPanel/WalletHoldingsPanel.tsx";
 import { TabContainer } from "@/components/tabContainer/tabContainer.tsx";
 import { RightSidebar } from "./RightSidebar.tsx";
-import { WalletChat, ChatContextProvider } from "@/components/wallet/WalletChat";
+import { WalletChat, ChatContextProvider, QuickAiPopup } from "@/components/wallet/WalletChat";
+import type { PredefinedQuestion } from "@/components/wallet/WalletChat/types";
+import { PREDEFINED_QUESTIONS } from "@/components/wallet/WalletChat/WalletChatConstants";
 import { AiAnalysisModal } from "@/components/wallet/AiAnalysisModal/AiAnalysisModal.tsx";
 import {
   FilterType,
@@ -49,8 +51,8 @@ import {
   type WalletSwapTokenInfo,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
-import { User, Close } from "@carbon/icons-react";
-import { Button } from "@carbon/react";
+import { User, Close, AiGenerate } from "@carbon/icons-react";
+import { Button, IconButton } from "@carbon/react";
 import JSZip from "jszip";
 import {
   useCallback,
@@ -235,6 +237,39 @@ export default function WalletPage() {
   const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
 
   const [aiSwapSummaryOpen, setAiSwapSummaryOpen] = useState(false);
+
+  const [aiPopupOpen, setAiPopupOpen] = useState(false);
+  const [aiPopupAnchor, setAiPopupAnchor] = useState<HTMLElement | null>(null);
+  const [aiPopupLabel, setAiPopupLabel] = useState("");
+  const [aiPopupQuestions, setAiPopupQuestions] = useState<PredefinedQuestion[]>([]);
+
+  function handleOpenAiPopup(
+    e: React.MouseEvent<HTMLElement>,
+    label: string,
+    questionIds?: string[],
+  ) {
+    setAiPopupAnchor(e.currentTarget);
+    setAiPopupLabel(label);
+    if (questionIds) {
+      setAiPopupQuestions(
+        PREDEFINED_QUESTIONS.filter((q) => questionIds.includes(q.id)),
+      );
+    } else {
+      setAiPopupQuestions(
+        PREDEFINED_QUESTIONS.filter((q) => q.contextTypes?.includes("wallet")),
+      );
+    }
+    setAiPopupOpen(true);
+  }
+
+  function handleCloseAiPopup() {
+    setAiPopupOpen(false);
+    setAiPopupAnchor(null);
+  }
+
+  function filterQuestions(ids: string[]): PredefinedQuestion[] {
+    return PREDEFINED_QUESTIONS.filter((q) => ids.includes(q.id));
+  }
 
   const loadedSwaps = useMemo(() => flattenLoadedPages(swapPages), [swapPages]);
   const loadedTransfers = useMemo(
@@ -1291,18 +1326,31 @@ export default function WalletPage() {
             currentPeriod={selectedPeriod}
             onPeriodChange={(period) => setSelectedPeriod(period)}
           />
-          <div style={{ padding: "20px 24px 0 24px" }}>
+          {/* <div style={{ padding: "20px 24px 0 24px" }}>
             <WalletOverviewWinRateBanner
               stats={stats} // Nhận từ hook useWalletWinrate
               selectedPeriod={selectedPeriod}
               loading={loading} // Nhận từ hook useWalletWinrate
             />
-          </div>
+          </div> */}
 
           <WalletHero
             overview={overviewReport}
             selectedPeriod={selectedPeriod}
             loading={false}
+            actions={
+              <IconButton
+                kind="ghost"
+                size="sm"
+                label="AI"
+                align="bottom"
+                onClick={(e: React.MouseEvent<HTMLElement>) =>
+                  handleOpenAiPopup(e, tr("walletPage.overview"), ["overview", "pnl", "balance"])
+                }
+              >
+                <AiGenerate size={16} />
+              </IconButton>
+            }
           />
 
           <div className={styles.body}>
@@ -1316,6 +1364,19 @@ export default function WalletPage() {
                     setDayPopupTimestamp(ts);
                     setDayPopupOpen(true);
                   }}
+                  actions={
+                    <IconButton
+                      kind="ghost"
+                      size="sm"
+                      label="AI"
+                      align="bottom"
+                      onClick={(e: React.MouseEvent<HTMLElement>) =>
+                        handleOpenAiPopup(e, tr("charts.balanceChart.title"), ["balance", "portfolioChange"])
+                      }
+                    >
+                      <AiGenerate size={16} />
+                    </IconButton>
+                  }
                 />
               </div>
 
@@ -1329,6 +1390,19 @@ export default function WalletPage() {
                     setDayPopupTimestamp(ts);
                     setDayPopupOpen(true);
                   }}
+                  actions={
+                    <IconButton
+                      kind="ghost"
+                      size="sm"
+                      label="AI"
+                      align="bottom"
+                      onClick={(e: React.MouseEvent<HTMLElement>) =>
+                        handleOpenAiPopup(e, tr("charts.pnlChart.title"), ["pnl"])
+                      }
+                    >
+                      <AiGenerate size={16} />
+                    </IconButton>
+                  }
                 />
               </div>
 
@@ -1354,7 +1428,7 @@ export default function WalletPage() {
                   onTabChange={(index) => setActiveActivityTab(index)}
                   tabs={[
                     <Table
-                      key="swaps-tab" // Need to set key to prevent React from reusing the same Table instance for both tabs, which causes issues with independent loading states and data
+                      key="swaps-tab"
                       maxHeight={400}
                       title={tr("walletPage.swap")}
                       headers={swapHeaders}
@@ -1374,11 +1448,15 @@ export default function WalletPage() {
                       }}
                       enableExport={false}
                       loading={swapLoading && loadedSwaps.length === 0}
+                      onTableAiAction={(e) =>
+                        handleOpenAiPopup(e, tr("walletPage.swap"), ["trades"])
+                      }
+                      onRowAiAction={(_row, rowIndex, e) => {
+                        handleOpenAiPopup(e, `${tr("walletPage.swap")} #${rowIndex + 1}`, ["trades"]);
+                      }}
                     />,
-                    // <div className={styles.chartSection} style={{ borderRadius: "0 0 12px 12px" }}>
-                    // </div>
                     <Table
-                      key="transfers-tab" // Need to set key to prevent React from reusing the same Table instance for both tabs, which causes issues with independent loading states and data
+                      key="transfers-tab"
                       maxHeight={400}
                       title={tr("walletPage.transfer")}
                       headers={transferHeaders}
@@ -1399,6 +1477,12 @@ export default function WalletPage() {
                       }}
                       enableExport={false}
                       loading={transferLoading && loadedTransfers.length === 0}
+                      onTableAiAction={(e) =>
+                        handleOpenAiPopup(e, tr("walletPage.transfer"), ["trades"])
+                      }
+                      onRowAiAction={(_row, rowIndex, e) => {
+                        handleOpenAiPopup(e, `${tr("walletPage.transfer")} #${rowIndex + 1}`, ["trades"]);
+                      }}
                     />,
                     // <div className={styles.chartSection} style={{ borderRadius: "0 0 12px 12px" }}>
                     // </div>,
@@ -1413,6 +1497,19 @@ export default function WalletPage() {
                 portfolio={portfolio}
                 portfolioMeta={portfolioMetaAsMap}
                 loading={portfolioLoading}
+                actions={
+                  <IconButton
+                    kind="ghost"
+                    size="sm"
+                    label="AI"
+                    align="bottom"
+                    onClick={(e: React.MouseEvent<HTMLElement>) =>
+                      handleOpenAiPopup(e, tr("walletPage.holdings"), ["tokens", "tokenPrices"])
+                    }
+                  >
+                    <AiGenerate size={16} />
+                  </IconButton>
+                }
               />
             </div>
           </div>
@@ -1450,6 +1547,20 @@ export default function WalletPage() {
                 <WalletChat variant="sidebar" chatPosition={chatPosition} onChatPositionChange={setChatPosition} />
               </div>
             </div>
+          )}
+
+          {aiPopupOpen && aiPopupAnchor && (
+            <QuickAiPopup
+              open={aiPopupOpen}
+              onClose={handleCloseAiPopup}
+              anchorElement={aiPopupAnchor}
+              addresses={[walletAddress]}
+              contextType="wallet"
+              lang={lang}
+              componentLabel={aiPopupLabel}
+              predefinedQuestions={aiPopupQuestions}
+              onOpenChat={() => setIsChatOpen(true)}
+            />
           )}
         </ChatContextProvider>
       </div>
