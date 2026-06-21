@@ -333,7 +333,7 @@ export function RightSidebar({
         </div>
         
         <div className={styles.toolbarBottom}>
-          <button className={styles.toolBtn}>
+          <button className={styles.toolBtn} hidden>
             <Settings size={20} />
           </button>
         </div>

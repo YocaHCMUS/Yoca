@@ -134,7 +134,7 @@ export default function WalletPage() {
   const [aiAnalysisOpen, setAiAnalysisOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatPosition, setChatPosition] = useState<ChatPosition>("right");
 
   const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);
@@ -956,6 +956,7 @@ export default function WalletPage() {
   return (
     <PageWrapper
       noMarketTickers
+      wideContent
       extraHeaderPanel={{
         isOpen: !!selectedToken,
         content: selectedToken && (
