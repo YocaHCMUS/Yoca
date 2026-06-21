@@ -399,7 +399,7 @@ export const translation = {
       processing: "Processing…",
       subscribeNow: "Subscribe Now",
       methods: {
-        card: "Cash",
+        card: "Card",
         bank: "Bank",
         bankDescription: "US Bank Transfer",
         wallet: "Wallet",
