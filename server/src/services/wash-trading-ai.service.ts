@@ -991,12 +991,14 @@ async function tryGeminiAnalysis(base: WashTradingAIResult["aiAnalysis"], params
           "- Không bịa rằng chắc chắn có gian lận nếu dữ liệu không đủ.",
           "- Nếu dataSource là demo-fallback, phải nói rõ chỉ là demo UX.",
           "- Giải thích dựa trên graph/GNN features, không nói chung chung.",
+          "- detailedFindings phải là câu văn ngắn, dễ đọc trên dashboard; không dùng Markdown, backtick, bullet Markdown hay tên biến camelCase như circularPattern. Hãy dùng cụm từ thân thiện như mẫu vòng lặp hoặc độ đều thời gian.",
         ].join("\n")
       : [
           "Requirements:",
           "- Do not claim certain fraud if the data is insufficient.",
           "- If dataSource is demo-fallback, clearly say it is only a UX demo.",
           "- Explain using graph/GNN features, not generic wording.",
+          "- detailedFindings must be short dashboard-ready sentences. Do not use Markdown, backticks, Markdown bullets, or camelCase variable names such as circularPattern; use user-facing phrases instead.",
         ].join("\n");
 
     const response = await ai.models.generateContent({

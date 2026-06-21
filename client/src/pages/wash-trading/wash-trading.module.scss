@@ -595,9 +595,25 @@
 
 .legendLine {
   display: inline-block;
-  width: 18px;
-  height: 2px;
-  background: #e24b4a;
+  width: 20px;
+  height: 3px;
+  border-radius: 999px;
+}
+
+.legendLineCircular {
+  background: #a855f7;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.72);
+}
+
+.legendLineSuspicious {
+  background: #0ea5e9;
+  box-shadow: 0 0 8px rgba(14, 165, 233, 0.45);
+}
+
+.legendRingCircular {
+  background: transparent;
+  border: 2px solid #c084fc;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.62);
 }
 
 .walletList,

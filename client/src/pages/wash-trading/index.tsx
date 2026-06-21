@@ -141,6 +141,39 @@ const getPatternLabel = (pattern: string, tr: ReturnType<typeof useLocalization>
   return pattern;
 };
 
+
+/**
+ * Gemini may occasionally use Markdown markers or internal feature names even
+ * though the dashboard renders normal prose. Convert them to clean, localized
+ * user-facing text before displaying a finding.
+ */
+const formatAiFindingText = (value: string, tr: ReturnType<typeof useLocalization>["tr"]) => {
+  const featureLabels: Array<[string, string]> = [
+    ["circularPattern", String(tr("washTrading.risk.circularPattern"))],
+    ["timeRegularity", String(tr("washTrading.risk.timeRegularity"))],
+    ["amountSimilarity", String(tr("washTrading.risk.amountSimilarity"))],
+    ["selfLoopDegree", String(tr("washTrading.risk.selfLoopDegree"))],
+    ["volumeSignal", String(tr("washTrading.risk.volumeSignal"))],
+    ["hubness", String(tr("washTrading.risk.hubness"))],
+  ];
+
+  let clean = String(value || "")
+    .replace(/```(?:json|markdown|text)?/gi, "")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/^\s*[-*•]\s+/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  featureLabels.forEach(([rawName, label]) => {
+    clean = clean.replace(new RegExp(`\\b${rawName}\\b`, "g"), label);
+  });
+
+  return clean;
+};
+
 const RiskGauge: React.FC<{ score: number; label: string }> = ({ score, label }) => {
   const safeScore = Math.max(0, Math.min(100, Math.round(score || 0)));
   const dashOffset = 170 - (170 * safeScore) / 100;
@@ -369,9 +402,10 @@ const NetworkGraph: React.FC<{
           formatter: [
             `<strong>${node.label || shortAddress(node.id)}</strong>`,
             `${tr("washTrading.graph.type")}: ${typeLabel}`,
+            isCircular ? `${tr("washTrading.graph.circularWallet")}: ${tr("washTrading.graph.yes")}` : null,
             score ? `${tr("washTrading.graph.gnnScore")}: ${score}/100` : `${tr("washTrading.graph.gnnScore")}: —`,
             `${tr("washTrading.graph.address")}: ${node.id}`,
-          ].join("<br/>"),
+          ].filter(Boolean).join("<br/>"),
         },
       };
     });
@@ -396,7 +430,7 @@ const NetworkGraph: React.FC<{
           // This is the original ECharts graph edge, not a second drawn edge.
           width: lineWidth,
           opacity: isCircularEdge ? 0.96 : edge.suspicious ? 0.78 : 0.24,
-          color: isCircularEdge ? "#a855f7" : edge.suspicious ? "#e24b4a" : "#64748b",
+          color: isCircularEdge ? "#a855f7" : edge.suspicious ? "#0ea5e9" : "#64748b",
           curveness: edge.curveness,
           shadowBlur: isCircularEdge ? 12 : 0,
           shadowColor: isCircularEdge ? "rgba(168, 85, 247, 0.62)" : "transparent",
@@ -411,7 +445,7 @@ const NetworkGraph: React.FC<{
           label: {
             show: true,
             formatter: `${formatGraphAmount(edge.amount)}${edge.transferCount > 1 ? ` · ${edge.transferCount} tx` : ""}`,
-            color: isCircularEdge ? "#7e22ce" : edge.suspicious ? "#dc2626" : "#334155",
+            color: isCircularEdge ? "#7e22ce" : edge.suspicious ? "#0369a1" : "#334155",
             fontSize: 11,
             fontWeight: 700,
             backgroundColor: "rgba(255,255,255,0.92)",
@@ -554,127 +588,227 @@ const NetworkGraph: React.FC<{
     const chart = chartInstanceRef.current as any;
     if (!chart || (!circularHighlight.nodeIds.size && !circularHighlight.edgeKeys.size)) return;
 
-    let animationFrame = 0;
-    let overlayGroup: any = null;
-    let isDisposed = false;
+    type ParticleEntry = {
+      particle: any;
+      path: any;
+      phase: number;
+    };
 
-    const resolvePath = (element: any): any => {
+    type PulseEntry = {
+      ring: any;
+      baseRadius: number;
+      phase: number;
+    };
+
+    let animationFrame = 0;
+    let retryTimer = 0;
+    let disposed = false;
+    let particles: ParticleEntry[] = [];
+    let pulses: PulseEntry[] = [];
+
+    const getChildren = (element: any): any[] => {
+      if (!element) return [];
+      if (typeof element.childrenRef === "function") return element.childrenRef() || [];
+      return Array.isArray(element.children) ? element.children : [];
+    };
+
+    const findLinkPath = (element: any): any => {
       if (!element) return null;
-      if (element.shape && typeof element.shape.x1 === "number") return element;
-      const children = typeof element.childrenRef === "function" ? element.childrenRef() : element.children;
-      if (!children) return null;
-      for (const child of children) {
-        const resolved = resolvePath(child);
-        if (resolved) return resolved;
+      const shape = element.shape;
+      if (
+        shape
+        && typeof shape.x1 === "number"
+        && typeof shape.y1 === "number"
+        && typeof shape.x2 === "number"
+        && typeof shape.y2 === "number"
+      ) {
+        return element;
       }
+
+      for (const child of getChildren(element)) {
+        const path = findLinkPath(child);
+        if (path) return path;
+      }
+
       return null;
     };
 
-    const attachToGraphView = () => {
-      if (isDisposed) return;
+    const resolveId = (raw: unknown, data: any, fallbackIndex: number): string | null => {
+      if (typeof raw === "string") return raw;
+      if (typeof raw === "number") {
+        const rawNode = data?.getRawDataItem?.(raw) as { id?: string; name?: string } | undefined;
+        return rawNode?.id || rawNode?.name || data?.getId?.(raw) || null;
+      }
+      return data?.getId?.(fallbackIndex) || null;
+    };
+
+    const pointOnPath = (path: any, t: number): [number, number] | null => {
+      if (typeof path?.pointAt === "function") {
+        const point = path.pointAt(t);
+        if (Array.isArray(point) && point.length >= 2) return [point[0], point[1]];
+      }
+
+      const shape = path?.shape;
+      if (!shape || typeof shape.x1 !== "number" || typeof shape.y1 !== "number" || typeof shape.x2 !== "number" || typeof shape.y2 !== "number") {
+        return null;
+      }
+
+      const x1 = shape.x1;
+      const y1 = shape.y1;
+      const x2 = shape.x2;
+      const y2 = shape.y2;
+      const inv = 1 - t;
+
+      // ECharts GraphView normally creates a quadratic Bezier curve for curved links.
+      // Fall back to cubic math only when a second control point is present.
+      if (typeof shape.cpx2 === "number" && typeof shape.cpy2 === "number") {
+        const cpx1 = typeof shape.cpx1 === "number" ? shape.cpx1 : (x1 + x2) / 2;
+        const cpy1 = typeof shape.cpy1 === "number" ? shape.cpy1 : (y1 + y2) / 2;
+        return [
+          inv ** 3 * x1 + 3 * inv ** 2 * t * cpx1 + 3 * inv * t ** 2 * shape.cpx2 + t ** 3 * x2,
+          inv ** 3 * y1 + 3 * inv ** 2 * t * cpy1 + 3 * inv * t ** 2 * shape.cpy2 + t ** 3 * y2,
+        ];
+      }
+
+      const cpx = typeof shape.cpx1 === "number" ? shape.cpx1 : (x1 + x2) / 2;
+      const cpy = typeof shape.cpy1 === "number" ? shape.cpy1 : (y1 + y2) / 2;
+      return [
+        inv * inv * x1 + 2 * inv * t * cpx + t * t * x2,
+        inv * inv * y1 + 2 * inv * t * cpy + t * t * y2,
+      ];
+    };
+
+    const cleanupGraphics = () => {
+      particles.forEach(({ particle }) => particle?.parent?.remove?.(particle));
+      pulses.forEach(({ ring }) => ring?.parent?.remove?.(ring));
+      particles = [];
+      pulses = [];
+    };
+
+    const bindToNativeGraphGraphics = () => {
+      if (disposed) return;
+      cleanupGraphics();
 
       const seriesModel = chart.getModel?.().getSeriesByIndex?.(0);
-      const graphView = seriesModel ? chart.getViewOfSeriesModel?.(seriesModel) : null;
-      const graphGroup = graphView?.group;
+      const graph = seriesModel?.getGraph?.();
+      const nodeData = seriesModel?.getData?.();
+      const edgeData = graph?.edgeData;
 
-      // Adding the particles to the graph view group is essential: it makes them
-      // inherit the exact same roam/zoom/pan transform as the real graph edges.
-      if (!graphGroup) {
-        animationFrame = window.requestAnimationFrame(attachToGraphView);
+      if (!nodeData || !edgeData) {
+        retryTimer = window.setTimeout(bindToNativeGraphGraphics, 120);
         return;
       }
 
-      overlayGroup = new (echarts.graphic.Group as any)({ silent: true });
-      overlayGroup.z2 = 100;
-      graphGroup.add(overlayGroup);
+      // Add each pulse ring as a sibling of the actual wallet symbol. It therefore
+      // inherits the native node transform during drag, pan and zoom.
+      const nodeCount = nodeData.count?.() ?? 0;
+      for (let index = 0; index < nodeCount; index += 1) {
+        const rawNode = nodeData.getRawDataItem?.(index) as { id?: string; name?: string } | undefined;
+        const nodeId = rawNode?.id || rawNode?.name || nodeData.getId?.(index);
+        if (!nodeId || !circularHighlight.nodeIds.has(nodeId)) continue;
 
-      const drawFrame = (timestamp: number) => {
-        if (isDisposed || !overlayGroup) return;
-        overlayGroup.removeAll();
+        const symbol = nodeData.getItemGraphicEl?.(index);
+        const parent = symbol?.parent;
+        const nodeContainer = typeof symbol?.add === "function" ? symbol : parent;
+        if (!symbol || !nodeContainer) continue;
 
-        const model = chart.getModel?.().getSeriesByIndex?.(0);
-        const nodeData = model?.getData?.();
-        const edgeData = model?.getGraph?.().edgeData;
+        const visualSize = nodeData.getItemVisual?.(index, "symbolSize");
+        const diameter = typeof visualSize === "number"
+          ? visualSize
+          : Array.isArray(visualSize)
+            ? Math.max(...visualSize)
+            : 24;
+        const ring = new (echarts.graphic.Circle as any)({
+          silent: true,
+          shape: { cx: 0, cy: 0, r: diameter / 2 + 5 },
+          style: {
+            fill: "rgba(168, 85, 247, 0)",
+            stroke: "rgba(196, 132, 252, 0.86)",
+            lineWidth: 1.7,
+            shadowBlur: 14,
+            shadowColor: "rgba(168, 85, 247, 0.48)",
+          },
+        });
+        ring.z2 = -1;
+        // Prefer the node's own Symbol group so 0,0 is exactly the wallet centre.
+        nodeContainer.add(ring);
+        pulses.push({ ring, baseRadius: diameter / 2 + 5, phase: index * 0.73 });
+      }
 
-        if (nodeData) {
-          const nodeCount = nodeData.count?.() ?? 0;
-          for (let index = 0; index < nodeCount; index += 1) {
-            const rawNode = nodeData.getRawDataItem?.(index) as { id?: string } | undefined;
-            const nodeId = rawNode?.id || nodeData.getId?.(index);
-            const layout = nodeData.getItemLayout?.(index) as [number, number] | undefined;
-            if (!nodeId || !layout || !circularHighlight.nodeIds.has(nodeId)) continue;
+      // Use the *actual rendered ECharts link path*, then place the particle in
+      // the same parent group as that path. No copied link or coordinate overlay
+      // is rendered, so the particle stays on the exact curve on drag/pan/zoom.
+      const edgeCount = edgeData.count?.() ?? 0;
+      for (let index = 0; index < edgeCount; index += 1) {
+        const rawEdge = edgeData.getRawDataItem?.(index) as { source?: string | number; target?: string | number } | undefined;
+        const graphEdge = graph?.getEdgeByIndex?.(index);
+        const source = resolveId(rawEdge?.source, nodeData, index) || graphEdge?.node1?.id || null;
+        const target = resolveId(rawEdge?.target, nodeData, index) || graphEdge?.node2?.id || null;
+        const edgeKey = source && target ? `${source}->${target}` : "";
+        if (!edgeKey || !circularHighlight.edgeKeys.has(edgeKey)) continue;
 
-            const pulse = 1 + Math.sin(timestamp / 440 + index * 0.9) * 0.07;
-            const renderedSize = nodeData.getItemVisual?.(index, "symbolSize");
-            const symbolDiameter = typeof renderedSize === "number"
-              ? renderedSize
-              : Array.isArray(renderedSize)
-                ? Math.max(...renderedSize)
-                : 24;
-            const baseRadius = symbolDiameter / 2 + 6;
+        const path = findLinkPath(edgeData.getItemGraphicEl?.(index));
+        const parent = path?.parent;
+        if (!path || !parent) continue;
 
-            overlayGroup.add(new (echarts.graphic.Circle as any)({
-              silent: true,
-              z2: 90,
-              shape: { cx: layout[0], cy: layout[1], r: baseRadius * pulse },
-              style: {
-                fill: "rgba(168, 85, 247, 0)",
-                stroke: "rgba(192, 132, 252, 0.92)",
-                lineWidth: 1.8,
-                shadowBlur: 16,
-                shadowColor: "rgba(168, 85, 247, 0.55)",
-              },
-            }));
-          }
-        }
+        const particle = new (echarts.graphic.Circle as any)({
+          silent: true,
+          shape: { cx: 0, cy: 0, r: isFullscreen ? 4.5 : 3.9 },
+          style: {
+            fill: "#f3e8ff",
+            stroke: "#c084fc",
+            lineWidth: 1,
+            shadowBlur: 17,
+            shadowColor: "rgba(168, 85, 247, 0.98)",
+          },
+        });
+        particle.z2 = (path.z2 || 0) + 10;
+        parent.add(particle);
+        particles.push({ particle, path, phase: index * 0.173 });
+      }
 
-        if (edgeData) {
-          const edgeCount = edgeData.count?.() ?? 0;
-          for (let index = 0; index < edgeCount; index += 1) {
-            const renderedEdge = readableEdges[index];
-            const edgeKey = renderedEdge ? `${renderedEdge.from}->${renderedEdge.to}` : "";
-            if (!edgeKey || !circularHighlight.edgeKeys.has(edgeKey)) continue;
+      if (!particles.length && circularHighlight.edgeKeys.size > 0) {
+        // ECharts may still be constructing edge elements on the first finished event.
+        retryTimer = window.setTimeout(bindToNativeGraphGraphics, 160);
+        return;
+      }
 
-            const path = resolvePath(edgeData.getItemGraphicEl?.(index));
-            const shape = path?.shape;
-            if (!shape || typeof shape.x1 !== "number" || typeof shape.y1 !== "number" || typeof shape.x2 !== "number" || typeof shape.y2 !== "number") continue;
+      const animate = (timestamp: number) => {
+        if (disposed) return;
 
-            const progress = ((timestamp / 1850) + index * 0.19) % 1;
-            const cpx1 = typeof shape.cpx1 === "number" ? shape.cpx1 : (shape.x1 + shape.x2) / 2;
-            const cpy1 = typeof shape.cpy1 === "number" ? shape.cpy1 : (shape.y1 + shape.y2) / 2;
-            const inverse = 1 - progress;
-            const x = inverse * inverse * shape.x1 + 2 * inverse * progress * cpx1 + progress * progress * shape.x2;
-            const y = inverse * inverse * shape.y1 + 2 * inverse * progress * cpy1 + progress * progress * shape.y2;
+        pulses.forEach(({ ring, baseRadius, phase }) => {
+          const pulse = 1 + Math.sin(timestamp / 420 + phase) * 0.08;
+          ring.attr({
+            shape: { cx: 0, cy: 0, r: baseRadius * pulse },
+            style: { opacity: 0.52 + Math.sin(timestamp / 420 + phase) * 0.16 },
+          });
+        });
 
-            // This is only the moving particle. The purple edge itself remains the
-            // original ECharts graph link configured in graphLinks above.
-            overlayGroup.add(new (echarts.graphic.Circle as any)({
-              silent: true,
-              z2: 110,
-              shape: { cx: x, cy: y, r: 4.2 },
-              style: {
-                fill: "rgba(237, 233, 254, 0.98)",
-                shadowBlur: 16,
-                shadowColor: "rgba(168, 85, 247, 0.98)",
-              },
-            }));
-          }
-        }
+        particles.forEach(({ particle, path, phase }) => {
+          // t increases from 0 to 1, matching ECharts source -> target path direction.
+          const point = pointOnPath(path, ((timestamp / 2050) + phase) % 1);
+          if (!point) return;
+          particle.attr({ shape: { cx: point[0], cy: point[1] } });
+        });
 
-        animationFrame = window.requestAnimationFrame(drawFrame);
+        animationFrame = window.requestAnimationFrame(animate);
       };
 
-      animationFrame = window.requestAnimationFrame(drawFrame);
+      animationFrame = window.requestAnimationFrame(animate);
     };
 
-    animationFrame = window.requestAnimationFrame(attachToGraphView);
+    // Bind only after GraphView has created native edge and node graphic elements.
+    chart.on?.("finished", bindToNativeGraphGraphics);
+    retryTimer = window.setTimeout(bindToNativeGraphGraphics, 90);
 
     return () => {
-      isDisposed = true;
+      disposed = true;
       window.cancelAnimationFrame(animationFrame);
-      if (overlayGroup?.parent) overlayGroup.parent.remove(overlayGroup);
+      window.clearTimeout(retryTimer);
+      chart.off?.("finished", bindToNativeGraphGraphics);
+      cleanupGraphics();
     };
-  }, [circularHighlight, readableEdges, isFullscreen]);
+  }, [circularHighlight, isFullscreen]);
 
   useEffect(() => {
     return () => {
@@ -695,6 +829,21 @@ const NetworkGraph: React.FC<{
       </div>
 
       <div ref={chartRef} className={`${styles.graphEcharts} ${isFullscreen ? styles.graphEchartsFullscreen : ""}`} />
+
+      <div className={styles.graphLegend} aria-label={String(tr("washTrading.graph.flowLegendAria"))}>
+        <span className={styles.legendItem}>
+          <i className={`${styles.legendLine} ${styles.legendLineCircular}`} />
+          {tr("washTrading.graph.circularClusterFlow")}
+        </span>
+        <span className={styles.legendItem}>
+          <i className={`${styles.legendDot} ${styles.legendRingCircular}`} />
+          {tr("washTrading.graph.circularWallet")}
+        </span>
+        <span className={styles.legendItem}>
+          <i className={`${styles.legendLine} ${styles.legendLineSuspicious}`} />
+          {tr("washTrading.graph.suspiciousTransfer")}
+        </span>
+      </div>
 
       {!isFullscreen && (
         <div className={styles.graphFooter}>
@@ -1203,7 +1352,7 @@ const WashTradingPage: React.FC = () => {
                   {result.aiAnalysis.detailedFindings.map((finding, index) => (
                     <div className={styles.findingItem} key={`${finding}-${index}`}>
                       <span>{index + 1}</span>
-                      <p>{finding}</p>
+                      <p>{formatAiFindingText(finding, tr)}</p>
                     </div>
                   ))}
                 </div>
