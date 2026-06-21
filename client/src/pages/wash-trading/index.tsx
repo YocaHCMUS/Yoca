@@ -589,7 +589,9 @@ const NetworkGraph: React.FC<{
     if (!chart || (!circularHighlight.nodeIds.size && !circularHighlight.edgeKeys.size)) return;
 
     type ParticleEntry = {
-      particle: any;
+      particleGroup: any;
+      glow: any;
+      core: any;
       path: any;
       phase: number;
     };
@@ -679,7 +681,7 @@ const NetworkGraph: React.FC<{
     };
 
     const cleanupGraphics = () => {
-      particles.forEach(({ particle }) => particle?.parent?.remove?.(particle));
+      particles.forEach(({ particleGroup }) => particleGroup?.parent?.remove?.(particleGroup));
       pulses.forEach(({ ring }) => ring?.parent?.remove?.(ring));
       particles = [];
       pulses = [];
@@ -751,20 +753,52 @@ const NetworkGraph: React.FC<{
         const parent = path?.parent;
         if (!path || !parent) continue;
 
-        const particle = new (echarts.graphic.Circle as any)({
+        // Put the moving marker in its own high z-level group. The parent is still
+        // the native ECharts link group, so it inherits the exact graph transform,
+        // but the marker is composited above the dark circular-pattern edge and arrow.
+        const particleZLevel = Math.max((Number(path.zlevel) || 0) + 1, 1);
+        const particleZ = (Number(path.z) || 0) + 100;
+        const particleZ2 = (Number(path.z2) || 0) + 100;
+        const particleRadius = isFullscreen ? 5.2 : 4.5;
+        const particleGroup = new (echarts.graphic.Group as any)({
           silent: true,
-          shape: { cx: 0, cy: 0, r: isFullscreen ? 4.5 : 3.9 },
+          zlevel: particleZLevel,
+          z: particleZ,
+          z2: particleZ2,
+        });
+        const glow = new (echarts.graphic.Circle as any)({
+          silent: true,
+          shape: { cx: 0, cy: 0, r: particleRadius * 2.45 },
           style: {
-            fill: "#f3e8ff",
-            stroke: "#c084fc",
-            lineWidth: 1,
-            shadowBlur: 17,
-            shadowColor: "rgba(168, 85, 247, 0.98)",
+            fill: "rgba(250, 204, 21, 0.28)",
+            shadowBlur: 30,
+            shadowColor: "rgba(250, 204, 21, 1)",
           },
         });
-        particle.z2 = (path.z2 || 0) + 10;
-        parent.add(particle);
-        particles.push({ particle, path, phase: index * 0.173 });
+        const core = new (echarts.graphic.Circle as any)({
+          silent: true,
+          shape: { cx: 0, cy: 0, r: particleRadius },
+          style: {
+            // Warm white/yellow strongly contrasts with the purple circular edge.
+            fill: "#ffffff",
+            stroke: "#fde047",
+            lineWidth: 2.2,
+            shadowBlur: 24,
+            shadowColor: "rgba(254, 240, 138, 1)",
+          },
+        });
+        // zlevel/z/z2 are also set on the drawable circles (not just the group),
+        // because ZRender sorts the flattened display list by each drawable itself.
+        glow.zlevel = particleZLevel;
+        glow.z = particleZ;
+        glow.z2 = particleZ2;
+        core.zlevel = particleZLevel;
+        core.z = particleZ;
+        core.z2 = particleZ2 + 2;
+        particleGroup.add(glow);
+        particleGroup.add(core);
+        parent.add(particleGroup);
+        particles.push({ particleGroup, glow, core, path, phase: index * 0.173 });
       }
 
       if (!particles.length && circularHighlight.edgeKeys.size > 0) {
@@ -784,11 +818,17 @@ const NetworkGraph: React.FC<{
           });
         });
 
-        particles.forEach(({ particle, path, phase }) => {
+        particles.forEach(({ particleGroup, glow, core, path, phase }) => {
           // t increases from 0 to 1, matching ECharts source -> target path direction.
           const point = pointOnPath(path, ((timestamp / 2050) + phase) % 1);
           if (!point) return;
-          particle.attr({ shape: { cx: point[0], cy: point[1] } });
+
+          // Move the whole halo/core group in the native link coordinate system.
+          // This preserves the exact curve while keeping the brightest core on top.
+          const shimmer = 0.86 + Math.sin(timestamp / 135 + phase * 7) * 0.14;
+          particleGroup.attr({ position: [point[0], point[1]] });
+          glow.attr({ style: { opacity: 0.58 + (shimmer - 0.86) * 0.8 } });
+          core.attr({ style: { opacity: shimmer } });
         });
 
         animationFrame = window.requestAnimationFrame(animate);
