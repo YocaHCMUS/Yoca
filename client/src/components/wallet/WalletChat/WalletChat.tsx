@@ -1,9 +1,11 @@
-import { useContext, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 import { Add, ChevronDown, Close, Maximize, OpenPanelLeft, OpenPanelRight, Playlist, Send, TrashCan } from "@carbon/icons-react";
 import { WalletChatMessage } from "./WalletChatMessage";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
 import { ChatPromptMenu } from "./ChatPromptMenu";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { useUserTheme } from "@/contexts/ThemeContext";
 import type { LangKeys } from "@/config/localization";
 import type { ChatSessionContextType } from "./useChatSessions";
 import styles from "./WalletChat.module.scss";
@@ -11,6 +13,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ChatContext, ChatContextProvider, MAX_INPUT_LENGTH, useChatContext } from "./ChatContext";
 
 const MAX_QUICK_QUESTIONS = 5;
+const SESSION_MENU_WIDTH = 320;
+const SESSION_MENU_MAX_HEIGHT = 300;
+const SESSION_MENU_OFFSET = 4;
+const VIEWPORT_PADDING = 8;
 
 interface Props {
   address?: string;
@@ -31,11 +37,14 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
   onRequestClose?: () => void;
 }) {
   const { tr, fmt } = useLocalization();
+  const { themeRef } = useUserTheme();
   const { user, isUserLoading } = useAuth();
   const [isOpen, setIsOpen] = useState(variant === "sidebar");
   const [isMinimized, setIsMinimized] = useState(false);
+  const [sessionDropdownStyle, setSessionDropdownStyle] = useState<CSSProperties>();
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const sessionToggleRef = useRef<HTMLButtonElement>(null);
   const sessionMenuRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -80,17 +89,47 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
     el.style.height = Math.min(el.scrollHeight, maxHeight) + "px";
   }, [inputText]);
 
+  const updateSessionDropdownPosition = useCallback(() => {
+    const toggle = sessionToggleRef.current;
+    if (!toggle) return;
+
+    const rect = toggle.getBoundingClientRect();
+    const maxLeft = window.innerWidth - SESSION_MENU_WIDTH - VIEWPORT_PADDING;
+    const maxTop = window.innerHeight - SESSION_MENU_MAX_HEIGHT - VIEWPORT_PADDING;
+
+    setSessionDropdownStyle({
+      left: Math.max(VIEWPORT_PADDING, Math.min(rect.right - SESSION_MENU_WIDTH, maxLeft)),
+      top: Math.max(VIEWPORT_PADDING, Math.min(rect.bottom + SESSION_MENU_OFFSET, maxTop)),
+      width: SESSION_MENU_WIDTH,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!showSessionMenu) return;
+    updateSessionDropdownPosition();
+  }, [showSessionMenu, chatPosition, updateSessionDropdownPosition]);
+
   useEffect(() => {
     if (!showSessionMenu) return;
-    const handler = (e: MouseEvent) => {
-      if (sessionMenuRef.current && !sessionMenuRef.current.contains(e.target as Node)) {
-        setShowSessionMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showSessionMenu, setShowSessionMenu]);
 
+    const handlePointerDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (sessionMenuRef.current?.contains(target) || sessionToggleRef.current?.contains(target)) {
+        return;
+      }
+      setShowSessionMenu(false);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("resize", updateSessionDropdownPosition);
+    window.addEventListener("scroll", updateSessionDropdownPosition, true);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("resize", updateSessionDropdownPosition);
+      window.removeEventListener("scroll", updateSessionDropdownPosition, true);
+    };
+  }, [showSessionMenu, setShowSessionMenu, updateSessionDropdownPosition]);
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -253,7 +292,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
   );
 
   const renderSessionMenu = () => (
-    <div ref={sessionMenuRef} className={styles.sessionDropdown}>
+    <div ref={sessionMenuRef} className={styles.sessionDropdown} style={sessionDropdownStyle}>
       <div className={styles.sessionDropdownTitle}>{tr("chat.sessions")}</div>
       {sessions.length === 0 && (
         <div className={styles.sessionEmpty}>{tr("chat.noSessions")}</div>
@@ -286,6 +325,9 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
   );
 
   const wrapperClass = variant === "sidebar" ? styles.sidebarContainer : styles.widgetContainer;
+  const sessionMenu = showSessionMenu
+    ? themeRef.current ? createPortal(renderSessionMenu(), themeRef.current) : renderSessionMenu()
+    : null;
 
   return (
     <div className={wrapperClass}>
@@ -296,6 +338,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
         <div className={styles.headerActions}>
           <div className={styles.sessionSelector}>
             <button
+              ref={sessionToggleRef}
               type="button"
               className={styles.sessionToggle}
               onClick={() => setShowSessionMenu((v) => !v)}
@@ -305,7 +348,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
               </span>
               <ChevronDown size={12} />
             </button>
-            {showSessionMenu && renderSessionMenu()}
+            {sessionMenu}
           </div>
           <button
             className={styles.headerBtn}
