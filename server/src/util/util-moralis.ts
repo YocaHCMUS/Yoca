@@ -3,6 +3,7 @@ import { mergeOutboundFetchTimeout } from "@sv/util/outbound-fetch.js";
 import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.js";
 import { apiKeyManager, buildApiKeyMetadata } from "./api-key-manager.js";
 import Bottleneck from "bottleneck";
+import env from "./load-env.js";
 
 const DEFAULT_MORALIS_SOLANA_GATEWAY_BASE_URL =
   "https://solana-gateway.moralis.io";
@@ -34,14 +35,7 @@ function buildEndpoint(base: string, path: string): URL {
 }
 
 function resolveBaseUrl(): string {
-  if (
-    process.env.MORALIS_SOLANA_GATEWAY_BASE_URL &&
-    process.env.MORALIS_SOLANA_GATEWAY_BASE_URL.length > 0
-  ) {
-    return process.env.MORALIS_SOLANA_GATEWAY_BASE_URL;
-  }
-
-  return DEFAULT_MORALIS_SOLANA_GATEWAY_BASE_URL;
+  return env.MORALIS_API_BASE_URL;
 }
 
 export async function moralisFetch(
@@ -93,7 +87,7 @@ export function getRequiredHeaders() {
   if (!moralisKeysInitialized) {
     apiKeyManager.initializeKeys(
       MORALIS_SERVICE_NAME,
-      process.env.MORALIS_API_KEY,
+      env.MORALIS_API_KEY,
     );
     moralisKeysInitialized = true;
   }
@@ -117,7 +111,7 @@ export function getRequiredHeadersWithMetadata(): {
   if (!moralisKeysInitialized) {
     apiKeyManager.initializeKeys(
       MORALIS_SERVICE_NAME,
-      process.env.MORALIS_API_KEY,
+      env.MORALIS_API_KEY,
     );
     moralisKeysInitialized = true;
   }
