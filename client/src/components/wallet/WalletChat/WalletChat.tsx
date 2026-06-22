@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useNavigate } from "react-router";
 import { Add, ChevronDown, Maximize, OpenPanelLeft, OpenPanelRight, Playlist, Send, TrashCan } from "@carbon/icons-react";
 import { WalletChatMessage } from "./WalletChatMessage";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
@@ -31,6 +32,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
 }) {
   const { tr, fmt } = useLocalization();
   const { user, isUserLoading } = useAuth();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(variant === "sidebar");
   const [isMinimized, setIsMinimized] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -175,13 +177,24 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
     updateActiveMessageContext();
   }, [messages, activeSession, updateActiveMessageContext]);
 
-  const renderContextTags = () => {
+  const renderSubheader = () => {
     const ctx = activeMessageContext ?? (messages.length > 0 ? getMessageContext(messages[messages.length - 1]) : null);
     if (!ctx || ctx.walletAddresses.length === 0) return null;
 
     return (
-      <div className={styles.contextTags} aria-label="Chat context">
-        <span className={styles.contextTag}>{formatContextAddresses(ctx.walletAddresses)}</span>
+      <div className={styles.subheader} aria-label="Wallet context">
+        <span className={styles.contextLabel}>{tr("chat.context")}:</span>
+        {ctx.walletAddresses.map((addr) => (
+          <button
+            key={addr}
+            type="button"
+            className={styles.contextTag}
+            onClick={() => navigate(`/wallets/${encodeURIComponent(addr)}`)}
+            title={addr}
+          >
+            {fmt.text.address(addr)}
+          </button>
+        ))}
       </div>
     );
   };
@@ -210,7 +223,6 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
             <div key={i} data-message-index={i}>
               {shouldShowContextShift && (
                 <div className={styles.contextChange}>
-                  <span className={styles.contextChangeLabel}>{tr("chat.contextChanged")}</span>
                   <span className={styles.contextChangeAddresses}>{formatContextAddresses(ctx.walletAddresses)}</span>
                 </div>
               )}
@@ -389,7 +401,6 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <span className={styles.headerTitle}>{tr("chat.headerTitle")}</span>
-          {renderContextTags()}
         </div>
         <div className={styles.headerActions}>
           <div className={styles.sessionSelector}>
@@ -459,6 +470,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
           )}
         </div>
       </div>
+      {renderSubheader()}
 
       {showPromptMenu ? renderPromptMenu()
         : messages.length === 0 && !isLoading ? renderGreeting()

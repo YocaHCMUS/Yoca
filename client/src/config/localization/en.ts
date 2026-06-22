@@ -1992,6 +1992,7 @@ export const translation = {
     greetingPrompt: "Try asking me:",
     serverError: "Server error: {{status}}. Please try again.",
     leftSidebar: "Left sidebar",
+    context: "Context",
     contextTypeWallet: "Wallet",
     contextTypeComparison: "Comparison",
     contextChanged: "Context changed",

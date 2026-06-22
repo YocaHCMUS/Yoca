@@ -465,12 +465,29 @@
   flex-shrink: 0;
 }
 
-.contextTags {
+.subheader {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
-  min-width: 0;
-  overflow: hidden;
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--cds-border-subtle-03);
+  background: $layer-01;
+  flex-shrink: 0;
+}
+
+.contextLabel {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 4px;
+  // background: $layer-02;
+  color: $text-secondary;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .contextTag {
@@ -488,6 +505,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $text-primary;
+  }
 }
 
 .walletSelect {
@@ -622,17 +645,12 @@
   }
 }
 
-.contextChangeLabel {
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 .contextChangeAddresses {
   max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
-  opacity: 0.8;
+  color: var(--cds-support-info);
+  font-weight: 600;
 }
 
 .emptyState {
