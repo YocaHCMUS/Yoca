@@ -110,6 +110,41 @@ export function useChatSessions(
     [userId],
   );
 
+  const createSessionWithMessages = useCallback(
+    async (
+      addresses: string[],
+      contextType: ChatSessionContextType,
+      messages: ChatMessageItem[],
+      title?: string,
+    ) => {
+      if (!userId || addresses.length === 0) return null;
+      try {
+        const session = await request<SessionItem>(sessionUrl(""), {
+          method: "POST",
+          body: JSON.stringify({ addresses, contextType, title }),
+        });
+        const updated = await request<SessionItem>(
+          sessionUrl(`/${session.id}`),
+          {
+            method: "PUT",
+            body: JSON.stringify({ messages, title }),
+          },
+        );
+        setSessions((prev) => {
+          const exists = prev.some((s) => s.id === updated.id);
+          return exists
+            ? prev.map((s) => (s.id === updated.id ? updated : s))
+            : [updated, ...prev];
+        });
+        setActiveSessionId(updated.id);
+        return updated;
+      } catch (err) {
+        console.error("[useChatSessions] Failed to create session with messages:", err);
+      }
+      return null;
+    },
+    [userId],
+  );
   const deleteSessionById = useCallback(
     async (sessionId: string) => {
       if (!userId) return;
@@ -142,6 +177,7 @@ export function useChatSessions(
     setActiveSessionId,
     createNewSession,
     saveMessagesToSession,
+    createSessionWithMessages,
     deleteSessionById,
     refreshSessions: fetchSessions,
     isLoading,

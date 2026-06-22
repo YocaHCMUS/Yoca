@@ -27,6 +27,7 @@ vi.mock("@/contexts/LocalizationContext", () => ({
         "chat.inputPlaceholder": "Ask about this wallet...",
         "chat.greetingPrompt": "Try asking me:",
         "chat.loadingLabel": "Analyzing...",
+        "chat.promptMenuBtn": "Prompts",
         "chat.prompt.overview.label": "Overview",
         "chat.prompt.overview.query": "Give a portfolio overview",
         "chat.prompt.trades.label": "Recent Trades",
@@ -47,6 +48,15 @@ vi.mock("../WalletChat/WalletChatMessage", () => ({
   ),
 }));
 
+vi.mock("../WalletChat/ChatPromptMenu", () => ({
+  ChatPromptMenu: ({ onSelect }: { onSelect: (query: string, promptId?: string) => void }) => (
+    <div>
+      <button type="button" onClick={() => onSelect("Give a portfolio overview", "overview")}>Overview</button>
+      <button type="button" onClick={() => onSelect("Show recent trades", "trades")}>Recent Trades</button>
+    </div>
+  ),
+}));
+
 const mockQuestions: PredefinedQuestion[] = [
   { id: "overview", label: "Overview", labelKey: "chat.prompt.overview.label", query: "Give a portfolio overview", queryKey: "chat.prompt.overview.query", contextTypes: ["wallet"] },
   { id: "trades", label: "Recent Trades", labelKey: "chat.prompt.trades.label", query: "Show recent trades", queryKey: "chat.prompt.trades.query", contextTypes: ["wallet"] },
@@ -60,14 +70,18 @@ function createAnchor(rect = defaultRect): HTMLElement {
   return anchor;
 }
 
+function openPromptMenu() {
+  fireEvent.click(screen.getByTitle("Prompts"));
+}
+
 function renderPopup(overrides?: Partial<ComponentProps<typeof QuickAiPopup>>) {
-  const injectQuickMessages = vi.fn();
+  const createSessionFromQuickMessages = vi.fn().mockResolvedValue({ id: "session-1" });
   const onClose = vi.fn();
   const onOpenChat = vi.fn();
 
   const anchorElement = overrides?.anchorElement ?? createAnchor();
   const chatContextValue = {
-    injectQuickMessages,
+    createSessionFromQuickMessages,
   } as unknown as NonNullable<ContextType<typeof ChatContext>>;
   const renderResult = render(
     <ChatContext.Provider value={chatContextValue}>
@@ -86,7 +100,7 @@ function renderPopup(overrides?: Partial<ComponentProps<typeof QuickAiPopup>>) {
     </ChatContext.Provider>,
   );
 
-  return { injectQuickMessages, onClose, onOpenChat, renderResult };
+  return { createSessionFromQuickMessages, onClose, onOpenChat, renderResult };
 }
 
 describe("QuickAiPopup", () => {
@@ -103,7 +117,7 @@ describe("QuickAiPopup", () => {
 
   it("shows predefined questions in prompt mode", () => {
     renderPopup();
-    expect(screen.getByText("Try asking me:")).toBeTruthy();
+    openPromptMenu();
     expect(screen.getAllByText("Overview").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Recent Trades")).toBeTruthy();
   });
@@ -115,6 +129,7 @@ describe("QuickAiPopup", () => {
     });
 
     renderPopup();
+    openPromptMenu();
     fireEvent.click(screen.getByText("Overview"));
 
     await waitFor(() => {
@@ -130,26 +145,31 @@ describe("QuickAiPopup", () => {
     });
   });
 
-  it("shows Continue in Chat button after response and calls inject + callbacks", async () => {
+  it("creates a persisted session before opening chat", async () => {
     mockPost.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ text: "Analysis done" }),
     });
 
-    const { injectQuickMessages, onClose, onOpenChat } = renderPopup();
+    let resolveSession: (value: { id: string }) => void = () => {};
+    const pendingSession = new Promise<{ id: string }>((resolve) => {
+      resolveSession = resolve;
+    });
+    const { createSessionFromQuickMessages, onClose, onOpenChat } = renderPopup();
+    createSessionFromQuickMessages.mockReturnValueOnce(pendingSession);
 
+    openPromptMenu();
     fireEvent.click(screen.getByText("Overview"));
     await waitFor(() => {
       expect(screen.getByText("Analysis done")).toBeTruthy();
     });
 
     const continueBtn = screen.getByText("Continue in Chat");
-    expect(continueBtn).toBeTruthy();
-
     fireEvent.click(continueBtn);
 
-    expect(injectQuickMessages).toHaveBeenCalledTimes(1);
-    const injected = injectQuickMessages.mock.calls[0][0] as ChatMessageItem[];
+    expect(createSessionFromQuickMessages).toHaveBeenCalledTimes(1);
+    const injected = createSessionFromQuickMessages.mock.calls[0][0] as ChatMessageItem[];
+    expect(createSessionFromQuickMessages.mock.calls[0][1]).toEqual(["test-addr"]);
     expect(injected).toHaveLength(2);
     expect(injected[0].role).toBe("user");
     expect(injected[1].role).toBe("assistant");
@@ -157,9 +177,37 @@ describe("QuickAiPopup", () => {
     expect(injected[0].content).toBe("Give a portfolio overview");
     expect(injected[0].context).toEqual({ contextType: "wallet", walletAddresses: ["test-addr"] });
     expect(injected[1].context).toEqual({ contextType: "wallet", walletAddresses: ["test-addr"] });
+    expect(onOpenChat).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
 
-    expect(onOpenChat).toHaveBeenCalledTimes(1);
-    expect(onClose).toHaveBeenCalledTimes(1);
+    resolveSession({ id: "session-1" });
+
+    await waitFor(() => {
+      expect(onOpenChat).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("does not create duplicate sessions while continue is saving", async () => {
+    mockPost.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ text: "Analysis done" }),
+    });
+
+    const { createSessionFromQuickMessages } = renderPopup();
+    createSessionFromQuickMessages.mockReturnValueOnce(new Promise(() => {}));
+
+    openPromptMenu();
+    fireEvent.click(screen.getByText("Overview"));
+    await waitFor(() => {
+      expect(screen.getByText("Analysis done")).toBeTruthy();
+    });
+
+    const continueBtn = screen.getByText("Continue in Chat");
+    fireEvent.click(continueBtn);
+    fireEvent.click(continueBtn);
+
+    expect(createSessionFromQuickMessages).toHaveBeenCalledTimes(1);
   });
 
   it("clamps popup position within the viewport", () => {

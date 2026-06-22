@@ -3,9 +3,7 @@ import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivi
 import { GeneralTab } from "@/components/wallet/WalletComparison/GeneralTab";
 import { HoldingTab } from "@/components/wallet/WalletComparison/HoldingTab";
 import { RiskTab } from "@/components/wallet/WalletComparison/RiskTab";
-import { WalletChat, ChatContextProvider, QuickAiPopup } from "@/components/wallet/WalletChat";
-import type { PredefinedQuestion } from "@/components/wallet/WalletChat/types";
-import { PREDEFINED_QUESTIONS } from "@/components/wallet/WalletChat/WalletChatConstants";
+import { WalletChat, ChatContextProvider } from "@/components/wallet/WalletChat";
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { applyRobotoRegularPdfFont } from "@/util/pdf-fonts";
@@ -183,34 +181,6 @@ export default function WalletsComparisonPage() {
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [chatPosition, setChatPosition] = useState<"right" | "left" | "fullscreen">("right");
 
-  const [aiPopupOpen, setAiPopupOpen] = useState(false);
-  const [aiPopupAnchor, setAiPopupAnchor] = useState<HTMLElement | null>(null);
-  const [aiPopupLabel, setAiPopupLabel] = useState("");
-  const [aiPopupQuestions, setAiPopupQuestions] = useState<PredefinedQuestion[]>([]);
-
-  function handleOpenAiPopup(
-    e: React.MouseEvent<HTMLElement>,
-    label: string,
-    questionIds?: string[],
-  ) {
-    setAiPopupAnchor(e.currentTarget);
-    setAiPopupLabel(label);
-    if (questionIds) {
-      setAiPopupQuestions(
-        PREDEFINED_QUESTIONS.filter((q) => questionIds.includes(q.id)),
-      );
-    } else {
-      setAiPopupQuestions(
-        PREDEFINED_QUESTIONS.filter((q) => q.contextTypes?.includes("wallet-comparison")),
-      );
-    }
-    setAiPopupOpen(true);
-  }
-
-  function handleCloseAiPopup() {
-    setAiPopupOpen(false);
-    setAiPopupAnchor(null);
-  }
   const [walletSectionOpen, setWalletSectionOpen] = useState(true);
   const [chatSectionOpen, setChatSectionOpen] = useState(true);
 
@@ -262,20 +232,7 @@ export default function WalletsComparisonPage() {
             key="wc-general"
             walletAddresses={selectedWallets}
             fetchEnabled={activeTab === 0}
-            onAiAction={handleOpenAiPopup}
           />
-          <IconButton
-            kind="ghost"
-            size="sm"
-            label="AI"
-            align="bottom"
-            onClick={(e: React.MouseEvent<HTMLElement>) =>
-              handleOpenAiPopup(e, tr("walletComparison.general"), ["compareOverview"])
-            }
-            style={{ position: "absolute", top: 16, right: 16, zIndex: 1 }}
-          >
-            <AiGenerate size={16} />
-          </IconButton>
         </div>
       </div>,
       <div
@@ -288,20 +245,7 @@ export default function WalletsComparisonPage() {
             key="wc-holding"
             walletAddresses={selectedWallets}
             fetchEnabled={activeTab === 1}
-            onAiAction={handleOpenAiPopup}
           />
-          <IconButton
-            kind="ghost"
-            size="sm"
-            label="AI"
-            align="bottom"
-            onClick={(e: React.MouseEvent<HTMLElement>) =>
-              handleOpenAiPopup(e, tr("walletComparison.holdings"), ["commonHoldings"])
-            }
-            style={{ position: "absolute", top: 16, right: 16, zIndex: 1 }}
-          >
-            <AiGenerate size={16} />
-          </IconButton>
         </div>
       </div>,
       <div
@@ -315,20 +259,7 @@ export default function WalletsComparisonPage() {
             walletAddresses={selectedWallets}
             fetchEnabled={activeTab === 2}
             onDayClick={handleDayClick}
-            onAiAction={handleOpenAiPopup}
           />
-          <IconButton
-            kind="ghost"
-            size="sm"
-            label="AI"
-            align="bottom"
-            onClick={(e: React.MouseEvent<HTMLElement>) =>
-              handleOpenAiPopup(e, tr("walletComparison.profitRiskManagement"), ["comparePnl", "topPerformer", "riskComparison"])
-            }
-            style={{ position: "absolute", top: 16, right: 16, zIndex: 1 }}
-          >
-            <AiGenerate size={16} />
-          </IconButton>
         </div>
       </div>,
     ],
@@ -336,7 +267,6 @@ export default function WalletsComparisonPage() {
       selectedWallets,
       activeTab,
       exportContainerClassName,
-      handleOpenAiPopup,
       tr,
     ],
   );
@@ -680,19 +610,6 @@ export default function WalletsComparisonPage() {
             </div>
           )}
 
-          {aiPopupOpen && aiPopupAnchor && (
-            <QuickAiPopup
-              open={aiPopupOpen}
-              onClose={handleCloseAiPopup}
-              anchorElement={aiPopupAnchor}
-              addresses={selectedWallets}
-              contextType="wallet-comparison"
-              lang={lang}
-              componentLabel={aiPopupLabel}
-              predefinedQuestions={aiPopupQuestions}
-              onOpenChat={() => setIsChatOpen(true)}
-            />
-          )}
         </ChatContextProvider>
       </div>
 

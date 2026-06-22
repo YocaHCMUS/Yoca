@@ -32,7 +32,7 @@ interface ChatContextValue {
   handleSessionSelect: (sessionId: string) => Promise<void>;
   handleDeleteSession: (e: React.MouseEvent, sessionId: string) => Promise<void>;
   refreshSessions: () => Promise<void>;
-  injectQuickMessages: (msgs: ChatMessageItem[], chatAddresses: string[]) => void;
+  createSessionFromQuickMessages: (msgs: ChatMessageItem[], chatAddresses: string[]) => Promise<SessionItem | null>;
 }
 
 export const ChatContext = createContext<ChatContextValue | null>(null);
@@ -61,6 +61,7 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
     activeSession,
     setActiveSessionId,
     saveMessagesToSession,
+    createSessionWithMessages,
     deleteSessionById,
     refreshSessions,
   } = useChatSessions(user?.userId ?? null);
@@ -291,12 +292,32 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
     await deleteSessionById(sessionId);
   }, [deleteSessionById]);
 
-  const injectQuickMessages = useCallback((msgs: ChatMessageItem[], chatAddresses: string[]) => {
-    const stampedMessages = msgs.map((msg) => withMessageContext(msg, chatAddresses));
-    setMessages((prev) => [...prev, ...stampedMessages]);
-    setActiveSessionId(null);
-    setTruncatedMessages(null);
-  }, [setActiveSessionId, withMessageContext]);
+  const createSessionFromQuickMessages = useCallback(async (msgs: ChatMessageItem[], chatAddresses: string[]) => {
+    const messageContext: NonNullable<ChatMessageItem["context"]> = {
+      contextType: chatAddresses.length > 1 ? "wallet-comparison" : "wallet",
+      walletAddresses: chatAddresses,
+    };
+    const stampedMessages = msgs.map((msg) => ({
+      ...msg,
+      context: messageContext,
+    }));
+    const title = stampedMessages.find((msg) => msg.role === "user")?.content.slice(0, 50);
+    const session = await createSessionWithMessages(
+      chatAddresses,
+      messageContext.contextType,
+      stampedMessages,
+      title,
+    );
+
+    if (session) {
+      setMessages(stampedMessages);
+      setTruncatedMessages(null);
+      setShowPromptMenu(false);
+      setShowSessionMenu(false);
+    }
+
+    return session;
+  }, [createSessionWithMessages]);
 
   return (
     <ChatContext.Provider
@@ -325,7 +346,7 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
         handleSessionSelect,
         handleDeleteSession,
         refreshSessions,
-        injectQuickMessages,
+        createSessionFromQuickMessages,
       }}
     >
       {children}

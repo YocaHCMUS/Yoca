@@ -1,10 +1,11 @@
 import { useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
-import { AiGenerate, Send, Close, ArrowRight } from "@carbon/icons-react";
+import { AiGenerate, Playlist, Send, Close, ArrowRight } from "@carbon/icons-react";
 import client from "@/api/main";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { WalletChatMessage } from "../WalletChat/WalletChatMessage";
 import { ChatContext } from "../WalletChat/ChatContext";
+import { ChatPromptMenu } from "../WalletChat/ChatPromptMenu";
 import type {
   ChatMessageItem,
   ChatResponse,
@@ -34,7 +35,6 @@ export function QuickAiPopup({
   contextType,
   lang,
   componentLabel,
-  predefinedQuestions = [],
   onOpenChat,
 }: Props) {
   const { tr } = useLocalization();
@@ -43,8 +43,10 @@ export function QuickAiPopup({
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSavingSession, setIsSavingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"prompt" | "loading" | "response">("prompt");
+  const [showPromptMenu, setShowPromptMenu] = useState(false);
   const [popupStyle, setPopupStyle] = useState<CSSProperties>({ visibility: "hidden" });
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -55,7 +57,9 @@ export function QuickAiPopup({
       setInputText("");
       setError(null);
       setMode("prompt");
+      setShowPromptMenu(false);
       setIsLoading(false);
+      setIsSavingSession(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [open]);
@@ -65,6 +69,15 @@ export function QuickAiPopup({
       bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
     }
   }, [messages, mode]);
+
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const lineHeight = 20;
+    const maxHeight = lineHeight * 3 + 8;
+    el.style.height = Math.min(el.scrollHeight, maxHeight) + "px";
+  }, [inputText]);
 
   const updatePopupPosition = useCallback(() => {
     if (!open || !anchorElement) return;
@@ -108,7 +121,7 @@ export function QuickAiPopup({
     };
   }, [open, updatePopupPosition]);
 
-  const handleSend = useCallback(async (query: string) => {
+  const handleSend = useCallback(async (query: string, promptId?: string) => {
     if (!query.trim() || isLoading || !user || addresses.length === 0) return;
 
     const messageContext: NonNullable<ChatMessageItem["context"]> = { contextType, walletAddresses: addresses };
@@ -129,6 +142,7 @@ export function QuickAiPopup({
           skipSessionSave: true,
           skipCache: true,
           contextType,
+          promptId,
         },
       });
 
@@ -163,17 +177,28 @@ export function QuickAiPopup({
     }
   }, [addresses, contextType, lang, isLoading, user]);
 
-  const handlePredefined = useCallback((q: string) => {
-    void handleSend(q);
+  const handlePredefined = useCallback((q: string, promptId?: string) => {
+    void handleSend(q, promptId);
   }, [handleSend]);
 
-  const handleContinueInChat = useCallback(() => {
-    if (messages.length > 0 && chatCtx) {
-      chatCtx.injectQuickMessages(messages, addresses);
+  const handleContinueInChat = useCallback(async () => {
+    if (messages.length === 0 || !chatCtx || isSavingSession) return;
+
+    setIsSavingSession(true);
+    setError(null);
+    try {
+      const session = await chatCtx.createSessionFromQuickMessages(messages, addresses);
+      if (!session) {
+        throw new Error("Failed to create chat session");
+      }
+      onOpenChat?.();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create chat session");
+    } finally {
+      setIsSavingSession(false);
     }
-    onOpenChat?.();
-    onClose();
-  }, [messages, chatCtx, addresses, onOpenChat, onClose]);
+  }, [messages, chatCtx, addresses, isSavingSession, onOpenChat, onClose]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -181,9 +206,6 @@ export function QuickAiPopup({
       void handleSend(inputText);
     }
   };
-
-  const inputValid =
-    inputText.trim().length > 0 && inputText.length <= MAX_INPUT;
 
   if (!open || !anchorElement) return null;
 
@@ -226,55 +248,54 @@ export function QuickAiPopup({
         <div ref={bodyRef} className={styles.body}>
           {mode === "prompt" && (
             <div className={styles.promptArea}>
-              <label className={styles.promptLabel}>
-                {tr("chat.inputPlaceholder")}
-              </label>
-              <textarea
-                ref={inputRef}
-                className={styles.promptInput}
-                rows={3}
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={tr("chat.inputPlaceholder")}
-              />
-              <div className={styles.promptActions}>
-                <button
-                  type="button"
-                  className={styles.sendBtn}
-                  disabled={!inputValid}
-                  onClick={() => handleSend(inputText)}
-                >
-                  <Send size={12} />
-                </button>
-              </div>
-
-              {predefinedQuestions.length > 0 && (
-                <div className={styles.predefinedSection}>
-                  <div className={styles.predefinedLabel}>
-                    {tr("chat.greetingPrompt")}
-                  </div>
-                  <div className={styles.predefinedList}>
-                    {predefinedQuestions.slice(0, 6).map((q) => {
-                      const queryText = q.queryKey
-                        ? tr(q.queryKey as "chat.prompt.overview.query")
-                        : q.query;
-                      const labelText = q.labelKey
-                        ? tr(q.labelKey as "chat.prompt.overview.label")
-                        : q.label;
-                      return (
-                        <button
-                          key={q.id}
-                          type="button"
-                          className={styles.predefinedItem}
-                          onClick={() => handlePredefined(queryText)}
-                        >
-                          {labelText}
-                        </button>
-                      );
-                    })}
+              <div className={styles.inputContainer}>
+                <textarea
+                  ref={inputRef}
+                  className={styles.promptInput}
+                  rows={1}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={tr("chat.inputPlaceholder")}
+                  disabled={isLoading}
+                />
+                <div className={styles.inputFooter}>
+                  <span className={styles.charCount}>
+                    {tr("chat.inputCounter", { current: String(inputText.length), max: MAX_INPUT })}
+                  </span>
+                  <div className={styles.inputActions}>
+                    <button
+                      type="button"
+                      onClick={() => setShowPromptMenu((v) => !v)}
+                      disabled={isLoading}
+                      className={styles.iconBtn}
+                      title={tr("chat.promptMenuBtn")}
+                    >
+                      <Playlist size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSend(inputText)}
+                      disabled={isLoading || !inputText.trim() || inputText.length > MAX_INPUT}
+                      className={styles.iconBtn}
+                    >
+                      <Send size={16} />
+                    </button>
                   </div>
                 </div>
+              </div>
+              {inputText.length > 0 && inputText.length > MAX_INPUT && (
+                <div className={styles.validationError}>{tr("chat.inputOverLimit", { max: MAX_INPUT })}</div>
+              )}
+              {showPromptMenu && (
+                <ChatPromptMenu
+                  walletAddress={addresses[0]}
+                  onSelect={(query, promptId) => {
+                    setShowPromptMenu(false);
+                    handlePredefined(query, promptId);
+                  }}
+                  onClose={() => setShowPromptMenu(false)}
+                />
               )}
             </div>
           )}
@@ -310,6 +331,7 @@ export function QuickAiPopup({
               type="button"
               className={styles.continueBtn}
               onClick={handleContinueInChat}
+              disabled={isSavingSession}
             >
               <AiGenerate size={14} />
               Continue in Chat
