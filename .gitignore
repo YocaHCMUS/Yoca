@@ -20,6 +20,7 @@ server/postgresdb/*
 !server/postgresdb/migrations/
 server/postgresdb/migrations/*
 !server/postgresdb/migrations/0007_managed_helius_webhooks.sql
+!server/postgresdb/migrations/0009_ai_daily_usage.sql
 !server/postgresdb/migrations/meta/
 server/postgresdb/migrations/meta/*
 !server/postgresdb/migrations/meta/_journal.json

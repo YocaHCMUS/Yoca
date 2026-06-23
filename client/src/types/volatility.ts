@@ -39,8 +39,19 @@ export interface VolatilitySummary {
   provider?: string;
 }
 
+export interface VolatilityAiUsage {
+  feature: "volatility_signal_summary";
+  tier: "Free" | "Lite" | "Plus" | "Pro";
+  limit: number;
+  used: number;
+  remaining: number;
+  resetsAt: string;
+}
+
 export interface VolatilitySignalResponse {
   success: boolean;
+  usage?: VolatilityAiUsage;
+  counted?: boolean;
   data: {
     token: {
       address: string;

@@ -76,6 +76,35 @@
   font-size: 12px;
 }
 
+.summaryUsage {
+  color: $text-helper;
+  font-size: 12px;
+}
+
+.quotaNotice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid $support-warning;
+  border-radius: 8px;
+  color: $text-secondary;
+  background: $layer-01;
+  font-size: 12px;
+
+  a {
+    flex-shrink: 0;
+    color: $link-primary;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
 .summaryBox {
   display: flex;
   flex-direction: column;
@@ -347,6 +376,12 @@
   .controls {
     width: 100%;
     flex-wrap: wrap;
+  }
+
+  .summaryActions,
+  .quotaNotice {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .relatedNewsItem {

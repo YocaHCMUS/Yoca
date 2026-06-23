@@ -319,7 +319,7 @@ export const translation = defineTranslation({
   pricing: {
     title: "Bảng giá",
     subtitle:
-      "Trang bị cho nền tảng của bạn dữ liệu crypto thời gian thực và insight từ hơn 200 thị trường chỉ với 1 tích hợp.",
+      "Chọn dung lượng AI mỗi ngày phù hợp với mức độ nghiên cứu thị trường của bạn.",
     placeholder: "Sẽ được cập nhật",
     free: "MIỄN PHÍ",
     period: {
@@ -327,6 +327,13 @@ export const translation = defineTranslation({
     },
     tiers: {
       standard: { name: "STANDARD" },
+    },
+    features: {
+      label: "Hạn mức AI bao gồm",
+      askYoca: "Ask Yoca AI: {{$count}} câu hỏi mỗi ngày",
+      volatilitySummary:
+        "Tóm tắt Volatility Signals: {{$count}} lượt tạo mỗi ngày",
+      dailyReset: "Hạn mức được làm mới lúc 00:00 UTC mỗi ngày",
     },
     cta: {
       buyNow: "Mua ngay",
@@ -2095,6 +2102,8 @@ export const translation = defineTranslation({
     NOT_FOUND: "Không tìm thấy",
     UNAUTHORIZED: "Không được ủy quyền",
     RATE_LIMIT_EXCEEDED: "Quá nhiều yêu cầu. Vui lòng thử lại sau.",
+    AI_DAILY_LIMIT_EXCEEDED:
+      "Bạn đã dùng hết lượt AI hôm nay. Hãy nâng cấp gói để có thêm lượt.",
     BAD_GATEWAY: "Cổng trung gian không hợp lệ. Vui lòng thử lại sau.",
   },
   token: {

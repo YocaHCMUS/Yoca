@@ -4,6 +4,14 @@ import {
   type TokenAiLanguage,
   type TokenAiTimeframe,
 } from "@sv/services/tokens/token-ai-chat.service.js";
+import userExtract from "@sv/middlewares/user-extract.js";
+import { honoJwt } from "@sv/middlewares/validation.js";
+import {
+  AI_FEATURES,
+  type AiUsageReservation,
+  releaseAiUsage,
+  reserveAiUsage,
+} from "@sv/services/ai-usage.service.js";
 import { setErr } from "@sv/util/errors.js";
 import { statusCode } from "@sv/util/responses.js";
 import { Hono, type Context } from "hono";
@@ -51,7 +59,8 @@ function isAllowed(ip: string) {
   return true;
 }
 
-const app = new Hono().post("/", async (c) => {
+const app = new Hono().post("/", honoJwt, userExtract, async (c) => {
+  const { id: userId } = c.get("userPayload");
   const ip = getIp(c);
   if (!isAllowed(ip)) {
     return c.json(
@@ -91,7 +100,23 @@ const app = new Hono().post("/", async (c) => {
     );
   }
 
+  let reservation: AiUsageReservation | undefined;
   try {
+    reservation = await reserveAiUsage(userId, AI_FEATURES.AskYocaAi);
+    if (!reservation.allowed) {
+      return c.json(
+        {
+          errorCode: "AI_DAILY_LIMIT_EXCEEDED",
+          success: false,
+          message:
+            "You have reached today's Ask Yoca AI limit. Upgrade your plan for more daily questions.",
+          ...reservation.usage,
+          upgradePath: "/pricing",
+        },
+        statusCode.TooManyRequests,
+      );
+    }
+
     const language = inferTokenAiLanguage(
       parsed.data.question,
       parsed.data.language,
@@ -108,8 +133,18 @@ const app = new Hono().post("/", async (c) => {
       modelMode: parsed.data.modelMode,
     });
 
-    return c.json({ success: true, data }, statusCode.Ok);
+    return c.json(
+      { success: true, data, usage: reservation.usage },
+      statusCode.Ok,
+    );
   } catch (err) {
+    if (reservation?.allowed) {
+      try {
+        await releaseAiUsage(reservation);
+      } catch (releaseErr) {
+        console.error("[token-ai-chat] failed to release AI usage:", releaseErr);
+      }
+    }
     console.error("[token-ai-chat] error:", err);
     return c.json(
       {

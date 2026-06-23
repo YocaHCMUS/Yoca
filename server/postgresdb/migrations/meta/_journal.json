@@ -64,6 +64,13 @@
       "when": 1781180000000,
       "tag": "0008_backward_swap_history_cache",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1782205299157,
+      "tag": "0009_ai_daily_usage",
+      "breakpoints": true
     }
   ]
 }

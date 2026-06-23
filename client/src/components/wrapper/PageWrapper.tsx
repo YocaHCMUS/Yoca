@@ -117,27 +117,33 @@ export function PageWrapper({
 }: PageWrapperProps) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
-  const { user, signOut } = useAuth();
+  const {
+    user,
+    signOut,
+    isSignInOpen,
+    openAuthModal,
+    closeAuthModal,
+  } = useAuth();
   const [openPanel, setOpenPanel] = useState<
     "lang" | "account" | "notifications" | null
   >(null);
   const location = useLocation();
   const [isExtraPanelOpen, setIsExtraHeaderPanelOpen] = useState(false);
-  const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const isHeaderNotificationPanelOpen = openPanel == "notifications";
   const isAnyExtraPanelOpen = isExtraPanelOpen || isHeaderNotificationPanelOpen;
 
   useEffect(() => {
-    if (authPopup && isSignInOpen != authPopup.isOpen)
-      setIsSignInOpen(authPopup.isOpen);
-  }, [authPopup]);
+    if (!authPopup) return;
+    if (authPopup.isOpen) openAuthModal("login");
+    else closeAuthModal();
+  }, [authPopup, closeAuthModal, openAuthModal]);
 
   useEffect(() => {
     if (authPopup && !isSignInOpen) {
       authPopup.onClose();
     }
-  }, [isSignInOpen]);
+  }, [authPopup, isSignInOpen]);
 
   // Ctrl+K / Cmd+K to open search
   useEffect(() => {
@@ -273,7 +279,7 @@ export function PageWrapper({
                 togglePanel("account");
               } else {
                 setOpenPanel(null);
-                setIsSignInOpen(true);
+                openAuthModal("login");
               }
             }}
           >
@@ -438,7 +444,7 @@ export function PageWrapper({
         />
       )}
 
-      <SignInModal open={isSignInOpen} onClose={() => setIsSignInOpen(false)} />
+      <SignInModal open={isSignInOpen} onClose={closeAuthModal} />
       {isSearchOpen && <SearchBar onClose={() => setIsSearchOpen(false)} />}
 
       <Content

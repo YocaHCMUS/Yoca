@@ -119,6 +119,8 @@ const ERROR = {
   NOT_FOUND: "Not found.",
   UNAUTHORIZED: "Unauthorized",
   RATE_LIMIT_EXCEEDED: "Too many requests. Please try again later.",
+  AI_DAILY_LIMIT_EXCEEDED:
+    "You have reached today's AI usage limit. Upgrade your plan for more requests.",
   BAD_GATEWAY: "Bad gateway. Please try again later.",
 } as const satisfies Record<ApiErrCode, string>;
 
@@ -357,7 +359,7 @@ export const translation = {
   pricing: {
     title: "Pricing",
     subtitle:
-      "Outfit your platform with real-time crypto data and insights from 200+ markets with just 1 integration.",
+      "Choose the daily AI capacity that fits how deeply you research the market.",
     placeholder: "To be updated",
     free: "FREE",
     period: {
@@ -365,6 +367,13 @@ export const translation = {
     },
     tiers: {
       standard: { name: "STANDARD" },
+    },
+    features: {
+      label: "AI usage included",
+      askYoca: "Ask Yoca AI: {{$count}} questions per day",
+      volatilitySummary:
+        "Volatility Signal Summary: {{$count}} generations per day",
+      dailyReset: "Daily limits reset at 00:00 UTC",
     },
     cta: {
       buyNow: "Buy Now",

@@ -65,6 +65,10 @@ function getGeminiApiKey() {
   return env.GOOGLE_AI_KEY;
 }
 
+export function isTokenVolatilityGeminiConfigured() {
+  return Boolean(getGeminiApiKey());
+}
+
 function formatPercent(value: number) {
   const prefix = value > 0 ? "+" : "";
   return `${prefix}${value.toFixed(1)}%`;

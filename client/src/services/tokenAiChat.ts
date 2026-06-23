@@ -116,33 +116,80 @@ export interface TokenAiChatData {
 export interface TokenAiChatResponse {
   success: true;
   data: TokenAiChatData;
+  usage: AiUsageMetadata;
+}
+
+export interface AiUsageMetadata {
+  feature: "ask_yoca_ai";
+  tier: "Free" | "Lite" | "Plus" | "Pro";
+  limit: number;
+  used: number;
+  remaining: number;
+  resetsAt: string;
+}
+
+export class TokenAiChatError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly errorCode?: string,
+    public readonly usage?: AiUsageMetadata,
+  ) {
+    super(message);
+    this.name = "TokenAiChatError";
+  }
 }
 
 export async function askTokenAiChat(
   payload: TokenAiChatPayload,
-): Promise<TokenAiChatData> {
-  const response = await (client.api.tokenAiChat.index as any).$post({
+): Promise<TokenAiChatResponse> {
+  const response = await client.api.tokenAiChat.index.$post({
     json: payload,
   });
 
   if (!response.ok) {
     let message = `Token AI chat failed (${response.status})`;
+    let errorCode: string | undefined;
+    let usage: AiUsageMetadata | undefined;
     try {
       const errorData = (await response.json()) as {
         message?: string;
         error?: string;
+        errorCode?: string;
+        feature?: AiUsageMetadata["feature"];
+        tier?: AiUsageMetadata["tier"];
+        limit?: number;
+        used?: number;
+        remaining?: number;
+        resetsAt?: string;
       };
       if (errorData.message?.trim()) {
         message = errorData.message;
       } else if (errorData.error?.trim()) {
         message = errorData.error;
       }
+      errorCode = errorData.errorCode;
+      usage =
+        errorData.feature &&
+        errorData.tier &&
+        typeof errorData.limit === "number" &&
+        typeof errorData.used === "number" &&
+        typeof errorData.remaining === "number" &&
+        errorData.resetsAt
+          ? {
+              feature: errorData.feature,
+              tier: errorData.tier,
+              limit: errorData.limit,
+              used: errorData.used,
+              remaining: errorData.remaining,
+              resetsAt: errorData.resetsAt,
+            }
+          : undefined;
     } catch {
-      // ignore parse failure
+      // Keep the status-based fallback message when the body is not JSON.
     }
-    throw new Error(message);
+    throw new TokenAiChatError(message, response.status, errorCode, usage);
   }
 
-  const data = (await response.json()) as TokenAiChatResponse;
-  return data.data;
+  return (await response.json()) as TokenAiChatResponse;
 }
