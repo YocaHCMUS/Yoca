@@ -5,6 +5,7 @@ import { and, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
 export const AI_FEATURES = {
   AskYocaAi: "ask_yoca_ai",
   VolatilitySignalSummary: "volatility_signal_summary",
+  WalletAiSwapSummary: "wallet_ai_swap_summary",
 } as const;
 
 export type AiFeature = (typeof AI_FEATURES)[keyof typeof AI_FEATURES];
@@ -20,6 +21,12 @@ const AI_DAILY_LIMITS: Record<AiFeature, Record<AiTier, number>> = {
   [AI_FEATURES.VolatilitySignalSummary]: {
     Free: 10,
     Lite: 25,
+    Plus: 50,
+    Pro: 100,
+  },
+  [AI_FEATURES.WalletAiSwapSummary]: {
+    Free: 10,
+    Lite: 20,
     Plus: 50,
     Pro: 100,
   },

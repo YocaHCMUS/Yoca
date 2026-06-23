@@ -7,10 +7,13 @@ import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import TrendNumWithSign from "@/components/TrendNumWithSign.tsx";
 import {
   fetchWalletAiSwapSummary,
+  WalletAiApiError,
   type WalletAiSwapSummaryResponse,
   type WalletAiAnalysisLanguage,
+  type WalletAiUsage,
 } from "@/services/wallet/walletApi";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { TokenDeepAnalysisView } from "./TokenDeepAnalysisView";
 // import { MiniHistogram } from "./MiniHistogram";
 import styles from "./ai-swap-summary.module.scss";
@@ -35,9 +38,11 @@ const SUMMARY_TAB_ID = "summary";
 function SummaryContent({
   report,
   onOpenTokenTab,
+  quotaExhausted,
 }: {
   report: WalletAiSwapSummaryResponse;
   onOpenTokenTab: (t: TokenTab) => void;
+  quotaExhausted: boolean;
 }) {
   const { tr, fmt } = useLocalization();
   const [sortAsc, setSortAsc] = useState(false);
@@ -116,6 +121,11 @@ function SummaryContent({
         {report.cached && (
           <p className={styles.cachedHint}>
             {tr("walletPage.aiSwapSummary.cachedResult")}
+          </p>
+        )}
+        {!report.counted && (
+          <p className={styles.cachedHint}>
+            {tr("walletPage.aiSwapSummary.notCounted")}
           </p>
         )}
       </div>
@@ -204,6 +214,7 @@ function SummaryContent({
                       <button
                         type="button"
                         className={styles.analyzeBtn}
+                        disabled={quotaExhausted}
                         onClick={(e) => {
                           e.stopPropagation();
                           onOpenTokenTab({
@@ -297,9 +308,11 @@ export function AiSwapSummaryModal({
   walletAddress,
 }: AiSwapSummaryModalProps) {
   const { tr, lang } = useLocalization();
+  const { user, isUserLoading, openAuthModal } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<WalletAiSwapSummaryResponse | null>(null);
+  const [usage, setUsage] = useState<WalletAiUsage | null>(null);
   const [tabs, setTabs] = useState<TokenTab[]>([]);
   const [activeTab, setActiveTab] = useState<string>(SUMMARY_TAB_ID);
 
@@ -307,23 +320,43 @@ export function AiSwapSummaryModal({
 
   const fetch = useCallback(async () => {
     if (!isOpen || !walletAddress) return;
+    if (isUserLoading) return;
+    if (!user) {
+      openAuthModal("login");
+      setError(String(tr("walletPage.aiSwapSummary.signInRequired")));
+      return;
+    }
     setLoading(true);
     setError(null);
     setReport(null);
     try {
       const result = await fetchWalletAiSwapSummary(walletAddress, apiLanguage);
       setReport(result);
+      setUsage(result.usage);
     } catch (err) {
+      if (err instanceof WalletAiApiError) {
+        if (err.usage) setUsage(err.usage);
+        if (err.status === 401) openAuthModal("login");
+      }
       setError(err instanceof Error ? err.message : "Failed to load AI swap summary");
     } finally {
       setLoading(false);
     }
-  }, [isOpen, walletAddress, apiLanguage]);
+  }, [
+    isOpen,
+    walletAddress,
+    apiLanguage,
+    user,
+    isUserLoading,
+    openAuthModal,
+    tr,
+  ]);
 
   useEffect(() => {
     if (isOpen) {
       setTabs([]);
       setActiveTab(SUMMARY_TAB_ID);
+      setUsage(null);
       void fetch();
     }
   }, [isOpen, fetch]);
@@ -354,6 +387,7 @@ export function AiSwapSummaryModal({
   if (!modalRoot) return null;
 
   const hasTokenTabs = tabs.length > 0;
+  const quotaExhausted = usage?.remaining === 0;
 
   return ReactDOM.createPortal(
     <div
@@ -413,26 +447,52 @@ export function AiSwapSummaryModal({
           </button>
         </div>
 
+        {usage && (
+          <div className={styles.quotaBar}>
+            <span>
+              {tr("walletPage.aiSwapSummary.remaining", {
+                remaining: String(usage.remaining),
+                limit: String(usage.limit),
+              })}
+            </span>
+            {quotaExhausted ? (
+              <a href="/pricing">{tr("walletPage.aiSwapSummary.upgrade")}</a>
+            ) : null}
+          </div>
+        )}
+
         {loading ? (
           <LoadingSkeleton />
         ) : error ? (
           <div className={styles.errorState}>
             <p className={styles.errorText}>{error}</p>
-            <button
-              type="button"
-              className={styles.retryBtn}
-              onClick={() => void fetch()}
-            >
-              {tr("walletPage.aiSwapSummary.retry")}
-            </button>
+            {quotaExhausted ? (
+              <a className={styles.upgradeLink} href="/pricing">
+                {tr("walletPage.aiSwapSummary.upgrade")}
+              </a>
+            ) : (
+              <button
+                type="button"
+                className={styles.retryBtn}
+                onClick={() => void fetch()}
+              >
+                {tr("walletPage.aiSwapSummary.retry")}
+              </button>
+            )}
           </div>
         ) : activeTab === SUMMARY_TAB_ID && report ? (
-          <SummaryContent report={report} onOpenTokenTab={openTokenTab} />
+          <SummaryContent
+            report={report}
+            onOpenTokenTab={openTokenTab}
+            quotaExhausted={quotaExhausted}
+          />
         ) : activeTab !== SUMMARY_TAB_ID ? (
           <TokenDeepAnalysisView
             walletAddress={walletAddress}
             tokenAddress={activeTab}
             apiLanguage={apiLanguage}
+            quotaExhausted={quotaExhausted}
+            onUsageChange={setUsage}
           />
         ) : null}
       </div>

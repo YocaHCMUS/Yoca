@@ -32,6 +32,13 @@ describe("AI usage policy", () => {
     expect(getAiDailyLimit("volatility_signal_summary", "Pro")).toBe(100);
   });
 
+  it("uses the configured Wallet AI Swap Summary limits", () => {
+    expect(getAiDailyLimit("wallet_ai_swap_summary", "Free")).toBe(10);
+    expect(getAiDailyLimit("wallet_ai_swap_summary", "Lite")).toBe(20);
+    expect(getAiDailyLimit("wallet_ai_swap_summary", "Plus")).toBe(50);
+    expect(getAiDailyLimit("wallet_ai_swap_summary", "Pro")).toBe(100);
+  });
+
   it("resets at the next UTC midnight", () => {
     expect(getUtcUsageWindow(new Date("2026-06-23T23:59:59.000Z"))).toEqual({
       usageDate: "2026-06-23",

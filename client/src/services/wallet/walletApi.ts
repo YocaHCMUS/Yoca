@@ -245,6 +245,77 @@ export interface WalletIntelligenceResponse {
 
 export type WalletAiAnalysisLanguage = "en" | "vn";
 
+export interface WalletAiUsage {
+  feature: "wallet_ai_swap_summary";
+  tier: "Free" | "Lite" | "Plus" | "Pro";
+  limit: number;
+  used: number;
+  remaining: number;
+  resetsAt: string;
+}
+
+export class WalletAiApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly errorCode?: string,
+    public readonly usage?: WalletAiUsage,
+  ) {
+    super(message);
+    this.name = "WalletAiApiError";
+  }
+}
+
+async function walletAiError(response: Response, fallback: string) {
+  let message = fallback;
+  let errorCode: string | undefined;
+  let usage: WalletAiUsage | undefined;
+
+  try {
+    const errorData = await response.json() as {
+      error?: string;
+      message?: string;
+      errorCode?: string;
+      feature?: WalletAiUsage["feature"];
+      tier?: WalletAiUsage["tier"];
+      limit?: number;
+      used?: number;
+      remaining?: number;
+      resetsAt?: string;
+    };
+    message =
+      errorData.message?.trim() ||
+      errorData.error?.trim() ||
+      message;
+    errorCode = errorData.errorCode;
+    usage =
+      errorData.feature &&
+      errorData.tier &&
+      typeof errorData.limit === "number" &&
+      typeof errorData.used === "number" &&
+      typeof errorData.remaining === "number" &&
+      errorData.resetsAt
+        ? {
+            feature: errorData.feature,
+            tier: errorData.tier,
+            limit: errorData.limit,
+            used: errorData.used,
+            remaining: errorData.remaining,
+            resetsAt: errorData.resetsAt,
+          }
+        : undefined;
+  } catch {
+    // Keep the status-based fallback when the response body is not JSON.
+  }
+
+  return new WalletAiApiError(
+    message,
+    response.status,
+    errorCode,
+    usage,
+  );
+}
+
 export interface WalletAiSwapSummaryTokenPnl {
   address: string;
   symbol: string | null;
@@ -284,6 +355,8 @@ export interface WalletAiSwapSummaryResponse {
   model: string;
   fetchedAt: string;
   cached: boolean;
+  usage: WalletAiUsage;
+  counted: boolean;
 }
 
 export async function fetchWalletAiSwapSummary(
@@ -295,18 +368,10 @@ export async function fetchWalletAiSwapSummary(
   });
 
   if (!response.ok) {
-    let message = `Failed to fetch wallet AI swap summary (${response.status})`;
-    try {
-      const errorData = await response.json() as { error?: string; message?: string; code?: string };
-      if (typeof errorData?.message === "string" && errorData.message.trim()) {
-        message = errorData.message;
-      } else if (typeof errorData?.error === "string" && errorData.error.trim()) {
-        message = errorData.error;
-      }
-    } catch {
-      // ignore parse failure
-    }
-    throw new Error(message);
+    throw await walletAiError(
+      response,
+      `Failed to fetch wallet AI swap summary (${response.status})`,
+    );
   }
 
   const data = await response.json();
@@ -349,6 +414,8 @@ export interface TokenDeepAnalysisResponse {
   winningPercentage: number;
   model: string;
   cached: boolean;
+  usage: WalletAiUsage;
+  counted: boolean;
 }
 
 export async function fetchTokenDeepAnalysis(
@@ -361,18 +428,10 @@ export async function fetchTokenDeepAnalysis(
   });
 
   if (!response.ok) {
-    let message = `Failed to fetch token deep analysis (${response.status})`;
-    try {
-      const errorData = await response.json() as { error?: string; message?: string; code?: string };
-      if (typeof errorData?.message === "string" && errorData.message.trim()) {
-        message = errorData.message;
-      } else if (typeof errorData?.error === "string" && errorData.error.trim()) {
-        message = errorData.error;
-      }
-    } catch {
-      // ignore parse failure
-    }
-    throw new Error(message);
+    throw await walletAiError(
+      response,
+      `Failed to fetch token deep analysis (${response.status})`,
+    );
   }
 
   const data = await response.json();

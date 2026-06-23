@@ -373,6 +373,8 @@ export const translation = {
       askYoca: "Ask Yoca AI: {{$count}} questions per day",
       volatilitySummary:
         "Volatility Signal Summary: {{$count}} generations per day",
+      walletSwapSummary:
+        "Wallet AI Swap Summary: {{$count}} analyses per day",
       dailyReset: "Daily limits reset at 00:00 UTC",
     },
     cta: {
@@ -1073,6 +1075,10 @@ export const translation = {
       summary: "Summary",
       riskAnalysis: "Risk Analysis",
       cachedResult: "Cached result",
+      remaining: "{{remaining}}/{{limit}} AI analyses remaining today",
+      notCounted: "Cached result — no usage charged",
+      upgrade: "Upgrade plan",
+      signInRequired: "Sign in to use Wallet AI Swap Summary.",
       allTokens: "All Tokens",
       entry: "Entry",
       exit: "Exit",

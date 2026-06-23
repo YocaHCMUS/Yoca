@@ -83,7 +83,8 @@ export default function PricingPage() {
   const aiFeature = (
     key:
       | "pricing.features.askYoca"
-      | "pricing.features.volatilitySummary",
+      | "pricing.features.volatilitySummary"
+      | "pricing.features.walletSwapSummary",
     count: number,
   ) => String(tr(key, { $count: count }));
   const localizedLite = {
@@ -92,6 +93,7 @@ export default function PricingPage() {
     features: [
       aiFeature("pricing.features.askYoca", 20),
       aiFeature("pricing.features.volatilitySummary", 25),
+      aiFeature("pricing.features.walletSwapSummary", 20),
       String(tr("pricing.features.dailyReset")),
     ],
     cta: tr("pricing.cta.buyNow"),
@@ -103,6 +105,7 @@ export default function PricingPage() {
     features: [
       aiFeature("pricing.features.askYoca", 5),
       aiFeature("pricing.features.volatilitySummary", 10),
+      aiFeature("pricing.features.walletSwapSummary", 10),
       String(tr("pricing.features.dailyReset")),
     ],
     cta: tr("pricing.cta.tryForFree"),
@@ -113,6 +116,7 @@ export default function PricingPage() {
     features: [
       aiFeature("pricing.features.askYoca", 50),
       aiFeature("pricing.features.volatilitySummary", 50),
+      aiFeature("pricing.features.walletSwapSummary", 50),
       String(tr("pricing.features.dailyReset")),
     ],
   };
@@ -122,6 +126,7 @@ export default function PricingPage() {
     features: [
       aiFeature("pricing.features.askYoca", 100),
       aiFeature("pricing.features.volatilitySummary", 100),
+      aiFeature("pricing.features.walletSwapSummary", 100),
       String(tr("pricing.features.dailyReset")),
     ],
   };

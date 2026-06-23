@@ -1,8 +1,10 @@
 import {
     addressSchema,
+    honoJwt,
     validate,
     walletTokenTradesSchema,
 } from "@sv/middlewares/validation.js";
+import userExtract from "@sv/middlewares/user-extract.js";
 import type {
     WalletPortfolioItem,
     WalletSwap,
@@ -55,6 +57,14 @@ import {
     WalletTokenAnalysisServiceError,
     getTokenDeepAnalysis,
 } from "@sv/services/wallet/walletTokenAnalysis.service.js";
+import {
+    AI_FEATURES,
+    type AiUsageMetadata,
+    type AiUsageReservation,
+    getAiUsage,
+    releaseAiUsage,
+    reserveAiUsage,
+} from "@sv/services/ai-usage.service.js";
 import { statusCode } from "@sv/util/responses.js";
 import { z } from "zod";
 import { Hono } from "hono";
@@ -90,6 +100,32 @@ const walletTokenAnalysisRequestSchema = z.object({
 });
 
 const DEFAULT_OVERVIEW_PERIOD = "24H";
+
+class WalletAiDailyLimitError extends Error {
+  constructor(readonly usage: AiUsageMetadata) {
+    super("Wallet AI Swap Summary daily limit exceeded");
+  }
+}
+
+async function releaseWalletAiUsage(reservation?: AiUsageReservation) {
+  if (!reservation?.allowed) return;
+
+  try {
+    await releaseAiUsage(reservation);
+  } catch (err) {
+    console.error("[wallet-ai-swap-summary] failed to release AI usage", err);
+  }
+}
+
+function walletAiLimitResponse(usage: AiUsageMetadata) {
+  return {
+    errorCode: "AI_DAILY_LIMIT_EXCEEDED",
+    message:
+      "You have reached today's Wallet AI Swap Summary limit. Upgrade your plan for more daily analyses.",
+    ...usage,
+    upgradePath: "/pricing",
+  };
+}
 
 function parseOverviewPeriod(
   rawPeriod?: string,
@@ -622,7 +658,8 @@ const app = new Hono()
       return c.json({ error: "Failed to get wallet AI analysis" }, 500);
     }
   })
-  .post("/ai-swap-summary", async (c) => {
+  .post("/ai-swap-summary", honoJwt, userExtract, async (c) => {
+    const { id: userId } = c.get("userPayload");
     let body: unknown;
 
     try {
@@ -639,13 +676,35 @@ const app = new Hono()
       );
     }
 
+    let reservation: AiUsageReservation | undefined;
     try {
       const summary = await getWalletAiSwapSummary(
         parsed.data.address,
         parsed.data.language,
+        async () => {
+          reservation = await reserveAiUsage(
+            userId,
+            AI_FEATURES.WalletAiSwapSummary,
+          );
+          if (!reservation.allowed) {
+            throw new WalletAiDailyLimitError(reservation.usage);
+          }
+        },
       );
-      return c.json(summary, 200);
+      const usage =
+        reservation?.usage ??
+        (await getAiUsage(userId, AI_FEATURES.WalletAiSwapSummary));
+      return c.json(
+        { ...summary, usage, counted: reservation?.allowed === true },
+        200,
+      );
     } catch (err) {
+      if (err instanceof WalletAiDailyLimitError) {
+        return c.json(walletAiLimitResponse(err.usage), 429);
+      }
+
+      await releaseWalletAiUsage(reservation);
+
       if (err instanceof WalletAiSwapSummaryServiceError) {
         const errCode = err.code;
         const statusByCode: Record<
@@ -670,7 +729,8 @@ const app = new Hono()
       return c.json({ error: "Failed to get wallet AI swap summary" }, 500);
     }
   })
-  .post("/ai-swap-summary/token", async (c) => {
+  .post("/ai-swap-summary/token", honoJwt, userExtract, async (c) => {
+    const { id: userId } = c.get("userPayload");
     let body: unknown;
 
     try {
@@ -687,14 +747,36 @@ const app = new Hono()
       );
     }
 
+    let reservation: AiUsageReservation | undefined;
     try {
       const analysis = await getTokenDeepAnalysis(
         parsed.data.address,
         parsed.data.tokenAddress,
         parsed.data.language ?? "en",
+        async () => {
+          reservation = await reserveAiUsage(
+            userId,
+            AI_FEATURES.WalletAiSwapSummary,
+          );
+          if (!reservation.allowed) {
+            throw new WalletAiDailyLimitError(reservation.usage);
+          }
+        },
       );
-      return c.json(analysis, 200);
+      const usage =
+        reservation?.usage ??
+        (await getAiUsage(userId, AI_FEATURES.WalletAiSwapSummary));
+      return c.json(
+        { ...analysis, usage, counted: reservation?.allowed === true },
+        200,
+      );
     } catch (err) {
+      if (err instanceof WalletAiDailyLimitError) {
+        return c.json(walletAiLimitResponse(err.usage), 429);
+      }
+
+      await releaseWalletAiUsage(reservation);
+
       if (err instanceof WalletTokenAnalysisServiceError) {
         const errCode = err.code;
         const statusByCode: Record<

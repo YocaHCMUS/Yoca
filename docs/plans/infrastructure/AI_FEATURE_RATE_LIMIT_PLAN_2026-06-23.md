@@ -1,7 +1,7 @@
 # AI Feature Rate Limit Plan
 
 Date: 2026-06-23  
-Status: Ask Yoca AI and Volatility Signal Summary implemented
+Status: Ask Yoca AI, Volatility Signal Summary, and Wallet AI Swap Summary implemented
 
 ## Architecture
 
@@ -10,6 +10,7 @@ Status: Ask Yoca AI and Volatility Signal Summary implemented
 - A conditional upsert reserves usage atomically before AI work starts.
 - Failed AI requests release reserved usage.
 - Cache charging is feature-specific: Ask Yoca AI counts successful cache hits; Volatility Signal Summary does not.
+- Wallet AI Swap Summary and its token-level AI Analysis share one daily counter; cache hits do not count.
 - Daily counters reset at `00:00 UTC`.
 - Existing short-window IP throttles remain separate abuse protection.
 - Users without a valid paid subscription use the Free tier.
@@ -22,7 +23,7 @@ Status: Ask Yoca AI and Volatility Signal Summary implemented
 | Ask Yoca AI | `ask_yoca_ai` | 5 | 20 | 50 | 100 | Enforced |
 | General AI Chat | Pending | Pending product limits | Pending product limits | Pending product limits | Pending product limits | Not enforced |
 | Wallet AI Analysis | Pending | Pending product limits | Pending product limits | Pending product limits | Pending product limits | Not enforced |
-| Wallet AI Swap Summary | Pending | Pending product limits | Pending product limits | Pending product limits | Pending product limits | Not enforced |
+| Wallet AI Swap Summary | `wallet_ai_swap_summary` | 10 | 20 | 50 | 100 | Enforced |
 | Wash Trading AI Analysis | Pending | Pending product limits | Pending product limits | Pending product limits | Pending product limits | Not enforced |
 | Volatility Signal Summary | `volatility_signal_summary` | 10 | 25 | 50 | 100 | Enforced |
 | Other token news AI summaries | Pending | Pending product limits | Pending product limits | Pending product limits | Pending product limits | Not enforced |
@@ -43,6 +44,14 @@ Status: Ask Yoca AI and Volatility Signal Summary implemented
 - The reservation is kept only when Gemini returns a valid summary; provider or validation fallback releases it.
 - A successful response includes `usage` and `counted`; exhausted quota returns `429 AI_DAILY_LIMIT_EXCEEDED`.
 
+## Wallet AI Swap Summary Behavior
+
+- Wallet-level swap summaries and token-level AI Analysis require authentication and share the `wallet_ai_swap_summary` quota.
+- Cache hits do not consume quota.
+- Invalid input, insufficient swap data, and a missing Gemini key do not consume quota.
+- Quota is reserved immediately before Gemini and retained only after a valid response; provider or validation failures release it.
+- Successful responses include `usage` and `counted`; exhausted quota returns `429 AI_DAILY_LIMIT_EXCEEDED`.
+
 ## Implementation Checklist
 
 - [x] Add `ai_daily_usage` schema and Drizzle migration.
@@ -53,7 +62,8 @@ Status: Ask Yoca AI and Volatility Signal Summary implemented
 - [x] Return quota metadata on success and exhaustion.
 - [x] Display remaining usage and upgrade CTA in the client.
 - [x] Enforce Volatility Signal Summary limits only for successful Gemini generations.
-- [x] Publish approved Ask Yoca AI and Volatility Summary limits on the pricing page.
+- [x] Enforce one shared Wallet AI Swap Summary quota across wallet and token analysis.
+- [x] Publish approved Ask Yoca AI, Volatility Summary, and Wallet AI Swap Summary limits on the pricing page.
 - [x] Keep other AI features unenforced until product limits are supplied.
 - [ ] Apply limits to each pending AI feature after its tier values are approved.
 
@@ -67,3 +77,5 @@ Status: Ask Yoca AI and Volatility Signal Summary implemented
 - Unauthenticated requests return `401`.
 - Exhausted requests return `429` without invoking the AI provider.
 - Volatility summary cache hits and deterministic fallbacks do not consume usage.
+- Wallet swap summary and token analysis cache hits do not consume usage.
+- Wallet swap summary and token analysis share the same 10/20/50/100 daily counter.

@@ -333,6 +333,8 @@ export const translation = defineTranslation({
       askYoca: "Ask Yoca AI: {{$count}} câu hỏi mỗi ngày",
       volatilitySummary:
         "Tóm tắt Volatility Signals: {{$count}} lượt tạo mỗi ngày",
+      walletSwapSummary:
+        "AI tóm tắt giao dịch swap: {{$count}} lượt phân tích mỗi ngày",
       dailyReset: "Hạn mức được làm mới lúc 00:00 UTC mỗi ngày",
     },
     cta: {
@@ -1035,6 +1037,10 @@ export const translation = defineTranslation({
       summary: "Tóm tắt",
       riskAnalysis: "Phân tích rủi ro",
       cachedResult: "Kết quả từ bộ nhớ đệm",
+      remaining: "Còn {{remaining}}/{{limit}} lượt phân tích AI hôm nay",
+      notCounted: "Kết quả cache — không trừ lượt",
+      upgrade: "Nâng cấp gói",
+      signInRequired: "Đăng nhập để sử dụng AI tóm tắt giao dịch swap.",
       allTokens: "Tất cả token",
       entry: "Vào",
       exit: "Ra",

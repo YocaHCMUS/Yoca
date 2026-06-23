@@ -7,9 +7,12 @@ import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import {
   fetchTokenDeepAnalysis,
+  WalletAiApiError,
   type TokenDeepAnalysisResponse,
   type WalletAiAnalysisLanguage,
+  type WalletAiUsage,
 } from "@/services/wallet/walletApi";
+import { useAuth } from "@/contexts/AuthContext";
 import { TokenPriceChart, type TradeIndicator } from "@/components/charts/TokenPriceChart/TokenPriceChart";
 import TrendNumWithSign from "@/components/TrendNumWithSign";
 import styles from "./TokenDeepAnalysisView.module.scss";
@@ -18,6 +21,8 @@ interface TokenDeepAnalysisViewProps {
   walletAddress: string;
   tokenAddress: string;
   apiLanguage: WalletAiAnalysisLanguage;
+  quotaExhausted: boolean;
+  onUsageChange: (usage: WalletAiUsage) => void;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -47,8 +52,11 @@ export function TokenDeepAnalysisView({
   walletAddress,
   tokenAddress,
   apiLanguage,
+  quotaExhausted,
+  onUsageChange,
 }: TokenDeepAnalysisViewProps) {
   const { tr, fmt } = useLocalization();
+  const { user, isUserLoading, openAuthModal } = useAuth();
   const baseOption = useCarbonChartBaseOption();
   const [data, setData] = useState<TokenDeepAnalysisResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,17 +64,38 @@ export function TokenDeepAnalysisView({
   const [expandedNotes, setExpandedNotes] = useState(false);
 
   const fetch = useCallback(async () => {
+    if (isUserLoading) return;
+    if (!user) {
+      openAuthModal("login");
+      setError(String(tr("walletPage.aiSwapSummary.signInRequired")));
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const result = await fetchTokenDeepAnalysis(walletAddress, tokenAddress, apiLanguage);
       setData(result);
+      onUsageChange(result.usage);
     } catch (err) {
+      if (err instanceof WalletAiApiError) {
+        if (err.usage) onUsageChange(err.usage);
+        if (err.status === 401) openAuthModal("login");
+      }
       setError(err instanceof Error ? err.message : "Failed to load token analysis");
     } finally {
       setLoading(false);
     }
-  }, [walletAddress, tokenAddress, apiLanguage]);
+  }, [
+    walletAddress,
+    tokenAddress,
+    apiLanguage,
+    user,
+    isUserLoading,
+    openAuthModal,
+    onUsageChange,
+    tr,
+  ]);
 
   useEffect(() => {
     void fetch();
@@ -190,9 +219,15 @@ export function TokenDeepAnalysisView({
     return (
       <div className={styles.errorContainer}>
         <p className={styles.errorText}>{error}</p>
-        <button type="button" className={styles.retryBtn} onClick={() => void fetch()}>
-          {tr("walletPage.aiSwapSummary.retry")}
-        </button>
+        {quotaExhausted ? (
+          <a className={styles.upgradeLink} href="/pricing">
+            {tr("walletPage.aiSwapSummary.upgrade")}
+          </a>
+        ) : (
+          <button type="button" className={styles.retryBtn} onClick={() => void fetch()}>
+            {tr("walletPage.aiSwapSummary.retry")}
+          </button>
+        )}
       </div>
     );
   }
@@ -258,6 +293,11 @@ export function TokenDeepAnalysisView({
         {data.cached && (
           <p className={styles.cachedHint}>
             {tr("walletPage.aiSwapSummary.cachedResult")}
+          </p>
+        )}
+        {!data.counted && (
+          <p className={styles.cachedHint}>
+            {tr("walletPage.aiSwapSummary.notCounted")}
           </p>
         )}
       </div>
