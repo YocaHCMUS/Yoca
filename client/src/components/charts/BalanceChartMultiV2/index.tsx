@@ -61,12 +61,14 @@ type MultiWalletBalanceChartProps = {
   addresses: string[];
   showTotal?: boolean;
   show24Change?: boolean;
+  actions?: React.ReactNode;
 };
 
 export function MultiWalletBalanceChart({
   addresses,
   showTotal = true,
   show24Change = true,
+  actions,
 }: MultiWalletBalanceChartProps) {
   const { fmt } = useLocalization();
 
@@ -137,7 +139,7 @@ export function MultiWalletBalanceChart({
   }, [balanceSeries]);
 
   return (
-    <ChartWrapper title="Combined Balance History">
+    <ChartWrapper title="Combined Balance History" actions={actions}>
       <Flex dir="column" gap={8}>
         <Flex justify="end">
           <FilterSwitch

@@ -41,6 +41,7 @@ export interface PnLChartProps {
   };
   fetchEnabled?: boolean;
   onDayClick?: (walletAddress: string, timestamp: number) => void;
+  actions?: React.ReactNode;
 }
 
 export const PnLChart: React.FC<PnLChartProps> = ({
@@ -54,6 +55,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   initialFilters,
   fetchEnabled = true,
   onDayClick,
+  actions: externalActions,
 }) => {
   const { tr, fmt } = useLocalization();
   const chartTitle = title || tr("charts.pnlChart.title");
@@ -426,6 +428,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
             onChange={(v) => handleChartPeriodChange(v as "7D" | "30D")}
             width={120}
           />
+          {externalActions}
         </Flex>
       }
     >

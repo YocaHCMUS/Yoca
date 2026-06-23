@@ -7,7 +7,7 @@ import { WalletChat, ChatContextProvider } from "@/components/wallet/WalletChat"
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { applyRobotoRegularPdfFont } from "@/util/pdf-fonts";
-import { Button, Search, Stack } from "@carbon/react";
+import { Button, IconButton, Search, Stack } from "@carbon/react";
 import { ChartLine, Close, Download, SearchAdvanced, Wallet, User, Launch, AiGenerate, ChevronDown } from "@carbon/react/icons";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
@@ -180,6 +180,7 @@ export default function WalletsComparisonPage() {
 
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [chatPosition, setChatPosition] = useState<"right" | "left" | "fullscreen">("right");
+
   const [walletSectionOpen, setWalletSectionOpen] = useState(true);
   const [chatSectionOpen, setChatSectionOpen] = useState(true);
 
@@ -226,40 +227,47 @@ export default function WalletsComparisonPage() {
         ref={activeTab === 0 ? exportRef : undefined}
         className={exportContainerClassName}
       >
-        <GeneralTab
-          key="wc-general"
-          walletAddresses={selectedWallets}
-          fetchEnabled={activeTab === 0}
-        />
+        <div style={{ position: "relative" }}>
+          <GeneralTab
+            key="wc-general"
+            walletAddresses={selectedWallets}
+            fetchEnabled={activeTab === 0}
+          />
+        </div>
       </div>,
       <div
         key="wc-holding-wrapper"
         ref={activeTab === 1 ? exportRef : undefined}
         className={exportContainerClassName}
       >
-        <HoldingTab
-          key="wc-holding"
-          walletAddresses={selectedWallets}
-          fetchEnabled={activeTab === 1}
-        />
+        <div style={{ position: "relative" }}>
+          <HoldingTab
+            key="wc-holding"
+            walletAddresses={selectedWallets}
+            fetchEnabled={activeTab === 1}
+          />
+        </div>
       </div>,
       <div
         key="wc-risk-wrapper"
         ref={activeTab === 2 ? exportRef : undefined}
         className={exportContainerClassName}
       >
-        <RiskTab
-          key="wc-risk"
-          walletAddresses={selectedWallets}
-          fetchEnabled={activeTab === 2}
-          onDayClick={handleDayClick}
-        />
+        <div style={{ position: "relative" }}>
+          <RiskTab
+            key="wc-risk"
+            walletAddresses={selectedWallets}
+            fetchEnabled={activeTab === 2}
+            onDayClick={handleDayClick}
+          />
+        </div>
       </div>,
     ],
     [
       selectedWallets,
       activeTab,
       exportContainerClassName,
+      tr,
     ],
   );
 
@@ -601,6 +609,7 @@ export default function WalletsComparisonPage() {
               </div>
             </div>
           )}
+
         </ChatContextProvider>
       </div>
 

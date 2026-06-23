@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface ChatPromptData {
@@ -22,15 +22,17 @@ export interface ListPromptsResult {
   limit: number;
 }
 
-export type PromptScope = "mine" | "public" | "popular";
+export type PromptScope = "mine" | "new" | "popular";
 
 interface ListPromptsOptions {
   scope?: PromptScope;
   walletAddress?: string;
   contextType?: "wallet" | "wallet-comparison";
   sort?: "usage" | "recent" | "trending";
+  search?: string;
   page?: number;
   limit?: number;
+  append?: boolean;
 }
 
 export interface CreatePromptInput {
@@ -69,17 +71,40 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+function appendUniquePrompts(existing: ChatPromptData[], incoming: ChatPromptData[]): ChatPromptData[] {
+  const seen = new Set(existing.map((prompt) => prompt.id));
+  const uniqueIncoming = incoming.filter((prompt) => {
+    if (seen.has(prompt.id)) return false;
+    seen.add(prompt.id);
+    return true;
+  });
+  return [...existing, ...uniqueIncoming];
+}
+
 export function useChatPrompts() {
   const { user } = useAuth();
   const [prompts, setPrompts] = useState<ChatPromptData[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentScope, setCurrentScope] = useState<PromptScope>("public");
+  const [currentScope, setCurrentScope] = useState<PromptScope>("new");
+  const requestSeq = useRef(0);
+
+  const hasMore = useMemo(() => prompts.length < total, [prompts.length, total]);
 
   const fetchPrompts = useCallback(async (opts: ListPromptsOptions = {}) => {
-    setIsLoading(true);
+    const requestId = requestSeq.current + 1;
+    requestSeq.current = requestId;
+    const append = opts.append === true;
+
+    if (append) {
+      setIsFetchingMore(true);
+    } else {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
@@ -88,19 +113,27 @@ export function useChatPrompts() {
       if (opts.walletAddress) params.set("walletAddress", opts.walletAddress);
       if (opts.contextType) params.set("contextType", opts.contextType);
       if (opts.sort) params.set("sort", opts.sort);
+      if (opts.search?.trim()) params.set("search", opts.search.trim());
       if (opts.page) params.set("page", String(opts.page));
       if (opts.limit) params.set("limit", String(opts.limit));
 
       const data = await request<ListPromptsResult>(`${promptUrl("")}?${params.toString()}`);
-      setPrompts(data.items);
+      if (requestId !== requestSeq.current) return;
+
+      setPrompts((prev) => (append ? appendUniquePrompts(prev, data.items) : data.items));
       setTotal(data.total);
       setPage(data.page);
+      setLimit(data.limit);
     } catch (err) {
+      if (requestId !== requestSeq.current) return;
       setError(err instanceof Error ? err.message : "Failed to fetch prompts");
     } finally {
-      setIsLoading(false);
+      if (requestId === requestSeq.current) {
+        setIsLoading(false);
+        setIsFetchingMore(false);
+      }
     }
-  }, [user, currentScope]);
+  }, [currentScope]);
 
   const createPrompt = useCallback(async (input: CreatePromptInput): Promise<ChatPromptData | null> => {
     if (!user) return null;
@@ -181,7 +214,10 @@ export function useChatPrompts() {
     prompts,
     total,
     page,
+    limit,
+    hasMore,
     isLoading,
+    isFetchingMore,
     error,
     currentScope,
     setCurrentScope,

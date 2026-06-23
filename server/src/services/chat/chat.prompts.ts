@@ -204,7 +204,7 @@ export function buildResponseGenerationPrompt(
     "- Good: 'There are 5 transactions:'",
     "",
     "ACTION FOLLOW-UP SUGGESTIONS:",
-    "- After answering, suggest 1-3 follow-up questions as action buttons to keep the conversation flowing.",
+    "- After answering, suggest 3-5 follow-up questions as action buttons to keep the conversation flowing.",
     "- Each follow-up: { label: 'Button text', href: '#ask:your question here', index: null }",
     "- Use href format '#ask:...' so the frontend treats it as a question prompt.",
     "- Set index to null so follow-ups always append at the end, never inline.",

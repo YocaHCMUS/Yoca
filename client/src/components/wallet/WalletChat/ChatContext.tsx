@@ -8,6 +8,8 @@ import type { ChatMessageItem, ChatResponse } from "./types";
 export const MAX_INPUT_LENGTH = 500;
 
 interface ChatContextValue {
+  addresses: string[];
+  contextType: ChatSessionContextType;
   messages: ChatMessageItem[];
   inputText: string;
   isLoading: boolean;
@@ -30,6 +32,7 @@ interface ChatContextValue {
   handleSessionSelect: (sessionId: string) => Promise<void>;
   handleDeleteSession: (e: React.MouseEvent, sessionId: string) => Promise<void>;
   refreshSessions: () => Promise<void>;
+  createSessionFromQuickMessages: (msgs: ChatMessageItem[], chatAddresses: string[]) => Promise<SessionItem | null>;
 }
 
 export const ChatContext = createContext<ChatContextValue | null>(null);
@@ -58,6 +61,7 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
     activeSession,
     setActiveSessionId,
     saveMessagesToSession,
+    createSessionWithMessages,
     deleteSessionById,
     refreshSessions,
   } = useChatSessions(user?.userId ?? null);
@@ -77,6 +81,22 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
+  const makeMessageContext = useCallback(
+    (walletAddresses = addresses): NonNullable<ChatMessageItem["context"]> => ({
+      contextType: walletAddresses.length > 1 ? "wallet-comparison" : contextType,
+      walletAddresses,
+    }),
+    [addresses, contextType],
+  );
+
+  const withMessageContext = useCallback(
+    (msg: ChatMessageItem, walletAddresses?: string[]): ChatMessageItem => ({
+      ...msg,
+      context: msg.context ?? makeMessageContext(walletAddresses),
+    }),
+    [makeMessageContext],
+  );
+
   const sendQuery = useCallback(
     async (query: string, opts?: { skipCache?: boolean; promptId?: string }) => {
       if (!query.trim() || isLoading || addresses.length === 0) return;
@@ -84,7 +104,8 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
       setShowPromptMenu(false);
       setTruncatedMessages(null);
 
-      const userMsg: ChatMessageItem = { role: "user", content: query.trim() };
+      const messageContext = makeMessageContext();
+      const userMsg: ChatMessageItem = { role: "user", content: query.trim(), context: messageContext };
       const prevMessages = messagesRef.current;
       setMessages((prev) => [...prev, userMsg]);
       setInputText("");
@@ -117,6 +138,7 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
         const assistantMsg: ChatMessageItem = {
           role: "assistant",
           content: data.text,
+          context: messageContext,
           data: data.data,
           charts: data.charts,
           tables: data.tables,
@@ -141,13 +163,13 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
         setError(msg);
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: tr("chat.errorMessage", { error: msg }) },
+          withMessageContext({ role: "assistant", content: tr("chat.errorMessage", { error: msg }) }),
         ]);
       } finally {
         setIsLoading(false);
       }
     },
-    [addresses, contextType, lang, isLoading, activeSessionId, setActiveSessionId, refreshSessions, tr],
+    [addresses, contextType, lang, isLoading, activeSessionId, setActiveSessionId, refreshSessions, tr, makeMessageContext, withMessageContext],
   );
 
   const handleRedo = useCallback(async (msgIndex: number, content: string) => {
@@ -185,9 +207,11 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
       if (!res.ok) throw new Error(tr("chat.serverError", { status: String(res.status) }));
 
       const data = (await res.json()) as ChatResponse & { sessionId?: string };
+      const redoContext = truncated[msgIndex]?.context ?? makeMessageContext();
       const assistantMsg: ChatMessageItem = {
         role: "assistant",
         content: data.text,
+        context: redoContext,
         data: data.data,
         charts: data.charts,
         tables: data.tables,
@@ -217,12 +241,12 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
       setError(msg);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: tr("chat.errorMessage", { error: msg }) },
+        withMessageContext({ role: "assistant", content: tr("chat.errorMessage", { error: msg }) }),
       ]);
     } finally {
       setIsLoading(false);
     }
-  }, [addresses, activeSessionId, setActiveSessionId, contextType, isLoading, lang, saveMessagesToSession, refreshSessions, tr]);
+  }, [addresses, activeSessionId, setActiveSessionId, contextType, isLoading, lang, saveMessagesToSession, refreshSessions, tr, makeMessageContext, withMessageContext]);
 
   const handleRevert = useCallback(async (msgIndex: number, content: string) => {
     if (!activeSessionId) return;
@@ -268,9 +292,38 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
     await deleteSessionById(sessionId);
   }, [deleteSessionById]);
 
+  const createSessionFromQuickMessages = useCallback(async (msgs: ChatMessageItem[], chatAddresses: string[]) => {
+    const messageContext: NonNullable<ChatMessageItem["context"]> = {
+      contextType: chatAddresses.length > 1 ? "wallet-comparison" : "wallet",
+      walletAddresses: chatAddresses,
+    };
+    const stampedMessages = msgs.map((msg) => ({
+      ...msg,
+      context: messageContext,
+    }));
+    const title = stampedMessages.find((msg) => msg.role === "user")?.content.slice(0, 50);
+    const session = await createSessionWithMessages(
+      chatAddresses,
+      messageContext.contextType,
+      stampedMessages,
+      title,
+    );
+
+    if (session) {
+      setMessages(stampedMessages);
+      setTruncatedMessages(null);
+      setShowPromptMenu(false);
+      setShowSessionMenu(false);
+    }
+
+    return session;
+  }, [createSessionWithMessages]);
+
   return (
     <ChatContext.Provider
       value={{
+        addresses,
+        contextType,
         messages,
         inputText,
         isLoading,
@@ -293,6 +346,7 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
         handleSessionSelect,
         handleDeleteSession,
         refreshSessions,
+        createSessionFromQuickMessages,
       }}
     >
       {children}

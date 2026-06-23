@@ -127,6 +127,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   refreshInterval = 30000,
   fetchEnabled = true,
   className,
+  actions: externalActions,
 }) => {
   const { tr, fmt } = useLocalization();
   const chartTitle = tr('charts.assetDistributionChart.title');
@@ -507,6 +508,10 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     />
   );
 
+  const combinedActions = externalActions ? (
+    <>{externalActions}{filterControls}</>
+  ) : filterControls;
+
   return (
     <ChartWrapper
       title={chartTitle}
@@ -523,7 +528,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       onExport={handleExport}
       className={className}
       wrapperMinHeight={minHeight}
-      actions={filterControls}
+      actions={combinedActions}
       enableExport={false}
       enableFullscreen={false}
       enableMiniPlayer={false}
