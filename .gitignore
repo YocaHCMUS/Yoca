@@ -20,6 +20,8 @@ server/postgresdb/*
 !server/postgresdb/migrations/
 server/postgresdb/migrations/*
 !server/postgresdb/migrations/0007_managed_helius_webhooks.sql
+!server/postgresdb/migrations/0008_token_stats_alerts.sql
+!server/postgresdb/migrations/0009_trading_event_alerts.sql
 !server/postgresdb/migrations/meta/
 server/postgresdb/migrations/meta/*
 !server/postgresdb/migrations/meta/_journal.json

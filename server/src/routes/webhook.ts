@@ -2,6 +2,8 @@ import {
   processHeliusWebhookTransactions,
   type HeliusEnhancedTransaction,
 } from "@sv/services/walletAlerts.service.js";
+import { evaluateTradingEventTransaction } from "@sv/services/alerts/trading-event-evaluator.js";
+import { syncHeliusWebhookAccountAddresses } from "@sv/services/heliusWebhooks.service.js";
 import { Hono } from "hono";
 
 function webhookAuthKey(): string {
@@ -63,11 +65,25 @@ const app = new Hono()
       return c.text("Webhook payload must be an array", 400);
     }
 
-    await processHeliusWebhookTransactions(transactions, {
+    const walletSummary = await processHeliusWebhookTransactions(transactions, {
       dryRun: false,
       dedupe: true,
       log: true,
     });
+    if (walletSummary.events) {
+      const tradingSummaries = await Promise.all(
+        transactions.map((transaction, index) =>
+          walletSummary.events[index]?.duplicate
+            ? undefined
+            : evaluateTradingEventTransaction(transaction),
+        ),
+      );
+      if (tradingSummaries.some((summary) => summary?.expiredStopped)) {
+        void syncHeliusWebhookAccountAddresses().catch((error) => {
+          console.error("[trading-alerts] Helius sync failed after expiry", error);
+        });
+      }
+    }
 
     return c.text("Webhook received", 200);
   })

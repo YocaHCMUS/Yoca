@@ -1,4 +1,5 @@
 import {
+  combineWatchedAddresses,
   disableLegacyHeliusWebhook,
   getHeliusWebhookDiagnostics,
   getManagedWebhookUrl,
@@ -181,6 +182,16 @@ describe("Helius managed webhook sharding", () => {
     expect(result.ok).toBe(true);
     expect(result.totalAddresses).toBe(2);
     expect(deps.createWebhook).toHaveBeenCalledWith(["Wallet0001", "Wallet0002"]);
+  });
+
+  it("keeps trading event target addresses in the shared wallet-alert union", () => {
+    expect(
+      combineWatchedAddresses(
+        ["Wallet0001"],
+        ["Wallet0002"],
+        ["TokenMint0003", "Wallet0001"],
+      ),
+    ).toEqual(["TokenMint0003", "Wallet0001", "Wallet0002"]);
   });
 
   it("deletes extra managed shards when watched addresses shrink", async () => {

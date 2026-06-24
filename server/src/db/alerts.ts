@@ -7,6 +7,7 @@ import {
   pgTable,
   primaryKey,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -54,6 +55,14 @@ export const enumTradeDirection = pgEnum("trade_direction", [
 export const enumTradingAggregation = pgEnum("trading_aggregation", [
   "volume_usd",
   "trade_count",
+]);
+
+/** Event predicates used by Helius enhanced webhook trading alerts. */
+export const enumTradingEventType = pgEnum("trading_event_type", [
+  "any_trade",
+  "buy",
+  "sell",
+  "swap",
 ]);
 
 export const alerts = pgTable("alerts", {
@@ -157,6 +166,31 @@ export const tradingAlertConditions = pgTable("trading_alert_conditions", {
   value: decimal("value").notNull(),
 });
 
+/**
+ * Token-centric on-chain Trading Event alerts. These deliberately live beside
+ * the older trading_alert_scopes/conditions aggregation model so existing
+ * alerts remain readable while the demo moves to real-time webhooks.
+ */
+export const tradingEventAlertTargets = pgTable("trading_event_alert_targets", {
+  alertId: uuid("alert_id")
+    .primaryKey()
+    .references(() => alerts.id, { onDelete: "cascade" }),
+  tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+  walletAddress: varchar("wallet_address", { length: 44 }),
+});
+
+export const tradingEventAlertConditions = pgTable(
+  "trading_event_alert_conditions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    alertId: uuid("alert_id")
+      .notNull()
+      .references(() => alerts.id, { onDelete: "cascade" }),
+    eventType: enumTradingEventType("event_type").notNull(),
+    minSolAmount: decimal("min_sol_amount"),
+  },
+);
+
 export const walletMetrics1m = pgTable(
   "wallet_metrics_1m",
   {
@@ -183,9 +217,13 @@ export const alertHistory = pgTable("alert_history", {
   alertName: varchar("alert_name", { length: 255 }).notNull(),
   message: varchar("message", { length: 1000 }).notNull(),
   metadata: jsonb("metadata"),
+  /** A transaction signature for webhook-driven alerts. */
+  eventKey: varchar("event_key", { length: 128 }),
   sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
   readAt: timestamp("read_at"),
-});
+}, (t) => [
+  uniqueIndex("alert_history_alert_event_key_uidx").on(t.alertId, t.eventKey),
+]);
 
 export const userAlerts = alerts;
 export const userAlertState = alertState;
@@ -203,6 +241,10 @@ export type TokenAlertConditionSelect =
 export type TradingAlertScopeInsert = typeof tradingAlertScopes.$inferInsert;
 export type TradingAlertConditionInsert =
   typeof tradingAlertConditions.$inferInsert;
+export type TradingEventAlertTargetInsert =
+  typeof tradingEventAlertTargets.$inferInsert;
+export type TradingEventAlertConditionInsert =
+  typeof tradingEventAlertConditions.$inferInsert;
 
 export type UserAlertInsert = AlertInsert;
 export type UserAlertSelect = AlertSelect;
@@ -218,6 +260,8 @@ export type UserTradeDirection = (typeof enumTradeDirection.enumValues)[number];
 export type UserTradingScopeSelect = typeof tradingAlertScopes.$inferSelect;
 export type UserTradingAggregation =
   (typeof enumTradingAggregation.enumValues)[number];
+export type UserTradingEventType =
+  (typeof enumTradingEventType.enumValues)[number];
 export const WalletMetrics1mInsert = typeof walletMetrics1m.$inferInsert;
 
 export const userAlertConditionOps = enumConditionOp.enumValues;
@@ -228,3 +272,4 @@ export const userAlertStatus = enumAlertStatus.enumValues;
 export const userAlertTypes = enumAlertType.enumValues;
 export const userTradeDirections = enumTradeDirection.enumValues;
 export const userTradingAggregations = enumTradingAggregation.enumValues;
+export const userTradingEventTypes = enumTradingEventType.enumValues;

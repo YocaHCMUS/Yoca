@@ -1,4 +1,5 @@
 import { db } from "@sv/db/index.js";
+import { getActiveTradingEventMonitoredAddresses } from "@sv/services/alerts/trading-event-alerts.js";
 import {
   alertRules,
   followedWallets,
@@ -283,6 +284,19 @@ export function normalizeWatchedAddresses(addresses: string[]): string[] {
   ].sort();
 }
 
+/** Keeps every alert source in one Helius managed-webhook address union. */
+export function combineWatchedAddresses(
+  followedAddresses: string[],
+  ruleAddresses: string[],
+  tradingEventAddresses: string[],
+): string[] {
+  return normalizeWatchedAddresses([
+    ...followedAddresses,
+    ...ruleAddresses,
+    ...tradingEventAddresses,
+  ]);
+}
+
 export function chunkAddresses(
   addresses: string[],
   chunkSize = MAX_HELIUS_WEBHOOK_ADDRESSES,
@@ -356,10 +370,12 @@ export async function loadWatchedAddresses(): Promise<string[]> {
       ),
     );
 
-  return normalizeWatchedAddresses([
-    ...followed.map((row) => row.address),
-    ...rules.map((row) => row.address),
-  ]);
+  const tradingEventAddresses = await getActiveTradingEventMonitoredAddresses(now);
+  return combineWatchedAddresses(
+    followed.map((row) => row.address),
+    rules.map((row) => row.address),
+    tradingEventAddresses,
+  );
 }
 
 function mapWebhookRow(row: HeliusWebhookRow): ManagedHeliusWebhook {

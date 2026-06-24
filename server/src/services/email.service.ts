@@ -37,6 +37,17 @@ export interface TokenAlertEmailInput {
   emittedAt: string;
 }
 
+export interface TradingEventAlertEmailInput {
+  alertName: string;
+  eventType: string;
+  tokenAddress: string;
+  walletAddress: string | null;
+  solAmount: number;
+  source: string | null;
+  signature: string;
+  emittedAt: string;
+}
+
 function severityColor(severity: AlertEmailInput["severity"]): string {
   if (severity === "high") return "#ed4245";
   if (severity === "medium") return "#eab308";
@@ -152,6 +163,34 @@ export async function sendTokenAlertEmail(
     return true;
   } catch (error) {
     console.error("[email] failed to send token alert to", to, error);
+    return false;
+  }
+}
+
+export async function sendTradingEventAlertEmail(
+  to: string,
+  alert: TradingEventAlertEmailInput,
+): Promise<boolean> {
+  const client = getResend();
+  if (!client) {
+    console.warn("[email] RESEND_API_KEY is not set; skipping trading alert email", { hasRecipient: Boolean(to) });
+    return false;
+  }
+  const transactionUrl = `https://solscan.io/tx/${encodeURIComponent(alert.signature)}`;
+  try {
+    const result = await client.emails.send({
+      from: RESEND_FROM,
+      to,
+      subject: `[Yoca Alert] Trading Event Alert Triggered: ${alert.alertName}`,
+      html: `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;color:#1f2937"><h2>Trading Event Alert Triggered</h2><p><strong>${escapeHtml(alert.alertName)}</strong> matched a ${escapeHtml(alert.eventType)} trading event.</p><table><tr><td><strong>Token mint</strong></td><td>${escapeHtml(alert.tokenAddress)}</td></tr><tr><td><strong>Wallet</strong></td><td>${escapeHtml(alert.walletAddress ?? "any")}</td></tr><tr><td><strong>Amount</strong></td><td>${alert.solAmount.toFixed(6)} SOL</td></tr><tr><td><strong>Source</strong></td><td>${escapeHtml(alert.source ?? "unknown")}</td></tr><tr><td><strong>Transaction</strong></td><td><a href="${transactionUrl}">${escapeHtml(alert.signature)}</a></td></tr><tr><td><strong>Triggered at</strong></td><td>${escapeHtml(alert.emittedAt)}</td></tr></table><p>You received this because a trading event matched your configured alert.</p></body></html>`,
+    });
+    if (result.error) {
+      console.error("[email] failed to send trading alert to", to, result.error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("[email] failed to send trading alert to", to, error);
     return false;
   }
 }

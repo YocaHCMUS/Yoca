@@ -3,8 +3,6 @@ import type {
   UserAlertPeriod,
   UserAlertTokenMetric,
   UserAlertTriggerMode,
-  UserTradeDirection,
-  UserTradingAggregation,
 } from "@/api/alerts";
 import {
   emptyStringAsUndefinedSchema,
@@ -51,34 +49,14 @@ export const tokenAlertMetrics: UserAlertTokenMetric[] = [
   "price_usd",
 ];
 
-export const tradingTargetTypes = [
-  { id: "counter_party", text: "Counter Party" },
-  { id: "pool", text: "Pool" },
-  { id: "token", text: "Token" },
-];
+export const tradingEventTypes = ["any_trade", "buy", "sell", "swap"] as const;
+export type TradingEventType = (typeof tradingEventTypes)[number];
 
-export const tradingAggregations: UserTradingAggregation[] = [
-  "volume_usd",
-  "trade_count",
-];
-export const tradeDirections: UserTradeDirection[] = ["buy", "sell", "both"];
-
-export const directionOptions: {
-  id: UserTradeDirection;
-  text: string;
-}[] = [
-  {
-    id: "both",
-    text: "Buy & Sell",
-  },
-  {
-    id: "buy",
-    text: "Buy",
-  },
-  {
-    id: "sell",
-    text: "Sell",
-  },
+export const tradingEventTypeOptions: { id: TradingEventType; text: string }[] = [
+  { id: "any_trade", text: "Any trade" },
+  { id: "buy", text: "Buy (best effort)" },
+  { id: "sell", text: "Sell (best effort)" },
+  { id: "swap", text: "Swap" },
 ];
 
 const selectedTokenSchema = z.object({
@@ -95,23 +73,11 @@ export const tokenConditionSchema = z.object({
   value: z.coerce.number(),
 });
 
-export const tradingConditionSchema = z.object({
-  period: z.enum(alertPeriods),
-  aggregation: z.enum(tradingAggregations),
-  op: z.enum(conditionOps),
-  value: z.coerce.number(),
-});
-
-export const tradingScopeSchema = z.object({
-  walletAddress: solanaBase58Schema,
-  token: selectedTokenSchema.optional(),
-  poolAddress: z
+export const tradingEventTargetSchema = z.object({
+  token: selectedTokenSchema,
+  walletAddress: z
     .union([emptyStringAsUndefinedSchema, solanaBase58Schema])
     .optional(),
-  counterpartyAddress: z
-    .union([emptyStringAsUndefinedSchema, solanaBase58Schema])
-    .optional(),
-  direction: z.enum(tradeDirections),
 });
 
 const timeHHmm = z
@@ -168,8 +134,24 @@ export const tokenStatsSchema = baseAlertSchema.extend({
 
 export const tradingEventsSchema = baseAlertSchema.extend({
   type: z.literal("trading-events"),
-  tradingConditions: z.array(tradingConditionSchema).min(1).max(3),
-  tradingScope: tradingScopeSchema,
+  tradingTarget: tradingEventTargetSchema,
+  eventType: z.enum(tradingEventTypes),
+  minSolAmount: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value, ctx) => {
+      if (!value) return undefined;
+      const amount = Number(value);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Enter a positive SOL amount",
+        });
+        return z.NEVER;
+      }
+      return amount;
+    }),
 });
 
 export const alertFormSchema = z.discriminatedUnion("type", [
@@ -180,10 +162,9 @@ export const alertFormSchema = z.discriminatedUnion("type", [
 export type BaseAlertForm = z.output<typeof baseAlertSchema>;
 export type TokenAlertForm = z.output<typeof tokenStatsSchema>;
 export type TradingAlertForm = z.output<typeof tradingEventsSchema>;
+export type TradingAlertFormInput = z.input<typeof tradingEventsSchema>;
 export type TokenAlertCondition = z.output<typeof tokenConditionSchema>;
 export type TokenAlertMetric = (typeof tokenAlertMetrics)[number];
-export type TradingAlertCondition = z.output<typeof tradingConditionSchema>;
-export type TradingScope = z.output<typeof tradingScopeSchema>;
 export type AlertConfig = z.output<typeof alertFormSchema>;
 
 export function combineLocalDateAndTime(

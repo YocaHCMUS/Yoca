@@ -5,6 +5,7 @@ import {
   userAlertTriggerModes,
   userTradeDirections,
   userTradingAggregations,
+  userTradingEventTypes,
 } from "@sv/db/alerts.js";
 import { userAlertStatus } from "@sv/db/schema.js";
 import { setErr } from "@sv/util/errors.js";
@@ -213,6 +214,16 @@ const alertDeliverySchema = z.object({
   message: "Select at least one delivery channel",
 });
 
+const tradingEventTargetSchema = z.object({
+  tokenAddress: solanaBase58Schema,
+  walletAddress: solanaBase58Schema.optional().nullable(),
+});
+
+const tradingEventConditionSchema = z.object({
+  eventType: z.enum(userTradingEventTypes),
+  minSolAmount: z.coerce.number().positive().optional().nullable(),
+});
+
 const alertBaseSchema = {
   name: z.string().trim().min(1),
   triggerMode: z.enum(userAlertTriggerModes).default("once"),
@@ -240,6 +251,23 @@ export const createTradingAlertSchema = z.object({
     .min(1, "At least one condition is required"),
 });
 
+export const createTradingEventAlertSchema = z
+  .object({
+    alertType: z.literal("trading"),
+    ...alertBaseSchema,
+    target: tradingEventTargetSchema,
+    condition: tradingEventConditionSchema,
+  })
+  .superRefine((value, ctx) => {
+    if (new Date(value.expiresAt) <= new Date()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["expiresAt"],
+        message: "expiresAt must be in the future",
+      });
+    }
+  });
+
 export const createAlertSchema = z.discriminatedUnion("alertType", [
   createTokenAlertSchema,
   createTradingAlertSchema,
@@ -248,6 +276,9 @@ export const createAlertSchema = z.discriminatedUnion("alertType", [
 export type CreateAlertSchema = z.infer<typeof createAlertSchema>;
 export type CreateTokenAlertSchema = z.infer<typeof createTokenAlertSchema>;
 export type CreateTradingAlertSchema = z.infer<typeof createTradingAlertSchema>;
+export type CreateTradingEventAlertSchema = z.infer<
+  typeof createTradingEventAlertSchema
+>;
 
 export const alertIdSchema = z.object({
   id: z.uuid(),

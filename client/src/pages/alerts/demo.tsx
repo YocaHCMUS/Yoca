@@ -144,7 +144,7 @@ export default function AlertsDemo() {
   );
 
   const tradingAlerts = useGet(
-    client.api.alertsHp.trading,
+    client.api.alertsHp["trading-events"],
     200,
     {},
     {
@@ -156,9 +156,9 @@ export default function AlertsDemo() {
     await Promise.all([tokenAlerts.mutate(), tradingAlerts.mutate()]);
   };
 
-  const handleDeleteTokenAlert = async (alertId: string) => {
+  const handleDeleteAlert = async (alertId: string, type: "token" | "trading") => {
     const confirmed = window.confirm(
-      "Are you sure you want to delete this token alert?",
+      "Are you sure you want to delete this alert?",
     );
     if (!confirmed) return;
 
@@ -166,27 +166,28 @@ export default function AlertsDemo() {
     setDeletingAlertId(alertId);
 
     try {
-      const response = await (client.api.alertsHp.tokens as any)[":id"].$delete({
+      const endpoint = type === "token" ? client.api.alertsHp.tokens : client.api.alertsHp["trading-events"];
+      const response = await (endpoint as any)[":id"].$delete({
         param: { id: alertId },
       });
 
       if (!response.ok) {
         setDeleteFeedback({
           kind: "error",
-          message: "Failed to delete token alert.",
+          message: "Failed to delete alert.",
         });
         return;
       }
 
       setDeleteFeedback({
         kind: "success",
-        message: "Token alert deleted.",
+        message: "Alert deleted.",
       });
       await refreshAlerts();
     } catch {
       setDeleteFeedback({
         kind: "error",
-        message: "Failed to delete token alert.",
+        message: "Failed to delete alert.",
       });
     } finally {
       setDeletingAlertId(null);
@@ -207,7 +208,7 @@ export default function AlertsDemo() {
           disabled={deletingAlertId !== null}
           onClick={(event) => {
             event.stopPropagation();
-            void handleDeleteTokenAlert(alertDetails.alertId);
+            void handleDeleteAlert(alertDetails.alertId, "token");
           }}
         >
           {deletingAlertId === alertDetails.alertId ? "Deleting..." : "Delete"}
@@ -216,25 +217,20 @@ export default function AlertsDemo() {
     }));
 
     const tradingRows = (tradingAlerts.data ?? []).map((alertDetails) => {
-      const firstScope = alertDetails.tradingScopes[0];
-      const target =
-        firstScope?.walletAddress ||
-        firstScope?.tokenAddress ||
-        firstScope?.poolAddress ||
-        firstScope?.counterpartyAddress ||
-        "all";
+      const target = alertDetails.target.walletAddress
+        ? `${alertDetails.target.tokenAddress} (${alertDetails.target.walletAddress})`
+        : alertDetails.target.tokenAddress;
 
       return {
         id: alertDetails.alertId,
-        type: "trading",
+        type: `trading: ${alertDetails.condition.eventType}`,
         target,
         alertName: alertDetails.alert.name,
         createdAt: fmt.datetime.datetime(alertDetails.alert.createdAt),
-        actions: (
-          <Txt secondary size="sm">
-            -
-          </Txt>
-        ),
+        actions: <Button kind="danger--ghost" size="sm" disabled={deletingAlertId !== null} onClick={(event) => {
+          event.stopPropagation();
+          void handleDeleteAlert(alertDetails.alertId, "trading");
+        }}>{deletingAlertId === alertDetails.alertId ? "Deleting..." : "Delete"}</Button>,
       };
     });
 
