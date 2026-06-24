@@ -2450,7 +2450,7 @@ export const translation = defineTranslation({
     },
     title: "AI phát hiện giao dịch ảo",
     subtitle: "Phân tích theo mô hình GNN cho {{symbol}} · {{mint}}",
-    suspiciousBadge: "{{count}} đáng ngờ",
+    suspiciousBadge: "{{count}} ví đáng ngờ",
     inputs: {
       mintPlaceholder: "Địa chỉ token mint",
       symbolPlaceholder: "Ký hiệu",
@@ -2577,7 +2577,7 @@ export const translation = defineTranslation({
     patterns: {
       circularTrade: "Giao dịch vòng lặp",
       hubWallet: "Ví trung tâm",
-      botLikeTiming: "Nhịp giống bot",
+      botLikeTiming: "Tấn suất giao dịch giống bot",
       amountMirror: "Amount lặp lại",
       anomalousActivity: "Hoạt động bất thường",
     },
