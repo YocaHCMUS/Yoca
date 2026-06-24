@@ -100,6 +100,7 @@ export interface ChatAiUsage {
   used: number;
   remaining: number;
   resetsAt: string;
+  disabled?: boolean;
 }
 
 export interface ChatResponse {

@@ -48,6 +48,7 @@ export async function getTokenVolatilityNews(
         used?: number;
         remaining?: number;
         resetsAt?: string;
+        disabled?: boolean;
       };
       message = error.message?.trim() || message;
       errorCode = error.errorCode;
@@ -65,6 +66,7 @@ export async function getTokenVolatilityNews(
               used: error.used,
               remaining: error.remaining,
               resetsAt: error.resetsAt,
+              disabled: error.disabled,
             }
           : undefined;
     } catch {

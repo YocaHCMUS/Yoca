@@ -134,7 +134,7 @@ const app = new Hono()
         success: true,
         data: result,
         usage: reservation.usage,
-        counted: true,
+        counted: !reservation.usage.disabled,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
@@ -226,7 +226,7 @@ const app = new Hono()
         success: true,
         data: result,
         usage: reservation.usage,
-        counted: true,
+        counted: !reservation.usage.disabled,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {

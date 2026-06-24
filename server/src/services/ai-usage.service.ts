@@ -80,6 +80,7 @@ export interface AiUsageMetadata {
   remaining: number;
   resetsAt: string;
   requiredTier?: Exclude<AiTier, "Free">;
+  disabled?: boolean;
 }
 
 export interface AiUsageReservation {
@@ -93,11 +94,17 @@ export function getAiDailyLimit(feature: AiFeature, tier: AiTier) {
   return AI_DAILY_LIMITS[feature][tier];
 }
 
+export function isAiUsageLimitEnabled() {
+  return process.env.AI_USAGE_LIMIT_ENABLED !== "false";
+}
+
 export function getAiFeatureRequiredTier(feature: AiFeature) {
   return AI_FEATURE_REQUIRED_TIER[feature] ?? null;
 }
 
 export function isAiFeatureLocked(feature: AiFeature, tier: AiTier) {
+  if (!isAiUsageLimitEnabled()) return false;
+
   const requiredTier = getAiFeatureRequiredTier(feature);
   return Boolean(requiredTier && TIER_RANK[tier] < TIER_RANK[requiredTier]);
 }
@@ -149,6 +156,18 @@ function usageMetadata(
   used: number,
   resetsAt: string,
 ): AiUsageMetadata {
+  if (!isAiUsageLimitEnabled()) {
+    return {
+      feature,
+      tier,
+      limit: Number.MAX_SAFE_INTEGER,
+      used: 0,
+      remaining: Number.MAX_SAFE_INTEGER,
+      resetsAt,
+      disabled: true,
+    };
+  }
+
   const limit = getAiDailyLimit(feature, tier);
   const requiredTier = getAiFeatureRequiredTier(feature) ?? undefined;
   return {
@@ -169,6 +188,10 @@ export async function getAiUsage(
 ): Promise<AiUsageMetadata> {
   const tier = await getUserAiTier(userId, now);
   const { usageDate, resetsAt } = getUtcUsageWindow(now);
+  if (!isAiUsageLimitEnabled()) {
+    return usageMetadata(feature, tier, 0, resetsAt);
+  }
+
   const [current] = await db
     .select({ used: aiDailyUsage.usageCount })
     .from(aiDailyUsage)
@@ -192,6 +215,15 @@ export async function reserveAiUsage(
   const tier = await getUserAiTier(userId, now);
   const limit = getAiDailyLimit(feature, tier);
   const { usageDate, resetsAt } = getUtcUsageWindow(now);
+
+  if (!isAiUsageLimitEnabled()) {
+    return {
+      allowed: true,
+      usage: usageMetadata(feature, tier, 0, resetsAt),
+      userId,
+      usageDate,
+    };
+  }
 
   if (isAiFeatureLocked(feature, tier)) {
     return {
@@ -258,7 +290,7 @@ export async function releaseAiUsage(
   reservation: AiUsageReservation,
   now = new Date(),
 ) {
-  if (!reservation.allowed) return;
+  if (!reservation.allowed || reservation.usage.disabled) return;
 
   await db
     .update(aiDailyUsage)

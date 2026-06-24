@@ -260,6 +260,7 @@ export interface WalletAiUsage {
   remaining: number;
   resetsAt: string;
   requiredTier?: "Lite" | "Plus" | "Pro";
+  disabled?: boolean;
 }
 
 export class WalletAiApiError extends Error {
@@ -293,6 +294,7 @@ async function walletAiError(response: Response, fallback: string) {
       remaining?: number;
       resetsAt?: string;
       requiredTier?: WalletAiUsage["requiredTier"];
+      disabled?: boolean;
       upgradePath?: string;
     };
     message =
@@ -315,6 +317,7 @@ async function walletAiError(response: Response, fallback: string) {
             remaining: errorData.remaining,
             resetsAt: errorData.resetsAt,
             requiredTier: errorData.requiredTier,
+            disabled: errorData.disabled,
           }
         : undefined;
     upgradePath = errorData.upgradePath;
@@ -617,7 +620,7 @@ export function fetchWalletTransfers(
 ): Promise<WalletTransfersResponse> {
   return client.api.wallets.transfers.history[":address"].$get({
     param: { address },
-    query: { limit: params?.limit },
+    query: { limit: params?.limit?.toString() },
   }).then(resp => {
     if (resp.ok) {
       return resp.json().then(transfers => ({
@@ -671,7 +674,7 @@ export function fetchWalletSwaps(
 ): Promise<WalletSwapsResponse> {
   return client.api.wallets.swaps.history[":address"].$get({
     param: { address },
-    query: { limit: params?.limit },
+    query: { limit: params?.limit?.toString() },
   }).then(resp => {
     if (resp.ok) {
       return resp.json().then(swaps => ({

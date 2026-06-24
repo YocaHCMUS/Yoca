@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("@sv/db/index.js", () => ({ db: {} }));
 vi.mock("@sv/db/schema.js", () => ({
@@ -10,6 +10,7 @@ let getAiDailyLimit: typeof import("@sv/services/ai-usage.service.js").getAiDail
 let getAiFeatureRequiredTier: typeof import("@sv/services/ai-usage.service.js").getAiFeatureRequiredTier;
 let getUtcUsageWindow: typeof import("@sv/services/ai-usage.service.js").getUtcUsageWindow;
 let isAiFeatureLocked: typeof import("@sv/services/ai-usage.service.js").isAiFeatureLocked;
+let isAiUsageLimitEnabled: typeof import("@sv/services/ai-usage.service.js").isAiUsageLimitEnabled;
 let selectHighestTier: typeof import("@sv/services/ai-usage.service.js").selectHighestTier;
 
 beforeAll(async () => {
@@ -18,7 +19,12 @@ beforeAll(async () => {
   getAiFeatureRequiredTier = service.getAiFeatureRequiredTier;
   getUtcUsageWindow = service.getUtcUsageWindow;
   isAiFeatureLocked = service.isAiFeatureLocked;
+  isAiUsageLimitEnabled = service.isAiUsageLimitEnabled;
   selectHighestTier = service.selectHighestTier;
+});
+
+afterEach(() => {
+  delete process.env.AI_USAGE_LIMIT_ENABLED;
 });
 
 describe("AI usage policy", () => {
@@ -72,6 +78,14 @@ describe("AI usage policy", () => {
     expect(isAiFeatureLocked("wallet_ai_analysis", "Lite")).toBe(true);
     expect(isAiFeatureLocked("wallet_ai_analysis", "Plus")).toBe(false);
     expect(isAiFeatureLocked("wash_trading_ai_analysis", "Pro")).toBe(false);
+  });
+
+  it("can disable AI usage limits and premium locks with env flag", () => {
+    process.env.AI_USAGE_LIMIT_ENABLED = "false";
+
+    expect(isAiUsageLimitEnabled()).toBe(false);
+    expect(isAiFeatureLocked("wallet_ai_analysis", "Free")).toBe(false);
+    expect(isAiFeatureLocked("wash_trading_ai_analysis", "Lite")).toBe(false);
   });
 
   it("resets at the next UTC midnight", () => {

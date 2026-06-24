@@ -46,6 +46,7 @@ export interface VolatilityAiUsage {
   used: number;
   remaining: number;
   resetsAt: string;
+  disabled?: boolean;
 }
 
 export interface VolatilitySignalResponse {

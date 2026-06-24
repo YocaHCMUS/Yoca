@@ -541,7 +541,9 @@ const app = new Hono().get("/", async (c) => {
               ? reserveForSummary
               : undefined,
           );
-          usageCounted = hasGeminiSummary(summarized);
+          usageCounted =
+            hasGeminiSummary(summarized) &&
+            reservation?.usage.disabled !== true;
           if (reservation?.allowed && !usageCounted) {
             await releaseAiUsage(reservation);
             reservation = undefined;
@@ -592,7 +594,8 @@ const app = new Hono().get("/", async (c) => {
         ? reserveForSummary
         : undefined,
     });
-    usageCounted = hasGeminiSummary(data);
+    usageCounted =
+      hasGeminiSummary(data) && reservation?.usage.disabled !== true;
     if (reservation?.allowed && !usageCounted) {
       await releaseAiUsage(reservation);
       reservation = undefined;

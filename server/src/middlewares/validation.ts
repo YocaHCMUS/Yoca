@@ -443,6 +443,7 @@ export const envSchema = z.object({
     .optional()
     .default("gemini-3.1-flash-lite"),
   CHAT_MODEL: z.string().optional().default("gemini-3.1-flash-lite"),
+  AI_USAGE_LIMIT_ENABLED: z.enum(["true", "false"]),
 });
 
 export type Env = z.infer<typeof envSchema>;

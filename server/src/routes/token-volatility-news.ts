@@ -344,7 +344,9 @@ const app = new Hono().get("/", async (c) => {
         }
 
         summary = await summarizeTokenVolatilityNews(dataWithoutSummary);
-        usageCounted = summary.provider?.startsWith("gemini:") === true;
+        usageCounted =
+          summary.provider?.startsWith("gemini:") === true &&
+          !reservation.usage.disabled;
         if (usageCounted) {
           usage = reservation.usage;
         } else {

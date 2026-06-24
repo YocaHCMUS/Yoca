@@ -121,7 +121,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
     trimmedInput.length === 0 ? null
       : trimmedInput.length > MAX_INPUT_LENGTH ? tr("chat.inputOverLimit", { max: MAX_INPUT_LENGTH })
         : null;
-  const quotaExhausted = usage?.remaining === 0;
+  const quotaExhausted = usage?.disabled ? false : usage?.remaining === 0;
 
   // ─── Auth gate ───────────────────────────────────────────────────────
   if (!isUserLoading && !user) {
@@ -380,7 +380,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
           />
           <div className={styles.inputFooter}>
             <span className={styles.charCount}>
-              {usage
+              {usage && !usage.disabled
                 ? `${usage.remaining}/${usage.limit} chats left today`
                 : tr("chat.inputCounter", { current: String(inputText.length), max: MAX_INPUT_LENGTH })}
             </span>

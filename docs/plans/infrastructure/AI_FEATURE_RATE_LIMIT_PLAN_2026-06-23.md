@@ -7,6 +7,7 @@ Status: All current AI feature limits implemented
 
 - PostgreSQL table `ai_daily_usage` stores one counter per user, feature, and UTC date.
 - Feature limits live in `server/src/services/ai-usage.service.ts`.
+- `AI_USAGE_LIMIT_ENABLED=false` disables usage enforcement and premium AI locks without changing authentication requirements. Default is enabled; set `AI_USAGE_LIMIT_ENABLED=true` in normal environments.
 - A conditional upsert reserves usage atomically before AI work starts.
 - Failed AI requests release reserved usage.
 - Cache charging is feature-specific: Ask Yoca AI counts successful cache hits; Volatility Signal Summary does not.
@@ -73,6 +74,7 @@ Status: All current AI feature limits implemented
 - [x] Enforce one shared Wallet AI Swap Summary quota across wallet and token analysis.
 - [x] Enforce General AI Chat, Token Chart News Summary, Wallet AI Analysis, and Wash Trading AI Analysis limits.
 - [x] Publish all approved AI feature limits and Plus-required locks on the pricing page.
+- [x] Add `AI_USAGE_LIMIT_ENABLED` env toggle for local/staging quota bypass.
 
 ## Verification
 
@@ -89,3 +91,4 @@ Status: All current AI feature limits implemented
 - General AI Chat stops at 5/20/50/100 successful responses per UTC day.
 - Wallet AI Analysis and Wash Trading AI Analysis return `403 AI_FEATURE_LOCKED` for Free/Lite and stop Plus/Pro at 51/101.
 - Token Chart News Summary remains public without summaries; summary cache hits and deterministic fallbacks do not consume usage.
+- With `AI_USAGE_LIMIT_ENABLED=false`, no AI usage rows are written, no `429` quota exhaustion is returned, Plus-only AI locks are bypassed, and authenticated endpoints still require login.

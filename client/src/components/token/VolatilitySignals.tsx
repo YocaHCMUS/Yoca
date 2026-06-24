@@ -365,7 +365,9 @@ export function VolatilitySignals({
       }));
     }
   };
-  const summaryQuotaExhausted = state.usage?.remaining === 0;
+  const summaryQuotaExhausted = state.usage?.disabled
+    ? false
+    : state.usage?.remaining === 0;
 
   const toggleEvent = (eventId: string) => {
     setExpandedEvents((prev) => {
@@ -446,7 +448,7 @@ export function VolatilitySignals({
                 ? "Generate signal summary"
                 : "Sign in to generate summary"}
           </Button>
-          {state.usage && (
+          {state.usage && !state.usage.disabled && (
             <span className={styles.summaryUsage}>
               {state.usage.remaining}/{state.usage.limit} summaries remaining
               today

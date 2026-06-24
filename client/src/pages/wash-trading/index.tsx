@@ -108,6 +108,7 @@ interface ApiResponse {
     used: number;
     remaining: number;
     resetsAt: string;
+    disabled?: boolean;
   };
 }
 
@@ -934,7 +935,7 @@ const WashTradingPage: React.FC = () => {
               <strong>{verdictLabel}</strong>
             </div>
             <p>{result?.aiAnalysis.summary ?? tr("washTrading.verdict.defaultSummary")}</p>
-            {aiUsage && (
+            {aiUsage && !aiUsage.disabled && (
               <div className={styles.sourceNotice}>
                 {aiUsage.remaining}/{aiUsage.limit} Wash Trading AI analyses left today
               </div>

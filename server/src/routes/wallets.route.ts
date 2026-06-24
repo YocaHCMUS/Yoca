@@ -308,7 +308,12 @@ async function handleWalletAiAnalysis(c: Context) {
         : await getAiUsage(userId, AI_FEATURES.WalletAiAnalysis);
 
     return c.json(
-      { ...analysis, usage, counted: reservation?.allowed === true },
+      {
+        ...analysis,
+        usage,
+        counted:
+          reservation?.allowed === true && !reservation.usage.disabled,
+      },
       200,
     );
   } catch (err) {
@@ -711,7 +716,12 @@ const app = new Hono()
         reservation?.usage ??
         (await getAiUsage(userId, AI_FEATURES.WalletAiSwapSummary));
       return c.json(
-        { ...summary, usage, counted: reservation?.allowed === true },
+        {
+          ...summary,
+          usage,
+          counted:
+            reservation?.allowed === true && !reservation.usage.disabled,
+        },
         200,
       );
     } catch (err) {
@@ -783,7 +793,12 @@ const app = new Hono()
         reservation?.usage ??
         (await getAiUsage(userId, AI_FEATURES.WalletAiSwapSummary));
       return c.json(
-        { ...analysis, usage, counted: reservation?.allowed === true },
+        {
+          ...analysis,
+          usage,
+          counted:
+            reservation?.allowed === true && !reservation.usage.disabled,
+        },
         200,
       );
     } catch (err) {

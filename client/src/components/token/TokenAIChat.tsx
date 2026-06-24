@@ -566,7 +566,7 @@ export function TokenAIChat({
   const visibleSources = showAllSources
     ? answer?.sources ?? []
     : answer?.sources.slice(0, 5) ?? [];
-  const quotaExhausted = usage?.remaining === 0;
+  const quotaExhausted = usage?.disabled ? false : usage?.remaining === 0;
 
   const submitQuestion = async (nextQuestion = trimmedQuestion) => {
     const finalQuestion = nextQuestion.trim();
@@ -672,7 +672,7 @@ export function TokenAIChat({
 
           <div className={styles.inputMeta}>
             <span>{trimmedQuestion.length}/500</span>
-            {usage && (
+            {usage && !usage.disabled && (
               <span>
                 {usage.remaining}/{usage.limit} questions remaining today (
                 {usage.tier})

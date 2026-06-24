@@ -126,6 +126,7 @@ export interface AiUsageMetadata {
   used: number;
   remaining: number;
   resetsAt: string;
+  disabled?: boolean;
 }
 
 export class TokenAiChatError extends Error {
@@ -162,6 +163,7 @@ export async function askTokenAiChat(
         used?: number;
         remaining?: number;
         resetsAt?: string;
+        disabled?: boolean;
       };
       if (errorData.message?.trim()) {
         message = errorData.message;
@@ -183,6 +185,7 @@ export async function askTokenAiChat(
               used: errorData.used,
               remaining: errorData.remaining,
               resetsAt: errorData.resetsAt,
+              disabled: errorData.disabled,
             }
           : undefined;
     } catch {

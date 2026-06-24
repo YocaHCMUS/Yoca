@@ -202,7 +202,7 @@ const chatRoute = new Hono().post("/", honoJwt, userExtract, async (c) => {
         ...response,
         sessionId: activeSessionId,
         usage: reservation.usage,
-        counted: true,
+        counted: !reservation.usage.disabled,
       },
       200,
     );

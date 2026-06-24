@@ -293,7 +293,7 @@ export function WalletAiAnalysisPopup({
 
         {report && !loading && (
           <>
-            {report.usage && (
+            {report.usage && !report.usage.disabled && (
               <div className={styles.emptyText}>
                 {report.usage.remaining}/{report.usage.limit} Wallet AI Analysis left today
                 {report.counted === false ? " · no usage charged" : ""}

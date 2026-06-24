@@ -715,7 +715,7 @@ export function TokenOverviewChart({
                       Summary: {selectedNewsEvent.summary.provider}
                     </div>
                   )}
-                  {newsSummaryUsage && (
+                  {newsSummaryUsage && !newsSummaryUsage.disabled && (
                     <div className={styles.newsSummaryProvider}>
                       {newsSummaryUsage.remaining}/{newsSummaryUsage.limit} summaries left today
                     </div>

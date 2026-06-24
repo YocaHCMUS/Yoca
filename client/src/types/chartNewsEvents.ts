@@ -59,6 +59,7 @@ export interface TokenChartNewsEventsData {
     used: number;
     remaining: number;
     resetsAt: string;
+    disabled?: boolean;
   };
   counted?: boolean;
 }

@@ -387,7 +387,7 @@ export function AiSwapSummaryModal({
   if (!modalRoot) return null;
 
   const hasTokenTabs = tabs.length > 0;
-  const quotaExhausted = usage?.remaining === 0;
+  const quotaExhausted = usage?.disabled ? false : usage?.remaining === 0;
 
   return ReactDOM.createPortal(
     <div
@@ -447,7 +447,7 @@ export function AiSwapSummaryModal({
           </button>
         </div>
 
-        {usage && (
+        {usage && !usage.disabled && (
           <div className={styles.quotaBar}>
             <span>
               {tr("walletPage.aiSwapSummary.remaining", {
