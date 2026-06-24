@@ -106,6 +106,10 @@ const transfersTransformer: DataTransformer = (data) => {
   return normalizeArray(arr, transferFieldMap);
 };
 
+const compactTokensTransformer: DataTransformer = (data) => {
+  const d = data as { compact?: { tokens?: unknown[] } } | null;
+  return Array.isArray(d?.compact?.tokens) ? d.compact.tokens : [];
+};
 const portfolioTransformer: DataTransformer = (data) => {
   if (!Array.isArray(data)) return [];
   return normalizeArray(data, portfolioFieldMap);
@@ -155,6 +159,8 @@ export const DATA_TRANSFORMERS: Record<string, DataTransformer> = {
   get_token_details: tokenDetailsTransformer,
   get_wallet_swaps: swapsTransformer,
   get_wallet_transfers: transfersTransformer,
+  get_wallet_swaps_compact: compactTokensTransformer,
+  get_wallet_transfers_compact: compactTokensTransformer,
   get_wallet_portfolio: portfolioTransformer,
   get_historical_portfolio: portfolioTransformer,
 };

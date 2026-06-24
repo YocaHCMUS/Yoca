@@ -1,4 +1,4 @@
-export { answerChatQuery } from "./chat.orchestrator.js";
+export { answerChatQuery, resolveToolDataReferences } from "./chat.orchestrator.js";
 export { TOOL_DEFINITIONS } from "./chat.tools.js";
 export {
   listPrompts,
@@ -20,6 +20,7 @@ export type {
   ChatToolDefinition,
   ChatToolCall,
   ChatToolResult,
+  ToolDataReference,
   ChatResponse,
   ChatMessage,
   ChatRequest,

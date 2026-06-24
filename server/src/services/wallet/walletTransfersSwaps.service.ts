@@ -83,6 +83,10 @@ type ZrnTradeTransferMatchResult =
     };
 
 const ZRN_SOL_FUNGIBLE_ID = "11111111111111111111111111111111";
+const STABLE_MINTS_FOR_FILTER = new Set([
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "Es9vMFrzaCERmJfrF4H2FYD4h4H8o3A8rM6jD5M3j6Q",
+]);
 const ZRN_BATCH_LIMIT = 500;
 
 let lastRecentTransactionsPruneAtMs = 0;
@@ -382,6 +386,7 @@ export async function getWalletTransfers(
   tokenAddress?: string,
   direction?: "in" | "out",
   minAmountUsd?: number,
+  maxAmountUsd?: number,
 ): Promise<WalletTransfersResponse> {
   const metaRows = await getCachedWalletTransfersMeta(address);
   const walletTransferMeta = metaRows.length > 0 ? metaRows[0] : null;
@@ -466,7 +471,7 @@ export async function getWalletTransfers(
     ...fetchedTransfers,
   ]);
 
-  if (tokenAddress != null || direction != null || minAmountUsd != null) {
+  if (tokenAddress != null || direction != null || minAmountUsd != null || maxAmountUsd != null) {
     combinedTransfers = combinedTransfers.filter((tr) => {
       if (tokenAddress != null && tr.tokenAddress !== tokenAddress)
         return false;
@@ -529,6 +534,9 @@ export async function getWalletSwaps(
   from?: number,
   to?: number,
   tokenAddress?: string,
+  type?: "buy" | "sell",
+  minAmountUsd?: number,
+  maxAmountUsd?: number,
 ): Promise<WalletSwapsResponse> {
   const metaRows = await getCachedWalletSwapsMeta(address);
   const walletSwapMeta = metaRows.length > 0 ? metaRows[0] : null;
@@ -610,11 +618,21 @@ export async function getWalletSwaps(
     ...fetchedSwaps,
   ]);
 
-  if (tokenAddress != null) {
+  if (tokenAddress != null || type != null || minAmountUsd != null || maxAmountUsd != null) {
     combinedSwaps = combinedSwaps.filter((s) => {
-      if (s.bought.address === tokenAddress || s.sold.address === tokenAddress)
-        return true;
-      return false;
+      if (tokenAddress != null && s.bought.address !== tokenAddress && s.sold.address !== tokenAddress) return false;
+      if (type != null) {
+        const boughtIsBase = s.bought.address === WSOL_MINT || STABLE_MINTS_FOR_FILTER.has(s.bought.address);
+        const soldIsBase = s.sold.address === WSOL_MINT || STABLE_MINTS_FOR_FILTER.has(s.sold.address);
+        const isBuy = !boughtIsBase && soldIsBase;
+        const isSell = boughtIsBase && !soldIsBase;
+        if (type === "buy" && !isBuy) return false;
+        if (type === "sell" && !isSell) return false;
+      }
+      const usd = s.totalValueUsd;
+      if (minAmountUsd != null && (usd == null || usd < minAmountUsd)) return false;
+      if (maxAmountUsd != null && (usd == null || usd > maxAmountUsd)) return false;
+      return true;
     });
   }
 

@@ -6,6 +6,7 @@ import { useChatSessions, type ChatSessionContextType, type SessionItem } from "
 import type { ChatMessageItem, ChatResponse } from "./types";
 
 export const MAX_INPUT_LENGTH = 500;
+const API_BASE = import.meta.env.VITE_CLIENT_API_DOMAIN || "";
 
 interface ChatContextValue {
   addresses: string[];
@@ -35,6 +36,34 @@ interface ChatContextValue {
   createSessionFromQuickMessages: (msgs: ChatMessageItem[], chatAddresses: string[]) => Promise<SessionItem | null>;
 }
 
+
+async function hydrateMessageData(message: ChatMessageItem): Promise<ChatMessageItem> {
+  const needsData = message.role === "assistant"
+    && !message.data
+    && Array.isArray(message.dataRefs)
+    && message.dataRefs.length > 0
+    && ((message.charts?.length ?? 0) > 0 || (message.tables?.length ?? 0) > 0);
+
+  if (!needsData) return message;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/chat/tool-data/resolve`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refs: message.dataRefs }),
+    });
+    if (!res.ok) return message;
+    const payload = (await res.json()) as { data?: Record<string, unknown> };
+    return { ...message, data: payload.data ?? {} };
+  } catch {
+    return message;
+  }
+}
+
+async function hydrateSessionMessages(messages: ChatMessageItem[]): Promise<ChatMessageItem[]> {
+  return Promise.all(messages.map((message) => hydrateMessageData(message)));
+}
 export const ChatContext = createContext<ChatContextValue | null>(null);
 
 interface ChatContextProviderProps {
@@ -67,15 +96,24 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
   } = useChatSessions(user?.userId ?? null);
 
   useEffect(() => {
+    let cancelled = false;
     if (activeSession) {
       setMessages(activeSession.messages);
       setError(null);
       setTruncatedMessages(null);
-      return;
+      hydrateSessionMessages(activeSession.messages).then((hydrated) => {
+        if (!cancelled) setMessages(hydrated);
+      });
+      return () => {
+        cancelled = true;
+      };
     }
     setMessages([]);
     setError(null);
     setTruncatedMessages(null);
+    return () => {
+      cancelled = true;
+    };
   }, [activeSession]);
 
   const messagesRef = useRef(messages);
@@ -139,6 +177,7 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
           role: "assistant",
           content: data.text,
           context: messageContext,
+          dataRefs: data.dataRefs,
           data: data.data,
           charts: data.charts,
           tables: data.tables,
@@ -212,6 +251,7 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
         role: "assistant",
         content: data.text,
         context: redoContext,
+        dataRefs: data.dataRefs,
         data: data.data,
         charts: data.charts,
         tables: data.tables,

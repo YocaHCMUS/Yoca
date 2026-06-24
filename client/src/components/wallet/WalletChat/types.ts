@@ -49,7 +49,7 @@ export interface TableSpec {
   filterOp?: "eq" | "gt" | "lt" | "contains";
 }
 
-// ─── Structured Response Types ───────────────────────────────────────────
+// Structured Response Types 
 
 export type WalletSectionKind =
   | "market_snapshot"
@@ -93,9 +93,18 @@ export interface WalletWarning {
 
 export type WalletConfidence = "Low" | "Medium" | "High";
 
+export interface ToolDataReference {
+  id: string;
+  toolName: string;
+  input: Record<string, unknown>;
+  query: string;
+  generatedAt: string;
+}
+
 export interface ChatResponse {
   text: string;
   data: Record<string, unknown>;
+  dataRefs?: ToolDataReference[];
   charts: ChartSpec[];
   tables: TableSpec[];
   actions?: ActionSpec[];
@@ -115,6 +124,7 @@ export interface ChatMessageItem {
     walletAddresses: string[];
   };
   data?: Record<string, unknown>;
+  dataRefs?: ToolDataReference[];
   charts?: ChartSpec[];
   tables?: TableSpec[];
   actions?: ActionSpec[];

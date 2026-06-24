@@ -103,7 +103,7 @@ function resolveRange(input: CachedRange | "24h" | "7d") {
 	};
 }
 
-function mapHeliusRow(row: any): WalletTransactionHelius {
+function mapHeliusRow(row: typeof walletHeliusTransactions.$inferSelect): WalletTransactionHelius {
 	return {
 		walletAddress: row.address,
 		signature: row.signature,
@@ -213,7 +213,7 @@ export async function getCachedWalletTransactionsHelius(
 ): Promise<CachedWalletTransactionsHeliusRangeResult> {
 	const requestedRange = resolveRange(range);
 
-	let metaRows = await db
+	const metaRows = await db
 		.select()
 		.from(walletTransactionsMeta)
 		.where(
