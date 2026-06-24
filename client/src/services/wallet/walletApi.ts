@@ -245,13 +245,21 @@ export interface WalletIntelligenceResponse {
 
 export type WalletAiAnalysisLanguage = "en" | "vn";
 
+export type WalletAiFeature =
+  | "wallet_ai_swap_summary"
+  | "wallet_ai_analysis"
+  | "wash_trading_ai_analysis"
+  | "general_ai_chat"
+  | "token_chart_news_summary";
+
 export interface WalletAiUsage {
-  feature: "wallet_ai_swap_summary";
+  feature: WalletAiFeature;
   tier: "Free" | "Lite" | "Plus" | "Pro";
   limit: number;
   used: number;
   remaining: number;
   resetsAt: string;
+  requiredTier?: "Lite" | "Plus" | "Pro";
 }
 
 export class WalletAiApiError extends Error {
@@ -260,6 +268,7 @@ export class WalletAiApiError extends Error {
     public readonly status: number,
     public readonly errorCode?: string,
     public readonly usage?: WalletAiUsage,
+    public readonly upgradePath?: string,
   ) {
     super(message);
     this.name = "WalletAiApiError";
@@ -270,18 +279,21 @@ async function walletAiError(response: Response, fallback: string) {
   let message = fallback;
   let errorCode: string | undefined;
   let usage: WalletAiUsage | undefined;
+  let upgradePath: string | undefined;
 
   try {
     const errorData = await response.json() as {
       error?: string;
       message?: string;
       errorCode?: string;
-      feature?: WalletAiUsage["feature"];
+      feature?: WalletAiFeature;
       tier?: WalletAiUsage["tier"];
       limit?: number;
       used?: number;
       remaining?: number;
       resetsAt?: string;
+      requiredTier?: WalletAiUsage["requiredTier"];
+      upgradePath?: string;
     };
     message =
       errorData.message?.trim() ||
@@ -302,8 +314,10 @@ async function walletAiError(response: Response, fallback: string) {
             used: errorData.used,
             remaining: errorData.remaining,
             resetsAt: errorData.resetsAt,
+            requiredTier: errorData.requiredTier,
           }
         : undefined;
+    upgradePath = errorData.upgradePath;
   } catch {
     // Keep the status-based fallback when the response body is not JSON.
   }
@@ -313,6 +327,7 @@ async function walletAiError(response: Response, fallback: string) {
     response.status,
     errorCode,
     usage,
+    upgradePath,
   );
 }
 
@@ -480,6 +495,8 @@ export interface WalletAiAnalysisResponse {
   summary: string;
   signals: string[];
   reference?: WalletAiReferenceEntry[];
+  usage?: WalletAiUsage;
+  counted?: boolean;
 }
 
 export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D" | "All";
@@ -795,9 +812,11 @@ export function fetchWalletAiAnalysis(
   return client.api.wallets["ai-analysis"].$post({
     json: { address, language },
   }).then(async resp => {
-    if (resp.ok) return resp.json();
-    console.error(`API Error ${resp.status}`);
-    throw new Error(`API Error ${resp.status}`);
+    if (resp.ok) return (await resp.json()) as WalletAiAnalysisResponse;
+    throw await walletAiError(
+      resp,
+      `Failed to fetch wallet AI analysis (${resp.status})`,
+    );
   });
 }
 

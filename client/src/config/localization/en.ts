@@ -371,10 +371,20 @@ export const translation = {
     features: {
       label: "AI usage included",
       askYoca: "Ask Yoca AI: {{$count}} questions per day",
+      generalAiChat: "General AI Chat: {{$count}} messages per day",
+      tokenChartNewsSummary:
+        "Token Chart News Summary: {{$count}} summaries per day",
       volatilitySummary:
         "Volatility Signal Summary: {{$count}} generations per day",
       walletSwapSummary:
         "Wallet AI Swap Summary: {{$count}} analyses per day",
+      walletAiAnalysis:
+        "Wallet AI Analysis: {{$count}} analyses per day",
+      washTradingAiAnalysis:
+        "Wash Trading AI Analysis: {{$count}} analyses per day",
+      walletAiAnalysisLocked: "Wallet AI Analysis: Plus required",
+      washTradingAiAnalysisLocked:
+        "Wash Trading AI Analysis: Plus required",
       dailyReset: "Daily limits reset at 00:00 UTC",
     },
     cta: {

@@ -62,12 +62,13 @@ import {
     type AiUsageMetadata,
     type AiUsageReservation,
     getAiUsage,
+    isAiFeatureLocked,
     releaseAiUsage,
     reserveAiUsage,
 } from "@sv/services/ai-usage.service.js";
 import { statusCode } from "@sv/util/responses.js";
 import { z } from "zod";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { serverErr, setErr } from "@sv/util/errors";
 import {
     WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
@@ -103,7 +104,7 @@ const DEFAULT_OVERVIEW_PERIOD = "24H";
 
 class WalletAiDailyLimitError extends Error {
   constructor(readonly usage: AiUsageMetadata) {
-    super("Wallet AI Swap Summary daily limit exceeded");
+    super("Wallet AI daily limit exceeded");
   }
 }
 
@@ -121,8 +122,19 @@ function walletAiLimitResponse(usage: AiUsageMetadata) {
   return {
     errorCode: "AI_DAILY_LIMIT_EXCEEDED",
     message:
-      "You have reached today's Wallet AI Swap Summary limit. Upgrade your plan for more daily analyses.",
+      "You have reached today's Wallet AI limit. Upgrade your plan for more daily analyses.",
     ...usage,
+    upgradePath: "/pricing",
+  };
+}
+
+function walletAiLockedResponse(usage: AiUsageMetadata) {
+  return {
+    errorCode: "AI_FEATURE_LOCKED",
+    message: "This AI feature requires the Plus plan or higher.",
+    feature: usage.feature,
+    tier: usage.tier,
+    requiredTier: usage.requiredTier ?? "Plus",
     upgradePath: "/pricing",
   };
 }
@@ -247,6 +259,78 @@ function mapSwapToTokenTradeRow(
     poolName: null,
     tradeAction: inferredAction,
   };
+}
+
+async function handleWalletAiAnalysis(c: Context) {
+  const { id: userId } = c.get("userPayload");
+  let body: unknown;
+  let reservation: AiUsageReservation | undefined;
+
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON payload" }, 400);
+  }
+
+  const parsed = walletAnalysisRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json(
+      { error: "Missing or invalid required field: address" },
+      400,
+    );
+  }
+
+  try {
+    const currentUsage = await getAiUsage(userId, AI_FEATURES.WalletAiAnalysis);
+    if (isAiFeatureLocked(AI_FEATURES.WalletAiAnalysis, currentUsage.tier)) {
+      return c.json(
+        walletAiLockedResponse(currentUsage),
+        statusCode.Forbidden,
+      );
+    }
+
+    const analysis = await getWalletAiAnalysis(
+      parsed.data.address,
+      parsed.data.language,
+      async () => {
+        reservation = await reserveAiUsage(
+          userId,
+          AI_FEATURES.WalletAiAnalysis,
+        );
+        if (!reservation.allowed) {
+          throw new WalletAiDailyLimitError(reservation.usage);
+        }
+      },
+    );
+    const usage =
+      reservation?.allowed === true
+        ? reservation.usage
+        : await getAiUsage(userId, AI_FEATURES.WalletAiAnalysis);
+
+    return c.json(
+      { ...analysis, usage, counted: reservation?.allowed === true },
+      200,
+    );
+  } catch (err) {
+    if (err instanceof WalletAiDailyLimitError) {
+      return c.json(
+        walletAiLimitResponse(err.usage),
+        statusCode.TooManyRequests,
+      );
+    }
+
+    await releaseWalletAiUsage(reservation);
+
+    if (err instanceof WalletAnalysisServiceError) {
+      return c.json(
+        { error: err.message, code: err.code, details: err.details },
+        mapWalletAnalysisStatus(err.status),
+      );
+    }
+
+    console.error("Failed to get wallet AI analysis", err);
+    return c.json({ error: "Failed to get wallet AI analysis" }, 500);
+  }
 }
 
 const app = new Hono()
@@ -588,76 +672,8 @@ const app = new Hono()
       return c.json({ error: "Failed to fetch wallet identity batch" }, 500);
     }
   })
-  .post("/ai-analysis", async (c) => {
-    let body: unknown;
-
-    try {
-      body = await c.req.json();
-    } catch {
-      return c.json({ error: "Invalid JSON payload" }, 400);
-    }
-
-    const parsed = walletAnalysisRequestSchema.safeParse(body);
-    if (!parsed.success) {
-      return c.json(
-        { error: "Missing or invalid required field: address" },
-        400,
-      );
-    }
-
-    try {
-      const analysis = await getWalletAiAnalysis(
-        parsed.data.address,
-        parsed.data.language,
-      );
-      return c.json(analysis, 200);
-    } catch (err) {
-      if (err instanceof WalletAnalysisServiceError) {
-        return c.json(
-          { error: err.message, code: err.code, details: err.details },
-          mapWalletAnalysisStatus(err.status),
-        );
-      }
-
-      console.error("Failed to get wallet AI analysis", err);
-      return c.json({ error: "Failed to get wallet AI analysis" }, 500);
-    }
-  })
-  .post("/analysis", async (c) => {
-    let body: unknown;
-
-    try {
-      body = await c.req.json();
-    } catch {
-      return c.json({ error: "Invalid JSON payload" }, 400);
-    }
-
-    const parsed = walletAnalysisRequestSchema.safeParse(body);
-    if (!parsed.success) {
-      return c.json(
-        { error: "Missing or invalid required field: address" },
-        400,
-      );
-    }
-
-    try {
-      const analysis = await getWalletAiAnalysis(
-        parsed.data.address,
-        parsed.data.language,
-      );
-      return c.json(analysis, 200);
-    } catch (err) {
-      if (err instanceof WalletAnalysisServiceError) {
-        return c.json(
-          { error: err.message, code: err.code, details: err.details },
-          mapWalletAnalysisStatus(err.status),
-        );
-      }
-
-      console.error("Failed to get wallet AI analysis", err);
-      return c.json({ error: "Failed to get wallet AI analysis" }, 500);
-    }
-  })
+  .post("/ai-analysis", honoJwt, userExtract, handleWalletAiAnalysis)
+  .post("/analysis", honoJwt, userExtract, handleWalletAiAnalysis)
   .post("/ai-swap-summary", honoJwt, userExtract, async (c) => {
     const { id: userId } = c.get("userPayload");
     let body: unknown;

@@ -84,7 +84,11 @@ export default function PricingPage() {
     key:
       | "pricing.features.askYoca"
       | "pricing.features.volatilitySummary"
-      | "pricing.features.walletSwapSummary",
+      | "pricing.features.walletSwapSummary"
+      | "pricing.features.generalAiChat"
+      | "pricing.features.tokenChartNewsSummary"
+      | "pricing.features.walletAiAnalysis"
+      | "pricing.features.washTradingAiAnalysis",
     count: number,
   ) => String(tr(key, { $count: count }));
   const localizedLite = {
@@ -92,8 +96,12 @@ export default function PricingPage() {
     period: tr("pricing.period.month"),
     features: [
       aiFeature("pricing.features.askYoca", 20),
+      aiFeature("pricing.features.generalAiChat", 20),
+      aiFeature("pricing.features.tokenChartNewsSummary", 20),
       aiFeature("pricing.features.volatilitySummary", 25),
       aiFeature("pricing.features.walletSwapSummary", 20),
+      String(tr("pricing.features.walletAiAnalysisLocked")),
+      String(tr("pricing.features.washTradingAiAnalysisLocked")),
       String(tr("pricing.features.dailyReset")),
     ],
     cta: tr("pricing.cta.buyNow"),
@@ -104,8 +112,12 @@ export default function PricingPage() {
     period: undefined,
     features: [
       aiFeature("pricing.features.askYoca", 5),
+      aiFeature("pricing.features.generalAiChat", 5),
+      aiFeature("pricing.features.tokenChartNewsSummary", 5),
       aiFeature("pricing.features.volatilitySummary", 10),
       aiFeature("pricing.features.walletSwapSummary", 10),
+      String(tr("pricing.features.walletAiAnalysisLocked")),
+      String(tr("pricing.features.washTradingAiAnalysisLocked")),
       String(tr("pricing.features.dailyReset")),
     ],
     cta: tr("pricing.cta.tryForFree"),
@@ -115,8 +127,12 @@ export default function PricingPage() {
     period: tr("pricing.period.month"),
     features: [
       aiFeature("pricing.features.askYoca", 50),
+      aiFeature("pricing.features.generalAiChat", 50),
+      aiFeature("pricing.features.tokenChartNewsSummary", 50),
       aiFeature("pricing.features.volatilitySummary", 50),
       aiFeature("pricing.features.walletSwapSummary", 50),
+      aiFeature("pricing.features.walletAiAnalysis", 50),
+      aiFeature("pricing.features.washTradingAiAnalysis", 50),
       String(tr("pricing.features.dailyReset")),
     ],
   };
@@ -125,8 +141,12 @@ export default function PricingPage() {
     period: tr("pricing.period.month"),
     features: [
       aiFeature("pricing.features.askYoca", 100),
+      aiFeature("pricing.features.generalAiChat", 100),
+      aiFeature("pricing.features.tokenChartNewsSummary", 100),
       aiFeature("pricing.features.volatilitySummary", 100),
       aiFeature("pricing.features.walletSwapSummary", 100),
+      aiFeature("pricing.features.walletAiAnalysis", 100),
+      aiFeature("pricing.features.washTradingAiAnalysis", 100),
       String(tr("pricing.features.dailyReset")),
     ],
   };

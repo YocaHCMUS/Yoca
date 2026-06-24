@@ -6,6 +6,10 @@ export const AI_FEATURES = {
   AskYocaAi: "ask_yoca_ai",
   VolatilitySignalSummary: "volatility_signal_summary",
   WalletAiSwapSummary: "wallet_ai_swap_summary",
+  GeneralAiChat: "general_ai_chat",
+  TokenChartNewsSummary: "token_chart_news_summary",
+  WalletAiAnalysis: "wallet_ai_analysis",
+  WashTradingAiAnalysis: "wash_trading_ai_analysis",
 } as const;
 
 export type AiFeature = (typeof AI_FEATURES)[keyof typeof AI_FEATURES];
@@ -30,6 +34,35 @@ const AI_DAILY_LIMITS: Record<AiFeature, Record<AiTier, number>> = {
     Plus: 50,
     Pro: 100,
   },
+  [AI_FEATURES.GeneralAiChat]: {
+    Free: 5,
+    Lite: 20,
+    Plus: 50,
+    Pro: 100,
+  },
+  [AI_FEATURES.TokenChartNewsSummary]: {
+    Free: 5,
+    Lite: 20,
+    Plus: 50,
+    Pro: 100,
+  },
+  [AI_FEATURES.WalletAiAnalysis]: {
+    Free: 0,
+    Lite: 0,
+    Plus: 50,
+    Pro: 100,
+  },
+  [AI_FEATURES.WashTradingAiAnalysis]: {
+    Free: 0,
+    Lite: 0,
+    Plus: 50,
+    Pro: 100,
+  },
+};
+
+const AI_FEATURE_REQUIRED_TIER: Partial<Record<AiFeature, Exclude<AiTier, "Free">>> = {
+  [AI_FEATURES.WalletAiAnalysis]: "Plus",
+  [AI_FEATURES.WashTradingAiAnalysis]: "Plus",
 };
 
 const TIER_RANK: Record<AiTier, number> = {
@@ -46,6 +79,7 @@ export interface AiUsageMetadata {
   used: number;
   remaining: number;
   resetsAt: string;
+  requiredTier?: Exclude<AiTier, "Free">;
 }
 
 export interface AiUsageReservation {
@@ -57,6 +91,15 @@ export interface AiUsageReservation {
 
 export function getAiDailyLimit(feature: AiFeature, tier: AiTier) {
   return AI_DAILY_LIMITS[feature][tier];
+}
+
+export function getAiFeatureRequiredTier(feature: AiFeature) {
+  return AI_FEATURE_REQUIRED_TIER[feature] ?? null;
+}
+
+export function isAiFeatureLocked(feature: AiFeature, tier: AiTier) {
+  const requiredTier = getAiFeatureRequiredTier(feature);
+  return Boolean(requiredTier && TIER_RANK[tier] < TIER_RANK[requiredTier]);
 }
 
 export function getUtcUsageWindow(now = new Date()) {
@@ -107,6 +150,7 @@ function usageMetadata(
   resetsAt: string,
 ): AiUsageMetadata {
   const limit = getAiDailyLimit(feature, tier);
+  const requiredTier = getAiFeatureRequiredTier(feature) ?? undefined;
   return {
     feature,
     tier,
@@ -114,6 +158,7 @@ function usageMetadata(
     used,
     remaining: Math.max(0, limit - used),
     resetsAt,
+    ...(requiredTier ? { requiredTier } : {}),
   };
 }
 
@@ -147,6 +192,15 @@ export async function reserveAiUsage(
   const tier = await getUserAiTier(userId, now);
   const limit = getAiDailyLimit(feature, tier);
   const { usageDate, resetsAt } = getUtcUsageWindow(now);
+
+  if (isAiFeatureLocked(feature, tier)) {
+    return {
+      allowed: false,
+      usage: usageMetadata(feature, tier, 0, resetsAt),
+      userId,
+      usageDate,
+    };
+  }
 
   const [reserved] = await db
     .insert(aiDailyUsage)

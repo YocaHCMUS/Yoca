@@ -100,6 +100,7 @@ async function checkDependencies(
 export async function getWalletAiAnalysis(
   address: string,
   language?: string,
+  beforeGenerate?: () => Promise<void>,
 ): Promise<WalletAiAnalysisResponse> {
   const normalizedAddress = address.trim();
   const normalizedLanguage = normalizeWalletAiLanguage(language);
@@ -171,6 +172,8 @@ export async function getWalletAiAnalysis(
   }
 
   try {
+    await beforeGenerate?.();
+
     const payload = await callViaAcms(
       "n8n",
       "analyse-wallet",

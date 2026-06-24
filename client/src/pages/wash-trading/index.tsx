@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import * as echarts from "echarts";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { PageWrapper } from "@/components/wrapper/PageWrapper";
+import { useAuth } from "@/contexts/AuthContext";
 import { useUserTheme } from "@/contexts/ThemeContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import styles from "./wash-trading.module.scss";
@@ -98,6 +99,16 @@ interface ApiResponse {
   data?: WashTradingResult;
   error?: string;
   message?: string;
+  errorCode?: string;
+  upgradePath?: string;
+  usage?: {
+    feature: "wash_trading_ai_analysis";
+    tier: "Free" | "Lite" | "Plus" | "Pro";
+    limit: number;
+    used: number;
+    remaining: number;
+    resetsAt: string;
+  };
 }
 
 const shortAddress = (address?: string) => {
@@ -654,6 +665,7 @@ const LogItem: React.FC<{ time: string; text: string; color: string }> = ({ time
 const WashTradingPage: React.FC = () => {
   const { theme } = useUserTheme();
   const { tr, lang, fmt } = useLocalization();
+  const { user, isUserLoading, openAuthModal } = useAuth();
   const isLight = theme === "light";
   const navigate = useNavigate();
   const { mint } = useParams<{ mint: string }>();
@@ -668,6 +680,8 @@ const WashTradingPage: React.FC = () => {
   const [manualMint, setManualMint] = useState(mint || "");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [upgradePath, setUpgradePath] = useState<string | null>(null);
+  const [aiUsage, setAiUsage] = useState<ApiResponse["usage"]>(undefined);
   const [result, setResult] = useState<WashTradingResult | null>(null);
   const [algoTab, setAlgoTab] = useState<GnnAlgorithm>(["GCN", "GAT", "GraphSAGE"].includes(algorithmFromUrl) ? algorithmFromUrl : "GCN");
   const [walletFilter, setWalletFilter] = useState<"All" | "High risk" | "New">("All");
@@ -711,9 +725,16 @@ const WashTradingPage: React.FC = () => {
       setError(String(tr("washTrading.errors.missingMint")));
       return;
     }
+    if (isUserLoading) return;
+    if (!user) {
+      openAuthModal("login");
+      setError("Sign in to use Wash Trading AI Analysis.");
+      return;
+    }
 
     setIsAnalyzing(true);
     setError(null);
+    setUpgradePath(null);
 
     try {
       const response = await fetch(`${API_DOMAIN}/api/v1/wash-trading/ai-analyze`, {
@@ -732,17 +753,25 @@ const WashTradingPage: React.FC = () => {
 
       const payload = (await response.json()) as ApiResponse;
       if (!response.ok || !payload.success || !payload.data) {
+        if (response.status === 401) openAuthModal("login");
+        if (
+          payload.errorCode === "AI_FEATURE_LOCKED" ||
+          payload.errorCode === "AI_DAILY_LIMIT_EXCEEDED"
+        ) {
+          setUpgradePath(payload.upgradePath ?? "/pricing");
+        }
         throw new Error(payload.message || payload.error || String(tr("washTrading.errors.analysisFailed")));
       }
 
       setResult(payload.data);
+      setAiUsage(payload.usage);
       setSelectedWalletAddress(payload.data.suspiciousWallets[0]?.wallet ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(tr("washTrading.errors.apiFailed")));
     } finally {
       setIsAnalyzing(false);
     }
-  }, [symbol, targetMint, timeframe, algoTab, lang, tr]);
+  }, [symbol, targetMint, timeframe, algoTab, lang, tr, isUserLoading, openAuthModal, user]);
 
   useEffect(() => {
     if (mint) {
@@ -886,7 +915,17 @@ const WashTradingPage: React.FC = () => {
         </div>
 
         <div className={styles.scrollBody}>
-          {error && <div className={styles.errorBox}>{error}</div>}
+          {error && (
+            <div className={styles.errorBox}>
+              {error}
+              {upgradePath && (
+                <>
+                  {" "}
+                  <a href={upgradePath}>Upgrade plan</a>
+                </>
+              )}
+            </div>
+          )}
 
         {isAiVerdictOpen && (
           <div id="ai-verdict-panel" className={styles.aiSummaryCard}>
@@ -895,6 +934,11 @@ const WashTradingPage: React.FC = () => {
               <strong>{verdictLabel}</strong>
             </div>
             <p>{result?.aiAnalysis.summary ?? tr("washTrading.verdict.defaultSummary")}</p>
+            {aiUsage && (
+              <div className={styles.sourceNotice}>
+                {aiUsage.remaining}/{aiUsage.limit} Wash Trading AI analyses left today
+              </div>
+            )}
             {result?.dataSource && (
               <div className={`${styles.sourceNotice} ${result.dataSource === "demo-fallback" ? styles.sourceWarning : styles.sourceLive}`}>
                 {tr("washTrading.verdict.dataSource")} <strong>{result.dataSource}</strong>

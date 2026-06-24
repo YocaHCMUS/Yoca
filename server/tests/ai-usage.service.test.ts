@@ -7,13 +7,17 @@ vi.mock("@sv/db/schema.js", () => ({
 }));
 
 let getAiDailyLimit: typeof import("@sv/services/ai-usage.service.js").getAiDailyLimit;
+let getAiFeatureRequiredTier: typeof import("@sv/services/ai-usage.service.js").getAiFeatureRequiredTier;
 let getUtcUsageWindow: typeof import("@sv/services/ai-usage.service.js").getUtcUsageWindow;
+let isAiFeatureLocked: typeof import("@sv/services/ai-usage.service.js").isAiFeatureLocked;
 let selectHighestTier: typeof import("@sv/services/ai-usage.service.js").selectHighestTier;
 
 beforeAll(async () => {
   const service = await import("@sv/services/ai-usage.service.js");
   getAiDailyLimit = service.getAiDailyLimit;
+  getAiFeatureRequiredTier = service.getAiFeatureRequiredTier;
   getUtcUsageWindow = service.getUtcUsageWindow;
+  isAiFeatureLocked = service.isAiFeatureLocked;
   selectHighestTier = service.selectHighestTier;
 });
 
@@ -37,6 +41,37 @@ describe("AI usage policy", () => {
     expect(getAiDailyLimit("wallet_ai_swap_summary", "Lite")).toBe(20);
     expect(getAiDailyLimit("wallet_ai_swap_summary", "Plus")).toBe(50);
     expect(getAiDailyLimit("wallet_ai_swap_summary", "Pro")).toBe(100);
+  });
+
+  it("uses the configured remaining AI feature limits", () => {
+    expect(getAiDailyLimit("general_ai_chat", "Free")).toBe(5);
+    expect(getAiDailyLimit("general_ai_chat", "Lite")).toBe(20);
+    expect(getAiDailyLimit("general_ai_chat", "Plus")).toBe(50);
+    expect(getAiDailyLimit("general_ai_chat", "Pro")).toBe(100);
+
+    expect(getAiDailyLimit("token_chart_news_summary", "Free")).toBe(5);
+    expect(getAiDailyLimit("token_chart_news_summary", "Lite")).toBe(20);
+    expect(getAiDailyLimit("token_chart_news_summary", "Plus")).toBe(50);
+    expect(getAiDailyLimit("token_chart_news_summary", "Pro")).toBe(100);
+
+    expect(getAiDailyLimit("wallet_ai_analysis", "Free")).toBe(0);
+    expect(getAiDailyLimit("wallet_ai_analysis", "Lite")).toBe(0);
+    expect(getAiDailyLimit("wallet_ai_analysis", "Plus")).toBe(50);
+    expect(getAiDailyLimit("wallet_ai_analysis", "Pro")).toBe(100);
+
+    expect(getAiDailyLimit("wash_trading_ai_analysis", "Free")).toBe(0);
+    expect(getAiDailyLimit("wash_trading_ai_analysis", "Lite")).toBe(0);
+    expect(getAiDailyLimit("wash_trading_ai_analysis", "Plus")).toBe(50);
+    expect(getAiDailyLimit("wash_trading_ai_analysis", "Pro")).toBe(100);
+  });
+
+  it("locks premium AI analysis features until Plus", () => {
+    expect(getAiFeatureRequiredTier("wallet_ai_analysis")).toBe("Plus");
+    expect(getAiFeatureRequiredTier("wash_trading_ai_analysis")).toBe("Plus");
+    expect(isAiFeatureLocked("wallet_ai_analysis", "Free")).toBe(true);
+    expect(isAiFeatureLocked("wallet_ai_analysis", "Lite")).toBe(true);
+    expect(isAiFeatureLocked("wallet_ai_analysis", "Plus")).toBe(false);
+    expect(isAiFeatureLocked("wash_trading_ai_analysis", "Pro")).toBe(false);
   });
 
   it("resets at the next UTC midnight", () => {

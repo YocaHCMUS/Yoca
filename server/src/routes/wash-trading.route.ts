@@ -1,7 +1,19 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import { honoJwt } from "@sv/middlewares/validation.js";
+import userExtract from "@sv/middlewares/user-extract.js";
+import {
+  AI_FEATURES,
+  type AiUsageMetadata,
+  type AiUsageReservation,
+  getAiUsage,
+  isAiFeatureLocked,
+  releaseAiUsage,
+  reserveAiUsage,
+} from "@sv/services/ai-usage.service.js";
 import { analyzeWashTradingWithAI, getWashTradingRuntimeStatus } from "@sv/services/wash-trading-ai.service.js";
 import { washTradingService } from "@sv/services/wash-trading.service.js";
+import { statusCode } from "@sv/util/responses.js";
 
 const timeframeSchema = z.enum(["1h", "24h", "7d", "30d"]).default("24h");
 const algorithmSchema = z.enum(["GCN", "GAT", "GraphSAGE"]).default("GCN");
@@ -24,6 +36,61 @@ const aiAnalyzeQuerySchema = z.object({
   limit: z.coerce.number().int().min(20).max(200).optional().default(80),
 });
 
+class WashTradingAiDailyLimitError extends Error {
+  constructor(readonly usage: AiUsageMetadata) {
+    super("Wash Trading AI Analysis daily limit exceeded");
+  }
+}
+
+function washTradingAiLimitResponse(usage: AiUsageMetadata) {
+  return {
+    success: false,
+    errorCode: "AI_DAILY_LIMIT_EXCEEDED",
+    message: "You have reached today's Wash Trading AI Analysis limit.",
+    ...usage,
+    upgradePath: "/pricing",
+  };
+}
+
+function washTradingAiLockedResponse(usage: AiUsageMetadata) {
+  return {
+    success: false,
+    errorCode: "AI_FEATURE_LOCKED",
+    message: "Wash Trading AI Analysis requires the Plus plan or higher.",
+    feature: usage.feature,
+    tier: usage.tier,
+    requiredTier: usage.requiredTier ?? "Plus",
+    upgradePath: "/pricing",
+  };
+}
+
+async function reserveWashTradingAi(userId: string) {
+  const usage = await getAiUsage(userId, AI_FEATURES.WashTradingAiAnalysis);
+  if (isAiFeatureLocked(AI_FEATURES.WashTradingAiAnalysis, usage.tier)) {
+    return { locked: true as const, usage };
+  }
+
+  const reservation = await reserveAiUsage(
+    userId,
+    AI_FEATURES.WashTradingAiAnalysis,
+  );
+  if (!reservation.allowed) {
+    throw new WashTradingAiDailyLimitError(reservation.usage);
+  }
+
+  return { locked: false as const, reservation };
+}
+
+async function releaseWashTradingAiUsage(reservation?: AiUsageReservation) {
+  if (!reservation?.allowed) return;
+
+  try {
+    await releaseAiUsage(reservation);
+  } catch (err) {
+    console.error("[WashTrading] failed to release AI usage:", err);
+  }
+}
+
 const app = new Hono()
   .get("/debug-config", (c) => {
     return c.json({
@@ -33,8 +100,11 @@ const app = new Hono()
     });
   })
 
-  .post("/ai-analyze", async (c) => {
+  .post("/ai-analyze", honoJwt, userExtract, async (c) => {
+    let reservation: AiUsageReservation | undefined;
+
     try {
+      const { id: userId } = c.get("userPayload");
       const body = await c.req.json().catch(() => null);
       const parsed = aiAnalyzeBodySchema.safeParse(body);
 
@@ -49,14 +119,33 @@ const app = new Hono()
         );
       }
 
+      const access = await reserveWashTradingAi(userId);
+      if (access.locked) {
+        return c.json(
+          washTradingAiLockedResponse(access.usage),
+          statusCode.Forbidden,
+        );
+      }
+      reservation = access.reservation;
+
       const result = await analyzeWashTradingWithAI(parsed.data);
 
       return c.json({
         success: true,
         data: result,
+        usage: reservation.usage,
+        counted: true,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
+      if (error instanceof WashTradingAiDailyLimitError) {
+        return c.json(
+          washTradingAiLimitResponse(error.usage),
+          statusCode.TooManyRequests,
+        );
+      }
+
+      await releaseWashTradingAiUsage(reservation);
       console.error("[WashTrading] POST /ai-analyze failed:", error);
       return c.json(
         {
@@ -101,8 +190,11 @@ const app = new Hono()
 
   // Test nhanh bằng browser/Postman:
   // GET /api/v1/wash-trading/:mint?symbol=BONK&timeframe=24h&algorithm=GAT
-  .get("/:mint", async (c) => {
+  .get("/:mint", honoJwt, userExtract, async (c) => {
+    let reservation: AiUsageReservation | undefined;
+
     try {
+      const { id: userId } = c.get("userPayload");
       const mint = c.req.param("mint")?.trim();
       const parsed = aiAnalyzeQuerySchema.safeParse({
         symbol: c.req.query("symbol") ?? undefined,
@@ -120,9 +212,32 @@ const app = new Hono()
         return c.json({ success: false, error: "Invalid query", details: parsed.error.flatten() }, 400);
       }
 
+      const access = await reserveWashTradingAi(userId);
+      if (access.locked) {
+        return c.json(
+          washTradingAiLockedResponse(access.usage),
+          statusCode.Forbidden,
+        );
+      }
+      reservation = access.reservation;
+
       const result = await analyzeWashTradingWithAI({ mint, ...parsed.data });
-      return c.json({ success: true, data: result, timestamp: new Date().toISOString() });
+      return c.json({
+        success: true,
+        data: result,
+        usage: reservation.usage,
+        counted: true,
+        timestamp: new Date().toISOString(),
+      });
     } catch (error) {
+      if (error instanceof WashTradingAiDailyLimitError) {
+        return c.json(
+          washTradingAiLimitResponse(error.usage),
+          statusCode.TooManyRequests,
+        );
+      }
+
+      await releaseWashTradingAiUsage(reservation);
       console.error("[WashTrading] GET /:mint failed:", error);
       return c.json(
         {

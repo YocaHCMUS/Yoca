@@ -331,6 +331,16 @@ export const translation = defineTranslation({
     features: {
       label: "Hạn mức AI bao gồm",
       askYoca: "Ask Yoca AI: {{$count}} câu hỏi mỗi ngày",
+      generalAiChat: "General AI Chat: {{$count}} tin nhan moi ngay",
+      tokenChartNewsSummary:
+        "Tom tat tin tuc tren chart: {{$count}} luot moi ngay",
+      walletAiAnalysis:
+        "Wallet AI Analysis: {{$count}} luot phan tich moi ngay",
+      washTradingAiAnalysis:
+        "Wash Trading AI Analysis: {{$count}} luot phan tich moi ngay",
+      walletAiAnalysisLocked: "Wallet AI Analysis: can goi Plus",
+      washTradingAiAnalysisLocked:
+        "Wash Trading AI Analysis: can goi Plus",
       volatilitySummary:
         "Tóm tắt Volatility Signals: {{$count}} lượt tạo mỗi ngày",
       walletSwapSummary:

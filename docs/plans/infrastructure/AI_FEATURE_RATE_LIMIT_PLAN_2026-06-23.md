@@ -1,7 +1,7 @@
 # AI Feature Rate Limit Plan
 
 Date: 2026-06-23  
-Status: Ask Yoca AI, Volatility Signal Summary, and Wallet AI Swap Summary implemented
+Status: All current AI feature limits implemented
 
 ## Architecture
 
@@ -11,6 +11,7 @@ Status: Ask Yoca AI, Volatility Signal Summary, and Wallet AI Swap Summary imple
 - Failed AI requests release reserved usage.
 - Cache charging is feature-specific: Ask Yoca AI counts successful cache hits; Volatility Signal Summary does not.
 - Wallet AI Swap Summary and its token-level AI Analysis share one daily counter; cache hits do not count.
+- Wallet AI Analysis and Wash Trading AI Analysis are locked until Plus; locked tiers receive `403 AI_FEATURE_LOCKED` and do not write usage.
 - Daily counters reset at `00:00 UTC`.
 - Existing short-window IP throttles remain separate abuse protection.
 - Users without a valid paid subscription use the Free tier.
@@ -21,12 +22,12 @@ Status: Ask Yoca AI, Volatility Signal Summary, and Wallet AI Swap Summary imple
 | Feature | Key | Free | Lite | Plus | Pro | Status |
 |---|---|---:|---:|---:|---:|---|
 | Ask Yoca AI | `ask_yoca_ai` | 5 | 20 | 50 | 100 | Enforced |
-| General AI Chat | Pending | Pending product limits | Pending product limits | Pending product limits | Pending product limits | Not enforced |
-| Wallet AI Analysis | Pending | Pending product limits | Pending product limits | Pending product limits | Pending product limits | Not enforced |
+| General AI Chat | `general_ai_chat` | 5 | 20 | 50 | 100 | Enforced |
+| Wallet AI Analysis | `wallet_ai_analysis` | Locked | Locked | 50 | 100 | Enforced |
 | Wallet AI Swap Summary | `wallet_ai_swap_summary` | 10 | 20 | 50 | 100 | Enforced |
-| Wash Trading AI Analysis | Pending | Pending product limits | Pending product limits | Pending product limits | Pending product limits | Not enforced |
+| Wash Trading AI Analysis | `wash_trading_ai_analysis` | Locked | Locked | 50 | 100 | Enforced |
 | Volatility Signal Summary | `volatility_signal_summary` | 10 | 25 | 50 | 100 | Enforced |
-| Other token news AI summaries | Pending | Pending product limits | Pending product limits | Pending product limits | Pending product limits | Not enforced |
+| Token Chart News Summary | `token_chart_news_summary` | 5 | 20 | 50 | 100 | Enforced |
 
 ## Ask Yoca AI Behavior
 
@@ -52,6 +53,13 @@ Status: Ask Yoca AI, Volatility Signal Summary, and Wallet AI Swap Summary imple
 - Quota is reserved immediately before Gemini and retained only after a valid response; provider or validation failures release it.
 - Successful responses include `usage` and `counted`; exhausted quota returns `429 AI_DAILY_LIMIT_EXCEEDED`.
 
+## Remaining AI Feature Behavior
+
+- `POST /api/chat` requires authentication and consumes `general_ai_chat` quota for every successful response, including cache hits.
+- `POST /api/wallets/ai-analysis` and `POST /api/wallets/analysis` require authentication and Plus or higher; cache hits require Plus but do not consume quota.
+- `POST /api/v1/wash-trading/ai-analyze` and `GET /api/v1/wash-trading/:mint` require authentication and Plus or higher; legacy deterministic wash-trading endpoints stay public.
+- Token chart news summaries only consume `token_chart_news_summary` when `includeSummary=true` produces a Gemini summary; regular chart news, cache hits, and deterministic fallbacks do not consume quota.
+
 ## Implementation Checklist
 
 - [x] Add `ai_daily_usage` schema and Drizzle migration.
@@ -63,9 +71,8 @@ Status: Ask Yoca AI, Volatility Signal Summary, and Wallet AI Swap Summary imple
 - [x] Display remaining usage and upgrade CTA in the client.
 - [x] Enforce Volatility Signal Summary limits only for successful Gemini generations.
 - [x] Enforce one shared Wallet AI Swap Summary quota across wallet and token analysis.
-- [x] Publish approved Ask Yoca AI, Volatility Summary, and Wallet AI Swap Summary limits on the pricing page.
-- [x] Keep other AI features unenforced until product limits are supplied.
-- [ ] Apply limits to each pending AI feature after its tier values are approved.
+- [x] Enforce General AI Chat, Token Chart News Summary, Wallet AI Analysis, and Wash Trading AI Analysis limits.
+- [x] Publish all approved AI feature limits and Plus-required locks on the pricing page.
 
 ## Verification
 
@@ -79,3 +86,6 @@ Status: Ask Yoca AI, Volatility Signal Summary, and Wallet AI Swap Summary imple
 - Volatility summary cache hits and deterministic fallbacks do not consume usage.
 - Wallet swap summary and token analysis cache hits do not consume usage.
 - Wallet swap summary and token analysis share the same 10/20/50/100 daily counter.
+- General AI Chat stops at 5/20/50/100 successful responses per UTC day.
+- Wallet AI Analysis and Wash Trading AI Analysis return `403 AI_FEATURE_LOCKED` for Free/Lite and stop Plus/Pro at 51/101.
+- Token Chart News Summary remains public without summaries; summary cache hits and deterministic fallbacks do not consume usage.
