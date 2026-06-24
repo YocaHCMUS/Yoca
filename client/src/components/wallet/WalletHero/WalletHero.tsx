@@ -9,9 +9,10 @@ interface WalletHeroProps {
   overview: WalletOverviewMultiPeriodResponse | null;
   selectedPeriod: WalletOverviewPeriodKey;
   loading: boolean;
+  actions?: React.ReactNode;
 }
 
-export function WalletHero({ overview, selectedPeriod }: WalletHeroProps) {
+export function WalletHero({ overview, selectedPeriod, actions }: WalletHeroProps) {
   const { tr, fmt } = useLocalization();
 
   const selectedStats = overview?.periods?.[selectedPeriod] ?? null;
@@ -41,6 +42,7 @@ export function WalletHero({ overview, selectedPeriod }: WalletHeroProps) {
 
   return (
     <div className={styles.hero}>
+      {actions && <div className={styles.heroActions}>{actions}</div>}
       {/* Column 1: Portfolio Value */}
       <div className={styles.cell}>
         <div className={styles.label}>{tr("wallet.totalAssetValue")}</div>

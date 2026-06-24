@@ -61,12 +61,14 @@ type MultiWalletBalanceChartProps = {
   addresses: string[];
   showTotal?: boolean;
   show24Change?: boolean;
+  actions?: React.ReactNode;
 };
 
 export function MultiWalletBalanceChart({
   addresses,
   showTotal = true,
   show24Change = true,
+  actions,
 }: MultiWalletBalanceChartProps) {
   const { fmt } = useLocalization();
 

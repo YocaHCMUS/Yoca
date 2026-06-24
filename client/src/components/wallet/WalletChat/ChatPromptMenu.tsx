@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useChatPrompts, type ChatPromptData, type CreatePromptInput, type UpdatePromptInput } from "./useChatPrompts";
+import { useCallback, useEffect, useMemo, useState, type UIEvent } from "react";
+import { useChatPrompts, type ChatPromptData, type CreatePromptInput, type PromptScope, type UpdatePromptInput } from "./useChatPrompts";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
 import { ChatPromptDialog } from "./ChatPromptDialog";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,7 +7,7 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import styles from "./WalletChat.module.scss";
 
 type TabId = "mine" | "explore";
-type ExploreSubTab = "community" | "system";
+type ExploreSubTab = "popular" | "new" | "system";
 
 interface Props {
   walletAddress?: string;
@@ -15,13 +15,19 @@ interface Props {
   onClose: () => void;
 }
 
+const PROMPT_PAGE_SIZE = 20;
+const SEARCH_DEBOUNCE_MS = 300;
+const SCROLL_LOAD_THRESHOLD_PX = 72;
+
 export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
   const { tr } = useLocalization();
   const { user } = useAuth();
   const {
     prompts,
-    total,
+    page,
+    hasMore,
     isLoading,
+    isFetchingMore,
     error,
     fetchPrompts,
     createPrompt,
@@ -31,46 +37,86 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
   } = useChatPrompts();
 
   const [activeTab, setActiveTab] = useState<TabId>(user ? "mine" : "explore");
-  const [exploreSubTab, setExploreSubTab] = useState<ExploreSubTab>("community");
+  const [exploreSubTab, setExploreSubTab] = useState<ExploreSubTab>("popular");
   const [searchQuery, setSearchQuery] = useState("");
-  const [showAllPopular, setShowAllPopular] = useState(false);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [dialogMode, setDialogMode] = useState<"create" | "edit" | "fork" | "view" | null>(null);
   const [editingPrompt, setEditingPrompt] = useState<ChatPromptData | null>(null);
   const [forkingPrompt, setForkingPrompt] = useState<ChatPromptData | null>(null);
   const [viewingPrompt, setViewingPrompt] = useState<ChatPromptData | null>(null);
 
   useEffect(() => {
-    if (activeTab === "mine") {
-      fetchPrompts({ scope: "mine", sort: "recent", walletAddress });
-    } else if (activeTab === "explore" && exploreSubTab === "community") {
-      fetchPrompts({ scope: "popular", sort: "usage", limit: showAllPopular ? 50 : 5, walletAddress });
-    }
-  }, [activeTab, exploreSubTab, showAllPopular, walletAddress, fetchPrompts]);
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  const activePromptScope: PromptScope | null = activeTab === "mine"
+    ? "mine"
+    : exploreSubTab === "system"
+      ? null
+      : exploreSubTab;
+
+  const activePromptSort: "usage" | "recent" = activePromptScope === "popular" ? "usage" : "recent";
+
+  useEffect(() => {
+    if (!activePromptScope) return;
+    fetchPrompts({
+      scope: activePromptScope,
+      sort: activePromptSort,
+      search: debouncedSearchQuery,
+      page: 1,
+      limit: PROMPT_PAGE_SIZE,
+      walletAddress,
+    });
+  }, [activePromptScope, activePromptSort, debouncedSearchQuery, walletAddress, fetchPrompts]);
 
   const handleTabChange = (tab: TabId) => {
     setActiveTab(tab);
     setSearchQuery("");
-    setShowAllPopular(false);
+    setDebouncedSearchQuery("");
   };
 
   const handleExploreSubTabChange = (sub: ExploreSubTab) => {
     setExploreSubTab(sub);
     setSearchQuery("");
-    setShowAllPopular(false);
+    setDebouncedSearchQuery("");
   };
+
+  const fetchNextPage = useCallback(() => {
+    if (!activePromptScope || isLoading || isFetchingMore || !hasMore) return;
+    fetchPrompts({
+      scope: activePromptScope,
+      sort: activePromptSort,
+      search: debouncedSearchQuery,
+      page: page + 1,
+      limit: PROMPT_PAGE_SIZE,
+      walletAddress,
+      append: true,
+    });
+  }, [activePromptScope, activePromptSort, debouncedSearchQuery, fetchPrompts, hasMore, isFetchingMore, isLoading, page, walletAddress]);
+
+  const handlePromptMenuScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
+    const el = event.currentTarget;
+    const remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (remaining <= SCROLL_LOAD_THRESHOLD_PX) {
+      fetchNextPage();
+    }
+  }, [fetchNextPage]);
 
   const handleSelectPrompt = useCallback((query: string, promptId?: string) => {
     onSelect(query, promptId);
     onClose();
   }, [onSelect, onClose]);
 
-  const resolveLabel = (q: typeof PREDEFINED_QUESTIONS[number]): string => {
+  const resolveLabel = useCallback((q: typeof PREDEFINED_QUESTIONS[number]): string => {
     return q.labelKey ? tr(q.labelKey as "chat.prompt.overview.label") : q.label;
-  };
+  }, [tr]);
 
-  const resolveQuery = (q: typeof PREDEFINED_QUESTIONS[number]): string => {
+  const resolveQuery = useCallback((q: typeof PREDEFINED_QUESTIONS[number]): string => {
     return q.queryKey ? tr(q.queryKey as "chat.prompt.overview.query") : q.query;
-  };
+  }, [tr]);
 
   const filterText = searchQuery.toLowerCase().trim();
 
@@ -81,16 +127,7 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
       const query = resolveQuery(q).toLowerCase();
       return label.includes(filterText) || query.includes(filterText);
     });
-  }, [filterText]);
-
-  const filteredApiPrompts = useMemo(() => {
-    if (!filterText) return prompts;
-    return prompts.filter((p) => {
-      const label = p.label.toLowerCase();
-      const query = p.query.toLowerCase();
-      return label.includes(filterText) || query.includes(filterText);
-    });
-  }, [filterText, prompts]);
+  }, [filterText, resolveLabel, resolveQuery]);
 
   const handleCreate = useCallback(async (input: CreatePromptInput | UpdatePromptInput) => {
     const result = await createPrompt(input as CreatePromptInput);
@@ -225,6 +262,29 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
     />
   );
 
+  const renderApiPromptList = (emptyText: string) => {
+    if (isLoading) {
+      return <div className={styles.promptLoading}>{tr("chat.prompt.loading")}</div>;
+    }
+
+    if (error) {
+      return <div className={styles.promptEmpty}>{error}</div>;
+    }
+
+    if (prompts.length === 0) {
+      return <div className={styles.promptEmpty}>{emptyText}</div>;
+    }
+
+    return (
+      <div className={styles.promptMenuList}>
+        {prompts.map(renderPromptItem)}
+        {isFetchingMore && (
+          <div className={styles.promptLoading}>{tr("chat.prompt.loadingMore")}</div>
+        )}
+      </div>
+    );
+  };
+
   const renderMineContent = () => (
     <>
       <div className={styles.promptMenuHeader}>
@@ -237,26 +297,7 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
       </div>
 
       {renderSearchInput()}
-
-      {isLoading && (
-        <div className={styles.promptLoading}>{tr("chat.prompt.loading")}</div>
-      )}
-
-      {!isLoading && error && (
-        <div className={styles.promptEmpty}>{error}</div>
-      )}
-
-      {!isLoading && !error && filteredApiPrompts.length === 0 && (
-        <div className={styles.promptEmpty}>
-          {tr("chat.prompt.emptyMine")}
-        </div>
-      )}
-
-      {!isLoading && !error && filteredApiPrompts.length > 0 && (
-        <div className={styles.promptMenuList}>
-          {filteredApiPrompts.map(renderPromptItem)}
-        </div>
-      )}
+      {renderApiPromptList(tr("chat.prompt.emptyMine"))}
     </>
   );
 
@@ -269,50 +310,21 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
       {renderSearchInput()}
 
       <div className={styles.promptPillTabs}>
-        {renderPillTab("community", tr("chat.prompt.exploreSubtabCommunity"))}
+        {renderPillTab("popular", tr("chat.prompt.exploreSubtabPopular"))}
+        {renderPillTab("new", tr("chat.prompt.exploreSubtabNew"))}
         {renderPillTab("system", tr("chat.prompt.exploreSubtabSystem"))}
       </div>
 
-      {exploreSubTab === "community" && (
-        <>
-          {isLoading && (
-            <div className={styles.promptLoading}>{tr("chat.prompt.loading")}</div>
-          )}
-
-          {!isLoading && error && (
-            <div className={styles.promptEmpty}>{error}</div>
-          )}
-
-          {!isLoading && !error && filteredApiPrompts.length === 0 && (
-            <div className={styles.promptEmpty}>{tr("chat.prompt.empty")}</div>
-          )}
-
-          {!isLoading && !error && filteredApiPrompts.length > 0 && (
-            <div className={styles.promptMenuList}>
-              {filteredApiPrompts.map(renderPromptItem)}
-              {!showAllPopular && total > 5 && (
-                <button
-                  className={styles.promptLoadMoreBtn}
-                  onClick={() => setShowAllPopular(true)}
-                >
-                  {tr("chat.prompt.loadMore", { count: total })}
-                </button>
-              )}
-            </div>
-          )}
-        </>
-      )}
-
-      {exploreSubTab === "system" && (
+      {exploreSubTab === "system" ? (
         <div className={styles.promptMenuList}>
           {filteredSystemPrompts.map(renderSystemPromptItem)}
         </div>
-      )}
+      ) : renderApiPromptList(tr("chat.prompt.empty"))}
     </>
   );
 
   return (
-    <div className={styles.promptMenuOverlay}>
+    <div className={styles.promptMenuOverlay} onScroll={handlePromptMenuScroll}>
       <div className={styles.promptTabs}>
         {user && renderTab("mine", tr("chat.prompt.tabMine"))}
         {renderTab("explore", tr("chat.prompt.tabExplore"))}

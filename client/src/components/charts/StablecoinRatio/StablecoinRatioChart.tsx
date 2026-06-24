@@ -36,6 +36,7 @@ export function StablecoinRatioChart({
   refreshInterval = 30000,
   fetchEnabled = true,
   className,
+  actions,
 }: ChartProps) {
   const { tr } = useLocalization();
   const chartTitle = title || tr("charts.stablecoinRatioChart.title");
@@ -175,6 +176,7 @@ export function StablecoinRatioChart({
       loadingState={loadingState}
       isEmpty={!isChartSuccess(data, "wallets") || data.wallets.length === 0}
       onRetry={() => refetch(false)}
+      actions={actions}
     >
       <ChartContainer>
         <ChartStatsHeader cards={statsCards} minColumnWidth="200px" />

@@ -20,6 +20,14 @@ export interface ChatToolCall {
   input: Record<string, unknown>;
 }
 
+export interface ToolDataReference {
+  id: string;
+  toolName: string;
+  input: Record<string, unknown>;
+  query: string;
+  generatedAt: string;
+}
+
 export interface ChatToolResult {
   name: string;
   input: Record<string, unknown>;
@@ -95,15 +103,15 @@ export interface TableSpec {
 export interface WalletChatSection {
   title: string;
   kind:
-    | "market_snapshot"
-    | "key_findings"
-    | "pnl_summary"
-    | "trading_activity"
-    | "top_holdings"
-    | "risk_factors"
-    | "what_to_watch"
-    | "conclusion"
-    | "custom";
+  | "market_snapshot"
+  | "key_findings"
+  | "pnl_summary"
+  | "trading_activity"
+  | "top_holdings"
+  | "risk_factors"
+  | "what_to_watch"
+  | "conclusion"
+  | "custom";
   content?: string;
   bullets?: string[];
   table?: Array<Record<string, string | number | null>>;
@@ -119,15 +127,15 @@ export interface ChatSource {
 
 export interface WalletChatEvidence {
   type:
-    | "overview"
-    | "portfolio"
-    | "swap"
-    | "transfer"
-    | "pnl"
-    | "balance"
-    | "volume"
-    | "audit"
-    | "market";
+  | "overview"
+  | "portfolio"
+  | "swap"
+  | "transfer"
+  | "pnl"
+  | "balance"
+  | "volume"
+  | "audit"
+  | "market";
   label: string;
   value?: string;
   detail?: string;
@@ -144,6 +152,7 @@ export type WalletConfidence = "Low" | "Medium" | "High";
 export interface ChatResponse {
   text: string;
   data: Record<string, unknown>;
+  dataRefs?: ToolDataReference[];
   charts: ChartSpec[];
   tables: TableSpec[];
   actions?: ActionSpec[];
@@ -160,7 +169,12 @@ export interface ChatResponse {
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  context?: {
+    contextType: "wallet" | "wallet-comparison";
+    walletAddresses: string[];
+  };
   data?: Record<string, unknown>;
+  dataRefs?: ToolDataReference[];
   charts?: ChartSpec[];
   tables?: TableSpec[];
   actions?: ActionSpec[];

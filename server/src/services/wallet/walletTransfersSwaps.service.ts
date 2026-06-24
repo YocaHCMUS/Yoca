@@ -324,6 +324,7 @@ export async function getWalletTransfers(
   tokenAddress?: string,
   direction?: "in" | "out",
   minAmountUsd?: number,
+  maxAmountUsd?: number,
 ): Promise<WalletTransfersResponse> {
   const requestedRange = resolveRequestedRange(from, to);
   const history = await getWalletTransferHistory(
@@ -383,6 +384,9 @@ export async function getWalletSwaps(
   from?: number,
   to?: number,
   tokenAddress?: string,
+  type?: "buy" | "sell",
+  minAmountUsd?: number,
+  maxAmountUsd?: number,
 ): Promise<WalletSwapsResponse> {
   const requestedRange = resolveRequestedRange(from, to);
   const history = await getWalletSwapHistory(

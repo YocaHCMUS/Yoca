@@ -24,6 +24,24 @@ export interface ChatSessionRow {
   updatedAt: Date;
 }
 
+
+export function sanitizeSessionMessages(
+  messages: Record<string, unknown>[],
+): Record<string, unknown>[] {
+  return messages.map((message) => {
+    if (message.role !== "assistant") return message;
+    const rest = { ...message };
+    delete rest.data;
+    return rest;
+  });
+}
+
+function sanitizeSessionRow(row: ChatSessionRow): ChatSessionRow {
+  return {
+    ...row,
+    messages: sanitizeSessionMessages(row.messages),
+  };
+}
 export function buildSessionContext(
   addresses: string[],
   contextType: ChatSessionContextType = addresses.length > 1 ? "wallet-comparison" : "wallet",
@@ -73,7 +91,7 @@ export async function getUserSessions(
     .from(chatSessions)
     .where(eq(chatSessions.userId, userId))
     .orderBy(desc(chatSessions.updatedAt));
-  return rows as ChatSessionRow[];
+  return (rows as ChatSessionRow[]).map(sanitizeSessionRow);
 }
 
 export async function getSession(
@@ -86,7 +104,7 @@ export async function getSession(
     .where(
       and(eq(chatSessions.id, sessionId), eq(chatSessions.userId, userId)),
     );
-  return (row as ChatSessionRow) ?? null;
+  return row ? sanitizeSessionRow(row as ChatSessionRow) : null;
 }
 
 export async function updateSession(
@@ -100,7 +118,7 @@ export async function updateSession(
 ): Promise<ChatSessionRow | null> {
   const values: Partial<typeof chatSessions.$inferInsert> = {};
   if (data.messages !== undefined) {
-    values.messages = data.messages;
+    values.messages = sanitizeSessionMessages(data.messages);
   }
   if (data.title !== undefined) {
     values.title = data.title;
@@ -118,7 +136,7 @@ export async function updateSession(
       and(eq(chatSessions.id, sessionId), eq(chatSessions.userId, userId)),
     )
     .returning();
-  return (row as ChatSessionRow) ?? null;
+  return row ? sanitizeSessionRow(row as ChatSessionRow) : null;
 }
 
 export async function deleteSession(

@@ -47,6 +47,7 @@ export function DrawdownChart({
   autoRefresh = true,
   refreshInterval = 30000,
   fetchEnabled = true,
+  actions,
 }: ChartProps) {
   const { tr, fmt } = useLocalization();
   const chartTitle = title || tr("charts.drawdownChart.title");
@@ -371,6 +372,7 @@ export function DrawdownChart({
       loadingState={loadingState}
       isEmpty={walletSeriesMeta.length === 0}
       onRetry={() => refetch(false)}
+      actions={actions}
     >
       <ChartContainer gap="0">
         <ChartStatsHeader cards={statsCards} minColumnWidth="300px" />

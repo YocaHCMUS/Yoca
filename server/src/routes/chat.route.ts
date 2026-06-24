@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { answerChatQuery, createPrompt, deletePrompt, forkPrompt, getPrompt, incrementPromptUsage, listPrompts, updatePrompt } from "@sv/services/chat/index.js";
+import { answerChatQuery, createPrompt, deletePrompt, forkPrompt, getPrompt, incrementPromptUsage, listPrompts, resolveToolDataReferences, updatePrompt } from "@sv/services/chat/index.js";
 import { honoJwt } from "@sv/middlewares/validation.js";
 import userExtract from "@sv/middlewares/user-extract.js";
 import { setErr } from "@sv/util/errors.js";
@@ -49,10 +49,11 @@ const updatePromptSchema = z.object({
 });
 
 const listPromptSchema = z.object({
-  scope: z.enum(["mine", "public", "popular"]).default("public"),
+  scope: z.enum(["mine", "new", "popular"]).default("new"),
   walletAddress: z.string().optional(),
   contextType: z.enum(["wallet", "wallet-comparison"]).optional(),
   sort: z.enum(["usage", "recent", "trending"]).optional(),
+  search: z.string().trim().max(255).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
@@ -63,12 +64,31 @@ const createSessionSchema = z.object({
   title: z.string().max(255).optional(),
 });
 
+const messageContextSchema = z.object({
+  contextType: z.enum(["wallet", "wallet-comparison"]),
+  walletAddresses: z.array(z.string()),
+});
+
+const toolDataReferenceSchema = z.object({
+  id: z.string().min(1).max(64),
+  toolName: z.string().min(1).max(128),
+  input: z.record(z.string(), z.unknown()),
+  query: z.string().max(2000),
+  generatedAt: z.string().max(64),
+});
+
+const toolDataResolveSchema = z.object({
+  refs: z.array(toolDataReferenceSchema).min(1).max(20),
+});
+
 const updateSessionSchema = z.object({
   messages: z
     .array(
       z.object({
         role: z.enum(["user", "assistant"]),
         content: z.string(),
+        context: messageContextSchema.optional(),
+        dataRefs: z.array(toolDataReferenceSchema).optional(),
         data: z.any().optional(),
         charts: z.any().optional(),
         tables: z.any().optional(),
@@ -85,7 +105,7 @@ const updateSessionSchema = z.object({
   title: z.string().max(255).optional(),
 });
 
-// ─── Protected chat route (POST /) ──────────────────────────────────────
+// Protected chat route (POST /)              
 const chatRoute = new Hono().post("/", honoJwt, userExtract, async (c) => {
   try {
     const { id: userId } = c.get("userPayload")!;
@@ -104,19 +124,46 @@ const chatRoute = new Hono().post("/", honoJwt, userExtract, async (c) => {
     const response = await answerChatQuery(addresses, query, language, history, skipCache);
 
     if (promptId) {
-      incrementPromptUsage(promptId).catch(() => {});
+      incrementPromptUsage(promptId).catch(() => { });
     }
 
     let activeSessionId = sessionId;
 
     if (!skipSessionSave) {
+      // Resolve the context that will be stamped on messages
+      let resolvedContext = buildSessionContext(addresses, contextType);
+
+      if (activeSessionId) {
+        const existing = await getSession(activeSessionId, userId);
+        if (existing) {
+          const existingLower = existing.walletAddresses.map((a: string) => a.toLowerCase());
+          const incomingLower = addresses.map((a: string) => a.toLowerCase());
+          const allCovered = incomingLower.every((a: string) =>
+            existingLower.includes(a),
+          );
+
+          if (!allCovered) {
+            const mergedAddrs = [...new Set([...existing.walletAddresses, ...addresses])];
+            resolvedContext = buildSessionContext(mergedAddrs, contextType);
+          }
+        }
+      }
+
+      const contextInfo = {
+        contextType: resolvedContext.contextType,
+        walletAddresses: resolvedContext.walletAddresses,
+      };
+
       const userMsg: Record<string, unknown> = {
         role: "user",
         content: query,
+        context: contextInfo,
       };
       const assistantMsg: Record<string, unknown> = {
         role: "assistant",
         content: response.text,
+        context: contextInfo,
+        dataRefs: response.dataRefs,
         data: response.data,
         charts: response.charts,
         tables: response.tables,
@@ -139,31 +186,15 @@ const chatRoute = new Hono().post("/", honoJwt, userExtract, async (c) => {
           ];
           const title = existing.title ?? query.slice(0, 50);
 
-          const existingLower = existing.walletAddresses.map((a: string) => a.toLowerCase());
-          const incomingLower = addresses.map((a: string) => a.toLowerCase());
-          const allCovered = incomingLower.every((a: string) =>
-            existingLower.includes(a),
-          );
-
-          if (!allCovered) {
-            const mergedAddrs = [...new Set([...existing.walletAddresses, ...addresses])];
-            const mergedContext = buildSessionContext(mergedAddrs, contextType);
-            await updateSession(activeSessionId, userId, {
-              messages: updatedMessages,
-              title,
-              context: mergedContext,
-            });
-          } else {
-            await updateSession(activeSessionId, userId, {
-              messages: updatedMessages,
-              title,
-            });
-          }
+          await updateSession(activeSessionId, userId, {
+            messages: updatedMessages,
+            title,
+            context: resolvedContext,
+          });
         }
       } else {
         const title = query.slice(0, 50);
-        const sessionContext = buildSessionContext(addresses, contextType);
-        const session = await createSession(userId, sessionContext, title);
+        const session = await createSession(userId, resolvedContext, title);
         activeSessionId = session.id;
         await updateSession(session.id, userId, {
           messages: [userMsg, assistantMsg],
@@ -187,7 +218,52 @@ const chatRoute = new Hono().post("/", honoJwt, userExtract, async (c) => {
   }
 });
 
-// ─── Session CRUD sub-routes ────────────────────────────────────────────
+// ─── Rate limiter for tool-data resolve ────────────────────────────────────
+
+const RATE_LIMIT_REQUESTS = 30;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkToolDataRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(userId);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_REQUESTS) return false;
+  entry.count++;
+  return true;
+}
+
+// Session CRUD sub-routes                
+const toolDataRoutes = new Hono()
+  .post("/resolve", honoJwt, userExtract, async (c) => {
+    const { id: userId } = c.get("userPayload")!;
+    if (!checkToolDataRateLimit(userId)) {
+      return c.json({ error: "Rate limit exceeded. Try again later." }, 429);
+    }
+    const body = await c.req.json();
+    const parsed = toolDataResolveSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return c.json(
+        { error: "Validation error", details: parsed.error.issues },
+        400,
+      );
+    }
+
+    try {
+      const data = await resolveToolDataReferences(parsed.data.refs);
+      return c.json({ data }, 200);
+    } catch (err) {
+      return c.json(
+        { error: err instanceof Error ? err.message : "Failed to resolve tool data" },
+        400,
+      );
+    }
+  });
+
 const sessionRoutes = new Hono()
   .get("/", honoJwt, userExtract, async (c) => {
     const { id: userId } = c.get("userPayload")!;
@@ -258,7 +334,7 @@ const sessionRoutes = new Hono()
     return c.json({ success: true }, 200);
   });
 
-// ─── Prompt CRUD sub-routes ──────────────────────────────────────────────
+// Prompt CRUD sub-routes 
 const promptRoutes = new Hono()
   .get("/", honoJwt, userExtract, async (c) => {
     const { id: userId } = c.get("userPayload")!;
@@ -367,6 +443,7 @@ const promptRoutes = new Hono()
   });
 
 const app = chatRoute
+  .route("/tool-data", toolDataRoutes)
   .route("/sessions", sessionRoutes)
   .route("/prompts", promptRoutes);
 

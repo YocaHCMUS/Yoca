@@ -5,6 +5,9 @@ import { TradingVolumeDistribution } from '@/components/charts/TradingVolumeDist
 import { TradingVolumePerTransaction } from '@/components/charts/TradingVolume/TradingVolumePerTransaction';
 import { TotalTradingVolumeChart } from '@/components/charts/TotalTradingVolume';
 import { MultiWalletBalanceChart } from '@/components/charts/BalanceChartMultiV2';
+import { AiGenerate } from '@carbon/icons-react';
+import { IconButton } from '@carbon/react';
+import { useLocalization } from '@/contexts/LocalizationContext';
 
 const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
 
@@ -12,7 +15,9 @@ const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
 export const GeneralTab: React.FC<WalletComparisonProp> = ({
     walletAddresses,
     fetchEnabled = true,
+    onAiAction,
 }) => {
+    const { tr } = useLocalization();
     // Empty state when no wallets are selected
     if (!walletAddresses || walletAddresses.length === 0) {
         return (
@@ -29,7 +34,15 @@ export const GeneralTab: React.FC<WalletComparisonProp> = ({
         <div className={styles.grid}>
             {/* Balance history comparison */}
             <div className={`${styles.stableCoinChart} ${PDF_EXPORT_SECTION_CLASS}`}>
-                <MultiWalletBalanceChart  addresses={walletAddresses} /> 
+                <MultiWalletBalanceChart
+                  addresses={walletAddresses}
+                  actions={onAiAction ? (
+                    <IconButton kind="ghost" size="sm" label="AI" align="bottom"
+                      onClick={(e) => onAiAction(e, tr("charts.balanceChart.title"), ["compareOverview"])}>
+                      <AiGenerate size={16} />
+                    </IconButton>
+                  ) : undefined}
+                />
             </div>
 
             {/* Daily Trading Volume Historical Chart */}
@@ -52,6 +65,12 @@ export const GeneralTab: React.FC<WalletComparisonProp> = ({
                         wallets: walletAddresses,
                     }}
                     fetchEnabled={fetchEnabled}
+                    actions={onAiAction ? (
+                      <IconButton kind="ghost" size="sm" label="AI" align="bottom"
+                        onClick={(e) => onAiAction(e, tr("charts.totalTradingVolumeChart.title"), ["compareOverview"])}>
+                        <AiGenerate size={16} />
+                      </IconButton>
+                    ) : undefined}
                 />
             </div>
 
@@ -60,6 +79,12 @@ export const GeneralTab: React.FC<WalletComparisonProp> = ({
                 <TradingVolumeDistribution
                     initialFilters={{ wallets: walletAddresses }}
                     fetchEnabled={fetchEnabled}
+                    actions={onAiAction ? (
+                      <IconButton kind="ghost" size="sm" label="AI" align="bottom"
+                        onClick={(e) => onAiAction(e, tr("charts.tradingVolumeDistributionChart.title"), ["compareOverview"])}>
+                        <AiGenerate size={16} />
+                      </IconButton>
+                    ) : undefined}
                 />
             </div>
 
@@ -69,6 +94,12 @@ export const GeneralTab: React.FC<WalletComparisonProp> = ({
                 <TradingVolumePerTransaction
                     initialFilters={{ wallets: walletAddresses }}
                     fetchEnabled={fetchEnabled}
+                    actions={onAiAction ? (
+                      <IconButton kind="ghost" size="sm" label="AI" align="bottom"
+                        onClick={(e) => onAiAction(e, tr("charts.tradingVolumePerTransactionChart.title"), ["compareOverview"])}>
+                        <AiGenerate size={16} />
+                      </IconButton>
+                    ) : undefined}
                 />
             </div>
 

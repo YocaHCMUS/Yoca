@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+﻿import { GoogleGenAI } from "@google/genai";
 import {
   GOOGLE_AI_KEY,
   CHAT_MODEL,
@@ -25,7 +25,17 @@ import { getMessage } from "./chat.localization.js";
 import { classifyWalletChatIntent, inferWalletChatLanguage } from "./chat-intent.js";
 import { buildWalletFallbackResponse } from "./chat-fallback.js";
 import { getTokenTopPools } from "@sv/services/tokens/token-pools.js";
-import type { WalletConfidence, WalletWarning, WalletChatSection } from "./chat.types.js";
+import {
+  buildToolDataReference,
+  filterDuplicateToolCalls,
+  getResolveSpec,
+  getToolAllowedKeys,
+  normalizeToolCalls,
+  normalizeToolInput,
+  pickResolvedValue,
+  RESOLVABLE_TOOLS,
+} from "./chat-tool-normalizer.js";
+import type { ChartSpec, TableSpec, ToolDataReference, WalletConfidence, WalletWarning, WalletChatSection } from "./chat.types.js";
 import { z } from "zod";
 import { WALLET_CHAT_RESPONSE_LIMITS as L } from "./chat-fallback.js";
 
@@ -98,20 +108,6 @@ function stripAddressKeys(input: Record<string, unknown>): Record<string, unknow
   return copy;
 }
 
-function makeCallKey(call: ChatToolCall): string {
-  return `${call.name}:${JSON.stringify(stripAddressKeys(call.input as Record<string, unknown>))}`;
-}
-
-function allDuplicates(
-  tools: ChatToolCall[],
-  previousResults: PriorContext["previousResults"],
-): boolean {
-  if (!previousResults.length) return false;
-  const seen = new Set(
-    previousResults.map((r) => `${r.name}:${JSON.stringify(stripAddressKeys(r.input as Record<string, unknown>))}`),
-  );
-  return tools.length > 0 && tools.every((t) => seen.has(makeCallKey(t)));
-}
 
 async function selectTool(
   query: string,
@@ -179,12 +175,12 @@ function mergeAddressData(perAddress: Array<{ address: string; data: unknown }>)
 
   const first = dataList[0];
 
-  // Array → concatenate (portfolio, balance_history, etc.)
+  // Array to concatenate (portfolio, balance_history, etc.)
   if (Array.isArray(first)) {
     return dataList.flatMap((d) => (Array.isArray(d) ? d : []));
   }
 
-  // Object → merge array-valued properties (swaps/transfers/pnl_chart)
+  // Object to merge array-valued properties (swaps/transfers/pnl_chart)
   if (typeof first === "object" && first !== null) {
     const keys = new Set<string>();
     for (const d of dataList) {
@@ -209,6 +205,87 @@ function mergeAddressData(perAddress: Array<{ address: string; data: unknown }>)
   return first;
 }
 
+async function resolveToolDependencies(
+  tools: ChatToolCall[],
+  query: string,
+): Promise<{ tools: ChatToolCall[]; resolverResults: ChatToolResult[] }> {
+  const resolvedTools: ChatToolCall[] = [];
+  const resolverResults: ChatToolResult[] = [];
+
+  for (const tool of tools) {
+    const input: Record<string, unknown> = { ...tool.input };
+    let failed = false;
+
+    for (const [key, value] of Object.entries(input)) {
+      const spec = getResolveSpec(value);
+      if (!spec) continue;
+
+      if (!RESOLVABLE_TOOLS.has(spec.tool)) {
+        resolverResults.push({
+          name: spec.tool,
+          input: spec.input,
+          data: null,
+          error: `Resolver tool '${spec.tool}' is not allowed`,
+        });
+        failed = true;
+        break;
+      }
+
+      const handler = TOOL_HANDLERS[spec.tool];
+      if (!handler) {
+        resolverResults.push({
+          name: spec.tool,
+          input: spec.input,
+          data: null,
+          error: `Resolver tool '${spec.tool}' not found`,
+        });
+        failed = true;
+        break;
+      }
+
+      const normalizedResolverInput = normalizeToolInput(spec.tool, spec.input, { query });
+      try {
+        const { data, llmData } = await handler(normalizedResolverInput);
+        const picked = pickResolvedValue(llmData, spec.pick) ?? pickResolvedValue(data, spec.pick);
+        resolverResults.push({
+          name: spec.tool,
+          input: normalizedResolverInput,
+          data: llmData,
+          fullData: data,
+        });
+        if (picked == null || picked === "") {
+          failed = true;
+          resolverResults.push({
+            name: tool.name,
+            input: tool.input,
+            data: null,
+            error: `Could not resolve '${key}' from ${spec.tool}.${spec.pick}`,
+          });
+          break;
+        }
+        input[key] = picked;
+      } catch (err) {
+        failed = true;
+        resolverResults.push({
+          name: spec.tool,
+          input: normalizedResolverInput,
+          data: null,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        break;
+      }
+    }
+
+    if (!failed) {
+      resolvedTools.push({
+        ...tool,
+        input: normalizeToolInput(tool.name, input, { query }),
+      });
+    }
+  }
+
+  return { tools: resolvedTools, resolverResults };
+}
 async function executeToolsForAllAddresses(
   addresses: string[],
   tools: ChatToolCall[],
@@ -273,7 +350,39 @@ async function executeToolsForAllAddresses(
   return results;
 }
 
-// ─── Zod Validation for Structured Response ────────────────────────────
+// Zod Validation for Structured Response
+
+function getRefAddresses(ref: ToolDataReference): string[] {
+  const addresses = ref.input.addresses;
+  if (Array.isArray(addresses)) {
+    return addresses.filter((addr): addr is string => typeof addr === "string" && addr.length > 0);
+  }
+  const address = ref.input.address;
+  return typeof address === "string" && address.length > 0 ? [address] : [];
+}
+
+export async function resolveToolDataReferences(refs: ToolDataReference[]): Promise<Record<string, unknown>> {
+  const resolved: Record<string, unknown> = {};
+
+  for (const ref of refs) {
+    if (!hasTool(ref.toolName) || !getToolAllowedKeys(ref.toolName)) {
+      throw new Error(`Tool '${ref.toolName}' cannot be resolved`);
+    }
+
+    const normalizedInput = normalizeToolInput(ref.toolName, ref.input, { query: ref.query });
+    const call: ChatToolCall = { type: "tool_use", name: ref.toolName, input: normalizedInput };
+    const addresses = getRefAddresses({ ...ref, input: normalizedInput });
+    const results = isWalletTool(ref.toolName)
+      ? await executeToolsForAllAddresses(addresses, [call])
+      : await executeToolsForAllAddresses([], [call]);
+    const result = results[0];
+    if (!result || result.error || result.fullData == null) continue;
+    const transformer = DATA_TRANSFORMERS[result.name];
+    resolved[ref.id] = transformer ? transformer(result.fullData) : result.fullData;
+  }
+
+  return resolved;
+}
 
 const walletSectionSchema = z.object({
   title: z.string().trim().min(1).max(L.sectionTitleChars),
@@ -322,6 +431,83 @@ function normalizeWalletResponse(raw: unknown): Record<string, unknown> {
   return out;
 }
 
+function isUsableToolResult(result: ChatToolResult | undefined): result is ChatToolResult {
+  return result !== undefined && !result.error && result.fullData != null;
+}
+
+function specHintText(spec: ChartSpec | TableSpec): string {
+  const parts = [spec.id];
+  if ("title" in spec && spec.title) parts.push(spec.title);
+  if ("columns" in spec) parts.push(spec.columns);
+  if ("type" in spec) parts.push(spec.type);
+  return parts.join(" ").toLowerCase();
+}
+
+function transformedResultIsArray(result: ChatToolResult): boolean {
+  try {
+    const transformer = DATA_TRANSFORMERS[result.name];
+    const transformed = transformer ? transformer(result.fullData) : result.fullData;
+    return Array.isArray(transformed);
+  } catch {
+    return false;
+  }
+}
+
+function resultMatchesSpecHint(result: ChatToolResult, spec: ChartSpec | TableSpec): boolean {
+  const hint = specHintText(spec);
+  const name = result.name.toLowerCase();
+  if ((hint.includes("swap") || hint.includes("trade")) && name.includes("swap")) return true;
+  if (hint.includes("transfer") && name.includes("transfer")) return true;
+  if ((hint.includes("portfolio") || hint.includes("holding")) && name.includes("portfolio")) return true;
+  if (hint.includes("pnl") && name.includes("pnl")) return true;
+  if ((hint.includes("balance") || hint.includes("drawdown")) && (name.includes("balance") || name.includes("drawdown"))) return true;
+  if ((hint.includes("price") || hint.includes("token")) && name.includes("token")) return true;
+  return false;
+}
+
+function inferDataRefForSpec(spec: ChartSpec | TableSpec, allResults: ChatToolResult[]): string | null {
+  const usable = allResults
+    .map((result, index) => ({ result, index }))
+    .filter((entry): entry is { result: ChatToolResult; index: number } => isUsableToolResult(entry.result));
+
+  if (usable.length === 0) return null;
+  if (usable.length === 1) return String(usable[0].index);
+
+  const hinted = usable.find(({ result }) => resultMatchesSpecHint(result, spec));
+  if (hinted) return String(hinted.index);
+
+  if ("columns" in spec) {
+    const tabular = usable.find(({ result }) => transformedResultIsArray(result));
+    if (tabular) return String(tabular.index);
+  }
+
+  if ("type" in spec && spec.type === "geckoterminal") {
+    const price = usable.find(({ result }) => result.name.startsWith("get_token_price_"));
+    if (price) return String(price.index);
+  }
+
+  return String(usable[0].index);
+}
+
+export function repairMissingDataRefs(
+  charts: ChartSpec[],
+  tables: TableSpec[],
+  allResults: ChatToolResult[],
+): number {
+  let repaired = 0;
+  const specs: Array<ChartSpec | TableSpec> = [...charts, ...tables];
+
+  for (const spec of specs) {
+    if (typeof spec.dataRef === "string" && spec.dataRef.trim() !== "") continue;
+    const inferred = inferDataRefForSpec(spec, allResults);
+    if (!inferred) continue;
+    spec.dataRef = inferred;
+    repaired += 1;
+    chatWarn("generateResponse: repaired missing dataRef", { specId: spec.id, dataRef: inferred });
+  }
+
+  return repaired;
+}
 async function generateResponse(
   query: string,
   allResults: ChatToolResult[],
@@ -391,6 +577,15 @@ async function generateResponse(
       tables: [],
     };
   }
+
+  const generatedAt = new Date().toISOString();
+  const dataRefs = allResults
+    .map((result, index) => result.fullData == null || result.error
+      ? null
+      : buildToolDataReference(String(index), result.name, result.input ?? {}, query, generatedAt))
+    .filter((ref): ref is ToolDataReference => ref != null);
+
+  repairMissingDataRefs(charts, tables, allResults);
 
   const resolvedData: Record<string, unknown> = {};
   const allSpecs = [...charts, ...tables];
@@ -466,6 +661,7 @@ async function generateResponse(
   const response: ChatResponse = {
     text: text || getMessage(language, "hereData"),
     data: resolvedData,
+    dataRefs,
     charts,
     tables,
     actions: actions.length > 0 ? actions : undefined,
@@ -520,6 +716,7 @@ export async function answerChatQuery(
   chatDebug("answerChatQuery: cache miss");
 
   const allResults: ChatToolResult[] = [];
+  const seenToolKeys = new Set<string>();
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     chatInfo("answerChatQuery: iteration start", { iteration: i + 1, max: MAX_ITERATIONS, accumulatedResults: allResults.length });
@@ -555,11 +752,18 @@ export async function answerChatQuery(
       chatWarn("answerChatQuery: empty tool list, breaking", { iteration: i + 1 });
       break;
     }
+    const normalizedSelection = normalizeToolCalls(toolSelection, { query });
+    const resolvedSelection = await resolveToolDependencies(normalizedSelection, query);
+    if (resolvedSelection.resolverResults.length > 0) {
+      allResults.push(...resolvedSelection.resolverResults);
+    }
 
-    if (allDuplicates(toolSelection, context?.previousResults ?? [])) {
+    const duplicateFiltered = filterDuplicateToolCalls(resolvedSelection.tools, seenToolKeys);
+    if (duplicateFiltered.fresh.length === 0) {
       chatWarn("answerChatQuery: duplicate tool calls detected, breaking loop", {
         iteration: i + 1,
-        tools: toolSelection.map((t) => t.name),
+        tools: resolvedSelection.tools.map((t) => t.name),
+        duplicateCount: duplicateFiltered.duplicateCount,
       });
       allResults.push({
         name: "_loop_guard",
@@ -570,7 +774,7 @@ export async function answerChatQuery(
       break;
     }
 
-    const results = await executeToolsForAllAddresses(addresses, toolSelection);
+    const results = await executeToolsForAllAddresses(addresses, duplicateFiltered.fresh);
     allResults.push(...results);
 
     if (results.length > 0 && results.every((r) => r.error)) {

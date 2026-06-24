@@ -1087,6 +1087,7 @@ export default function WalletPage() {
               </div>
             </div>
           )}
+
         </ChatContextProvider>
       </div>
 

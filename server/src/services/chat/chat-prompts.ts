@@ -1,6 +1,6 @@
 import { db } from "@sv/db";
 import { chatPrompts } from "@sv/db/schema";
-import { and, desc, eq, isNull, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, ilike, isNull, or, sql, type SQL } from "drizzle-orm";
 
 export type PromptContextType = "wallet" | "wallet-comparison";
 
@@ -18,7 +18,7 @@ export interface ChatPromptData {
   updatedAt: Date;
 }
 
-export type PromptScope = "mine" | "public" | "popular";
+export type PromptScope = "mine" | "new" | "popular";
 
 export interface ListPromptsOptions {
   userId: string;
@@ -26,6 +26,7 @@ export interface ListPromptsOptions {
   walletAddress?: string;
   contextType?: PromptContextType;
   sort?: "usage" | "recent" | "trending";
+  search?: string;
   page?: number;
   limit?: number;
 }
@@ -54,14 +55,14 @@ function toData(row: typeof chatPrompts.$inferSelect): ChatPromptData {
 }
 
 export async function listPrompts(opts: ListPromptsOptions): Promise<ListPromptsResult> {
-  const { userId, scope, walletAddress, contextType, sort, page = 1, limit = 50 } = opts;
+  const { userId, scope, walletAddress, contextType, sort, search, page = 1, limit = 50 } = opts;
   const offset = (page - 1) * limit;
 
   const conditions: SQL[] = [];
 
   if (scope === "mine") {
     conditions.push(eq(chatPrompts.userId, userId));
-  } else if (scope === "public" || scope === "popular") {
+  } else if (scope === "new" || scope === "popular") {
     conditions.push(eq(chatPrompts.isPublic, true));
   }
 
@@ -78,13 +79,21 @@ export async function listPrompts(opts: ListPromptsOptions): Promise<ListPrompts
     conditions.push(sql`${chatPrompts.contextTypes} @> ${sql`ARRAY[${contextType}]::text[]`}`);
   }
 
+  const trimmedSearch = search?.trim();
+  if (trimmedSearch) {
+    const searchPattern = `%${trimmedSearch}%`;
+    conditions.push(or(
+      ilike(chatPrompts.label, searchPattern),
+      ilike(chatPrompts.query, searchPattern),
+    )!);
+  }
+
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const orderBy = sort === "usage"
+  const resolvedSort = sort ?? (scope === "popular" ? "usage" : "recent");
+  const orderBy = resolvedSort === "usage" || resolvedSort === "trending"
     ? desc(chatPrompts.usageCount)
-    : sort === "trending"
-      ? desc(chatPrompts.usageCount)
-      : desc(chatPrompts.createdAt);
+    : desc(chatPrompts.createdAt);
 
   const rows = await db
     .select()
