@@ -57,6 +57,13 @@
       "when": 1781170000000,
       "tag": "0007_managed_helius_webhooks",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781180000000,
+      "tag": "0008_backward_swap_history_cache",
+      "breakpoints": true
     }
   ]
 }

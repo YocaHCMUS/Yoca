@@ -1,52 +1,46 @@
 import type {
-  BirdeyeNetworthDirection,
-  BirdeyeNetworthHistoryPoint,
-  BirdeyeNetworthHistoryResult,
-  BirdeyeNetworthType,
-  BirdeyeOverallPnlResult,
-  BirdeyePnlDuration,
-  BirdeyePortfolioSnapshotResult,
-  BirdeyeSortType,
-  BirdeyeTokenPnlDetailsOptions,
-  BirdeyeTokenPnlDetailsResult,
-  HeliusWalletFirstFund,
-  WalletPortfolio,
-  WalletPortfolioItem,
-  WalletSwap,
-  WalletTransaction,
-  WalletTransactionHelius,
-  WalletTransfer,
+    BirdeyeNetworthDirection,
+    BirdeyeNetworthHistoryPoint,
+    BirdeyeNetworthHistoryResult,
+    BirdeyeNetworthType,
+    BirdeyePortfolioSnapshotResult,
+    BirdeyeSortType,
+    HeliusWalletFirstFund,
+    WalletPortfolioItem,
+    WalletSwap,
+    WalletTransactionHelius,
+    WalletTransfer
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import {
-  runCursorPagination,
-  runOffsetPagination,
+    runCursorPagination
 } from "@sv/services/wallet/fetchers/walletPagination.js";
 import {
-  getNextCursor,
-  getTokenLogoUri,
-  mapHeliusTransferEntry,
-  mapMoralisSwapEntry,
-  toFiniteNumber,
-  toIsoTimestamp,
-  toOptionalNumber,
-  toTokenAmount,
+    getNextCursor,
+    getTokenLogoUri,
+    mapHeliusTransferEntry,
+    mapMoralisSwapEntry,
+    toFiniteNumber,
+    toIsoTimestamp,
+    toOptionalNumber,
 } from "@sv/services/wallet/fetchers/walletProviderMappers.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { hls_WalletBalancesSchema } from "@sv/services/_types/wallet-raw-responses.js";
 import { callBirdeye } from "@sv/services/wallet/providers/adapters/birdeye.adapter.js";
 import {
-  birdeyeGetJson,
-  birdeyePostJson,
+    birdeyeGetJson,
+    birdeyePostJson,
 } from "@sv/services/wallet/providers/birdeye.client.js";
 import { heliusGetJson } from "@sv/services/wallet/providers/helius.client.js";
 import { normalizeBirdeyeTimeParam } from "@sv/util/util-birdeye.js";
 import {
-  getEndpoint,
-  getRequiredHeaders,
-  heliusFetch,
+    getEndpoint,
+    getRequiredHeaders,
+    heliusFetch,
 } from "@sv/util/util-helius.js";
 import * as moralis from "@sv/util/util-moralis.js";
 import type {
-  MoralisSwapResponseRoot,
-  MoralisSwapResult,
+    MoralisSwapResponseRoot,
+    MoralisSwapResult,
 } from "./walletThirdPartyResponses";
 
 
@@ -319,7 +313,6 @@ export async function fetchHeliusSolanaPortfolio(
     // NFTs are not our current focus; exclude them to reduce payload size.
     url.searchParams.set("showNfts", "false");
 
-    let json: any;
     try {
       const headers = getRequiredHeaders();
       const resp = await heliusFetch(url, {
@@ -336,105 +329,106 @@ export async function fetchHeliusSolanaPortfolio(
         break;
       }
 
-      json = await resp.json();
+      const json = await getTrackedApiResult(hls_WalletBalancesSchema, resp);
+      if (!json) {
+        break;
+      }
+
+      const balances = json.balances;
+      if (balances.length === 0) {
+        break;
+      }
+
+      let addedOnPage = 0;
+
+      for (const token of balances) {
+        const amount = Number(token.balance ?? 0);
+        if (!(amount > 0) || Number.isNaN(amount)) continue;
+
+        const tokenAddress = String(token.mint ?? "");
+        const tokenAddressKey = tokenAddress.trim().toLowerCase();
+        const fallbackKey = `${String(token.symbol ?? "")
+          .trim()
+          .toLowerCase()}::${String(token.name ?? "")
+            .trim()
+            .toLowerCase()}`;
+        const dedupeKey = tokenAddressKey || fallbackKey;
+
+        if (dedupeKey && seenPortfolioKeys.has(dedupeKey)) {
+          continue;
+        }
+
+        if (dedupeKey) {
+          seenPortfolioKeys.add(dedupeKey);
+        }
+
+        const pricePerToken =
+          token.pricePerToken != null &&
+            !Number.isNaN(Number(token.pricePerToken))
+            ? Number(token.pricePerToken)
+            : undefined;
+        const usdValue =
+          token.usdValue != null && !Number.isNaN(Number(token.usdValue))
+            ? Number(token.usdValue)
+            : 0;
+
+        portfolio.push({
+          tokenAddress,
+          symbol: String(token.symbol ?? ""),
+          name: token.name ? String(token.name) : undefined,
+          logoUri: getTokenLogoUri(token),
+          amount,
+          priceUsd: pricePerToken,
+          valueUsd: usdValue,
+        });
+
+        addedOnPage += 1;
+        if (portfolio.length >= MAX_HELIUS_PORTFOLIO_ITEMS) {
+          console.warn(
+            "[wallet-portfolio-fetch] Max portfolio item limit reached",
+            {
+              address,
+              pageCount,
+              itemCount: portfolio.length,
+            },
+          );
+          hasMore = false;
+          break;
+        }
+      }
+
+      if (!hasMore) {
+        break;
+      }
+
+      if (addedOnPage === 0) {
+        stagnantPageCount += 1;
+        if (stagnantPageCount >= MAX_HELIUS_PORTFOLIO_STAGNANT_PAGES) {
+          console.warn(
+            "[wallet-portfolio-fetch] Stagnant pagination detected; stopping fetch",
+            {
+              address,
+              pageCount,
+              itemCount: portfolio.length,
+            },
+          );
+          break;
+        }
+      } else {
+        stagnantPageCount = 0;
+      }
+
+      const pagination = json.pagination;
+      hasMore = Boolean(pagination?.hasMore);
+      const currentPageRaw = Number(pagination?.page);
+      const nextPage = Number.isFinite(currentPageRaw)
+        ? Math.max(page + 1, Math.floor(currentPageRaw) + 1)
+        : page + 1;
+      page = nextPage;
     } catch (err) {
       console.error("Helius wallet balances request failed", err);
       break;
     }
-
-    const balances: any[] = Array.isArray(json?.balances) ? json.balances : [];
-    if (balances.length === 0) {
-      break;
-    }
-
-    let addedOnPage = 0;
-
-    for (const token of balances) {
-      const amount = Number(token.balance ?? 0);
-      if (!(amount > 0) || Number.isNaN(amount)) continue;
-
-      const tokenAddress = String(token.mint ?? "");
-      const tokenAddressKey = tokenAddress.trim().toLowerCase();
-      const fallbackKey = `${String(token.symbol ?? "")
-        .trim()
-        .toLowerCase()}::${String(token.name ?? "")
-          .trim()
-          .toLowerCase()}`;
-      const dedupeKey = tokenAddressKey || fallbackKey;
-
-      if (dedupeKey && seenPortfolioKeys.has(dedupeKey)) {
-        continue;
-      }
-
-      if (dedupeKey) {
-        seenPortfolioKeys.add(dedupeKey);
-      }
-
-      const pricePerToken =
-        token.pricePerToken != null &&
-          !Number.isNaN(Number(token.pricePerToken))
-          ? Number(token.pricePerToken)
-          : undefined;
-      const usdValue =
-        token.usdValue != null && !Number.isNaN(Number(token.usdValue))
-          ? Number(token.usdValue)
-          : pricePerToken != null
-            ? amount * pricePerToken
-            : 0;
-
-      portfolio.push({
-        tokenAddress,
-        symbol: String(token.symbol ?? ""),
-        name: token.name ? String(token.name) : undefined,
-        logoUri: getTokenLogoUri(token),
-        amount,
-        priceUsd: pricePerToken,
-        valueUsd: usdValue,
-      });
-
-      addedOnPage += 1;
-      if (portfolio.length >= MAX_HELIUS_PORTFOLIO_ITEMS) {
-        console.warn(
-          "[wallet-portfolio-fetch] Max portfolio item limit reached",
-          {
-            address,
-            pageCount,
-            itemCount: portfolio.length,
-          },
-        );
-        hasMore = false;
-        break;
-      }
-    }
-
-    if (!hasMore) {
-      break;
-    }
-
-    if (addedOnPage === 0) {
-      stagnantPageCount += 1;
-      if (stagnantPageCount >= MAX_HELIUS_PORTFOLIO_STAGNANT_PAGES) {
-        console.warn(
-          "[wallet-portfolio-fetch] Stagnant pagination detected; stopping fetch",
-          {
-            address,
-            pageCount,
-            itemCount: portfolio.length,
-          },
-        );
-        break;
-      }
-    } else {
-      stagnantPageCount = 0;
-    }
-
-    const pagination = json?.pagination;
-    hasMore = Boolean(pagination?.hasMore);
-    const currentPageRaw = Number(pagination?.page);
-    const nextPage = Number.isFinite(currentPageRaw)
-      ? Math.max(page + 1, Math.floor(currentPageRaw) + 1)
-      : page + 1;
-    page = nextPage;
   }
 
   return portfolio;
@@ -797,79 +791,6 @@ export async function fetchBirdeyeJson(
   }
 }
 
-export async function fetchBirdeyePortfolio(
-  address: string,
-): Promise<WalletPortfolio> {
-  const json = await fetchBirdeyeJson(
-    "/wallet/v2/current-net-worth",
-    "GET",
-    {
-      searchParams: {
-        wallet: address,
-        sort_type: "desc",
-        sort_by: "value",
-        limit: 100,
-      },
-    },
-  );
-
-  if (!json || !json.data) {
-    return {
-      address,
-      items: [],
-      totalAssetValueUsd: 0,
-    };
-  }
-
-  const balances: any[] = Array.isArray(json.data.items)
-    ? json.data.items
-    : [];
-
-  const pageItems: WalletPortfolioItem[] = [];
-  let calculatedTotal = 0;
-
-  for (const token of balances) {
-    const amount = toTokenAmount(
-      token.balance,
-      token.decimals,
-      token.uiAmount ?? token.amount,
-    );
-    if (!(amount > 0) || Number.isNaN(amount)) continue;
-
-    const tokenAddress = String(token.address ?? token.mint ?? "");
-    const pricePerToken =
-      token.priceUsd != null && !Number.isNaN(Number(token.priceUsd))
-        ? Number(token.priceUsd)
-        : token.price != null && !Number.isNaN(Number(token.price))
-          ? Number(token.price)
-          : undefined;
-
-    // Prioritize Birdeye's API valueUsd as it includes liquidity/scam adjustments (matching their website's "Hide Low Liq/Scam" logic)
-    const usdValue =
-      toOptionalNumber(token.valueUsd) ??
-      toOptionalNumber(token.value) ??
-      (pricePerToken != null ? amount * pricePerToken : 0);
-      
-    calculatedTotal += usdValue;
-
-    pageItems.push({
-      tokenAddress,
-      symbol: String(token.symbol ?? ""),
-      name: token.name ? String(token.name) : undefined,
-      logoUri: getTokenLogoUri(token),
-      amount,
-      priceUsd: pricePerToken ?? undefined,
-      valueUsd: usdValue,
-    });
-  }
-
-  return {
-    address,
-    items: pageItems,
-    totalAssetValueUsd: calculatedTotal > 0 ? calculatedTotal : toFiniteNumber(json.data.total_value, 0),
-  };
-}
-
 export async function fetchBirdeyeNetworthHistory(
   address: string,
   options?: {
@@ -985,66 +906,6 @@ export async function fetchBirdeyePortfolioSnapshot(
       valueUsd: toFiniteNumber(asset?.value, 0),
     })),
   };
-}
-
-export async function fetchBirdeyeOverallPnL(
-  address: string,
-  options?: {
-    duration?: BirdeyePnlDuration;
-  },
-): Promise<BirdeyeOverallPnlResult> {
-  const duration = options?.duration ?? "all";
-
-  const json = await fetchBirdeyeJson("/wallet/v2/pnl/summary", "GET", {
-    searchParams: {
-      wallet: address,
-      duration,
-    },
-  });
-  const summary = json?.data?.summary ?? null;
-
-  return {
-    address,
-    duration,
-    summary,
-  };
-}
-
-export async function fetchBirdeyeTokenPnLDetails(
-  address: string,
-  options?: BirdeyeTokenPnlDetailsOptions,
-): Promise<BirdeyeTokenPnlDetailsResult> {
-  const limit = Math.min(Math.max(Math.floor(options?.limit ?? 10), 1), 100);
-  const offset = Math.max(Math.floor(options?.offset ?? 0), 0);
-
-  const body = {
-    wallet: address,
-    token_addresses: options?.tokenAddresses,
-    duration: options?.duration ?? "all",
-    sort_type: options?.sortType ?? "desc",
-    sort_by: options?.sortBy ?? "last_trade",
-    limit,
-    offset,
-  };
-
-  console.log(`[fetchBirdeyeTokenPnLDetails] Fetching PnL data for wallet ${address}. Options:`, body);
-
-  const json = await fetchBirdeyeJson("/wallet/v2/pnl/details", "POST", {
-    body,
-  });
-
-  const data = json?.data ?? {};
-
-  console.log(`[fetchBirdeyeTokenPnLDetails] Birdeye response received. Tokens count: ${Array.isArray(data?.tokens) ? data.tokens.length : 0}`);
-  console.log(`[fetchBirdeyeTokenPnLDetails] RAW BIRDEYE RESPONSE - data.tokens:`, JSON.stringify(data?.tokens, null, 2));
-
-  const result = {
-    meta: data?.meta ?? null,
-    tokens: Array.isArray(data?.tokens) ? data.tokens : [],
-    summary: data?.summary ?? null,
-  };
-
-  return result;
 }
 
 export async function fetchHeliusWalletFirstFund(address: string) {

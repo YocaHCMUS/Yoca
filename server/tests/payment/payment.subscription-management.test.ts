@@ -185,4 +185,27 @@ describe("Payment subscription management routes", () => {
     expect(body.errorCode).toBe("UNSUPPORTED_SUBSCRIPTION_PROVIDER");
     expect(stripeService.upgradeSubscription).not.toHaveBeenCalled();
   });
+
+  it("records the upgrade invoice in payment history", async () => {
+    const stripeService = await import("@sv/services/stripe.service.js");
+    const subscriptionService = await import("@sv/services/subscription.service.js");
+    const invoice = { id: "inv_upgrade", status: "open" };
+    selectWhereMock.mockResolvedValueOnce([stripeSubscription]);
+    vi.mocked(stripeService.upgradeSubscription).mockResolvedValueOnce({
+      subscription: { id: "sub_123", status: "active" },
+      invoice,
+      clientSecret: null,
+      applied: true,
+      processing: true,
+    } as any);
+
+    const response = await app.request("/upgrade", {
+      method: "POST",
+      headers: requestHeaders,
+      body: JSON.stringify({ subscriptionId: "sub_123", newTier: "Plus" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(subscriptionService.recordInvoicePayment).toHaveBeenCalledWith(invoice);
+  });
 });

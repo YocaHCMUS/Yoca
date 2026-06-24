@@ -1,42 +1,33 @@
-/**
- * Winrate Chart API Route
- *
- * Endpoint for fetching winrate and trade magnitude distribution data
- *
- * @module routes/charts/winrate.route
- */
-
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { getWinrateData } from '@sv/services/charts/winrate.service.js';
+import { Hono } from "hono";
+import { z } from "zod";
+import { getWinrateData } from "@sv/services/charts/winrate.service.js";
+import { solanaBase58Schema, validate } from "@sv/middlewares/validation";
+import { serverErr } from "@sv/util/errors";
+import { statusCode } from "@sv/util/responses";
 
 const winrateRequestSchema = z.object({
-  period: z.enum(['24H', '7D', '30D', '60D', '90D', '1Y', 'All']).optional().default('30D'),
-  wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
+  period: z.enum(["24H", "7D", "30D", "90D"]).optional().default("30D"),
+  wallets: z
+    .string()
+    .optional()
+    .transform((val) => (val ? val.split(",").filter(Boolean) : []))
+    .pipe(solanaBase58Schema.array()),
 });
 
-const app = new Hono()
-  .get('/', async (c) => {
+const app = new Hono().get(
+  "/",
+  validate("query", winrateRequestSchema),
+  async (c) => {
     try {
-      const query = c.req.query();
-      const params = winrateRequestSchema.parse(query);
+      const { wallets, period } = c.req.valid("query");
 
-      const data = await getWinrateData(
-        params.wallets,
-        params.period as any
-      );
+      const data = await getWinrateData(wallets, period);
 
-      return c.json(data, 200);
-    } catch (error) {
-      console.error('Error fetching winrate data:', error);
-      return c.json(
-        {
-          error: 'Failed to fetch winrate data',
-          message: error instanceof Error ? error.message : 'Unknown error'
-        },
-        500
-      );
+      return c.json(data, statusCode.Ok);
+    } catch (e) {
+      return serverErr(c, e);
     }
-  });
+  },
+);
 
 export default app;

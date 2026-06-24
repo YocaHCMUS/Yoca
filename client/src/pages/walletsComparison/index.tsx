@@ -178,7 +178,7 @@ export default function WalletsComparisonPage() {
   const [dayPopupOpen, setDayPopupOpen] = useState(false);
   const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
 
-  const [isChatOpen, setIsChatOpen] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatPosition, setChatPosition] = useState<"right" | "left" | "fullscreen">("right");
 
   const [walletSectionOpen, setWalletSectionOpen] = useState(true);
@@ -472,7 +472,7 @@ export default function WalletsComparisonPage() {
   const activeWalletCount = selectedWallets.length;
 
   return (
-    <PageWrapper noMarketTickers>
+    <PageWrapper noMarketTickers wideContent>
       <div className={styles.pageLayout}>
         <ChatContextProvider addresses={selectedWallets} contextType="wallet-comparison" lang={lang}>
           {/* Left Sidebar */}

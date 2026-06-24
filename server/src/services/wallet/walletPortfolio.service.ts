@@ -4,7 +4,21 @@ import { enrichWalletPortfolioMetadata } from "./walletData.core.js";
 import { db } from "@sv/db/index.js";
 import { walletPortfolioCache } from "@sv/db/schema.js";
 import { and, eq } from "drizzle-orm";
-import { fetchBirdeyePortfolio } from "./fetchers/walletDataFetcher.service.js";
+import { z } from "zod";
+import { fetchHeliusSolanaPortfolio } from "./fetchers/walletDataFetcher.service.js";
+
+const walletPortfolioCacheSchema = z.array(
+  z.object({
+    tokenAddress: z.string(),
+    symbol: z.string(),
+    name: z.string().optional(),
+    logoUri: z.string().optional(),
+    amount: z.number(),
+    priceUsd: z.number().optional(),
+    valueUsd: z.number(),
+    change24hPercent: z.number().optional(),
+  }),
+);
 
 export async function getWalletPortfolio(
   address: string,
@@ -16,49 +30,51 @@ export async function getWalletPortfolio(
     .from(walletPortfolioCache)
     .where(and(eq(walletPortfolioCache.address, address)))
     .limit(1);
+  const cachedDataResult = walletPortfolioCacheSchema.safeParse(
+    cachedPortfolio[0]?.data,
+  );
+  const cachedData: WalletPortfolioItem[] = cachedDataResult.success
+    ? cachedDataResult.data
+    : [];
   if (
     cachedPortfolio.length > 0 &&
+    cachedDataResult.success &&
     cachedPortfolio[0].fetchedAt >= portfolioThreshold
   ) {
-    const cachedData = (cachedPortfolio[0].data as WalletPortfolioItem[]) ?? [];
-    if (cachedData.length > 0) {
-      const enrichedCached = await enrichWalletPortfolioMetadata(cachedData, {
-        address,
-        source: "cache-hit",
-      });
+    const enrichedCached = await enrichWalletPortfolioMetadata(cachedData, {
+      address,
+      source: "cache-hit",
+    });
 
-      if (enrichedCached.changed) {
-        await db
-          .insert(walletPortfolioCache)
-          .values({ address, data: enrichedCached.portfolio })
-          .onConflictDoUpdate({
-            target: [walletPortfolioCache.address],
-            set: { data: enrichedCached.portfolio, fetchedAt: new Date() },
-          });
-      }
-
-      return enrichedCached.portfolio;
+    if (enrichedCached.changed) {
+      await db
+        .insert(walletPortfolioCache)
+        .values({ address, data: enrichedCached.portfolio })
+        .onConflictDoUpdate({
+          target: [walletPortfolioCache.address],
+          set: { data: enrichedCached.portfolio, fetchedAt: new Date() },
+        });
     }
-    // If cached portfolio is empty (likely from an earlier failed API call),
-    // fall through to external fetch instead of treating it as valid.
+
+    return enrichedCached.portfolio;
   }
 
   let selectedPortfolio: WalletPortfolioItem[] = [];
-  let selectedSource: "birdeye" | "helius" | "none" = "none";
   try {
-    const birdeyePortfolio = await fetchBirdeyePortfolio(address);
-    if (
-      birdeyePortfolio.items.length > 0 ||
-      Number(birdeyePortfolio.totalAssetValueUsd ?? 0) > 0
-    ) {
-      selectedPortfolio = birdeyePortfolio.items;
-      selectedSource = "birdeye";
-    }
+    selectedPortfolio = await fetchHeliusSolanaPortfolio(address);
   } catch (err) {
-    console.error("Failed to fetch Solana portfolio from Birdeye", err);
+    console.error("Failed to fetch Solana portfolio from Helius", err);
   }
 
   if (selectedPortfolio.length === 0) {
+    if (cachedData.length > 0) {
+      const enrichedStale = await enrichWalletPortfolioMetadata(cachedData, {
+        address,
+        source: "stale-cache",
+      });
+      return enrichedStale.portfolio;
+    }
+
     return [];
   }
 
@@ -66,7 +82,7 @@ export async function getWalletPortfolio(
     selectedPortfolio,
     {
       address,
-      source: selectedSource,
+      source: "helius",
     },
   );
 

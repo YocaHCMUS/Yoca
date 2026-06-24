@@ -14,16 +14,8 @@ type TopHoldersData = InferResponseType<
   200
 >;
 
-type HoldersInfo =
-  | InferResponseType<
-      (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
-      200
-    >[number]
-  | null;
-
 interface TopHoldersProps {
   holders: TopHoldersData;
-  holdersInfo?: HoldersInfo | null;
 }
 
 // Rút gọn địa chỉ ví
@@ -32,7 +24,7 @@ const shortenAddress = (address: string) => {
   return address.slice(0, 10);
 };
 
-export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
+export const TopHolders = ({ holders }: TopHoldersProps) => {
   const { tr, fmt } = useLocalization();
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(true);
@@ -45,9 +37,6 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
       </div>
     );
   }
-  console.log("Holders: ");
-  console.log(holdersInfo);
-
   // Tính tổng phần trăm top 10
   // Dùng trực tiếp dữ liệu top 10 từ mảng holders
   const top10Holders = holders.slice(0, 10);

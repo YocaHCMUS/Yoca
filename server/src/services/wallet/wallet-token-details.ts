@@ -1,104 +1,140 @@
-import { WALLET_TOKEN_DETAILS_TTL_MS } from "@sv/config/constants.js";
+import {
+    WALLET_TOKEN_DETAILS_FETCH_LIMIT,
+    WALLET_TOKEN_DETAILS_TTL_MS,
+} from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-  walletTokenDetails,
-  type WalletTokenDetailsInsert,
+    walletTokenDetails,
+    type WalletTokenDetailsInsert,
+    type WalletTokenDetailsSelect,
 } from "@sv/db/schema.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import {
+    mbl_WalletPositionsSchema,
+    type MBL_WalletPositions,
+} from "@sv/services/_types/wallet-raw-responses.js";
 import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
-import * as bds from "@sv/util/util-birdeye.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
+import * as mobula from "@sv/util/util-mobula.js";
+import dayjs from "dayjs";
 import { eq } from "drizzle-orm";
-import { bds_WalletTokenDetailsSchema } from "../_types/wallet-raw-responses.js";
 
-export async function getTokenDetails(wallet: string) {
-  const dbRes = await db
-    .select()
-    .from(walletTokenDetails)
-    .where(eq(walletTokenDetails.address, wallet));
+export async function fetchTokenDetails(
+  wallet: string,
+): Promise<WalletTokenDetailsSelect[] | null> {
+  const endpoint = mobula.getEndpoint("/2/wallet/positions");
+  endpoint.search = new URLSearchParams({
+    wallet,
+    blockchains: "solana:solana",
+    limit: String(WALLET_TOKEN_DETAILS_FETCH_LIMIT),
+    sortBy: "lastActivity",
+    order: "desc",
+    includeFees: "false",
+    includeAllBalances: "false",
+    onlyOpen: "false",
+  }).toString();
 
-  let isStale = false;
-  if (dbRes.length == 0) {
-    isStale = true;
-  } else {
-    const thresholdDate = new Date(Date.now() - WALLET_TOKEN_DETAILS_TTL_MS);
-    isStale = dbRes[0].updatedAt < thresholdDate;
-  }
+  const response = await rlFetch(endpoint, {
+    method: "GET",
+    headers: mobula.getRequiredHeaders(),
+    rlLimiter: mobula.limiter,
+  });
+  const result = await getTrackedApiResult(
+    mbl_WalletPositionsSchema,
+    response,
+  );
+  if (!result) return null;
 
-  if (!isStale) {
-    return dbRes;
-  }
+  const positions: MBL_WalletPositions["data"] = result.data;
 
-  const bdsEnpoint = bds.getEndpoint("/wallet/v2/pnl/details");
-  const req = new Request(bdsEnpoint, {
-    method: "POST",
-    headers: bds.getRequiredHeaders(),
-    body: JSON.stringify({
-      duration: "all",
-      sort_type: "desc",
-      sort_by: "last_trade",
-      limit: 100,
-      wallet,
-    }),
+  const updatedAtMs = dayjs.utc().valueOf();
+  const values = positions.map((position): WalletTokenDetailsInsert => {
+    const costOfQuantitySold = Math.max(
+      0,
+      position.volumeSell - position.realizedPnlUSD,
+    );
+    const unrealizedCostBasis = Math.max(
+      0,
+      position.amountUSD - position.unrealizedPnlUSD,
+    );
+
+    return {
+      address: wallet,
+      tokenAddress: position.token.address,
+      symbol: position.token.symbol,
+      lastTradeUnixTime: position.lastDate
+        ? dayjs.utc(position.lastDate).unix()
+        : 0,
+      totalBuyCount: position.buys,
+      totalSellCount: position.sells,
+      totalTradeCount: position.buys + position.sells,
+      totalBoughtAmount: position.volumeBuyToken,
+      totalSoldAmount: position.volumeSellToken,
+      balanceAmount: position.balance,
+      costOfQuantitySold,
+      totalBoughtUsd: position.volumeBuy,
+      totalSoldUsd: position.volumeSell,
+      currentValue: position.amountUSD,
+      realizedProfitUsd: position.realizedPnlUSD,
+      realizedProfitPercent:
+        costOfQuantitySold > 0
+          ? position.realizedPnlUSD / costOfQuantitySold
+          : 0,
+      unrealizedProfitUsd: position.unrealizedPnlUSD,
+      unrealizedProfitPercent:
+        unrealizedCostBasis > 0
+          ? position.unrealizedPnlUSD / unrealizedCostBasis
+          : 0,
+      avgBuyCost: position.avgBuyPriceUSD ?? 0,
+      avgSellCost: position.avgSellPriceUSD ?? 0,
+      updatedAtMs,
+    };
   });
 
-  const resp = await fetch(req);
-  const res = await getTrackedApiResult(bds_WalletTokenDetailsSchema, resp);
-  if (res == undefined) {
-    return null;
-  }
+  if (values.length == 0) return [];
 
-  const tokenDetails = (res?.data?.tokens ?? []).map(
-    (tokenDetail): WalletTokenDetailsInsert => ({
-      symbol: tokenDetail.symbol,
-      address: tokenDetail.address,
-      tokenAddress: tokenDetail.address,
-      lastTradeUnixTime: tokenDetail.last_trade_unix_time,
-      totalBuyCount: tokenDetail.counts.total_buy,
-      totalSellCount: tokenDetail.counts.total_sell,
-      totalTradeCount: tokenDetail.counts.total_trade,
-      totalBoughtAmount: tokenDetail.quantity.total_bought_amount,
-      totalSoldAmount: tokenDetail.quantity.total_sold_amount,
-      balanceAmount: tokenDetail.quantity.holding,
-      costOfQuantitySold: tokenDetail.cashflow_usd.cost_of_quantity_sold,
-      totalBoughtUsd: tokenDetail.cashflow_usd.total_invested,
-      totalSoldUsd: tokenDetail.cashflow_usd.total_sold,
-      currentValue: tokenDetail.cashflow_usd.current_value,
-      realizedProfitUsd: tokenDetail.pnl.realized_profit_usd,
-      realizedProfitPercent: tokenDetail.pnl.realized_profit_percent,
-      unrealizedProfitUsd: tokenDetail.pnl.unrealized_usd,
-      unrealizedProfitPercent: tokenDetail.pnl.unrealized_percent,
-      avgBuyCost: tokenDetail.pricing.avg_buy_cost ?? 0,
-      avgSellCost: tokenDetail.pricing.avg_sell_cost ?? 0,
-    }),
-  );
-
-  const filteredTokenDetails = tokenDetails.filter(
-    (detail) =>
-      !isNaN(detail.totalBoughtAmount) &&
-      !isNaN(detail.totalSoldAmount) &&
-      !isNaN(detail.balanceAmount) &&
-      !isNaN(detail.costOfQuantitySold) &&
-      !isNaN(detail.totalBoughtUsd) &&
-      !isNaN(detail.totalSoldUsd) &&
-      !isNaN(detail.currentValue) &&
-      !isNaN(detail.realizedProfitUsd) &&
-      !isNaN(detail.realizedProfitPercent) &&
-      !isNaN(detail.unrealizedProfitUsd) &&
-      !isNaN(detail.unrealizedProfitPercent) &&
-      !isNaN(detail.avgBuyCost) &&
-      !isNaN(detail.avgSellCost),
-  );
-
-  return await db
+  return db
     .insert(walletTokenDetails)
-    .values(filteredTokenDetails)
+    .values(values)
     .onConflictDoUpdate({
       target: [walletTokenDetails.address, walletTokenDetails.tokenAddress],
       set: excludedAutoFromInsert(
         walletTokenDetails,
         [walletTokenDetails.address, walletTokenDetails.tokenAddress],
-        filteredTokenDetails,
+        values,
       ),
     })
     .returning();
+}
+
+export async function getTokenDetails(
+  wallet: string,
+): Promise<WalletTokenDetailsSelect[] | null> {
+  const stored = await db
+    .select()
+    .from(walletTokenDetails)
+    .where(eq(walletTokenDetails.address, wallet));
+
+  if (
+    stored.length > 0 &&
+    stored[0].updatedAtMs >=
+      dayjs.utc().valueOf() - WALLET_TOKEN_DETAILS_TTL_MS
+  ) {
+    return stored;
+  }
+
+  try {
+    const refreshed = await fetchTokenDetails(wallet);
+    return refreshed ?? (stored.length > 0 ? stored : null);
+  } catch (error) {
+    if (stored.length > 0) {
+      console.warn("Mobula wallet positions failed; returning stored data", {
+        wallet,
+        error,
+      });
+      return stored;
+    }
+
+    throw error;
+  }
 }

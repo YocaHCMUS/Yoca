@@ -10,9 +10,13 @@ import {
 import { rlFetch } from "@sv/util/rate-limit.js";
 import dayjs from "dayjs";
 import { and, between, eq, inArray } from "drizzle-orm";
-import { WALLET_BALANCE_HISTORY_CACHE_TTL_MS } from "@sv/config/constants.js";
+import {
+  WALLET_BALANCE_HISTORY_CACHE_TTL_MS,
+  ZRN_SOL_FUNGIBLE_ID,
+} from "@sv/config/constants.js";
 import * as zrn from "@sv/util/util-zerion.js";
 import { zrn_FungiblesResponseSchema } from "../_types/token-raw-responses.js";
+import { SOL_NATIVE_ALIAS_MINT } from "./wallet.constants.js";
 
 type WalletTokenBalanceHistory = Record<
   string,
@@ -25,17 +29,40 @@ type WalletTokenBalanceHistory = Record<
 async function getZerionId(
   tokenAddresses: string[],
 ): Promise<Record<string, string>> {
+  const fungibleImplementationAddresses = tokenAddresses.filter(
+    (tokenAddress) => tokenAddress !== SOL_NATIVE_ALIAS_MINT,
+  );
+  const nativeSolId: Record<string, string> = {};
+  if (tokenAddresses.includes(SOL_NATIVE_ALIAS_MINT)) {
+    nativeSolId[SOL_NATIVE_ALIAS_MINT] = ZRN_SOL_FUNGIBLE_ID;
+  }
+
+  if (fungibleImplementationAddresses.length == 0) {
+    return nativeSolId;
+  }
+
   const res = await db
     .select()
     .from(zerionTokenList)
-    .where(inArray(zerionTokenList.tokenAddress, tokenAddresses));
+    .where(
+      inArray(
+        zerionTokenList.tokenAddress,
+        fungibleImplementationAddresses,
+      ),
+    );
 
   if (res.length == 0) {
-    return await fetchZerionId(tokenAddresses);
+    return {
+      ...(await fetchZerionId(fungibleImplementationAddresses)),
+      ...nativeSolId,
+    };
   }
-  return Object.fromEntries(
-    res.map((entry) => [entry.tokenAddress, entry.zerionId]),
-  );
+  return {
+    ...Object.fromEntries(
+      res.map((entry) => [entry.tokenAddress, entry.zerionId]),
+    ),
+    ...nativeSolId,
+  };
 }
 
 async function fetchZerionId(

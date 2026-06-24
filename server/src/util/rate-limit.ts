@@ -57,37 +57,88 @@ export async function rlFetch(
 
   return rlLimiter.schedule(async () => {
     let lastErr: unknown;
+    const requestStartedAtMs = Date.now();
+    const requestUrl = url.toString();
+    const requestMethod = fetchInit.method ?? "GET";
 
     for (let attempt = 0; attempt <= rlRetries; attempt++) {
+      const attemptStartedAtMs = Date.now();
+
       try {
         const resp = await fetchWithTimeout(url, fetchInit, rlTimeoutMs);
 
-        if (resp.status == 429) {
+        if (resp.status == 429 || (resp.status >= 500 && resp.status <= 599)) {
+          const retryAfter = resp.headers.get("Retry-After");
+
           if (attempt == rlRetries) {
+            console.error(
+              "Outbound request returned retryable status after retries",
+              {
+                url: requestUrl,
+                method: requestMethod,
+                status: resp.status,
+                attempt: attempt + 1,
+                retriesRemaining: 0,
+                retryAfter,
+                attemptDurationMs: Date.now() - attemptStartedAtMs,
+                totalDurationMs: Date.now() - requestStartedAtMs,
+              },
+            );
             return resp;
           }
 
-          const waitMs = computeBackoff(attempt, rlRetryDelayMs);
+          let waitMs = computeBackoff(attempt, rlRetryDelayMs);
+          let delaySource = "exponential backoff";
 
-          console.warn(`Rate Limit Fetch: 429 retry in ${waitMs}ms`);
+          if (retryAfter !== null) {
+            const normalizedRetryAfter = retryAfter.trim();
+            const retryAfterSeconds = Number(normalizedRetryAfter);
+
+            if (/^\d+$/.test(normalizedRetryAfter)) {
+              waitMs = retryAfterSeconds * 1_000;
+              delaySource = "Retry-After seconds";
+            } else {
+              const retryAfterDate = Date.parse(normalizedRetryAfter);
+
+              if (!Number.isNaN(retryAfterDate)) {
+                waitMs = Math.max(0, retryAfterDate - Date.now());
+                delaySource = "Retry-After date";
+              } else {
+                console.warn("Outbound request received invalid Retry-After", {
+                  url: requestUrl,
+                  method: requestMethod,
+                  status: resp.status,
+                  retryAfter: normalizedRetryAfter,
+                });
+              }
+            }
+          }
+
+          console.warn("Outbound request retry", {
+            url: requestUrl,
+            method: requestMethod,
+            status: resp.status,
+            attempt: attempt + 1,
+            retriesRemaining: rlRetries - attempt,
+            retryAfter,
+            retryInMs: waitMs,
+            delaySource,
+            attemptDurationMs: Date.now() - attemptStartedAtMs,
+            totalDurationMs: Date.now() - requestStartedAtMs,
+          });
 
           await sleep(waitMs);
           continue;
         }
 
-        if (resp.status >= 500 && resp.status <= 599) {
-          if (attempt == rlRetries) {
-            return resp;
-          }
-
-          const waitMs = computeBackoff(attempt, rlRetryDelayMs);
-
-          console.warn(`Rate Limit Fetch: ${resp.status} retry in ${waitMs}ms`);
-
-          await sleep(waitMs);
-          continue;
-        }
-
+        console.info("Outbound request completed", {
+          url: requestUrl,
+          method: requestMethod,
+          status: resp.status,
+          attempt: attempt + 1,
+          attemptDurationMs: Date.now() - attemptStartedAtMs,
+          totalDurationMs: Date.now() - requestStartedAtMs,
+        });
         return resp;
       } catch (e) {
         lastErr = e;
@@ -98,13 +149,35 @@ export async function rlFetch(
 
         const waitMs = computeBackoff(attempt, rlRetryDelayMs);
 
-        console.warn(`Rate Limit Fetch: network error retry in ${waitMs}ms`, e);
+        console.warn("Outbound request network-error retry", {
+          url: requestUrl,
+          method: requestMethod,
+          status: null,
+          attempt: attempt + 1,
+          retriesRemaining: rlRetries - attempt,
+          retryInMs: waitMs,
+          errorName: e instanceof Error ? e.name : "UnknownError",
+          errorMessage: e instanceof Error ? e.message : String(e),
+          error: e,
+          attemptDurationMs: Date.now() - attemptStartedAtMs,
+          totalDurationMs: Date.now() - requestStartedAtMs,
+        });
 
         await sleep(waitMs);
       }
     }
 
-    console.error("Rate Limit Fetch: failed after retries", lastErr);
+    console.error("Outbound request failed after retries", {
+      url: requestUrl,
+      method: requestMethod,
+      status: null,
+      attempts: rlRetries + 1,
+      errorName: lastErr instanceof Error ? lastErr.name : "UnknownError",
+      errorMessage:
+        lastErr instanceof Error ? lastErr.message : String(lastErr),
+      error: lastErr,
+      totalDurationMs: Date.now() - requestStartedAtMs,
+    });
 
     throw lastErr;
   });

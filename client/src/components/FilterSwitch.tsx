@@ -53,7 +53,7 @@ export function FilterSwitch<V extends string | number>({
       style={{
         inlineSize: isNumber(width)
           ? width
-          : `${widthSize[width as WidthSize]}rem`,
+          : `${widthSize[width]}rem`,
         ...style,
       }}
     >

@@ -50,6 +50,7 @@ const summarySchema = z.object({
 interface PromptArticle {
   title: string;
   source: string;
+  sourceType: TokenNewsArticle["sourceType"];
   publishedAt: string | null;
   description: string;
   extraSnippets: string[];
@@ -358,6 +359,7 @@ function buildArticlesForPromptWithoutFetch(
     return {
       title,
       source: article.source,
+      sourceType: article.sourceType ?? "news",
       publishedAt: article.publishedAt,
       description:
         description.length >= MIN_CLEAN_DESCRIPTION_CHARS ? description : "",
@@ -433,6 +435,9 @@ export function buildFallbackChartNewsSummary(
       : [];
   const combinedEvidence = evidenceTexts.join(" ");
   const themes = detectThemes(combinedEvidence);
+  const onlyWebMentions =
+    promptArticles.length > 0 &&
+    promptArticles.every((article) => article.sourceType === "web_mention");
   const hasLimitedSnippets =
     extractedTexts.length === 0 &&
     (snippets.length === 0 ||
@@ -459,10 +464,12 @@ export function buildFallbackChartNewsSummary(
   }
 
   return {
-    headline: `${input.token.name} news summary for ${formatDateLabel(input.date)}.`,
+    headline: onlyWebMentions
+      ? `${input.token.name} related web mentions for ${formatDateLabel(input.date)}.`
+      : `${input.token.name} news summary for ${formatDateLabel(input.date)}.`,
     tldr:
       evidenceTexts.length > 0
-        ? `The available article context points to ${themes.slice(0, 2).join(" and ")} around ${input.token.name}. ${hasLimitedSnippets ? "Because the snippets are limited, this summary should be treated as brief context rather than a full article synthesis." : "The summary uses available snippets and extracted article text."}`
+        ? `${onlyWebMentions ? "Related web mentions suggest" : "The available article context points to"} ${themes.slice(0, 2).join(" and ")} around ${input.token.name}. ${hasLimitedSnippets ? "Because the snippets are limited, this summary should be treated as brief context rather than a full article synthesis." : "The summary uses available snippets and extracted article text."}`
         : "Only limited article snippets were available for this date.",
     bullets: [...new Set(bullets)].slice(0, 3),
     themes,
@@ -495,6 +502,9 @@ function buildSummaryPrompt(
     "",
     "Rules:",
     "- Synthesize the articles; do not list titles.",
+    "- Use sourceType to distinguish confirmed news from broader web mentions or project updates.",
+    "- If all articles are sourceType web_mention, use cautious wording such as \"Related web mentions suggest\".",
+    "- Never present web mentions as confirmed major news.",
     "- Use extractedText and descriptions as primary evidence.",
     "- Identify the shared theme across articles.",
     "- Mention concrete developments: integrations, listings, partnerships, launches, regulation, security, ecosystem activity, adoption, or market context.",

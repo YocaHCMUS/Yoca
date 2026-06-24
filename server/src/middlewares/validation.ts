@@ -1,10 +1,10 @@
 import {
-  userAlertConditionOps,
-  userAlertPeriods,
-  userAlertTokenMetric,
-  userAlertTriggerModes,
-  userTradeDirections,
-  userTradingAggregations,
+    userAlertConditionOps,
+    userAlertPeriods,
+    userAlertTokenMetric,
+    userAlertTriggerModes,
+    userTradeDirections,
+    userTradingAggregations,
 } from "@sv/db/alerts.js";
 import { userAlertStatus } from "@sv/db/schema.js";
 import { setErr } from "@sv/util/errors.js";
@@ -48,7 +48,7 @@ export const addressSchema = z.object({
 export const addressListSchema = z.object({
   addresses: z
     .string()
-    .transform((v) => v.split(","))
+    .transform((val) => val.split(",").filter(Boolean))
     .pipe(solanaBase58Schema.array()),
 });
 
@@ -391,10 +391,7 @@ export const envSchema = z.object({
   ZERION_API_KEY: z.string(),
 
   HELIUS_API_KEY: z.string(),
-  HELIUS_API_BASE: z
-    .url()
-    .optional()
-    .default("https://api.helius.xyz"),
+  HELIUS_API_BASE_URL: z.url().optional().default("https://api.helius.xyz"),
   HELIUS_AUTH_HEADER: z.string().optional().default(""),
   HELIUS_WEBHOOK_AUTH_KEY: z.string(),
   HELIUS_WEBHOOK_ID: z.string().optional().default(""),
@@ -403,6 +400,12 @@ export const envSchema = z.object({
   WEBHOOK_SOL_PRICE_USD: z.coerce.number().positive().optional().default(150),
   MORALIS_API_BASE_URL: z.url().default("https://solana-gateway.moralis.io"),
   MORALIS_API_KEY: z.string(),
+  MOBULA_API_BASE_URL: z.url().default("https://api.mobula.io/api"),
+  MOBULA_API_KEY: z.string().trim().min(1),
+  WALLET_AI_ANALYSIS_WEBHOOK_URL: z
+    .url()
+    .default("http://localhost:5678/webhook/analyse-wallet"),
+
   N8N_ANALYSE_WALLET_URL: z
     .url()
     .default("http://localhost:5678/webhook/analyse-wallet"),

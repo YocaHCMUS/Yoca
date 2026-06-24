@@ -24,6 +24,7 @@ import {
 import { IconButton } from "@carbon/react";
 import {
   buildPortfolioMetaMap,
+  isNativeSolToken,
   mapPortfolioItems,
 } from "@/util/wallet-portfolio-mapper.ts";
 import type { WalletPortfolioItem } from "@/services/wallet/walletApi";
@@ -217,7 +218,7 @@ export function WalletHoldingsPanel({
               rowIndex >= 0
                 ? portfolioMeta.get(rowIndex)?.tokenAddress
                 : undefined;
-            if (tokenAddress) {
+            if (tokenAddress && !isNativeSolToken(tokenAddress)) {
               navigate(`/tokens/${tokenAddress}`);
             }
           }}

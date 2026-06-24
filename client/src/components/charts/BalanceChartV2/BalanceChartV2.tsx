@@ -42,6 +42,7 @@ type TokenPortpofilo = {
 type BalanceSeries = {
   key: string;
   label: string;
+  color?: string;
   data: {
     unixTimeMs: number;
     value: number;
@@ -137,6 +138,8 @@ export function BalanceChartV2({
       select: (data) => ({
         key: "_total",
         label: "Total Balance",
+        // Todo: tokenize me
+        color: "#0f62fe",
         data:
           data?.[address]?.map((point) => ({
             unixTimeMs: point.timestampMs,
@@ -181,6 +184,22 @@ export function BalanceChartV2({
     return tokenBalances.data ?? [];
   }, [selectedTokens, totalBalance.data, tokenBalances.data]);
 
+  const totalBalanceLoadingState = totalBalance.error
+    ? {
+        status: "error" as const,
+        retryCount: 0,
+        error: {
+          code: "BALANCE_HISTORY_UNAVAILABLE",
+          message:
+            "Balance history is temporarily unavailable. Please try again.",
+          retryable: true,
+        },
+      }
+    : {
+        status: "success" as const,
+        retryCount: 0,
+      };
+
   const series24hChanges = useMemo(() => {
     return balanceSeries.reduce<Record<string, ChangeMetric | null>>(
       (acc, series) => {
@@ -197,6 +216,14 @@ export function BalanceChartV2({
     <ChartWrapper
       title={tr("charts.balanceChart.title")}
       wrapperMinHeight={minHeight}
+      loadingState={totalBalanceLoadingState}
+      onRetry={
+        totalBalance.error
+          ? () => {
+              void totalBalance.mutate();
+            }
+          : undefined
+      }
       enableExport={false}
       enableFullscreen={false}
       enableMiniPlayer={false}
@@ -290,8 +317,7 @@ export function BalanceChartV2({
 
         <Flex dir="row" gap={4} align="center">
           <Txt size="md" secondary>
-            {/* // TODO: Localize */}
-            24h Change:
+            {tr("charts.balanceChart.change24h")}:
           </Txt>
           <Flex dir="row" gap={2}>
             {balanceSeries.map((series) => {
@@ -339,6 +365,7 @@ export function BalanceChartV2({
                     <TrendNum
                       value={displayValue}
                       prefixes={prefixMode}
+                      size="sm"
                       formatter={displayFormatter}
                     />
                   </Flex>

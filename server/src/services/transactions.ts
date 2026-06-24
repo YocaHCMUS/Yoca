@@ -261,79 +261,6 @@ function extractBirdeyePriceValue(
   return undefined;
 }
 
-function extractBirdeyeTokenSymbol(payload: unknown): string | undefined {
-  const root = payload as {
-    success?: boolean;
-    data?: {
-      symbol?: unknown;
-      tokenSymbol?: unknown;
-      token?: {
-        symbol?: unknown;
-      };
-    };
-  };
-
-  const directCandidates = [
-    root?.data?.symbol,
-    root?.data?.tokenSymbol,
-    root?.data?.token?.symbol,
-  ];
-
-  for (const candidate of directCandidates) {
-    const symbol = String(candidate ?? "").trim();
-    if (symbol) {
-      return symbol.toUpperCase();
-    }
-  }
-
-  return undefined;
-}
-
-async function fetchBirdeyeTokenSymbol(
-  mint: string,
-): Promise<string | undefined> {
-  if (!process.env.BIRDEYE_API_KEY || !process.env.BIRDEYE_API_BASE_URL) {
-    return undefined;
-  }
-
-  try {
-    const endpoint = getBirdeyeEndpoint("/defi/token_overview");
-    endpoint.searchParams.set("address", mint);
-
-    const response = await fetch(endpoint, {
-      method: "GET",
-      headers: getBirdeyeHeaders(),
-    });
-
-    if (!response.ok) {
-      return undefined;
-    }
-
-    const payload = (await response.json()) as unknown;
-    return extractBirdeyeTokenSymbol(payload);
-  } catch {
-    return undefined;
-  }
-}
-
-async function getBirdeyeMintSymbols(
-  mints: string[],
-): Promise<Map<string, string>> {
-  const uniqueMints = Array.from(new Set(mints.filter(Boolean)));
-  const symbolMap = new Map<string, string>();
-
-  await Promise.all(
-    uniqueMints.map(async (mint) => {
-      const symbol = await fetchBirdeyeTokenSymbol(mint);
-      if (symbol) {
-        symbolMap.set(mint, symbol);
-      }
-    }),
-  );
-
-  return symbolMap;
-}
-
 async function fetchBirdeyePriceAtTimestampUsd(
   mint: string,
   timestampSec: number,
@@ -394,20 +321,10 @@ async function normalizeTransfers(tx: HeliusEnhancedTransaction): Promise<Helius
   const tokenMetaRows = await getTokenMeta(Array.from(new Set(tokenMints)));
   const mintToSymbol = new Map<string, string>();
   for (const row of tokenMetaRows) {
-    const address = normalizeMint((row as { address?: string }).address);
-    const symbol = String((row as { symbol?: string }).symbol ?? "").trim();
+    const address = normalizeMint(row.address);
+    const symbol = String(row.symbol ?? "").trim();
     if (address && symbol) {
       mintToSymbol.set(address, symbol.toUpperCase());
-    }
-  }
-
-  const unresolvedMints = Array.from(
-    new Set(tokenMints.filter((mint) => !mintToSymbol.has(mint))),
-  );
-  const birdeyeMintToSymbol = await getBirdeyeMintSymbols(unresolvedMints);
-  for (const [mint, symbol] of birdeyeMintToSymbol.entries()) {
-    if (!mintToSymbol.has(mint)) {
-      mintToSymbol.set(mint, symbol);
     }
   }
 
@@ -441,7 +358,7 @@ async function normalizeTransfers(tx: HeliusEnhancedTransaction): Promise<Helius
     const existingSymbol = String(
       transfer.symbol ?? transfer.tokenSymbol ?? "",
     ).trim();
-    const fallbackSymbol = mintToSymbol.get(mint) ?? "";
+    const fallbackSymbol = mintToSymbol.get(mint) ?? mint;
     const resolvedSymbol = existingSymbol || fallbackSymbol;
 
     return {

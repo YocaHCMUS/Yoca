@@ -1,8 +1,8 @@
 import type {
-  BalanceDataPoint,
-  WalletTimePeriod,
-  WalletCumulativePnLResult,
-  PnLDataPoint,
+    BalanceDataPoint,
+    WalletTimePeriod,
+    WalletCumulativePnLResult,
+    PnLDataPoint,
 } from "./dtos/walletDataObjects.js";
 import { getRangeStartMs } from "@sv/services/wallet/walletData.core.js";
 import { roundUsd } from "./walletNormalization.utils.js";
@@ -10,15 +10,16 @@ import { getWalletTransfers } from "./walletTransfersSwaps.service.js";
 import { getWalletOverview } from "./walletOverview.service.js";
 import { db } from "@sv/db/index.js";
 import {
-  walletBalanceMonthHistory,
-  walletBalanceWeekHistory,
+    walletBalanceMonthHistory,
+    walletBalanceWeekHistory,
 } from "@sv/db/schema.js";
-import { and, between, eq, gte } from "drizzle-orm";
+import { and, between, eq } from "drizzle-orm";
 import * as zrn from "@sv/util/util-zerion.js";
 import { zrn_WalletBalanceChartSchema } from "../_types/wallet-raw-responses.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import dayjs from "dayjs";
 import { WALLET_BALANCE_HISTORY_CACHE_TTL_MS } from "@sv/config/constants.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 
 /**
  * Get UTC start-of-day timestamp (ms) for a given timestamp.
@@ -190,9 +191,10 @@ async function fetchWalletBalanceHistory(
     "filter[chain_ids]": "solana",
   }).toString();
 
-  const resp = await fetch(req, {
+  const resp = await rlFetch(req, {
     method: "GET",
     headers: zrn.getRequiredHeaders(),
+    rlLimiter: zrn.limiter
   });
 
   const res = await getTrackedApiResult(zrn_WalletBalanceChartSchema, resp);

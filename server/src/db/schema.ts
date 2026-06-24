@@ -19,6 +19,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
+import dayjs from "dayjs";
 export * from "./alerts";
 export * from "./users";
 export * from "./payment";
@@ -1095,9 +1096,9 @@ export const walletTokenDetails = pgTable(
     avgBuyCost: decimal("avg_buy_cost").notNull(),
     avgSellCost: decimal("avg_sell_cost").notNull(),
 
-    updatedAt: timestamp("updated_at")
+    updatedAtMs: bigint("updated_at_ms", { mode: "number" })
       .notNull()
-      .$onUpdate(() => new Date()),
+      .$onUpdate(() => dayjs.utc().valueOf()),
   },
   (t) => [primaryKey({ columns: [t.address, t.tokenAddress] })],
 );
@@ -1435,6 +1436,7 @@ export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
 export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
 export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
+export type WalletTokenDetailsSelect = typeof walletTokenDetails.$inferSelect;
 export type WalletFirstFundInsert = typeof walletFirstFund.$inferInsert;
 export type FollowedWalletInsert = typeof followedWallets.$inferInsert;
 export type FollowedWalletRow = typeof followedWallets.$inferSelect;

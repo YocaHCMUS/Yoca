@@ -1,8 +1,8 @@
 import type { ApiErrCode } from "@/api/main";
 import {
-  defineDateTimeFormat,
-  defineNumberFormat,
-  defineTextFormat,
+    defineDateTimeFormat,
+    defineNumberFormat,
+    defineTextFormat,
 } from "./util/util-format";
 import { defineTranslationWithBase } from "./util/util-translation";
 
@@ -151,6 +151,7 @@ export const translation = {
     selectAll: "Select All",
     from: "From",
     to: "To",
+    page: "Page {{count}}"
   },
   // Authentication
   auth: {
@@ -265,7 +266,8 @@ export const translation = {
       readStory: "Read story",
       items: {
         base: {
-          title: "How teams run onchain data transformations at scale with Yoca",
+          title:
+            "How teams run onchain data transformations at scale with Yoca",
         },
         blockworks: {
           title: "Powering institutional crypto research with unified metrics",
@@ -274,7 +276,8 @@ export const translation = {
           title: "Ecosystem growth and transparency backed by live dashboards",
         },
         oneInch: {
-          title: "Making execution and liquidity data transparent and accessible",
+          title:
+            "Making execution and liquidity data transparent and accessible",
         },
       },
     },
@@ -398,7 +401,7 @@ export const translation = {
       processing: "Processing…",
       subscribeNow: "Subscribe Now",
       methods: {
-        card: "Cash",
+        card: "Card",
         bank: "Bank",
         bankDescription: "US Bank Transfer",
         wallet: "Wallet",
@@ -441,9 +444,11 @@ export const translation = {
       balanceLoading: "Loading balances...",
       balanceUnreachable: "Unreachable",
       mismatchDetected: "Network Mismatch Detected!",
-      mismatchExplanation: "Your wallet has {{balance}} SOL on {{alternateNetwork}}, but the app is configured for {{networkName}}. Please open your wallet's Settings -> Developer Settings -> Solana network and switch it to {{networkName}} (or fund your {{networkName}} account).",
+      mismatchExplanation:
+        "Your wallet has {{balance}} SOL on {{alternateNetwork}}, but the app is configured for {{networkName}}. Please open your wallet's Settings -> Developer Settings -> Solana network and switch it to {{networkName}} (or fund your {{networkName}} account).",
       insufficientBalanceDetected: "Insufficient Balance Detected!",
-      insufficientBalanceExplanation: "Your account has {{balance}} SOL on {{networkName}}, but needs at least {{required}} SOL to pay for this plan. Please request free SOL from the official {{networkName}} faucet.",
+      insufficientBalanceExplanation:
+        "Your account has {{balance}} SOL on {{networkName}}, but needs at least {{required}} SOL to pay for this plan. Please request free SOL from the official {{networkName}} faucet.",
       faucetButton: "Request Free SOL (Faucet)",
     },
     transactionId: {
@@ -467,8 +472,7 @@ export const translation = {
       cardSetupIncomplete: "Card setup did not complete. Please try again.",
       missingPaymentMethod:
         "Could not retrieve payment method. Please try again.",
-      activateSubscription:
-        "Subscription activation failed. Please try again.",
+      activateSubscription: "Subscription activation failed. Please try again.",
       network: "A network error occurred. Please try again.",
     },
   },
@@ -591,7 +595,8 @@ export const translation = {
     },
     summary: {
       title: "AI Wallet Behavior Summary",
-      description: "Plain-language interpretation of the computed wallet profile.",
+      description:
+        "Plain-language interpretation of the computed wallet profile.",
       noSummary: "No summary was generated for this wallet.",
       walletPersona: "Wallet Persona",
       walletPersonaTooltip:
@@ -616,7 +621,8 @@ export const translation = {
       title: "Key Findings",
       description:
         "Evidence-backed observations generated from the wallet profile.",
-      empty: "No major evidence-backed findings were generated for this wallet.",
+      empty:
+        "No major evidence-backed findings were generated for this wallet.",
       fallbackTitle: "Finding",
       fallbackExplanation: "No explanation was provided.",
       whyItMatters: "Why it matters:",
@@ -704,8 +710,7 @@ export const translation = {
         "Do not claim this analysis represents the wallet's full history unless the analysis window is FULL_HISTORY.",
       backendNoConfirmedSuspicious:
         "Do not claim confirmed suspicious behavior or wash trading.",
-      backendNoIntent:
-        "Do not infer intent beyond the computed metrics.",
+      backendNoIntent: "Do not infer intent beyond the computed metrics.",
     },
     empty: {
       title: "No analyzable activity found for this wallet.",
@@ -762,15 +767,19 @@ export const translation = {
     },
     personaExplanations: {
       unknown: {
-        meaning: "There is not enough clear behavior to assign a specific persona.",
-        commonSignals: "Low transaction count, incomplete data, or mixed signals.",
-        caution: "Unknown should not be interpreted as safe or risky by itself.",
+        meaning:
+          "There is not enough clear behavior to assign a specific persona.",
+        commonSignals:
+          "Low transaction count, incomplete data, or mixed signals.",
+        caution:
+          "Unknown should not be interpreted as safe or risky by itself.",
       },
       longTermHolder: {
         meaning: "Wallet behavior resembles holding assets for longer periods.",
         commonSignals:
           "Low swap count, longer holding periods, low short-term trade ratio, concentrated holdings.",
-        caution: "This describes observed behavior in the analyzed window only.",
+        caution:
+          "This describes observed behavior in the analyzed window only.",
       },
       casualUser: {
         meaning: "Wallet behavior resembles occasional, lower-intensity usage.",
@@ -784,7 +793,8 @@ export const translation = {
           "Wallet frequently interacts with decentralized trading protocols.",
         commonSignals:
           "Many swaps, high DEX usage, multiple traded tokens, meaningful trading volume.",
-        caution: "This label describes protocol usage and trading behavior, not trading skill.",
+        caution:
+          "This label describes protocol usage and trading behavior, not trading skill.",
       },
       memecoinTrader: {
         meaning:
@@ -806,7 +816,8 @@ export const translation = {
           "Wallet behavior resembles activity aimed at receiving or claiming token distributions.",
         commonSignals:
           "Repeated airdrop claims, many inbound token transfers, broad token coverage, burst activity.",
-        caution: "This does not prove intent; it describes claim-like behavior.",
+        caution:
+          "This does not prove intent; it describes claim-like behavior.",
       },
       botLikeTrader: {
         meaning:
@@ -833,8 +844,7 @@ export const translation = {
           "Wallet shows patterns that can be associated with potentially suspicious market behavior.",
         commonSignals:
           "High suspicion score, repeated counterparties, circular or reciprocal flow signals.",
-        caution:
-          "This is not proof of wash trading or suspicious behavior.",
+        caution: "This is not proof of wash trading or suspicious behavior.",
       },
     },
     riskFactorExplanations: {
@@ -862,7 +872,8 @@ export const translation = {
           "Low win rate matters only when there are enough closed positions.",
       },
       highTokenDiversity: {
-        meaning: "The wallet traded many different tokens in the analyzed window.",
+        meaning:
+          "The wallet traded many different tokens in the analyzed window.",
         whyItMatters:
           "Trading many different tokens can indicate broad speculative behavior.",
       },
@@ -880,8 +891,7 @@ export const translation = {
       },
       missingData: {
         meaning: "Some data could not be fully parsed or valued.",
-        whyItMatters:
-          "This affects reliability, not wallet behavior itself.",
+        whyItMatters: "This affects reliability, not wallet behavior itself.",
       },
       fallbackMeaning:
         "This risk factor was generated from the wallet's analyzed behavior.",
@@ -896,8 +906,7 @@ export const translation = {
       unsupported:
         "{{unsupported}} unsupported out of {{txTotal}} analyzed transactions.",
       missingPrices: "{{count}} transactions were missing price data.",
-      none:
-        "No missing prices or unsupported transactions were detected in this analysis window.",
+      none: "No missing prices or unsupported transactions were detected in this analysis window.",
     },
     riskLevelExplanation: {
       unknown:
@@ -941,6 +950,7 @@ export const translation = {
     holding: "Holding",
     value: "Value",
     change24h: "Change (24h)",
+    hideLowValue: "Hide Low Value",
     // Token Details Demo
     tokensLastTraded: "Last traded tokens",
     tokensLastTradedDescription: "Tokens with recent trading activity",
@@ -969,8 +979,8 @@ export const translation = {
     filter30d: "30d",
     filter90d: "90d",
     pair: "Pair",
-    tokenSold: "Token Sold",
-    tokenBought: "Token Bought",
+    tokenSold: "Sold",
+    tokenBought: "Bought",
     totalValueUSD: "Total Value (USD)",
     feeInLamports: "Fee (lamport)",
     identity: "Identity",
@@ -1017,6 +1027,33 @@ export const translation = {
     aiAnalysisRetry: "Retry AI analysis",
     aiNoData: "No AI analysis data",
     aiSummary: "Summary",
+    tokenWinRate: {
+      title: "Token Win Rate",
+      win: "profitable token",
+      traded: "traded token",
+      summaryShort: "{{win}} profitable / {{tradedCount}} traded",
+      summaryBreakdown:
+        "{{profit}} profit · {{loss}} loss · {{neutral}} neutral",
+      avgWin: "Avg Win",
+      avgLoss: "Avg Realized Loss",
+      explanationAria: "Token win rate explanation",
+      tooltipWinRateLabel: "Token Win Rate",
+      tooltipWinRateDescription:
+        "is calculated from realized PnL in {{period}}. A token is counted as profitable only when its realized PnL is greater than 0.",
+      tooltipTotalTradedTokens: "Tokens traded in period",
+      tooltipRealizedProfitTokens: "Realized profit tokens",
+      tooltipRealizedLossTokens: "Realized loss tokens",
+      tooltipBreakEvenTokens: "Break-even / no realized PnL",
+      tooltipUnrealizedLossTokens: "Unrealized loss tokens",
+      tooltipTokenValue: "{{value}} token(s)",
+      tooltipClosedAvgLoss: "Avg realized loss",
+      tooltipClassifiedRealizedPnl: "Classified realized PnL",
+      tooltipWalletRealizedPnl: "Wallet realized PnL",
+      tooltipUnclassifiedRealizedPnl: "Unclassified / fees / missing rows",
+      tooltipAverageLabel: "How to read this",
+      tooltipAverageDescription:
+        "Avg Win and Avg Realized Loss use {{closed}} closed-PnL tokens out of {{traded}} traded tokens. Classified token PnL is {{classifiedPnl}}. Wallet realized PnL is {{walletPnl}}. The difference {{difference}} is shown separately so the buckets reconcile with the wallet total.",
+    },
     aiSwapSummary: {
       button: "View swap analysis",
       title: "AI Swap Summary",
@@ -1696,6 +1733,7 @@ export const translation = {
       title: "Balance History",
       totalBalance: "Total Balance",
       change: "Change",
+      change24h: "24h Change",
       date: "Date",
       balance: "Balance",
       selectTokenLabel: "Select token",
@@ -1976,7 +2014,8 @@ export const translation = {
     tableNullValue: "-",
     newChat: "New session",
     signInRequired: "Sign in Required",
-    signInRequiredDesc: "Please sign in to use the AI chat assistant. Your chat history will be saved across sessions.",
+    signInRequiredDesc:
+      "Please sign in to use the AI chat assistant. Your chat history will be saved across sessions.",
     sessions: "Sessions",
     noSessions: "No sessions yet",
     deleteSession: "Delete session",
@@ -2101,6 +2140,8 @@ export const translation = {
       searchX: "Search on X",
       discord: "Join Discord",
       coingecko: "View on CoinGecko",
+      aiWashTradingDetection: "Wash Trading Detection",
+      aiWashTradingDetectionShort: "Wash Trading Detection",
     },
     chart: {
       loadingPool: "Loading chart...",
@@ -2424,6 +2465,182 @@ export const translation = {
     unavailableState: {
       defaultTitle: "Data unavailable",
       defaultDescription: "No profile data is available right now.",
+    },
+  },
+  washTrading: {
+    breadcrumb: {
+      tokens: "Tokens",
+      manualToken: "Manual token",
+      page: "Wash Trading Detection",
+    },
+    title: "AI Wash Trading Detection",
+    subtitle: "GNN-inspired analysis for {{symbol}} · {{mint}}",
+    suspiciousBadge: "{{count}} Suspicious",
+    inputs: {
+      mintPlaceholder: "Token mint address",
+      symbolPlaceholder: "Symbol",
+      last24h: "Last 24h",
+      last7d: "Last 7d",
+      last30d: "Last 30d",
+      openToken: "Open token",
+      runAnalyze: "Run AI Analyze ↗",
+      analyzing: "Analyzing...",
+    },
+    errors: {
+      missingMint:
+        "Missing token mint address. Open this page from Token Detail or enter a mint address to analyze.",
+      manualMissingMint: "Please enter a token mint address.",
+      apiFailed: "Unable to call the AI Wash Trading API.",
+      analysisFailed: "AI analysis failed",
+    },
+    verdict: {
+      toggle: "AI Verdict",
+      hide: "Hide AI Verdict",
+      show: "Show AI Verdict",
+      waiting: "Waiting for analysis",
+      defaultSummary:
+        "Click Run AI Analyze to analyze circular trading, amount similarity, timing regularity, and graph features for this token.",
+      dataSource: "Data source:",
+      highRisk: "HIGH RISK",
+      mediumRisk: "MEDIUM RISK",
+      lowRisk: "LOW RISK",
+      clean: "CLEAN",
+    },
+    metrics: {
+      totalTransactions: "Total Transactions",
+      uniqueWallets: "{{wallets}} unique wallets",
+      washVolumeEstimate: "Wash Volume Estimate",
+      totalVolumePercent: "{{percent}} of {{volume}} total volume",
+      suspiciousWallets: "Suspicious Wallets",
+      circularClusters: "{{count}} circular clusters",
+      gnnConfidence: "GNN Confidence",
+      riskScore: "Risk score: {{score}}/100",
+    },
+    graph: {
+      title: "Transaction Graph — GNN Cluster View",
+      algorithmButtonAria:
+        "Select {{algorithm}} algorithm and view explanation",
+      algorithms: {
+        bestForLabel: "Best for",
+        gcn: {
+          title: "GCN — Graph Convolutional Network",
+          description:
+            "Aggregates signals from neighboring wallets and transfer links to estimate whether a wallet belongs to a suspicious trading cluster.",
+          bestFor: "overall cluster risk and circular-flow neighborhoods",
+        },
+        gat: {
+          title: "GAT — Graph Attention Network",
+          description:
+            "Learns attention weights for each neighboring wallet or transfer, so stronger suspicious links influence the score more than weak links.",
+          bestFor:
+            "dominant suspicious links, hub wallets, and high-impact flows",
+        },
+        graphsage: {
+          title: "GraphSAGE — Sample and Aggregate",
+          description:
+            "Samples nearby wallets and learns reusable wallet embeddings, which keeps analysis scalable when the token graph is large or changes quickly.",
+          bestFor: "large token graphs and fast wallet-risk generalization",
+        },
+      },
+      highRiskWallet: "High risk wallet",
+      bridgeWallet: "Bridge wallet",
+      normalWallet: "Normal wallet",
+      walletGraphName: "Wallet transaction graph",
+      suspiciousFlow: "Suspicious flow",
+      suspiciousTransfer: "Suspicious transfer flow",
+      circularClusterFlow: "Purple glow: circular cluster flow",
+      circularWallet: "Wallet in circular cluster",
+      flowLegendAria: "Transaction flow color legend",
+      yes: "Yes",
+      transferFlow: "Transfer flow",
+      type: "Type",
+      gnnScore: "GNN score",
+      address: "Address",
+      from: "From",
+      to: "To",
+      totalAmount: "Total token amount",
+      groupedTransfers: "Grouped transfers",
+      tokenUnit: "tokens",
+      nodes: "{{count}} nodes",
+      rawEdges: "{{count}} raw edges",
+      visibleFlows: "{{count}} visible flows",
+      suspiciousGroups: "{{count}} suspicious groups",
+      edgesGrouped: "{{count}} edges grouped",
+      hoverEdgeAmount: "Hover edge to view token amount",
+      footerReady:
+        "Live force-directed graph from backend graphData. Drag nodes, zoom, pan, and hover edges/wallets to inspect flow details.",
+      footerWaiting:
+        "Waiting for backend graphData. Click AI Analyze to build the wallet transaction graph.",
+      fullscreen: "Fullscreen",
+      fullscreenTitle: "Open graph in fullscreen",
+      fullscreenWaitingTitle: "Run AI Analyze to generate graph data",
+      modalAria: "Transaction graph fullscreen view",
+      modalSubtitle:
+        "{{symbol}} · {{mint}} · {{nodes}} nodes · {{edges}} edges",
+      close: "Close",
+      guideAria: "Graph fullscreen controls",
+      guideDrag: "🖱 Drag nodes to separate wallet clusters",
+      guideZoom: "🔍 Scroll to zoom",
+      guideClose: "⌨ Esc or Close to exit",
+    },
+    wallets: {
+      title: "Suspicious Wallets",
+      all: "All",
+      highRisk: "High risk",
+      new: "New",
+      graphRank: "Graph rank #{{rank}}",
+      gnn: "GNN: {{score}}",
+      empty: "No suspicious wallets yet. Run AI analysis for this token.",
+      insightTitle: "Wallet Risk Explanation",
+      insightEmpty:
+        "Select a wallet from Suspicious Wallets to view the detailed AI explanation.",
+      selectedWallet: "Selected wallet",
+      explanation:
+        "AI flagged this wallet because of pattern {{pattern}} on token {{symbol}}. Current GNN score is {{score}}/100.",
+      topFeature: "Top feature",
+      featureScore: "Feature score",
+      note: "How to read: high circularPattern usually means the wallet is involved in closed-loop trading; high timeRegularity suggests bot-like timing; high amountSimilarity suggests repeated token amounts; high volumeSignal means the wallet transfers a large share of token amount compared with the largest-volume wallet in this graph.",
+    },
+    patterns: {
+      circularTrade: "Circular Trade",
+      hubWallet: "Hub Wallet",
+      botLikeTiming: "Bot-like Timing",
+      amountMirror: "Amount Mirror",
+      anomalousActivity: "Anomalous Activity",
+    },
+    findings: {
+      title: "AI Detailed Findings",
+    },
+    risk: {
+      title: "Risk Score — {{target}}",
+      walletTitle: "Wallet GNN Score — {{target}}",
+      tokenRiskScore: "Token risk score",
+      scoreOutOf100: "{{score}}/100",
+      walletFeatureTitle: "Selected wallet behavior features",
+      high: "High Risk",
+      medium: "Medium Risk",
+      low: "Low Risk",
+      noSignal: "No Signal",
+      circularPattern: "Circular pattern",
+      timeRegularity: "Time regularity",
+      amountSimilarity: "Amount similarity",
+      selfLoopDegree: "Self-loop degree",
+      hubness: "Hubness",
+      volumeSignal: "Volume signal",
+    },
+    detectionLog: {
+      title: "Detection Log",
+      waiting: "Waiting for AI analysis request...",
+    },
+    context: {
+      title: "Token Context",
+      symbol: "Symbol",
+      mint: "Mint",
+      timeframe: "Timeframe",
+      algorithm: "Algorithm",
+      dataSource: "Data source",
+      sourceReason: "Source reason",
+      analyzedAt: "Analyzed at",
     },
   },
   errorPages: {

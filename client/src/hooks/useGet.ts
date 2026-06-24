@@ -54,7 +54,7 @@ export function useGet<
   ...params: HasRequiredKeys<GetInput<T>> extends true
     ? [args: GetInput<T>, config?: UseGetConfig<Success, Transformed>]
     : [args?: GetInput<T>, config?: UseGetConfig<Success, Transformed>]
-) {
+) : UseGetResp<NoInfer<Transformed>, Error>{
   const [args, config] = params;
   const { options, select, enabled = true } = config ?? {};
 
@@ -81,6 +81,8 @@ export function useGet<
 
 export type UseGetResp<Data, Error = any> = {
   isLoading: boolean;
+  isValidating: boolean;
   data: Data | undefined;
   error: Error | undefined;
+  mutate: () => void;
 };

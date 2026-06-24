@@ -1,62 +1,69 @@
 import {
-  addressSchema,
-  validate,
-  walletTokenTradesSchema,
+    addressSchema,
+    validate,
+    walletTokenTradesSchema,
 } from "@sv/middlewares/validation.js";
 import type {
-  WalletPortfolioItem,
-  WalletSwap,
+    WalletPortfolioItem,
+    WalletSwap,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import {
-  getTokenDetails,
-  getWalletFirstFund,
+    getTokenDetails,
+    getWalletFirstFund,
 } from "@sv/services/wallet/index.js";
 import {
-  getWalletDayActivitySummary,
-  getWalletTxDetail,
-  getWalletTxInstructionDetail,
+    getWalletDayActivitySummary,
+    getWalletTxDetail,
+    getWalletTxInstructionDetail,
 } from "@sv/services/wallet/walletDayActivity.service.js";
 import { getTokenPriceChartForDay } from "@sv/services/tokens/token-chart.js";
 import {
-  // fetchTestTransaction,
-  // getWalletExchangeCounts,
-  getWalletOverview,
+    // fetchTestTransaction,
+    // getWalletExchangeCounts,
+    getWalletOverview,
 } from "@sv/services/wallet/walletOverview.service.js";
 import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
 import {
-  getWalletRecentSwaps,
-  getWalletRecentTransfers,
-  getWalletSwaps,
-  getWalletTransfers,
+    getWalletRecentSwaps,
+    getWalletRecentTransfers,
+    getWalletSwapHistory,
+    getWalletTransferHistory,
+    getWalletSwaps,
+    getWalletTransfers,
+    walletHistoryCursorQuerySchema,
 } from "@sv/services/wallet/walletTransfersSwaps.service.js";
 import {
-  WALLET_IDENTITY_MAX_BATCH_SIZE,
-  WalletIdentityServiceError,
-  getWalletIdentity,
-  getWalletIdentityBatch,
+    WALLET_IDENTITY_MAX_BATCH_SIZE,
+    WalletIdentityServiceError,
+    getWalletIdentity,
+    getWalletIdentityBatch,
 } from "@sv/services/wallet/walletIdentity.service.js";
 import { composeWalletIntelligence } from "@sv/services/wallet/walletIntelligence.service.js";
 import {
-  WalletAnalysisServiceError,
-  getWalletAiAnalysis,
+    WalletAnalysisServiceError,
+    getWalletAiAnalysis,
 } from "@sv/services/wallet/walletAnalysis.service.js";
 import {
-  WalletAuditServiceError,
-  getWalletAudit,
+    WalletAuditServiceError,
+    getWalletAudit,
 } from "@sv/services/wallet/walletAudit.service.js";
 import {
-  WalletAiSwapSummaryServiceError,
-  getWalletAiSwapSummary,
+    WalletAiSwapSummaryServiceError,
+    getWalletAiSwapSummary,
 } from "@sv/services/wallet/walletAiSwapSummary.service.js";
 import {
-  WalletTokenAnalysisServiceError,
-  getTokenDeepAnalysis,
+    WalletTokenAnalysisServiceError,
+    getTokenDeepAnalysis,
 } from "@sv/services/wallet/walletTokenAnalysis.service.js";
 import { statusCode } from "@sv/util/responses.js";
 import { z } from "zod";
 import { Hono } from "hono";
 import { serverErr, setErr } from "@sv/util/errors";
-import { WALLET_RECENT_TRANSACTIONS_MAX_COUNT } from "@sv/config/constants.js";
+import {
+    WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
+    WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
+    WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
+} from "@sv/config/constants.js";
 
 const walletRequestSchema = z.object({
   address: z.string(),
@@ -293,6 +300,47 @@ const app = new Hono()
     },
   )
   .get(
+    "/swaps/history/:address",
+    validate("param", addressSchema),
+    validate(
+      "query",
+      z.object({
+        fromMs: z.coerce.number().int().min(0).optional(),
+        toMs: z.coerce.number().int().min(0).optional(),
+        limit: z.coerce
+          .number()
+          .int()
+          .min(1)
+          .max(WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT)
+          .optional(),
+        cursor: walletHistoryCursorQuerySchema.optional(),
+      }),
+    ),
+    async (c) => {
+      try {
+        const { address } = c.req.valid("param");
+        const { limit, fromMs, toMs, cursor } = c.req.valid("query");
+
+        const txs = await getWalletSwapHistory(
+          address,
+          fromMs,
+          toMs,
+          limit,
+          cursor,
+        );
+        if (!txs) {
+          return c.json(
+            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+            statusCode.BadGateway,
+          );
+        }
+        return c.json(txs);
+      } catch (e) {
+        return serverErr(c, e);
+      }
+    },
+  )
+  .get(
     "/transfers/recent/:address",
     validate("param", addressSchema),
     validate(
@@ -312,6 +360,47 @@ const app = new Hono()
 
       try {
         const txs = await getWalletRecentTransfers(address, limit);
+        if (!txs) {
+          return c.json(
+            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
+            statusCode.BadGateway,
+          );
+        }
+        return c.json(txs);
+      } catch (e) {
+        return serverErr(c, e);
+      }
+    },
+  )
+  .get(
+    "/transfers/history/:address",
+    validate("param", addressSchema),
+    validate(
+      "query",
+      z.object({
+        fromMs: z.coerce.number().int().min(0).optional(),
+        toMs: z.coerce.number().int().min(0).optional(),
+        limit: z.coerce
+          .number()
+          .int()
+          .min(1)
+          .max(WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT)
+          .optional(),
+        cursor: walletHistoryCursorQuerySchema.optional(),
+      }),
+    ),
+    async (c) => {
+      try {
+        const { address } = c.req.valid("param");
+        const { limit, fromMs, toMs, cursor } = c.req.valid("query");
+
+        const txs = await getWalletTransferHistory(
+          address,
+          fromMs,
+          toMs,
+          limit,
+          cursor,
+        );
         if (!txs) {
           return c.json(
             setErr("FAILED_TO_FETCH_REQUESTED_DATA"),

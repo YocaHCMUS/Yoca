@@ -1,5 +1,7 @@
 import { solanaBase58Schema, validate } from "@sv/middlewares/validation";
-import { getWalletBalanceHistory } from "@sv/services/wallet/walletCharts.service";
+import {
+    getWalletBalanceHistory,
+} from "@sv/services/wallet/walletCharts.service";
 import { getWalletTokenBalanceHistory } from "@sv/services/wallet/walletTokenBalance.service";
 import { serverErr, setErr } from "@sv/util/errors";
 import { statusCode } from "@sv/util/responses";

@@ -1,5 +1,163 @@
 import { z } from "zod";
 
+const heliusNumberishSchema = z.union([z.number(), z.string()]);
+
+export const hls_WalletBalancesSchema = z.object({
+  balances: z.array(
+    z.object({
+      mint: z.string().nullish(),
+      symbol: z.string().nullish(),
+      name: z.string().nullish(),
+      balance: heliusNumberishSchema.nullish(),
+      pricePerToken: heliusNumberishSchema.nullish(),
+      usdValue: heliusNumberishSchema.nullish(),
+      logoURI: z.string().nullish(),
+      logoUri: z.string().nullish(),
+      logo_uri: z.string().nullish(),
+      image: z.string().nullish(),
+    }),
+  ),
+  pagination: z
+    .object({
+      page: heliusNumberishSchema.nullish(),
+      hasMore: z.boolean().nullish(),
+    })
+    .nullish(),
+});
+
+export type HLS_WalletBalances = z.infer<typeof hls_WalletBalancesSchema>;
+
+export const mbl_WalletAnalysisSchema = z.object({
+  data: z.object({
+    winRateDistribution: z.object({
+      ">500%": z.number(),
+      "200%-500%": z.number(),
+      "50%-200%": z.number(),
+      "0%-50%": z.number(),
+      "-50%-0%": z.number(),
+      "<-50%": z.number(),
+    }),
+    marketCapDistribution: z.object({
+      ">1000M": z.number(),
+      ">100M": z.number(),
+      "10M-100M": z.number(),
+      "1M-10M": z.number(),
+      "100k-1M": z.number(),
+      "<100k": z.number(),
+    }),
+    periodTimeframes: z.array(
+      z.object({
+        date: z.string(),
+        realized: z.number(),
+      }),
+    ),
+    calendarBreakdown: z
+      .array(
+        z.object({
+          date: z.string(),
+          volumeBuy: z.number(),
+          volumeSell: z.number(),
+          totalVolume: z.number(),
+          buys: z.number(),
+          sells: z.number(),
+          realizedPnlUSD: z.number(),
+        }),
+      )
+      .optional(),
+    stat: z.object({
+      totalValue: z.number(),
+      periodTotalPnlUSD: z.number(),
+      periodRealizedPnlUSD: z.number(),
+      periodRealizedRate: z.number(),
+      periodActiveTokensCount: z.number(),
+      periodWinCount: z.number(),
+      periodVolumeBuy: z.number(),
+      periodVolumeSell: z.number(),
+      periodBuys: z.number(),
+      periodSells: z.number(),
+      periodBuyTokens: z.number(),
+      periodSellTokens: z.number(),
+      periodTradingTokens: z.number(),
+      holdingTokensCount: z.number(),
+      holdingDuration: z.number(),
+      tradingTimeFrames: z.number(),
+      winRealizedPnl: z.number(),
+      winRealizedPnlRate: z.number(),
+      fundingInfo: z
+        .object({
+          from: z.string(),
+          date: z.string(),
+          chainId: z.string(),
+          txHash: z.string(),
+          amount: z.string(),
+          fromWalletLogo: z.string().nullish(),
+          fromWalletTag: z.string().nullish(),
+        })
+        .nullish(),
+      nativeBalance: z
+        .object({
+          rawBalance: z.string(),
+          formattedBalance: z.number(),
+          assetId: z.number().nullable(),
+          chainId: z.string(),
+          address: z.string(),
+          decimals: z.number(),
+          name: z.string(),
+          symbol: z.string(),
+          logo: z.string().nullish(),
+          price: z.number(),
+          balanceUSD: z.number(),
+        })
+        .nullish(),
+      winToken: z
+        .object({
+          address: z.string(),
+          chainId: z.string(),
+          name: z.string(),
+          symbol: z.string(),
+          logo: z.string().nullish(),
+          decimals: z.number(),
+        })
+        .nullish(),
+    }),
+    labels: z.array(z.string()),
+  }),
+});
+
+export type MBL_WalletAnalysis = z.infer<typeof mbl_WalletAnalysisSchema>;
+
+export const mbl_WalletPositionsSchema = z.object({
+  data: z.array(
+    z.object({
+      token: z.object({
+        address: z.string(),
+        symbol: z.string().nullish(),
+      }),
+      balance: z.number(),
+      amountUSD: z.number(),
+      buys: z.number(),
+      sells: z.number(),
+      volumeBuyToken: z.number(),
+      volumeSellToken: z.number(),
+      volumeBuy: z.number(),
+      volumeSell: z.number(),
+      avgBuyPriceUSD: z.number().nullish(),
+      avgSellPriceUSD: z.number().nullish(),
+      realizedPnlUSD: z.number(),
+      unrealizedPnlUSD: z.number(),
+      lastDate: z.string().nullish(),
+    }),
+  ),
+  pagination: z.object({
+    page: z.number(),
+    offset: z.number(),
+    limit: z.number(),
+    pageEntries: z.number(),
+  }),
+});
+
+export type MBL_WalletPositions = z.infer<typeof mbl_WalletPositionsSchema>;
+
 export const bds_WalletFirstFundSchema = z.object({
   success: z.boolean(),
   data: z.record(

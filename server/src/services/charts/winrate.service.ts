@@ -1,16 +1,31 @@
-import { mapWithConcurrency } from "@sv/util/concurrency.js";
-import type { WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import type { BirdeyeTokenPnlDetailsToken } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import { fetchBirdeyeTokenPnLDetails } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
+import {
+    WALLET_WINRATE_24H_TTL_MS,
+    WALLET_WINRATE_30D_TTL_MS,
+    WALLET_WINRATE_7D_TTL_MS,
+    WALLET_WINRATE_90D_TTL_MS,
+} from "@sv/config/constants.js";
+import { db } from "@sv/db/index.js";
+import {
+    walletAnalyses,
+    type WalletAnalysisSelect,
+} from "@sv/db/schema.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { mbl_WalletAnalysisSchema } from "@sv/services/_types/wallet-raw-responses.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
+import * as mobula from "@sv/util/util-mobula.js";
+import dayjs from "dayjs";
+import { and, eq } from "drizzle-orm";
 
-interface WinrateBin {
+export type WinratePeriod = "24H" | "7D" | "30D" | "90D";
+
+export interface WinrateBin {
   range: string;
   count: number;
   min: number;
   max: number;
 }
 
-interface WalletWinrateData {
+export interface WalletWinrateData {
   walletAddress: string;
   walletName?: string;
   winrate: number;
@@ -19,11 +34,11 @@ interface WalletWinrateData {
   losingTrades: number;
   winningDistribution: WinrateBin[];
   losingDistribution: WinrateBin[];
-  avgWinUsd: number; // Thêm trường này
-  avgLossUsd: number; 
+  avgWinUsd: number;
+  avgLossUsd: number;
 }
 
-interface WinrateResponse {
+export interface WinrateResponse {
   wallets: WalletWinrateData[];
   metadata: {
     period: string;
@@ -31,275 +46,233 @@ interface WinrateResponse {
   };
 }
 
-const MAX_WALLET_CHART_CONCURRENCY = 4;
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const WINRATE_TTL_BY_PERIOD: Record<WinratePeriod, number> = {
+  "24H": WALLET_WINRATE_24H_TTL_MS,
+  "7D": WALLET_WINRATE_7D_TTL_MS,
+  "30D": WALLET_WINRATE_30D_TTL_MS,
+  "90D": WALLET_WINRATE_90D_TTL_MS,
+};
 
-type WinrateRange = "24H" | "7D" | "30D" | "All";
+const MOBULA_PERIOD_BY_WINRATE_PERIOD: Record<WinratePeriod, string> = {
+  "24H": "1d",
+  "7D": "7d",
+  "30D": "30d",
+  "90D": "90d",
+};
 
-const DISTRIBUTION_BINS = [
-  { range: "0-5%", min: 0, max: 5 },
-  { range: "5-10%", min: 5, max: 10 },
-  { range: "10-20%", min: 10, max: 20 },
-  { range: "20-50%", min: 20, max: 50 },
-  { range: "50-100%", min: 50, max: 100 },
-  { range: ">100%", min: 100, max: Infinity },
-];
-
-function generateDistributionBins(pnlValues: number[]): WinrateBin[] {
-  const bins = DISTRIBUTION_BINS.map(b => ({ ...b, count: 0 }));
-
-  for (const pnl of pnlValues) {
-    const absPnl = Math.abs(pnl);
-    for (const bin of bins) {
-      if (absPnl >= bin.min && (absPnl < bin.max || bin.max === Infinity)) {
-        bin.count++;
-        break;
-      }
-    }
-  }
-
-  return bins.filter(b => b.count > 0);
+function mapStoredWinrateToResponse(
+  row: WalletAnalysisSelect,
+): WalletWinrateData {
+  return {
+    walletAddress: row.walletAddress,
+    walletName: row.walletAddress,
+    winrate: row.winrate,
+    totalTrades: row.totalTrades,
+    winningTrades: row.winningTrades,
+    losingTrades: row.losingTrades,
+    winningDistribution: [
+      { range: "0%-50%", count: row.win0To50Count, min: 0, max: 50 },
+      { range: "50%-200%", count: row.win50To200Count, min: 50, max: 200 },
+      { range: "200%-500%", count: row.win200To500Count, min: 200, max: 500 },
+      { range: ">500%", count: row.winOver500Count, min: 500, max: Infinity },
+    ],
+    losingDistribution: [
+      { range: "-50%-0%", count: row.loss0To50Count, min: 0, max: 50 },
+      { range: "<-50%", count: row.lossOver50Count, min: 50, max: Infinity },
+    ],
+    avgWinUsd: row.avgWinUsd,
+    avgLossUsd: row.avgLossUsd,
+  };
 }
 
-function resolveWinrateRange(period: WalletTimePeriod): WinrateRange {
-  if (period === "24H" || period === "7D" || period === "30D") {
-    return period;
+export async function fetchWalletAnalysis(
+  walletAddress: string,
+  period: WinratePeriod,
+): Promise<WalletAnalysisSelect> {
+  const endpoint = mobula.getEndpoint("/2/wallet/analysis");
+  endpoint.search = new URLSearchParams({
+    wallet: walletAddress,
+    blockchain: "solana:solana",
+    period: MOBULA_PERIOD_BY_WINRATE_PERIOD[period],
+  }).toString();
+
+  const response = await rlFetch(endpoint, {
+    method: "GET",
+    headers: mobula.getRequiredHeaders(),
+    rlLimiter: mobula.limiter,
+  });
+  const result = await getTrackedApiResult(mbl_WalletAnalysisSchema, response);
+  if (!result) {
+    throw new Error(`Mobula wallet analysis returned invalid data (${response.status})`);
   }
 
-  return "All";
+  const distribution = result.data.winRateDistribution;
+  const win0To50Count = distribution["0%-50%"];
+  const win50To200Count = distribution["50%-200%"];
+  const win200To500Count = distribution["200%-500%"];
+  const winOver500Count = distribution[">500%"];
+  const loss0To50Count = distribution["-50%-0%"];
+  const lossOver50Count = distribution["<-50%"];
+  const winningTrades =
+    win0To50Count + win50To200Count + win200To500Count + winOver500Count;
+  const losingTrades = loss0To50Count + lossOver50Count;
+  const totalTrades = winningTrades + losingTrades;
+  const totalWinUsd = result.data.stat.winRealizedPnl;
+  const totalLossUsd = Math.max(
+    0,
+    totalWinUsd - result.data.stat.periodRealizedPnlUSD,
+  );
+  const fetchedAtMs = dayjs.utc().valueOf();
+
+  const winrate = totalTrades > 0 ? winningTrades / totalTrades * 100 : 0;
+
+  const rows = await db
+    .insert(walletAnalyses)
+    .values({
+      walletAddress,
+      period,
+      winrate,
+      totalTrades,
+      winningTrades,
+      losingTrades,
+      avgWinUsd: winningTrades > 0 ? totalWinUsd / winningTrades : 0,
+      avgLossUsd: losingTrades > 0 ? totalLossUsd / losingTrades : 0,
+      win0To50Count,
+      win50To200Count,
+      win200To500Count,
+      winOver500Count,
+      loss0To50Count,
+      lossOver50Count,
+      buyVolumeUsd: result.data.stat.periodVolumeBuy,
+      sellVolumeUsd: result.data.stat.periodVolumeSell,
+      buyTransactionCount: result.data.stat.periodBuys,
+      sellTransactionCount: result.data.stat.periodSells,
+      transactionCount:
+        result.data.stat.periodBuys + result.data.stat.periodSells,
+      tokensTradedCount: result.data.stat.periodTradingTokens,
+      pnlTotalUsd: result.data.stat.periodTotalPnlUSD,
+      pnlRealizedUsd: result.data.stat.periodRealizedPnlUSD,
+      pnlUnrealizedUsd:
+        result.data.stat.periodTotalPnlUSD -
+        result.data.stat.periodRealizedPnlUSD,
+      fetchedAtMs,
+    })
+    .onConflictDoUpdate({
+      target: [walletAnalyses.walletAddress, walletAnalyses.period],
+      set: {
+        winrate,
+        totalTrades,
+        winningTrades,
+        losingTrades,
+        avgWinUsd: winningTrades > 0 ? totalWinUsd / winningTrades : 0,
+        avgLossUsd: losingTrades > 0 ? totalLossUsd / losingTrades : 0,
+        win0To50Count,
+        win50To200Count,
+        win200To500Count,
+        winOver500Count,
+        loss0To50Count,
+        lossOver50Count,
+        buyVolumeUsd: result.data.stat.periodVolumeBuy,
+        sellVolumeUsd: result.data.stat.periodVolumeSell,
+        buyTransactionCount: result.data.stat.periodBuys,
+        sellTransactionCount: result.data.stat.periodSells,
+        transactionCount:
+          result.data.stat.periodBuys + result.data.stat.periodSells,
+        tokensTradedCount: result.data.stat.periodTradingTokens,
+        pnlTotalUsd: result.data.stat.periodTotalPnlUSD,
+        pnlRealizedUsd: result.data.stat.periodRealizedPnlUSD,
+        pnlUnrealizedUsd:
+          result.data.stat.periodTotalPnlUSD -
+          result.data.stat.periodRealizedPnlUSD,
+        fetchedAtMs,
+      },
+    })
+    .returning();
+
+  const saved = rows[0];
+  if (!saved) {
+    throw new Error("Failed to persist Mobula wallet analysis");
+  }
+
+  return saved;
 }
 
-function resolveRangeStartMs(range: WinrateRange, nowMs: number): number | null {
-  if (range === "All") {
-    return null;
-  }
-
-  if (range === "24H") {
-    return nowMs - ONE_DAY_MS;
-  }
-
-  if (range === "7D") {
-    return nowMs - 7 * ONE_DAY_MS;
-  }
-
-  return nowMs - 30 * ONE_DAY_MS;
-}
-
-function toTimestampMs(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value > 1e12 ? value : value * 1000;
-  }
-
-  if (typeof value === "string") {
-    const parsedAsNumber = Number(value);
-    if (Number.isFinite(parsedAsNumber)) {
-      return parsedAsNumber > 1e12 ? parsedAsNumber : parsedAsNumber * 1000;
-    }
-
-    const parsedAsDate = Date.parse(value);
-    if (Number.isFinite(parsedAsDate)) {
-      return parsedAsDate;
-    }
-  }
-
-  return null;
-}
-
-function extractTokenTimestampMs(token: BirdeyeTokenPnlDetailsToken): number | null {
-  const rawToken = token as Record<string, unknown>;
-
-  return (
-    toTimestampMs(rawToken.last_trade_unix_time) ??
-    toTimestampMs(rawToken.lastTradeUnixTime) ??
-    toTimestampMs(rawToken.blockTime) ??
-    toTimestampMs(rawToken.block_time) ??
-    toTimestampMs(rawToken.blockTimestamp) ??
-    toTimestampMs(rawToken.timestamp)
+export async function fetchWalletWinrateData(
+  walletAddress: string,
+  period: WinratePeriod,
+): Promise<WalletWinrateData> {
+  return mapStoredWinrateToResponse(
+    await fetchWalletAnalysis(walletAddress, period),
   );
 }
 
-function filterTokensByRange(
-  tokens: BirdeyeTokenPnlDetailsToken[],
-  period: WalletTimePeriod,
-  nowMs: number = Date.now(),
-): BirdeyeTokenPnlDetailsToken[] {
-  const range = resolveWinrateRange(period);
-  const rangeStartMs = resolveRangeStartMs(range, nowMs);
-
-  if (rangeStartMs == null) {
-    return tokens;
-  }
-
-  return tokens.filter((token) => {
-    const timestampMs = extractTokenTimestampMs(token);
-    return timestampMs != null && timestampMs >= rangeStartMs && timestampMs <= nowMs;
-  });
-}
-
-function calculateWinrate(tokens: BirdeyeTokenPnlDetailsToken[]) {
-  let winningPnLs: number[] = [];
-  let losingPnLs: number[] = [];
-  let totalTrades = 0;
-  let winningTrades = 0;
-  let losingTrades = 0;
-  let totalWinUsd = 0;
-  let totalLossUsd = 0;
-
-  for (const token of tokens) {
-    const pnlPercent = token.pnl?.total_percent;
-    const pnlUsd = token.pnl?.realized_profit_usd ?? 0; 
-    
-    // Tuỳ chọn: Lấy thêm volume để lọc các lệnh rác (ví dụ giao dịch < $1)
-    // const volumeUsd = token.pnl?.total_volume_usd ?? 0;
-
-    // Bỏ qua nếu data lỗi
-    if (pnlPercent === null || pnlPercent === undefined || !isFinite(pnlPercent)) continue;
-    
-    // [BỘ LỌC SPAM] - Mở comment dòng dưới nếu muốn bỏ qua các token có khối lượng < 1 USD
-    // if (volumeUsd < 1) continue;
-
-    // Không tính các lệnh hoà vốn (0%) vào Win/Loss
-    if (pnlPercent === 0 && pnlUsd === 0) continue;
-
-    totalTrades++;
-
-    if (pnlPercent > 0) {
-      winningTrades++;
-      winningPnLs.push(pnlPercent);
-      totalWinUsd += pnlUsd;
-    } else if (pnlPercent < 0) {
-      losingTrades++;
-      losingPnLs.push(pnlPercent);
-      totalLossUsd += Math.abs(pnlUsd); 
-    }
-  }
-
-  return {
-    winningPnLs,
-    losingPnLs,
-    totalTrades,
-    winningTrades,
-    losingTrades,
-    avgWinUsd: winningTrades > 0 ? totalWinUsd / winningTrades : 0,
-    avgLossUsd: losingTrades > 0 ? totalLossUsd / losingTrades : 0
-  };
-}
-
-async function calculateWalletWinrate(
+export async function getWalletAnalysis(
   walletAddress: string,
-  walletName: string,
-  timePeriod: WalletTimePeriod
-): Promise<WalletWinrateData> {
-  let allTokens: BirdeyeTokenPnlDetailsToken[] = [];
-  let offset = 0;
-  const limit = 100;
-  let hasMore = true;
+  period: WinratePeriod,
+): Promise<WalletAnalysisSelect> {
+  const storedRows = await db
+    .select()
+    .from(walletAnalyses)
+    .where(
+      and(
+        eq(walletAnalyses.walletAddress, walletAddress),
+        eq(walletAnalyses.period, period),
+      ),
+    )
+    .limit(1);
+  const stored = storedRows[0];
+
+  if (
+    stored &&
+    stored.fetchedAtMs >=
+      dayjs.utc().valueOf() - WINRATE_TTL_BY_PERIOD[period]
+  ) {
+    return stored;
+  }
 
   try {
-    // 1. Fetch toàn bộ token bằng vòng lặp Pagination
-    while (hasMore) {
-      const pnlDetails = await fetchBirdeyeTokenPnLDetails(walletAddress, {
-        limit,
-        offset,
-        duration: "all",
+    return await fetchWalletAnalysis(walletAddress, period);
+  } catch (error) {
+    if (stored) {
+      console.warn("Mobula win-rate refresh failed; returning stored data", {
+        walletAddress,
+        period,
+        error,
       });
-
-      if (pnlDetails.tokens && Array.isArray(pnlDetails.tokens) && pnlDetails.tokens.length > 0) {
-        allTokens = allTokens.concat(pnlDetails.tokens);
-        offset += limit;
-        
-        // Nếu số token trả về ít hơn limit, nghĩa là đã đến trang cuối
-        if (pnlDetails.tokens.length < limit) {
-          hasMore = false;
-        }
-      } else {
-        hasMore = false;
-      }
+      return stored;
     }
 
-    console.log(`[WalletWinrate] Fetched Total ${allTokens.length} tokens for ${walletAddress}`);
-
-  } catch (error) {
-    console.error(`[WalletWinrate] Failed to fetch PnL details for ${walletAddress}:`, error);
+    throw error;
   }
+}
 
-  // Nếu không có token nào
-  if (allTokens.length === 0) {
-    return {
-      walletAddress, walletName, winrate: 0, totalTrades: 0, winningTrades: 0, losingTrades: 0,
-      winningDistribution: [], losingDistribution: [], avgWinUsd: 0, avgLossUsd: 0,
-    };
-  }
-
-  // 2. Lọc theo thời gian và tính toán
-  const filteredTokens = filterTokensByRange(allTokens, timePeriod);
-  const winrateStats = calculateWinrate(filteredTokens);
-
-  if (winrateStats.totalTrades === 0) {
-    return {
-      walletAddress, walletName, winrate: 0, totalTrades: 0, winningTrades: 0, losingTrades: 0,
-      winningDistribution: [], losingDistribution: [], avgWinUsd: 0, avgLossUsd: 0,
-    };
-  }
-
-  const winrate = (winrateStats.winningTrades / winrateStats.totalTrades) * 100;
-  
-  // 3. FIX LỖI LOGIC: Truyền đúng giá trị USD đã tính từ winrateStats
-  const chartData = {
-    walletAddress,
-    walletName,
-    winrate: Math.round(winrate * 100) / 100,
-    totalTrades: winrateStats.totalTrades,
-    winningTrades: winrateStats.winningTrades,
-    losingTrades: winrateStats.losingTrades,
-    winningDistribution: generateDistributionBins(winrateStats.winningPnLs),
-    losingDistribution: generateDistributionBins(winrateStats.losingPnLs),
-    avgWinUsd: winrateStats.avgWinUsd,   // <-- Đã sửa: Không dùng mảng phần trăm nữa
-    avgLossUsd: winrateStats.avgLossUsd, // <-- Đã sửa: Không dùng mảng phần trăm nữa
-  };
-
-  return chartData;
+export async function getWalletWinrateData(
+  walletAddress: string,
+  period: WinratePeriod,
+): Promise<WalletWinrateData> {
+  return mapStoredWinrateToResponse(
+    await getWalletAnalysis(walletAddress, period),
+  );
 }
 
 export async function getWinrateData(
   wallets: string[] = [],
-  period: WalletTimePeriod = "30D"
+  period: WinratePeriod = "30D",
 ): Promise<WinrateResponse> {
-  console.log(`[getWinrateData] Starting winrate calculation for period: ${period}, wallets: ${wallets.join(', ')}`);
-  
-  const normalizedWallets = wallets.map((w) => w.trim()).filter(Boolean);
-
-  if (normalizedWallets.length === 0) {
-    console.log("[getWinrateData] No wallets provided, returning empty response");
-    return {
-      wallets: [],
-      metadata: {
-        period,
-        timestamp: Date.now(),
-      },
-    };
-  }
-
-  const winrateItems = await mapWithConcurrency(
-    normalizedWallets,
-    MAX_WALLET_CHART_CONCURRENCY,
-    async (walletAddress) =>
-      calculateWalletWinrate(
-        walletAddress,
-        walletAddress,
-        period
-      )
+  const normalizedWallets = Array.from(
+    new Set(wallets.map((wallet) => wallet.trim()).filter(Boolean)),
+  );
+  const winrateItems = await Promise.all(
+    normalizedWallets.map((walletAddress) =>
+      getWalletWinrateData(walletAddress, period),
+    ),
   );
 
-  const response: WinrateResponse = {
+  return {
     wallets: winrateItems,
     metadata: {
       period,
-      timestamp: Date.now(),
+      timestamp: dayjs.utc().valueOf(),
     },
   };
-
-  console.log("[getWinrateData] Final winrate response:", JSON.stringify(response, null, 2));
-  
-  return response;
 }

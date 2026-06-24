@@ -176,7 +176,7 @@ const app = new Hono()
             const invoice = await stripeClient.invoices.retrieve(
               invoices.data[0].id,
               {
-                expand: ["payment_intent"],
+                expand: ["payments.data.payment.payment_intent"],
               },
             );
             await recordInvoicePayment(invoice);
@@ -246,15 +246,18 @@ const app = new Hono()
                 ? intentAny.invoice
                 : intentAny.invoice.id;
             const invoice = await stripeClient.invoices.retrieve(invoiceId, {
-              expand: ["payment_intent"],
+              expand: ["payments.data.payment.payment_intent"],
             });
 
             const invoiceAny = invoice as any;
-            if (invoiceAny.subscription) {
+            const invoiceSubscription =
+              invoiceAny.subscription ??
+              invoiceAny.parent?.subscription_details?.subscription;
+            if (invoiceSubscription) {
               const subId =
-                typeof invoiceAny.subscription === "string"
-                  ? invoiceAny.subscription
-                  : invoiceAny.subscription.id;
+                typeof invoiceSubscription === "string"
+                  ? invoiceSubscription
+                  : invoiceSubscription.id;
               const subscription =
                 await stripeClient.subscriptions.retrieve(subId);
 
@@ -348,10 +351,10 @@ const app = new Hono()
   )
 
   /**
-   * POST /api/payment/upgrade
+   * POST /api/payment/upgrade-preview
    */
   .post(
-    "/upgrade",
+    "/upgrade-preview",
     honoJwt,
     userExtract,
     validate(
@@ -364,8 +367,71 @@ const app = new Hono()
     async (c) => {
       try {
         const { id: userId } = c.get("userPayload");
-
         const { subscriptionId, newTier } = c.req.valid("json");
+        const [sub] = await db
+          .select()
+          .from(subscriptions)
+          .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
+
+        if (!sub || sub.userId !== userId) {
+          return c.json(
+            { errorCode: "NOT_FOUND", message: "Subscription not found" },
+            statusCode.NotFound,
+          );
+        }
+        if (!isStripeManagedSubscription(subscriptionId)) {
+          return c.json(
+            {
+              errorCode: "UNSUPPORTED_SUBSCRIPTION_PROVIDER",
+              message: "This subscription is not managed by Stripe.",
+            },
+            statusCode.BadRequest,
+          );
+        }
+
+        const { previewSubscriptionUpgrade } = await import(
+          "@sv/services/stripe.service.js"
+        );
+        return c.json(
+          await previewSubscriptionUpgrade(subscriptionId, newTier),
+          statusCode.Ok,
+        );
+      } catch (err: any) {
+        console.error("[payment/upgrade-preview]", err);
+        return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
+      }
+    },
+  )
+
+  /**
+   * POST /api/payment/upgrade
+   */
+  .post(
+    "/upgrade",
+    honoJwt,
+    userExtract,
+    validate(
+      "json",
+      z.object({
+        subscriptionId: z.string(),
+        newTier: z.enum(["Lite", "Plus", "Pro"]),
+        prorationDate: z.number().int().positive().optional(),
+      }),
+    ),
+    async (c) => {
+      try {
+        const { id: userId } = c.get("userPayload");
+
+        const { subscriptionId, newTier, prorationDate } = c.req.valid("json");
+        if (
+          prorationDate &&
+          Math.abs(Math.floor(Date.now() / 1000) - prorationDate) > 600
+        ) {
+          return c.json(
+            { errorCode: "STALE_UPGRADE_PREVIEW", message: "Upgrade preview has expired." },
+            statusCode.BadRequest,
+          );
+        }
 
         const [sub] = await db
           .select()
@@ -391,21 +457,22 @@ const app = new Hono()
         const { upgradeSubscription } = await import(
           "@sv/services/stripe.service.js"
         );
-        const { subscription, clientSecret } = await upgradeSubscription(
+        const { subscription, invoice, clientSecret, applied, processing } = await upgradeSubscription(
           subscriptionId,
           newTier,
+          prorationDate,
         );
 
-        if (!clientSecret) {
-          await db
-            .update(subscriptions)
-            .set({ planTier: newTier as any, updatedAt: new Date() })
-            .where(eq(subscriptions.stripeSubscriptionId, subscriptionId));
+        if (applied) {
+          await upsertSubscription(subscription);
+          if (invoice) await recordInvoicePayment(invoice);
         }
 
         return c.json(
           {
-            success: true,
+            success: applied,
+            applied,
+            processing,
             subscriptionId: subscription.id,
             clientSecret,
             status: subscription.status,
