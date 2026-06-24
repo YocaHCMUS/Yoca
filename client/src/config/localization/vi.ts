@@ -2471,7 +2471,7 @@ export const translation = defineTranslation({
     },
     title: "AI phát hiện giao dịch ảo",
     subtitle: "Phân tích theo mô hình GNN cho {{symbol}} · {{mint}}",
-    suspiciousBadge: "{{count}} đáng ngờ",
+    suspiciousBadge: "{{count}} ví đáng ngờ",
     inputs: {
       mintPlaceholder: "Địa chỉ token mint",
       symbolPlaceholder: "Ký hiệu",
@@ -2542,6 +2542,11 @@ export const translation = defineTranslation({
       normalWallet: "Ví bình thường",
       walletGraphName: "Graph giao dịch ví",
       suspiciousFlow: "Luồng đáng ngờ",
+      suspiciousTransfer: "Luồng đáng ngờ",
+      circularClusterFlow: "Tím phát sáng: luồng thuộc cụm vòng lặp",
+      circularWallet: "Ví thuộc cụm vòng lặp",
+      flowLegendAria: "Chú thích màu luồng giao dịch",
+      yes: "Có",
       transferFlow: "Luồng chuyển token",
       type: "Loại",
       gnnScore: "Điểm GNN",
@@ -2580,7 +2585,7 @@ export const translation = defineTranslation({
       graphRank: "Hạng graph #{{rank}}",
       gnn: "GNN: {{score}}",
       empty: "Chưa có ví đáng ngờ. Hãy chạy phân tích AI cho token này.",
-      insightTitle: "Giải thích AI cho ví",
+      insightTitle: "Giải thích về rủi ro ví",
       insightEmpty:
         "Chọn một ví trong danh sách Ví đáng ngờ để xem giải thích AI chi tiết.",
       selectedWallet: "Ví đã chọn",
@@ -2593,7 +2598,7 @@ export const translation = defineTranslation({
     patterns: {
       circularTrade: "Giao dịch vòng lặp",
       hubWallet: "Ví trung tâm",
-      botLikeTiming: "Nhịp giống bot",
+      botLikeTiming: "Tấn suất giao dịch giống bot",
       amountMirror: "Amount lặp lại",
       anomalousActivity: "Hoạt động bất thường",
     },
