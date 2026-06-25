@@ -42,7 +42,6 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 import { SignInModal } from "../auth/SignInModal";
 import MarketTicker from "../MarketTicker";
-import { Divider } from "../partials/Divider/Divider";
 import { SearchBar } from "../search/SearchBar";
 import styles from "./PageWrapper.module.scss";
 import { useLocation, useNavigate } from "react-router";
@@ -180,6 +179,11 @@ export function PageWrapper({
       extraHeaderPanel?.onClose();
     }
     setOpenPanel((prev) => (prev == panel ? null : panel));
+  };
+
+  const handleLanguageSelect = (nextLang: "en" | "vi") => {
+    setLang(nextLang);
+    setOpenPanel(null);
   };
 
   function NavHeaderItems() {
@@ -321,46 +325,68 @@ export function PageWrapper({
         <HeaderPanel
           className={styles.headerPanel}
           expanded={openPanel == "lang"}
+          addFocusListeners={false}
           onHeaderPanelFocus={() => setOpenPanel(null)}
         >
-          <Switcher
-            aria-label="Language Switcher"
-            expanded={openPanel == "lang"}
+          <section
+            className={styles.languagePanelContent}
+            aria-label={tr("nav.language")}
           >
-            <SwitcherItem
-              aria-labelledby="lang-vi"
-              onClick={() => {
-                setLang("vi");
-                setOpenPanel(null);
-              }}
+            <div className={styles.languagePanelHeader}>
+              <strong>{tr("nav.language")}</strong>
+              <span>{lang === "en" ? "English" : "Tiếng Việt"}</span>
+            </div>
+
+            <div
+              className={styles.languageOptions}
+              role="radiogroup"
+              aria-label={tr("nav.language")}
             >
-              <Stack
-                orientation="horizontal"
-                gap={4}
-                style={{ alignItems: "center" }}
+              <button
+                type="button"
+                role="radio"
+                aria-checked={lang == "en"}
+                className={`${styles.languageOption} ${
+                  lang == "en" ? styles.languageOptionActive : ""
+                }`}
+                onClick={() => handleLanguageSelect("en")}
               >
-                <p>{tr("lang.vi")}</p>
-                {lang == "vi" && <Checkmark size={16} />}
-              </Stack>
-            </SwitcherItem>
-            <Divider />
-            <SwitcherItem
-              aria-labelledby="lang-en"
-              onClick={() => {
-                setLang("en");
-                setOpenPanel(null);
-              }}
-            >
-              <Stack
-                orientation="horizontal"
-                gap={4}
-                style={{ alignItems: "center" }}
+                <span className={styles.languageOptionLabel}>English</span>
+                <span className={styles.languageOptionMeta}>
+                  {lang == "en" ? (
+                    <>
+                      <Checkmark size={16} />
+                      <span>Current</span>
+                    </>
+                  ) : (
+                    <span>Switch</span>
+                  )}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                role="radio"
+                aria-checked={lang == "vi"}
+                className={`${styles.languageOption} ${
+                  lang == "vi" ? styles.languageOptionActive : ""
+                }`}
+                onClick={() => handleLanguageSelect("vi")}
               >
-                <p>{tr("lang.en")}</p>
-                {lang == "en" && <Checkmark size={16} />}
-              </Stack>
-            </SwitcherItem>
-          </Switcher>
+                <span className={styles.languageOptionLabel}>Tiếng Việt</span>
+                <span className={styles.languageOptionMeta}>
+                  {lang == "vi" ? (
+                    <>
+                      <Checkmark size={16} />
+                      <span>Current</span>
+                    </>
+                  ) : (
+                    <span>Switch</span>
+                  )}
+                </span>
+              </button>
+            </div>
+          </section>
         </HeaderPanel>
 
         <HeaderPanel
