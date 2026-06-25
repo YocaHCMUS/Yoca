@@ -986,6 +986,17 @@ export default function WalletPage() {
     >
       <div className={styles.pageLayout}>
         <div className={styles.shell}>
+          <section className={styles.pageIntro}>
+            <div className={styles.pageEyebrow}>Wallet Intelligence</div>
+            <div className={styles.pageIntroBody}>
+              <h1 className={styles.pageTitle}>Wallet Detail</h1>
+              <p className={styles.pageSubtitle}>
+                Track holdings, capital flow, trading performance, and recent
+                on-chain activity for this address.
+              </p>
+            </div>
+          </section>
+
           <WalletTopbar
             address={walletAddress}
             onAiAnalysisOpen={() => setAiAnalysisOpen(true)}
