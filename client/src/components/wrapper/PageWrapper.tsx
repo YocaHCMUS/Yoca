@@ -47,12 +47,13 @@ import { SearchBar } from "../search/SearchBar";
 import styles from "./PageWrapper.module.scss";
 import { useLocation } from "react-router";
 
-function ThemeToggleGlobalAction() {
+function ThemeToggleGlobalAction({ className }: { className?: string }) {
   const { theme, toggleTheme } = useUserTheme();
   const { tr } = useLocalization();
 
   return (
     <HeaderGlobalAction
+      className={className}
       aria-label={
         theme == "dark"
           ? tr("nav.switchToDarkTheme")
@@ -183,8 +184,24 @@ export function PageWrapper({
   function NavHeaderItems() {
     return (
       <>
-        <HeaderMenuItem href="/market">{tr("nav.market")}</HeaderMenuItem>
-        <HeaderMenuItem href="/alerts">{tr("nav.alerts")}</HeaderMenuItem>
+        <HeaderMenuItem
+          className={
+            location.pathname == "/market" ? styles.headerNavItemActive : undefined
+          }
+          aria-current={location.pathname == "/market" ? "page" : undefined}
+          href="/market"
+        >
+          {tr("nav.market")}
+        </HeaderMenuItem>
+        <HeaderMenuItem
+          className={
+            location.pathname == "/alerts" ? styles.headerNavItemActive : undefined
+          }
+          aria-current={location.pathname == "/alerts" ? "page" : undefined}
+          href="/alerts"
+        >
+          {tr("nav.alerts")}
+        </HeaderMenuItem>
       </>
     );
   }
@@ -218,16 +235,23 @@ export function PageWrapper({
 
   return (
     <>
-      <Header>
+      <Header className={styles.appHeader}>
         <HeaderMenuButton
+          className={styles.headerMenuButton}
           aria-label={isSideNavExpanded ? "Close menu" : "Open menu"}
           isActive={isSideNavExpanded}
           aria-expanded={isSideNavExpanded}
           onClick={toggleSideNav}
         />
 
-        <HeaderName href="/market" prefix="" style={{ textDecoration: "none" }}>
+        <HeaderName
+          className={styles.headerName}
+          href="/market"
+          prefix=""
+          style={{ textDecoration: "none" }}
+        >
           <Stack
+            className={styles.headerBrand}
             gap={3}
             orientation="horizontal"
             style={{ alignItems: "center", fontWeight: "bold" }}
@@ -237,12 +261,13 @@ export function PageWrapper({
           </Stack>
         </HeaderName>
 
-        <HeaderNavigation>
+        <HeaderNavigation className={styles.headerNavigation}>
           <NavHeaderItems />
         </HeaderNavigation>
 
-        <HeaderGlobalBar>
+        <HeaderGlobalBar className={styles.headerGlobalBar}>
           <HeaderGlobalAction
+            className={styles.headerGlobalAction}
             aria-label={tr("nav.search")}
             onClick={() => setIsSearchOpen(true)}
           >
@@ -250,6 +275,7 @@ export function PageWrapper({
           </HeaderGlobalAction>
 
           <HeaderGlobalAction
+            className={styles.headerGlobalAction}
             aria-label={tr("nav.language")}
             isActive={openPanel == "lang"}
             onClick={() => togglePanel("lang")}
@@ -258,6 +284,7 @@ export function PageWrapper({
           </HeaderGlobalAction>
 
           <HeaderGlobalAction
+            className={styles.headerGlobalAction}
             aria-label={tr("nav.notification")}
             isActive={isHeaderNotificationPanelOpen}
             onClick={() => togglePanel("notifications")}
@@ -266,6 +293,7 @@ export function PageWrapper({
           </HeaderGlobalAction>
 
           <HeaderGlobalAction
+            className={styles.headerGlobalAction}
             aria-label={tr("nav.account")}
             isActive={openPanel == "account"}
             onClick={() => {
@@ -284,7 +312,7 @@ export function PageWrapper({
             )}
           </HeaderGlobalAction>
 
-          <ThemeToggleGlobalAction />
+          <ThemeToggleGlobalAction className={styles.headerGlobalAction} />
         </HeaderGlobalBar>
 
         <HeaderPanel
@@ -417,6 +445,7 @@ export function PageWrapper({
         )}
 
         <SideNav
+          className={styles.appSideNav}
           aria-label="Side navigation"
           expanded={isSideNavExpanded}
           isPersistent={false}
@@ -445,11 +474,11 @@ export function PageWrapper({
         id="main-content"
         className={
           isAnyExtraPanelOpen
-            ? styles.contentDimmed
+            ? `${styles.appContent} ${styles.contentDimmed}`
             : wideContent
-              ? styles.wideContent
-              : ""
-        }
+              ? `${styles.appContent} ${styles.wideContent}`
+              : styles.appContent
+          }
         style={
           {
             "--page-content-top-offset": noMarketTickers ? "0rem" : "3.5rem",

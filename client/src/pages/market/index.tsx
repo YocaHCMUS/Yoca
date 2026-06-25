@@ -281,16 +281,22 @@ export default function MarketPage() {
 
   return (
     <PageWrapper>
-      <Section>
+      <Section className={styles.marketPage}>
         <Grid className={overwriteStyles.wdGrd}>
           <Column sm={2} md={8} lg={16}>
-            <Stack gap={4}>
-              <Stack gap={1}>
-                <Txt bold size="lg">
+            <Stack className={styles.marketStack} gap={4}>
+              <header className={styles.marketHero}>
+                <div className={styles.radarEyebrow}>
+                  <span className={styles.radarPulse} aria-hidden="true" />
+                  Market Radar
+                </div>
+                <Txt block bold className={styles.marketTitle} size="lg">
                   {headings.title}
                 </Txt>
-                <Txt secondary>{headings.subtitle}</Txt>
-              </Stack>
+                <Txt block className={styles.marketSubtitle}>
+                  {headings.subtitle}
+                </Txt>
+              </header>
 
               <div className={styles.dexBar}>
                 {MAIN_TABS.map((tab) => {

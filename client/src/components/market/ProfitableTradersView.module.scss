@@ -1,7 +1,7 @@
 /* ── Split layout ───────────────────────────────────────────────── */
 .splitLayout {
   display: flex;
-  gap: 16px;
+  gap: 1rem;
   width: 100%;
   margin-top: 0;
   min-width: 0;
@@ -12,22 +12,26 @@
 }
 
 .panel {
+  min-width: 0;
   flex: 1;
-  min-width: 0; /* prevent flex children from overflowing */
 }
 
 /* ── Section heading (Top Gainers / Top Losers) ─────────────────── */
 .panelLabel {
-  font-weight: 700;
-  font-size: 0.9375rem;
-  padding-bottom: 16px;
-  padding-top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.625rem 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 
   &[data-type="gainers"] {
-    color: var(--cds-support-success, #24a148);
+    color: var(--yoca-success);
   }
 
   &[data-type="losers"] {
-    color: var(--cds-support-error, #da1e28);
+    color: var(--yoca-danger);
   }
 }

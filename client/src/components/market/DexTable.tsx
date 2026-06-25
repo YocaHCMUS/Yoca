@@ -197,7 +197,7 @@ export function DexTable({
       val > 0 ? styles.positive : val < 0 ? styles.negative : styles.neutral;
     const sign = val > 0 ? "+" : val < 0 ? "-" : "";
     return (
-      <span className={clz}>
+      <span className={classNames(styles.trendValue, clz)}>
         {sign}
         {formatCompactPercentText(val)}
       </span>
@@ -206,15 +206,8 @@ export function DexTable({
 
   if (loading) {
     return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "calc(100vh - 250px)",
-        }}
-      >
-        <div style={{ width: "fit-content" }}>
+      <div className={styles.loadingState}>
+        <div className={styles.loadingIndicator}>
           <InlineLoading
             status="active"
             description={tr("marketPage.loadingMarketData")}
@@ -440,9 +433,7 @@ export function DexTable({
                   </span>
                 </td>
                 <td>
-                  <span
-                    className={classNames(styles.numberValue, styles.positive)}
-                  >
+                  <span className={styles.numberValue}>
                     {pool.priceUsd ? fmt.num.currency(pool.priceUsd) : "-"}
                   </span>
                 </td>
