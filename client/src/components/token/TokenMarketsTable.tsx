@@ -99,7 +99,7 @@ export function TokenMarketsTable({ address }: TokenMarketsTableProps) {
 
       return {
         id: data.poolAddress,
-        rank: <span>{rankInfo.rank || idx + 1}</span>,
+        rank: <span className={styles.rankBadge}>{rankInfo.rank || idx + 1}</span>,
         exchange: (
           <ExchangeCell dexId={data.dexId} dexImageUrl={data.dexImageUrl} />
         ),

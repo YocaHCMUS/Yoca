@@ -45,7 +45,7 @@ import MarketTicker from "../MarketTicker";
 import { Divider } from "../partials/Divider/Divider";
 import { SearchBar } from "../search/SearchBar";
 import styles from "./PageWrapper.module.scss";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 
 function ThemeToggleGlobalAction({ className }: { className?: string }) {
   const { theme, toggleTheme } = useUserTheme();
@@ -119,6 +119,7 @@ export function PageWrapper({
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [openPanel, setOpenPanel] = useState<
     "lang" | "account" | "notifications" | null
   >(null);
@@ -297,12 +298,14 @@ export function PageWrapper({
             aria-label={tr("nav.account")}
             isActive={openPanel == "account"}
             onClick={() => {
-              if (user) {
-                togglePanel("account");
-              } else {
+              if (!user) {
                 setOpenPanel(null);
                 setIsSignInOpen(true);
+                return;
               }
+
+              setOpenPanel(null);
+              navigate("/profile");
             }}
           >
             {user?.avatarUrl ? (

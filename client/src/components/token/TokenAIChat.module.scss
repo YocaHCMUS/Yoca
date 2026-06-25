@@ -5,9 +5,13 @@
   flex-direction: column;
   gap: 14px;
   padding: 18px;
-  border: 1px solid $border-subtle;
-  border-radius: 8px;
-  background: $background;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 26%),
+    var(--yoca-surface);
+  box-shadow: var(--yoca-shadow-card);
+  backdrop-filter: blur(18px);
 }
 
 .header {
@@ -19,16 +23,16 @@
   h2 {
     margin: 0;
     font-size: 18px;
-    font-weight: 700;
-    color: $text-primary;
+    font-weight: 800;
+    color: var(--yoca-text-main);
   }
 
   p {
     margin: 4px 0 0;
     max-width: 680px;
     font-size: 13px;
-    line-height: 1.45;
-    color: $text-secondary;
+    line-height: 1.5;
+    color: var(--yoca-text-muted);
   }
 }
 
@@ -39,18 +43,23 @@
 }
 
 .chip {
-  min-height: 30px;
-  padding: 5px 10px;
-  border: 1px solid $border-subtle;
-  border-radius: 4px;
-  color: $text-primary;
-  background: $layer-01;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--yoca-border);
+  border-radius: 999px;
+  color: var(--yoca-text-soft);
+  background: rgba(255, 255, 255, 0.04);
   font-size: 12px;
   cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
 
   &:hover:not(:disabled) {
-    border-color: $border-strong;
-    background: $layer-hover-01;
+    border-color: rgba(124, 58, 237, 0.28);
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateY(-1px);
   }
 
   &:disabled {
@@ -76,25 +85,25 @@
   gap: 12px;
   min-height: 18px;
   font-size: 12px;
-  color: $text-helper;
+  color: var(--yoca-text-muted);
 }
 
 .validation,
 .error {
-  color: $text-error;
+  color: var(--yoca-danger);
 }
 
 .loading,
 .error {
   padding: 10px 12px;
-  border: 1px solid $border-subtle;
-  border-radius: 6px;
-  background: $layer-01;
+  border: 1px solid var(--yoca-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
   font-size: 13px;
 }
 
 .loading {
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
 }
 
 .answer {
@@ -110,26 +119,27 @@
   justify-content: space-between;
   gap: 16px;
   padding-top: 12px;
-  border-top: 1px solid $border-subtle;
+  border-top: 1px solid var(--yoca-border);
 }
 
 .answerEyebrow {
   margin-bottom: 4px;
   font-size: 11px;
-  color: $text-helper;
+  color: var(--yoca-accent);
   text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .answerTitle {
   margin: 0;
-  color: $text-primary;
+  color: var(--yoca-text-main);
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1.35;
 }
 
 .tokenLink {
-  color: $link-primary;
+  color: var(--yoca-primary-2);
   font: inherit;
   text-decoration: none;
 
@@ -143,7 +153,7 @@
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
-  color: $text-helper;
+  color: var(--yoca-text-muted);
   font-size: 11px;
 
   span {
@@ -152,9 +162,9 @@
     max-width: 100%;
     min-height: 20px;
     padding: 2px 7px;
-    border: 1px solid $border-subtle;
+    border: 1px solid var(--yoca-border);
     border-radius: 999px;
-    background: $layer-01;
+    background: rgba(255, 255, 255, 0.04);
     overflow-wrap: anywhere;
   }
 }
@@ -172,7 +182,7 @@
   align-items: center;
   min-height: 24px;
   padding: 3px 9px;
-  border: 1px solid $border-subtle;
+  border: 1px solid var(--yoca-border);
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
@@ -180,25 +190,25 @@
 }
 
 .confidenceHigh {
-  border-color: $support-success;
-  color: $support-success;
+  border-color: rgba(34, 197, 94, 0.32);
+  color: var(--yoca-success);
 }
 
 .confidenceMedium {
-  border-color: $support-info;
-  color: $support-info;
+  border-color: rgba(45, 212, 191, 0.32);
+  color: var(--yoca-accent);
 }
 
 .confidenceLow {
-  border-color: $support-warning;
-  color: $support-warning;
+  border-color: rgba(245, 158, 11, 0.32);
+  color: var(--yoca-warning);
 }
 
 .asOf {
   text-align: right;
   font-size: 12px;
   line-height: 1.4;
-  color: $text-helper;
+  color: var(--yoca-text-muted);
 }
 
 .tldr,
@@ -206,20 +216,16 @@
 .referenceBlock,
 .warnings {
   padding: 14px;
-  border: 1px solid $border-subtle;
-  border-radius: 8px;
-  background: $layer-01;
+  border: 1px solid var(--yoca-border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .tldr {
-  border-color: $border-strong;
+  border-color: rgba(124, 58, 237, 0.22);
   background:
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, #{$support-info} 10%, transparent),
-      transparent 70%
-    ),
-    $layer-02;
+    linear-gradient(90deg, rgba(124, 58, 237, 0.08), transparent 70%),
+    rgba(255, 255, 255, 0.03);
 
   ol {
     display: flex;
@@ -235,7 +241,7 @@
     grid-template-columns: 24px minmax(0, 1fr);
     gap: 10px;
     align-items: flex-start;
-    color: $text-primary;
+    color: var(--yoca-text-main);
     font-size: 14px;
     line-height: 1.55;
   }
@@ -262,8 +268,8 @@
 }
 
 .tldrIcon {
-  color: $support-info;
-  background: color-mix(in srgb, #{$support-info} 14%, transparent);
+  color: var(--yoca-primary-2);
+  background: rgba(37, 99, 235, 0.12);
 }
 
 .tldrNumber {
@@ -272,10 +278,10 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  border: 1px solid $border-subtle;
+  border: 1px solid var(--yoca-border);
   border-radius: 999px;
-  color: $text-primary;
-  background: $background;
+  color: var(--yoca-text-main);
+  background: rgba(255, 255, 255, 0.04);
   font-size: 12px;
   font-weight: 700;
 }
@@ -285,8 +291,8 @@
 .warnings h3 {
   margin: 0;
   font-size: 14px;
-  font-weight: 700;
-  color: $text-primary;
+  font-weight: 800;
+  color: var(--yoca-text-main);
 }
 
 .referenceHeader {
@@ -302,7 +308,7 @@
 
   p {
     margin: 0;
-    color: $text-helper;
+    color: var(--yoca-text-muted);
     font-size: 12px;
     line-height: 1.35;
   }
@@ -313,7 +319,7 @@
 .warnings ul {
   margin: 0;
   padding-left: 18px;
-  color: $text-secondary;
+  color: var(--yoca-text-soft);
   font-size: 13px;
   line-height: 1.55;
 }
@@ -353,9 +359,9 @@
 
   h4 {
     margin: 2px 0 0;
-    color: $text-primary;
+    color: var(--yoca-text-main);
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 800;
     line-height: 1.35;
     overflow-wrap: anywhere;
   }
@@ -368,10 +374,10 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  border: 1px solid $border-subtle;
-  border-radius: 6px;
-  color: $text-secondary;
-  background: $background;
+  border: 1px solid var(--yoca-border);
+  border-radius: 8px;
+  color: var(--yoca-text-muted);
+  background: rgba(255, 255, 255, 0.04);
   font-size: 10px;
   font-weight: 800;
   line-height: 1;
@@ -380,10 +386,10 @@
 .sectionKind {
   flex-shrink: 0;
   padding: 3px 7px;
-  border: 1px solid $border-subtle;
+  border: 1px solid var(--yoca-border);
   border-radius: 999px;
-  color: $text-helper;
-  background: $background;
+  color: var(--yoca-text-muted);
+  background: rgba(255, 255, 255, 0.04);
   font-size: 11px;
   line-height: 1.2;
   text-transform: none;
@@ -401,7 +407,7 @@
 
 .richParagraph {
   margin: 0;
-  color: $text-secondary;
+  color: var(--yoca-text-soft);
   font-size: 13px;
   line-height: 1.55;
 }
@@ -410,7 +416,7 @@
   display: grid;
   grid-template-columns: 7px minmax(0, 1fr);
   gap: 8px;
-  color: $text-secondary;
+  color: var(--yoca-text-soft);
   font-size: 13px;
   line-height: 1.55;
 
@@ -419,12 +425,12 @@
     height: 5px;
     margin-top: 9px;
     border-radius: 999px;
-    background: $border-strong;
+    background: rgba(148, 163, 184, 0.7);
   }
 }
 
 .richStrong {
-  color: $text-primary;
+  color: var(--yoca-text-main);
   font-weight: 800;
 }
 
@@ -441,92 +447,92 @@
 
 .metricPositive,
 .bullishText {
-  color: $support-success;
-  background: color-mix(in srgb, #{$support-success} 12%, transparent);
+  color: var(--yoca-success);
+  background: rgba(34, 197, 94, 0.08);
 }
 
 .metricNegative,
 .riskText {
-  color: $support-error;
-  background: color-mix(in srgb, #{$support-error} 10%, transparent);
+  color: var(--yoca-danger);
+  background: rgba(239, 68, 68, 0.08);
 }
 
 .metricMoney {
-  color: $text-primary;
-  background: color-mix(in srgb, #{$support-info} 13%, transparent);
+  color: var(--yoca-text-main);
+  background: rgba(37, 99, 235, 0.1);
 }
 
 .metricNeutral {
-  color: $text-primary;
-  background: $layer-accent-01;
+  color: var(--yoca-text-main);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .warningText {
-  color: $support-warning;
-  background: color-mix(in srgb, #{$support-warning} 13%, transparent);
+  color: var(--yoca-warning);
+  background: rgba(245, 158, 11, 0.1);
 }
 
 .kindBullish {
-  border-left-color: $support-success;
+  border-left-color: var(--yoca-success);
 
   .sectionIcon {
-    border-color: $support-success;
-    color: $support-success;
+    border-color: var(--yoca-success);
+    color: var(--yoca-success);
   }
 }
 
 .kindBearish {
-  border-left-color: $support-error;
+  border-left-color: var(--yoca-danger);
 
   .sectionIcon {
-    border-color: $support-error;
-    color: $support-error;
+    border-color: var(--yoca-danger);
+    color: var(--yoca-danger);
   }
 }
 
 .kindRisk {
-  border-left-color: $support-warning;
+  border-left-color: var(--yoca-warning);
 
   .sectionIcon {
-    border-color: $support-warning;
-    color: $support-warning;
+    border-color: var(--yoca-warning);
+    color: var(--yoca-warning);
   }
 }
 
 .kindMarket,
 .kindFramework {
-  border-left-color: $support-info;
+  border-left-color: var(--yoca-primary-2);
 
   .sectionIcon {
-    border-color: $support-info;
-    color: $support-info;
+    border-color: var(--yoca-primary-2);
+    color: var(--yoca-primary-2);
   }
 }
 
 .kindDrivers,
 .kindScenario,
 .kindDeepDive {
-  border-left-color: #8a3ffc;
+  border-left-color: var(--yoca-primary);
 
   .sectionIcon {
-    border-color: #8a3ffc;
-    color: #8a3ffc;
+    border-color: var(--yoca-primary);
+    color: var(--yoca-primary);
   }
 }
 
 .kindWatch,
 .kindNews {
-  border-left-color: #009d9a;
+  border-left-color: var(--yoca-accent);
 
   .sectionIcon {
-    border-color: #009d9a;
-    color: #009d9a;
+    border-color: var(--yoca-accent);
+    color: var(--yoca-accent);
   }
 }
 
 .kindSimple,
 .kindConclusion {
-  border-left-color: $border-strong;
+  border-left-color: var(--yoca-border);
 }
 
 .tableWrap {
@@ -542,13 +548,13 @@
   th,
   td {
     padding: 8px;
-    border-bottom: 1px solid $border-subtle;
+    border-bottom: 1px solid var(--yoca-border);
     text-align: left;
-    color: $text-secondary;
+    color: var(--yoca-text-soft);
   }
 
   th {
-    color: $text-primary;
+    color: var(--yoca-text-main);
     font-weight: 700;
   }
 }
@@ -565,13 +571,13 @@
   gap: 5px;
   min-width: 0;
   padding: 10px;
-  border: 1px solid $border-subtle;
-  border-radius: 6px;
-  background: $background;
+  border: 1px solid var(--yoca-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
 
   a,
   strong {
-    color: $text-primary;
+    color: var(--yoca-text-main);
     font-size: 13px;
     font-weight: 700;
     line-height: 1.35;
@@ -582,14 +588,14 @@
     text-decoration: none;
 
     &:hover {
-      color: $link-primary;
+      color: var(--yoca-primary-2);
       text-decoration: underline;
     }
   }
 
   p {
     margin: 0;
-    color: $text-secondary;
+    color: var(--yoca-text-soft);
     font-size: 12px;
     line-height: 1.45;
   }
@@ -600,7 +606,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  color: $text-helper;
+  color: var(--yoca-text-muted);
   font-size: 11px;
 
   time {
@@ -613,10 +619,10 @@
   align-items: center;
   min-height: 20px;
   padding: 2px 7px;
-  border: 1px solid $border-subtle;
+  border: 1px solid var(--yoca-border);
   border-radius: 999px;
-  color: $text-secondary;
-  background: $layer-01;
+  color: var(--yoca-text-muted);
+  background: rgba(255, 255, 255, 0.04);
   font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
@@ -625,41 +631,41 @@
 .evidenceTypeMarket,
 .evidenceTypeChart,
 .evidenceTypeVolatility {
-  border-color: $support-info;
-  color: $support-info;
+  border-color: var(--yoca-primary-2);
+  color: var(--yoca-primary-2);
 }
 
 .evidenceTypeNews {
-  border-color: #009d9a;
-  color: #009d9a;
+  border-color: var(--yoca-accent);
+  color: var(--yoca-accent);
 }
 
 .evidenceTypeHolders,
 .evidenceTypePool,
 .evidenceTypeTrades {
-  border-color: #8a3ffc;
-  color: #8a3ffc;
+  border-color: var(--yoca-primary);
+  color: var(--yoca-primary);
 }
 
 .evidenceTypeSecurity {
-  border-color: $support-warning;
-  color: $support-warning;
+  border-color: var(--yoca-warning);
+  color: var(--yoca-warning);
 }
 
 .evidenceTypeMetadata,
 .evidenceTypeInternal {
-  border-color: $border-strong;
-  color: $text-secondary;
+  border-color: var(--yoca-border);
+  color: var(--yoca-text-muted);
 }
 
 .evidenceValue {
-  color: $text-primary;
+  color: var(--yoca-text-main);
   font-size: 14px;
   font-weight: 700;
 }
 
 .evidenceDetail {
-  color: $text-secondary;
+  color: var(--yoca-text-soft);
   font-size: 12px;
   line-height: 1.45;
 
@@ -670,7 +676,7 @@
 }
 
 .sourceLine {
-  color: $text-helper;
+  color: var(--yoca-text-muted);
   font-size: 11px;
 }
 
@@ -685,15 +691,15 @@
   justify-content: space-between;
   gap: 16px;
   padding: 10px;
-  border: 1px solid $border-subtle;
-  border-radius: 6px;
-  color: $text-primary;
-  background: $background;
+  border: 1px solid var(--yoca-border);
+  border-radius: 14px;
+  color: var(--yoca-text-main);
+  background: rgba(255, 255, 255, 0.03);
   text-decoration: none;
 
   &:hover {
-    border-color: $border-strong;
-    background: $layer-hover-01;
+    border-color: rgba(124, 58, 237, 0.28);
+    background: rgba(255, 255, 255, 0.05);
   }
 
   strong {
@@ -705,7 +711,7 @@
 
 .sourceSnippet {
   margin-top: 5px;
-  color: $text-secondary;
+  color: var(--yoca-text-soft);
   font-size: 12px;
   line-height: 1.45;
 
@@ -722,7 +728,7 @@
   align-items: flex-end;
   gap: 5px;
   max-width: 220px;
-  color: $text-helper;
+  color: var(--yoca-text-muted);
   text-align: right;
   font-size: 12px;
   line-height: 1.35;
@@ -733,40 +739,36 @@
   align-items: center;
   min-height: 20px;
   padding: 2px 7px;
-  border: 1px solid $border-subtle;
+  border: 1px solid var(--yoca-border);
   border-radius: 999px;
-  color: $link-primary;
-  background: $layer-01;
+  color: var(--yoca-primary-2);
+  background: rgba(255, 255, 255, 0.04);
   font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
 }
 
 .warnings {
-  border-color: $support-warning;
+  border-color: rgba(245, 158, 11, 0.28);
   background:
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, #{$support-warning} 9%, transparent),
-      transparent 68%
-    ),
-    $layer-01;
+    linear-gradient(90deg, rgba(245, 158, 11, 0.08), transparent 68%),
+    rgba(255, 255, 255, 0.03);
 
   h3 {
-    color: $text-primary;
+    color: var(--yoca-text-main);
   }
 }
 
 .warningIcon {
-  color: $support-warning;
-  background: color-mix(in srgb, #{$support-warning} 16%, transparent);
+  color: var(--yoca-warning);
+  background: rgba(245, 158, 11, 0.12);
 }
 
 .footer {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  color: $text-helper;
+  color: var(--yoca-text-muted);
   font-size: 11px;
 }
 
@@ -774,7 +776,7 @@
   max-width: 80ch;
 
   .richParagraph {
-    color: $text-helper;
+    color: var(--yoca-text-muted);
     font-size: 11px;
     line-height: 1.45;
   }
@@ -782,7 +784,7 @@
 
 .footerMeta {
   flex-shrink: 0;
-  color: $text-placeholder;
+  color: var(--yoca-text-muted);
 }
 
 @media (max-width: 1200px) {

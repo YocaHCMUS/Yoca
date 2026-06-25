@@ -736,7 +736,7 @@ export function TokenOverviewChart({
         )}
       </div>
 
-      {!loading && seriesData.length > 0 && (
+        {!loading && seriesData.length > 0 && (
         <div className={styles.newsMarkerStatus}>
           {newsLoading
             ? "Loading news markers..."
@@ -744,7 +744,7 @@ export function TokenOverviewChart({
               ? newsError
               : newsEvents.length === 0
                 ? "No news markers for this timeframe."
-                : `${newsEvents.length} news marker${newsEvents.length === 1 ? "" : "s"} in this timeframe.`}
+                : `${newsEvents.length} news marker${newsEvents.length === 1 ? "" : "s"} detected in this timeframe.`}
         </div>
       )}
     </div>

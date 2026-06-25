@@ -18,9 +18,9 @@ interface TokenUnlockScheduleProps {
 // ─── Color palette ────────────────────────────────────────────────────────────
 
 const COLORS = [
-  "#D15B40", "#EE9F43", "#F8DE5B", "#F3AD8E",
-  "#D74F71", "#F08CB1", "#B385D5", "#7BB8F5",
-  "#3D8DF5", "#52C878", "#F7D0DF", "#DFCAEF",
+  "#7C3AED", "#2563EB", "#2DD4BF", "#22C55E",
+  "#F59E0B", "#EC4899", "#8B5CF6", "#38BDF8",
+  "#A855F7", "#14B8A6", "#F472B6", "#C084FC",
 ];
 
 // ─── Build categories + cumulative data ──────────────────────────────────────
@@ -72,10 +72,12 @@ function buildChartOption(
   deduped: Record<string, number[]>,
   isDark: boolean,
 ): any {
-  const textColor    = isDark ? "#c6c6c6" : "#525252";
-  const gridColor    = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)";
-  const tooltipBg    = isDark ? "#1e1e2e" : "#ffffff";
-  const tooltipBorder = isDark ? "#3a3a5c" : "#dde1e7";
+  const textColor = isDark ? "#CBD5E1" : "#475569";
+  const gridColor = isDark
+    ? "rgba(148,163,184,0.12)"
+    : "rgba(148,163,184,0.18)";
+  const tooltipBg = isDark ? "rgba(11,16,32,0.96)" : "#ffffff";
+  const tooltipBorder = isDark ? "rgba(148,163,184,0.16)" : "rgba(148,163,184,0.24)";
 
   return {
     color: COLORS,
@@ -152,10 +154,11 @@ function UpcomingList({ schedule, isDark }: { schedule: UnlockEvent[]; isDark: b
     .slice(0, 5);
 
   if (upcoming.length === 0) {
-    return <p style={{ color: "var(--cds-text-secondary)", fontSize: "0.875rem", marginTop: "0.5rem" }}>No upcoming unlock events found.</p>;
+    return <p style={{ color: "var(--yoca-text-muted)", fontSize: "0.875rem", marginTop: "0.5rem" }}>No upcoming unlock events found.</p>;
   }
 
-  const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+  const borderColor = "var(--yoca-border)";
+  const chipBackground = isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.04)";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.75rem" }}>
@@ -164,17 +167,17 @@ function UpcomingList({ schedule, isDark }: { schedule: UnlockEvent[]; isDark: b
         const daysLeft = Math.ceil((ev.unlock_date - now) / (1000 * 60 * 60 * 24));
         const cats = Object.entries(ev.allocation_details).sort((a, b) => b[1] - a[1]);
         return (
-          <div key={i} style={{ border: `1px solid ${borderColor}`, borderRadius: "8px", padding: "0.875rem 1rem", background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
+          <div key={i} style={{ border: `1px solid ${borderColor}`, borderRadius: "14px", padding: "0.875rem 1rem", background: "rgba(255,255,255,0.03)", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--cds-text-primary)", marginBottom: "0.25rem" }}>
+              <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--yoca-text-main)", marginBottom: "0.25rem" }}>
                 {date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
-                <span style={{ marginLeft: "0.5rem", fontSize: "0.75rem", fontWeight: 500, color: daysLeft <= 30 ? "#f8de5b" : "var(--cds-text-secondary)" }}>
+                <span style={{ marginLeft: "0.5rem", fontSize: "0.75rem", fontWeight: 600, color: daysLeft <= 30 ? "var(--yoca-warning)" : "var(--yoca-text-muted)" }}>
                   {daysLeft <= 0 ? "Today" : `in ${daysLeft}d`}
                 </span>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
                 {cats.map(([cat, amount], ci) => (
-                  <span key={ci} style={{ fontSize: "0.75rem", color: "var(--cds-text-secondary)", background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)", borderRadius: "4px", padding: "2px 8px" }}>
+                  <span key={ci} style={{ fontSize: "0.75rem", color: "var(--yoca-text-soft)", background: chipBackground, borderRadius: "999px", padding: "2px 8px" }}>
                     <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: COLORS[ci % COLORS.length], marginRight: 5, verticalAlign: "middle" }} />
                     {cat}: {amount >= 1e6 ? `${(amount / 1e6).toFixed(2)}M` : amount >= 1e3 ? `${(amount / 1e3).toFixed(1)}K` : amount.toFixed(0)}
                   </span>
@@ -182,10 +185,10 @@ function UpcomingList({ schedule, isDark }: { schedule: UnlockEvent[]; isDark: b
               </div>
             </div>
             <div style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-              <div style={{ fontWeight: 700, fontSize: "1rem", color: "var(--cds-text-primary)" }}>
+              <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--yoca-text-main)" }}>
                 {ev.tokens_to_unlock >= 1e9 ? `${(ev.tokens_to_unlock / 1e9).toFixed(2)}B` : ev.tokens_to_unlock >= 1e6 ? `${(ev.tokens_to_unlock / 1e6).toFixed(2)}M` : ev.tokens_to_unlock >= 1e3 ? `${(ev.tokens_to_unlock / 1e3).toFixed(1)}K` : ev.tokens_to_unlock.toFixed(0)}
               </div>
-              <div style={{ fontSize: "0.75rem", color: "var(--cds-text-secondary)" }}>tokens unlock</div>
+              <div style={{ fontSize: "0.75rem", color: "var(--yoca-text-muted)" }}>tokens unlock</div>
             </div>
           </div>
         );
@@ -200,19 +203,18 @@ export const TokenUnlockSchedule = ({ symbol, schedule }: TokenUnlockSchedulePro
   const { theme } = useUserTheme();
   const isDark = theme === "dark";
   const displaySymbol = symbol?.toUpperCase() ?? "";
-  const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
-  const legendTextColor = isDark ? "#c6c6c6" : "#525252";
+  const borderColor = "var(--yoca-border)";
 
   const { categories, uniqueDates, deduped } = buildChartData(schedule);
   const chartOption = buildChartOption(categories, uniqueDates, deduped, isDark);
 
   return (
     <div style={{ padding: "0.5rem 0" }}>
-      <div style={{ border: `1px solid ${borderColor}`, borderRadius: "8px", padding: "1.5rem", marginBottom: "1.5rem", background: "var(--cds-ui-background, #ffffff)" }}>
-        <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "0.25rem", color: "var(--cds-text-primary)" }}>
+      <div style={{ border: `1px solid ${borderColor}`, borderRadius: "14px", padding: "1.5rem", marginBottom: "1.5rem", background: "rgba(255,255,255,0.03)" }}>
+        <h3 style={{ fontSize: "1.125rem", fontWeight: 700, marginBottom: "0.25rem", color: "var(--yoca-text-main)" }}>
           {displaySymbol} Unlock Schedule
         </h3>
-        <p style={{ color: "var(--cds-text-secondary)", fontSize: "0.875rem", marginBottom: "1.25rem" }}>
+        <p style={{ color: "var(--yoca-text-muted)", fontSize: "0.875rem", marginBottom: "1.25rem" }}>
           Cumulative token unlock by allocation group over time
         </p>
 
@@ -229,7 +231,7 @@ export const TokenUnlockSchedule = ({ symbol, schedule }: TokenUnlockSchedulePro
           borderTop: `1px solid ${borderColor}`,
         }}>
           {categories.map((cat, i) => (
-            <div key={cat} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "11px", color: legendTextColor }}>
+            <div key={cat} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "11px", color: "var(--yoca-text-muted)" }}>
               <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: COLORS[i % COLORS.length], flexShrink: 0 }} />
               {cat}
             </div>
@@ -238,9 +240,9 @@ export const TokenUnlockSchedule = ({ symbol, schedule }: TokenUnlockSchedulePro
       </div>
 
       {/* Upcoming events */}
-      <div style={{ border: `1px solid ${borderColor}`, borderRadius: "8px", padding: "1.5rem", background: "var(--cds-ui-background, #ffffff)" }}>
-        <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "0.125rem", color: "var(--cds-text-primary)" }}>Upcoming Unlocks</h3>
-        <p style={{ color: "var(--cds-text-secondary)", fontSize: "0.875rem" }}>
+      <div style={{ border: `1px solid ${borderColor}`, borderRadius: "14px", padding: "1.5rem", background: "rgba(255,255,255,0.03)" }}>
+        <h3 style={{ fontSize: "1.125rem", fontWeight: 700, marginBottom: "0.125rem", color: "var(--yoca-text-main)" }}>Upcoming Unlocks</h3>
+        <p style={{ color: "var(--yoca-text-muted)", fontSize: "0.875rem" }}>
           Next {Math.min(5, schedule.filter((e) => e.unlock_date >= Date.now()).length)} scheduled unlock events
         </p>
         <UpcomingList schedule={schedule} isDark={isDark} />
