@@ -39,7 +39,7 @@ import {
   User,
   Wikis,
 } from "@carbon/react/icons";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { SignInModal } from "../auth/SignInModal";
 import MarketTicker from "../MarketTicker";
 import { SearchBar } from "../search/SearchBar";
@@ -119,6 +119,7 @@ export function PageWrapper({
   const { tr, lang, setLang } = useLocalization();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const languageMenuRef = useRef<HTMLDivElement | null>(null);
   const [openPanel, setOpenPanel] = useState<
     "lang" | "account" | "notifications" | null
   >(null);
@@ -167,6 +168,32 @@ export function PageWrapper({
       content.scrollTop = 0;
     }
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (openPanel != "lang") return;
+
+    const handleMouseDown = (event: MouseEvent) => {
+      if (
+        languageMenuRef.current &&
+        !languageMenuRef.current.contains(event.target as Node)
+      ) {
+        setOpenPanel(null);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key == "Escape") {
+        setOpenPanel(null);
+      }
+    };
+
+    window.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openPanel]);
 
   const toggleSideNav = () => {
     setIsSideNavExpanded((prev) => !prev);
@@ -279,14 +306,58 @@ export function PageWrapper({
             <Search size={20} />
           </HeaderGlobalAction>
 
-          <HeaderGlobalAction
-            className={styles.headerGlobalAction}
-            aria-label={tr("nav.language")}
-            isActive={openPanel == "lang"}
-            onClick={() => togglePanel("lang")}
-          >
-            <Wikis size={20} />
-          </HeaderGlobalAction>
+          <div className={styles.languageMenuAnchor} ref={languageMenuRef}>
+            <HeaderGlobalAction
+              className={styles.headerGlobalAction}
+              aria-label={tr("nav.language")}
+              aria-haspopup="menu"
+              aria-expanded={openPanel == "lang"}
+              isActive={openPanel == "lang"}
+              onClick={() => togglePanel("lang")}
+            >
+              <Wikis size={20} />
+            </HeaderGlobalAction>
+
+            {openPanel == "lang" && (
+              <div
+                className={styles.languageMenu}
+                role="menu"
+                aria-label={tr("nav.language")}
+              >
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={lang == "vi"}
+                  className={`${styles.languageMenuOption} ${
+                    lang == "vi" ? styles.languageMenuOptionActive : ""
+                  }`}
+                  onClick={() => handleLanguageSelect("vi")}
+                >
+                  <span className={styles.languageMenuLocale}>
+                    {"Ti\u1ebfng Vi\u1ec7t"}
+                  </span>
+                  <span className={styles.languageMenuLabel}>
+                    {"Ti\u1ebfng Vi\u1ec7t (Vietnamese)"}
+                  </span>
+                  {lang == "vi" && <Checkmark size={16} />}
+                </button>
+
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={lang == "en"}
+                  className={`${styles.languageMenuOption} ${
+                    lang == "en" ? styles.languageMenuOptionActive : ""
+                  }`}
+                  onClick={() => handleLanguageSelect("en")}
+                >
+                  <span className={styles.languageMenuLocale}>{"M\u1ef9"}</span>
+                  <span className={styles.languageMenuLabel}>English</span>
+                  {lang == "en" && <Checkmark size={16} />}
+                </button>
+              </div>
+            )}
+          </div>
 
           <HeaderGlobalAction
             className={styles.headerGlobalAction}
@@ -324,7 +395,7 @@ export function PageWrapper({
 
         <HeaderPanel
           className={styles.headerPanel}
-          expanded={openPanel == "lang"}
+          expanded={false}
           addFocusListeners={false}
           onHeaderPanelFocus={() => setOpenPanel(null)}
         >
