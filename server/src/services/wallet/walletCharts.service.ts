@@ -140,18 +140,19 @@ type WalletBalanceHistory =
 export async function getWalletBalanceHistory(
   address: string,
   timePeriod: WalletTimePeriod = "30D",
+  fromMs?: number,
+  toMs?: number,
 ): Promise<WalletBalanceHistory> {
-  // TODO: enforce this
-  const toZrnChartPeriod: Record<any, "week" | "month"> = {
-    "7D": "week",
-    "30D": "month",
-  };
-  const zrnPeriod = toZrnChartPeriod[timePeriod];
-
   const nowUtc = dayjs.utc();
-  const end = nowUtc.valueOf();
-  const start = nowUtc.subtract(1, zrnPeriod).valueOf();
-  const thresholdDateMs = end - WALLET_BALANCE_HISTORY_CACHE_TTL_MS;
+  const nowMs = nowUtc.valueOf();
+
+  const effectiveToMs = toMs ?? nowMs;
+  const effectiveFromMs = fromMs ?? getRangeStartMs(effectiveToMs, timePeriod);
+
+  const durationMs = effectiveToMs - effectiveFromMs;
+  const zrnPeriod: "week" | "month" = durationMs <= 8 * 24 * 60 * 60 * 1000 ? "week" : "month";
+
+  const thresholdDateMs = nowMs - WALLET_BALANCE_HISTORY_CACHE_TTL_MS;
 
   const balanceTable =
     zrnPeriod == "week" ? walletBalanceWeekHistory : walletBalanceMonthHistory;
@@ -162,7 +163,7 @@ export async function getWalletBalanceHistory(
     .where(
       and(
         eq(balanceTable.address, address),
-        between(balanceTable.timestampMs, start, end),
+        between(balanceTable.timestampMs, effectiveFromMs, effectiveToMs),
       ),
     )
     .orderBy(balanceTable.timestampMs);
@@ -171,12 +172,20 @@ export async function getWalletBalanceHistory(
     return fetchWalletBalanceHistory(address, zrnPeriod);
   }
 
-  return normalizeByDay(
+  let points = normalizeByDay(
     res.map((point) => ({
       timestampMs: point.timestampMs,
       usdValue: point.usdValue,
     })),
   );
+
+  if (points != null) {
+    points = points.filter(
+      (p) => p.timestampMs >= effectiveFromMs && p.timestampMs <= effectiveToMs,
+    );
+  }
+
+  return points;
 }
 
 async function fetchWalletBalanceHistory(
@@ -242,14 +251,16 @@ function normalizeByDay(
 export async function getCumulativePnL(
   address: string,
   timePeriod: WalletTimePeriod = "30D",
+  fromMs?: number,
+  toMs?: number,
 ): Promise<WalletCumulativePnLResult> {
-  const rangeSec = resolveWalletTimeRangeSec(timePeriod);
-  const fromMs = rangeSec.fromSec * 1000;
-  const toMs = rangeSec.toSec * 1000;
+  const nowMs = Date.now();
+  const effectiveFromMs = fromMs ?? getRangeStartMs(toMs ?? nowMs, timePeriod);
+  const effectiveToMs = toMs ?? nowMs;
 
   try {
     // Get balance history and build daily anchors
-    const balanceHistory = await getWalletBalanceHistory(address, timePeriod);
+    const balanceHistory = await getWalletBalanceHistory(address, timePeriod, effectiveFromMs, effectiveToMs);
 
     // get Current balance
     const currentBalance = (await getWalletOverview(address)).holdings
@@ -276,8 +287,8 @@ export async function getCumulativePnL(
     // Compute daily net inflow
     const dailyNetInflowMap = await computeDailyNetInflow(
       address,
-      fromMs,
-      toMs,
+      effectiveFromMs,
+      effectiveToMs,
     );
     // console.log("[getCumulativePnL] dailyNetInflowMap")
     // console.info(dailyNetInflowMap)

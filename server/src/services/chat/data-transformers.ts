@@ -161,6 +161,7 @@ export const DATA_TRANSFORMERS: Record<string, DataTransformer> = {
   get_wallet_transfers: transfersTransformer,
   get_wallet_swaps_compact: compactTokensTransformer,
   get_wallet_transfers_compact: compactTokensTransformer,
+  get_wallet_pnl_compact: compactTokensTransformer,
   get_wallet_portfolio: portfolioTransformer,
   get_historical_portfolio: portfolioTransformer,
 };

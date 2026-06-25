@@ -66,6 +66,8 @@ export function buildToolSelectionPrompt(
     "- 'search_news': Use for recent crypto news about tokens, projects, or market events. Query should include token name/symbol and be specific. Returns article headlines with source URLs.",
     "- 'search_web': Use for general web content — project docs, analysis, technical info, GitHub, announcements. Prefer search_news if the user is asking about 'news' or 'latest'.",
     "- Prefer get_wallet_swaps_compact/get_wallet_transfers_compact for broad activity analysis. Use detailed get_wallet_swaps/get_wallet_transfers only when the user needs exact rows or transaction-level details.",
+    "- PnL tools: use get_wallet_pnl for detailed per-token PnL breakdowns (with tokenAddress filtering for single-token PnL). Use get_wallet_pnl_compact for aggregated PnL overview (total PnL, win rate, top gainer/loser). Both support fromMs/toMs, limit (max 500), minAmountUsd/maxAmountUsd filters.",
+    "- Chart tools (get_balance_history, get_drawdown_chart, get_pnl_chart): support timePeriod (7D, 30D, 60D, 90D, 1Y) OR custom fromMs/toMs range. When fromMs/toMs are provided, timePeriod is ignored.",
     "- Transaction tools include coverage metadata. If coverage.isCapped is true, the result is a limited sample/window, not the wallet's complete transaction history.",
     "- Both search tools return article/webpage snippets with links. Cite sources when you use them.",
     "",

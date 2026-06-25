@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   GEMINI_MODEL,
   SWAPS_SAMPLE_SIZE,
+  WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
   SYSTEM_PROMPT_EN,
   SYSTEM_PROMPT_VN,
   WALLET_AUDIT_TTL_MS,
@@ -151,7 +152,6 @@ function computePerTokenPnl(swaps: WalletSwap[]): TokenAccumulator[] {
       acc.totalSoldUsd += swap.totalValueUsd ? swap.totalValueUsd : 0;
       acc.sellCount += 1;
       const sellTimeMs = new Date(swap.blockTimestampIso).getTime();
-      const pnlBeforeSell = acc.realizedPnl;
 
       while (remainingExit > 0 && acc.entryQueue.length > 0) {
         const lot = acc.entryQueue[0];
@@ -488,6 +488,9 @@ export interface PnLFilterOptions {
   fromMs?: number;
   toMs?: number;
   tokenAddress?: string;
+  limit?: number;
+  minAmountUsd?: number;
+  maxAmountUsd?: number;
 }
 
 export interface PnLComputedResult {
@@ -515,12 +518,21 @@ export async function getWalletPnLComputed(
     );
   }
 
+  const pnlLimit = filters?.limit != null
+    ? Math.min(Math.max(1, Math.trunc(filters.limit)), WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT)
+    : SWAPS_SAMPLE_SIZE;
+
   const swapsResult = await getWalletSwaps(
     normalizedAddress,
     filters?.fromMs,
     filters?.toMs,
+    filters?.tokenAddress,
+    undefined,
+    filters?.minAmountUsd,
+    filters?.maxAmountUsd,
+    pnlLimit,
   );
-  const recent = (swapsResult.swaps ?? []).slice(0, SWAPS_SAMPLE_SIZE);
+  const recent = swapsResult.swaps ?? [];
 
   if (recent.length < 2) {
     return {
@@ -546,7 +558,7 @@ export async function getWalletPnLComputed(
   }
 
   const sortedByPnl = [...breakdowns].sort((a, b) => b.pnlUsd - a.pnlUsd);
-  let allTokenBreakdowns = sortedByPnl;
+  const allTokenBreakdowns = sortedByPnl;
 
   if (filters?.tokenAddress) {
     const tokenAddr = filters.tokenAddress;
