@@ -1,7 +1,7 @@
 # AI Feature Rate Limit Plan
 
 Date: 2026-06-23  
-Status: All current AI feature limits implemented
+Status: Current AI feature limits implemented; Wallet AI Swap Summary quota removed
 
 ## Architecture
 
@@ -11,8 +11,8 @@ Status: All current AI feature limits implemented
 - A conditional upsert reserves usage atomically before AI work starts.
 - Failed AI requests release reserved usage.
 - Cache charging is feature-specific: Ask Yoca AI counts successful cache hits; Volatility Signal Summary does not.
-- Wallet AI Swap Summary and its token-level AI Analysis share one daily counter; cache hits do not count.
 - Wallet AI Analysis and Wash Trading AI Analysis are locked until Plus; locked tiers receive `403 AI_FEATURE_LOCKED` and do not write usage.
+- Wash Trading also has a client-side Plus/Pro modal gate to prevent direct page visits from auto-running unusable AI analysis; the backend lock remains authoritative.
 - Daily counters reset at `00:00 UTC`.
 - Existing short-window IP throttles remain separate abuse protection.
 - Users without a valid paid subscription use the Free tier.
@@ -25,7 +25,6 @@ Status: All current AI feature limits implemented
 | Ask Yoca AI | `ask_yoca_ai` | 5 | 20 | 50 | 100 | Enforced |
 | General AI Chat | `general_ai_chat` | 5 | 20 | 50 | 100 | Enforced |
 | Wallet AI Analysis | `wallet_ai_analysis` | Locked | Locked | 50 | 100 | Enforced |
-| Wallet AI Swap Summary | `wallet_ai_swap_summary` | 10 | 20 | 50 | 100 | Enforced |
 | Wash Trading AI Analysis | `wash_trading_ai_analysis` | Locked | Locked | 50 | 100 | Enforced |
 | Volatility Signal Summary | `volatility_signal_summary` | 10 | 25 | 50 | 100 | Enforced |
 | Token Chart News Summary | `token_chart_news_summary` | 5 | 20 | 50 | 100 | Enforced |
@@ -46,20 +45,13 @@ Status: All current AI feature limits implemented
 - The reservation is kept only when Gemini returns a valid summary; provider or validation fallback releases it.
 - A successful response includes `usage` and `counted`; exhausted quota returns `429 AI_DAILY_LIMIT_EXCEEDED`.
 
-## Wallet AI Swap Summary Behavior
-
-- Wallet-level swap summaries and token-level AI Analysis require authentication and share the `wallet_ai_swap_summary` quota.
-- Cache hits do not consume quota.
-- Invalid input, insufficient swap data, and a missing Gemini key do not consume quota.
-- Quota is reserved immediately before Gemini and retained only after a valid response; provider or validation failures release it.
-- Successful responses include `usage` and `counted`; exhausted quota returns `429 AI_DAILY_LIMIT_EXCEEDED`.
-
 ## Remaining AI Feature Behavior
 
 - `POST /api/chat` requires authentication and consumes `general_ai_chat` quota for every successful response, including cache hits.
 - `POST /api/wallets/ai-analysis` and `POST /api/wallets/analysis` require authentication and Plus or higher; cache hits require Plus but do not consume quota.
 - `POST /api/v1/wash-trading/ai-analyze` and `GET /api/v1/wash-trading/:mint` require authentication and Plus or higher; legacy deterministic wash-trading endpoints stay public.
 - Token chart news summaries only consume `token_chart_news_summary` when `includeSummary=true` produces a Gemini summary; regular chart news, cache hits, and deterministic fallbacks do not consume quota.
+- `POST /api/wallets/ai-swap-summary` and `POST /api/wallets/ai-swap-summary/token` still require authentication if used, but no longer reserve or report AI usage.
 
 ## Implementation Checklist
 
@@ -71,24 +63,25 @@ Status: All current AI feature limits implemented
 - [x] Return quota metadata on success and exhaustion.
 - [x] Display remaining usage and upgrade CTA in the client.
 - [x] Enforce Volatility Signal Summary limits only for successful Gemini generations.
-- [x] Enforce one shared Wallet AI Swap Summary quota across wallet and token analysis.
+- [x] Remove Wallet AI Swap Summary quota enforcement and pricing references.
 - [x] Enforce General AI Chat, Token Chart News Summary, Wallet AI Analysis, and Wash Trading AI Analysis limits.
-- [x] Publish all approved AI feature limits and Plus-required locks on the pricing page.
+- [x] Add client-side Wash Trading Plus/Pro gate.
+- [x] Publish current AI feature limits and Plus-required locks on the pricing page.
 - [x] Add `AI_USAGE_LIMIT_ENABLED` env toggle for local/staging quota bypass.
 
 ## Verification
 
-- Free/Lite/Plus/Pro stop at 5/20/50/100 successful requests per UTC day.
+- Free/Lite/Plus/Pro stop at 5/20/50/100 successful requests per UTC day for Ask Yoca AI and General AI Chat.
 - Concurrent requests cannot reserve beyond the tier limit.
 - Provider/server failures release their reservation.
-- Successful cached responses consume one usage.
+- Successful cached responses consume one usage only for features whose cache policy counts hits.
 - Expired, canceled, and past-due subscriptions fall back to Free.
 - Unauthenticated requests return `401`.
 - Exhausted requests return `429` without invoking the AI provider.
 - Volatility summary cache hits and deterministic fallbacks do not consume usage.
-- Wallet swap summary and token analysis cache hits do not consume usage.
-- Wallet swap summary and token analysis share the same 10/20/50/100 daily counter.
 - General AI Chat stops at 5/20/50/100 successful responses per UTC day.
 - Wallet AI Analysis and Wash Trading AI Analysis return `403 AI_FEATURE_LOCKED` for Free/Lite and stop Plus/Pro at 51/101.
+- Free/Lite users who visit Wash Trading directly see the Plus/Pro modal and do not auto-run AI analysis.
 - Token Chart News Summary remains public without summaries; summary cache hits and deterministic fallbacks do not consume usage.
+- Wallet AI Swap Summary routes do not write usage rows and do not return quota metadata.
 - With `AI_USAGE_LIMIT_ENABLED=false`, no AI usage rows are written, no `429` quota exhaustion is returned, Plus-only AI locks are bypassed, and authenticated endpoints still require login.

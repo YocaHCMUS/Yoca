@@ -246,7 +246,6 @@ export interface WalletIntelligenceResponse {
 export type WalletAiAnalysisLanguage = "en" | "vn";
 
 export type WalletAiFeature =
-  | "wallet_ai_swap_summary"
   | "wallet_ai_analysis"
   | "wash_trading_ai_analysis"
   | "general_ai_chat"
@@ -373,8 +372,6 @@ export interface WalletAiSwapSummaryResponse {
   model: string;
   fetchedAt: string;
   cached: boolean;
-  usage: WalletAiUsage;
-  counted: boolean;
 }
 
 export async function fetchWalletAiSwapSummary(
@@ -432,8 +429,6 @@ export interface TokenDeepAnalysisResponse {
   winningPercentage: number;
   model: string;
   cached: boolean;
-  usage: WalletAiUsage;
-  counted: boolean;
 }
 
 export async function fetchTokenDeepAnalysis(

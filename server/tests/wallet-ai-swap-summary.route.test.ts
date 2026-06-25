@@ -9,13 +9,12 @@ type TestContext = Context<{
 }>;
 
 const mocks = vi.hoisted(() => ({
-  cached: false,
   getSummary: vi.fn(),
   getTokenAnalysis: vi.fn(),
-  provider: vi.fn(),
   reserve: vi.fn(),
   release: vi.fn(),
   getUsage: vi.fn(),
+  isLocked: vi.fn(),
 }));
 
 vi.mock("@sv/middlewares/validation.js", async () => {
@@ -42,10 +41,11 @@ vi.mock("@sv/middlewares/user-extract.js", () => ({
 }));
 
 vi.mock("@sv/services/ai-usage.service.js", () => ({
-  AI_FEATURES: { WalletAiSwapSummary: "wallet_ai_swap_summary" },
+  AI_FEATURES: { WalletAiAnalysis: "wallet_ai_analysis" },
   reserveAiUsage: mocks.reserve,
   releaseAiUsage: mocks.release,
   getAiUsage: mocks.getUsage,
+  isAiFeatureLocked: mocks.isLocked,
 }));
 
 vi.mock("@sv/services/wallet/walletAiSwapSummary.service.js", () => ({
@@ -59,15 +59,6 @@ vi.mock("@sv/services/wallet/walletTokenAnalysis.service.js", () => ({
 }));
 
 import app from "@sv/routes/wallets.route.js";
-
-const usage = {
-  feature: "wallet_ai_swap_summary",
-  tier: "Free",
-  limit: 10,
-  used: 1,
-  remaining: 9,
-  resetsAt: "2026-06-24T00:00:00.000Z",
-} as const;
 
 function request(path: "/ai-swap-summary" | "/ai-swap-summary/token", userId?: string) {
   return app.request(path, {
@@ -85,42 +76,15 @@ function request(path: "/ai-swap-summary" | "/ai-swap-summary/token", userId?: s
   });
 }
 
-describe("Wallet AI Swap Summary quota", () => {
+describe("Wallet AI Swap Summary routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.cached = false;
-    mocks.provider.mockResolvedValue(undefined);
-    mocks.getSummary.mockImplementation(
-      async (_address, _language, beforeGenerate?: () => Promise<void>) => {
-        if (!mocks.cached) {
-          await beforeGenerate?.();
-          await mocks.provider();
-        }
-        return { address: "wallet", cached: mocks.cached };
-      },
-    );
-    mocks.getTokenAnalysis.mockImplementation(
-      async (
-        _address,
-        _tokenAddress,
-        _language,
-        beforeGenerate?: () => Promise<void>,
-      ) => {
-        if (!mocks.cached) {
-          await beforeGenerate?.();
-          await mocks.provider();
-        }
-        return { address: "wallet", tokenAddress: "token", cached: mocks.cached };
-      },
-    );
-    mocks.reserve.mockResolvedValue({
-      allowed: true,
-      usage,
-      userId: "user-1",
-      usageDate: "2026-06-23",
+    mocks.getSummary.mockResolvedValue({ address: "wallet", cached: false });
+    mocks.getTokenAnalysis.mockResolvedValue({
+      address: "wallet",
+      tokenAddress: "token",
+      cached: false,
     });
-    mocks.release.mockResolvedValue(undefined);
-    mocks.getUsage.mockResolvedValue({ ...usage, used: 0, remaining: 10 });
   });
 
   it.each(["/ai-swap-summary", "/ai-swap-summary/token"] as const)(
@@ -134,66 +98,20 @@ describe("Wallet AI Swap Summary quota", () => {
   );
 
   it.each(["/ai-swap-summary", "/ai-swap-summary/token"] as const)(
-    "does not consume quota for cached responses from %s",
+    "does not reserve AI usage for %s",
     async (path) => {
-      mocks.cached = true;
-
       const response = await request(path, "user-1");
       const body = await response.json();
 
       expect(response.status).toBe(200);
-      expect(body).toMatchObject({ counted: false });
-      expect(mocks.reserve).not.toHaveBeenCalled();
-      expect(mocks.getUsage).toHaveBeenCalledWith(
-        "user-1",
-        "wallet_ai_swap_summary",
+      expect(body).toMatchObject(
+        path.endsWith("/token")
+          ? { address: "wallet", tokenAddress: "token" }
+          : { address: "wallet" },
       );
+      expect(mocks.reserve).not.toHaveBeenCalled();
+      expect(mocks.getUsage).not.toHaveBeenCalled();
+      expect(mocks.release).not.toHaveBeenCalled();
     },
   );
-
-  it("uses one shared feature key for wallet and token generations", async () => {
-    await request("/ai-swap-summary", "user-1");
-    await request("/ai-swap-summary/token", "user-1");
-
-    expect(mocks.reserve).toHaveBeenNthCalledWith(
-      1,
-      "user-1",
-      "wallet_ai_swap_summary",
-    );
-    expect(mocks.reserve).toHaveBeenNthCalledWith(
-      2,
-      "user-1",
-      "wallet_ai_swap_summary",
-    );
-  });
-
-  it("returns 429 before provider work when quota is exhausted", async () => {
-    mocks.reserve.mockResolvedValue({
-      allowed: false,
-      usage: { ...usage, used: 10, remaining: 0 },
-      userId: "user-1",
-      usageDate: "2026-06-23",
-    });
-
-    const response = await request("/ai-swap-summary", "user-1");
-    const body = await response.json();
-
-    expect(response.status).toBe(429);
-    expect(body).toMatchObject({
-      errorCode: "AI_DAILY_LIMIT_EXCEEDED",
-      used: 10,
-      remaining: 0,
-      upgradePath: "/pricing",
-    });
-    expect(mocks.provider).not.toHaveBeenCalled();
-  });
-
-  it("releases reserved usage when provider work fails", async () => {
-    mocks.provider.mockRejectedValueOnce(new Error("provider unavailable"));
-
-    const response = await request("/ai-swap-summary/token", "user-1");
-
-    expect(response.status).toBe(500);
-    expect(mocks.release).toHaveBeenCalledOnce();
-  });
 });

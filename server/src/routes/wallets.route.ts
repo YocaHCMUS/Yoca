@@ -114,7 +114,7 @@ async function releaseWalletAiUsage(reservation?: AiUsageReservation) {
   try {
     await releaseAiUsage(reservation);
   } catch (err) {
-    console.error("[wallet-ai-swap-summary] failed to release AI usage", err);
+    console.error("[wallet-ai] failed to release AI usage", err);
   }
 }
 
@@ -680,7 +680,6 @@ const app = new Hono()
   .post("/ai-analysis", honoJwt, userExtract, handleWalletAiAnalysis)
   .post("/analysis", honoJwt, userExtract, handleWalletAiAnalysis)
   .post("/ai-swap-summary", honoJwt, userExtract, async (c) => {
-    const { id: userId } = c.get("userPayload");
     let body: unknown;
 
     try {
@@ -697,40 +696,13 @@ const app = new Hono()
       );
     }
 
-    let reservation: AiUsageReservation | undefined;
     try {
       const summary = await getWalletAiSwapSummary(
         parsed.data.address,
         parsed.data.language,
-        async () => {
-          reservation = await reserveAiUsage(
-            userId,
-            AI_FEATURES.WalletAiSwapSummary,
-          );
-          if (!reservation.allowed) {
-            throw new WalletAiDailyLimitError(reservation.usage);
-          }
-        },
       );
-      const usage =
-        reservation?.usage ??
-        (await getAiUsage(userId, AI_FEATURES.WalletAiSwapSummary));
-      return c.json(
-        {
-          ...summary,
-          usage,
-          counted:
-            reservation?.allowed === true && !reservation.usage.disabled,
-        },
-        200,
-      );
+      return c.json(summary, 200);
     } catch (err) {
-      if (err instanceof WalletAiDailyLimitError) {
-        return c.json(walletAiLimitResponse(err.usage), 429);
-      }
-
-      await releaseWalletAiUsage(reservation);
-
       if (err instanceof WalletAiSwapSummaryServiceError) {
         const errCode = err.code;
         const statusByCode: Record<
@@ -756,7 +728,6 @@ const app = new Hono()
     }
   })
   .post("/ai-swap-summary/token", honoJwt, userExtract, async (c) => {
-    const { id: userId } = c.get("userPayload");
     let body: unknown;
 
     try {
@@ -773,41 +744,14 @@ const app = new Hono()
       );
     }
 
-    let reservation: AiUsageReservation | undefined;
     try {
       const analysis = await getTokenDeepAnalysis(
         parsed.data.address,
         parsed.data.tokenAddress,
         parsed.data.language ?? "en",
-        async () => {
-          reservation = await reserveAiUsage(
-            userId,
-            AI_FEATURES.WalletAiSwapSummary,
-          );
-          if (!reservation.allowed) {
-            throw new WalletAiDailyLimitError(reservation.usage);
-          }
-        },
       );
-      const usage =
-        reservation?.usage ??
-        (await getAiUsage(userId, AI_FEATURES.WalletAiSwapSummary));
-      return c.json(
-        {
-          ...analysis,
-          usage,
-          counted:
-            reservation?.allowed === true && !reservation.usage.disabled,
-        },
-        200,
-      );
+      return c.json(analysis, 200);
     } catch (err) {
-      if (err instanceof WalletAiDailyLimitError) {
-        return c.json(walletAiLimitResponse(err.usage), 429);
-      }
-
-      await releaseWalletAiUsage(reservation);
-
       if (err instanceof WalletTokenAnalysisServiceError) {
         const errCode = err.code;
         const statusByCode: Record<

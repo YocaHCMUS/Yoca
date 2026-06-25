@@ -10,7 +10,6 @@ import {
   WalletAiApiError,
   type TokenDeepAnalysisResponse,
   type WalletAiAnalysisLanguage,
-  type WalletAiUsage,
 } from "@/services/wallet/walletApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { TokenPriceChart, type TradeIndicator } from "@/components/charts/TokenPriceChart/TokenPriceChart";
@@ -21,8 +20,6 @@ interface TokenDeepAnalysisViewProps {
   walletAddress: string;
   tokenAddress: string;
   apiLanguage: WalletAiAnalysisLanguage;
-  quotaExhausted: boolean;
-  onUsageChange: (usage: WalletAiUsage) => void;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -52,8 +49,6 @@ export function TokenDeepAnalysisView({
   walletAddress,
   tokenAddress,
   apiLanguage,
-  quotaExhausted,
-  onUsageChange,
 }: TokenDeepAnalysisViewProps) {
   const { tr, fmt } = useLocalization();
   const { user, isUserLoading, openAuthModal } = useAuth();
@@ -76,10 +71,8 @@ export function TokenDeepAnalysisView({
     try {
       const result = await fetchTokenDeepAnalysis(walletAddress, tokenAddress, apiLanguage);
       setData(result);
-      onUsageChange(result.usage);
     } catch (err) {
       if (err instanceof WalletAiApiError) {
-        if (err.usage) onUsageChange(err.usage);
         if (err.status === 401) openAuthModal("login");
       }
       setError(err instanceof Error ? err.message : "Failed to load token analysis");
@@ -93,7 +86,6 @@ export function TokenDeepAnalysisView({
     user,
     isUserLoading,
     openAuthModal,
-    onUsageChange,
     tr,
   ]);
 
@@ -219,15 +211,9 @@ export function TokenDeepAnalysisView({
     return (
       <div className={styles.errorContainer}>
         <p className={styles.errorText}>{error}</p>
-        {quotaExhausted ? (
-          <a className={styles.upgradeLink} href="/pricing">
-            {tr("walletPage.aiSwapSummary.upgrade")}
-          </a>
-        ) : (
-          <button type="button" className={styles.retryBtn} onClick={() => void fetch()}>
-            {tr("walletPage.aiSwapSummary.retry")}
-          </button>
-        )}
+        <button type="button" className={styles.retryBtn} onClick={() => void fetch()}>
+          {tr("walletPage.aiSwapSummary.retry")}
+        </button>
       </div>
     );
   }
@@ -293,11 +279,6 @@ export function TokenDeepAnalysisView({
         {data.cached && (
           <p className={styles.cachedHint}>
             {tr("walletPage.aiSwapSummary.cachedResult")}
-          </p>
-        )}
-        {!data.counted && (
-          <p className={styles.cachedHint}>
-            {tr("walletPage.aiSwapSummary.notCounted")}
           </p>
         )}
       </div>

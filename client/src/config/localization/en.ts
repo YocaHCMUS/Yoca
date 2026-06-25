@@ -376,8 +376,6 @@ export const translation = {
         "Token Chart News Summary: {{$count}} summaries per day",
       volatilitySummary:
         "Volatility Signal Summary: {{$count}} generations per day",
-      walletSwapSummary:
-        "Wallet AI Swap Summary: {{$count}} analyses per day",
       walletAiAnalysis:
         "Wallet AI Analysis: {{$count}} analyses per day",
       washTradingAiAnalysis:
@@ -1085,9 +1083,6 @@ export const translation = {
       summary: "Summary",
       riskAnalysis: "Risk Analysis",
       cachedResult: "Cached result",
-      remaining: "{{remaining}}/{{limit}} AI analyses remaining today",
-      notCounted: "Cached result — no usage charged",
-      upgrade: "Upgrade plan",
       signInRequired: "Sign in to use Wallet AI Swap Summary.",
       allTokens: "All Tokens",
       entry: "Entry",
@@ -2160,6 +2155,12 @@ export const translation = {
       coingecko: "View on CoinGecko",
       aiWashTradingDetection: "Wash Trading Detection",
       aiWashTradingDetectionShort: "Wash Trading Detection",
+      washGateTitle: "Plus plan required",
+      washGateDescription:
+        "AI Wash Trading Detection is available on Plus and Pro. Upgrade before opening this analysis.",
+      washGateSignIn: "Sign in",
+      washGateClose: "Not now",
+      washGateUpgrade: "Upgrade",
     },
     chart: {
       loadingPool: "Loading chart...",

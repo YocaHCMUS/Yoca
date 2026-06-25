@@ -1,7 +1,10 @@
 import { COINGECKO_THUMBNAIL_URL } from "@/config/constants";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { getUserSubscription, type PlanTier } from "@/services/profile/subscriptionApi";
 import { Copy, LogoDiscord, Search, Wikis } from "@carbon/icons-react";
-import { Link } from "react-router";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router";
 import styles from "./TokenHeader.module.scss";
 
 interface TokenHeaderProps {
@@ -21,6 +24,8 @@ interface TokenHeaderProps {
   sidebar?: boolean;
 }
 
+const hasWashTradingTier = (tier?: PlanTier) => tier === "Plus" || tier === "Pro";
+
 export const TokenHeader = ({
   name,
   symbol,
@@ -37,6 +42,10 @@ export const TokenHeader = ({
 }: TokenHeaderProps) => {
   const copyToClipboard = () => navigator.clipboard.writeText(address);
   const { tr } = useLocalization();
+  const { user, isUserLoading, openAuthModal } = useAuth();
+  const navigate = useNavigate();
+  const [isCheckingWashAccess, setIsCheckingWashAccess] = useState(false);
+  const [isWashGateOpen, setIsWashGateOpen] = useState(false);
 
   const openWebsite = () => websiteUrl && window.open(websiteUrl, "_blank");
 
@@ -61,16 +70,47 @@ export const TokenHeader = ({
     symbol || name || "TOKEN",
   )}&timeframe=24h`;
 
+  const handleAiWashClick = async () => {
+    if (isUserLoading || isCheckingWashAccess) return;
+    if (!user) {
+      setIsWashGateOpen(true);
+      return;
+    }
+
+    setIsCheckingWashAccess(true);
+    try {
+      const subscription = await getUserSubscription();
+      const isCurrent =
+        subscription &&
+        (subscription.status === "active" || subscription.status === "trialing") &&
+        (!subscription.currentPeriodEnd || new Date(subscription.currentPeriodEnd).getTime() > Date.now());
+
+      if (isCurrent && hasWashTradingTier(subscription.planTier)) {
+        navigate(washTradingUrl);
+        return;
+      }
+
+      setIsWashGateOpen(true);
+    } catch (err) {
+      console.error("Failed to check Wash Trading access", err);
+      setIsWashGateOpen(true);
+    } finally {
+      setIsCheckingWashAccess(false);
+    }
+  };
+
   const aiWashButton = (
-    <Link
-      to={washTradingUrl}
+    <button
+      type="button"
       className={`${styles.aiWashButton} ${compact ? styles.aiWashButtonCompact : ""} ${sidebar ? styles.aiWashButtonSidebar : ""}`}
       title={String(tr("token.header.aiWashTradingDetection"))}
+      onClick={() => void handleAiWashClick()}
+      disabled={isUserLoading || isCheckingWashAccess}
     >
       <span className={styles.aiWashIcon}>AI</span>
       <span className={styles.aiWashLabelFull}>{tr("token.header.aiWashTradingDetection")}</span>
       <span className={styles.aiWashLabelShort}>{tr("token.header.aiWashTradingDetectionShort")}</span>
-    </Link>
+    </button>
   );
 
   return (
@@ -147,6 +187,46 @@ export const TokenHeader = ({
       </div>
 
       {!sidebar && aiWashButton}
+
+      {isWashGateOpen && (
+        <div
+          className={styles.washGateOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-label={String(tr("token.header.washGateTitle"))}
+          onClick={() => setIsWashGateOpen(false)}
+        >
+          <div className={styles.washGateCard} onClick={(event) => event.stopPropagation()}>
+            <div className={styles.washGateIcon}>AI</div>
+            <h2 className={styles.washGateTitle}>{tr("token.header.washGateTitle")}</h2>
+            <p className={styles.washGateText}>{tr("token.header.washGateDescription")}</p>
+            <div className={styles.washGateActions}>
+              {!user && (
+                <button
+                  type="button"
+                  className={styles.washGateSecondary}
+                  onClick={() => {
+                    setIsWashGateOpen(false);
+                    openAuthModal("login");
+                  }}
+                >
+                  {tr("token.header.washGateSignIn")}
+                </button>
+              )}
+              <button
+                type="button"
+                className={styles.washGateSecondary}
+                onClick={() => setIsWashGateOpen(false)}
+              >
+                {tr("token.header.washGateClose")}
+              </button>
+              <Link className={styles.washGatePrimary} to="/pricing">
+                {tr("token.header.washGateUpgrade")}
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
