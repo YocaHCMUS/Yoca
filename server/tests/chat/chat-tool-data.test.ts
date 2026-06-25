@@ -6,9 +6,10 @@ import {
 import { buildTransactionCoverage } from "@sv/services/chat/chat.tools.js";
 import { repairMissingDataRefs } from "@sv/services/chat/chat.orchestrator.js";
 import { sanitizeSessionMessages } from "@sv/services/chat/chat-session.js";
-import { compactWalletSwaps, compactWalletTransfers } from "@sv/services/wallet/walletTxCompaction.service.js";
+import { compactWalletPnL, compactWalletSwaps, compactWalletTransfers } from "@sv/services/wallet/walletTxCompaction.service.js";
 import type { ChartSpec, ChatToolCall, ChatToolResult, TableSpec } from "@sv/services/chat/chat.types.js";
 import type { WalletSwap, WalletTransfer } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { PnLComputedResult } from "@sv/services/wallet/walletAiSwapSummary.service.js";
 
 const NOW_MS = Date.UTC(2026, 5, 23, 12, 0, 0, 0);
 
@@ -65,10 +66,13 @@ describe("transaction tool coverage metadata", () => {
       isCapped: true,
       scope: "limited_filtered_sample",
     });
-    expect(coverage.note).toContain("Do not treat 500 as the complete wallet history");
+    expect(coverage.coverageKind).toBe("known_result_rows");
+    expect(coverage.source).toBe("wallet_service_result");
+    expect(coverage.note).toContain("known rows returned");
+    expect(coverage.note).toContain("do not treat 500 as complete wallet history");
   });
 
-  it("marks non-capped transaction results as complete for the filtered query window", () => {
+  it("marks non-capped transaction results as complete for the known bounded result", () => {
     const coverage = buildTransactionCoverage(42, 100);
 
     expect(coverage).toMatchObject({
@@ -78,7 +82,18 @@ describe("transaction tool coverage metadata", () => {
       returnedCount: 42,
       isCapped: false,
       scope: "complete_filtered_result",
+      coverageKind: "known_result_rows",
+      source: "wallet_service_result",
     });
+    expect(coverage.note).toContain("current bounded service result");
+  });
+
+  it("marks results that hit the limit as capped because more rows may exist", () => {
+    const coverage = buildTransactionCoverage(500, 500);
+
+    expect(coverage.isCapped).toBe(true);
+    expect(coverage.scope).toBe("limited_filtered_sample");
+    expect(coverage.note).toContain("hit the limit (500)");
   });
 });
 describe("wallet transaction compaction", () => {
@@ -119,6 +134,27 @@ describe("wallet transaction compaction", () => {
     expect(summary.sellTxCount).toBe(1);
     expect(summary.totalVolumeUsd).toBe(35);
     expect(summary.totalTokensTraded).toBe(2);
+  });
+
+
+  it("preserves PnL coverage in compact summaries", () => {
+    const pnl: PnLComputedResult = {
+      tradeCount: 2,
+      realizedPnlUsd: 12.34,
+      winningPercentage: 50,
+      totalBoughtUsd: 100,
+      totalSoldUsd: 112.34,
+      topProfitable: null,
+      topLoser: null,
+      allTokenBreakdowns: [],
+      coverage: buildTransactionCoverage(500, 500),
+    };
+
+    const summary = compactWalletPnL(pnl);
+
+    expect(summary.coverage).toMatchObject({ isCapped: true, analyzedCount: 500, availableCount: 500 });
+    expect(summary.analyzedTrades).toBe(500);
+    expect(summary.availableTrades).toBe(500);
   });
 
   it("summarizes transfers by direction", () => {

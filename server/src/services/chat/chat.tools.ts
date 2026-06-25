@@ -24,6 +24,8 @@ interface TransactionCoverage {
   returnedCount: number;
   isCapped: boolean;
   scope: "complete_filtered_result" | "limited_filtered_sample";
+  coverageKind: "known_result_rows";
+  source: "wallet_service_result";
   note: string;
 }
 
@@ -501,18 +503,21 @@ function extractTransfersForLLM(
 }
 
 export function buildTransactionCoverage(availableCount: number, limit: number): TransactionCoverage {
-  const analyzedCount = Math.min(availableCount, limit);
-  const isCapped = availableCount > limit;
+  const normalizedLimit = Math.max(1, Math.trunc(limit));
+  const analyzedCount = Math.min(availableCount, normalizedLimit);
+  const isCapped = availableCount >= normalizedLimit;
   return {
-    limit,
+    limit: normalizedLimit,
     availableCount,
     analyzedCount,
     returnedCount: analyzedCount,
     isCapped,
     scope: isCapped ? "limited_filtered_sample" : "complete_filtered_result",
+    coverageKind: "known_result_rows",
+    source: "wallet_service_result",
     note: isCapped
-      ? `Analyzed ${analyzedCount} of at least ${availableCount} filtered rows returned for this query window. Do not treat ${analyzedCount} as the complete wallet history.`
-      : `Analyzed all ${analyzedCount} filtered rows returned for this query window.`,
+      ? `Analyzed ${analyzedCount} known rows returned for this query window and hit the limit (${normalizedLimit}). More matching rows may exist; do not treat ${analyzedCount} as complete wallet history.`
+      : `Analyzed all ${analyzedCount} known rows returned for this query window. This is complete for the current bounded service result, not necessarily all chain history.`,
   };
 }
 function extractPortfolioForLLM(
@@ -631,6 +636,7 @@ function extractPnLComputedForLLM(data: unknown): unknown {
       totalExited: b.totalExited,
     }))
     : [];
+  const coverage = s.coverage;
   return {
     tradeCount: s.tradeCount,
     realizedPnlUsd: s.realizedPnlUsd,
@@ -639,6 +645,13 @@ function extractPnLComputedForLLM(data: unknown): unknown {
     totalSoldUsd: s.totalSoldUsd,
     topProfitable: s.topProfitable,
     topLoser: s.topLoser,
+    coverage,
+    analyzedTrades: coverage && typeof coverage === "object" && !Array.isArray(coverage)
+      ? (coverage as Record<string, unknown>).analyzedCount
+      : s.tradeCount,
+    availableTrades: coverage && typeof coverage === "object" && !Array.isArray(coverage)
+      ? (coverage as Record<string, unknown>).availableCount
+      : s.tradeCount,
     tokenBreakdowns: breakdowns,
   };
 }
