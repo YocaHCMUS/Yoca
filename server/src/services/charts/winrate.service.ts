@@ -36,6 +36,8 @@ export interface WalletWinrateData {
   losingDistribution: WinrateBin[];
   avgWinUsd: number;
   avgLossUsd: number;
+  dailyPnL: Array<{ timestamp: number; value: number }>;
+  cumulativePnL: Array<{ timestamp: number; value: number }>;
 }
 
 export interface WinrateResponse {
@@ -63,6 +65,32 @@ const MOBULA_PERIOD_BY_WINRATE_PERIOD: Record<WinratePeriod, string> = {
 function mapStoredWinrateToResponse(
   row: WalletAnalysisSelect,
 ): WalletWinrateData {
+  const dailyPnL = (
+    row.calendarBreakdown.length > 0
+      ? row.calendarBreakdown.map((day) => ({
+          date: day.date,
+          realizedPnlUsd: day.realizedPnlUSD,
+        }))
+      : row.periodTimeframes.map((timeframe) => ({
+          date: timeframe.date,
+          realizedPnlUsd: timeframe.realized,
+        }))
+  )
+    .map((day) => ({
+      timestamp: dayjs.utc(day.date).startOf("day").valueOf(),
+      value: day.realizedPnlUsd,
+    }))
+    .filter((day) => Number.isFinite(day.timestamp))
+    .sort((left, right) => left.timestamp - right.timestamp);
+  let cumulativeValue = 0;
+  const cumulativePnL = dailyPnL.map((day) => {
+    cumulativeValue += day.value;
+    return {
+      timestamp: day.timestamp,
+      value: cumulativeValue,
+    };
+  });
+
   return {
     walletAddress: row.walletAddress,
     walletName: row.walletAddress,
@@ -82,6 +110,8 @@ function mapStoredWinrateToResponse(
     ],
     avgWinUsd: row.avgWinUsd,
     avgLossUsd: row.avgLossUsd,
+    dailyPnL,
+    cumulativePnL,
   };
 }
 
@@ -155,6 +185,8 @@ export async function fetchWalletAnalysis(
       pnlUnrealizedUsd:
         result.data.stat.periodTotalPnlUSD -
         result.data.stat.periodRealizedPnlUSD,
+      periodTimeframes: result.data.periodTimeframes,
+      calendarBreakdown: result.data.calendarBreakdown ?? [],
       fetchedAtMs,
     })
     .onConflictDoUpdate({
@@ -184,6 +216,8 @@ export async function fetchWalletAnalysis(
         pnlUnrealizedUsd:
           result.data.stat.periodTotalPnlUSD -
           result.data.stat.periodRealizedPnlUSD,
+        periodTimeframes: result.data.periodTimeframes,
+        calendarBreakdown: result.data.calendarBreakdown ?? [],
         fetchedAtMs,
       },
     })

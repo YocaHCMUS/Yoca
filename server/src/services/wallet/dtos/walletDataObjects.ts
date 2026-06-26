@@ -16,7 +16,7 @@ export interface WalletOverview {
     metricsPeriod?: string;
 }
 
-export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D" | "All";
+export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D";
 export interface WalletOverviewWinRateStats {
     winRate: number;       // VD: 68.4
     winCount: number;      // Số token lãi
@@ -660,4 +660,3 @@ export interface WalletDayActivityMultiResponse {
     wallets: WalletDayActivitySummary[];
     combined?: WalletDayActivitySummary;
 }
-

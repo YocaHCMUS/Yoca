@@ -146,7 +146,7 @@ export default function WalletPage() {
 
   const { stats, loading } = useWalletWinrate(
     walletAddress,
-    selectedPeriod === "All" ? "90D" : selectedPeriod,
+    selectedPeriod,
   );
   const [selectedToken, setSelectedToken] = useState<{
     address: string;

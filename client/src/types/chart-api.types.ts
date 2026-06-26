@@ -733,6 +733,12 @@ export interface WinrateResponse extends ChartResponseBase {
       /** Upper bound of bin (%) */
       max: number;
     }[];
+
+    /** Daily realized PnL returned by Mobula wallet analysis */
+    dailyPnL: TimeSeriesPoint[];
+
+    /** Prefix sum of daily realized PnL */
+    cumulativePnL: TimeSeriesPoint[];
   }[];
 
   /** Response metadata */

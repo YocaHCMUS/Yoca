@@ -79,6 +79,46 @@ export type WalletTransactionHistory<T> = {
   cursor: string | null;
 };
 
+export function mapSwapToTokenTradeRow(
+  swap: WalletSwap,
+  walletAddress: string,
+  tokenAddress: string,
+) {
+  const normalizedToken = tokenAddress.trim().toLowerCase();
+  const boughtAddress = swap.bought.address.trim().toLowerCase();
+
+  const inferredAction: "buy" | "sell" =
+    boughtAddress == normalizedToken ? "buy" : "sell";
+
+  const selectedAmount =
+    inferredAction == "buy" ? swap.bought.amount : swap.sold.amount;
+  const selectedTokenAddress =
+    inferredAction == "buy" ? swap.bought.address : swap.sold.address;
+  const otherTokenAddress =
+    inferredAction == "buy" ? swap.sold.address : swap.bought.address;
+  const selectedPrice =
+    inferredAction == "buy" ? swap.bought.priceUsd : swap.sold.priceUsd;
+  const otherPrice =
+    inferredAction == "buy" ? swap.sold.priceUsd : swap.bought.priceUsd;
+
+  return {
+    address: walletAddress,
+    tokenAddress,
+    transactionHash: swap.transactionHash,
+    blockUnixTimeMs: new Date(swap.blockTimestampIso).getTime(),
+    baseTokenAddress: selectedTokenAddress,
+    quoteTokenAddress: otherTokenAddress,
+    baseAmount: selectedAmount,
+    quoteAmount: selectedAmount,
+    basePrice: selectedPrice,
+    quotePrice: otherPrice,
+    volumeUsd: swap.totalValueUsd ?? 0,
+    poolAddress: swap.pairAddress,
+    poolName: null,
+    tradeAction: inferredAction,
+  };
+}
+
 const walletHistoryCursorSchema = z
   .tuple([
     z.literal("1"),
@@ -931,12 +971,43 @@ async function fetchWalletSwapHistoryCore(
     WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
   );
 
-  if (!res || res.transactions.length == 0) return null;
+  if (!res) return null;
+  if (res.transactions.length == 0) {
+    if (writeMeta) {
+      await db.insert(walletSwapHistoryMeta).values({
+        address,
+        fromExclusiveMs: res.coveredFromExclusiveMs,
+        toInclusiveMs: res.coveredToInclusiveMs,
+        fetchedAtMs: dayjs.utc().valueOf(),
+      });
+    }
+
+    return {
+      values: [],
+      coveredFromExclusiveMs: res.coveredFromExclusiveMs,
+      coveredToInclusiveMs: res.coveredToInclusiveMs,
+      cutOffByLimit: res.cutOffByLimit,
+    };
+  }
 
   const combinedValues = await zrn_extractSwaps(address, res.transactions);
 
   if (combinedValues.returnValues.length == 0) {
-    return null;
+    if (writeMeta) {
+      await db.insert(walletSwapHistoryMeta).values({
+        address,
+        fromExclusiveMs: res.coveredFromExclusiveMs,
+        toInclusiveMs: res.coveredToInclusiveMs,
+        fetchedAtMs: dayjs.utc().valueOf(),
+      });
+    }
+
+    return {
+      values: [],
+      coveredFromExclusiveMs: res.coveredFromExclusiveMs,
+      coveredToInclusiveMs: res.coveredToInclusiveMs,
+      cutOffByLimit: res.cutOffByLimit,
+    };
   }
 
   await db
@@ -1337,10 +1408,43 @@ async function fetchWalletTransferHistoryCore(
     WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
   );
 
-  if (!res || res.transactions.length == 0) return null;
+  if (!res) return null;
+  if (res.transactions.length == 0) {
+    if (writeMeta) {
+      await db.insert(walletTransferHistoryMeta).values({
+        address,
+        fromExclusiveMs: res.coveredFromExclusiveMs,
+        toInclusiveMs: res.coveredToInclusiveMs,
+        fetchedAtMs: dayjs.utc().valueOf(),
+      });
+    }
+
+    return {
+      values: [],
+      coveredFromExclusiveMs: res.coveredFromExclusiveMs,
+      coveredToInclusiveMs: res.coveredToInclusiveMs,
+      cutOffByLimit: res.cutOffByLimit,
+    };
+  }
 
   const combinedValues = zrn_extractTransfers(address, res.transactions);
-  if (combinedValues.returnValues.length == 0) return null;
+  if (combinedValues.returnValues.length == 0) {
+    if (writeMeta) {
+      await db.insert(walletTransferHistoryMeta).values({
+        address,
+        fromExclusiveMs: res.coveredFromExclusiveMs,
+        toInclusiveMs: res.coveredToInclusiveMs,
+        fetchedAtMs: dayjs.utc().valueOf(),
+      });
+    }
+
+    return {
+      values: [],
+      coveredFromExclusiveMs: res.coveredFromExclusiveMs,
+      coveredToInclusiveMs: res.coveredToInclusiveMs,
+      cutOffByLimit: res.cutOffByLimit,
+    };
+  }
 
   await db
     .insert(walletTransferHistory)

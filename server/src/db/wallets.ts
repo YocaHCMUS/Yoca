@@ -4,6 +4,7 @@ import {
     decimal as dec,
     index,
     integer,
+    jsonb,
     pgEnum,
     pgTable,
     primaryKey,
@@ -225,6 +226,21 @@ export type WalletRecentTransfersSelect =
 export type WalletRecentTransfersInsert =
   typeof walletRecentTransfers.$inferInsert;
 
+export type WalletAnalysisPeriodTimeframe = {
+  date: string;
+  realized: number;
+};
+
+export type WalletAnalysisCalendarDay = {
+  date: string;
+  volumeBuy: number;
+  volumeSell: number;
+  totalVolume: number;
+  buys: number;
+  sells: number;
+  realizedPnlUSD: number;
+};
+
 export const walletAnalyses = pgTable(
   "wallet_analyses",
   {
@@ -251,6 +267,14 @@ export const walletAnalyses = pgTable(
     pnlTotalUsd: decimal("pnl_total_usd").notNull(),
     pnlRealizedUsd: decimal("pnl_realized_usd").notNull(),
     pnlUnrealizedUsd: decimal("pnl_unrealized_usd").notNull(),
+    periodTimeframes: jsonb("period_timeframes")
+      .$type<WalletAnalysisPeriodTimeframe[]>()
+      .notNull()
+      .default([]),
+    calendarBreakdown: jsonb("calendar_breakdown")
+      .$type<WalletAnalysisCalendarDay[]>()
+      .notNull()
+      .default([]),
     fetchedAtMs: bigint("fetched_at_ms", { mode: "number" }).notNull(),
   },
   (t) => [primaryKey({ columns: [t.walletAddress, t.period] })],

@@ -206,7 +206,7 @@ async function fetchWalletBalanceHistory(
     address: address,
     // s -> ms
     timestampMs: point[0] * 1000,
-    usdValue: point[1] * 1000,
+    usdValue: point[1],
   }));
 
   const balanceTable =

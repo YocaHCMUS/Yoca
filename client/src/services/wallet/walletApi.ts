@@ -423,7 +423,7 @@ export interface WalletAiAnalysisResponse {
   reference?: WalletAiReferenceEntry[];
 }
 
-export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D" | "All";
+export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D";
 
 export interface WalletOverviewPeriodStats {
   tradingVolumeUsd: number | null;
@@ -804,6 +804,7 @@ export function fetchWalletAudit(
 ): Promise<WalletAuditReport> {
   return client.api.wallets[":address"].audit.$get({
     param: { address },
+    query: { force: options?.force ? "true" : undefined },
   }).then(resp => {
     if (resp.ok) return resp.json();
     console.error(`API Error: ${resp.status}`);
