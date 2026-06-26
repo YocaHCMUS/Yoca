@@ -10,7 +10,7 @@ import { searchNews, searchWeb } from "./chat-web-search.js";
 import { getBirdeyeChartData } from "@sv/services/wallet/providers/birdeye-chart-data.js";
 import type { ChatToolDefinition, ToolCachePolicy } from "./chat.types.js";
 import { getWalletTxDetail } from "@sv/services/wallet/walletDayActivity.service.js";
-import { compactWalletSwaps, compactWalletTransfers, compactWalletPnL } from "@sv/services/wallet/walletTxCompaction.service.js";
+import { compactWalletSwaps, compactWalletTransfers } from "@sv/services/wallet/walletTxCompaction.service.js";
 import { z } from "zod";
 
 const BASE58_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -23,6 +23,8 @@ interface TransactionCoverage {
   analyzedCount: number;
   returnedCount: number;
   isCapped: boolean;
+  hasMore: boolean;
+  totalAvailableMinimum: number;
   scope: "complete_filtered_result" | "limited_filtered_sample";
   coverageKind: "known_result_rows";
   source: "wallet_service_result";
@@ -35,7 +37,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_wallet_overview",
     description:
-      "Fetch portfolio summary for a wallet address: total balance in USD, 24h change, trading volume, PnL, token holdings count, and activity metrics across time periods (24H, 7D, 30D, 90D).",
+      "Fetch wallet overview snapshot: current total balance in USD, 24h change, trading volume, token holdings count, activity metrics, and PnL snapshots across fixed periods (24H, 7D, 30D, 90D). Use with get_wallet_pnl to cross-check realized trade-derived PnL, and with get_wallet_portfolio to explain current exposure.",
     input_schema: {
       type: "object",
       properties: {
@@ -85,7 +87,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_wallet_swaps_compact",
     description:
-      "Fetch up to 500 wallet swaps and return a compact aggregate overview by token and buy/sell action. Prefer this for broad trading activity analysis, token summaries, and overview questions instead of raw trade rows.",
+      "Fetch up to 500 wallet swaps and return a compact aggregate overview by token and buy/sell action. Prefer this for broad trading activity analysis, behavior summaries, and token activity instead of raw trade rows. Pair with get_wallet_pnl when the user asks whether trading behavior produced gains or losses.",
     input_schema: {
       type: "object",
       properties: {
@@ -104,7 +106,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_wallet_transfers_compact",
     description:
-      "Fetch up to 500 wallet transfers and return a compact aggregate overview by token and direction. Prefer this for broad transfer activity analysis and overview questions instead of raw transfer rows.",
+      "Fetch up to 500 wallet transfers and return a compact aggregate overview by token and direction. Prefer this for broad funding, deposit/withdrawal, and flow analysis instead of raw transfer rows. Pair with swap/PnL tools when external flows may explain balance or performance changes.",
     input_schema: {
       type: "object",
       properties: {
@@ -123,7 +125,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_balance_history",
     description:
-      "Fetch wallet balance over time (USD). Returns daily balance data points. Supports time periods (7D, 30D, 60D, 90D, 1Y) or custom fromMs/toMs range. Useful for balance trend charts.",
+      "Fetch wallet balance over time (USD). Returns daily balance data points for trend context, not token-level drivers. Supports time periods (7D, 30D, 60D, 90D, 1Y) or custom fromMs/toMs range. Pair with get_wallet_overview for summary metrics or get_drawdown_chart for risk framing.",
     input_schema: {
       type: "object",
       properties: {
@@ -159,7 +161,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_drawdown_chart",
     description:
-      "Fetch drawdown (peak-to-trough decline) chart data for a wallet over time. Returns daily drawdown percentages showing how far the balance has fallen from its most recent peak. Supports time periods (7D, 30D, 60D, 90D, 1Y) or custom fromMs/toMs range. Useful for risk assessment.",
+      "Fetch drawdown (peak-to-trough decline) chart data for a wallet over time. Returns daily drawdown percentages showing how far the balance has fallen from its most recent peak. Use for risk/stability context, not as a replacement for overview or PnL driver tools. Pair with get_wallet_overview and get_wallet_pnl for risk questions.",
     input_schema: {
       type: "object",
       properties: {
@@ -193,24 +195,24 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
       required: ["address"],
     },
   },
-  {
-    name: "get_wallet_pnl_compact",
-    description:
-      "Fetch up to 500 wallet swaps and return a compact aggregated PnL overview by token. Includes total PnL, win rate, top gainer/loser, and per-token breakdowns. Prefer this for broad PnL analysis and overview questions instead of raw per-token rows.",
-    input_schema: {
-      type: "object",
-      properties: {
-        address: { type: "string", description: "Solana wallet address (base58)" },
-        limit: { type: "number", description: "Max number of swaps to analyze for PnL (default 500, max 500)" },
-        fromMs: { type: "number", description: "Start time (epoch ms)" },
-        toMs: { type: "number", description: "End time (epoch ms)" },
-        tokenAddress: { type: "string", description: "Token mint address (base58) to filter PnL. Call search_token first if you only have a symbol." },
-        minAmountUsd: { type: "number", description: "Minimum USD value per swap to include" },
-        maxAmountUsd: { type: "number", description: "Maximum USD value per swap to include" },
-      },
-      required: ["address"],
-    },
-  },
+  // {
+  //   name: "get_wallet_pnl_compact",
+  //   description:
+  //     "Fetch up to 500 wallet swaps and return a compact realized, trade-derived PnL overview by token. Includes total realized PnL, win rate, top gainer/loser, coverage, and per-token breakdowns. This can be sampled/limited by swap coverage, so cross-check with get_wallet_overview period PnL for broad performance questions.",
+  //   input_schema: {
+  //     type: "object",
+  //     properties: {
+  //       address: { type: "string", description: "Solana wallet address (base58)" },
+  //       limit: { type: "number", description: "Max number of swaps to analyze for PnL (default 500, max 500)" },
+  //       fromMs: { type: "number", description: "Start time (epoch ms)" },
+  //       toMs: { type: "number", description: "End time (epoch ms)" },
+  //       tokenAddress: { type: "string", description: "Token mint address (base58) to filter PnL. Call search_token first if you only have a symbol." },
+  //       minAmountUsd: { type: "number", description: "Minimum USD value per swap to include" },
+  //       maxAmountUsd: { type: "number", description: "Maximum USD value per swap to include" },
+  //     },
+  //     required: ["address"],
+  //   },
+  // },
   {
     name: "get_wallet_winrate",
     description:
@@ -227,7 +229,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_pnl_chart",
     description:
-      "Fetch PnL time series data for a wallet. Returns daily PnL and cumulative PnL data points. Supports time periods (7D, 30D, 60D, 90D, 1Y) or custom fromMs/toMs range. Useful for PnL trend charts.",
+      "Fetch PnL time series data for a wallet. Returns daily PnL and cumulative PnL points for trend, timing, consistency, and chart context. Supports time periods (7D, 30D, 60D, 90D, 1Y) or custom fromMs/toMs range. Pair with get_wallet_pnl for token-level realized PnL drivers.",
     input_schema: {
       type: "object",
       properties: {
@@ -246,7 +248,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_wallet_portfolio",
     description:
-      "Fetch current token holdings for a wallet. Returns list of tokens with amount, USD value, and token metadata. Supports filtering by minimum value and token search.",
+      "Fetch current token holdings for a wallet. Returns tokens with amount, USD value, and metadata. Use for current exposure, concentration, and unrealized portfolio context. Pair with get_wallet_overview for balance/activity summary and with get_wallet_pnl when holdings may explain gains or losses.",
     input_schema: {
       type: "object",
       properties: {
@@ -429,7 +431,7 @@ const MULTI_ADDRESS_TOOLS = new Set([
   "get_wallet_swaps", "get_wallet_transfers",
   "get_wallet_swaps_compact", "get_wallet_transfers_compact",
   "get_balance_history", "get_drawdown_chart",
-  "get_wallet_pnl", "get_wallet_pnl_compact", "get_wallet_winrate", "get_pnl_chart",
+  "get_wallet_pnl", "get_wallet_winrate", "get_pnl_chart",
   "get_wallet_portfolio", "get_historical_portfolio",
   "get_tx_detail",
 ]);
@@ -459,11 +461,12 @@ function extractSwapsForLLM(
   limit: number,
 ): unknown {
   if (!swaps || typeof swaps !== "object") return { coverage: buildTransactionCoverage(0, limit), swaps: [] };
-  const s = swaps as { swaps?: unknown[] };
+  const s = swaps as { swaps?: unknown[]; pageInfo?: { hasMore?: boolean } };
   if (!Array.isArray(s.swaps)) return { coverage: buildTransactionCoverage(0, limit), swaps: [] };
+  const hasMore = s.pageInfo?.hasMore ?? false;
 
   return {
-    coverage: buildTransactionCoverage(s.swaps.length, limit),
+    coverage: buildTransactionCoverage(s.swaps.length, limit, hasMore),
     swaps: s.swaps.slice(0, limit).map((swap) => {
       const r = swap as Record<string, unknown>;
       return {
@@ -482,11 +485,12 @@ function extractTransfersForLLM(
   limit: number,
 ): unknown {
   if (!transfers || typeof transfers !== "object") return { coverage: buildTransactionCoverage(0, limit), transfers: [] };
-  const t = transfers as { transfers?: unknown[] };
+  const t = transfers as { transfers?: unknown[]; pageInfo?: { hasMore?: boolean } };
   if (!Array.isArray(t.transfers)) return { coverage: buildTransactionCoverage(0, limit), transfers: [] };
+  const hasMore = t.pageInfo?.hasMore ?? false;
 
   return {
-    coverage: buildTransactionCoverage(t.transfers.length, limit),
+    coverage: buildTransactionCoverage(t.transfers.length, limit, hasMore),
     transfers: t.transfers.slice(0, limit).map((tr) => {
       const r = tr as Record<string, unknown>;
       return {
@@ -502,22 +506,27 @@ function extractTransfersForLLM(
   };
 }
 
-export function buildTransactionCoverage(availableCount: number, limit: number): TransactionCoverage {
+export function buildTransactionCoverage(availableCount: number, limit: number, hasMore = false): TransactionCoverage {
   const normalizedLimit = Math.max(1, Math.trunc(limit));
   const analyzedCount = Math.min(availableCount, normalizedLimit);
   const isCapped = availableCount >= normalizedLimit;
+  const totalAvailableMinimum = isCapped || hasMore ? Math.max(availableCount, normalizedLimit) + 1 : availableCount;
   return {
     limit: normalizedLimit,
     availableCount,
     analyzedCount,
     returnedCount: analyzedCount,
     isCapped,
+    hasMore,
+    totalAvailableMinimum,
     scope: isCapped ? "limited_filtered_sample" : "complete_filtered_result",
     coverageKind: "known_result_rows",
     source: "wallet_service_result",
     note: isCapped
-      ? `Analyzed ${analyzedCount} known rows returned for this query window and hit the limit (${normalizedLimit}). More matching rows may exist; do not treat ${analyzedCount} as complete wallet history.`
-      : `Analyzed all ${analyzedCount} known rows returned for this query window. This is complete for the current bounded service result, not necessarily all chain history.`,
+      ? `Analyzed ${analyzedCount}/${totalAvailableMinimum}+ rows — capped at limit (${normalizedLimit}). Do not treat as complete history.`
+      : hasMore
+        ? `Analyzed all ${analyzedCount} rows for this query window; more exist beyond the query range.`
+        : `Analyzed all ${analyzedCount} available rows for this query window.`,
   };
 }
 function extractPortfolioForLLM(
@@ -636,8 +645,24 @@ function extractPnLComputedForLLM(data: unknown): unknown {
       totalExited: b.totalExited,
     }))
     : [];
-  const coverage = s.coverage;
+  const coverage = s.coverage as Record<string, unknown> | undefined;
+  const analyzedTrades = coverage?.analyzedCount as number ?? (s.tradeCount as number);
+  const availableTrades = coverage?.availableCount as number ?? (s.tradeCount as number);
+  const isCapped = coverage?.isCapped as boolean ?? false;
+  const hasMore = coverage?.hasMore as boolean ?? false;
+  const totalAvailableMinimum = coverage?.totalAvailableMinimum as number ?? availableTrades;
+  const coveragePercent = availableTrades > 0 ? Math.round((analyzedTrades / totalAvailableMinimum) * 100) : 100;
+  const coverageSummary = isCapped || hasMore
+    ? `${analyzedTrades} of \u2265${totalAvailableMinimum} swaps analyzed (\u2264${Math.min(coveragePercent, 100)}% coverage)`
+    : `All ${analyzedTrades} swaps analyzed`;
   return {
+    coverageSummary,
+    coveragePercent: Math.min(coveragePercent, 100),
+    analyzedTrades,
+    availableTrades,
+    isCapped,
+    hasMore,
+    totalAvailableMinimum,
     tradeCount: s.tradeCount,
     realizedPnlUsd: s.realizedPnlUsd,
     winRate: s.winningPercentage,
@@ -646,12 +671,6 @@ function extractPnLComputedForLLM(data: unknown): unknown {
     topProfitable: s.topProfitable,
     topLoser: s.topLoser,
     coverage,
-    analyzedTrades: coverage && typeof coverage === "object" && !Array.isArray(coverage)
-      ? (coverage as Record<string, unknown>).analyzedCount
-      : s.tradeCount,
-    availableTrades: coverage && typeof coverage === "object" && !Array.isArray(coverage)
-      ? (coverage as Record<string, unknown>).availableCount
-      : s.tradeCount,
     tokenBreakdowns: breakdowns,
   };
 }
@@ -906,7 +925,7 @@ export const TOOL_HANDLERS: Record<
   get_wallet_swaps: async (input) => {
     const { address, limit, tokenAddress, type, fromMs, toMs, minAmountUsd, maxAmountUsd } = swapsFilterSchema.parse(input);
     const data = await getWalletSwaps(address, fromMs, toMs, tokenAddress, type, minAmountUsd, maxAmountUsd, limit);
-    const coverage = buildTransactionCoverage(data.swaps.length, limit);
+    const coverage = buildTransactionCoverage(data.swaps.length, limit, data.pageInfo?.hasMore);
     const limited = data.swaps.slice(0, limit);
     return { data: { ...data, swaps: limited, coverage }, llmData: extractSwapsForLLM(data, limit) };
   },
@@ -914,7 +933,7 @@ export const TOOL_HANDLERS: Record<
   get_wallet_transfers: async (input) => {
     const { address, limit, tokenAddress, direction, fromMs, toMs, minAmountUsd, maxAmountUsd } = transfersFilterSchema.parse(input);
     const data = await getWalletTransfers(address, fromMs, toMs, tokenAddress, direction, minAmountUsd, maxAmountUsd, limit);
-    const coverage = buildTransactionCoverage(data.transfers.length, limit);
+    const coverage = buildTransactionCoverage(data.transfers.length, limit, data.pageInfo?.hasMore);
     const limited = data.transfers.slice(0, limit);
     return { data: { ...data, transfers: limited, coverage }, llmData: extractTransfersForLLM(data, limit) };
   },
@@ -922,17 +941,33 @@ export const TOOL_HANDLERS: Record<
   get_wallet_swaps_compact: async (input) => {
     const { address, limit, tokenAddress, type, fromMs, toMs, minAmountUsd, maxAmountUsd } = compactSwapsFilterSchema.parse(input);
     const data = await getWalletSwaps(address, fromMs, toMs, tokenAddress, type, minAmountUsd, maxAmountUsd, limit);
-    const coverage = buildTransactionCoverage(data.swaps.length, limit);
+    const coverage = buildTransactionCoverage(data.swaps.length, limit, data.pageInfo?.hasMore);
     const limited = data.swaps.slice(0, limit);
-    const compact = { ...compactWalletSwaps(limited), coverage, analyzedTrades: coverage.analyzedCount, availableTrades: coverage.availableCount };
+    const isCapped = coverage.isCapped || coverage.hasMore;
+    const coveragePercent = coverage.totalAvailableMinimum > 0 ? Math.round((coverage.analyzedCount / coverage.totalAvailableMinimum) * 100) : 100;
+    const coverageSummary = isCapped
+      ? `${coverage.analyzedCount} of \u2265${coverage.totalAvailableMinimum} swaps (\u2264${Math.min(coveragePercent, 100)}%)`
+      : `All ${coverage.analyzedCount} swaps`;
+    const compact = {
+      ...compactWalletSwaps(limited), coverage, analyzedTrades: coverage.analyzedCount,
+      availableTrades: coverage.availableCount, coverageSummary, coveragePercent: Math.min(coveragePercent, 100),
+    };
     return { data: { ...data, swaps: limited, coverage, compact }, llmData: compact };
   },
   get_wallet_transfers_compact: async (input) => {
     const { address, limit, tokenAddress, direction, fromMs, toMs, minAmountUsd, maxAmountUsd } = compactTransfersFilterSchema.parse(input);
     const data = await getWalletTransfers(address, fromMs, toMs, tokenAddress, direction, minAmountUsd, maxAmountUsd, limit);
-    const coverage = buildTransactionCoverage(data.transfers.length, limit);
+    const coverage = buildTransactionCoverage(data.transfers.length, limit, data.pageInfo?.hasMore);
     const limited = data.transfers.slice(0, limit);
-    const compact = { ...compactWalletTransfers(limited, address), coverage, analyzedTransfers: coverage.analyzedCount, availableTransfers: coverage.availableCount };
+    const isCapped = coverage.isCapped || coverage.hasMore;
+    const coveragePercent = coverage.totalAvailableMinimum > 0 ? Math.round((coverage.analyzedCount / coverage.totalAvailableMinimum) * 100) : 100;
+    const coverageSummary = isCapped
+      ? `${coverage.analyzedCount} of \u2265${coverage.totalAvailableMinimum} transfers (\u2264${Math.min(coveragePercent, 100)}%)`
+      : `All ${coverage.analyzedCount} transfers`;
+    const compact = {
+      ...compactWalletTransfers(limited, address), coverage, analyzedTransfers: coverage.analyzedCount,
+      availableTransfers: coverage.availableCount, coverageSummary, coveragePercent: Math.min(coveragePercent, 100),
+    };
     return { data: { ...data, transfers: limited, coverage, compact }, llmData: compact };
   },
   get_balance_history: async (input) => {
@@ -981,23 +1016,23 @@ export const TOOL_HANDLERS: Record<
     const data = await getWalletPnLComputed(address, { fromMs, toMs, tokenAddress, limit, minAmountUsd, maxAmountUsd });
     return { data, llmData: extractPnLComputedForLLM(data) };
   },
-  get_wallet_pnl_compact: async (input) => {
-    const { address, limit, fromMs, toMs, tokenAddress, minAmountUsd, maxAmountUsd } = z.object({
-      address: z.string().min(1),
-      limit: z.number().int().positive().max(500).optional(),
-      fromMs: z.number().optional(),
-      toMs: z.number().optional(),
-      tokenAddress: z.string().regex(BASE58_REGEX, "Must be a valid base58 token mint address").optional(),
-      minAmountUsd: z.number().optional(),
-      maxAmountUsd: z.number().optional(),
-    }).refine(fromToMsRefinement, { message: "fromMs must be less than toMs" }).parse(input);
-    const { getWalletPnLComputed } = await import(
-      "@sv/services/wallet/walletAiSwapSummary.service.js"
-    );
-    const data = await getWalletPnLComputed(address, { fromMs, toMs, tokenAddress, limit, minAmountUsd, maxAmountUsd });
-    const compact = compactWalletPnL(data);
-    return { data: { ...data, compact }, llmData: compact };
-  },
+  // get_wallet_pnl_compact: async (input) => {
+  //   const { address, limit, fromMs, toMs, tokenAddress, minAmountUsd, maxAmountUsd } = z.object({
+  //     address: z.string().min(1),
+  //     limit: z.number().int().positive().max(500).optional(),
+  //     fromMs: z.number().optional(),
+  //     toMs: z.number().optional(),
+  //     tokenAddress: z.string().regex(BASE58_REGEX, "Must be a valid base58 token mint address").optional(),
+  //     minAmountUsd: z.number().optional(),
+  //     maxAmountUsd: z.number().optional(),
+  //   }).refine(fromToMsRefinement, { message: "fromMs must be less than toMs" }).parse(input);
+  //   const { getWalletPnLComputed } = await import(
+  //     "@sv/services/wallet/walletAiSwapSummary.service.js"
+  //   );
+  //   const data = await getWalletPnLComputed(address, { fromMs, toMs, tokenAddress, limit, minAmountUsd, maxAmountUsd });
+  //   const compact = compactWalletPnL(data);
+  //   return { data: { ...data, compact }, llmData: compact };
+  // },
 
   get_wallet_winrate: async (input) => {
     const { address, period } = z.object({
@@ -1142,7 +1177,7 @@ export const TOOL_CACHE_POLICY: Record<string, ToolCachePolicy> = {
   get_wallet_swaps_compact: { ttlMs: 300_000, cacheable: true },
   get_wallet_transfers_compact: { ttlMs: 300_000, cacheable: true },
   get_wallet_pnl: { ttlMs: 300_000, cacheable: true },
-  get_wallet_pnl_compact: { ttlMs: 300_000, cacheable: true },
+  // get_wallet_pnl_compact: { ttlMs: 300_000, cacheable: true },
   get_wallet_winrate: { ttlMs: 300_000, cacheable: true },
   get_pnl_chart: { ttlMs: 300_000, cacheable: true },
   get_historical_portfolio: { ttlMs: 300_000, cacheable: true },
@@ -1205,7 +1240,7 @@ const WALLET_SCOPED_TOOLS = new Set([
   "get_balance_history",
   "get_drawdown_chart",
   "get_wallet_pnl",
-  "get_wallet_pnl_compact",
+  // "get_wallet_pnl_compact",
   "get_wallet_winrate",
   "get_pnl_chart",
   "get_wallet_portfolio",

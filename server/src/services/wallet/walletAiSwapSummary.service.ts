@@ -228,22 +228,27 @@ function buildBreakdown(acc: TokenAccumulator): TokenPnlBreakdownPersisted {
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
-function buildPnLCoverage(availableCount: number, limit: number): PnLCoverage {
+function buildPnLCoverage(availableCount: number, limit: number, hasMore = false): PnLCoverage {
   const normalizedLimit = Math.max(1, Math.trunc(limit));
   const analyzedCount = Math.min(availableCount, normalizedLimit);
   const isCapped = availableCount >= normalizedLimit;
+  const totalAvailableMinimum = isCapped || hasMore ? Math.max(availableCount, normalizedLimit) + 1 : availableCount;
   return {
     limit: normalizedLimit,
     availableCount,
     analyzedCount,
     returnedCount: analyzedCount,
     isCapped,
+    hasMore,
+    totalAvailableMinimum,
     scope: isCapped ? "limited_filtered_sample" : "complete_filtered_result",
     coverageKind: "known_result_rows",
     source: "wallet_service_result",
     note: isCapped
-      ? `Analyzed ${analyzedCount} known rows returned for this PnL query and hit the limit (${normalizedLimit}). More matching swaps may exist; do not treat ${analyzedCount} as complete wallet history.`
-      : `Analyzed all ${analyzedCount} known rows returned for this PnL query. This is complete for the current bounded service result, not necessarily all chain history.`,
+      ? `Analyzed ${analyzedCount}/${totalAvailableMinimum}+ swaps — capped at limit (${normalizedLimit}). Do not treat as complete wallet history.`
+      : hasMore
+        ? `Analyzed ${analyzedCount} swaps for this query. More exist beyond the query window; not all chain history.`
+        : `Analyzed all ${analyzedCount} available swaps for this query range.`,
   };
 }
 
@@ -518,6 +523,8 @@ export interface PnLCoverage {
   analyzedCount: number;
   returnedCount: number;
   isCapped: boolean;
+  hasMore: boolean;
+  totalAvailableMinimum: number;
   scope: "complete_filtered_result" | "limited_filtered_sample";
   coverageKind: "known_result_rows";
   source: "wallet_service_result";
@@ -565,7 +572,7 @@ export async function getWalletPnLComputed(
     pnlLimit,
   );
   const recent = swapsResult.swaps ?? [];
-  const coverage = buildPnLCoverage(recent.length, pnlLimit);
+  const coverage = buildPnLCoverage(recent.length, pnlLimit, swapsResult.pageInfo?.hasMore);
 
   if (recent.length < 2) {
     return {

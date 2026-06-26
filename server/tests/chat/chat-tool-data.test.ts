@@ -3,14 +3,13 @@ import {
   filterDuplicateToolCalls,
   normalizeToolInput,
 } from "@sv/services/chat/chat-tool-normalizer.js";
-import { buildTransactionCoverage } from "@sv/services/chat/chat.tools.js";
+import { buildTransactionCoverage, TOOL_DEFINITIONS } from "@sv/services/chat/chat.tools.js";
 import { repairMissingDataRefs } from "@sv/services/chat/chat.orchestrator.js";
+import { buildToolSelectionPrompt } from "@sv/services/chat/chat.prompts.js";
 import { sanitizeSessionMessages } from "@sv/services/chat/chat-session.js";
-import { compactWalletPnL, compactWalletSwaps, compactWalletTransfers } from "@sv/services/wallet/walletTxCompaction.service.js";
+import { compactWalletSwaps, compactWalletTransfers } from "@sv/services/wallet/walletTxCompaction.service.js";
 import type { ChartSpec, ChatToolCall, ChatToolResult, TableSpec } from "@sv/services/chat/chat.types.js";
 import type { WalletSwap, WalletTransfer } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import type { PnLComputedResult } from "@sv/services/wallet/walletAiSwapSummary.service.js";
-
 const NOW_MS = Date.UTC(2026, 5, 23, 12, 0, 0, 0);
 
 describe("chat tool normalization", () => {
@@ -54,6 +53,36 @@ describe("chat tool normalization", () => {
 });
 
 
+describe("chat tool selection prompt", () => {
+  it("includes balanced wallet bundle guidance", () => {
+    const prompt = buildToolSelectionPrompt(
+      "Give me a wallet overview",
+      TOOL_DEFINITIONS,
+      ["wallet"],
+    );
+
+    expect(prompt).toContain("COMPLEMENTARY TOOL SELECTION");
+    expect(prompt).toContain("get_wallet_overview + get_wallet_pnl_compact + get_wallet_portfolio");
+    expect(prompt).toContain("get_wallet_pnl_compact + get_wallet_overview");
+    expect(prompt).toContain("get_drawdown_chart + get_wallet_overview");
+  });
+
+  it("preserves Vietnamese language detection guidance", () => {
+    const prompt = buildToolSelectionPrompt(
+      "Tong quan vi nay the nao?",
+      TOOL_DEFINITIONS,
+      ["wallet"],
+      undefined,
+      undefined,
+      "vi",
+    );
+
+    expect(prompt).toContain("Tong quan vi nay the nao?");
+    expect(prompt).toContain("the user's language is 'vi'");
+    expect(prompt).toContain('"language":"vi"');
+  });
+});
+
 describe("transaction tool coverage metadata", () => {
   it("marks capped transaction results as limited samples", () => {
     const coverage = buildTransactionCoverage(650, 500);
@@ -68,8 +97,8 @@ describe("transaction tool coverage metadata", () => {
     });
     expect(coverage.coverageKind).toBe("known_result_rows");
     expect(coverage.source).toBe("wallet_service_result");
-    expect(coverage.note).toContain("known rows returned");
-    expect(coverage.note).toContain("do not treat 500 as complete wallet history");
+    expect(coverage.note).toContain("500/651+");
+    expect(coverage.note).toContain("Do not treat as complete history");
   });
 
   it("marks non-capped transaction results as complete for the known bounded result", () => {
@@ -85,7 +114,7 @@ describe("transaction tool coverage metadata", () => {
       coverageKind: "known_result_rows",
       source: "wallet_service_result",
     });
-    expect(coverage.note).toContain("current bounded service result");
+    expect(coverage.note).toContain("Analyzed all 42 available rows for this query window");
   });
 
   it("marks results that hit the limit as capped because more rows may exist", () => {
@@ -93,7 +122,7 @@ describe("transaction tool coverage metadata", () => {
 
     expect(coverage.isCapped).toBe(true);
     expect(coverage.scope).toBe("limited_filtered_sample");
-    expect(coverage.note).toContain("hit the limit (500)");
+    expect(coverage.note).toContain("capped at limit (500)");
   });
 });
 describe("wallet transaction compaction", () => {
@@ -136,26 +165,6 @@ describe("wallet transaction compaction", () => {
     expect(summary.totalTokensTraded).toBe(2);
   });
 
-
-  it("preserves PnL coverage in compact summaries", () => {
-    const pnl: PnLComputedResult = {
-      tradeCount: 2,
-      realizedPnlUsd: 12.34,
-      winningPercentage: 50,
-      totalBoughtUsd: 100,
-      totalSoldUsd: 112.34,
-      topProfitable: null,
-      topLoser: null,
-      allTokenBreakdowns: [],
-      coverage: buildTransactionCoverage(500, 500),
-    };
-
-    const summary = compactWalletPnL(pnl);
-
-    expect(summary.coverage).toMatchObject({ isCapped: true, analyzedCount: 500, availableCount: 500 });
-    expect(summary.analyzedTrades).toBe(500);
-    expect(summary.availableTrades).toBe(500);
-  });
 
   it("summarizes transfers by direction", () => {
     const transfers: WalletTransfer[] = [

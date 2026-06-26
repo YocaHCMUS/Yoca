@@ -1,5 +1,4 @@
 import type { WalletSwap, WalletTransfer } from "./dtos/walletDataObjects.js";
-import type { PnLComputedResult } from "./walletAiSwapSummary.service.js";
 import { isBaseAsset } from "./walletDayActivity.service.js";
 import { roundUsd } from "./walletNormalization.utils.js";
 
@@ -208,48 +207,4 @@ export function compactWalletTransfers(transfers: WalletTransfer[], walletAddres
   };
 }
 
-interface PnLTokenSummary {
-  address: string;
-  symbol: string | null;
-  name: string | null;
-  pnlUsd: number;
-  trades: number;
-  wins: number;
-  exits: number;
-  winRate: number;
-  totalEntered: number;
-  totalExited: number;
-}
 
-export function compactWalletPnL(data: PnLComputedResult): Record<string, unknown> {
-  const tokens: PnLTokenSummary[] = (data.allTokenBreakdowns ?? []).map((b) => ({
-    address: b.address,
-    symbol: b.symbol,
-    name: b.name,
-    pnlUsd: b.pnlUsd,
-    trades: b.trades,
-    wins: b.wins,
-    exits: b.exits,
-    winRate: b.exits > 0 ? roundUsd((b.wins / b.exits) * 100) : 0,
-    totalEntered: roundUsd(b.totalEntered),
-    totalExited: roundUsd(b.totalExited),
-  })).sort((a, b) => b.pnlUsd - a.pnlUsd);
-
-  const topGainer = tokens.length > 0 ? tokens[0] : null;
-  const topLoser = tokens.length > 1 ? tokens[tokens.length - 1] : null;
-
-  return {
-    tradeCount: data.tradeCount,
-    realizedPnlUsd: roundUsd(data.realizedPnlUsd),
-    winRate: roundUsd(data.winningPercentage),
-    totalBoughtUsd: roundUsd(data.totalBoughtUsd),
-    totalSoldUsd: roundUsd(data.totalSoldUsd),
-    coverage: data.coverage,
-    analyzedTrades: data.coverage.analyzedCount,
-    availableTrades: data.coverage.availableCount,
-    tokenCount: tokens.length,
-    topGainer: topGainer != null && topGainer.pnlUsd > 0 ? topGainer : null,
-    topLoser: topLoser != null && topLoser.pnlUsd < 0 ? topLoser : null,
-    tokens: tokens.slice(0, 20),
-  };
-}
