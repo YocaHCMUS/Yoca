@@ -148,6 +148,49 @@ const tokenDetailsTransformer: DataTransformer = (data) => {
     .filter(Boolean);
 };
 
+const washTradeRiskTransformer: DataTransformer = (data) => {
+  if (!data || typeof data !== "object") return [];
+  const d = data as {
+    riskScore?: number;
+    patterns?: { circularTrades?: number; sameAmountTransactions?: number; tightTimingClusters?: number; starTopology?: boolean; volumeAnomaly?: boolean };
+    summary?: { totalVolume?: number; volumeAnomalies?: number; circularTrades?: number };
+    suspiciousWallets?: Array<{ wallet: string; confidence: number; pattern: string; gnnScore: number }>;
+  };
+  return {
+    riskScore: d.riskScore ?? 0,
+    patterns: d.patterns,
+    summary: d.summary,
+    topSuspiciousWallets: (d.suspiciousWallets ?? []).slice(0, 5).map((w) => ({
+      wallet: w.wallet,
+      confidence: w.confidence,
+      pattern: w.pattern,
+    })),
+  };
+};
+
+const intelligenceTransformer: DataTransformer = (data) => {
+  if (!data || typeof data !== "object") return [];
+  const d = data as {
+    address?: string;
+    identity?: { status?: string; category?: string | null; type?: string | null; name?: string | null; tags?: string[] };
+    analysis?: { riskScore?: number; riskLevel?: string; signals?: string[] };
+  };
+  return {
+    address: d.address,
+    identity: {
+      status: d.identity?.status ?? "unknown",
+      category: d.identity?.category,
+      type: d.identity?.type,
+      name: d.identity?.name,
+    },
+    analysis: {
+      riskScore: d.analysis?.riskScore ?? 50,
+      riskLevel: d.analysis?.riskLevel ?? "medium",
+      signals: d.analysis?.signals ?? [],
+    },
+  };
+};
+
 export const DATA_TRANSFORMERS: Record<string, DataTransformer> = {
   get_balance_history: balanceHistoryTransformer,
   get_drawdown_chart: drawdownChartTransformer,
@@ -164,4 +207,6 @@ export const DATA_TRANSFORMERS: Record<string, DataTransformer> = {
   get_wallet_pnl_compact: compactTokensTransformer,
   get_wallet_portfolio: portfolioTransformer,
   get_historical_portfolio: portfolioTransformer,
+  get_token_wash_trade_risk: washTradeRiskTransformer,
+  get_wallet_intelligence: intelligenceTransformer,
 };
