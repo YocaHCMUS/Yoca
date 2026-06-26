@@ -155,6 +155,19 @@ export default function WalletPage() {
     avgSellCost: number;
   } | null>(null);
 
+  useEffect(() => {
+    if (!selectedToken) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedToken(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedToken]);
+
   const walletTokenDetails = useGet(
     client.api.wallets[":address"].tokens,
     200,
@@ -957,32 +970,6 @@ export default function WalletPage() {
     <PageWrapper
       noMarketTickers
       wideContent
-      extraHeaderPanel={{
-        isOpen: !!selectedToken,
-        content: selectedToken && (
-          <>
-            <TokenAverageTradePrice
-              walletAddress={address}
-              tokenAddress={selectedToken.address}
-              tokenImgUrl={
-                tokenMeta.data?.[selectedToken.address]?.imageUrl || null
-              }
-              tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
-              tokenSymbol={
-                tokenMeta.data?.[selectedToken.address]?.symbol || null
-              }
-              tokenCurrentPrice={
-                tokenMarket.data?.[selectedToken.address]?.priceUsd || null
-              }
-              avgBuyPrice={selectedToken.avgBuyCost}
-              avgSellPrice={selectedToken.avgSellCost}
-            />
-
-          </>
-        ),
-        size: "lg",
-        onClose: () => setSelectedToken(null),
-      }}
     >
       <div className={styles.pageLayout}>
         <div className={styles.shell}>
@@ -1100,6 +1087,58 @@ export default function WalletPage() {
           )}
 
         </ChatContextProvider>
+
+        {selectedToken && (
+          <div
+            className={styles.tokenGraphOverlay}
+            role="presentation"
+            onClick={() => setSelectedToken(null)}
+          >
+            <aside
+              className={styles.tokenGraphPanel}
+              aria-label={tr("walletPage.averageTradingPrice")}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={styles.tokenGraphHeader}>
+                <div>
+                  <span className={styles.tokenGraphEyebrow}>
+                    {tr("walletPage.graph")}
+                  </span>
+                  <h2 className={styles.tokenGraphTitle}>
+                    {tr("walletPage.averageTradingPrice")}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  className={styles.tokenGraphCloseBtn}
+                  aria-label={tr("common.cancel")}
+                  onClick={() => setSelectedToken(null)}
+                >
+                  <Close size={20} />
+                </button>
+              </div>
+
+              <div className={styles.tokenGraphContent}>
+                <TokenAverageTradePrice
+                  walletAddress={address}
+                  tokenAddress={selectedToken.address}
+                  tokenImgUrl={
+                    tokenMeta.data?.[selectedToken.address]?.imageUrl || null
+                  }
+                  tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
+                  tokenSymbol={
+                    tokenMeta.data?.[selectedToken.address]?.symbol || null
+                  }
+                  tokenCurrentPrice={
+                    tokenMarket.data?.[selectedToken.address]?.priceUsd || null
+                  }
+                  avgBuyPrice={selectedToken.avgBuyCost}
+                  avgSellPrice={selectedToken.avgSellCost}
+                />
+              </div>
+            </aside>
+          </div>
+        )}
       </div>
 
       <div

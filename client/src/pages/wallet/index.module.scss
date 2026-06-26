@@ -381,6 +381,117 @@
   }
 }
 
+.tokenGraphOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(3, 6, 14, 0.48);
+  backdrop-filter: blur(8px);
+}
+
+.tokenGraphPanel {
+  width: min(100%, 760px);
+  height: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+  background:
+    linear-gradient(180deg, rgba(124, 58, 237, 0.08), rgba(255, 255, 255, 0.02)),
+    var(--yoca-surface-elevated, rgba(24, 31, 48, 0.92));
+  box-shadow: -24px 0 70px rgba(0, 0, 0, 0.42);
+}
+
+.tokenGraphHeader {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+}
+
+.tokenGraphEyebrow {
+  display: inline-flex;
+  margin-bottom: 0.35rem;
+  color: var(--yoca-accent, #2dd4bf);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.tokenGraphTitle {
+  margin: 0;
+  color: var(--yoca-text-main, #f8fafc);
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+.tokenGraphCloseBtn {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--yoca-text-muted, #94a3b8);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(124, 58, 237, 0.16);
+    border-color: rgba(124, 58, 237, 0.28);
+    color: var(--yoca-text-main, #f8fafc);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--yoca-accent, #2dd4bf);
+    outline-offset: 2px;
+  }
+}
+
+.tokenGraphContent {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px 22px 28px;
+}
+
+.tokenGraphContent :global(.cds--table-container),
+.tokenGraphContent :global(.cds--data-table-container),
+.tokenGraphContent :global(.cds--data-table-header),
+.tokenGraphContent :global(.cds--data-table-content),
+.tokenGraphContent :global(.cds--pagination),
+.tokenGraphContent :global(.cds--pagination__control-buttons),
+.tokenGraphContent :global(.cds--layer) {
+  background: transparent !important;
+}
+
+.tokenGraphContent :global(.cds--data-table),
+.tokenGraphContent :global(.cds--data-table thead),
+.tokenGraphContent :global(.cds--data-table tbody),
+.tokenGraphContent :global(.cds--data-table tr),
+.tokenGraphContent :global(.cds--data-table th),
+.tokenGraphContent :global(.cds--data-table td) {
+  background: transparent !important;
+}
+
+.tokenGraphContent :global(.cds--data-table-content) {
+  overflow-x: auto;
+}
+
 @media (max-width: 1200px) {
   .shell {
     padding: 16px;
@@ -403,6 +514,10 @@
 
   .chatInline {
     display: none;
+  }
+
+  .tokenGraphPanel {
+    width: 100%;
   }
 }
 
