@@ -254,7 +254,9 @@ export function WalletHoldingsPanel({
 
       <div className={styles.listHeader}>
         <span>{tr("walletPage.token")}</span>
+        <span>{tr("walletPage.balance")}</span>
         <span>{tr("walletPage.value")}</span>
+        <span className={styles.watchHeader} aria-hidden="true" />
       </div>
 
       <div className={styles.list}>
@@ -275,6 +277,10 @@ export function WalletHoldingsPanel({
                 {logo ? <img src={logo} alt="" /> : <span className={styles.tokenFallback}>{token.symbol.slice(0, 1).toUpperCase()}</span>}
                 <span className={styles.tokenIdentity}><strong>{token.symbol.toUpperCase()}</strong><small>{tokenName}</small></span>
               </button>
+              <div className={styles.rowBalance}>
+                <strong>{fmt.num.compact.decimal(token.amount)}</strong>
+                <small>{token.symbol.toUpperCase()}</small>
+              </div>
               <div className={styles.rowValue}><strong>{fmt.num.currency(token.valueUsd)}</strong><small>{percent.toFixed(1)}%</small></div>
               <button type="button" className={styles.watchButton} onClick={() => tokenAddress && void toggleToken(tokenAddress)} disabled={!user || !tokenAddress || pending} title={watched ? String(tr("marketPage.removeFromWatchlist")) : String(tr("marketPage.addToWatchlist"))}>
                 {watched ? <Star size={15} fill="currentColor" strokeWidth={1.8} /> : <StarOff size={15} strokeWidth={1.8} />}

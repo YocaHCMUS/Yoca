@@ -245,7 +245,7 @@
 
 .listHeader {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(68px, .62fr) minmax(82px, .78fr) 24px;
   gap: 8px;
   padding: 9px 16px;
   border-bottom: 1px solid var(--wallet-border);
@@ -257,8 +257,13 @@
   text-transform: uppercase;
 }
 
-.listHeader span:nth-child(2) {
+.listHeader span:nth-child(2),
+.listHeader span:nth-child(3) {
   text-align: right;
+}
+
+.watchHeader {
+  min-width: 24px;
 }
 
 .list {
@@ -270,7 +275,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(68px, .62fr) minmax(82px, .78fr) 24px;
   gap: 8px;
   align-items: center;
   padding: 10px 16px;
@@ -343,19 +348,35 @@
   font-size: 10px;
 }
 
+.rowBalance,
 .rowValue {
+  min-width: 0;
   text-align: right;
 }
 
+.rowBalance strong,
 .rowValue strong {
   display: block;
+  overflow: hidden;
   color: var(--wallet-text);
   font-size: 11px;
   font-weight: 690;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+.rowBalance small,
 .rowValue small {
   margin-top: 2px;
+}
+
+.rowBalance small {
+  overflow: hidden;
+  color: var(--wallet-text-muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .watchButton {
@@ -405,6 +426,39 @@
   50% {
     background-position: -100% 0;
   }
+}
+
+@media (max-width: 760px) {
+  .listHeader,
+  .row {
+    grid-template-columns: minmax(0, 1fr) minmax(58px, .58fr) minmax(70px, .7fr) 22px;
+    gap: 6px;
+  }
+
+  .listHeader {
+    padding-inline: 13px;
+    font-size: 9px;
+    letter-spacing: .045em;
+  }
+
+  .row {
+    padding-inline: 13px;
+  }
+
+  .tokenButton {
+    gap: 7px;
+  }
+
+  .tokenButton img,
+  .tokenFallback {
+    width: 26px;
+    height: 26px;
+  }
+
+  .tokenIdentity strong { font-size: 11px; }
+  .tokenIdentity small,
+  .rowBalance small,
+  .rowValue small { font-size: 9px; }
 }
 
 @media (max-width: 620px) {
