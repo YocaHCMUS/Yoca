@@ -87,7 +87,7 @@ export async function fetchAssetDistribution(
  * Fetches period-bounded realized PnL from Mobula wallet analysis.
  */
 export async function fetchPnLChart(params?: PnLRequestParams) {
-  const response = await client.api.charts.winrate.$get({
+  const response = await client.api.wallets.analysis.pnl.$get({
     query: {
       period: params?.period ?? "30D",
       wallets: params?.wallets ?? "",

@@ -12,7 +12,7 @@ import {
   fetchHeliusSolanaPortfolio,
 
 } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
-import { getWalletAnalysis } from "@sv/services/charts/winrate.service.js";
+import { getWalletAnalysis } from "@sv/services/wallet/wallet-analysis.js";
 import type { WalletAnalysisSelect } from "@sv/db/schema.js";
 import type {
   ChartAggregation,

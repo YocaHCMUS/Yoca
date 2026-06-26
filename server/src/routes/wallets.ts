@@ -63,6 +63,9 @@ import {
 import { statusCode } from "@sv/util/responses.js";
 import { z } from "zod";
 import { Hono } from "hono";
+import walletAnalysis from "./wallets/wallet-analysis";
+import walletTags from "./wallets/wallet-tags";
+
 import { serverErr, setErr } from "@sv/util/errors";
 import {
     WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
@@ -137,6 +140,8 @@ const walletAuditQuerySchema = z.object({
 });
 
 const app = new Hono()
+  .route("/analysis", walletAnalysis)
+  .route("/tags", walletTags)
   .get("/overview", validate("query", walletOverviewQuerySchema), async (c) => {
     try {
       const { address, period } = c.req.valid("query");
@@ -609,7 +614,7 @@ const app = new Hono()
     } catch (e) {
       return serverErr(c, e);
     }
-  });
+  })
 
 export default app;
 
