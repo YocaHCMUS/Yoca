@@ -30,7 +30,8 @@
   width: 100%;
   min-height: calc(100vh - 3.5rem);
   position: relative;
-  overflow: hidden;
+  align-items: stretch;
+  overflow: visible;
   background: var(--wallet-page-bg);
   color: var(--wallet-text);
 }
@@ -68,10 +69,8 @@
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: visible;
   background: var(--wallet-page-bg);
-  scrollbar-color: var(--wallet-border-strong) transparent;
 }
 
 .body {

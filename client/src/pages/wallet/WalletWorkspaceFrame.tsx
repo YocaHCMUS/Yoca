@@ -1,8 +1,10 @@
-import { useState, type ReactNode } from "react";
-import { Bell, Languages, LogOut, Menu, Moon, Search, Sun, UserRound, X } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Bell, CircleAlert, Info, Languages, LogOut, Menu, Moon, Search, Sun, TriangleAlert, UserRound, X } from "lucide-react";
 import { useUserTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { headerNotificationsMockData } from "@/services/notifications/headerNotificationsMock";
+import type { AlertNotification } from "@/types/profile";
 import appLogo from "@/assets/app-logo.png";
 import styles from "./WalletWorkspaceFrame.module.scss";
 
@@ -22,7 +24,30 @@ export function WalletWorkspaceFrame({ children, extraPanel }: WalletWorkspaceFr
   const { lang, setLang, tr } = useLocalization();
   const { user, signOut, openAuthModal } = useAuth();
   const [accountOpen, setAccountOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const isDark = theme === "dark";
+
+  const getNotificationTone = (severity: AlertNotification["severity"]) => {
+    if (severity === "critical") return "critical";
+    if (severity === "warning") return "warning";
+    return "info";
+  };
+
+  const getNotificationIcon = (severity: AlertNotification["severity"]) => {
+    if (severity === "critical") return <CircleAlert size={15} strokeWidth={1.9} />;
+    if (severity === "warning") return <TriangleAlert size={15} strokeWidth={1.9} />;
+    return <Info size={15} strokeWidth={1.9} />;
+  };
+
+  // App.css keeps the whole SPA clipped for routes that own their own scroll areas.
+  // The wallet route is a long dashboard, so temporarily restore document scrolling.
+  useEffect(() => {
+    const targets = [document.documentElement, document.body, document.getElementById("root")]
+      .filter((element): element is HTMLElement => Boolean(element));
+
+    targets.forEach((element) => element.classList.add("walletRouteScroll"));
+    return () => targets.forEach((element) => element.classList.remove("walletRouteScroll"));
+  }, []);
 
   return (
     <div className={styles.frame} data-theme={theme}>
@@ -63,14 +88,65 @@ export function WalletWorkspaceFrame({ children, extraPanel }: WalletWorkspaceFr
             >
               {isDark ? <Sun size={17} strokeWidth={1.9} /> : <Moon size={17} strokeWidth={1.9} />}
             </button>
-            <button type="button" className={styles.iconButton} aria-label={tr("nav.notification")} title={tr("nav.notification")}>
-              <Bell size={17} strokeWidth={1.9} />
-            </button>
+            <div className={styles.notificationsWrap}>
+              <button
+                type="button"
+                className={`${styles.iconButton} ${notificationsOpen ? styles.iconButtonActive : ""}`}
+                onClick={() => {
+                  setNotificationsOpen((open) => !open);
+                  setAccountOpen(false);
+                }}
+                aria-label={tr("nav.notification")}
+                aria-expanded={notificationsOpen}
+                aria-haspopup="dialog"
+                title={tr("nav.notification")}
+              >
+                <Bell size={17} strokeWidth={1.9} />
+                <span className={styles.notificationBadge}>{headerNotificationsMockData.length}</span>
+              </button>
+              {notificationsOpen && (
+                <section className={styles.notificationsMenu} role="dialog" aria-label={tr("nav.notification")}>
+                  <div className={styles.notificationsMenuHeader}>
+                    <div>
+                      <strong>{tr("nav.notification")}</strong>
+                      <span>{lang === "vi" ? `${headerNotificationsMockData.length} thông báo mới` : `${headerNotificationsMockData.length} new notifications`}</span>
+                    </div>
+                    <a href="/alerts" onClick={() => setNotificationsOpen(false)}>
+                      {lang === "vi" ? "Xem tất cả" : "View all"}
+                    </a>
+                  </div>
+                  <div className={styles.notificationsList}>
+                    {headerNotificationsMockData.map((item) => {
+                      const tone = getNotificationTone(item.severity);
+                      return (
+                        <article key={item.id} className={`${styles.notificationItem} ${styles[`notification_${tone}`]}`}>
+                          <span className={styles.notificationSeverity}>{getNotificationIcon(item.severity)}</span>
+                          <div>
+                            <p>{item.message}</p>
+                            <time dateTime={item.timestamp}>
+                              {new Date(item.timestamp).toLocaleString(lang === "vi" ? "vi-VN" : "en-US", {
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </time>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+            </div>
             <div className={styles.accountWrap}>
               <button
                 type="button"
                 className={styles.accountButton}
-                onClick={() => setAccountOpen((open) => !open)}
+                onClick={() => {
+                  setAccountOpen((open) => !open);
+                  setNotificationsOpen(false);
+                }}
                 aria-expanded={accountOpen}
                 aria-label={lang === "vi" ? "Tài khoản" : "Account"}
               >
