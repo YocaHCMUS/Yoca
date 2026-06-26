@@ -32,3 +32,57 @@
 .direction[data-direction="send"] { color:var(--wallet-danger); }
 .direction[data-direction="receive"] { color:var(--wallet-success); }
 @media (max-width:600px) { .header { align-items:flex-start; flex-direction:column; } .filterToggle { align-self:flex-end; } }
+
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 14px;
+  border-top: 1px solid var(--wallet-border);
+  color: var(--wallet-text-muted);
+  background: var(--wallet-surface);
+  font-size: 11px;
+}
+
+.pagination > div {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.pagination strong {
+  min-width: 86px;
+  color: var(--wallet-text-muted);
+  font-size: 10.5px;
+  font-weight: 650;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.pagination button {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  color: var(--wallet-text-muted);
+  border: 1px solid var(--wallet-border);
+  border-radius: 7px;
+  background: var(--wallet-surface);
+  cursor: pointer;
+}
+
+.pagination button:hover:not(:disabled) {
+  color: var(--wallet-text);
+  border-color: var(--wallet-border-strong);
+  background: var(--wallet-surface-hover);
+}
+
+.pagination button:disabled { opacity: .42; cursor: not-allowed; }
+
+@media (max-width: 520px) {
+  .pagination { align-items: flex-start; flex-direction: column; padding-block: 10px; }
+  .pagination > div { align-self: flex-end; }
+}

@@ -1,10 +1,10 @@
 .container {
-  position: sticky;
-  top: 0;
-  align-self: flex-start;
+  position: fixed;
+  top: 72px;
+  right: 0;
   display: flex;
-  height: calc(100dvh - var(--page-content-top-offset, 3.5rem));
-  max-height: 980px;
+  height: calc(100dvh - 88px);
+  max-height: none;
   color: var(--wallet-text);
   font-family: inherit;
   z-index: 15;

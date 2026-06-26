@@ -2,8 +2,16 @@ import client from "@/api/main";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import type { WalletSwap, WalletTransfer } from "@/services/wallet/walletApi";
-import { ArrowDownLeft, ArrowUpRight, Copy, ExternalLink, Repeat2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  ExternalLink,
+  Repeat2,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal";
 import { TransferDetailModal } from "@/components/wallet/TransferDetailModal/TransferDetailModal";
 import styles from "./WalletActivityPanel.module.scss";
@@ -30,6 +38,7 @@ type WalletTransferData = {
 };
 
 type ActivityMode = "swap" | "transfer";
+const ACTIVITY_PAGE_SIZE = 10;
 
 function TokenPill({ symbol, logoUri, amount, direction }: { symbol: string; logoUri: string | null; amount: number; direction: "in" | "out" }) {
   const { fmt } = useLocalization();
@@ -55,32 +64,45 @@ export function WalletActivityPanel({ address }: { address: string }) {
   const { tr, fmt } = useLocalization();
   const [mode, setMode] = useState<ActivityMode>("swap");
   const [hideLowValue, setHideLowValue] = useState(false);
+  const [page, setPage] = useState(1);
   const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
   const [selectedTransfer, setSelectedTransfer] = useState<WalletTransfer | null>(null);
 
   const swapResponse = useGet(
     client.api.wallets.swaps.history[":address"],
     200,
-    { param: { address }, query: {} },
+    { param: { address }, query: { limit: 100 } },
   );
   const transferResponse = useGet(
     client.api.wallets.transfers.history[":address"],
     200,
-    { param: { address }, query: {} },
+    { param: { address }, query: { limit: 100 } },
   );
 
   const swaps = useMemo(() => {
     const values = (swapResponse.data as unknown as WalletSwapData | undefined)?.transactions ?? [];
-    return values.filter((item) => !hideLowValue || item.totalValueUsd == null || item.totalValueUsd >= 1).slice(0, 16);
+    return values.filter((item) => !hideLowValue || item.totalValueUsd == null || item.totalValueUsd >= 1);
   }, [hideLowValue, swapResponse.data]);
 
   const transfers = useMemo(() => {
     const values = (transferResponse.data as unknown as WalletTransferData | undefined)?.transactions ?? [];
-    return values.filter((item) => !hideLowValue || item.valueUsd >= 1).slice(0, 16);
+    return values.filter((item) => !hideLowValue || item.valueUsd >= 1);
   }, [hideLowValue, transferResponse.data]);
 
+  const activeRowCount = mode === "swap" ? swaps.length : transfers.length;
+  const pageCount = Math.max(1, Math.ceil(activeRowCount / ACTIVITY_PAGE_SIZE));
+  const firstRowIndex = (page - 1) * ACTIVITY_PAGE_SIZE;
+  const displayedSwaps = swaps.slice(firstRowIndex, firstRowIndex + ACTIVITY_PAGE_SIZE);
+  const displayedTransfers = transfers.slice(firstRowIndex, firstRowIndex + ACTIVITY_PAGE_SIZE);
   const loading = mode === "swap" ? swapResponse.isLoading : transferResponse.isLoading;
-  const rows = mode === "swap" ? swaps : transfers;
+
+  useEffect(() => {
+    setPage(1);
+  }, [mode, hideLowValue]);
+
+  useEffect(() => {
+    setPage((currentPage) => Math.min(currentPage, pageCount));
+  }, [pageCount]);
 
   const selectSwap = (transaction: WalletSwapData["transactions"][number]) => {
     const soldPriceUsd = transaction.sold.priceUsd ?? 0;
@@ -117,6 +139,22 @@ export function WalletActivityPanel({ address }: { address: string }) {
     });
   };
 
+  const renderPagination = () => {
+    if (loading || activeRowCount === 0) return null;
+    const min = firstRowIndex + 1;
+    const max = Math.min(firstRowIndex + ACTIVITY_PAGE_SIZE, activeRowCount);
+    return (
+      <footer className={styles.pagination}>
+        <span>{tr("table.itemRangeText", { min, max, count: activeRowCount })}</span>
+        <div>
+          <button type="button" onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))} disabled={page <= 1} aria-label={tr("table.previousPage")} title={tr("table.previousPage")}><ChevronLeft size={15} strokeWidth={1.9} /></button>
+          <strong>{tr("table.pageRangeText", { count: page, total: pageCount })}</strong>
+          <button type="button" onClick={() => setPage((currentPage) => Math.min(pageCount, currentPage + 1))} disabled={page >= pageCount} aria-label={tr("table.nextPage")} title={tr("table.nextPage")}><ChevronRight size={15} strokeWidth={1.9} /></button>
+        </div>
+      </footer>
+    );
+  };
+
   return (
     <section className={styles.card} aria-label={tr("walletPage.activity")}>
       <header className={styles.header}>
@@ -140,7 +178,7 @@ export function WalletActivityPanel({ address }: { address: string }) {
           <table className={styles.table}>
             <thead><tr><th>{tr("walletPage.time")}</th><th>{tr("walletPage.tokenSold")}</th><th>{tr("walletPage.tokenBought")}</th><th>{tr("walletPage.value")}</th><th aria-label={tr("walletPage.view")} /></tr></thead>
             <tbody>
-              {loading ? <tr><td colSpan={5} className={styles.statusCell}>{tr("common.loading")}</td></tr> : swaps.length === 0 ? <tr><td colSpan={5} className={styles.statusCell}>{tr("common.noData")}</td></tr> : swaps.map((transaction) => (
+              {loading ? <tr><td colSpan={5} className={styles.statusCell}>{tr("common.loading")}</td></tr> : displayedSwaps.length === 0 ? <tr><td colSpan={5} className={styles.statusCell}>{tr("common.noData")}</td></tr> : displayedSwaps.map((transaction) => (
                 <tr key={transaction.transactionHash} onClick={() => selectSwap(transaction)}>
                   <td>{fmt.datetime.relativeShort(transaction.blockTimestampMs, true)}</td>
                   <td><TokenPill amount={transaction.sold.amount} symbol={(transaction.sold.symbol ?? transaction.sold.address).toUpperCase()} logoUri={transaction.sold.logoUri} direction="out" /></td>
@@ -155,7 +193,7 @@ export function WalletActivityPanel({ address }: { address: string }) {
           <table className={styles.table}>
             <thead><tr><th>{tr("walletPage.time")}</th><th>{tr("walletPage.sender")}</th><th>{tr("walletPage.receiver")}</th><th>{tr("walletPage.token")}</th><th>{tr("walletPage.value")}</th></tr></thead>
             <tbody>
-              {loading ? <tr><td colSpan={5} className={styles.statusCell}>{tr("common.loading")}</td></tr> : transfers.length === 0 ? <tr><td colSpan={5} className={styles.statusCell}>{tr("common.noData")}</td></tr> : transfers.map((transaction) => (
+              {loading ? <tr><td colSpan={5} className={styles.statusCell}>{tr("common.loading")}</td></tr> : displayedTransfers.length === 0 ? <tr><td colSpan={5} className={styles.statusCell}>{tr("common.noData")}</td></tr> : displayedTransfers.map((transaction) => (
                 <tr key={transaction.transactionHash} onClick={() => selectTransfer(transaction)}>
                   <td>{fmt.datetime.relativeShort(transaction.blockTimestampMs, true)}</td>
                   <td><CopyAddress address={transaction.direction === "send" ? address : transaction.counterpartyAddress} /></td>
@@ -169,6 +207,7 @@ export function WalletActivityPanel({ address }: { address: string }) {
         )}
       </div>
 
+      {renderPagination()}
       <SwapDetailModal isOpen={selectedSwap != null} onClose={() => setSelectedSwap(null)} swap={selectedSwap} walletAddress={address} />
       <TransferDetailModal isOpen={selectedTransfer != null} onClose={() => setSelectedTransfer(null)} transfer={selectedTransfer} walletAddress={address} />
     </section>

@@ -19,7 +19,8 @@
 .tradeSubhead { display:flex; flex-direction:column; gap:3px; padding:13px 16px 10px; border-top:1px solid var(--wallet-border); }
 .tradeSubhead span { color:var(--wallet-text); font-size:13px; font-weight:720; }
 .tradeSubhead small { color:var(--wallet-text-muted); font-size:11px; }
-.tradeTableWrap,.tokenListWrap { overflow-x:auto; }
+.tradeTableWrap { overflow-x:auto; }
+.tokenListWrap { width:100%; overflow:visible; }
 .tradeTable,.tokenListTable { width:100%; border-collapse:collapse; }
 .tradeTable { min-width:560px; }
 .tradeTable th,.tokenListTable th { padding:10px 14px; border-bottom:1px solid var(--wallet-border); color:var(--wallet-text-soft); background:var(--wallet-surface-soft); font-size:10px; font-weight:710; letter-spacing:.07em; text-align:left; text-transform:uppercase; white-space:nowrap; }
@@ -35,7 +36,145 @@
 .listHeader h2 { margin:4px 0 0; color:var(--wallet-text); font-size:15px; font-weight:730; }
 .listHeader p { margin:4px 0 0; color:var(--wallet-text-muted); font-size:11px; }
 .tokenCount { min-width:30px; height:24px; display:grid; place-items:center; border:1px solid var(--wallet-border); border-radius:999px; color:var(--wallet-text-muted); background:var(--wallet-surface-soft); font-size:11px; font-weight:700; }
-.tokenListTable { min-width:880px; }
+.tokenListTable {
+  width:100%;
+  min-width:0;
+  table-layout:fixed;
+}
+
+.tokenListTable th,.tokenListTable td {
+  padding:10px 6px;
+  vertical-align:middle;
+}
+
+.tokenListTable th {
+  white-space:normal;
+  line-height:1.28;
+}
+
+.tokenListTable td {
+  min-width:0;
+  overflow:hidden;
+  white-space:normal;
+  line-height:1.28;
+}
+
+.tokenListTable td strong,.tokenListTable td small,.tokenListTable td .pnl {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.colToken { width:14%; }
+.colBalance { width:10%; }
+.colProfit,.colRealized,.colUnrealized { width:8.75%; }
+.colBought,.colSold { width:9.5%; }
+.colNet { width:8%; }
+.colTransactions { width:7%; }
+.colAverage { width:9%; }
+.colGraph { width:6%; }
+
+.tokenListTable .tokenCell {
+  min-width:0;
+  width:100%;
+  gap:7px;
+}
+
+.tokenListTable .tokenCell > span {
+  min-width:0;
+  overflow:hidden;
+}
+
+.tokenListTable .tokenCell strong,.tokenListTable .tokenCell small {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.tokenListTable .tokenCell img,.tokenListTable .tokenCell .tokenFallback {
+  width:26px;
+  height:26px;
+}
+
+.tokenListTable .chartButton {
+  width:100%;
+  justify-content:center;
+  min-width:0;
+  padding:0 4px;
+  gap:4px;
+  white-space:nowrap;
+}
+
+@media (max-width: 1240px) {
+  .tokenListTable th,.tokenListTable td { padding-inline:4px; }
+  .tokenListTable th { font-size:9px; letter-spacing:.045em; }
+  .tokenListTable td { font-size:10px; }
+  .tokenListTable td strong { font-size:10px; }
+  .tokenListTable td small { font-size:9px; }
+  .tokenListTable .chartButton { font-size:0; }
+  .tokenListTable .chartButton svg { width:14px; height:14px; }
+}
+
+@media (max-width: 1080px) {
+  .tokenListWrap { padding:10px; }
+  .tokenListTable,.tokenListTable tbody,.tokenListTable tr { display:block; width:100%; }
+  .tokenListTable thead { display:none; }
+  .tokenListTable tbody { display:grid; gap:10px; }
+  .tokenListTable tbody tr {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px 14px;
+    padding:12px;
+    border:1px solid var(--wallet-border);
+    border-radius:10px;
+    background:var(--wallet-surface-raised);
+  }
+  .tokenListTable tbody tr:last-child td { border-bottom:0; }
+  .tokenListTable td {
+    display:flex;
+    min-width:0;
+    flex-direction:column;
+    gap:3px;
+    padding:0;
+    border:0;
+    overflow:visible;
+  }
+  .tokenListTable td::before {
+    content:attr(data-label);
+    overflow:hidden;
+    color:var(--wallet-text-soft);
+    font-size:9px;
+    font-weight:700;
+    letter-spacing:.055em;
+    line-height:1.2;
+    text-overflow:ellipsis;
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .tokenListTable td:first-child {
+    grid-column:1 / -1;
+    padding-bottom:9px;
+    border-bottom:1px solid var(--wallet-border-soft);
+  }
+  .tokenListTable td:first-child .tokenCell { width:auto; }
+  .tokenListTable td:last-child { align-items:flex-start; }
+  .tokenListTable .chartButton {
+    width:auto;
+    min-width:76px;
+    padding-inline:9px;
+    font-size:10px;
+  }
+}
+
+@media (max-width: 680px) {
+  .tokenListWrap { padding:8px; }
+  .tokenListTable tbody tr { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:11px; }
+  .tokenListTable td:last-child { grid-column:1 / -1; }
+}
+
+@media (max-width: 430px) {
+  .tokenListTable tbody tr { grid-template-columns:1fr; }
+}
 .tokenListTable td strong,.tokenListTable td small { display:block; }
 .tokenListTable td strong { color:var(--wallet-text); font-size:11px; font-weight:680; }
 .tokenListTable td small { margin-top:3px; color:var(--wallet-text-soft); font-size:10px; }
@@ -43,6 +182,34 @@
 .tokenCell img,.tokenCell .tokenFallback { width:29px; height:29px; }
 .pnl { color:var(--wallet-danger); font-weight:700; }
 .pnl[data-positive="true"] { color:var(--wallet-success); }
+.tradeCount { display:inline-flex; align-items:center; gap:5px; color:var(--wallet-text); font-variant-numeric:tabular-nums; }
+.tradeCount b { color:var(--wallet-text); font-size:11px; font-weight:700; }
+.tradeCount i { color:var(--wallet-text-soft); font-style:normal; }
 .chartButton { display:inline-flex; align-items:center; gap:5px; height:29px; border:1px solid var(--wallet-border); border-radius:8px; padding:0 8px; background:transparent; color:var(--wallet-text-muted); cursor:pointer; font-size:10.5px; font-weight:660; }
 .chartButton:hover { color:var(--wallet-accent); border-color:var(--wallet-accent); background:var(--wallet-accent-soft); }
 @media (max-width:700px) { .detailHeader { grid-template-columns:1fr auto; } .rangeButtons { grid-column:1 / -1; justify-self:start; } .currentPrice { justify-self:end; } }
+
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 16px;
+  border-top: 1px solid var(--wallet-border);
+  color: var(--wallet-text-muted);
+  background: var(--wallet-surface);
+  font-size: 11px;
+}
+
+.pagination > div { display: inline-flex; align-items: center; gap: 7px; }
+.pagination strong { min-width: 84px; color: var(--wallet-text-muted); font-size: 10.5px; font-weight: 650; text-align: center; white-space: nowrap; }
+.pagination button { width: 28px; height: 28px; display: grid; place-items: center; color: var(--wallet-text-muted); border: 1px solid var(--wallet-border); border-radius: 7px; background: var(--wallet-surface); cursor: pointer; }
+.pagination button:hover:not(:disabled) { color: var(--wallet-text); border-color: var(--wallet-border-strong); background: var(--wallet-surface-hover); }
+.pagination button:disabled { opacity: .42; cursor: not-allowed; }
+
+@media (max-width: 520px) {
+  .pagination { align-items: flex-start; flex-direction: column; padding-block: 10px; }
+  .pagination > div { align-self: flex-end; }
+}

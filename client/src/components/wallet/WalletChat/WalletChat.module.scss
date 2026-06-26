@@ -454,6 +454,31 @@
   flex-shrink: 0;
 }
 
+.dragHandle {
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  margin-left: -6px;
+  margin-right: 2px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--wallet-text-soft, #8a96a8);
+  cursor: grab;
+  touch-action: none;
+
+  &:hover {
+    background: var(--wallet-surface-hover, #f0f3f8);
+    color: var(--wallet-text, #172033);
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
 .headerTitle {
   font-size: 13px;
   font-weight: 600;

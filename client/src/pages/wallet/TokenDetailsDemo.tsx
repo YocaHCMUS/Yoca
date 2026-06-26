@@ -5,8 +5,8 @@ import { useUserTheme } from "@/contexts/ThemeContext";
 import { useGet } from "@/hooks/useGet";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
-import { BarChart3, Copy, ExternalLink, LineChart, TrendingDown, TrendingUp } from "lucide-react";
-import { useMemo, useState } from "react";
+import { BarChart3, ChevronLeft, ChevronRight, Copy, ExternalLink, LineChart, TrendingDown, TrendingUp } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import styles from "./TokenDetailsDemo.module.scss";
 
@@ -23,6 +23,7 @@ type TokenAverageTradePriceProps = {
 
 type TokenPriceDayRange = 7 | 30 | 90;
 type TradeSide = "buy" | "sell";
+const LAST_TRADED_TOKENS_PAGE_SIZE = 10;
 type PricePoint = { unixTimeMs: number; value: number };
 type RawTrade = {
   tradeAction: TradeSide;
@@ -184,9 +185,21 @@ export function TokenDetailsDemo({ setSelectedToken }: { setSelectedToken: React
         : (data as unknown as Record<string, TokenMarket>),
     },
   );
-  const rows = ((walletTokenDetails.data as unknown as WalletTokenDetail[] | undefined) ?? []).slice(0, 20);
+  const [page, setPage] = useState(1);
+  const rows = (walletTokenDetails.data as unknown as WalletTokenDetail[] | undefined) ?? [];
+  const pageCount = Math.max(1, Math.ceil(rows.length / LAST_TRADED_TOKENS_PAGE_SIZE));
+  const pageStart = (page - 1) * LAST_TRADED_TOKENS_PAGE_SIZE;
+  const visibleRows = rows.slice(pageStart, pageStart + LAST_TRADED_TOKENS_PAGE_SIZE);
   const metaMap = (tokenMeta.data ?? {}) as Record<string, TokenMeta>;
   const marketMap = (tokenMarket.data ?? {}) as Record<string, TokenMarket>;
+
+  useEffect(() => {
+    setPage(1);
+  }, [address]);
+
+  useEffect(() => {
+    setPage((currentPage) => Math.min(currentPage, pageCount));
+  }, [pageCount]);
 
   if (!address) return null;
 
@@ -197,10 +210,92 @@ export function TokenDetailsDemo({ setSelectedToken }: { setSelectedToken: React
         <span className={styles.tokenCount}>{rows.length}</span>
       </header>
       <div className={styles.tokenListWrap}>
-        <table className={styles.tokenListTable}><thead><tr><th>{tr("walletPage.token")}</th><th>{tr("walletPage.balance")}</th><th>{tr("walletPage.profit")}</th><th>{tr("walletPage.realizedProfit")}</th><th>{tr("walletPage.unrealizedProfit")}</th><th>{tr("walletPage.averageTradingPrice")}</th></tr></thead>
-          <tbody>{walletTokenDetails.isLoading ? <tr><td colSpan={6} className={styles.centered}>{tr("common.loading")}</td></tr> : rows.length === 0 ? <tr><td colSpan={6} className={styles.centered}>{tr("common.noData")}</td></tr> : rows.map((details) => { const meta = metaMap[details.tokenAddress]; const market = marketMap[details.tokenAddress]; const symbol = meta?.symbol?.toUpperCase() ?? fmt.text.address(details.tokenAddress); const totalPnl = details.unrealizedProfitUsd + details.realizedProfitUsd; const isPositive = totalPnl >= 0; return <tr key={details.tokenAddress}><td><button type="button" className={styles.tokenCell} onClick={() => setSelectedToken({ address: details.tokenAddress, symbol, avgBuyCost: details.avgBuyCost, avgSellCost: details.avgSellCost })}>{meta?.imageUrl ? <img src={meta.imageUrl} alt="" /> : <span className={styles.tokenFallback}>{symbol.slice(0, 1)}</span>}<span><strong>{symbol}</strong><small>{fmt.datetime.relativeShort(details.lastTradeUnixTime * 1000, true)}</small></span></button></td><td><strong>{fmt.num.compact.currency((market?.priceUsd ?? 0) * details.balanceAmount)}</strong><small>{fmt.num.compact.decimal(details.balanceAmount)}</small></td><td><span className={styles.pnl} data-positive={isPositive}>{fmt.num.compact.currency(totalPnl)}</span><small>{fmt.num.percent(details.realizedProfitPercent + details.unrealizedProfitPercent)}</small></td><td><span className={styles.pnl} data-positive={details.realizedProfitUsd >= 0}>{fmt.num.compact.currency(details.realizedProfitUsd)}</span></td><td><span className={styles.pnl} data-positive={details.unrealizedProfitUsd >= 0}>{fmt.num.compact.currency(details.unrealizedProfitUsd)}</span></td><td><button type="button" className={styles.chartButton} onClick={() => setSelectedToken({ address: details.tokenAddress, symbol, avgBuyCost: details.avgBuyCost, avgSellCost: details.avgSellCost })}><LineChart size={15} strokeWidth={1.85} />{tr("walletPage.graph")}</button></td></tr>; })}</tbody>
+        <table className={styles.tokenListTable}>
+          <colgroup>
+            <col className={styles.colToken} />
+            <col className={styles.colBalance} />
+            <col className={styles.colProfit} />
+            <col className={styles.colRealized} />
+            <col className={styles.colUnrealized} />
+            <col className={styles.colBought} />
+            <col className={styles.colSold} />
+            <col className={styles.colNet} />
+            <col className={styles.colTransactions} />
+            <col className={styles.colAverage} />
+            <col className={styles.colGraph} />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>{tr("walletPage.token")} / {tr("walletPage.time")}</th>
+              <th>{tr("walletPage.balance")}</th>
+              <th>{tr("walletPage.profit")}</th>
+              <th>{tr("walletPage.realizedProfit")}</th>
+              <th>{tr("walletPage.unrealizedProfit")}</th>
+              <th>{tr("walletPage.totalBought")}</th>
+              <th>{tr("walletPage.totalSold")}</th>
+              <th>{tr("walletPage.netValue")}</th>
+              <th>{tr("walletPage.transactions")}</th>
+              <th>{tr("walletPage.avgBuySellPrice")}</th>
+              <th>{tr("walletPage.graph")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {walletTokenDetails.isLoading ? (
+              <tr><td colSpan={11} className={styles.centered}>{tr("common.loading")}</td></tr>
+            ) : rows.length === 0 ? (
+              <tr><td colSpan={11} className={styles.centered}>{tr("common.noData")}</td></tr>
+            ) : visibleRows.map((details) => {
+              const meta = metaMap[details.tokenAddress];
+              const market = marketMap[details.tokenAddress];
+              const symbol = meta?.symbol?.toUpperCase() ?? fmt.text.address(details.tokenAddress);
+              const totalPnl = details.unrealizedProfitUsd + details.realizedProfitUsd;
+              const pnlPercent = details.realizedProfitPercent + details.unrealizedProfitPercent;
+              const netValue = details.totalSoldUsd - details.totalBoughtUsd;
+              const openTokenChart = () => setSelectedToken({
+                address: details.tokenAddress,
+                symbol,
+                avgBuyCost: details.avgBuyCost,
+                avgSellCost: details.avgSellCost,
+              });
+
+              return (
+                <tr key={details.tokenAddress}>
+                  <td data-label={`${tr("walletPage.token")} / ${tr("walletPage.time")}`}>
+                    <button type="button" className={styles.tokenCell} onClick={openTokenChart}>
+                      {meta?.imageUrl ? <img src={meta.imageUrl} alt="" /> : <span className={styles.tokenFallback}>{symbol.slice(0, 1)}</span>}
+                      <span><strong>{symbol}</strong><small>{fmt.datetime.relativeShort(details.lastTradeUnixTime * 1000, true)}</small></span>
+                    </button>
+                  </td>
+                  <td data-label={tr("walletPage.balance")}><strong>{fmt.num.compact.currency((market?.priceUsd ?? 0) * details.balanceAmount)}</strong><small>{fmt.num.compact.decimal(details.balanceAmount)}</small></td>
+                  <td data-label={tr("walletPage.profit")}><span className={styles.pnl} data-positive={totalPnl >= 0}>{fmt.num.compact.currency(totalPnl)}</span><small>{fmt.num.percent(pnlPercent)}</small></td>
+                  <td data-label={tr("walletPage.realizedProfit")}><span className={styles.pnl} data-positive={details.realizedProfitUsd >= 0}>{fmt.num.compact.currency(details.realizedProfitUsd)}</span><small>{fmt.num.percent(details.realizedProfitPercent)}</small></td>
+                  <td data-label={tr("walletPage.unrealizedProfit")}><span className={styles.pnl} data-positive={details.unrealizedProfitUsd >= 0}>{fmt.num.compact.currency(details.unrealizedProfitUsd)}</span><small>{fmt.num.percent(details.unrealizedProfitPercent)}</small></td>
+                  <td data-label={tr("walletPage.totalBought")}><strong>{fmt.num.compact.currency(details.totalBoughtUsd)}</strong><small>{fmt.num.compact.decimal(details.totalBoughtAmount)}</small></td>
+                  <td data-label={tr("walletPage.totalSold")}><strong>{fmt.num.compact.currency(details.totalSoldUsd)}</strong><small>{fmt.num.compact.decimal(details.totalSoldAmount)}</small></td>
+                  <td data-label={tr("walletPage.netValue")}><span className={styles.pnl} data-positive={netValue >= 0}>{fmt.num.compact.currency(netValue)}</span></td>
+                  <td data-label={tr("walletPage.transactions")}><span className={styles.tradeCount}><b>{fmt.num.compact.decimal(details.totalBuyCount)}</b><i>/</i><b>{fmt.num.compact.decimal(details.totalSellCount)}</b></span></td>
+                  <td data-label={tr("walletPage.avgBuySellPrice")}><strong>{fmt.num.compact.currency(details.avgBuyCost)}</strong><small>{fmt.num.compact.currency(details.avgSellCost)}</small></td>
+                  <td data-label={tr("walletPage.graph")}><button type="button" className={styles.chartButton} onClick={openTokenChart}><LineChart size={15} strokeWidth={1.85} />{tr("walletPage.graph")}</button></td>
+                </tr>
+              );
+            })}
+          </tbody>
         </table>
       </div>
+      {rows.length > 0 && (
+        <footer className={styles.pagination}>
+          <span>{tr("table.itemRangeText", {
+            min: pageStart + 1,
+            max: Math.min(pageStart + LAST_TRADED_TOKENS_PAGE_SIZE, rows.length),
+            count: rows.length,
+          })}</span>
+          <div>
+            <button type="button" onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))} disabled={page <= 1} aria-label={tr("table.previousPage")} title={tr("table.previousPage")}><ChevronLeft size={15} strokeWidth={1.9} /></button>
+            <strong>{tr("table.pageRangeText", { count: page, total: pageCount })}</strong>
+            <button type="button" onClick={() => setPage((currentPage) => Math.min(pageCount, currentPage + 1))} disabled={page >= pageCount} aria-label={tr("table.nextPage")} title={tr("table.nextPage")}><ChevronRight size={15} strokeWidth={1.9} /></button>
+          </div>
+        </footer>
+      )}
     </section>
   );
 }

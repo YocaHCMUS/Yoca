@@ -188,6 +188,61 @@
   color: var(--wallet-accent);
 }
 
+.listToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--wallet-border);
+  background: var(--wallet-surface);
+}
+
+.listToolbar > span {
+  min-width: 28px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  color: var(--wallet-text-muted);
+  border: 1px solid var(--wallet-border);
+  border-radius: 999px;
+  background: var(--wallet-surface-soft);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.searchField {
+  min-width: 0;
+  flex: 1;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+  color: var(--wallet-text-soft);
+  border: 1px solid var(--wallet-border);
+  border-radius: 8px;
+  background: var(--wallet-surface-soft);
+}
+
+.searchField:focus-within {
+  border-color: var(--wallet-border-strong);
+  box-shadow: 0 0 0 3px var(--wallet-accent-soft);
+}
+
+.searchField input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  color: var(--wallet-text);
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+}
+
+.searchField input::placeholder { color: var(--wallet-text-soft); }
+
 .listHeader {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto 24px;
@@ -372,3 +427,23 @@
     padding-inline: 13px;
   }
 }
+
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  min-height: 46px;
+  padding: 0 16px;
+  border-top: 1px solid var(--wallet-border);
+  color: var(--wallet-text-muted);
+  background: var(--wallet-surface);
+  font-size: 10px;
+}
+
+.pagination > div { display: inline-flex; align-items: center; gap: 6px; }
+.pagination strong { min-width: 78px; color: var(--wallet-text-muted); font-size: 10px; font-weight: 650; text-align: center; white-space: nowrap; }
+.pagination button { width: 27px; height: 27px; display: grid; place-items: center; color: var(--wallet-text-muted); border: 1px solid var(--wallet-border); border-radius: 7px; background: var(--wallet-surface); cursor: pointer; }
+.pagination button:hover:not(:disabled) { color: var(--wallet-text); border-color: var(--wallet-border-strong); background: var(--wallet-surface-hover); }
+.pagination button:disabled { opacity: .42; cursor: not-allowed; }

@@ -1,8 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
-import { PieChart, Star, StarOff, WalletCards } from "lucide-react";
+import { ChevronLeft, ChevronRight, PieChart, Search, Star, StarOff, WalletCards } from "lucide-react";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useUserTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +18,8 @@ interface WalletHoldingsPanelProps {
   loading: boolean;
   actions?: React.ReactNode;
 }
+
+const PORTFOLIO_PAGE_SIZE = 10;
 
 const ALLOCATION_COLORS = ["#5867dd", "#1a9b80", "#ba7b14", "#a25fbe", "#3a8fc9", "#b85364"];
 
@@ -40,10 +42,22 @@ export function WalletHoldingsPanel({
   const navigate = useNavigate();
   const isDark = theme === "dark";
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
   const rows = useMemo(
     () => [...portfolio].sort((left, right) => right.valueUsd - left.valueUsd),
     [portfolio],
   );
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredRows = useMemo(
+    () => !normalizedSearch
+      ? rows
+      : rows.filter((token) => `${token.symbol} ${token.name ?? ""} ${token.tokenAddress ?? ""}`.toLowerCase().includes(normalizedSearch)),
+    [normalizedSearch, rows],
+  );
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / PORTFOLIO_PAGE_SIZE));
+  const pageStart = (page - 1) * PORTFOLIO_PAGE_SIZE;
+  const pagedRows = filteredRows.slice(pageStart, pageStart + PORTFOLIO_PAGE_SIZE);
   const totalValue = useMemo(
     () => rows.reduce((total, token) => total + (Number.isFinite(token.valueUsd) ? token.valueUsd : 0), 0),
     [rows],
@@ -52,6 +66,18 @@ export function WalletHoldingsPanel({
     () => new Set(tokenWatchlist.map((item) => item.toLowerCase())),
     [tokenWatchlist],
   );
+  const portfolioMetaByAddress = useMemo(
+    () => new Map([...portfolioMeta.values()].map((item) => [item.tokenAddress, item])),
+    [portfolioMeta],
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [normalizedSearch]);
+
+  useEffect(() => {
+    setPage((currentPage) => Math.min(currentPage, pageCount));
+  }, [pageCount]);
 
   const allocationData = useMemo<AllocationSlice[]>(() => {
     if (totalValue <= 0) return [];
@@ -213,16 +239,29 @@ export function WalletHoldingsPanel({
         <span>{tr("walletPage.portfolio")}</span>
       </div>
 
+      <div className={styles.listToolbar}>
+        <label className={styles.searchField}>
+          <Search size={14} strokeWidth={1.9} />
+          <input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder={tr("table.searchPlaceholder")}
+            aria-label={tr("table.searchPlaceholder")}
+          />
+        </label>
+        <span>{filteredRows.length}</span>
+      </div>
+
       <div className={styles.listHeader}>
         <span>{tr("walletPage.token")}</span>
         <span>{tr("walletPage.value")}</span>
       </div>
 
       <div className={styles.list}>
-        {rows.length === 0 ? (
+        {filteredRows.length === 0 ? (
           <div className={styles.empty}>{tr("common.noData")}</div>
-        ) : rows.map((token, index) => {
-          const meta = portfolioMeta.get(index);
+        ) : pagedRows.map((token) => {
+          const meta = portfolioMetaByAddress.get(token.tokenAddress);
           const tokenAddress = token.tokenAddress || meta?.tokenAddress;
           const watched = Boolean(tokenAddress && watchedTokens.has(tokenAddress.toLowerCase()));
           const pending = Boolean(tokenAddress && tokenPending[tokenAddress]);
@@ -231,7 +270,7 @@ export function WalletHoldingsPanel({
           const tokenName = token.name ?? meta?.fullName ?? token.symbol;
 
           return (
-            <div key={tokenAddress || `${token.symbol}-${index}`} className={styles.row}>
+            <div key={tokenAddress || `${token.symbol}-${token.name ?? "token"}`} className={styles.row}>
               <button type="button" className={styles.tokenButton} onClick={() => tokenAddress && !isNativeSolToken(tokenAddress) && navigate(`/tokens/${tokenAddress}`)} disabled={!tokenAddress || isNativeSolToken(tokenAddress)}>
                 {logo ? <img src={logo} alt="" /> : <span className={styles.tokenFallback}>{token.symbol.slice(0, 1).toUpperCase()}</span>}
                 <span className={styles.tokenIdentity}><strong>{token.symbol.toUpperCase()}</strong><small>{tokenName}</small></span>
@@ -244,6 +283,21 @@ export function WalletHoldingsPanel({
           );
         })}
       </div>
+
+      {filteredRows.length > 0 && (
+        <footer className={styles.pagination}>
+          <span>{tr("table.itemRangeText", {
+            min: pageStart + 1,
+            max: Math.min(pageStart + PORTFOLIO_PAGE_SIZE, filteredRows.length),
+            count: filteredRows.length,
+          })}</span>
+          <div>
+            <button type="button" onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))} disabled={page <= 1} aria-label={tr("table.previousPage")} title={tr("table.previousPage")}><ChevronLeft size={15} strokeWidth={1.9} /></button>
+            <strong>{tr("table.pageRangeText", { count: page, total: pageCount })}</strong>
+            <button type="button" onClick={() => setPage((currentPage) => Math.min(pageCount, currentPage + 1))} disabled={page >= pageCount} aria-label={tr("table.nextPage")} title={tr("table.nextPage")}><ChevronRight size={15} strokeWidth={1.9} /></button>
+          </div>
+        </footer>
+      )}
     </section>
   );
 }

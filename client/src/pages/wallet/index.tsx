@@ -38,6 +38,8 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
@@ -65,6 +67,7 @@ import { WalletActivityPanel } from "./WalletActivityPanel.tsx";
 import { WalletWorkspaceFrame } from "./WalletWorkspaceFrame.tsx";
 
 type ChatPosition = "right" | "left" | "fullscreen";
+type ChatFloatPosition = { left: number; top: number };
 
 function isEditableShortcutTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -150,6 +153,8 @@ export default function WalletPage() {
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatPosition, setChatPosition] = useState<ChatPosition>("right");
+  const [chatFloatPosition, setChatFloatPosition] = useState<ChatFloatPosition | null>(null);
+  const chatOverlayRef = useRef<HTMLDivElement | null>(null);
 
   const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
@@ -361,6 +366,51 @@ export default function WalletPage() {
         setWalletTags([]);
       });
   }, [address]);
+  const handleChatPositionChange = useCallback((nextPosition: ChatPosition) => {
+    setChatPosition(nextPosition);
+    setChatFloatPosition(null);
+  }, []);
+
+  const handleChatDragStart = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (chatPosition === "fullscreen") return;
+
+    const overlay = chatOverlayRef.current;
+    if (!overlay) return;
+
+    const rect = overlay.getBoundingClientRect();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const originLeft = rect.left;
+    const originTop = rect.top;
+    const viewportPadding = 12;
+    const headerOffset = 72;
+
+    event.preventDefault();
+
+    const move = (moveEvent: PointerEvent) => {
+      const maxLeft = Math.max(viewportPadding, window.innerWidth - rect.width - viewportPadding);
+      const maxTop = Math.max(headerOffset, window.innerHeight - rect.height - viewportPadding);
+      const nextLeft = Math.min(maxLeft, Math.max(viewportPadding, originLeft + moveEvent.clientX - startX));
+      const nextTop = Math.min(maxTop, Math.max(headerOffset, originTop + moveEvent.clientY - startY));
+
+      setChatFloatPosition({ left: nextLeft, top: nextTop });
+    };
+
+    const end = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+    };
+
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end);
+    window.addEventListener("pointercancel", end);
+  }, [chatPosition]);
+
+  const chatOverlayStyle: CSSProperties | undefined = chatFloatPosition && chatPosition !== "fullscreen"
+    ? { left: chatFloatPosition.left, top: chatFloatPosition.top, right: "auto", bottom: "auto" }
+    : undefined;
+
   useEffect(() => {
     const handleChatShortcut = (event: globalThis.KeyboardEvent) => {
       if (
@@ -1013,7 +1063,7 @@ export default function WalletPage() {
         onClose: () => setSelectedToken(null),
       }}
     >
-      <div className={styles.pageLayout} data-theme={theme}>
+      <div className={styles.pageLayout} data-theme={theme} data-sidebar-open={isRightSidebarOpen}>
         <div className={styles.shell}>
           <WalletTopbar
             address={walletAddress}
@@ -1112,12 +1162,19 @@ export default function WalletPage() {
           />
 
           {isChatOpen && (
-            <div className={styles.chatOverlay} data-position={chatPosition}>
+            <div
+              ref={chatOverlayRef}
+              className={styles.chatOverlay}
+              data-position={chatPosition}
+              data-floating={chatFloatPosition ? "true" : "false"}
+              style={chatOverlayStyle}
+            >
               <div className={styles.chatPanel}>
                 <WalletChat
                   variant="sidebar"
                   chatPosition={chatPosition}
-                  onChatPositionChange={setChatPosition}
+                  onChatPositionChange={handleChatPositionChange}
+                  onDragStart={handleChatDragStart}
                   onRequestClose={() => setIsChatOpen(false)}
                 />
               </div>

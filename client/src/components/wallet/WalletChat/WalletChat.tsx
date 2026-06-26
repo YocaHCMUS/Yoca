@@ -1,7 +1,7 @@
-import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
-import { Plus as Add, ChevronDown, X as Close, Maximize2 as Maximize, PanelLeftOpen as OpenPanelLeft, PanelRightOpen as OpenPanelRight, List as Playlist, Send, Trash2 as TrashCan } from "lucide-react";
+import { Plus as Add, ChevronDown, X as Close, Maximize2 as Maximize, PanelLeftOpen as OpenPanelLeft, PanelRightOpen as OpenPanelRight, GripVertical, List as Playlist, Send, Trash2 as TrashCan } from "lucide-react";
 import { WalletChatMessage } from "./WalletChatMessage";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
 import { ChatPromptMenu } from "./ChatPromptMenu";
@@ -27,14 +27,16 @@ interface Props {
   variant?: "widget" | "sidebar";
   chatPosition: "right" | "left" | "fullscreen";
   onChatPositionChange: (position: "right" | "left" | "fullscreen") => void;
+  onDragStart?: (event: ReactPointerEvent<HTMLButtonElement>) => void;
   contextType?: ChatSessionContextType;
   onRequestClose?: () => void;
 }
 
-function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAddresses, onRequestClose }: {
+function WalletChatInner({ variant, chatPosition, onChatPositionChange, onDragStart, walletAddresses, onRequestClose }: {
   variant: "widget" | "sidebar";
   chatPosition: "right" | "left" | "fullscreen";
   onChatPositionChange: (position: "right" | "left" | "fullscreen") => void;
+  onDragStart?: (event: ReactPointerEvent<HTMLButtonElement>) => void;
   walletAddresses: string[];
   onRequestClose?: () => void;
 }) {
@@ -444,6 +446,17 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
     <div className={wrapperClass}>
       <div className={styles.header}>
         <div className={styles.headerLeft}>
+          {variant === "sidebar" && onDragStart && chatPosition !== "fullscreen" ? (
+            <button
+              type="button"
+              className={styles.dragHandle}
+              onPointerDown={onDragStart}
+              aria-label={tr("chat.headerTitle")}
+              title={tr("chat.headerTitle")}
+            >
+              <GripVertical size={16} strokeWidth={1.8} />
+            </button>
+          ) : null}
           <span className={styles.headerTitle}>{tr("chat.headerTitle")}</span>
         </div>
         <div className={styles.headerActions}>
@@ -577,11 +590,11 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
   );
 }
 
-export function WalletChat({ address, addresses, lang, variant = "widget", chatPosition, onChatPositionChange, contextType: contextTypeProp, onRequestClose }: Props) {
+export function WalletChat({ address, addresses, lang, variant = "widget", chatPosition, onChatPositionChange, onDragStart, contextType: contextTypeProp, onRequestClose }: Props) {
   const existingCtx = useContext(ChatContext);
 
   if (existingCtx) {
-    return <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} walletAddresses={existingCtx.addresses} onRequestClose={onRequestClose} />;
+    return <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} onDragStart={onDragStart} walletAddresses={existingCtx.addresses} onRequestClose={onRequestClose} />;
   }
 
   const activeAddresses = [address, ...(addresses ?? [])].filter(Boolean) as string[];
@@ -589,7 +602,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
 
   return (
     <ChatContextProvider addresses={activeAddresses} contextType={contextType} lang={lang}>
-      <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} walletAddresses={activeAddresses} onRequestClose={onRequestClose} />
+      <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} onDragStart={onDragStart} walletAddresses={activeAddresses} onRequestClose={onRequestClose} />
     </ChatContextProvider>
   );
 }

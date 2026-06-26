@@ -39,14 +39,44 @@ export function WalletWorkspaceFrame({ children, extraPanel }: WalletWorkspaceFr
     return <Info size={15} strokeWidth={1.9} />;
   };
 
-  // App.css keeps the whole SPA clipped for routes that own their own scroll areas.
-  // The wallet route is a long dashboard, so temporarily restore document scrolling.
+  // App.css clips the generic SPA shell. Wallet is a long dashboard, so restore
+  // browser scrolling explicitly for this route and restore the previous inline styles on unmount.
   useEffect(() => {
     const targets = [document.documentElement, document.body, document.getElementById("root")]
       .filter((element): element is HTMLElement => Boolean(element));
 
-    targets.forEach((element) => element.classList.add("walletRouteScroll"));
-    return () => targets.forEach((element) => element.classList.remove("walletRouteScroll"));
+    const previousStyles = targets.map((element) => ({
+      element,
+      height: element.style.getPropertyValue("height"),
+      minHeight: element.style.getPropertyValue("min-height"),
+      overflow: element.style.getPropertyValue("overflow"),
+      overflowX: element.style.getPropertyValue("overflow-x"),
+      overflowY: element.style.getPropertyValue("overflow-y"),
+    }));
+
+    targets.forEach((element) => {
+      element.classList.add("walletRouteScroll");
+      element.style.setProperty("height", "auto", "important");
+      element.style.setProperty("min-height", element === document.getElementById("root") ? "100vh" : "100%", "important");
+      element.style.setProperty("overflow", "visible", "important");
+      element.style.setProperty("overflow-x", "hidden", "important");
+      element.style.setProperty("overflow-y", "auto", "important");
+    });
+
+    return () => {
+      previousStyles.forEach(({ element, height, minHeight, overflow, overflowX, overflowY }) => {
+        element.classList.remove("walletRouteScroll");
+        const restore = (property: string, value: string) => {
+          if (value) element.style.setProperty(property, value);
+          else element.style.removeProperty(property);
+        };
+        restore("height", height);
+        restore("min-height", minHeight);
+        restore("overflow", overflow);
+        restore("overflow-x", overflowX);
+        restore("overflow-y", overflowY);
+      });
+    };
   }, []);
 
   return (
