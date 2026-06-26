@@ -225,7 +225,7 @@ export default function AlertsPage() {
     setListLoading(true);
     setListError(null);
     try {
-      const res = await client.api.alerts.index.$get();
+      const res = await client.api.alerts.$get();
       if (!res.ok) throw new Error("list_failed");
       const data = (await res.json()) as FollowedWalletRow[];
       setRows(Array.isArray(data) ? data : []);

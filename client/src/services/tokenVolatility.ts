@@ -1,13 +1,13 @@
 import client from "@/api/main";
 import type {
     TokenVolatilityNewsQuery,
-    VolatilitySignalResponse,
+    VolatilitySignalResponse
 } from "@/types/volatility";
 
 export async function getTokenVolatilityNews(
   query: TokenVolatilityNewsQuery,
-) {
-  const resp = await client.api["token-chart-news-events"].$get({
+) : Promise<VolatilitySignalResponse["data"]> {
+  const resp = await client.api["token-volatility-news"].$get({
     query: {
       address: query.address,
       symbol: query.symbol,
@@ -25,7 +25,7 @@ export async function getTokenVolatilityNews(
     throw new Error(`Failed to fetch volatility signals: ${resp.status}`);
   }
 
-  const payload = (await resp.json()) as VolatilitySignalResponse;
+  const payload = await resp.json();
   if (!payload.success) {
     throw new Error("Failed to fetch volatility signals");
   }

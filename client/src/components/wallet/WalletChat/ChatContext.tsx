@@ -96,7 +96,7 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
           role: m.role,
           content: m.content.length > 2000 ? m.content.slice(0, 2000) : m.content,
         }));
-        const res = await client.api.chat.index.$post({
+        const res = await client.api.chat.$post({
           json: {
             addresses,
             query: query.trim(),
