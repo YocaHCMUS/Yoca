@@ -36,10 +36,6 @@ type WinrateData =  {
         avgWinUsd: number;
         avgLossUsd: number;
     }[];
-    metadata: {
-        period: string;
-        timestamp: number;
-    };
 }
 
 export function WinrateChart({

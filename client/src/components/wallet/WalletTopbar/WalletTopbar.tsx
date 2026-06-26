@@ -1,18 +1,15 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Bookmark,
-  BookmarkFilled,
-  Notification,
-  NotificationFilled,
-  Repeat,
-  Share,
-  AiGenerate,
-  Report,
-  Download,
-  ChevronDown,
-  Edit,
-  Tag as TagIcon,
-  Copy,
+    Bookmark,
+    BookmarkFilled,
+    Notification,
+    NotificationFilled,
+    Repeat,
+    Share,
+    AiGenerate,
+    Edit,
+    Tag as TagIcon,
+    Copy
 } from "@carbon/icons-react";
 import { InlineNotification, Tag, Tooltip } from "@carbon/react";
 import client from "@/api/main";
@@ -20,22 +17,19 @@ import { PeriodSelector } from "@/components/common/PeriodSelector/PeriodSelecto
 import { WalletLabelModal } from "@/components/wallet/WalletLabelModal/WalletLabelModal";
 import { WalletTagsModal } from "@/components/wallet/WalletTagsModal/WalletTagsModal";
 import {
-  fetchWalletIntelligence,
-  fetchWalletOverview,
-  type WalletIntelligenceResponse,
-  type WalletOverviewMultiPeriodResponse,
-  type WalletOverviewPeriodKey,
+    fetchWalletIntelligence,
+    type WalletIntelligenceResponse,
+    type WalletOverviewPeriodKey
 } from "@/services/wallet/walletApi";
 import {
-  fetchWalletTags,
-  saveWalletTags,
+    fetchWalletTags,
+    saveWalletTags,
 } from "@/services/wallet/walletTagsApi";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWatchlist } from "@/contexts/WatchlistContext";
 import { PERIOD_OPTIONS } from "@/config/periodOptions";
 import { useNavigate } from "react-router";
-import type { TimePeriod } from "@/types/chart-filters.types";
 import { useWalletLabels } from "@/hooks/profile/useWalletLabels";
 import styles from "./WalletTopbar.module.scss";
 
@@ -224,7 +218,7 @@ export function WalletTopbar({
 
     setFollowLoading(true);
     try {
-      const res = await client.api.alerts.index.$get();
+      const res = await client.api.alerts.$get();
       if (!res.ok) {
         throw new Error(`Failed to load followed wallets: ${res.status}`);
       }
@@ -333,7 +327,7 @@ export function WalletTopbar({
         return;
       }
 
-      const res = await client.api.alerts.index.$post({
+      const res = await client.api.alerts.$post({
         json: { address: address.trim() },
       });
       const body = (await res.json().catch(() => null)) as

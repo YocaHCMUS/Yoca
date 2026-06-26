@@ -1,13 +1,13 @@
 import client from "@/api/main";
 import type {
-  TokenVolatilityNewsQuery,
-  VolatilitySignalResponse,
+    TokenVolatilityNewsQuery,
+    VolatilitySignalResponse,
 } from "@/types/volatility";
 
 export async function getTokenVolatilityNews(
   query: TokenVolatilityNewsQuery,
 ) {
-  const resp = await client.api.tokenVolatilityNews.index.$get({
+  const resp = await client.api["token-chart-news-events"].$get({
     query: {
       address: query.address,
       symbol: query.symbol,

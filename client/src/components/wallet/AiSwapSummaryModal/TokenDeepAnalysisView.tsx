@@ -11,8 +11,8 @@ import {
   type WalletAiAnalysisLanguage,
 } from "@/services/wallet/walletApi";
 import { TokenPriceChart, type TradeIndicator } from "@/components/charts/TokenPriceChart/TokenPriceChart";
-import TrendNumWithSign from "@/components/TrendNumWithSign";
 import styles from "./TokenDeepAnalysisView.module.scss";
+import { TrendNum } from "@/components/TrendNum";
 
 interface TokenDeepAnalysisViewProps {
   walletAddress: string;
@@ -211,7 +211,7 @@ export function TokenDeepAnalysisView({
           <div className={styles.statCard}>
             <span className={styles.statLabel}>{tr("walletPage.aiSwapSummary.realizedPnl")}</span>
             <span className={styles.statValue}>
-              <TrendNumWithSign
+              <TrendNum
                 value={data.realizedPnlUsd}
                 prefixes="plus-minus"
                 formatter={fmt.num.currency}

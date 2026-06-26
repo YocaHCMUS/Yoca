@@ -38,10 +38,6 @@ const app = new Hono()
       return c.json(
         {
           wallets: data,
-          metadata: {
-            period,
-            timestamp: Date.now(),
-          },
         },
         statusCode.Ok,
       );
@@ -78,11 +74,6 @@ const app = new Hono()
             totalPnL: wallet.totalPnL,
             unrealizedPnL: wallet.unrealizedPnL,
           })),
-          metadata: {
-            currency: "USD",
-            source: "mobula-wallet-analysis",
-            period,
-          },
         },
         statusCode.Ok,
       );
