@@ -128,8 +128,7 @@
   position: relative;
 }
 
-.section::before,
-.tokenDetailsWrapper::before {
+.section::before {
   content: '';
   position: absolute;
   inset: 0 0 auto;
@@ -139,7 +138,32 @@
 }
 
 .tokenDetailsWrapper {
-  position: relative;
+  position: static;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin-bottom: 24px;
+  overflow: visible;
+}
+
+.tokenDetailsWrapper :global(.cds--data-table-content) {
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  scrollbar-gutter: stable both-edges;
+}
+
+.tokenDetailsWrapper :global(.cds--data-table) {
+  width: max-content;
+  min-width: 100%;
+}
+
+.tokenDetailsWrapper :global(.cds--data-table thead),
+.tokenDetailsWrapper :global(.cds--data-table tr),
+.tokenDetailsWrapper :global(.cds--data-table th) {
+  position: static !important;
+  inset-block-start: auto !important;
+  top: auto !important;
+  z-index: auto !important;
 }
 
 .section :global(.cds--chart-wrapper),
@@ -190,6 +214,15 @@
 .section :global(.cds--tabs__nav-link:focus),
 .section :global(.cds--tabs__nav-link:hover) {
   color: var(--yoca-text-main, #f8fafc);
+}
+
+.tokenDetailsWrapper :global(.cds--table-container),
+.tokenDetailsWrapper :global(.cds--data-table-container),
+.tokenDetailsWrapper :global(.cds--data-table-header),
+.tokenDetailsWrapper :global(.cds--data-table-content),
+.tokenDetailsWrapper :global(.cds--pagination),
+.tokenDetailsWrapper :global(.cds--pagination__control-buttons) {
+  background: transparent !important;
 }
 
 .auditOverlay {

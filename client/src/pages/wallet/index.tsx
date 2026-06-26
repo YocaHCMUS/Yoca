@@ -1022,7 +1022,7 @@ export default function WalletPage() {
           />
 
           <div className={styles.body}>
-            <div className={styles.mainCol}>
+            <main className={styles.mainCol}>
               {/* Balance History */}
               <div className={styles.section}>
                 <BalanceChartV2
@@ -1052,21 +1052,21 @@ export default function WalletPage() {
               <div className={styles.section}>
                 <WalletTransactionActivity address={walletAddress} />
               </div>
-            </div>
+            </main>
 
-            <div className={styles.sideCol}>
+            <aside className={styles.sideCol}>
               <WalletHoldingsPanel
                 walletAddress={walletAddress}
                 portfolio={portfolio}
                 portfolioMeta={portfolioMetaAsMap}
                 loading={portfolioLoading}
               />
-            </div>
+            </aside>
           </div>
 
-          <div className={styles.tokenDetailsWrapper}>
+          <section className={styles.tokenDetailsWrapper}>
             <TokenDetailsDemo setSelectedToken={setSelectedToken} />
-          </div>
+          </section>
         </div>
 
         {/* Layout-integrated chat panel (right/left dock) */}

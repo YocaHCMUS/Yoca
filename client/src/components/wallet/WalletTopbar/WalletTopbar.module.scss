@@ -1,6 +1,12 @@
 @use "@carbon/react/scss/theme" as *;
 
 .topbar {
+  --wallet-winrate-card-border: rgba(124, 58, 237, 0.16);
+  --wallet-winrate-card-bg:
+    radial-gradient(circle at left top, rgba(124, 58, 237, 0.12), transparent 40%),
+    linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(37, 99, 235, 0.06) 45%, rgba(255, 255, 255, 0.84)),
+    var(--yoca-surface-elevated, rgba(255, 255, 255, 0.96));
+  --wallet-winrate-card-shadow: 0 18px 36px rgba(15, 23, 42, 0.1);
   display: grid;
   grid-template-columns: minmax(260px, 1fr) minmax(460px, 720px) minmax(250px, 1fr);
   align-items: center;
@@ -13,6 +19,15 @@
     var(--yoca-surface, rgba(18, 24, 38, 0.82));
   box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.32));
   backdrop-filter: blur(18px);
+}
+
+:global(.yoca-app-theme[data-yoca-theme="dark"]) .topbar {
+  --wallet-winrate-card-border: rgba(45, 212, 191, 0.16);
+  --wallet-winrate-card-bg:
+    radial-gradient(circle at left top, rgba(45, 212, 191, 0.12), transparent 38%),
+    linear-gradient(135deg, rgba(124, 58, 237, 0.16), rgba(37, 99, 235, 0.1) 45%, rgba(255, 255, 255, 0.02)),
+    rgba(10, 16, 30, 0.88);
+  --wallet-winrate-card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .topbarLeft {
@@ -166,13 +181,10 @@
   width: min(100%, 720px);
   min-height: 96px;
   padding: 14px 16px;
-  border: 1px solid rgba(45, 212, 191, 0.16);
+  border: 1px solid var(--wallet-winrate-card-border);
   border-radius: 18px;
-  background:
-    radial-gradient(circle at left top, rgba(45, 212, 191, 0.12), transparent 38%),
-    linear-gradient(135deg, rgba(124, 58, 237, 0.16), rgba(37, 99, 235, 0.1) 45%, rgba(255, 255, 255, 0.02)),
-    rgba(10, 16, 30, 0.88);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: var(--wallet-winrate-card-bg);
+  box-shadow: var(--wallet-winrate-card-shadow);
   display: flex;
   flex-direction: column;
   gap: 10px;

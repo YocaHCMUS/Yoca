@@ -298,10 +298,9 @@ export function WalletTransactionActivity({ address }: { address: string }) {
                 rows={swapRows}
                 headers={swapHeaders}
                 loading={swapLoading}
-                height={480}
+                height="auto"
                 enablePagination
                 pageSize={16}
-                stickyHeader
                 boxed
                 pageUnknown
                 toolBar={
@@ -363,10 +362,9 @@ export function WalletTransactionActivity({ address }: { address: string }) {
                 rows={transferRows}
                 headers={transferHeaders}
                 loading={transferLoading}
-                height={480}
+                height="auto"
                 enablePagination
                 pageSize={16}
-                stickyHeader
                 boxed
                 pageUnknown
                 toolBar={
