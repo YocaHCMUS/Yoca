@@ -4,16 +4,16 @@ import { Close, ChevronDown, ChevronRight } from "@carbon/react/icons";
 import { SkeletonPlaceholder, SkeletonText } from "@carbon/react";
 import { ID_MODAL_ROOT } from "@/config/constants";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
-import TrendNumWithSign from "@/components/TrendNumWithSign.tsx";
 import {
-  fetchWalletAiSwapSummary,
-  type WalletAiSwapSummaryResponse,
-  type WalletAiAnalysisLanguage,
+    fetchWalletAiSwapSummary,
+    type WalletAiSwapSummaryResponse,
+    type WalletAiAnalysisLanguage,
 } from "@/services/wallet/walletApi";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { TokenDeepAnalysisView } from "./TokenDeepAnalysisView";
 // import { MiniHistogram } from "./MiniHistogram";
 import styles from "./ai-swap-summary.module.scss";
+import { TrendNum } from "@/components/TrendNum";
 
 const PAGE_SIZE = 10;
 
@@ -70,7 +70,7 @@ function SummaryContent({
           <div className={styles.statCard}>
             <span className={styles.statLabel}>{tr("walletPage.aiSwapSummary.realizedPnl")}</span>
             <span className={styles.statValue}>
-              <TrendNumWithSign
+              <TrendNum
                 value={report.realizedPnlUsd}
                 prefixes="plus-minus"
                 formatter={fmt.num.currency}
@@ -155,7 +155,7 @@ function SummaryContent({
                   />
                   <span className={styles.rankedSpacer} />
                   <span className={styles.rankedPnl}>
-                    <TrendNumWithSign
+                    <TrendNum
                       value={t.pnlUsd}
                       prefixes="plus-minus"
                       formatter={fmt.num.currency}

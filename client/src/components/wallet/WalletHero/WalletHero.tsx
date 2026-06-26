@@ -1,6 +1,5 @@
 import { Flex } from "@/components/Flex";
 import { TrendNum } from "@/components/TrendNum";
-import TrendNumWithSign from "@/components/TrendNumWithSign";
 import { Txt } from "@/components/Txt";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type { WalletWinrateStats } from "@/hooks/useWalletWinrate";
@@ -51,21 +50,6 @@ export function WalletHero({
   const hasWinRateStats =
     winRateStats !== null && Number.isFinite(winRateStats.winRate);
   const isHighWinRate = safeWinRate >= 50;
-
-  const formatVal = (value: number | null): string => {
-    if (value == null || !Number.isFinite(value)) return "\u2014";
-    return fmt.num.currency(value);
-  };
-
-  const formatCompactCurrency = (value: number | null): string => {
-    if (value == null || !Number.isFinite(value)) return "\u2014";
-    return fmt.num.compact.currency(value);
-  };
-
-  const formatCount = (value: number | null): string => {
-    if (value == null || !Number.isFinite(value)) return "\u2014";
-    return fmt.num.compact.unit(value, "");
-  };
 
   return (
     <Grid fullWidth condensed className={styles.hero}>
@@ -121,8 +105,10 @@ export function WalletHero({
             {winRateLoading || !winRateStats
               ? "\u2014"
               : tr("walletPage.tokenWinRate.summaryShort", {
-                  win: formatCount(winRateStats.winCount),
-                  tradedCount: formatCount(winRateStats.totalTraded),
+                  win: fmt.num.compact.decimal(winRateStats.winCount),
+                  tradedCount: fmt.num.compact.decimal(
+                    winRateStats.totalTraded,
+                  ),
                 })}
           </Txt>
           <div className={styles.spacer} />
@@ -135,7 +121,7 @@ export function WalletHero({
               direction="in"
               prefixes="plus-minus"
               size="sm"
-              formatter={formatCompactCurrency}
+              formatter={fmt.num.compact.currency}
             />
             <span className={styles.dot}>·</span>
             <Txt size="sm" secondary>
@@ -146,7 +132,7 @@ export function WalletHero({
               direction="out"
               prefixes="plus-minus"
               size="sm"
-              formatter={formatCompactCurrency}
+              formatter={fmt.num.compact.currency}
             />
           </Flex>
         </Flex>
@@ -175,7 +161,7 @@ export function WalletHero({
             className={styles.mainValue}
             style={{ fontSize: "1.25rem" }}
           >
-            {formatVal(totalAssetValue)}
+            {fmt.num.compact.currency(totalAssetValue)}
           </Txt>
           <Flex align="center" wrap="wrap" gap={3} className={styles.subRow}>
             {pnlUnrealized != null &&
@@ -192,11 +178,12 @@ export function WalletHero({
           <div className={styles.spacer} />
           <Flex align="center" wrap="wrap" gap={2.5} className={styles.footer}>
             <Txt size="sm" secondary>
-              {formatCount(numberOfTokenHolding)} {tr("wallet.tokensHolding")}
+              {fmt.num.compact.decimal(numberOfTokenHolding)}{" "}
+              {tr("wallet.tokensHolding")}
             </Txt>
             <span className={styles.dot}>·</span>
             <Txt size="sm" secondary>
-              {formatCount(tokenTraded)} {tr("wallet.tokensTraded")}
+              {fmt.num.compact.decimal(tokenTraded)} {tr("wallet.tokensTraded")}
             </Txt>
           </Flex>
         </Flex>
@@ -234,7 +221,7 @@ export function WalletHero({
             <TrendNum
               value={pnlRealized}
               prefixes="arrow"
-              formatter={formatVal}
+              formatter={fmt.num.compact.currency}
             />
             <span className={styles.dot}>·</span>
             <Txt size="sm" secondary>
@@ -243,7 +230,7 @@ export function WalletHero({
             <TrendNum
               value={pnlUnrealized}
               prefixes="arrow"
-              formatter={formatVal}
+              formatter={fmt.num.compact.currency}
             />
           </Flex>
         </Flex>
@@ -266,29 +253,24 @@ export function WalletHero({
           >
             {tr("wallet.tradingVolume")}
           </Txt>
-          <Txt
-            block
-            weight="semibold"
-            className={styles.mainValue}
-            style={{ fontSize: "1.25rem" }}
-          >
-            {formatVal(tradingVolume)}
+          <Txt block weight="semibold" className={styles.mainValue} size="sm">
+            {fmt.num.compact.currency(tradingVolume)}
           </Txt>
           <Flex align="center" wrap="wrap" gap={3} className={styles.subRow}>
             <TrendNum
               value={buyVolumeUsd}
               prefixes="none"
-              formatter={formatVal}
+              formatter={fmt.num.compact.currency}
             />
             <Txt size="sm" secondary>
               {tr("walletPage.buy")}
             </Txt>
             <span className={styles.dot}>·</span>
-            <TrendNumWithSign
-              forceSign="negative"
+            <TrendNum
+              direction="out"
               value={sellVolumeUsd}
               prefixes="none"
-              formatter={formatVal}
+              formatter={fmt.num.compact.currency}
             />
             <Txt size="sm" secondary>
               {tr("walletPage.sell")}
@@ -299,21 +281,20 @@ export function WalletHero({
             <Txt size="sm" secondary>
               {tr("walletPage.transaction")}:
             </Txt>
-            <TrendNumWithSign
-              forceSign="positive"
+            <TrendNum
+              direction="in"
               value={buyTxCount}
               prefixes="none"
-              formatter={formatCount}
+              formatter={fmt.num.compact.currency}
             />
             <Txt size="sm" secondary>
               {tr("walletPage.buy")}
             </Txt>
             <span className={styles.dot}>·</span>
-            <TrendNumWithSign
-              forceSign="negative"
+            <TrendNum
               value={sellTxCount}
               prefixes="none"
-              formatter={formatCount}
+              formatter={fmt.num.compact.decimal}
             />
             <Txt size="sm" secondary>
               {tr("walletPage.sell")}
