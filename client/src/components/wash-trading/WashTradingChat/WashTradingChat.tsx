@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useUserTheme } from "@/contexts/ThemeContext";
 import styles from "./WashTradingChat.module.scss";
@@ -113,6 +113,201 @@ const getRiskTone = (score?: number) => {
   if (score >= 45) return "medium";
   return "low";
 };
+
+
+const makeSolanaAddressBreakable = (value: string) => (
+  value.replace(/\b[1-9A-HJ-NP-Za-km-z]{24,88}\b/g, (address) => (
+    address.match(/.{1,6}/g)?.join("\u200B") ?? address
+  ))
+);
+
+const inlineMarkdown = (value: string, keyPrefix: string): ReactNode[] => {
+  const parts = value.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^\s)]+\))/g);
+
+  return parts.filter(Boolean).map((part, index) => {
+    const key = `${keyPrefix}-${index}`;
+
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={key}>{makeSolanaAddressBreakable(part.slice(2, -2))}</strong>;
+    }
+
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return <code key={key}>{makeSolanaAddressBreakable(part.slice(1, -1))}</code>;
+    }
+
+    const link = part.match(/^\[([^\]]+)\]\(([^\s)]+)\)$/);
+    if (link) {
+      return (
+        <a key={key} href={link[2]} target="_blank" rel="noreferrer">
+          {link[1]}
+        </a>
+      );
+    }
+
+    return makeSolanaAddressBreakable(part);
+  });
+};
+
+type AnswerBlock =
+  | { type: "heading"; value: string; level: number }
+  | { type: "paragraph"; value: string }
+  | { type: "bullet"; values: string[] }
+  | { type: "ordered"; values: string[] }
+  | { type: "quote"; value: string }
+  | { type: "divider" };
+
+const isBlockStart = (line: string) => (
+  /^#{1,4}\s+/.test(line)
+  || /^[-*•]\s+/.test(line)
+  || /^\d+[.)]\s+/.test(line)
+  || /^>\s?/.test(line)
+  || /^(---|___|\*\*\*)$/.test(line)
+);
+
+const parseAnswerBlocks = (content: string): AnswerBlock[] => {
+  const lines = content
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.trim());
+  const blocks: AnswerBlock[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
+    if (!line) {
+      index += 1;
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,4})\s+(.+)$/);
+    if (heading) {
+      blocks.push({ type: "heading", value: heading[2], level: heading[1].length });
+      index += 1;
+      continue;
+    }
+
+    if (/^(---|___|\*\*\*)$/.test(line)) {
+      blocks.push({ type: "divider" });
+      index += 1;
+      continue;
+    }
+
+    if (/^>\s?/.test(line)) {
+      const quoteLines: string[] = [];
+      while (index < lines.length && /^>\s?/.test(lines[index])) {
+        quoteLines.push(lines[index].replace(/^>\s?/, ""));
+        index += 1;
+      }
+      blocks.push({ type: "quote", value: quoteLines.join(" ") });
+      continue;
+    }
+
+    if (/^[-*•]\s+/.test(line)) {
+      const values: string[] = [];
+      while (index < lines.length && /^[-*•]\s+/.test(lines[index])) {
+        values.push(lines[index].replace(/^[-*•]\s+/, ""));
+        index += 1;
+      }
+      blocks.push({ type: "bullet", values });
+      continue;
+    }
+
+    if (/^\d+[.)]\s+/.test(line)) {
+      const values: string[] = [];
+      while (index < lines.length && /^\d+[.)]\s+/.test(lines[index])) {
+        values.push(lines[index].replace(/^\d+[.)]\s+/, ""));
+        index += 1;
+      }
+      blocks.push({ type: "ordered", values });
+      continue;
+    }
+
+    const paragraphLines = [line];
+    index += 1;
+    while (index < lines.length && lines[index] && !isBlockStart(lines[index])) {
+      paragraphLines.push(lines[index]);
+      index += 1;
+    }
+    blocks.push({ type: "paragraph", value: paragraphLines.join(" ") });
+  }
+
+  return blocks.length ? blocks : [{ type: "paragraph", value: content }];
+};
+
+const getCalloutTone = (value: string) => {
+  const normalized = value.toLowerCase();
+  if (/(cảnh báo|lưu ý|rủi ro|warning|risk)/.test(normalized)) return "warning";
+  if (/(kết luận|điểm chính|tóm tắt|key takeaway|summary)/.test(normalized)) return "insight";
+  return "default";
+};
+
+function FormattedAssistantAnswer({ content, language }: { content: string; language: "vi" | "en" }) {
+  const blocks = useMemo(() => parseAnswerBlocks(content), [content]);
+
+  return (
+    <div className={styles.formattedAnswer}>
+      {blocks.map((block, index) => {
+        const key = `${block.type}-${index}`;
+
+        if (block.type === "heading") {
+          const tone = getCalloutTone(block.value);
+          return (
+            <div key={key} className={`${styles.answerHeading} ${styles[`answerHeading_${tone}`]}`}>
+              <span className={styles.answerHeadingMarker} />
+              <h4>{inlineMarkdown(block.value, key)}</h4>
+            </div>
+          );
+        }
+
+        if (block.type === "bullet") {
+          return (
+            <ul key={key} className={styles.answerBulletList}>
+              {block.values.map((value, itemIndex) => (
+                <li key={`${key}-${itemIndex}`}>
+                  <span className={styles.answerBulletDot} />
+                  <span>{inlineMarkdown(value, `${key}-${itemIndex}`)}</span>
+                </li>
+              ))}
+            </ul>
+          );
+        }
+
+        if (block.type === "ordered") {
+          return (
+            <ol key={key} className={styles.answerOrderedList}>
+              {block.values.map((value, itemIndex) => (
+                <li key={`${key}-${itemIndex}`}>
+                  <span className={styles.answerStep}>{String(itemIndex + 1).padStart(2, "0")}</span>
+                  <span>{inlineMarkdown(value, `${key}-${itemIndex}`)}</span>
+                </li>
+              ))}
+            </ol>
+          );
+        }
+
+        if (block.type === "quote") {
+          return (
+            <aside key={key} className={`${styles.answerCallout} ${styles[`answerCallout_${getCalloutTone(block.value)}`]}`}>
+              <span className={styles.answerCalloutLabel}>{language === "vi" ? "Lưu ý" : "Note"}</span>
+              <p>{inlineMarkdown(block.value, key)}</p>
+            </aside>
+          );
+        }
+
+        if (block.type === "divider") return <div key={key} className={styles.answerDivider} />;
+
+        const tone = getCalloutTone(block.value);
+        const isLead = /^(\*\*)?(kết luận|điểm chính|tóm tắt|cảnh báo|lưu ý|key takeaway|summary|warning|note)(\*\*)?\s*:/i.test(block.value);
+
+        return (
+          <p key={key} className={`${styles.answerParagraph} ${isLead ? styles.answerLead : ""} ${isLead ? styles[`answerLead_${tone}`] : ""}`}>
+            {inlineMarkdown(block.value, key)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
 
 export function WashTradingChat({ context, disabled = false }: Props) {
   const { lang } = useLocalization();
@@ -309,8 +504,6 @@ export function WashTradingChat({ context, disabled = false }: Props) {
           <div ref={listRef} className={styles.messages}>
             {messages.length === 0 ? (
               <div className={styles.welcome}>
-                <div className={styles.welcomeIcon}><InsightOrbitIcon size={24} /></div>
-                <div className={styles.welcomeEyebrow}>{lang === "vi" ? "PHÂN TÍCH CÓ NGỮ CẢNH" : "CONTEXT-GROUNDED ANALYSIS"}</div>
                 <h3>{lang === "vi" ? `Hỏi trực tiếp về ${context.symbol || "token"} này` : `Ask directly about this ${context.symbol || "token"}`}</h3>
                 <p>
                   {lang === "vi"
@@ -334,7 +527,17 @@ export function WashTradingChat({ context, disabled = false }: Props) {
                       ? (lang === "vi" ? "BẠN" : "YOU")
                       : (lang === "vi" ? "AI ANALYST" : "AI ANALYST")}
                   </span>
-                  <p>{message.content}</p>
+                  {message.role === "assistant" ? (
+                    <div className={styles.assistantAnswerCard}>
+                      <div className={styles.answerMeta}>
+                        <span className={styles.answerMetaPulse} />
+                        {lang === "vi" ? "Phân tích dựa trên dữ liệu hiện tại" : "Grounded in current analysis data"}
+                      </div>
+                      <FormattedAssistantAnswer content={message.content} language={lang === "vi" ? "vi" : "en"} />
+                    </div>
+                  ) : (
+                    <p>{message.content}</p>
+                  )}
                   {message.role === "assistant" && message.suggestions?.length ? (
                     <div className={styles.suggestions}>
                       {message.suggestions.map((suggestion) => (

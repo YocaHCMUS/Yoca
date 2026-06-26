@@ -59,6 +59,23 @@ const cleanText = (value: unknown, maxLength: number): string => {
     .slice(0, maxLength);
 };
 
+// Keep only safe, presentation-friendly Markdown tokens for the client renderer.
+// History and suggestions still use cleanText() so they remain single-line prompts.
+const cleanAnswerText = (value: unknown, maxLength: number): string => {
+  if (typeof value !== "string") return "";
+
+  return value
+    .replace(/```(?:json|markdown|text)?/gi, "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.trim().replace(/[ \t]{2,}/g, " "))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, maxLength);
+};
+
 const buildHistory = (history: WashTradingChatHistoryMessage[] = []) => {
   const safeHistory = history
     .slice(-MAX_HISTORY_TURNS)
@@ -168,21 +185,21 @@ const buildSystemInstruction = (language: WashTradingLanguage, mint: string) => 
       ? "Nếu nguồn là demo-fallback, phải nói rõ kết quả là demo UX, không phải dữ liệu on-chain thật."
       : "If the source is demo-fallback, clearly disclose that the result is a UX demo, not real on-chain data.",
     vietnamese
-      ? "Giữ câu trả lời dễ đọc, đúng trọng tâm, tối đa khoảng 4 đoạn ngắn. Không đưa lời khuyên mua/bán."
-      : "Keep the answer easy to read and focused, at most about four short paragraphs. Do not give buy/sell advice.",
+      ? "Trình bày câu trả lời để giao diện có thể nhấn mạnh thông tin: mở đầu bằng 1 kết luận trực tiếp, sau đó 2–4 gạch đầu dòng về bằng chứng. Có thể dùng tiêu đề ngắn dạng ###, nhãn in đậm như **Kết luận:** hoặc **Lưu ý:** và danh sách bắt đầu bằng '-'. Không dùng bảng, HTML, code fence, hoặc quá 180 từ. Không đưa lời khuyên mua/bán. Khi nhắc mint hoặc địa chỉ ví, ưu tiên symbol hoặc dạng rút gọn 4 ký tự đầu…4 ký tự cuối; chỉ in đầy đủ khi người dùng yêu cầu trực tiếp."
+      : "Format the answer for an insight UI: begin with one direct conclusion, then 2–4 evidence bullets. You may use a short ### heading, bold labels such as **Key takeaway:** or **Note:** and '-' lists. Do not use tables, HTML, code fences, or more than 180 words. Do not give buy/sell advice. For mints or wallet addresses, prefer the symbol or a shortened 4-character-prefix…4-character-suffix form; only print a full address when the user explicitly asks.",
     "",
     featureReference,
     "",
     vietnamese
-      ? "Trả lời DUY NHẤT JSON: {\"answer\":\"...\",\"suggestions\":[\"...\",\"...\",\"...\"]}. answer bằng tiếng Việt, suggestions là câu hỏi tiếp theo ngắn gọn."
-      : "Reply ONLY as JSON: {\"answer\":\"...\",\"suggestions\":[\"...\",\"...\",\"...\"]}. Keep answer in English and suggestions as short follow-up questions.",
+      ? "Trả lời DUY NHẤT JSON: {\"answer\":\"...\",\"suggestions\":[\"...\",\"...\",\"...\"]}. answer bằng tiếng Việt và được phép dùng Markdown an toàn (###, **đậm**, -, >) để frontend trình bày; suggestions là câu hỏi tiếp theo ngắn gọn."
+      : "Reply ONLY as JSON: {\"answer\":\"...\",\"suggestions\":[\"...\",\"...\",\"...\"]}. Keep answer in English and use only safe Markdown (###, **bold**, -, >) that the frontend can render; suggestions must be short follow-up questions.",
   ].join("\n");
 };
 
 const localUnavailableResponse = (language: WashTradingLanguage, analysis: WashTradingAIResult): WashTradingChatResponse => ({
   answer: language === "vi"
-    ? `Phân tích hiện tại của ${analysis.symbol} có điểm rủi ro ${analysis.summary.overallRiskScore}/100 trong khung ${analysis.timeframe}. Gemini chưa được cấu hình trong backend nên chat không thể tạo diễn giải tương tác.`
-    : `The current ${analysis.symbol} analysis has a risk score of ${analysis.summary.overallRiskScore}/100 for ${analysis.timeframe}. Gemini is not configured in the backend, so interactive chat explanations are unavailable.`,
+    ? `### Kết quả hiện tại\n**Điểm rủi ro:** ${analysis.summary.overallRiskScore}/100 trong khung ${analysis.timeframe}.\n> Gemini chưa được cấu hình trong backend nên chat chưa thể tạo diễn giải tương tác.`
+    : `### Current result\n**Risk score:** ${analysis.summary.overallRiskScore}/100 for ${analysis.timeframe}.\n> Gemini is not configured in the backend, so interactive chat explanations are unavailable.`,
   suggestions: language === "vi"
     ? ["Giải thích điểm rủi ro token", "Cách tính điểm ví", "Ý nghĩa circular trade"]
     : ["Explain the token risk score", "How is wallet score calculated?", "What is a circular trade?"],
@@ -229,7 +246,7 @@ export async function answerWashTradingChatQuery(params: WashTradingChatRequest)
     });
 
     const parsed = parseJsonObject(response.text ?? "");
-    const answer = cleanText(parsed?.answer, 2400);
+    const answer = cleanAnswerText(parsed?.answer, 2400);
     const suggestions = Array.isArray(parsed?.suggestions)
       ? parsed!.suggestions
         .map((value) => cleanText(value, 180))
