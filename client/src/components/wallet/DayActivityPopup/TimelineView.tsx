@@ -1,6 +1,6 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { type WalletDaySwapSummary } from "@/services/wallet/walletApi";
-import { ChevronDown, ChevronUp } from "@carbon/icons-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState, useMemo } from "react";
 import { TxRow } from "./TxRow";
 import TokenIdentityCell from "@/components/token/TokenIdentityCell";

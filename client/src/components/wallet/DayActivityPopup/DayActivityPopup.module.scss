@@ -1,15 +1,12 @@
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/theme' as *;
-@use '@carbon/react/scss/type' as *;
 
 .card {
   position: fixed;
   z-index: 8000;
-  background-color: $layer-01;
-  border: 1px solid $border-subtle;
+  background-color: var(--wallet-surface, #ffffff);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 8px;
   max-height: 72vh;
-  padding: $spacing-06;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -26,10 +23,10 @@
   width: 560px;
   flex-shrink: 0;
   min-width: 0;
-  padding: $spacing-04 $spacing-06 0 0;
+  padding: 16px 24px 0 0;
   display: flex;
   flex-direction: column;
-  gap: $spacing-05;
+  gap: 20px;
   overflow-y: auto;
 }
 
@@ -41,8 +38,8 @@
   cursor: grab;
   user-select: none;
 
-  padding-bottom: $spacing-04;
-  border-bottom: 1px solid $border-subtle;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--wallet-border, #dfe6ef);
 
   &:active {
     cursor: grabbing;
@@ -52,52 +49,50 @@
 .headerLeft {
   display: flex;
   flex-direction: column;
-  gap: $spacing-01;
+  gap: 4px;
 }
 
 .titleRow {
   display: flex;
   align-items: center;
-  gap: $spacing-02;
+  gap: 8px;
 }
 
 .dragIcon {
-  color: $icon-secondary;
+  color: var(--wallet-muted, #67748a);
   flex-shrink: 0;
 }
 
 .title {
-  @include type-style('heading-03');
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   margin: 0;
 }
 
 .date {
-  @include type-style('body-01');
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
 }
 
 .headerActions {
   display: flex;
   align-items: center;
-  gap: $spacing-01;
+  gap: 4px;
 }
 
 .clearChartsBtn {
   background: transparent;
   border: none;
   cursor: pointer;
-  color: $icon-primary;
+  color: var(--wallet-text, #172033);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: $spacing-02;
+  padding: 8px;
   border-radius: 4px;
   transition: background-color 0.15s;
   flex-shrink: 0;
 
   &:hover {
-    background-color: $layer-hover-01;
+    background-color: var(--wallet-surface-hover, #f0f3f8);
   }
 }
 
@@ -105,17 +100,17 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  color: $icon-primary;
+  color: var(--wallet-text, #172033);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: $spacing-02;
+  padding: 8px;
   border-radius: 4px;
   transition: background-color 0.15s;
   flex-shrink: 0;
 
   &:hover {
-    background-color: $layer-hover-01;
+    background-color: var(--wallet-surface-hover, #f0f3f8);
   }
 }
 
@@ -124,44 +119,43 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: $spacing-07 0;
+  padding: 32px 0;
 }
 
 .loadingOverlay {
   display: flex;
   flex-direction: column;
-  gap: $spacing-05;
+  gap: 20px;
 }
 
 .loadingStatRows {
   display: flex;
   flex-direction: column;
-  gap: $spacing-03;
+  gap: 12px;
 }
 
 .loadingStatRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: $spacing-03 $spacing-04;
-  border-bottom: 1px solid $border-subtle;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--wallet-border, #dfe6ef);
 }
 
 .errorContainer {
   text-align: center;
-  padding: $spacing-05 0;
+  padding: 20px 0;
 }
 
 .errorText {
-  @include type-style('body-01');
-  color: $support-error;
+  color: var(--wallet-negative, #c9434d);
 }
 
 /* ── Body ────────────────────────────────────── */
 .body {
   display: flex;
   flex-direction: column;
-  gap: $spacing-05;
+  gap: 20px;
 }
 
 /* ── Stats Section ───────────────────────────── */
@@ -174,20 +168,18 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: $spacing-03 $spacing-04;
+  padding: 12px 16px;
 }
 
 .statLabel {
-  @include type-style('body-01');
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   display: flex;
   align-items: center;
-  gap: $spacing-01;
+  gap: 4px;
 }
 
 .statValue {
-  @include type-style('body-compact-01');
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   font-weight: 600;
   text-align: right;
 }
@@ -206,20 +198,19 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: $spacing-03;
+  gap: 12px;
 }
 
 .sectionHeaderRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: $spacing-03;
-  border-top: 1px solid $border-subtle;
+  padding-top: 12px;
+  border-top: 1px solid var(--wallet-border, #dfe6ef);
 }
 
 .sectionTitle {
-  @include type-style('label-01');
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin: 0;
@@ -228,18 +219,17 @@
 .viewToggle {
   display: flex;
   gap: 1px;
-  background-color: $layer-02;
+  background-color: var(--wallet-surface-soft, #f5f7fb);
   border-radius: 4px;
   padding: 2px;
 }
 
 .toggleBtn {
-  @include type-style('label-01');
   background: transparent;
   border: none;
   cursor: pointer;
-  color: $text-secondary;
-  padding: 2px $spacing-03;
+  color: var(--wallet-muted, #67748a);
+  padding: 2px 12px;
   border-radius: 3px;
   transition: background-color 0.15s, color 0.15s;
   font-weight: 500;
@@ -247,13 +237,13 @@
   letter-spacing: normal;
 
   &:hover {
-    color: $text-primary;
+    color: var(--wallet-text, #172033);
   }
 }
 
 .toggleBtnActive {
-  background-color: $layer-01;
-  color: $text-primary;
+  background-color: var(--wallet-surface, #ffffff);
+  color: var(--wallet-text, #172033);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
@@ -261,38 +251,36 @@
 .txList {
   display: flex;
   flex-direction: column;
-  gap: $spacing-02;
+  gap: 8px;
 }
 
 .emptyText {
-  @include type-style('body-01');
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   text-align: center;
-  padding: $spacing-04 0;
+  padding: 16px 0;
 }
 
 /* ── Chart Panel ─────────────────────────────── */
 .chartPanel {
   flex-shrink: 0;
-  padding: $spacing-05;
+  padding: 20px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: $spacing-05;
-  border-left: 1px solid $border-subtle;
+  gap: 20px;
+  border-left: 1px solid var(--wallet-border, #dfe6ef);
 }
 
 .chartPanelHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: $spacing-03;
-  border-bottom: 1px solid $border-subtle;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--wallet-border, #dfe6ef);
 }
 
 .chartPanelTitle {
-  @include type-style('label-01');
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 600;
@@ -302,9 +290,9 @@
 .aggregatedTxRow {
   display: flex;
   align-items: center;
-  gap: $spacing-03;
-  padding: $spacing-03 $spacing-04;
-  border-bottom: 1px solid $border-subtle-00;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--wallet-border-soft, #edf1f6);
   cursor: pointer;
   transition: background-color 0.15s;
 
@@ -313,7 +301,7 @@
   }
 
   &:hover {
-    background-color: $layer-hover-01;
+    background-color: var(--wallet-surface-hover, #f0f3f8);
   }
 }
 
@@ -326,7 +314,6 @@
 }
 
 .aggregatedTxAction {
-  @include type-style('body-compact-01');
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -340,8 +327,7 @@
 }
 
 .aggregatedTxAmount {
-  @include type-style('body-compact-01');
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   font-weight: 500;
   flex-shrink: 0;
   overflow: hidden;
@@ -350,10 +336,9 @@
 }
 
 .aggregatedTxCount {
-  @include type-style('label-01');
-  color: $text-secondary;
-  background-color: $layer-02;
-  padding: 1px $spacing-02;
+  color: var(--wallet-muted, #67748a);
+  background-color: var(--wallet-surface-soft, #f5f7fb);
+  padding: 1px 8px;
   border-radius: 4px;
   flex-shrink: 0;
 }
@@ -363,8 +348,7 @@
 }
 
 .aggregatedTxVolume {
-  @include type-style('body-compact-01');
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   font-weight: 600;
   text-align: right;
   flex-shrink: 0;
@@ -372,16 +356,16 @@
 
 .aggregatedTxChevron {
   flex-shrink: 0;
-  color: $icon-secondary;
+  color: var(--wallet-muted, #67748a);
 }
 
 .aggregatedTxDetail {
-  padding-left: $spacing-04;
-  border-left: 2px solid $border-subtle;
-  margin-left: $spacing-04;
+  padding-left: 16px;
+  border-left: 2px solid var(--wallet-border, #dfe6ef);
+  margin-left: 16px;
   display: flex;
   flex-direction: column;
-  gap: $spacing-02;
+  gap: 8px;
 }
 
 .columnGrid {
@@ -391,3 +375,6 @@
   min-height: 0;
   overflow: hidden;
 }
+.skeletonLine { display:block; height:12px; border-radius:6px; background:var(--wallet-surface-hover,#eef2f7); animation:walletSkeleton 1.2s ease-in-out infinite alternate; }
+.skeletonArea { height:54px; border-radius:9px; background:var(--wallet-surface-hover,#eef2f7); animation:walletSkeleton 1.2s ease-in-out infinite alternate; }
+@keyframes walletSkeleton { to { opacity:.45; } }

@@ -1,0 +1,23 @@
+.card { display:flex; flex-direction:column; min-height:0; background:var(--wallet-surface); }
+.header { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:15px 16px 11px; border-bottom:1px solid var(--wallet-border); }
+.heading { display:flex; align-items:center; gap:10px; min-width:0; }
+.icon { width:34px; height:34px; display:grid; place-items:center; border:1px solid var(--wallet-border); border-radius:10px; color:var(--wallet-accent); background:var(--wallet-accent-soft); }
+.heading h2 { margin:0; color:var(--wallet-text); font-size:14px; font-weight:720; }
+.heading p { margin:3px 0 0; color:var(--wallet-text-muted); font-size:11px; }
+.controls { display:flex; align-items:center; gap:7px; }
+.tokenSelect select { max-width:128px; height:31px; border:1px solid var(--wallet-border); border-radius:8px; padding:0 26px 0 9px; outline:none; background:var(--wallet-surface-soft); color:var(--wallet-text); font:inherit; font-size:11px; }
+.segmented { display:flex; padding:3px; border:1px solid var(--wallet-border); border-radius:9px; background:var(--wallet-surface-soft); }
+.segmented button { min-width:38px; height:24px; border:0; border-radius:6px; background:transparent; color:var(--wallet-text-muted); cursor:pointer; font-size:10px; font-weight:700; }
+.segmented button[data-active="true"] { background:var(--wallet-surface-raised); color:var(--wallet-text); box-shadow:0 1px 4px rgba(21,31,49,.12); }
+.refreshButton { width:31px; height:31px; display:grid; place-items:center; border:1px solid var(--wallet-border); border-radius:8px; background:transparent; color:var(--wallet-text-muted); cursor:pointer; }
+.refreshButton:hover { background:var(--wallet-surface-hover); color:var(--wallet-text); }
+.statRow { display:flex; gap:26px; padding:10px 16px 0; }
+.statRow div { display:flex; align-items:baseline; gap:7px; }
+.statRow span { color:var(--wallet-text-soft); font-size:10px; font-weight:650; text-transform:uppercase; letter-spacing:.05em; }
+.statRow strong { color:var(--wallet-danger); font-size:12px; font-weight:700; }
+.statRow strong[data-positive="true"] { color:var(--wallet-success); }
+.chartArea { min-height:220px; padding:0 4px 4px; }
+.loading, .empty { min-height:220px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; color:var(--wallet-text-muted); font-size:12px; }
+.loading svg { color:var(--wallet-accent); animation:pulse 1.3s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity:.35; transform:scale(.94); } }
+@media (max-width:650px) { .header { align-items:flex-start; flex-direction:column; } .controls { width:100%; } .tokenSelect { flex:1; } .tokenSelect select { width:100%; max-width:none; } .statRow { gap:12px; flex-wrap:wrap; } }

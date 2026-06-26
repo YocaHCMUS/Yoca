@@ -1,7 +1,7 @@
 import type { WalletDayToken } from "@/services/wallet/walletApi";
 import React, { useState } from "react";
 import styles from "./TokenStack.module.scss";
-import { ChevronDown, ChevronUp } from "@carbon/react/icons";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useLocalization } from "@/contexts/LocalizationContext";
 
 interface TokenStackProps {

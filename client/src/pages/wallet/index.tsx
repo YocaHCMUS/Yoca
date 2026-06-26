@@ -1,22 +1,17 @@
 import client from "@/api/main";
-import { PnLChart } from "@/components/charts/PnLChart/index.ts";
 import { WalletTopbar } from "@/components/wallet/WalletTopbar/WalletTopbar.tsx";
 import { WalletHero } from "@/components/wallet/WalletHero/WalletHero.tsx";
 import { WalletHoldingsPanel } from "@/components/wallet/WalletHoldingsPanel/WalletHoldingsPanel.tsx";
 import { RightSidebar } from "./RightSidebar.tsx";
-import {
-  WalletChat,
-  ChatContextProvider,
-} from "@/components/wallet/WalletChat";
+import { WalletChat } from "@/components/wallet/WalletChat/WalletChat.tsx";
+import { ChatContextProvider } from "@/components/wallet/WalletChat/ChatContext.tsx";
 import { AiAnalysisModal } from "@/components/wallet/AiAnalysisModal/AiAnalysisModal.tsx";
-import { tableHeaderLabel } from "@/components/tables/Table.tsx";
 import { useWalletWinrate } from "@/hooks/useWalletWinrate";
 import {
   WalletReportTemplate,
   type WalletReportSection,
 } from "@/components/WalletReportTemplate";
 import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
-import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { locale } from "@/config/localization/index.ts";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { useExportReport } from "@/hooks/useExportReport.ts";
@@ -35,8 +30,7 @@ import {
   type WalletPageInfo,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
-import { AiGenerate, Close } from "@carbon/icons-react";
-import { Button } from "@carbon/react";
+import { Bot, X } from "lucide-react";
 import JSZip from "jszip";
 import {
   useCallback,
@@ -63,10 +57,12 @@ import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailM
 import { TransferDetailModal } from "@/components/wallet/TransferDetailModal/TransferDetailModal.tsx";
 import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup.tsx";
 import { AiSwapSummaryModal } from "@/components/wallet/AiSwapSummaryModal";
-import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
 import type { WalletOverviewPeriodKey } from "@/services/wallet/walletApi.ts";
-import { TimePeriod } from "@/types/chart-filters.types.ts";
-import { WalletTransactionActivity } from "@/components/WalletTransactionActivity/WalletTransactionActivity";
+import { useUserTheme } from "@/contexts/ThemeContext.tsx";
+import { WalletBalanceChart } from "./WalletBalanceChart.tsx";
+import { WalletPnlChart } from "./WalletPnlChart.tsx";
+import { WalletActivityPanel } from "./WalletActivityPanel.tsx";
+import { WalletWorkspaceFrame } from "./WalletWorkspaceFrame.tsx";
 
 type ChatPosition = "right" | "left" | "fullscreen";
 
@@ -119,6 +115,7 @@ const PDF_CHUNK_PAGE_BREAK_CLASS = "break-after-page print:break-after-page";
 
 export default function WalletPage() {
   const { tr, fmt, lang } = useLocalization();
+  const { theme } = useUserTheme();
   const bcp47 = locale[lang].langCode;
   const { address } = useParams<{ address: string }>();
   const walletAddress = address ?? "";
@@ -983,17 +980,15 @@ export default function WalletPage() {
 
   if (!address) {
     return (
-      <PageWrapper>
-        <div>{tr("walletPage.addressNotFound")}</div>
-      </PageWrapper>
+      <WalletWorkspaceFrame>
+        <div className={styles.addressMissing}>{tr("walletPage.addressNotFound")}</div>
+      </WalletWorkspaceFrame>
     );
   }
 
   return (
-    <PageWrapper
-      noMarketTickers
-      wideContent
-      extraHeaderPanel={{
+    <WalletWorkspaceFrame
+      extraPanel={{
         isOpen: !!selectedToken,
         content: selectedToken && (
           <>
@@ -1015,11 +1010,10 @@ export default function WalletPage() {
             />
           </>
         ),
-        size: "lg",
         onClose: () => setSelectedToken(null),
       }}
     >
-      <div className={styles.pageLayout}>
+      <div className={styles.pageLayout} data-theme={theme}>
         <div className={styles.shell}>
           <WalletTopbar
             address={walletAddress}
@@ -1049,7 +1043,7 @@ export default function WalletPage() {
             <div className={styles.mainCol}>
               {/* Balance History */}
               <div className={styles.section}>
-                <BalanceChartV2
+                <WalletBalanceChart
                   minHeight={324}
                   address={walletAddress}
                   onClickDay={(ts) => {
@@ -1061,11 +1055,10 @@ export default function WalletPage() {
 
               {/* Profit & Loss */}
               <div className={styles.section}>
-                <PnLChart
+                <WalletPnlChart
                   minHeight={324}
-                  autoRefresh
-                  initialFilters={{ wallets: [walletAddress] }}
-                  onDayClick={(_wallet, ts) => {
+                  address={walletAddress}
+                  onDayClick={(_wallet: string, ts: number) => {
                     setDayPopupTimestamp(ts);
                     setDayPopupOpen(true);
                   }}
@@ -1074,7 +1067,7 @@ export default function WalletPage() {
 
               {/* Activity Tables */}
               <div className={styles.section}>
-                <WalletTransactionActivity address={walletAddress} />
+                <WalletActivityPanel address={walletAddress} />
               </div>
             </div>
 
@@ -1106,7 +1099,7 @@ export default function WalletPage() {
               onClick={() => setIsChatOpen(true)}
               title="Shift + /"
             >
-              <AiGenerate size={18} />
+              <Bot size={18} strokeWidth={1.8} />
               <span>{tr("chat.launcherLabel")}</span>
               <kbd>Shift /</kbd>
             </button>
@@ -1195,13 +1188,13 @@ export default function WalletPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className={styles.auditHeader}>
-              <span className={styles.auditTitle}>Forensic Audit</span>
+              <span className={styles.auditTitle}>{tr("walletPage.ui.forensicAudit")}</span>
               <button
                 type="button"
                 className={styles.auditCloseBtn}
                 onClick={() => setAuditOpen(false)}
               >
-                <Close />
+                <X size={18} strokeWidth={1.8} />
               </button>
             </div>
             <WalletAuditPanel
@@ -1211,6 +1204,6 @@ export default function WalletPage() {
           </div>
         </div>
       )}
-    </PageWrapper>
+    </WalletWorkspaceFrame>
   );
 }

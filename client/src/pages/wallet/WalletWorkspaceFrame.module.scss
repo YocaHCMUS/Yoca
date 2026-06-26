@@ -1,0 +1,125 @@
+.frame {
+  min-height: 100vh;
+  color: var(--wallet-text, #142033);
+  background: var(--wallet-page-bg, #f6f8fb);
+}
+
+.frame[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 160;
+  height: 58px;
+  border-bottom: 1px solid var(--wallet-border, #dfe5ee);
+  background: color-mix(in srgb, var(--wallet-surface, #fff) 92%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.headerInner {
+  width: min(1540px, calc(100% - 36px));
+  height: 100%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.brand {
+  min-width: max-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--wallet-text, #142033);
+  text-decoration: none;
+}
+
+.brandMark {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--wallet-border, #dfe5ee);
+  border-radius: 7px;
+  background: var(--wallet-surface-soft, #f3f6fa);
+}
+
+.brandMark img { width: 21px; height: 21px; object-fit: contain; }
+.brandName { font-size: 15px; font-weight: 780; letter-spacing: .045em; }
+.brandDivider { width: 1px; height: 18px; background: var(--wallet-border, #dfe5ee); }
+.workspaceLabel { color: var(--wallet-text-muted, #64748b); font-size: 12px; font-weight: 600; }
+
+.navigation { display: flex; align-items: center; gap: 2px; }
+.navigation a {
+  padding: 8px 10px;
+  color: var(--wallet-text-muted, #64748b);
+  border-radius: 7px;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 640;
+}
+.navigation a:hover { color: var(--wallet-text, #142033); background: var(--wallet-surface-soft, #f3f6fa); }
+
+.headerActions { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.iconButton {
+  min-width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 8px;
+  color: var(--wallet-text-muted, #64748b);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  text-decoration: none;
+}
+.iconButton:hover { color: var(--wallet-text, #142033); border-color: var(--wallet-border, #dfe5ee); background: var(--wallet-surface-soft, #f3f6fa); }
+.languageCode { margin-left: 3px; font-size: 10px; font-weight: 780; letter-spacing: .04em; }
+
+.accountWrap { position: relative; margin-left: 4px; }
+.accountButton {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 4px;
+  color: var(--wallet-text, #142033);
+  border: 1px solid var(--wallet-border, #dfe5ee);
+  border-radius: 9px;
+  background: var(--wallet-surface, #fff);
+  font: inherit;
+  cursor: pointer;
+}
+.accountButton:hover { background: var(--wallet-surface-soft, #f3f6fa); }
+.avatar { width: 24px; height: 24px; display: grid; place-items: center; color: #fff; border-radius: 7px; background: #5261c6; font-size: 11px; font-weight: 760; }
+.accountName { max-width: 128px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 620; }
+.accountMenu { position: absolute; right: 0; top: calc(100% + 8px); width: 210px; padding: 8px; border: 1px solid var(--wallet-border, #dfe5ee); border-radius: 10px; background: var(--wallet-surface, #fff); box-shadow: var(--wallet-shadow, 0 14px 38px rgba(15, 23, 42, .12)); }
+.accountMenuLabel { display: block; padding: 5px 7px 8px; overflow: hidden; color: var(--wallet-text-muted, #64748b); border-bottom: 1px solid var(--wallet-border-soft, #edf1f5); text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.accountMenu a, .accountMenu button { width: 100%; display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 8px 7px; color: var(--wallet-text, #142033); border: 0; border-radius: 7px; background: transparent; font: inherit; font-size: 12px; text-align: left; text-decoration: none; cursor: pointer; }
+.accountMenu a:hover, .accountMenu button:hover { background: var(--wallet-surface-soft, #f3f6fa); }
+.mobileMenu { display: none; }
+.content { min-height: calc(100vh - 58px); }
+
+.drawerBackdrop { position: fixed; inset: 58px 0 0; z-index: 170; background: rgba(11, 18, 30, .24); }
+.drawer { position: absolute; right: 0; top: 0; width: min(560px, 100vw); height: 100%; display: flex; flex-direction: column; overflow: auto; border-left: 1px solid var(--wallet-border, #dfe5ee); background: var(--wallet-surface, #fff); box-shadow: -20px 0 55px rgba(10, 18, 30, .15); }
+.drawerHeader { display: flex; align-items: center; justify-content: space-between; min-height: 56px; padding: 0 18px; border-bottom: 1px solid var(--wallet-border-soft, #edf1f5); font-size: 13px; font-weight: 720; }
+.drawerHeader button { width: 30px; height: 30px; display: grid; place-items: center; color: var(--wallet-text-muted, #64748b); border: 1px solid var(--wallet-border, #dfe5ee); border-radius: 7px; background: transparent; cursor: pointer; }
+.drawerContent { padding: 18px; }
+
+@media (max-width: 780px) {
+  .headerInner { width: calc(100% - 24px); gap: 14px; }
+  .workspaceLabel, .navigation, .accountName { display: none; }
+  .brandDivider { display: none; }
+  .mobileMenu { display: inline-grid; }
+}
+
+@media (max-width: 500px) {
+  .headerInner { width: calc(100% - 18px); }
+  .headerActions { gap: 2px; }
+  .headerActions > .iconButton:nth-of-type(1), .headerActions > .iconButton:nth-of-type(4) { display: none; }
+  .accountButton { padding-right: 3px; border-color: transparent; }
+}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import {
   fetchWalletAudit,
   type WalletAuditReport,
@@ -19,14 +20,12 @@ const PERSONA_EMOJI: Record<WalletAuditPersona, string> = {
   Unknown: "\u{2753}",  // ❓
 };
 
-const PERSONA_LABEL: Record<WalletAuditPersona, string> = {
-  Sniper: "Sniper Bot",
-  Whale: "Institutional Whale",
-  DCA: "DCA Accumulator",
-  LP: "Liquidity Provider",
-  Retail: "Retail Trader",
-  Unknown: "Unclassified",
-};
+function personaLabel(persona: WalletAuditPersona, language: "vi" | "en") {
+  const labels = language === "vi"
+    ? { Sniper: "Bot Sniper", Whale: "Cá voi tổ chức", DCA: "Tích lũy DCA", LP: "Nhà cung cấp thanh khoản", Retail: "Nhà giao dịch cá nhân", Unknown: "Chưa phân loại" }
+    : { Sniper: "Sniper Bot", Whale: "Institutional Whale", DCA: "DCA Accumulator", LP: "Liquidity Provider", Retail: "Retail Trader", Unknown: "Unclassified" };
+  return labels[persona];
+}
 
 function scoreColor(score: number): "green" | "yellow" | "red" {
   if (score >= 80) return "green";
@@ -64,6 +63,7 @@ function isRedFlag(obs: string): boolean {
 // ---------------------------------------------------------------------------
 
 function TrustGauge({ score }: { score: number }) {
+  const { lang } = useLocalization();
   const r = 60;
   const circumference = 2 * Math.PI * r;
   const progress = Math.min(Math.max(score, 0), 100) / 100;
@@ -88,7 +88,7 @@ function TrustGauge({ score }: { score: number }) {
         <span className={`${styles.gaugeScore} ${SCORE_CLASS[color]}`}>
           {score}
         </span>
-        <span className={styles.gaugeLabel}>Trust Score</span>
+        <span className={styles.gaugeLabel}>{lang === "vi" ? "Điểm tin cậy" : "Trust score"}</span>
       </div>
     </div>
   );
@@ -101,20 +101,22 @@ function PersonaBadge({
   persona: WalletAuditPersona;
   transactionCount: number;
 }) {
+  const { lang } = useLocalization();
   return (
     <div className={styles.personaSection}>
       <div className={styles.personaBadge}>
         <span>{PERSONA_EMOJI[persona]}</span>
-        <span>{PERSONA_LABEL[persona]}</span>
+        <span>{personaLabel(persona, lang === "vi" ? "vi" : "en")}</span>
       </div>
       <span className={styles.personaMeta}>
-        Based on {transactionCount} recent transactions
+        {lang === "vi" ? `Dựa trên ${transactionCount.toLocaleString()} giao dịch gần đây` : `Based on ${transactionCount.toLocaleString()} recent transactions`}
       </span>
     </div>
   );
 }
 
 function ScanningLoader() {
+  const { lang } = useLocalization();
   return (
     <div className={styles.skeletonPanel}>
       <div className={styles.scanningOverlay}>
@@ -123,10 +125,8 @@ function ScanningLoader() {
           <span className={styles.scanDot} />
           <span className={styles.scanDot} />
         </div>
-        <p className={styles.scanningTitle}>Scanning Blockchain...</p>
-        <p className={styles.scanningSubtitle}>
-          Analyzing transaction patterns with AI. This may take a few seconds.
-        </p>
+        <p className={styles.scanningTitle}>{lang === "vi" ? "Đang quét dữ liệu blockchain…" : "Scanning blockchain data…"}</p>
+        <p className={styles.scanningSubtitle}>{lang === "vi" ? "Đang phân tích các mẫu giao dịch. Quá trình này có thể mất vài giây." : "Analyzing transaction patterns. This may take a few seconds."}</p>
       </div>
       <div className={styles.skeletonHeader}>
         <div className={styles.skeletonGauge} />
@@ -145,10 +145,11 @@ function ErrorState({
   message: string;
   onRetry: () => void;
 }) {
+  const { lang } = useLocalization();
   return (
     <div className={styles.auditPanel}>
       <div className={styles.errorCard}>
-        <h4 className={styles.cardTitle}>Audit Failed</h4>
+        <h4 className={styles.cardTitle}>{lang === "vi" ? "Không thể phân tích" : "Analysis failed"}</h4>
         <p className={styles.errorText}>{message}</p>
         <button
           type="button"
@@ -165,7 +166,7 @@ function ErrorState({
             cursor: "pointer",
           }}
         >
-          Retry Audit
+          {lang === "vi" ? "Thử lại" : "Retry"}
         </button>
       </div>
     </div>
@@ -173,13 +174,14 @@ function ErrorState({
 }
 
 function AuditReport({ report }: { report: WalletAuditReport }) {
+  const { lang } = useLocalization();
   const fetchedDate = useMemo(() => {
     try {
-      return new Date(report.fetchedAt).toLocaleString();
+      return new Date(report.fetchedAt).toLocaleString(lang === "vi" ? "vi-VN" : "en-US");
     } catch {
       return report.fetchedAt;
     }
-  }, [report.fetchedAt]);
+  }, [report.fetchedAt, lang]);
 
   return (
     <div className={styles.auditPanel}>
@@ -194,14 +196,14 @@ function AuditReport({ report }: { report: WalletAuditReport }) {
 
       {/* Summary */}
       <div className={styles.summaryCard}>
-        <h4 className={styles.cardTitle}>Forensic Summary</h4>
+        <h4 className={styles.cardTitle}>{lang === "vi" ? "Tóm tắt phân tích" : "Forensic summary"}</h4>
         <p className={styles.summaryText}>{report.summary}</p>
       </div>
 
       {/* Observations */}
       {report.observations.length > 0 && (
         <div className={styles.observationsCard}>
-          <h4 className={styles.cardTitle}>Observations</h4>
+          <h4 className={styles.cardTitle}>{lang === "vi" ? "Các quan sát" : "Observations"}</h4>
           <ul className={styles.observationsList}>
             {report.observations.map((obs, idx) => (
               <li key={idx} className={styles.observationItem}>
@@ -219,9 +221,9 @@ function AuditReport({ report }: { report: WalletAuditReport }) {
 
       {/* Footer meta */}
       <div className={styles.footerMeta}>
-        <span>Model: {report.model}</span>
-        <span>Generated: {fetchedDate}</span>
-        {report.cached && <span>Served from cache</span>}
+        <span>{lang === "vi" ? "Mô hình" : "Model"}: {report.model}</span>
+        <span>{lang === "vi" ? "Tạo lúc" : "Generated"}: {fetchedDate}</span>
+        {report.cached && <span>{lang === "vi" ? "Dữ liệu từ bộ nhớ đệm" : "Served from cache"}</span>}
       </div>
     </div>
   );

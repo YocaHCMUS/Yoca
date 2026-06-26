@@ -1,13 +1,11 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { fetchTokenPriceChartForDay, type TokenPriceChartPoint } from "@/services/wallet/walletApi";
-import { useCarbonChartBaseOption, CHART_COLOR_PALETTE } from "@/util/carbon-chart-base";
-import { Close } from "@carbon/icons-react";
-import { InlineLoading } from "@carbon/react";
+import { useUserTheme } from "@/contexts/ThemeContext";
+import { LoaderCircle, X } from "lucide-react";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useEffect, useMemo, useState } from "react";
 import styles from "./TokenPriceChart.module.scss";
-import { da } from "date-fns/locale";
 
 export interface TradeIndicator {
   timestampMs: number;
@@ -51,7 +49,8 @@ export function TokenPriceChart({
   onRemove,
 }: TokenPriceChartProps) {
   const { fmt, tr } = useLocalization();
-  const baseOption = useCarbonChartBaseOption();
+  const { theme } = useUserTheme();
+  const isDark = theme === "dark";
 
   const [priceData, setPriceData] = useState<TokenPriceChartPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +95,9 @@ export function TokenPriceChart({
     const maxPrice = Math.max(...allPrices);
     const priceRange = maxPrice - minPrice || 1;
 
-    const color = CHART_COLOR_PALETTE[0];
+    const color = "#5261c6";
+    const axisColor = isDark ? "#8e9aad" : "#6b778c";
+    const gridColor = isDark ? "rgba(148, 163, 184, .16)" : "rgba(100, 116, 139, .13)";
 
     function findClosestPrice(timestampMs: number): number {
       let closest = sorted[0];
@@ -207,26 +208,30 @@ export function TokenPriceChart({
     }
 
     return {
-      ...baseOption,
+      animationDuration: 240,
       legend: { show: false },
-      grid: { left: 8, right: 8, top: 8, bottom: 24 },
+      grid: { left: 8, right: 8, top: 8, bottom: 24, containLabel: true },
       xAxis: {
-        ...baseOption.xAxis,
         type: "time",
         boundaryGap: false as never,
         splitNumber: 4,
+        axisLine: { lineStyle: { color: gridColor } },
+        axisTick: { show: false },
+        splitLine: { show: false },
         axisLabel: {
-          ...baseOption.xAxis?.axisLabel,
+          color: axisColor,
           formatter: (val: number) => formatUtcTime(val),
           fontSize: 10,
         },
       },
       yAxis: {
-        ...baseOption.yAxis,
         type: "value",
         position: "right" as const,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: { lineStyle: { color: gridColor } },
         axisLabel: {
-          ...baseOption.yAxis?.axisLabel,
+          color: axisColor,
           formatter: (val: number) => fmt.num.compact.currency(val),
           fontSize: 10,
         },
@@ -234,8 +239,10 @@ export function TokenPriceChart({
         max: (v: { min: number; max: number }) => v.max + (v.max - v.min) * 0.15,
       },
       tooltip: {
-        ...baseOption.tooltip,
         trigger: "axis",
+        backgroundColor: isDark ? "#172033" : "#ffffff",
+        borderColor: isDark ? "#334155" : "#dfe5ee",
+        textStyle: { color: isDark ? "#e6edf7" : "#172033" },
         formatter: (params) => {
           if (!Array.isArray(params) || params.length === 0) return "";
 
@@ -299,7 +306,7 @@ export function TokenPriceChart({
         },
       ],
     };
-  }, [priceData, trades, tokenSymbol, fmt, tr, baseOption]);
+  }, [priceData, trades, tokenSymbol, fmt, tr, isDark]);
 
   if (loading) {
     return (
@@ -313,7 +320,7 @@ export function TokenPriceChart({
           </div>
         </div>
         <div className={styles.chartContent}>
-          <InlineLoading description={tr("common.loading")} />
+          <div className={styles.loadingState}><LoaderCircle size={17} strokeWidth={1.9} /><span>{tr("common.loading")}</span></div>
         </div>
       </div>
     );
@@ -330,7 +337,7 @@ export function TokenPriceChart({
             <span className={styles.tokenSymbol}>{tokenSymbol}</span>
           </div>
           <button className={styles.removeBtn} onClick={onRemove} aria-label={tr("common.cancel")}>
-            <Close size={16} />
+            <X size={16} strokeWidth={1.9} />
           </button>
         </div>
         <div className={styles.chartContent}>
@@ -350,7 +357,7 @@ export function TokenPriceChart({
           <span className={styles.tokenSymbol}>{tokenSymbol}</span>
         </div>
         <button className={styles.removeBtn} onClick={onRemove} aria-label={tr("common.cancel")}>
-          <Close size={16} />
+          <X size={16} strokeWidth={1.9} />
         </button>
       </div>
       <div className={styles.chartContent}>

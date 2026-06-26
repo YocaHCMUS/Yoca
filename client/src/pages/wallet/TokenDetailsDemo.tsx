@@ -1,27 +1,14 @@
 import client from "@/api/main";
-import {
-    getDefaultAggregationForDayRange,
-    mapTradesWithFallbackPrice,
-    TimeSeriesTradesScatterChart,
-    type TimeSeriesDataPoint,
-    type TradePoint,
-} from "@/components/charts/TimeSeriesTradesScatterChart";
-import { CpyBtn } from "@/components/CpyBtn";
-import { FilterSwitch } from "@/components/FilterSwitch";
-import Tble from "@/components/Tble";
-import { TknImg } from "@/components/TknImg";
-import { TrendNum } from "@/components/TrendNum";
-import { Txt } from "@/components/Txt";
 import { SOLSCAN_TX_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { useCarbonTokens } from "@/hooks/useCarbonToken";
+import { useUserTheme } from "@/contexts/ThemeContext";
 import { useGet } from "@/hooks/useGet";
-import overwriteStyles from "@/styles/_overwrite.module.scss";
-import { cds } from "@/util/carbon-theme";
-import { Column, Grid, IconButton, Link, Stack, Tooltip } from "@carbon/react";
-import { ChartAverage, Launch } from "@carbon/react/icons";
+import type { EChartsOption } from "echarts";
+import ReactECharts from "echarts-for-react";
+import { BarChart3, Copy, ExternalLink, LineChart, TrendingDown, TrendingUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useParams } from "react-router";
+import styles from "./TokenDetailsDemo.module.scss";
 
 type TokenAverageTradePriceProps = {
   walletAddress: string;
@@ -35,70 +22,49 @@ type TokenAverageTradePriceProps = {
 };
 
 type TokenPriceDayRange = 7 | 30 | 90;
+type TradeSide = "buy" | "sell";
+type PricePoint = { unixTimeMs: number; value: number };
+type RawTrade = {
+  tradeAction: TradeSide;
+  blockUnixTimeMs: number;
+  volumeUsd: number;
+  transactionHash: string;
+  baseAmount: number;
+  quoteAmount: number;
+  basePrice?: number;
+  priceUsd?: number;
+  tradePriceUsd?: number;
+  baseQuotePrice?: number;
+};
+
+type WalletTokenDetail = {
+  tokenAddress: string;
+  balanceAmount: number;
+  unrealizedProfitUsd: number;
+  realizedProfitUsd: number;
+  realizedProfitPercent: number;
+  unrealizedProfitPercent: number;
+  totalBoughtUsd: number;
+  totalBoughtAmount: number;
+  totalSoldUsd: number;
+  totalSoldAmount: number;
+  totalBuyCount: number;
+  totalSellCount: number;
+  avgBuyCost: number;
+  avgSellCost: number;
+  lastTradeUnixTime: number;
+};
+
+type TokenMeta = { address: string; imageUrl?: string | null; symbol?: string | null; name?: string | null };
+type TokenMarket = { address: string; priceUsd?: number | null };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Visible ticker in the last-traded table; full symbol/name in tooltip. */
-const TOKEN_TICKER_VISIBLE_CHARS = 4;
-
-function shortTokenTicker(
-  symbol: string | undefined | null,
-  tokenAddress: string,
-): string {
-  const s = (symbol ?? "").trim();
-  if (s.length > TOKEN_TICKER_VISIBLE_CHARS) {
-    return `${s.slice(0, TOKEN_TICKER_VISIBLE_CHARS).toUpperCase()}...`;
+function getTradePrice(trade: RawTrade): number | null {
+  const candidates = [trade.basePrice, trade.priceUsd, trade.tradePriceUsd, trade.baseQuotePrice];
+  for (const value of candidates) {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
   }
-  if (s.length > 0) {
-    return s.toUpperCase();
-  }
-  const addr = tokenAddress.trim();
-  if (addr.length <= TOKEN_TICKER_VISIBLE_CHARS) {
-    return addr;
-  }
-  return `${addr.slice(0, TOKEN_TICKER_VISIBLE_CHARS)}...`;
-}
-
-function tokenRowTooltip(
-  symbol: string | undefined | null,
-  tokenAddress: string,
-  name: string | undefined | null,
-): string {
-  const lines: string[] = [];
-  const sym = symbol?.trim();
-  if (sym) {
-    lines.push(sym.toUpperCase());
-  } else {
-    lines.push(tokenAddress);
-  }
-  const n = name?.trim();
-  if (n && n.toLowerCase() !== sym?.toLowerCase()) {
-    lines.push(n);
-  }
-  return lines.join("\n");
-}
-
-function toOptionalFiniteNumber(value: unknown): number | null {
-  if (typeof value !== "number") return null;
-  if (!Number.isFinite(value)) return null;
-  return value;
-}
-
-function getTradeRowPrice(trade: Record<string, unknown>): number | null {
-  const directCandidates = [
-    trade.basePrice,
-    trade.priceUsd,
-    trade.tradePriceUsd,
-    trade.baseQuotePrice,
-  ];
-
-  for (const candidate of directCandidates) {
-    const parsed = toOptionalFiniteNumber(candidate);
-    if (parsed !== null) {
-      return parsed;
-    }
-  }
-
   return null;
 }
 
@@ -107,25 +73,22 @@ export function isTradeWithinSelectedRange(
   selectedTimeRange: TokenPriceDayRange,
   nowMs = Date.now(),
 ): boolean {
-  if (
-    typeof tradeUnixTimeMs !== "number" ||
-    !Number.isFinite(tradeUnixTimeMs)
-  ) {
-    return false;
-  }
-
-  const rangeStartMs = nowMs - selectedTimeRange * DAY_MS;
-  return tradeUnixTimeMs >= rangeStartMs && tradeUnixTimeMs <= nowMs;
+  return typeof tradeUnixTimeMs === "number" && Number.isFinite(tradeUnixTimeMs)
+    && tradeUnixTimeMs >= nowMs - selectedTimeRange * DAY_MS
+    && tradeUnixTimeMs <= nowMs;
 }
 
-export function filterTradesWithinSelectedRange(
-  trades: TradePoint[],
+export function filterTradesWithinSelectedRange<T extends { unixTimeMs: number }>(
+  trades: T[],
   selectedTimeRange: TokenPriceDayRange,
   nowMs = Date.now(),
-): TradePoint[] {
-  return trades.filter((trade) =>
-    isTradeWithinSelectedRange(trade.unixTimeMs, selectedTimeRange, nowMs),
-  );
+): T[] {
+  return trades.filter((trade) => isTradeWithinSelectedRange(trade.unixTimeMs, selectedTimeRange, nowMs));
+}
+
+function AddressCopyButton({ value }: { value: string }) {
+  const { tr } = useLocalization();
+  return <button type="button" className={styles.copyButton} onClick={() => void navigator.clipboard.writeText(value)} title={String(tr("walletPage.ui.copyAddress"))} aria-label={String(tr("walletPage.ui.copyAddress"))}><Copy size={14} strokeWidth={1.8} /></button>;
 }
 
 export function TokenAverageTradePrice({
@@ -138,578 +101,106 @@ export function TokenAverageTradePrice({
   avgBuyPrice,
   avgSellPrice,
 }: TokenAverageTradePriceProps) {
-  const { sellColor, buyColor } = useCarbonTokens({
-    sellColor: cds.supportError,
-    buyColor: cds.supportWarning,
-  });
-  const { fmt, tr } = useLocalization();
-  const [selectedTimeRange, setSelectedTimeRange] =
-    useState<TokenPriceDayRange>(7);
+  const { tr, fmt } = useLocalization();
+  const { theme } = useUserTheme();
+  const isDark = theme === "dark";
+  const [range, setRange] = useState<TokenPriceDayRange>(7);
 
-  const priceData = useGet(
+  const priceResponse = useGet(
     client.api.tokens.markets.chart[":address"].daily,
     200,
-    {
-      param: { address: tokenAddress },
-      query: {
-        days: selectedTimeRange.toString(),
-      },
-    },
-    {
-      select: (data) => {
-        return data.map((dataPoint) => ({
-          unixTimeMs: dataPoint.unixTimestampMs,
-          value: dataPoint.price,
-        }));
-      },
-    },
+    { param: { address: tokenAddress }, query: { days: String(range) } },
+    { select: (data) => (data as unknown as Array<{ unixTimestampMs: number; price: number }>).map((item) => ({ unixTimeMs: item.unixTimestampMs, value: item.price })) },
   );
-  const recentTrades = useGet(
+  const tradesResponse = useGet(
     client.api.wallets[":walletAddress"].trades[":tokenAddress"],
     200,
-    {
-      param: {
-        walletAddress,
-        tokenAddress,
-      },
-    },
+    { param: { walletAddress, tokenAddress } },
   );
 
-  const mappedTradePoints: TradePoint[] = useMemo(() => {
-    if (!recentTrades.data) {
-      return [];
-    }
+  const trades = useMemo(() => {
+    const source = (tradesResponse.data as unknown as RawTrade[] | undefined) ?? [];
+    return filterTradesWithinSelectedRange(source.map((trade) => ({ ...trade, unixTimeMs: trade.blockUnixTimeMs, price: getTradePrice(trade) })).filter((trade) => Number.isFinite(trade.unixTimeMs)), range);
+  }, [range, tradesResponse.data]);
+  const prices = (priceResponse.data ?? []) as PricePoint[];
 
-    const normalizedTrades = recentTrades.data
-      .map((trade): TradePoint => {
-        const side = trade.tradeAction == "buy" ? "buy" : "sell";
-        const price = getTradeRowPrice(trade);
-
-        return {
-          unixTimeMs: trade.blockUnixTimeMs,
-          side,
-          volumeUsd: trade.volumeUsd,
-          price,
-          priceSource: price == null ? "missing" : "trade",
-          transactionHash: trade.transactionHash,
-        };
-      })
-      .filter((trade) => Number.isFinite(trade.unixTimeMs));
-
-    const selectedRangeTrades = filterTradesWithinSelectedRange(
-      normalizedTrades,
-      selectedTimeRange,
-    );
-
-    return mapTradesWithFallbackPrice(
-      selectedRangeTrades,
-      priceData.data,
-      true,
-    );
-  }, [recentTrades.data, priceData.data, selectedTimeRange]);
-
-  const tradeAggregation = useMemo(
-    () => getDefaultAggregationForDayRange(selectedTimeRange),
-    [selectedTimeRange],
-  );
-
-  const recentTradesRows = useMemo(() => {
-    if (!recentTrades.data) return [];
-
-    return recentTrades.data.map((trade, index) => {
-      const isBuy = trade.tradeAction == "buy";
-      const amount = isBuy ? trade.baseAmount : trade.quoteAmount;
-      const symbol = tokenSymbol;
-
-      return {
-        id: index.toString(),
-        time: fmt.datetime.relativeShort(trade.blockUnixTimeMs, true),
-        tradeAction: (
-          <span
-            style={{
-              color: isBuy ? cds.supportSuccess : cds.supportError,
-              textTransform: "uppercase",
-            }}
-          >
-            {isBuy ? tr("walletPage.buy") : tr("walletPage.sell")}
-          </span>
-        ),
-        amount: fmt.num.compact.unit(amount, symbol?.toUpperCase() || null),
-        value: fmt.num.compact.currency(trade.volumeUsd),
-        transaction: (
-          <IconButton
-            href={`${SOLSCAN_TX_URL}/${trade.transactionHash}`}
-            label={tr("walletPage.openInSolscan")}
-            kind="ghost"
-            size="sm"
-          >
-            <Launch size={18} />
-          </IconButton>
-        ),
-      };
-    });
-  }, [recentTrades.data, fmt]);
+  const option = useMemo<EChartsOption>(() => {
+    const text = isDark ? "#e7ecf5" : "#172033";
+    const muted = isDark ? "#9aa8bd" : "#67748a";
+    const grid = isDark ? "rgba(128, 151, 184, 0.16)" : "#e8edf4";
+    const tooltipBg = isDark ? "#151e2c" : "#ffffff";
+    const buy = isDark ? "#4ed3a8" : "#118563";
+    const sell = isDark ? "#ff848d" : "#c9434d";
+    const line = isDark ? "#aab5ff" : "#4458d9";
+    return {
+      animationDuration: 350,
+      backgroundColor: "transparent",
+      grid: { top: 24, right: 18, bottom: 30, left: 12, containLabel: true },
+      tooltip: { trigger: "axis", backgroundColor: tooltipBg, borderColor: isDark ? "#34445d" : "#dbe3ee", borderWidth: 1, textStyle: { color: text, fontSize: 12 }, valueFormatter: (value) => fmt.num.compact.currency(Number(value)) },
+      xAxis: { type: "time", axisLine: { lineStyle: { color: grid } }, axisTick: { show: false }, axisLabel: { color: muted, fontSize: 10 }, splitLine: { show: false } },
+      yAxis: { type: "value", position: "right", axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: muted, fontSize: 10, formatter: (value: number) => fmt.num.compact.currency(value) }, splitLine: { lineStyle: { color: grid, type: "dashed" } } },
+      series: [
+        { type: "line", name: tokenSymbol ?? tr("walletPage.token"), data: prices.map((point) => [point.unixTimeMs, point.value]), smooth: 0.15, showSymbol: false, lineStyle: { width: 2.1, color: line }, itemStyle: { color: line }, markLine: { silent: true, symbol: "none", label: { color: muted, fontSize: 10 }, data: [{ yAxis: avgBuyPrice, name: tr("walletPage.avgBuyPrice"), lineStyle: { color: buy, type: "dashed" } }, { yAxis: avgSellPrice, name: tr("walletPage.avgSellPrice"), lineStyle: { color: sell, type: "dashed" } }] } },
+        { type: "scatter", name: tr("walletPage.buy"), data: trades.filter((trade) => trade.tradeAction === "buy" && trade.price != null).map((trade) => [trade.unixTimeMs, trade.price]), symbolSize: 8, itemStyle: { color: buy } },
+        { type: "scatter", name: tr("walletPage.sell"), data: trades.filter((trade) => trade.tradeAction === "sell" && trade.price != null).map((trade) => [trade.unixTimeMs, trade.price]), symbolSize: 8, itemStyle: { color: sell } },
+      ],
+    };
+  }, [avgBuyPrice, avgSellPrice, fmt, isDark, prices, tokenSymbol, tr, trades]);
 
   return (
-    <Stack>
-      <Grid narrow className={overwriteStyles.grdNarrowCustom}>
-        <Column sm={2} md={2} lg={4}>
-          <Stack
-            orientation="horizontal"
-            gap={3}
-            style={{ justifyContent: "start", alignItems: "center" }}
-          >
-            <TknImg src={tokenImgUrl} alt={tokenSymbol} size={48} />
-            <Stack>
-              <Stack orientation="horizontal" style={{ alignItems: "center" }}>
-                <Link
-                  style={{
-                    fontFamily: "monospace",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {tokenSymbol ??
-                    fmt.text.address(tokenAddress, {
-                      maxLength: 4,
-                    })}
-                </Link>
-                <CpyBtn size="xs" copyWhat={tokenAddress} />
-              </Stack>
-
-              <Txt size="sm" secondary ellipsis>
-                {tokenName}
-              </Txt>
-            </Stack>
-          </Stack>
-        </Column>
-
-        <Column sm={1} md={3} lg={6}>
-          <Txt size="xl" align="center" stretch>
-            {fmt.num.compact.currency(tokenCurrentPrice)}
-          </Txt>
-        </Column>
-
-        <Column sm={1} md={3} lg={6}>
-          <div
-            style={{
-              display: "flex",
-              width: "100%",
-              height: "100%",
-              justifyContent: "end",
-              alignItems: "center",
-            }}
-          >
-            <FilterSwitch
-              options={[
-                {
-                  label: "7d",
-                  value: 7,
-                },
-                {
-                  label: "30d",
-                  value: 30,
-                },
-                {
-                  label: "90d",
-                  value: 90,
-                },
-              ]}
-              value={selectedTimeRange}
-              onChange={(v) => setSelectedTimeRange(v)}
-            />
-          </div>
-        </Column>
-      </Grid>
-      <TimeSeriesTradesScatterChart
-        markLines={[
-          {
-            label: tr("walletPage.avgBuyPrice"),
-            value: avgBuyPrice,
-            color: buyColor,
-          },
-          {
-            label: tr("walletPage.avgSellPrice"),
-            value: avgSellPrice,
-            color: sellColor,
-          },
-        ]}
-        valueFormatter={fmt.num.compact.currency}
-        data={priceData.data as TimeSeriesDataPoint[] | undefined}
-        trades={mappedTradePoints}
-        aggregation={tradeAggregation}
-        loading={priceData.isLoading || recentTrades.isLoading}
-      />
-      <Tble
-        title={tr("walletPage.recentTrades")}
-        description={tr("walletPage.recentTradesDescription")}
-        loading={recentTrades.isLoading}
-        rows={recentTradesRows}
-        headers={[
-          {
-            key: "time",
-            header: tr("walletPage.time"),
-            align: "end",
-            width: "10%",
-          },
-          {
-            key: "tradeAction",
-            header: tr("walletPage.action"),
-            align: "center",
-          },
-          {
-            key: "amount",
-            header: tr("walletPage.amount"),
-            align: "end",
-          },
-          {
-            key: "value",
-            header: `${tr("walletPage.value")}`,
-            align: "end",
-          },
-          {
-            key: "transaction",
-            header: tr("walletPage.transaction"),
-            align: "center",
-          },
-        ]}
-        boxed
-        enablePagination
-        // stickyHeader
-        pageSize={8}
-      />
-    </Stack>
+    <section className={styles.detailPanel}>
+      <header className={styles.detailHeader}>
+        <div className={styles.tokenTitle}>
+          {tokenImgUrl ? <img src={tokenImgUrl} alt="" /> : <span className={styles.tokenFallback}>{(tokenSymbol ?? "T").slice(0, 1)}</span>}
+          <div><span className={styles.detailEyebrow}>{tr("walletPage.averageTradingPrice")}</span><strong>{tokenSymbol?.toUpperCase() ?? fmt.text.address(tokenAddress)} <AddressCopyButton value={tokenAddress} /></strong><small>{tokenName ?? tokenAddress}</small></div>
+        </div>
+        <div className={styles.currentPrice}><span>{tr("walletPage.price")}</span><strong>{tokenCurrentPrice != null ? fmt.num.currency(tokenCurrentPrice) : "—"}</strong></div>
+        <div className={styles.rangeButtons}>{([7, 30, 90] as const).map((item) => <button key={item} type="button" data-active={range === item} onClick={() => setRange(item)}>{item}d</button>)}</div>
+      </header>
+      <div className={styles.tokenChart}>{priceResponse.isLoading ? <div className={styles.centered}>{tr("common.loading")}</div> : <ReactECharts option={option} notMerge lazyUpdate style={{ height: 290, width: "100%" }} />}</div>
+      <div className={styles.tradeSubhead}><span>{tr("walletPage.recentTrades")}</span><small>{tr("walletPage.recentTradesDescription")}</small></div>
+      <div className={styles.tradeTableWrap}>
+        <table className={styles.tradeTable}><thead><tr><th>{tr("walletPage.time")}</th><th>{tr("walletPage.action")}</th><th>{tr("walletPage.amount")}</th><th>{tr("walletPage.value")}</th><th aria-label={tr("walletPage.openInSolscan")} /></tr></thead>
+        <tbody>{tradesResponse.isLoading ? <tr><td colSpan={5} className={styles.centered}>{tr("common.loading")}</td></tr> : trades.slice(0, 8).map((trade) => { const isBuy = trade.tradeAction === "buy"; const amount = isBuy ? trade.baseAmount : trade.quoteAmount; return <tr key={trade.transactionHash}><td>{fmt.datetime.relativeShort(trade.blockUnixTimeMs, true)}</td><td><span className={styles.side} data-side={trade.tradeAction}>{isBuy ? <TrendingUp size={13} /> : <TrendingDown size={13} />}{isBuy ? tr("walletPage.buy") : tr("walletPage.sell")}</span></td><td>{fmt.num.compact.unit(amount, tokenSymbol?.toUpperCase() ?? null)}</td><td>{fmt.num.compact.currency(trade.volumeUsd)}</td><td><a href={`${SOLSCAN_TX_URL}/${trade.transactionHash}`} target="_blank" rel="noreferrer" className={styles.externalLink}><ExternalLink size={14} strokeWidth={1.8} /></a></td></tr>; })}</tbody></table>
+      </div>
+    </section>
   );
 }
 
-export function TokenDetailsDemo({
-  setSelectedToken,
-}: {
-  setSelectedToken: React.Dispatch<
-    React.SetStateAction<{
-      address: string;
-      symbol: string;
-      avgBuyCost: number;
-      avgSellCost: number;
-    } | null>
-  >;
-}) {
-  const { address } = useParams<{
-    address: string;
-  }>();
-
-  // const [selectedToken, setSelectedToken] = useState<{
-  //   address: string;
-  //   symbol: string;
-  //   avgBuyCost: number;
-  //   avgSellCost: number;
-  // } | null>(null);
-
-  const { tr, lang, fmt } = useLocalization();
-
-  const walletTokenDetails = useGet(
-    client.api.wallets[":address"].tokens,
-    200,
-    {
-      param: { address: address || "" },
-    },
-    {
-      enabled: !!address,
-    },
-  );
-
-  const tokenAddresses = useMemo(
-    () =>
-      walletTokenDetails.data
-        ?.map((details) => details.tokenAddress)
-        .join(",") || null,
-    [walletTokenDetails.data],
-  );
-
-  const tokenMeta = useGet(
-    client.api.tokens.meta[":addresses"],
-    200,
-    { param: { addresses: tokenAddresses || "" } },
-    {
-      enabled: !!tokenAddresses,
-      select: (data) => {
-        return Object.fromEntries(data.map((item) => [item.address, item]));
-      },
-    },
-  );
-
+export function TokenDetailsDemo({ setSelectedToken }: { setSelectedToken: React.Dispatch<React.SetStateAction<{ address: string; symbol: string; avgBuyCost: number; avgSellCost: number } | null>>; }) {
+  const { address } = useParams<{ address: string }>();
+  const { tr, fmt } = useLocalization();
+  const walletTokenDetails = useGet(client.api.wallets[":address"].tokens, 200, { param: { address: address || "" } }, { enabled: Boolean(address) });
+  const tokenAddresses = useMemo(() => ((walletTokenDetails.data as unknown as WalletTokenDetail[] | undefined)?.map((item) => item.tokenAddress).join(",") || null), [walletTokenDetails.data]);
+  const tokenMeta = useGet(client.api.tokens.meta[":addresses"], 200, { param: { addresses: tokenAddresses || "" } }, { enabled: Boolean(tokenAddresses), select: (data) => Object.fromEntries((data as unknown as TokenMeta[]).map((item) => [item.address, item])) });
   const tokenMarket = useGet(
     client.api.tokens.markets[":addresses"],
     200,
     { param: { addresses: tokenAddresses || "" } },
     {
-      enabled: !!tokenAddresses,
+      enabled: Boolean(tokenAddresses),
+      select: (data) => Array.isArray(data)
+        ? Object.fromEntries((data as unknown as TokenMarket[]).map((item) => [item.address, item]))
+        : (data as unknown as Record<string, TokenMarket>),
     },
   );
+  const rows = ((walletTokenDetails.data as unknown as WalletTokenDetail[] | undefined) ?? []).slice(0, 20);
+  const metaMap = (tokenMeta.data ?? {}) as Record<string, TokenMeta>;
+  const marketMap = (tokenMarket.data ?? {}) as Record<string, TokenMarket>;
 
-  const rows = useMemo(() => {
-    if (!walletTokenDetails.data) return [];
-
-    return walletTokenDetails.data.map((details) => {
-      const metaForToken = tokenMeta.data?.[details.tokenAddress];
-      const sym = metaForToken?.symbol;
-      const nm = metaForToken?.name;
-      const tickerShort = shortTokenTicker(sym, details.tokenAddress);
-      const tooltip = tokenRowTooltip(sym, details.tokenAddress, nm);
-
-      return {
-        id: details.tokenAddress,
-        token: (
-          <Stack
-            orientation="horizontal"
-            gap={2}
-            style={{ alignItems: "center", minWidth: 0, maxWidth: "11rem" }}
-          >
-            <TknImg
-              size={42}
-              loading={tokenMeta.isLoading}
-              src={metaForToken?.imageUrl}
-            />
-            <Stack style={{ minWidth: 0 }}>
-              <Stack
-                orientation="horizontal"
-                style={{ alignItems: "center", gap: "0.25rem" }}
-              >
-                <Tooltip label={tooltip} align="right-top">
-                  <Link
-                    style={{ fontFamily: "monospace", whiteSpace: "nowrap" }}
-                  >
-                    {tickerShort}
-                  </Link>
-                </Tooltip>
-                <CpyBtn size="xs" copyWhat={details.tokenAddress} />
-              </Stack>
-              <small style={{ whiteSpace: "nowrap" }}>
-                {fmt.datetime.relativeShort(
-                  details.lastTradeUnixTime * 1000,
-                  true,
-                )}
-              </small>
-            </Stack>
-          </Stack>
-        ),
-        balance: (
-          <Stack>
-            <p>
-              {fmt.num.compact.currency(
-                tokenMarket.data?.[details.tokenAddress]?.priceUsd
-                  ? tokenMarket.data?.[details.tokenAddress]?.priceUsd *
-                  details.balanceAmount
-                  : null,
-              )}
-            </p>
-            <p>{fmt.num.compact.decimal(details.balanceAmount)}</p>
-          </Stack>
-        ),
-        pnl: (
-          <Stack style={{ justifyContent: "inherit" }}>
-            <TrendNum
-              prefixes="plus-minus"
-              value={details.unrealizedProfitUsd + details.realizedProfitUsd}
-              formatter={fmt.num.compact.currency}
-            />
-            <TrendNum
-              prefixes="plus-minus"
-              value={
-                details.realizedProfitPercent + details.unrealizedProfitPercent
-              }
-              formatter={fmt.num.percent}
-            />
-          </Stack>
-        ),
-        realizedPnl: (
-          <Stack style={{ justifyContent: "inherit" }}>
-            <TrendNum
-              prefixes="plus-minus"
-              value={details.realizedProfitUsd}
-              formatter={fmt.num.compact.currency}
-            />
-            <TrendNum
-              prefixes="plus-minus"
-              value={details.realizedProfitPercent}
-              formatter={fmt.num.percent}
-            />
-          </Stack>
-        ),
-        unrealizedPnl: (
-          <TrendNum
-            prefixes="plus-minus"
-            value={details.unrealizedProfitUsd}
-            formatter={fmt.num.compact.currency}
-          />
-        ),
-        buy: (
-          <Stack style={{ justifyContent: "inherit" }}>
-            <p>{fmt.num.compact.currency(details.totalBoughtUsd)}</p>
-            <p>{fmt.num.compact.decimal(details.totalBoughtAmount)}</p>
-          </Stack>
-        ),
-        sell: (
-          <Stack style={{ justifyContent: "inherit" }}>
-            <p>{fmt.num.compact.currency(details.totalSoldUsd)}</p>
-            <p>{fmt.num.compact.decimal(details.totalSoldAmount)}</p>
-          </Stack>
-        ),
-        net: (
-          <TrendNum
-            prefixes="plus-minus"
-            value={details.totalSoldUsd - details.totalBoughtUsd}
-            formatter={fmt.num.compact.currency}
-          />
-        ),
-        tradeCount: (
-          <span>
-            <TrendNum
-              value={details.totalBuyCount}
-              formatter={fmt.num.compact.decimal}
-              prefixes="none"
-            />{" "}
-            /{" "}
-            <TrendNum
-              value={-details.totalSellCount}
-              formatter={fmt.num.compact.decimal}
-              prefixes="none"
-            />
-          </span>
-        ),
-        avgTradePrice: (
-          <Stack style={{ justifyContent: "inherit" }}>
-            <p>{fmt.num.compact.currency(details.avgBuyCost)}</p>
-            <p>{fmt.num.compact.currency(details.avgSellCost)}</p>
-          </Stack>
-        ),
-        tradePriceGraph: (
-          <IconButton
-            kind="ghost"
-            label={tr("walletPage.averageTradingPrice")}
-            align="bottom-right"
-            onClick={() =>
-              setSelectedToken({
-                address: details.tokenAddress,
-                symbol: metaForToken?.symbol?.toUpperCase() ?? "Unknown",
-                avgBuyCost: details.avgBuyCost,
-                avgSellCost: details.avgSellCost,
-              })
-            }
-          >
-            <ChartAverage />
-          </IconButton>
-        ),
-      };
-    });
-  }, [
-    walletTokenDetails.data,
-    tokenMeta.isLoading,
-    tokenMeta.data,
-    tokenMarket.data,
-    lang,
-  ]);
-
-  if (!address) {
-    return <></>;
-  }
+  if (!address) return null;
 
   return (
-    // <PageWrapper
-    //   extraHeaderPanel={{
-    //     isOpen: !!selectedToken,
-    //     content: selectedToken && (
-    //       <TokenAverageTradePrice
-    //         walletAddress={address}
-    //         tokenAddress={selectedToken.address}
-    //         tokenImgUrl={
-    //           tokenMeta.data?.[selectedToken.address]?.imageUrl || null
-    //         }
-    //         tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
-    //         tokenSymbol={
-    //           tokenMeta.data?.[selectedToken.address]?.symbol || null
-    //         }
-    //         tokenCurrentPrice={
-    //           tokenMarket.data?.[selectedToken.address]?.priceUsd || null
-    //         }
-    //         avgBuyPrice={selectedToken.avgBuyCost}
-    //         avgSellPrice={selectedToken.avgSellCost}
-    //       />
-    //     ),
-    //     size: "lg",
-    //     onClose: () => setSelectedToken(null),
-    //   }}
-    // >
-    <Tble
-      loading={walletTokenDetails.isLoading}
-      boxed
-      title={tr("walletPage.tokensLastTraded")}
-      description={tr("walletPage.tokensLastTradedDescription")}
-      rows={rows}
-      height={800}
-      stickyHeader
-      enablePagination
-      headers={[
-        {
-          key: "token",
-          header: `${tr("walletPage.token")} / ${tr("walletPage.time")}`,
-          align: "start",
-          minWidth: "11rem",
-        },
-        {
-          key: "balance",
-          header: tr("walletPage.balance"),
-          align: "center",
-          minWidth: "7.5rem",
-        },
-        { key: "pnl", header: tr("walletPage.profit"), minWidth: "6.5rem" },
-        {
-          key: "realizedPnl",
-          header: tr("walletPage.realizedProfit"),
-          minWidth: "9.5rem",
-        },
-        {
-          key: "unrealizedPnl",
-          header: tr("walletPage.unrealizedProfit"),
-          minWidth: "10.5rem",
-        },
-        {
-          key: "buy",
-          header: tr("walletPage.totalBought"),
-          align: "end",
-          minWidth: "8.5rem",
-        },
-        {
-          key: "sell",
-          header: tr("walletPage.totalSold"),
-          align: "end",
-          minWidth: "7.5rem",
-        },
-        {
-          key: "net",
-          header: tr("walletPage.netValue"),
-          align: "end",
-          minWidth: "6rem",
-        },
-        {
-          key: "tradeCount",
-          header: tr("walletPage.transactions"),
-          align: "end",
-          minWidth: "11.5rem",
-        },
-        {
-          key: "avgTradePrice",
-          header: tr("walletPage.avgBuySellPrice"),
-          align: "end",
-          minWidth: "9.5rem",
-        },
-        {
-          key: "tradePriceGraph",
-          header: tr("walletPage.graph"),
-          align: "center",
-          minWidth: "3.5rem",
-        },
-      ]}
-    />
-    // </PageWrapper>
+    <section className={styles.tokenListPanel} aria-label={tr("walletPage.tokensLastTraded")}>
+      <header className={styles.listHeader}>
+        <div><span className={styles.detailEyebrow}>{tr("walletPage.activity")}</span><h2>{tr("walletPage.tokensLastTraded")}</h2><p>{tr("walletPage.tokensLastTradedDescription")}</p></div>
+        <span className={styles.tokenCount}>{rows.length}</span>
+      </header>
+      <div className={styles.tokenListWrap}>
+        <table className={styles.tokenListTable}><thead><tr><th>{tr("walletPage.token")}</th><th>{tr("walletPage.balance")}</th><th>{tr("walletPage.profit")}</th><th>{tr("walletPage.realizedProfit")}</th><th>{tr("walletPage.unrealizedProfit")}</th><th>{tr("walletPage.averageTradingPrice")}</th></tr></thead>
+          <tbody>{walletTokenDetails.isLoading ? <tr><td colSpan={6} className={styles.centered}>{tr("common.loading")}</td></tr> : rows.length === 0 ? <tr><td colSpan={6} className={styles.centered}>{tr("common.noData")}</td></tr> : rows.map((details) => { const meta = metaMap[details.tokenAddress]; const market = marketMap[details.tokenAddress]; const symbol = meta?.symbol?.toUpperCase() ?? fmt.text.address(details.tokenAddress); const totalPnl = details.unrealizedProfitUsd + details.realizedProfitUsd; const isPositive = totalPnl >= 0; return <tr key={details.tokenAddress}><td><button type="button" className={styles.tokenCell} onClick={() => setSelectedToken({ address: details.tokenAddress, symbol, avgBuyCost: details.avgBuyCost, avgSellCost: details.avgSellCost })}>{meta?.imageUrl ? <img src={meta.imageUrl} alt="" /> : <span className={styles.tokenFallback}>{symbol.slice(0, 1)}</span>}<span><strong>{symbol}</strong><small>{fmt.datetime.relativeShort(details.lastTradeUnixTime * 1000, true)}</small></span></button></td><td><strong>{fmt.num.compact.currency((market?.priceUsd ?? 0) * details.balanceAmount)}</strong><small>{fmt.num.compact.decimal(details.balanceAmount)}</small></td><td><span className={styles.pnl} data-positive={isPositive}>{fmt.num.compact.currency(totalPnl)}</span><small>{fmt.num.percent(details.realizedProfitPercent + details.unrealizedProfitPercent)}</small></td><td><span className={styles.pnl} data-positive={details.realizedProfitUsd >= 0}>{fmt.num.compact.currency(details.realizedProfitUsd)}</span></td><td><span className={styles.pnl} data-positive={details.unrealizedProfitUsd >= 0}>{fmt.num.compact.currency(details.unrealizedProfitUsd)}</span></td><td><button type="button" className={styles.chartButton} onClick={() => setSelectedToken({ address: details.tokenAddress, symbol, avgBuyCost: details.avgBuyCost, avgSellCost: details.avgSellCost })}><LineChart size={15} strokeWidth={1.85} />{tr("walletPage.graph")}</button></td></tr>; })}</tbody>
+        </table>
+      </div>
+    </section>
   );
 }

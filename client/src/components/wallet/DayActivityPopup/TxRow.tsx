@@ -8,8 +8,7 @@ import {
 } from "@/services/wallet/walletApi";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell";
 import { CpyBtn } from "@/components/CpyBtn";
-import { ChevronDown, ChevronUp, Launch, Wallet } from "@carbon/icons-react";
-import { Loading } from "@carbon/react";
+import { ChevronDown, ChevronUp, ExternalLink as Launch, LoaderCircle, Wallet } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import client from "@/api/main";
@@ -159,7 +158,7 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
         </span>
         <span className={styles.txValue}>{fmt.num.currency(swap.valueUsd)}</span>
         {loading ? (
-          <Loading withOverlay={false} small className={styles.spinner} />
+          <LoaderCircle className={styles.spinner} size={14} strokeWidth={1.9} />
         ) : (
           expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />
         )}
@@ -307,7 +306,7 @@ export const TxRow: React.FC<TxRowProps> = ({ walletAddress, swap }) => {
 
           {/* <button className={styles.instructionsBtn} onClick={handleLoadInstructions}>
             {showInstructions ? tr("walletPage.hide") : tr("walletPage.view")} {tr("walletPage.instructions")}
-            {loadingInstructions && <Loading withOverlay={false} small className={styles.btnSpinner} />}
+            {loadingInstructions && <LoaderCircle className={styles.btnSpinner} size={13} strokeWidth={1.9} />}
           </button>
 
           {showInstructions && instructions && (

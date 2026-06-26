@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
-import { ArrowRight, Close, Launch } from "@carbon/react/icons";
-import { Link, Loading } from "@carbon/react";
+import { ArrowLeft, ArrowRight, ExternalLink as Launch, LoaderCircle, X as Close } from "lucide-react";
 import { ID_MODAL_ROOT } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
@@ -17,8 +16,6 @@ import {
 } from "@/services/wallet/walletApi";
 import styles from "./SwapDetailModal.module.scss";
 import { Divider } from "@/components/partials/Divider/Divider";
-import { ArrowLeft } from "lucide-react";
-
 const WSOL_MINT = "So11111111111111111111111111111111111111112";
 const BASE_FEE_LAMPORTS = 5_000;
 
@@ -47,11 +44,11 @@ function AddressLinkWithCopy({
   const { fmt } = useLocalization();
   return (
     <Flex align="center" gap={2}>
-      <Link href={`/wallets/${encodeURIComponent(address)}`} target="_blank">
+      <a href={`/wallets/${encodeURIComponent(address)}`} target="_blank">
         <Txt mono className={className}>
           {fmt.text.address(address)}
         </Txt>
-      </Link>
+      </a>
       <CpyBtn size="xs" copyWhat={address} align="top" />
     </Flex>
   );
@@ -217,7 +214,7 @@ export function SwapDetailModal({
 
         {loading ? (
           <div className={styles.loadingContainer}>
-            <Loading withOverlay={false} />
+            <LoaderCircle className={styles.loadingSpinner} size={20} strokeWidth={1.8} />
           </div>
         ) : (
           <div className={styles.twoColumnLayout}>
@@ -319,12 +316,12 @@ export function SwapDetailModal({
                 <Flex justify="between" align="center">
                   <Txt>{tr("walletPage.signature")}</Txt>
                   <Flex align="center" gap={2}>
-                    <Link
+                    <a
                       href={`https://solscan.io/tx/${signature}`}
                       target="_blank"
                     >
                       <Txt mono>{fmt.text.txHash(signature)}</Txt>
-                    </Link>
+                    </a>
                     <Launch size={16} />
                   </Flex>
                 </Flex>

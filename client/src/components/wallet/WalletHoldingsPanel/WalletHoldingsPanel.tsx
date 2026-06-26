@@ -1,33 +1,11 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router";
+import { Star, StarOff, WalletCards } from "lucide-react";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWatchlist } from "@/contexts/WatchlistContext";
-import { AssetDistribution } from "@/components/charts/AssetDistribution/AssetDistribution.tsx";
-import {
-  FilterType,
-  type FilterConfig,
-  SortType,
-  Table,
-} from "@/components/tables/Table.tsx";
-import {
-  renderBase,
-  renderReducedNumber,
-} from "@/components/tables/TableCellRenderer.tsx";
-import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
-import { locale } from "@/config/localization/index.ts";
-import {
-  Star,
-  StarFilled,
-  User,
-} from "@carbon/icons-react";
-import { IconButton } from "@carbon/react";
-import {
-  buildPortfolioMetaMap,
-  isNativeSolToken,
-  mapPortfolioItems,
-} from "@/util/wallet-portfolio-mapper.ts";
 import type { WalletPortfolioItem } from "@/services/wallet/walletApi";
+import { isNativeSolToken } from "@/util/wallet-portfolio-mapper";
 import styles from "./WalletHoldingsPanel.module.scss";
 
 interface WalletHoldingsPanelProps {
@@ -38,195 +16,108 @@ interface WalletHoldingsPanelProps {
   actions?: React.ReactNode;
 }
 
-function resolveTokenMetaLookupAddress(
-  tokenAddress: string | undefined,
-): string | undefined {
-  if (!tokenAddress) return undefined;
-  const normalized = tokenAddress.trim().toLowerCase();
-  if (
-    normalized === "native" ||
-    normalized === "sol" ||
-    normalized === "11111111111111111111111111111111" ||
-    normalized === "so11111111111111111111111111111111111111111"
-  ) {
-    return "So11111111111111111111111111111111111111112";
-  }
-  return tokenAddress;
-}
+const ALLOCATION_COLORS = ["#5867dd", "#1a9b80", "#ba7b14", "#a25fbe", "#3a8fc9", "#b85364"];
 
 export function WalletHoldingsPanel({
-  walletAddress,
   portfolio,
   portfolioMeta,
   loading,
   actions,
 }: WalletHoldingsPanelProps) {
-  const { tr, fmt, lang } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const { user } = useAuth();
   const { tokenWatchlist, tokenPending, toggleToken } = useWatchlist();
   const navigate = useNavigate();
-  const bcp47 = locale[lang].langCode;
 
-  const { rows: portfolioData, meta: portfolioMetaRows } = useMemo(
-    () => mapPortfolioItems(portfolio),
+  const rows = useMemo(
+    () => [...portfolio].sort((left, right) => right.valueUsd - left.valueUsd),
     [portfolio],
   );
-
-  const portfolioMetaMap = useMemo(
-    () => buildPortfolioMetaMap(portfolioMetaRows),
-    [portfolioMetaRows],
+  const totalValue = useMemo(
+    () => rows.reduce((total, token) => total + (Number.isFinite(token.valueUsd) ? token.valueUsd : 0), 0),
+    [rows],
   );
-
-  const portfolioTableData = useMemo(
-    () =>
-      portfolioData.map((row: (string | number)[], rowIndex: number) => [
-        portfolioMetaRows[rowIndex]?.tokenAddress ?? "",
-        ...row,
-      ]),
-    [portfolioData, portfolioMetaRows],
-  );
-
-  const tokenWatchlistLookup = useMemo(
+  const topRows = rows.slice(0, 5);
+  const watchedTokens = useMemo(
     () => new Set(tokenWatchlist.map((item) => item.toLowerCase())),
     [tokenWatchlist],
   );
 
-  const portfolioHeaders = [
-    { header: "", align: "center" as const, minWidth: "3.25rem" },
-    { header: tr("walletPage.token"), align: "start" as const, minWidth: "11rem" },
-    { header: tr("walletPage.price"), align: "end" as const, minWidth: "8rem" },
-    { header: tr("walletPage.holding"), align: "end" as const, minWidth: "8rem" },
-    { header: tr("walletPage.value"), align: "end" as const, minWidth: "8.5rem" },
-  ];
+  const gradient = useMemo(() => {
+    if (topRows.length === 0 || totalValue <= 0) return "conic-gradient(var(--wallet-border) 0 100%)";
+    let cursor = 0;
+    const stops = topRows.map((token, index) => {
+      const amount = Math.max(0, (token.valueUsd / totalValue) * 100);
+      const next = Math.min(cursor + amount, 100);
+      const color = ALLOCATION_COLORS[index % ALLOCATION_COLORS.length];
+      const stop = `${color} ${cursor.toFixed(2)}% ${next.toFixed(2)}%`;
+      cursor = next;
+      return stop;
+    });
+    if (cursor < 100) stops.push(`var(--wallet-border) ${cursor.toFixed(2)}% 100%`);
+    return `conic-gradient(${stops.join(",")})`;
+  }, [topRows, totalValue]);
 
-  const isSortablePortfolio = [false, false, true, true, true];
-
-  const portfolioSortConfig = {
-    2: { type: SortType.Number },
-    3: { type: SortType.Number },
-    4: { type: SortType.Number },
-  };
-
-  const portfolioFilterSchema: Record<number, FilterConfig | null> = {
-    1: { type: FilterType.Select },
-    2: { type: FilterType.Range, min: 0, max: 500, step: 0.01 },
-    3: { type: FilterType.Range, min: 0, max: 1_000_000, step: 0.001 },
-    4: { type: FilterType.Range, min: 0, max: 100_000, step: 0.01 },
-  };
-
-  const portfolioCellRenderers = [
-    (value: string) => {
-      const tokenAddress =
-        typeof value === "string" && value.trim().length > 0
-          ? value
-          : undefined;
-      const watched = Boolean(
-        tokenAddress && tokenWatchlistLookup.has(tokenAddress.toLowerCase()),
-      );
-      const pending = Boolean(tokenAddress && tokenPending[tokenAddress]);
-
-      if (!tokenAddress) return null;
-
-      return (
-        <IconButton
-          kind="ghost"
-          size="sm"
-          disabled={pending || !user}
-          label={
-            watched
-              ? tr("marketPage.removeFromWatchlist")
-              : tr("marketPage.addToWatchlist")
-          }
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            void toggleToken(tokenAddress);
-          }}
-        >
-          {watched ? <StarFilled size={16} /> : <Star size={16} />}
-        </IconButton>
-      );
-    },
-    (value: string) => {
-      const portfolioTokenMeta = portfolioMetaMap.get(value);
-      const tokenMetaLookupAddress = resolveTokenMetaLookupAddress(
-        portfolioTokenMeta?.tokenAddress,
-      );
-      return (
-        <TokenIdentityCell
-          symbol={value}
-          fullName={portfolioTokenMeta?.fullName}
-          imageUrl={portfolioTokenMeta?.logoUri}
-          imageSize={30}
-          tooltipAlign="right"
-        />
-      );
-    },
-    (value: unknown) => {
-      const n = Number(value);
-      return Number.isFinite(n) ? fmt.num.currency(n) : renderBase(value);
-    },
-    (value: string) => renderReducedNumber(value, renderBase, bcp47),
-    (value: unknown) => {
-      const n = Number(value);
-      return Number.isFinite(n) ? fmt.num.currency(n) : renderBase(value);
-    },
-  ];
-
-  if (loading && portfolio.length === 0) {
+  if (loading && rows.length === 0) {
     return (
-      <div className={styles.holdingsPanel}>
-        <div className={styles.holdingsHeader}>
-          <span className={styles.holdingsTitle}>Holdings</span>
-          {actions && <div>{actions}</div>}
-        </div>
-        <div className={styles.loadingSkeleton}>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className={styles.skeletonRow} />
-          ))}
-        </div>
-      </div>
+      <section className={styles.panel} aria-label={tr("walletPage.holdings")}>
+        <header className={styles.header}><div className={styles.heading}><span className={styles.icon}><WalletCards size={17} strokeWidth={1.75} /></span><div><h2>{tr("walletPage.holdings")}</h2><p>{tr("walletPage.portfolio")}</p></div></div></header>
+        <div className={styles.loadingList}>{Array.from({ length: 5 }).map((_, index) => <span key={index} />)}</div>
+      </section>
     );
   }
 
   return (
-    <div className={styles.holdingsPanel}>
-      <div className={styles.chartSection}>
-        <AssetDistribution
-          initialFilters={{
-            wallets: walletAddress ? [walletAddress] : [],
-            timePeriod: "30D",
-          }}
-          autoRefresh
-          minHeight={340}
-        />
+    <section className={styles.panel} aria-label={tr("walletPage.holdings")}>
+      <header className={styles.header}>
+        <div className={styles.heading}>
+          <span className={styles.icon}><WalletCards size={17} strokeWidth={1.75} /></span>
+          <div><h2>{tr("walletPage.holdings")}</h2><p>{tr("walletPage.portfolio")}</p></div>
+        </div>
+        {actions && <div className={styles.headerActions}>{actions}</div>}
+      </header>
+
+      <div className={styles.summary}>
+        <div className={styles.allocationRing} style={{ background: gradient }}><span>{fmt.num.compact.currency(totalValue)}</span></div>
+        <div className={styles.summaryText}>
+          <span>{tr("walletPage.ui.totalPortfolio")}</span>
+          <strong>{fmt.num.currency(totalValue)}</strong>
+          <small>{tr("walletPage.ui.assetsHeld", { count: rows.length })}</small>
+        </div>
       </div>
 
-      <div className={styles.tableSection}>
-        <Table
-          title={tr("walletPage.portfolio")}
-          headers={portfolioHeaders}
-          initialFilters={{}}
-          fetcher={Promise.resolve(portfolioTableData)}
-          filterSchema={portfolioFilterSchema}
-          cellRenderers={portfolioCellRenderers}
-          dataEntries={portfolioTableData}
-          isSortable={isSortablePortfolio}
-          sortConfigs={portfolioSortConfig}
-          onRowClick={(_row: (string | number)[], rowIndex: number) => {
-            const tokenAddress =
-              rowIndex >= 0
-                ? portfolioMeta.get(rowIndex)?.tokenAddress
-                : undefined;
-            if (tokenAddress && !isNativeSolToken(tokenAddress)) {
-              navigate(`/tokens/${tokenAddress}`);
-            }
-          }}
-          enableExport={false}
-          loading={loading && portfolioTableData.length === 0}
-        />
+      <div className={styles.listHeader}>
+        <span>{tr("walletPage.token")}</span>
+        <span>{tr("walletPage.value")}</span>
       </div>
-    </div>
+
+      <div className={styles.list}>
+        {rows.length === 0 ? (
+          <div className={styles.empty}>{tr("common.noData")}</div>
+        ) : rows.map((token, index) => {
+          const meta = portfolioMeta.get(index);
+          const tokenAddress = token.tokenAddress || meta?.tokenAddress;
+          const watched = Boolean(tokenAddress && watchedTokens.has(tokenAddress.toLowerCase()));
+          const pending = Boolean(tokenAddress && tokenPending[tokenAddress]);
+          const percent = totalValue > 0 ? (token.valueUsd / totalValue) * 100 : 0;
+          const logo = token.logoUri ?? meta?.logoUri ?? null;
+          const tokenName = token.name ?? meta?.fullName ?? token.symbol;
+
+          return (
+            <div key={tokenAddress || `${token.symbol}-${index}`} className={styles.row}>
+              <button type="button" className={styles.tokenButton} onClick={() => tokenAddress && !isNativeSolToken(tokenAddress) && navigate(`/tokens/${tokenAddress}`)} disabled={!tokenAddress || isNativeSolToken(tokenAddress)}>
+                {logo ? <img src={logo} alt="" /> : <span className={styles.tokenFallback}>{token.symbol.slice(0, 1).toUpperCase()}</span>}
+                <span className={styles.tokenIdentity}><strong>{token.symbol.toUpperCase()}</strong><small>{tokenName}</small></span>
+              </button>
+              <div className={styles.rowValue}><strong>{fmt.num.currency(token.valueUsd)}</strong><small>{percent.toFixed(1)}%</small></div>
+              <button type="button" className={styles.watchButton} onClick={() => tokenAddress && void toggleToken(tokenAddress)} disabled={!user || !tokenAddress || pending} title={watched ? String(tr("marketPage.removeFromWatchlist")) : String(tr("marketPage.addToWatchlist"))}>
+                {watched ? <Star size={15} fill="currentColor" strokeWidth={1.8} /> : <StarOff size={15} strokeWidth={1.8} />}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

@@ -1,8 +1,6 @@
-import { ErrorBoundary, Stack, Tooltip } from "@carbon/react";
-import { type ComponentProps } from "react";
 import { TknImg } from "../TknImg";
 
-type TooltipAlign = ComponentProps<typeof Tooltip>["align"];
+export type TooltipAlign = "top" | "bottom" | "left" | "right";
 
 export interface TokenIdentityCellProps {
   symbol: string;
@@ -23,21 +21,16 @@ export function TokenIdentityCell({
 }: TokenIdentityCellProps): React.ReactElement {
   const normalizedSymbol = symbol?.trim().toUpperCase() || "UNKNOWN";
   const tooltipLabel = fullName?.trim() || normalizedSymbol;
-  const source = imageUrl || null;
 
   return (
-    <Stack orientation="horizontal" gap={2} style={{ alignItems: "center" }}>
-      <TknImg src={source} alt={normalizedSymbol} size={imageSize} />
-      <span>
-        <Tooltip label={tooltipLabel} align={tooltipAlign}>
-          {emphasizeSymbol ? (
-            <strong>{normalizedSymbol}</strong>
-          ) : (
-            <span>{normalizedSymbol}</span>
-          )}
-        </Tooltip>
-      </span>
-    </Stack>
+    <span
+      title={tooltipLabel}
+      data-tooltip-align={tooltipAlign}
+      style={{ display: "inline-flex", alignItems: "center", gap: 6, minWidth: 0, verticalAlign: "middle" }}
+    >
+      <TknImg src={imageUrl || null} alt={normalizedSymbol} size={imageSize} />
+      {emphasizeSymbol ? <strong style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{normalizedSymbol}</strong> : <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{normalizedSymbol}</span>}
+    </span>
   );
 }
 

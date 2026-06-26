@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
-import { Close } from "@carbon/react/icons";
+import { X as Close } from "lucide-react";
 import { ID_MODAL_ROOT } from "@/config/constants";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import styles from "./WalletTagsModal.module.scss";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -32,6 +33,7 @@ export function WalletTagsModal({
   walletLabel,
   initialTags,
 }: WalletTagsModalProps) {
+  const { tr } = useLocalization();
   const [tags, setTags] = useState<string[]>([]);
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -114,16 +116,16 @@ export function WalletTagsModal({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Manage wallet tags"
+      aria-label={String(tr("walletPage.ui.manageWalletTags"))}
     >
       <div className={styles.card} onClick={(e) => e.stopPropagation()}>
         {/* ── Header ── */}
         <div className={styles.header}>
-          <span className={styles.title}>Manage Wallet Tags</span>
+          <span className={styles.title}>{tr("walletPage.ui.manageWalletTags")}</span>
           <button
             className={styles.closeBtn}
             onClick={onClose}
-            aria-label="Close"
+            aria-label={String(tr("walletPage.ui.dismiss"))}
           >
             <Close size={20} />
           </button>
@@ -143,7 +145,7 @@ export function WalletTagsModal({
         <div className={styles.body}>
           <div className={styles.field}>
             <label className={styles.fieldLabel} htmlFor="wtm-tag-input">
-              Tags
+              {tr("walletPage.ui.tags")}
             </label>
 
             {/* Tag chips + input combined box */}
@@ -160,7 +162,7 @@ export function WalletTagsModal({
                       e.stopPropagation();
                       removeTag(i);
                     }}
-                    aria-label={`Remove tag ${tag}`}
+                    aria-label={String(tr("walletPage.ui.removeTag", { tag }))}
                     type="button"
                   >
                     <Close size={12} />
@@ -176,26 +178,23 @@ export function WalletTagsModal({
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyDown={handleInputKeyDown}
-                placeholder={tags.length === 0 ? 'e.g. Whale, Smart Money' : ''}
+                placeholder={tags.length === 0 ? String(tr("walletPage.ui.tagPlaceholder")) : ""}
                 maxLength={30}
-                aria-label="New tag"
+                aria-label={String(tr("walletPage.ui.newTag"))}
               />
             </div>
 
-            <span className={styles.hint}>
-              Press <kbd className={styles.kbd}>Enter</kbd> or type a{" "}
-              <kbd className={styles.kbd}>,</kbd> to add a tag.
-            </span>
+            <span className={styles.hint}>{tr("walletPage.ui.addTagHint")}</span>
           </div>
         </div>
 
         {/* ── Footer ── */}
         <div className={styles.footer}>
           <button className={styles.cancelBtn} onClick={onClose} type="button">
-            Cancel
+            {tr("walletPage.ui.cancel")}
           </button>
           <button className={styles.saveBtn} onClick={handleSave} type="button">
-            Save
+            {tr("walletPage.ui.save")}
           </button>
         </div>
       </div>

@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import ReactDOM from "react-dom";
-import { Close } from "@carbon/react/icons";
+import { X as Close } from "lucide-react";
 import { ID_MODAL_ROOT } from "@/config/constants";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import styles from "./WalletLabelModal.module.scss";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -30,6 +31,7 @@ export function WalletLabelModal({
   walletAddress,
   initialLabel = "",
 }: WalletLabelModalProps) {
+  const { tr } = useLocalization();
   const [label, setLabel] = useState(initialLabel);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -79,7 +81,7 @@ export function WalletLabelModal({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Assign custom label"
+      aria-label={String(tr("walletPage.ui.assignLabel"))}
     >
       <div
         className={styles.card}
@@ -87,11 +89,11 @@ export function WalletLabelModal({
       >
         {/* ── Header ── */}
         <div className={styles.header}>
-          <span className={styles.title}>Assign Custom Label</span>
+          <span className={styles.title}>{tr("walletPage.ui.assignLabel")}</span>
           <button
             className={styles.closeBtn}
             onClick={onClose}
-            aria-label="Close"
+            aria-label={String(tr("walletPage.ui.dismiss"))}
           >
             <Close size={20} />
           </button>
@@ -102,7 +104,7 @@ export function WalletLabelModal({
           {/* Read-only wallet address */}
           <div className={styles.field}>
             <label className={styles.fieldLabel} htmlFor="wlm-address">
-              Wallet Address
+              {tr("walletPage.ui.walletAddress")}
             </label>
             <input
               id="wlm-address"
@@ -118,7 +120,7 @@ export function WalletLabelModal({
           {/* Editable label */}
           <div className={styles.field}>
             <label className={styles.fieldLabel} htmlFor="wlm-label">
-              Custom Label
+              {tr("walletPage.ui.customLabel")}
             </label>
             <input
               id="wlm-label"
@@ -129,8 +131,8 @@ export function WalletLabelModal({
               onChange={(e) => setLabel(e.target.value)}
               onKeyDown={handleKeyDown}
               maxLength={30}
-              placeholder="e.g. My Trading Wallet"
-              aria-label="Custom wallet label"
+              placeholder={String(tr("walletPage.ui.labelPlaceholder"))}
+              aria-label={String(tr("walletPage.ui.customLabel"))}
             />
             <span className={styles.charCount}>{label.length} / 30</span>
           </div>
@@ -143,14 +145,14 @@ export function WalletLabelModal({
             onClick={onClose}
             type="button"
           >
-            Cancel
+            {tr("walletPage.ui.cancel")}
           </button>
           <button
             className={styles.saveBtn}
             onClick={handleSave}
             type="button"
           >
-            Save
+            {tr("walletPage.ui.save")}
           </button>
         </div>
       </div>

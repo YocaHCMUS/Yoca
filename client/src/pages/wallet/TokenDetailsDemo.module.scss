@@ -1,0 +1,48 @@
+.detailPanel,.tokenListPanel { background:var(--wallet-surface); }
+.detailHeader { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:18px; padding:16px; border-bottom:1px solid var(--wallet-border); }
+.tokenTitle { display:flex; align-items:center; gap:10px; min-width:0; }
+.tokenTitle img,.tokenFallback { width:40px; height:40px; flex:0 0 auto; border-radius:50%; object-fit:cover; }
+.tokenFallback { display:grid; place-items:center; background:var(--wallet-surface-hover); color:var(--wallet-text-muted); font-size:13px; font-weight:750; }
+.detailEyebrow { display:block; color:var(--wallet-text-soft); font-size:10px; font-weight:710; letter-spacing:.08em; text-transform:uppercase; }
+.tokenTitle strong { display:flex; align-items:center; gap:5px; margin-top:4px; color:var(--wallet-text); font-size:15px; font-weight:730; }
+.tokenTitle small { display:block; overflow:hidden; max-width:350px; margin-top:3px; color:var(--wallet-text-muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.copyButton { width:24px; height:24px; display:grid; place-items:center; border:1px solid transparent; border-radius:7px; background:transparent; color:var(--wallet-text-soft); cursor:pointer; }
+.copyButton:hover { border-color:var(--wallet-border); color:var(--wallet-text); background:var(--wallet-surface-hover); }
+.currentPrice { text-align:right; }
+.currentPrice span,.currentPrice strong { display:block; }
+.currentPrice span { color:var(--wallet-text-soft); font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; }
+.currentPrice strong { margin-top:4px; color:var(--wallet-text); font-size:16px; font-weight:730; }
+.rangeButtons { display:flex; padding:3px; border:1px solid var(--wallet-border); border-radius:9px; background:var(--wallet-surface-soft); }
+.rangeButtons button { min-width:37px; height:25px; border:0; border-radius:6px; background:transparent; color:var(--wallet-text-muted); cursor:pointer; font-size:10px; font-weight:700; }
+.rangeButtons button[data-active="true"] { background:var(--wallet-surface-raised); color:var(--wallet-text); box-shadow:0 1px 4px rgba(21,31,49,.12); }
+.tokenChart { padding:0 4px; }
+.tradeSubhead { display:flex; flex-direction:column; gap:3px; padding:13px 16px 10px; border-top:1px solid var(--wallet-border); }
+.tradeSubhead span { color:var(--wallet-text); font-size:13px; font-weight:720; }
+.tradeSubhead small { color:var(--wallet-text-muted); font-size:11px; }
+.tradeTableWrap,.tokenListWrap { overflow-x:auto; }
+.tradeTable,.tokenListTable { width:100%; border-collapse:collapse; }
+.tradeTable { min-width:560px; }
+.tradeTable th,.tokenListTable th { padding:10px 14px; border-bottom:1px solid var(--wallet-border); color:var(--wallet-text-soft); background:var(--wallet-surface-soft); font-size:10px; font-weight:710; letter-spacing:.07em; text-align:left; text-transform:uppercase; white-space:nowrap; }
+.tradeTable td,.tokenListTable td { padding:10px 14px; border-bottom:1px solid var(--wallet-border); color:var(--wallet-text-muted); font-size:11px; white-space:nowrap; }
+.tradeTable tbody tr:last-child td,.tokenListTable tbody tr:last-child td { border-bottom:0; }
+.side { display:inline-flex; align-items:center; gap:4px; font-weight:680; }
+.side[data-side="buy"] { color:var(--wallet-success); }
+.side[data-side="sell"] { color:var(--wallet-danger); }
+.externalLink { width:25px; height:25px; display:grid; place-items:center; border:1px solid transparent; border-radius:7px; color:var(--wallet-text-soft); }
+.externalLink:hover { border-color:var(--wallet-border); color:var(--wallet-text); background:var(--wallet-surface-hover); }
+.centered { height:150px; color:var(--wallet-text-muted); text-align:center; }
+.listHeader { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:16px; border-bottom:1px solid var(--wallet-border); }
+.listHeader h2 { margin:4px 0 0; color:var(--wallet-text); font-size:15px; font-weight:730; }
+.listHeader p { margin:4px 0 0; color:var(--wallet-text-muted); font-size:11px; }
+.tokenCount { min-width:30px; height:24px; display:grid; place-items:center; border:1px solid var(--wallet-border); border-radius:999px; color:var(--wallet-text-muted); background:var(--wallet-surface-soft); font-size:11px; font-weight:700; }
+.tokenListTable { min-width:880px; }
+.tokenListTable td strong,.tokenListTable td small { display:block; }
+.tokenListTable td strong { color:var(--wallet-text); font-size:11px; font-weight:680; }
+.tokenListTable td small { margin-top:3px; color:var(--wallet-text-soft); font-size:10px; }
+.tokenCell { display:flex; align-items:center; gap:9px; min-width:150px; border:0; background:transparent; color:inherit; cursor:pointer; text-align:left; }
+.tokenCell img,.tokenCell .tokenFallback { width:29px; height:29px; }
+.pnl { color:var(--wallet-danger); font-weight:700; }
+.pnl[data-positive="true"] { color:var(--wallet-success); }
+.chartButton { display:inline-flex; align-items:center; gap:5px; height:29px; border:1px solid var(--wallet-border); border-radius:8px; padding:0 8px; background:transparent; color:var(--wallet-text-muted); cursor:pointer; font-size:10.5px; font-weight:660; }
+.chartButton:hover { color:var(--wallet-accent); border-color:var(--wallet-accent); background:var(--wallet-accent-soft); }
+@media (max-width:700px) { .detailHeader { grid-template-columns:1fr auto; } .rangeButtons { grid-column:1 / -1; justify-self:start; } .currentPrice { justify-self:end; } }

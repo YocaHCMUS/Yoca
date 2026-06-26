@@ -1,751 +1,451 @@
-@use "@carbon/react/scss/spacing" as *;
-@use "@carbon/react/scss/theme" as *;
-
 .topbar {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(520px, 700px) minmax(
-      260px,
-      1fr
-    );
-  align-items: center;
-  gap: 18px;
-  padding: 12px 22px;
-  // background: $layer-01;
-  border-bottom: 1px solid var(--cds-border-subtle-03);
+  grid-template-columns: minmax(270px, 1fr) minmax(420px, 1.35fr) minmax(240px, 0.7fr);
+  gap: 14px;
+  align-items: stretch;
+  padding: 18px 22px 14px;
+  background: var(--wallet-page-bg);
 }
 
-.topbarLeft {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.identityCard,
+.winRateCard,
+.actionsCard {
   min-width: 0;
-  justify-self: start;
-  max-width: 100%;
+  border: 1px solid var(--wallet-border);
+  border-radius: 15px;
+  background: var(--wallet-surface);
+  box-shadow: 0 5px 16px rgba(30, 44, 74, 0.04);
 }
 
-.topbarAvatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: $layer-02;
+.identityCard {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: $text-secondary;
-  flex-shrink: 0;
+  gap: 12px;
+  padding: 14px;
 }
 
-.topbarIdentity {
+.walletGlyph {
+  width: 39px;
+  height: 39px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--wallet-border-strong);
+  border-radius: 12px;
+  background: var(--wallet-accent-soft);
+  color: var(--wallet-accent);
+}
+
+.identityContent {
+  min-width: 0;
+}
+
+.identityHeading {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 4px;
   min-width: 0;
 }
 
-.topbarAddress {
-  font-size: 13px;
-  font-weight: 500;
-  color: $text-primary;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.eyebrow {
+  display: block;
+  color: var(--wallet-text-soft);
+  font-size: 10px;
+  font-weight: 720;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
-.topbarAddressText {
+.addressLine {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+
+  strong {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--wallet-text);
+    font-size: 14px;
+    font-weight: 720;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  code {
+    overflow: hidden;
+    color: var(--wallet-text-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.inlineIconButton,
+.manageTagsButton,
+.actionButton,
+.infoButton {
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--wallet-text-muted);
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+
+  &:hover:not(:disabled) {
+    border-color: var(--wallet-border);
+    background: var(--wallet-surface-hover);
+    color: var(--wallet-text);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+}
+
+.inlineIconButton {
+  width: 25px;
+  height: 25px;
+  border-radius: 7px;
+}
+
+.identityMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.metaPill {
+  max-width: 160px;
   overflow: hidden;
+  border: 1px solid var(--wallet-border);
+  border-radius: 999px;
+  padding: 3px 7px;
+  color: var(--wallet-text-muted);
+  background: var(--wallet-surface-soft);
+  font-size: 10px;
+  font-weight: 620;
+  line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.copyBtn {
-  background: none;
-  border: none;
+.metaPillAccent {
+  border-color: color-mix(in srgb, var(--wallet-accent) 25%, var(--wallet-border));
+  color: var(--wallet-accent);
+  background: var(--wallet-accent-soft);
+}
+
+.metaPillAction {
   cursor: pointer;
-  padding: 0;
-  vertical-align: middle;
-  color: $icon-secondary;
-  display: flex;
-  align-items: center;
 
   &:hover {
-    color: $icon-primary;
+    border-color: var(--wallet-accent);
+    color: var(--wallet-accent);
   }
 }
 
-.topbarSub {
+.manageTagsButton {
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+}
+
+.winRateCard {
+  padding: 13px 15px;
+}
+
+.winRateHeader,
+.winRateBody {
   display: flex;
   align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
 }
 
-.chipGreen {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
+.winRateHeader {
+  justify-content: space-between;
+}
+
+.periodCaption {
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--wallet-text-muted);
   font-size: 11px;
-  padding: 2px 7px;
-  border-radius: 20px;
-  line-height: 1;
-  background: rgba(22, 199, 132, 0.1);
-  color: #16c784;
+  font-weight: 650;
 }
 
-.chipGray {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 11px;
-  padding: 2px 7px;
-  border-radius: 20px;
-  line-height: 1;
-  background: $layer-02;
-  color: $text-secondary;
-  border: 1px solid var(--cds-border-subtle-03);
+.winRateTooltipWrap {
+  position: relative;
 }
 
-.inlineTagBtn {
-  display: inline-flex;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  color: var(--interactive-link);
-  font-size: 11px;
+.infoButton {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--wallet-border);
+  border-radius: 8px;
 }
 
-.topbarRight {
+.winRateTooltipPanel {
+  position: absolute;
+  z-index: 12;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(360px, calc(100vw - 36px));
+  padding: 12px;
+  border: 1px solid var(--wallet-border-strong);
+  border-radius: 12px;
+  background: var(--wallet-surface-raised);
+  box-shadow: var(--wallet-shadow-float);
+  color: var(--wallet-text);
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 150ms ease, transform 150ms ease;
+
+  p {
+    margin: 0;
+  }
+
+  dl {
+    display: grid;
+    gap: 7px;
+    margin: 10px 0 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--wallet-border);
+  }
+
+  dl div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 14px;
+  }
+
+  dt {
+    color: var(--wallet-text-muted);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--wallet-text);
+    font-weight: 720;
+  }
+}
+
+.winRateTooltipWrap:hover .winRateTooltipPanel,
+.winRateTooltipWrap:focus-within .winRateTooltipPanel {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.winRateBody {
+  display: grid;
+  grid-template-columns: minmax(185px, 1fr) minmax(72px, 0.36fr) minmax(92px, 0.46fr);
+  gap: 13px;
+  margin-top: 8px;
+}
+
+.winRatePrimary {
+  min-width: 0;
+
+  > strong {
+    display: block;
+    color: var(--wallet-danger);
+    font-size: 28px;
+    font-weight: 760;
+    letter-spacing: -0.045em;
+    line-height: 1;
+
+    &[data-positive="true"] {
+      color: var(--wallet-success);
+    }
+  }
+
+  small {
+    display: block;
+    overflow: hidden;
+    margin-top: 5px;
+    color: var(--wallet-text-muted);
+    font-size: 10.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.winRateTrack {
+  display: flex;
+  height: 5px;
+  overflow: hidden;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: var(--wallet-border);
+}
+
+.winRateWin,
+.winRateLoss {
+  height: 100%;
+  transition: width 220ms ease;
+}
+
+.winRateWin { background: var(--wallet-success); }
+.winRateLoss { background: var(--wallet-danger); }
+
+.winRateMetric {
+  min-width: 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--wallet-border);
+
+  span,
+  strong {
+    display: block;
+  }
+
+  span {
+    overflow: hidden;
+    color: var(--wallet-text-soft);
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  strong {
+    overflow: hidden;
+    margin-top: 7px;
+    font-size: 13px;
+    font-weight: 720;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.positiveMetric { color: var(--wallet-success); }
+.negativeMetric { color: var(--wallet-danger); }
+
+.actionsCard {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  justify-self: end;
+  justify-content: space-between;
+  padding: 13px;
+}
+
+.periodControl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.actionButtons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 6px;
-  flex-shrink: 0;
+  margin-top: 12px;
 }
 
-.topbarRow {
-  display: flex;
-  align-items: center;
+.actionButton {
+  width: 31px;
+  height: 31px;
+  flex: 0 0 auto;
+  border-color: var(--wallet-border);
+  border-radius: 9px;
+
+  &.actionButtonActive {
+    border-color: color-mix(in srgb, var(--wallet-success) 40%, var(--wallet-border));
+    color: var(--wallet-success);
+    background: var(--wallet-success-soft);
+  }
+}
+
+.aiActionButton {
+  width: auto;
   gap: 6px;
-}
+  padding: 0 9px;
+  border-color: color-mix(in srgb, var(--wallet-accent) 32%, var(--wallet-border));
+  color: var(--wallet-accent);
+  background: var(--wallet-accent-soft);
 
-.ibtn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  padding: 5px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--cds-border-subtle-03);
-  background: transparent;
-  color: $text-secondary;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color 0.15s;
-
-  &:hover {
-    background: $background-hover;
-    color: $text-primary;
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-}
-
-.iconBtn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: $icon-secondary;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5px;
-  border-radius: 4px;
-  transition:
-    color 0.15s,
-    background-color 0.15s;
-  flex-shrink: 0;
-
-  &:hover {
-    color: $icon-primary;
-    background-color: $layer-hover-01;
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-}
-
-.iconBtnActive {
-  color: var(--cds-support-success);
-  background-color: color-mix(in srgb, var(--cds-support-success) 12%, transparent);
-
-  &:hover {
-    color: var(--cds-support-success);
-    background-color: color-mix(in srgb, var(--cds-support-success) 18%, transparent);
+  span {
+    font-size: 11px;
+    font-weight: 690;
+    white-space: nowrap;
   }
 }
 
 .followNotice {
   display: flex;
   align-items: flex-start;
-  justify-content: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 0 20px 12px;
-  border-bottom: 1px solid var(--cds-border-subtle-03);
-
-  :global(.cds--inline-notification),
-  :global(.cds--inline-notification--low-contrast) {
-    max-width: 32rem;
-    margin: 12px 0 0 auto;
-  }
-}
-
-.noticeLink {
-  display: inline-flex;
-  align-items: center;
-  min-height: 48px;
-  margin-top: 12px;
-  font-size: 13px;
-  color: var(--cds-link-primary);
-  text-decoration: none;
-
-  &:hover {
-    text-decoration: underline;
-  }
-}
-
-.topbarCenter {
-  justify-self: center;
-  width: 100%;
-  min-width: 0;
-  display: flex;
-  justify-content: center;
-}
-
-.winRateMiniCard {
-  width: min(100%, 700px);
-  min-height: 88px;
-  border: 1px solid var(--cds-border-subtle-03);
-  border-radius: 14px;
-  background:
-    linear-gradient(
-      135deg,
-      rgba(22, 199, 132, 0.08),
-      rgba(255, 255, 255, 0.04)
-    ),
-    var(--cds-layer-01, #ffffff);
-  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.08);
-  padding: 12px 16px 13px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  overflow: visible;
-}
-
-.winRateMiniHeader {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 8px;
-
-  span {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--cds-text-secondary, #525252);
-  }
-}
-
-.winRateInfoBtn {
-  width: 22px;
-  height: 22px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--cds-icon-secondary, #525252);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition:
-    background-color 0.15s,
-    color 0.15s;
-
-  &:hover {
-    background: var(--cds-layer-hover-01, #e8e8e8);
-    color: var(--cds-icon-primary, #161616);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--cds-focus, #0f62fe);
-    outline-offset: 2px;
-  }
-}
-
-.winRateTooltipWrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 20;
-}
-
-.winRateTooltipPanel {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: -4px;
-  width: 440px;
-  max-width: min(440px, calc(100vw - 32px));
-  max-height: min(72vh, 560px);
-  overflow-y: auto;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--cds-border-subtle-03);
-  background: var(--cds-layer-02, #ffffff);
-  color: var(--cds-text-primary, #161616);
-  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.16);
-  font-size: 12.5px;
-  font-weight: 400;
-  line-height: 1.5;
-  letter-spacing: normal;
-  text-align: left;
-  text-transform: none;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transform: translateY(4px);
-  transition:
-    opacity 0.16s ease,
-    transform 0.16s ease,
-    visibility 0.16s ease;
-  z-index: 999;
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: -6px;
-    right: 15px;
-    width: 10px;
-    height: 10px;
-    transform: rotate(45deg);
-    background: inherit;
-    border-left: 1px solid var(--cds-border-subtle-03);
-    border-top: 1px solid var(--cds-border-subtle-03);
-  }
-
-  p {
-    margin: 0;
-  }
-
-  p + p {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--cds-border-subtle-03);
-  }
-
-  strong {
-    color: var(--cds-text-primary, #161616);
-    font-weight: 700;
-  }
-
-  span {
-    color: var(--cds-text-secondary, #525252);
-  }
-}
-
-.winRateTooltipStats {
-  margin: 10px 0 0;
-  padding: 10px 0 0;
-  border-top: 1px solid var(--cds-border-subtle-03);
-  display: grid;
-  gap: 7px;
-
-  div {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: baseline;
-    gap: 12px;
-  }
-
-  dt,
-  dd {
-    margin: 0;
-    text-transform: none !important;
-    letter-spacing: normal !important;
-  }
-
-  dt {
-    color: var(--cds-text-secondary, #525252);
-    font-weight: 500;
-  }
-
-  dd {
-    color: var(--cds-text-primary, #161616);
-    font-weight: 750;
-    white-space: nowrap;
-  }
-
-  div[data-muted="true"] {
-    opacity: 0.72;
-  }
-}
-
-.winRateTooltipPanel,
-.winRateTooltipPanel * {
-  text-transform: none !important;
-  letter-spacing: normal !important;
-}
-
-.winRateTooltipWrap:hover .winRateTooltipPanel,
-.winRateTooltipWrap:focus-within .winRateTooltipPanel {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-
-.winRateMiniBody {
-  display: grid;
-  grid-template-columns: minmax(330px, 1.55fr) 1px minmax(96px, 0.55fr) minmax(
-      96px,
-      0.55fr
-    );
-  align-items: center;
-  gap: 13px;
-}
-
-.winRateMainCol {
-  display: grid;
-  grid-template-columns: auto minmax(210px, 1fr);
-  grid-template-rows: auto auto;
-  column-gap: 12px;
-  row-gap: 4px;
-  align-items: center;
-  min-width: 0;
-}
-
-.winRateValue {
-  grid-row: 1 / span 2;
-  font-size: 27px;
-  font-weight: 750;
-  line-height: 1;
-  color: var(--cds-support-error, #da1e28);
-  letter-spacing: -0.03em;
-  white-space: nowrap;
-
-  &[data-positive="true"] {
-    color: var(--cds-support-success, #24a148);
-  }
-}
-
-.winRateProgressWrap {
-  height: 6px;
-  min-width: 0;
-  border-radius: 999px;
-  background: var(--cds-border-subtle, #e0e0e0);
-  display: flex;
-  overflow: hidden;
-}
-
-.winRateProgressWin {
-  height: 100%;
-  background: var(--cds-support-success, #24a148);
-  transition: width 0.2s ease;
-}
-
-.winRateProgressLoss {
-  height: 100%;
-  background: var(--cds-support-error, #da1e28);
-  transition: width 0.2s ease;
-}
-
-.winRateCounts {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  color: var(--cds-text-secondary, #525252);
-  font-size: 11px;
-  white-space: nowrap;
-  overflow: hidden;
-
-  .winRateCountsText {
-    display: block;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--cds-support-success, #24a148);
-    font-weight: 700;
-  }
-}
-
-.winRateDivider {
-  width: 1px;
-  height: 42px;
-  background: var(--cds-border-subtle-03);
-}
-
-.winRateMetricCol {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-
-  span {
-    font-size: 11px;
-    color: var(--cds-text-secondary, #525252);
-    white-space: nowrap;
-  }
-
-  strong {
-    font-size: 14px;
-    font-weight: 750;
-    line-height: 1.15;
-    white-space: nowrap;
-  }
-}
-
-.winRateMetricWin {
-  color: var(--cds-support-success, #24a148);
-}
-
-.winRateMetricLoss {
-  color: var(--cds-support-error, #da1e28);
-}
-
-@media (max-width: 1280px) {
-  .topbar {
-    grid-template-columns: minmax(220px, 1fr) minmax(460px, 620px) minmax(
-        220px,
-        1fr
-      );
-    gap: 14px;
-  }
-
-  .winRateMiniCard {
-    width: min(100%, 620px);
-    padding-inline: 14px;
-  }
-
-  .winRateMiniBody {
-    grid-template-columns: minmax(285px, 1.45fr) 1px minmax(
-        88px,
-        0.55fr
-      ) minmax(88px, 0.55fr);
-    gap: 10px;
-  }
-
-  .winRateValue {
-    font-size: 24px;
-  }
-
-  .winRateMetricCol strong {
-    font-size: 13px;
-  }
-
-  .winRateMainCol {
-    grid-template-columns: auto minmax(175px, 1fr);
-  }
-}
-
-@media (max-width: 1024px) {
-  .topbar {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-
-  .topbarLeft,
-  .topbarCenter,
-  .topbarRight {
-    justify-self: stretch;
-  }
-
-  .topbarRight {
-    align-items: flex-start;
-  }
-
-  .winRateMiniCard {
-    width: 100%;
-  }
-}
-
-@media (max-width: 640px) {
-  .winRateMiniBody {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .winRateMainCol {
-    grid-column: 1 / -1;
-  }
-
-  .winRateDivider {
-    display: none;
-  }
-}
-
-/* When the AI chat panel is docked, the content area becomes narrower.
-   Compact only the Win Rate card so it does not overlap the period selector/actions. */
-.topbar[data-chat-docked="true"] {
-  grid-template-columns: minmax(210px, 1fr) minmax(430px, 540px) minmax(
-      170px,
-      max-content
-    );
   gap: 12px;
+  margin: 0 22px 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--wallet-border);
+  border-radius: 11px;
+  background: var(--wallet-surface);
+  box-shadow: 0 5px 16px rgba(30, 44, 74, 0.05);
 
-  .topbarRight {
-    min-width: 0;
-  }
+  &[data-kind="success"] { border-color: color-mix(in srgb, var(--wallet-success) 36%, var(--wallet-border)); }
+  &[data-kind="error"] { border-color: color-mix(in srgb, var(--wallet-danger) 36%, var(--wallet-border)); }
+  &[data-kind="warning"] { border-color: color-mix(in srgb, var(--wallet-warning) 36%, var(--wallet-border)); }
 
-  .topbarRow {
-    gap: 4px;
-  }
+  strong,
+  span,
+  a { display: block; }
+  strong { color: var(--wallet-text); font-size: 12px; }
+  span { margin-top: 2px; color: var(--wallet-text-muted); font-size: 11px; }
+  a { margin-top: 5px; color: var(--wallet-accent); font-size: 11px; font-weight: 650; }
 
-  .winRateMiniCard {
-    width: min(100%, 540px);
-    min-height: 78px;
-    padding: 10px 12px 11px;
-    border-radius: 13px;
-    gap: 6px;
-  }
+  button {
+    width: 27px;
+    height: 27px;
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--wallet-text-muted);
+    cursor: pointer;
 
-  .winRateMiniHeader span {
-    font-size: 10.5px;
-    letter-spacing: 0.075em;
-  }
-
-  .winRateInfoBtn {
-    width: 20px;
-    height: 20px;
-  }
-
-  .winRateMiniBody {
-    grid-template-columns: minmax(245px, 1.5fr) 1px minmax(62px, 0.42fr) minmax(
-        62px,
-        0.42fr
-      );
-    gap: 8px;
-  }
-
-  .winRateMainCol {
-    grid-template-columns: auto minmax(136px, 1fr);
-    column-gap: 10px;
-    row-gap: 3px;
-  }
-
-  .winRateValue {
-    font-size: 24px;
-  }
-
-  .winRateProgressWrap {
-    height: 5px;
-  }
-
-  .winRateCounts {
-    font-size: 10.5px;
-    gap: 3px;
-  }
-
-  .winRateDivider {
-    height: 36px;
-  }
-
-  .winRateMetricCol {
-    gap: 3px;
-
-    span {
-      font-size: 10px;
-    }
-
-    strong {
-      max-width: 70px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      font-size: 12px;
-      line-height: 1.1;
-    }
+    &:hover { background: var(--wallet-surface-hover); color: var(--wallet-text); }
   }
 }
 
-@media (max-width: 1180px) {
-  .topbar[data-chat-docked="true"] {
-    grid-template-columns: minmax(180px, 0.9fr) minmax(390px, 500px) minmax(
-        150px,
-        max-content
-      );
-    gap: 10px;
-
-    .winRateMiniCard {
-      width: min(100%, 500px);
-      padding-inline: 11px;
-    }
-
-    .winRateMiniBody {
-      grid-template-columns: minmax(220px, 1.45fr) 1px minmax(
-          58px,
-          0.4fr
-        ) minmax(58px, 0.4fr);
-      gap: 7px;
-    }
-
-    .winRateMainCol {
-      grid-template-columns: auto minmax(118px, 1fr);
-      column-gap: 8px;
-    }
-
-    .winRateValue {
-      font-size: 22px;
-    }
-
-    .winRateMetricCol strong {
-      max-width: 62px;
-      font-size: 11.5px;
-    }
-  }
-}
-
-.exportMenuWrapper {
-  position: relative;
-}
-
-.exportMenu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
-  min-width: 240px;
-  background: $layer-01;
-  border: 1px solid var(--cds-border-subtle-03);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  padding: 6px;
-  z-index: 50;
-}
-
-.exportMenuItem {
-  width: 100%;
-  border: none;
-  background: transparent;
-  color: $text-primary;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  text-align: left;
-  font-size: 13px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    background: $layer-hover-01;
+@media (max-width: 1320px) {
+  .topbar {
+    grid-template-columns: minmax(240px, 0.9fr) minmax(390px, 1.3fr) minmax(205px, 0.65fr);
+    padding-inline: 16px;
   }
 
-  &:disabled {
-    cursor: not-allowed;
-    color: $text-disabled;
-  }
+  .winRateBody { gap: 9px; }
+  .winRateMetric { padding-left: 9px; }
+}
+
+@media (max-width: 1080px) {
+  .topbar { grid-template-columns: 1fr 1fr; }
+  .actionsCard { grid-column: 1 / -1; flex-direction: row; align-items: center; }
+  .actionButtons { margin-top: 0; }
+}
+
+@media (max-width: 720px) {
+  .topbar { grid-template-columns: 1fr; padding: 12px; gap: 10px; }
+  .actionsCard { grid-column: auto; flex-direction: column; align-items: stretch; }
+  .actionButtons { justify-content: flex-start; margin-top: 10px; }
+  .winRateBody { grid-template-columns: 1fr 0.55fr 0.65fr; }
+  .followNotice { margin-inline: 12px; }
+}
+
+@media (max-width: 430px) {
+  .winRateBody { grid-template-columns: 1fr 1fr; }
+  .winRatePrimary { grid-column: 1 / -1; }
+  .winRateMetric { padding-left: 0; border-left: 0; }
 }

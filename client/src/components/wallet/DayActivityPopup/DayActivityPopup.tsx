@@ -5,15 +5,13 @@ import {
   type WalletDaySwapSummary,
   type WalletDayToken,
 } from "@/services/wallet/walletApi";
-import { Close, Draggable, ChevronDown, ChevronUp } from "@carbon/icons-react";
-import { SkeletonText, TextAreaSkeleton } from "@carbon/react";
+import { BarChart3 as ChartColumn, ChevronDown, ChevronUp, GripVertical as Draggable, X as Close } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TokenStack } from "./TokenStack";
 import { TimelineView } from "./TimelineView";
 import { TxRow } from "./TxRow";
 import { WalletSelector } from "./WalletSelector";
 import styles from "./DayActivityPopup.module.scss";
-import { ChartColumn } from '@carbon/react/icons';
 import { TokenPriceChart } from "@/components/charts/TokenPriceChart/TokenPriceChart";
 import type { TradeIndicator } from "@/components/charts/TokenPriceChart/TokenPriceChart";
 import TokenIdentityCell from "@/components/token/TokenIdentityCell";
@@ -36,6 +34,14 @@ interface AggregatedTxGroup {
 }
 
 const DEFAULT_POSITION = { x: 0, y: 100 };
+
+function SkeletonLine({ width }: { width: string }) {
+  return <span className={styles.skeletonLine} style={{ width }} />;
+}
+
+function SkeletonArea() {
+  return <div className={styles.skeletonArea} />;
+}
 
 export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
   isOpen,
@@ -285,20 +291,20 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
             <div className={styles.loadingOverlay}>
               <div className={styles.loadingStatRows}>
                 <div className={styles.loadingStatRow}>
-                  <SkeletonText width="6rem" />
-                  <SkeletonText width="4rem" />
+                  <SkeletonLine width="6rem" />
+                  <SkeletonLine width="4rem" />
                 </div>
                 <div className={styles.loadingStatRow}>
-                  <SkeletonText width="8rem" />
-                  <SkeletonText width="6rem" />
+                  <SkeletonLine width="8rem" />
+                  <SkeletonLine width="6rem" />
                 </div>
                 <div className={styles.loadingStatRow}>
-                  <SkeletonText width="8rem" />
-                  <SkeletonText width="4rem" />
+                  <SkeletonLine width="8rem" />
+                  <SkeletonLine width="4rem" />
                 </div>
               </div>
-              <TextAreaSkeleton />
-              <TextAreaSkeleton />
+              <SkeletonArea />
+              <SkeletonArea />
             </div>
           )}
 

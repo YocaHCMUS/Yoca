@@ -1,19 +1,17 @@
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/theme' as *;
 
 // ===== Prompt Menu Tabs =====
 .promptTabs {
   display: flex;
   gap: 2px;
   margin-bottom: 8px;
-  border-bottom: 1px solid var(--cds-border-subtle-03);
+  border-bottom: 1px solid var(--wallet-border, #dfe6ef);
   padding-bottom: 4px;
 }
 
 .promptTab {
   background: none;
   border: none;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   cursor: pointer;
   font-size: 10px;
   font-weight: 600;
@@ -24,35 +22,35 @@
   transition: background-color 0.15s, color 0.15s;
 
   &:hover {
-    background: $layer-hover-01;
-    color: $text-primary;
+    background: var(--wallet-surface-hover, #f0f3f8);
+    color: var(--wallet-text, #172033);
   }
 }
 
 .promptTabActive {
-  color: $interactive;
-  background: $layer-selected;
+  color: var(--wallet-accent, #4458d9);
+  background: var(--wallet-accent-soft, #eef1ff);
 }
 
 .promptSearchInput {
   width: 100%;
   box-sizing: border-box;
-  background: $field-01;
-  border: 1px solid var(--cds-border-subtle-03);
+  background: var(--wallet-surface-soft, #f5f7fb);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 6px;
   padding: 5px 8px;
   font-size: 11px;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   outline: none;
   font-family: inherit;
   margin-bottom: 8px;
 
   &:focus {
-    border-color: $interactive;
+    border-color: var(--wallet-accent, #4458d9);
   }
 
   &::placeholder {
-    color: $text-secondary;
+    color: var(--wallet-muted, #67748a);
   }
 }
 
@@ -63,28 +61,28 @@
 }
 
 .promptPillTab {
-  background: $layer-02;
-  border: 1px solid var(--cds-border-subtle-03);
+  background: var(--wallet-surface-soft, #f5f7fb);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 12px;
   padding: 3px 10px;
   font-size: 10px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   cursor: pointer;
   transition: background-color 0.15s, color 0.15s;
 
   &:hover {
-    background: $layer-hover-01;
-    color: $text-primary;
+    background: var(--wallet-surface-hover, #f0f3f8);
+    color: var(--wallet-text, #172033);
   }
 }
 
 .promptPillTabActive {
-  background: $interactive;
-  color: $text-on-color;
-  border-color: $interactive;
+  background: var(--wallet-accent, #4458d9);
+  color: #ffffff;
+  border-color: var(--wallet-accent, #4458d9);
 
   &:hover {
-    background: $interactive;
+    background: var(--wallet-accent, #4458d9);
     opacity: 0.9;
   }
 }
@@ -92,17 +90,17 @@
 .promptLoadMoreBtn {
   width: 100%;
   background: none;
-  border: 1px solid var(--cds-border-subtle-03);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 4px;
   padding: 6px 8px;
   margin-top: 4px;
   font-size: 10px;
-  color: $interactive;
+  color: var(--wallet-accent, #4458d9);
   cursor: pointer;
   transition: background-color 0.15s;
 
   &:hover {
-    background: $layer-hover-01;
+    background: var(--wallet-surface-hover, #f0f3f8);
   }
 }
 
@@ -116,7 +114,7 @@
 .promptCreateBtn {
   background: none;
   border: none;
-  color: $interactive;
+  color: var(--wallet-accent, #4458d9);
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
@@ -128,7 +126,7 @@
   transition: background-color 0.15s;
 
   &:hover {
-    background: $layer-selected;
+    background: var(--wallet-accent-soft, #eef1ff);
   }
 }
 
@@ -138,7 +136,7 @@
   padding: 4px 8px;
   margin-bottom: 2px;
   font-size: 12px;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   cursor: pointer;
   text-align: left;
   line-height: 1.4;
@@ -149,20 +147,20 @@
   box-sizing: border-box;
 
   &:hover {
-    background: $layer-hover-01;
+    background: var(--wallet-surface-hover, #f0f3f8);
   }
 }
 
 .promptItemLabel {
   font-weight: 600;
   font-size: 13px;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   margin-bottom: 2px;
 }
 
 .promptItemQuery {
   font-size: 11px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -173,7 +171,7 @@
   gap: 8px;
   margin-top: 4px;
   font-size: 10px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
 }
 
 .promptItemActions {
@@ -191,11 +189,11 @@
 }
 
 .promptItemAction {
-  background: $layer-02;
-  border: 1px solid var(--cds-border-subtle-03);
+  background: var(--wallet-surface-soft, #f5f7fb);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 4px;
   padding: 2px 6px;
-  color: $icon-secondary;
+  color: var(--wallet-muted, #67748a);
   cursor: pointer;
   font-size: 10px;
   display: flex;
@@ -204,8 +202,8 @@
   transition: background-color 0.12s, color 0.12s;
 
   &:hover {
-    background: $layer-hover-01;
-    color: $icon-primary;
+    background: var(--wallet-surface-hover, #f0f3f8);
+    color: var(--wallet-text, #172033);
   }
 }
 
@@ -213,13 +211,13 @@
   padding: 16px;
   text-align: center;
   font-size: 11px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
 }
 
 .promptEmpty {
   padding: 12px 8px;
   font-size: 11px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   text-align: center;
 }
 
@@ -235,8 +233,8 @@
 }
 
 .dialog {
-  background: $background;
-  border: 1px solid var(--cds-border-subtle-03);
+  background: var(--wallet-surface, #ffffff);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 12px;
   width: 380px;
   max-width: 90vw;
@@ -249,7 +247,7 @@
 .dialogTitle {
   font-size: 14px;
   font-weight: 700;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   margin-bottom: 12px;
 }
 
@@ -261,43 +259,43 @@
   display: block;
   font-size: 11px;
   font-weight: 600;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   margin-bottom: 4px;
 }
 
 .dialogInput {
   width: 100%;
   box-sizing: border-box;
-  background: $field-01;
-  border: 1px solid var(--cds-border-subtle-03);
+  background: var(--wallet-surface-soft, #f5f7fb);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 6px;
   padding: 6px 8px;
   font-size: 12px;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   outline: none;
   font-family: inherit;
 
   &:focus {
-    border-color: $interactive;
+    border-color: var(--wallet-accent, #4458d9);
   }
 }
 
 .dialogTextarea {
   width: 100%;
   box-sizing: border-box;
-  background: $field-01;
-  border: 1px solid var(--cds-border-subtle-03);
+  background: var(--wallet-surface-soft, #f5f7fb);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 6px;
   padding: 6px 8px;
   font-size: 12px;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   outline: none;
   resize: vertical;
   min-height: 60px;
   font-family: inherit;
 
   &:focus {
-    border-color: $interactive;
+    border-color: var(--wallet-accent, #4458d9);
   }
 }
 
@@ -306,7 +304,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   cursor: pointer;
 
   input {
@@ -332,18 +330,18 @@
 }
 
 .dialogBtnCancel {
-  background: $layer-02;
-  color: $text-primary;
-  border: 1px solid var(--cds-border-subtle-03);
+  background: var(--wallet-surface-soft, #f5f7fb);
+  color: var(--wallet-text, #172033);
+  border: 1px solid var(--wallet-border, #dfe6ef);
 
   &:hover {
-    background: $layer-hover-01;
+    background: var(--wallet-surface-hover, #f0f3f8);
   }
 }
 
 .dialogBtnSubmit {
-  background: $interactive;
-  color: $text-on-color;
+  background: var(--wallet-accent, #4458d9);
+  color: #ffffff;
 
   &:hover {
     opacity: 0.9;
@@ -363,7 +361,7 @@
 
 .dialogForkedInfo {
   font-size: 10px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   margin-bottom: 8px;
   font-style: italic;
 }
@@ -371,7 +369,7 @@
 // ===== Fork confirmation dialog =====
 .dialogConfirmText {
   font-size: 12px;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   line-height: 1.5;
   margin-bottom: 12px;
 }
@@ -391,8 +389,8 @@
   right: 24px;
   width: 420px;
   height: 600px;
-  background: $background;
-  border: 1px solid var(--cds-border-subtle-03);
+  background: var(--wallet-surface, #ffffff);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   z-index: 9999;
@@ -451,15 +449,15 @@
   justify-content: space-between;
   padding: 0 16px;
   height: 40px;
-  border-bottom: 1px solid var(--cds-border-subtle-03);
-  background: $layer-01;
+  border-bottom: 1px solid var(--wallet-border, #dfe6ef);
+  background: var(--wallet-surface, #ffffff);
   flex-shrink: 0;
 }
 
 .headerTitle {
   font-size: 13px;
   font-weight: 600;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -471,8 +469,8 @@
   align-items: center;
   gap: 4px;
   padding: 4px 12px;
-  border-bottom: 1px solid var(--cds-border-subtle-03);
-  background: $layer-01;
+  border-bottom: 1px solid var(--wallet-border, #dfe6ef);
+  background: var(--wallet-surface, #ffffff);
   flex-shrink: 0;
 }
 
@@ -482,8 +480,8 @@
   height: 20px;
   padding: 0 6px;
   border-radius: 4px;
-  // background: $layer-02;
-  color: $text-secondary;
+  // background: var(--wallet-surface-soft, #f5f7fb);
+  color: var(--wallet-muted, #67748a);
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
@@ -496,10 +494,10 @@
   max-width: 160px;
   height: 20px;
   padding: 0 7px;
-  border: 1px solid $border-subtle-01;
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 999px;
-  background: $layer-accent-01;
-  color: $text-secondary;
+  background: var(--wallet-accent-soft, #eef1ff);
+  color: var(--wallet-muted, #67748a);
   font-size: 10px;
   line-height: 1;
   white-space: nowrap;
@@ -508,8 +506,8 @@
   cursor: pointer;
 
   &:hover {
-    background: $layer-hover-01;
-    color: $text-primary;
+    background: var(--wallet-surface-hover, #f0f3f8);
+    color: var(--wallet-text, #172033);
   }
 }
 
@@ -519,28 +517,28 @@
   max-width: 140px;
   height: 24px;
   font-size: 0.6875rem;
-  background: $field-01;
-  border: 1px solid var(--cds-border-subtle-03);
+  background: var(--wallet-surface-soft, #f5f7fb);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 4px;
-  color: $text-primary;
-  padding: 0 $spacing-02;
+  color: var(--wallet-text, #172033);
+  padding: 0 8px;
   cursor: pointer;
   outline: none;
 
   &:focus {
-    border-color: var(--cds-interactive-focus);
+    border-color: var(--wallet-accent, #4458d9);
   }
 }
 
 .headerActions {
   display: flex;
-  gap: $spacing-02;
+  gap: 8px;
 }
 
 .headerBtn {
   background: none;
   border: none;
-  color: $icon-secondary;
+  color: var(--wallet-muted, #67748a);
   cursor: pointer;
   font-size: 16px;
   padding: 4px;
@@ -550,13 +548,13 @@
   border-radius: 4px;
 
   &:hover {
-    background: $layer-hover-01;
-    color: $icon-primary;
+    background: var(--wallet-surface-hover, #f0f3f8);
+    color: var(--wallet-text, #172033);
   }
 
   &[data-active="true"] {
-    color: $interactive;
-    background: $layer-selected;
+    color: var(--wallet-accent, #4458d9);
+    background: var(--wallet-accent-soft, #eef1ff);
   }
 }
 
@@ -569,13 +567,13 @@
 .greetingTitle {
   font-size: 14px;
   font-weight: 700;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   margin-bottom: 6px;
 }
 
 .greetingDescription {
   font-size: 13px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   line-height: 1.55;
   margin: 0 0 12px;
 }
@@ -583,7 +581,7 @@
 .greetingPromptLabel {
   font-size: 11px;
   font-weight: 600;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-bottom: 6px;
@@ -601,7 +599,7 @@
   border-radius: 6px;
   padding: 6px 8px;
   font-size: 13px;
-  color: $interactive;
+  color: var(--wallet-accent, #4458d9);
   cursor: pointer;
   text-align: left;
   line-height: 1.4;
@@ -611,11 +609,11 @@
   &::before {
     content: "•";
     margin-right: 8px;
-    color: $interactive;
+    color: var(--wallet-accent, #4458d9);
   }
 
   &:hover {
-    background: $layer-hover-01;
+    background: var(--wallet-surface-hover, #f0f3f8);
   }
 }
 
@@ -631,7 +629,7 @@
   align-items: center;
   gap: 8px;
   margin: 10px 0;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   font-size: 10px;
   line-height: 1;
   white-space: nowrap;
@@ -641,7 +639,7 @@
     content: "";
     flex: 1;
     min-width: 16px;
-    border-top: 1px dashed $border-subtle-01;
+    border-top: 1px dashed var(--wallet-border, #dfe6ef);
   }
 }
 
@@ -649,7 +647,7 @@
   max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--cds-support-info);
+  color: var(--wallet-accent, #4458d9);
   font-weight: 600;
 }
 
@@ -658,7 +656,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   font-size: 13px;
   text-align: center;
   padding: 20px;
@@ -669,14 +667,14 @@
   align-items: center;
   gap: 6px;
   padding: 8px 0;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
 }
 
 .dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: $text-secondary;
+  background: var(--wallet-muted, #67748a);
   animation: wave 1.2s ease-in-out infinite;
 }
 
@@ -711,17 +709,17 @@
 // ===== Input bar =====
 .inputBar {
   padding: 8px 12px 12px;
-  // border-top: 1px solid var(--cds-border-subtle-03);
+  // border-top: 1px solid var(--wallet-border, #dfe6ef);
   flex-shrink: 0;
 }
 
 .inputContainer {
   display: flex;
   flex-direction: column;
-  // border: 1px solid var(--cds-border-subtle-03);
-  box-shadow: inset 0 0 0 1px var(--cds-border-subtle-03);
+  // border: 1px solid var(--wallet-border, #dfe6ef);
+  box-shadow: inset 0 0 0 1px var(--wallet-border, #dfe6ef);
   border-radius: 8px;
-  background: $field-01;
+  background: var(--wallet-surface-soft, #f5f7fb);
   overflow: hidden;
 
   &:focus-within {
@@ -736,14 +734,14 @@
   border: none;
   padding: 8px 12px 0;
   font-size: 13px;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   outline: none;
   resize: none;
   line-height: 1.5;
   overflow-y: auto;
 
   &::placeholder {
-    color: $text-placeholder;
+    color: var(--wallet-muted, #67748a);
   }
 }
 
@@ -756,7 +754,7 @@
 
 .charCount {
   font-size: 11px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   padding: 0 4px;
 }
 
@@ -771,7 +769,7 @@
   background: transparent;
   border: none;
   border-radius: 4px;
-  color: $icon-secondary;
+  color: var(--wallet-muted, #67748a);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -779,8 +777,8 @@
   transition: background-color 0.15s, color 0.15s;
 
   &:hover {
-    background: $layer-hover-01;
-    color: $icon-primary;
+    background: var(--wallet-surface-hover, #f0f3f8);
+    color: var(--wallet-text, #172033);
   }
 
   &:disabled {
@@ -799,7 +797,7 @@
 .promptMenuTitle {
   font-size: 12px;
   font-weight: 600;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-bottom: 8px;
@@ -814,13 +812,13 @@
 
 .promptMenuItem {
   border: none;
-  border-left: 3px solid $interactive;
+  border-left: 3px solid var(--wallet-accent, #4458d9);
   border-radius: 0;
   // padding: 0 0 0 8px;
   padding: 2px 8px;
-  margin-bottom: $spacing-02;
+  margin-bottom: 8px;
   font-size: 12px;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   cursor: pointer;
   text-align: left;
   line-height: 1.4;
@@ -829,14 +827,14 @@
   border-radius: 4px;
 
   &:hover {
-    background: $layer-hover-01;
+    background: var(--wallet-surface-hover, #f0f3f8);
   }
 }
 
 .promptMenuItemLabel {
   font-weight: 600;
   font-size: 11px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-bottom: 2px;
@@ -844,7 +842,7 @@
 
 .promptMenuItemQuery {
   font-size: 12px;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
 }
 
 // ===== Message bubbles (shared with WalletChatMessage) =====
@@ -856,8 +854,8 @@
 
 .userBubble {
   max-width: 80%;
-  background: $interactive;
-  color: $text-on-color;
+  background: var(--wallet-accent, #4458d9);
+  color: #ffffff;
   border-radius: 12px 12px 4px 12px;
   padding: 8px 14px;
   font-size: 13px;
@@ -875,7 +873,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: color-mix(in srgb, #{$text-on-color} 13%, transparent);
+  background: color-mix(in srgb, #{#ffffff} 13%, transparent);
   border-radius: 8px;
   padding: 2px 8px;
   font-size: 11px;
@@ -911,7 +909,7 @@
 .textPart {
   font-size: 13px;
   line-height: 1.6;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   white-space: pre-wrap;
   word-break: break-word;
   margin-bottom: 4px;
@@ -922,7 +920,7 @@
   width: 100%;
   font-size: 13px;
   line-height: 1.6;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   white-space: pre-wrap;
   word-break: break-word;
   margin-bottom: 4px;
@@ -930,7 +928,7 @@
 
 .emptyPart {
   font-size: 13px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
 }
 
 // ===== Action button group =====
@@ -944,8 +942,8 @@
 
 .actionBtn {
   background: transparent;
-  border: 1px solid $interactive;
-  color: $interactive;
+  border: 1px solid var(--wallet-accent, #4458d9);
+  color: var(--wallet-accent, #4458d9);
   border-radius: 8px;
   padding: 6px 14px;
   font-size: 12px;
@@ -954,7 +952,7 @@
   transition: background-color 0.15s;
 
   &:hover {
-    background: $layer-selected-inverse;
+    background: var(--wallet-accent, #4458d9);
   }
 }
 
@@ -968,7 +966,7 @@
 .chartTitle {
   font-size: 12px;
   font-weight: 600;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   margin-bottom: 4px;
 }
 
@@ -988,16 +986,16 @@
 .tableTh {
   text-align: left;
   padding: 4px 8px;
-  border-bottom: 1px solid var(--cds-border-subtle-03);
-  color: $text-secondary;
+  border-bottom: 1px solid var(--wallet-border, #dfe6ef);
+  color: var(--wallet-muted, #67748a);
   font-weight: 600;
   text-transform: capitalize;
 }
 
 .tableTd {
   padding: 4px 8px;
-  border-bottom: 1px solid var(--cds-border-subtle-02);
-  color: $text-primary;
+  border-bottom: 1px solid var(--wallet-border-soft, #edf1f6);
+  color: var(--wallet-text, #172033);
 }
 
 .tableRow {
@@ -1009,7 +1007,7 @@
   }
 
   &:hover {
-    background: $layer-hover-01;
+    background: var(--wallet-surface-hover, #f0f3f8);
   }
 }
 
@@ -1020,22 +1018,22 @@
   justify-content: center;
   gap: 8px;
   padding: 8px 0;
-  border-top: 1px solid var(--cds-border-subtle-02);
+  border-top: 1px solid var(--wallet-border-soft, #edf1f6);
   margin-top: 4px;
 }
 
 .pageBtn {
-  background: $layer-02;
-  border: 1px solid var(--cds-border-subtle-03);
+  background: var(--wallet-surface-soft, #f5f7fb);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 4px;
   padding: 4px 10px;
   font-size: 11px;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   cursor: pointer;
   transition: background-color 0.15s;
 
   &:hover:not(:disabled) {
-    background: $layer-hover-01;
+    background: var(--wallet-surface-hover, #f0f3f8);
   }
 
   &:disabled {
@@ -1046,7 +1044,7 @@
 
 .pageInfo {
   font-size: 11px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   white-space: nowrap;
 }
 
@@ -1059,7 +1057,7 @@
 
 .richParagraph {
   margin: 0;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   font-size: 13px;
   line-height: 1.55;
 }
@@ -1068,7 +1066,7 @@
   display: grid;
   grid-template-columns: 7px minmax(0, 1fr);
   gap: 8px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   font-size: 13px;
   line-height: 1.55;
 
@@ -1077,20 +1075,20 @@
     height: 5px;
     margin-top: 9px;
     border-radius: 999px;
-    background: var(--cds-border-strong, #6f6f6f);
+    background: var(--wallet-border-strong, #cfd8e5);
   }
 }
 
 .richList {
   margin: 0;
   padding-left: 18px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   font-size: 13px;
   line-height: 1.55;
 }
 
 .richStrong {
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   font-weight: 800;
 }
 
@@ -1106,20 +1104,20 @@
 }
 
 .metricPositive {
-  color: $support-success;
+  color: var(--wallet-positive, #118563);
 }
 
 .metricNegative {
-  color: $support-error;
+  color: var(--wallet-negative, #c9434d);
 }
 
 .metricMoney {
-  color: $text-primary;
-  background: color-mix(in srgb, #{$support-info} 13%, transparent);
+  color: var(--wallet-text, #172033);
+  background: color-mix(in srgb, #{var(--wallet-accent, #4458d9)} 13%, transparent);
 }
 
 .metricNeutral {
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
 }
 
 
@@ -1146,7 +1144,7 @@
     grid-template-columns: 24px minmax(0, 1fr);
     gap: 10px;
     align-items: flex-start;
-    color: $text-primary;
+    color: var(--wallet-text, #172033);
     font-size: 13px;
     line-height: 1.5;
   }
@@ -1162,7 +1160,7 @@
     margin: 0;
     font-size: 13px;
     font-weight: 600;
-    color: $text-primary;
+    color: var(--wallet-text, #172033);
   }
 }
 
@@ -1202,7 +1200,7 @@
   gap: 0.5rem;
   margin-bottom: 0.75rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--cds-border-subtle-03);
+  border-bottom: 1px solid var(--wallet-border, #dfe6ef);
 }
 
 .sectionIcon {
@@ -1223,7 +1221,7 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #6f6f6f;
-  // background: $layer-01;
+  // background: var(--wallet-surface, #ffffff);
   // padding: 1px 6px;
   // border-radius: 4px;
   display: inline-block;
@@ -1232,7 +1230,7 @@
 .sectionTitle {
   font-size: 14px;
   font-weight: 700;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   margin-top: 4px;
   line-height: 1.4;
 }
@@ -1311,13 +1309,13 @@
   th,
   td {
     padding: 6px 8px;
-    border-bottom: 1px solid var(--cds-border-subtle-02, #e0e0e0);
+    border-bottom: 1px solid var(--wallet-border-soft, #edf1f6);
     text-align: left;
-    color: $text-secondary;
+    color: var(--wallet-muted, #67748a);
   }
 
   th {
-    color: $text-primary;
+    color: var(--wallet-text, #172033);
     font-weight: 700;
     font-size: 11px;
     text-transform: capitalize;
@@ -1356,7 +1354,7 @@
     margin: 0;
     font-size: 13px;
     font-weight: 600;
-    color: $text-primary;
+    color: var(--wallet-text, #172033);
   }
 }
 
@@ -1424,7 +1422,7 @@
     margin: 0 0 0.5rem;
     font-size: 13px;
     font-weight: 600;
-    color: $text-primary;
+    color: var(--wallet-text, #172033);
   }
 }
 
@@ -1440,12 +1438,12 @@
   gap: 4px;
   min-width: 0;
   padding: 8px;
-  border: 1px solid var(--cds-border-subtle-03, #353535);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 6px;
-  background: $background;
+  background: var(--wallet-surface, #ffffff);
 
   strong {
-    color: $text-primary;
+    color: var(--wallet-text, #172033);
     font-size: 12px;
     font-weight: 700;
     line-height: 1.35;
@@ -1454,13 +1452,13 @@
 }
 
 .evidenceValue {
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   font-size: 13px;
   font-weight: 700;
 }
 
 .evidenceDetail {
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   font-size: 11px;
   line-height: 1.4;
 }
@@ -1524,16 +1522,16 @@
 .evidenceShowBtn {
   font-size: 11px;
   padding: 4px 8px;
-  border: 1px solid var(--cds-border-subtle-03, #353535);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 4px;
   background: transparent;
-  color: var(--cds-link-primary, #78a9ff);
+  color: var(--wallet-accent, #4458d9);
   cursor: pointer;
   margin-top: 6px;
   transition: background 0.15s;
 
   &:hover {
-    background: var(--cds-layer-hover-01, #353535);
+    background: var(--wallet-surface-hover, #f0f3f8);
   }
 }
 
@@ -1548,11 +1546,11 @@
 
 // ===== Section Block Wrapper =====
 .sectionBlock {
-  border: 1px solid var(--cds-border-subtle-03);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 8px;
   padding: 12px;
   margin-bottom: 14px;
-  background: $background;
+  background: var(--wallet-surface, #ffffff);
   position: relative;
 }
 
@@ -1567,11 +1565,11 @@
   right: 6px;
   opacity: 0;
   transition: opacity 0.15s;
-  background: $layer-02;
-  border: 1px solid var(--cds-border-subtle-03);
+  background: var(--wallet-surface-soft, #f5f7fb);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 4px;
   padding: 2px 6px;
-  color: $icon-secondary;
+  color: var(--wallet-muted, #67748a);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1580,8 +1578,8 @@
   z-index: 1;
 
   &:hover {
-    background: $layer-hover-01;
-    color: $icon-primary;
+    background: var(--wallet-surface-hover, #f0f3f8);
+    color: var(--wallet-text, #172033);
   }
 }
 
@@ -1598,7 +1596,7 @@
   margin: 0 -4px;
 
   &:hover {
-    background: $layer-hover-01;
+    background: var(--wallet-surface-hover, #f0f3f8);
   }
 }
 
@@ -1610,7 +1608,7 @@
   margin: 0 -4px;
 
   &:hover {
-    background: $layer-hover-01;
+    background: var(--wallet-surface-hover, #f0f3f8);
   }
 }
 
@@ -1626,7 +1624,7 @@
 .copyBtn {
   background: none;
   border: none;
-  color: $icon-secondary;
+  color: var(--wallet-muted, #67748a);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1637,13 +1635,13 @@
   transition: background-color 0.12s, color 0.12s;
 
   &:hover {
-    background: $layer-hover-01;
-    color: $icon-primary;
+    background: var(--wallet-surface-hover, #f0f3f8);
+    color: var(--wallet-text, #172033);
   }
 }
 
 .copyBtnCopied {
-  color: $support-success;
+  color: var(--wallet-positive, #118563);
 }
 
 // ===== Copy button for user bubble row hover =====
@@ -1667,7 +1665,7 @@
 .bubbleActionBtn {
   background: none;
   border: none;
-  color: $icon-secondary;
+  color: var(--wallet-muted, #67748a);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1679,8 +1677,8 @@
   transition: opacity 0.15s, background-color 0.12s, color 0.12s;
 
   &:hover {
-    background: $layer-hover-01;
-    color: $icon-primary;
+    background: var(--wallet-surface-hover, #f0f3f8);
+    color: var(--wallet-text, #172033);
   }
 }
 
@@ -1695,20 +1693,20 @@
   justify-content: space-between;
   padding: 8px 12px;
   margin: 0 8px 8px;
-  background: $layer-01;
+  background: var(--wallet-surface, #ffffff);
   border-radius: 8px;
-  border: 1px solid $border-subtle-01;
+  border: 1px solid var(--wallet-border, #dfe6ef);
 }
 
 .undoBannerText {
   font-size: 12px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
 }
 
 .undoBannerBtn {
   background: none;
-  border: 1px solid $interactive;
-  color: $interactive;
+  border: 1px solid var(--wallet-accent, #4458d9);
+  color: var(--wallet-accent, #4458d9);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1719,7 +1717,7 @@
   transition: background-color 0.12s;
 
   &:hover {
-    background: $layer-selected-inverse;
+    background: var(--wallet-accent, #4458d9);
   }
 }
 
@@ -1757,19 +1755,19 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  background: $layer-02;
-  border: 1px solid var(--cds-border-subtle-03);
+  background: var(--wallet-surface-soft, #f5f7fb);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 4px;
   padding: 4px 10px;
   font-size: 11px;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 
   &:hover {
-    background: $layer-hover-01;
+    background: var(--wallet-surface-hover, #f0f3f8);
   }
 }
 
@@ -1786,8 +1784,8 @@
   max-width: 320px;
   max-height: 300px;
   overflow-y: auto;
-  background: $background;
-  border: 1px solid var(--cds-border-subtle-03);
+  background: var(--wallet-surface, #ffffff);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   z-index: 10001;
@@ -1797,7 +1795,7 @@
 .sessionDropdownTitle {
   font-size: 10px;
   font-weight: 600;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 6px 8px 4px;
@@ -1806,7 +1804,7 @@
 .sessionEmpty {
   padding: 12px 8px;
   font-size: 11px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   text-align: center;
 }
 
@@ -1821,15 +1819,15 @@
   transition: background-color 0.12s;
 
   &:hover {
-    background: $layer-hover-01;
+    background: var(--wallet-surface-hover, #f0f3f8);
   }
 }
 
 .sessionItemActive {
-  background: $layer-selected;
+  background: var(--wallet-accent-soft, #eef1ff);
 
   &:hover {
-    background: $layer-selected-hover;
+    background: var(--wallet-accent-soft, #eef1ff);
   }
 }
 
@@ -1842,7 +1840,7 @@
 
 .sessionItemTitle {
   font-size: 12px;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1851,7 +1849,7 @@
 
 .sessionItemTime {
   font-size: 10px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   margin-top: 1px;
   white-space: nowrap;
   overflow: hidden;
@@ -1861,7 +1859,7 @@
 .sessionItemDelete {
   background: none;
   border: none;
-  color: $icon-secondary;
+  color: var(--wallet-muted, #67748a);
   cursor: pointer;
   padding: 2px;
   border-radius: 3px;
@@ -1877,7 +1875,7 @@
   }
 
   &:hover {
-    color: $support-error;
+    color: var(--wallet-negative, #c9434d);
   }
 }
 
@@ -1895,13 +1893,13 @@
 .authRequiredTitle {
   font-size: 16px;
   font-weight: 700;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   margin-bottom: 8px;
 }
 
 .authRequiredDesc {
   font-size: 13px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   line-height: 1.5;
   max-width: 280px;
 }
@@ -1909,7 +1907,7 @@
 // ===== Source Citations =====
 
 .citationLink {
-  color: $interactive;
+  color: var(--wallet-accent, #4458d9);
   text-decoration: none;
   font-weight: 700;
   font-size: 11px;
@@ -1922,8 +1920,8 @@
 }
 
 .citationRef {
-  color: $text-secondary;
-  background: var(--cds-background-tertiary);
+  color: var(--wallet-muted, #67748a);
+  background: var(--wallet-surface-soft, #f5f7fb);
   font-weight: 700;
   font-size: 11px;
   padding: 0 3px;
@@ -1934,15 +1932,15 @@
 .sourcesBlock {
   margin: 12px 0 4px;
   padding: 10px 12px;
-  background: $background;
-  border: 1px solid var(--cds-border-subtle-03);
+  background: var(--wallet-surface, #ffffff);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 8px;
 }
 
 .sourcesHeader {
   font-size: 10px;
   font-weight: 600;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-bottom: 6px;
@@ -1966,7 +1964,7 @@
 }
 
 .sourceIndex {
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   font-weight: 700;
   font-size: 10px;
   flex-shrink: 0;
@@ -1974,7 +1972,7 @@
 }
 
 .sourceLink {
-  color: $interactive;
+  color: var(--wallet-accent, #4458d9);
   text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1986,7 +1984,7 @@
 }
 
 .sourceName {
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   font-size: 11px;
   flex-shrink: 0;
 }
@@ -2004,12 +2002,12 @@
   cursor: default;
 
   &:hover {
-    background: color-mix(in srgb, var(--cds-interactive) 18%, transparent);
+    background: color-mix(in srgb, var(--wallet-accent, #4458d9) 18%, transparent);
   }
 }
 
 .citeBlockHighlighted {
-  background: color-mix(in srgb, var(--cds-interactive) 22%, transparent);
+  background: color-mix(in srgb, var(--wallet-accent, #4458d9) 22%, transparent);
 }
 
 .citePill {
@@ -2017,9 +2015,9 @@
   vertical-align: baseline;
   font-size: 10px;
   font-weight: 600;
-  color: $interactive;
+  color: var(--wallet-accent, #4458d9);
   background: transparent;
-  border: 1px solid color-mix(in srgb, var(--cds-interactive) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--wallet-accent, #4458d9) 30%, transparent);
   border-radius: 10px;
   padding: 1px 6px;
   margin: 0 2px;
@@ -2029,8 +2027,8 @@
   transition: background 0.15s ease, border-color 0.15s ease;
 
   &:hover {
-    background: color-mix(in srgb, var(--cds-interactive) 12%, transparent);
-    border-color: $interactive;
+    background: color-mix(in srgb, var(--wallet-accent, #4458d9) 12%, transparent);
+    border-color: var(--wallet-accent, #4458d9);
   }
 }
 
@@ -2049,8 +2047,8 @@
   min-width: 300px;
   max-width: 380px;
   padding: 10px 12px;
-  background: $background;
-  border: 1px solid var(--cds-border-subtle-03);
+  background: var(--wallet-surface, #ffffff);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -2067,7 +2065,7 @@
 .sourcePanelTitle {
   font-size: 10px;
   font-weight: 600;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -2077,24 +2075,24 @@
 .sourceCard {
   padding: 8px 10px;
   border-radius: 6px;
-  background: $background;
+  background: var(--wallet-surface, #ffffff);
   transition: background 0.15s ease;
   display: flex;
   flex-direction: column;
   gap: 3px;
 
   &:hover {
-    background: var(--cds-layer-hover-01);
+    background: var(--wallet-surface-hover, #f0f3f8);
   }
 }
 
 .sourceCardHighlighted {
-  background: color-mix(in srgb, var(--cds-interactive) 15%, transparent) !important;
-  outline: 1px solid color-mix(in srgb, var(--cds-interactive) 40%, transparent);
+  background: color-mix(in srgb, var(--wallet-accent, #4458d9) 15%, transparent) !important;
+  outline: 1px solid color-mix(in srgb, var(--wallet-accent, #4458d9) 40%, transparent);
 }
 
 .sourceCardTitle {
-  color: $interactive;
+  color: var(--wallet-accent, #4458d9);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
@@ -2106,12 +2104,12 @@
 }
 
 .sourceCardDomain {
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   font-size: 11px;
 }
 
 .sourceCardSnippet {
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   font-size: 12px;
   line-height: 1.4;
   margin: 0;
@@ -2125,12 +2123,12 @@
 }
 
 .sourceCardDate {
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   font-size: 10px;
 }
 
 .sourceCardOpen {
-  color: $interactive;
+  color: var(--wallet-accent, #4458d9);
   font-size: 11px;
   font-weight: 500;
   text-decoration: none;
@@ -2151,12 +2149,12 @@
   margin-top: 8px;
   border: none;
   background: transparent;
-  color: $icon-secondary;
+  color: var(--wallet-muted, #67748a);
   cursor: pointer;
   font-size: 10px;
   transition: color 0.15s;
 
   &:hover {
-    color: $icon-primary;
+    color: var(--wallet-text, #172033);
   }
 }

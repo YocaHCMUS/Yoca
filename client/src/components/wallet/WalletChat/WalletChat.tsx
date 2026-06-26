@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
-import { Add, ChevronDown, Close, Maximize, OpenPanelLeft, OpenPanelRight, Playlist, Send, TrashCan } from "@carbon/icons-react";
+import { Plus as Add, ChevronDown, X as Close, Maximize2 as Maximize, PanelLeftOpen as OpenPanelLeft, PanelRightOpen as OpenPanelRight, List as Playlist, Send, Trash2 as TrashCan } from "lucide-react";
 import { WalletChatMessage } from "./WalletChatMessage";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
 import { ChatPromptMenu } from "./ChatPromptMenu";

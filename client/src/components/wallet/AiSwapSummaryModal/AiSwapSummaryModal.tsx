@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom";
-import { Close, ChevronDown, ChevronRight } from "@carbon/react/icons";
-import { SkeletonPlaceholder, SkeletonText } from "@carbon/react";
+import { ChevronDown, ChevronRight, X as Close } from "lucide-react";
 import { ID_MODAL_ROOT } from "@/config/constants";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import TrendNumWithSign from "@/components/TrendNumWithSign.tsx";
@@ -16,6 +15,14 @@ import { TokenDeepAnalysisView } from "./TokenDeepAnalysisView";
 import styles from "./ai-swap-summary.module.scss";
 
 const PAGE_SIZE = 10;
+
+function SkeletonLine({ width, heading = false }: { width: string; heading?: boolean }) {
+  return <span className={styles.skeletonLine} data-heading={heading ? "true" : "false"} style={{ width }} />;
+}
+
+function SkeletonBlock({ style }: { style?: React.CSSProperties }) {
+  return <span className={styles.skeletonBlock} style={style} />;
+}
 
 interface AiSwapSummaryModalProps {
   isOpen: boolean;
@@ -256,33 +263,33 @@ function LoadingSkeleton() {
         <div className={styles.statsRow}>
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className={styles.statCard}>
-              <SkeletonText width="80%" />
-              <SkeletonPlaceholder style={{ height: 24, width: "60%", margin: "0 auto" }} />
+              <SkeletonLine width="80%" />
+              <SkeletonBlock style={{ height: 24, width: "60%", margin: "0 auto" }} />
             </div>
           ))}
         </div>
         <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: 12 }}>
-          <SkeletonText heading width="40%" />
-          <SkeletonText width="100%" />
-          <SkeletonText width="100%" />
-          <SkeletonText width="75%" />
+          <SkeletonLine heading width="40%" />
+          <SkeletonLine width="100%" />
+          <SkeletonLine width="100%" />
+          <SkeletonLine width="75%" />
         </div>
         <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: 12 }}>
-          <SkeletonText width="30%" />
-          <SkeletonText width="90%" />
-          <SkeletonText width="85%" />
+          <SkeletonLine width="30%" />
+          <SkeletonLine width="90%" />
+          <SkeletonLine width="85%" />
         </div>
       </div>
       <div className={styles.rightColumn}>
         <div className={styles.rankedHeader}>
-          <SkeletonText width="40%" />
-          <SkeletonText width="20%" />
+          <SkeletonLine width="40%" />
+          <SkeletonLine width="20%" />
         </div>
         <div className={styles.rankedList}>
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className={styles.rankedRow}>
-              <SkeletonPlaceholder style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0 }} />
-              <SkeletonText width="60%" />
+              <SkeletonBlock style={{ width: 20, height: 20, borderRadius: "50%", flexShrink: 0 }} />
+              <SkeletonLine width="60%" />
             </div>
           ))}
         </div>

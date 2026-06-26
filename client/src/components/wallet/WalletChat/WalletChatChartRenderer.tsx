@@ -464,7 +464,7 @@ function TableRenderer({ spec, data, onAction }: TableRendererProps) {
                 onMouseEnter={() => setHoveredIdx(globalIdx)}
                 onMouseLeave={() => setHoveredIdx(null)}
                 className={styles.tableRow}
-                style={{ background: hoveredIdx === globalIdx && rowQuery ? "var(--cds-layer-hover)" : undefined }}
+                style={{ background: hoveredIdx === globalIdx && rowQuery ? "var(--wallet-surface-hover, #f0f3f8)" : undefined }}
               >
                 {cols.map((col) => (
                   <td key={col.field} className={styles.tableTd}>

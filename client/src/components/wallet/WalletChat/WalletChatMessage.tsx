@@ -2,7 +2,7 @@ import classNames from "classnames";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import ReactDOM from "react-dom";
 import { useNavigate } from "react-router";
-import { Copy, Checkmark, Restart, Edit } from "@carbon/icons-react";
+import { Copy, Check as Checkmark, RotateCcw as Restart, Pencil as Edit } from "lucide-react";
 import { ID_MODAL_ROOT } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type { TranslationKeyPath } from "@/config/localization";

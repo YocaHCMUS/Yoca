@@ -1,6 +1,3 @@
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/theme' as *;
-@use '@carbon/react/scss/type' as *;
 
 /* ── 2-column layout ─────────────────── */
 .twoColumnLayout {
@@ -8,7 +5,7 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  gap: $spacing-05;
+  gap: 20px;
 }
 
 .leftColumn {
@@ -16,7 +13,7 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: $spacing-04;
+  gap: 16px;
   min-width: 0;
 }
 
@@ -24,11 +21,11 @@
   width: 480px;
   flex-shrink: 0;
   overflow-y: auto;
-  border-left: 1px solid $border-subtle;
-  padding-left: $spacing-05;
+  border-left: 1px solid var(--wallet-border, #dfe6ef);
+  padding-left: 20px;
   display: flex;
   flex-direction: column;
-  gap: $spacing-04;
+  gap: 16px;
 }
 
 /* Error */
@@ -36,24 +33,22 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: $spacing-04;
-  padding: $spacing-07 0;
+  gap: 16px;
+  padding: 32px 0;
 }
 
 .errorText {
-  @include type-style('body-01');
-  color: $support-error;
+  color: var(--wallet-negative, #c9434d);
   margin: 0;
   text-align: center;
 }
 
 .retryBtn {
   background-color: var(--button-primary);
-  color: $text-on-color;
+  color: #ffffff;
   border: none;
   border-radius: 6px;
-  padding: $spacing-03 $spacing-06;
-  @include type-style('body-compact-01');
+  padding: 12px 24px;
   cursor: pointer;
   font-weight: 600;
 
@@ -64,42 +59,39 @@
 
 /* ── Section titles ──────────────────── */
 .sectionTitle {
-  @include type-style('label-01');
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin: 0 0 $spacing-02 0;
+  margin: 0 0 8px 0;
 }
 
 /* ── Stats row ───────────────────────── */
 .statsRow {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: $spacing-02;
+  gap: 8px;
 }
 
 .statCard {
-  background-color: $layer-02;
-  border: 1px solid $border-subtle;
+  background-color: var(--wallet-surface-soft, #f5f7fb);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 6px;
-  padding: $spacing-03;
+  padding: 12px;
   text-align: center;
   display: flex;
   flex-direction: column;
-  gap: $spacing-01;
+  gap: 4px;
 }
 
 .statLabel {
-  @include type-style('label-01');
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-size: 9px;
 }
 
 .statValue {
-  @include type-style('heading-02');
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   font-weight: 600;
   font-size: 16px;
 }
@@ -108,16 +100,15 @@
 .analysisSection {
   display: flex;
   flex-direction: column;
-  gap: $spacing-03;
-  background-color: $layer-02;
-  border: 1px solid $border-subtle;
+  gap: 12px;
+  background-color: var(--wallet-surface-soft, #f5f7fb);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 8px;
-  padding: $spacing-04;
+  padding: 16px;
 }
 
 .analysisText {
-  @include type-style('body-01');
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   margin: 0;
   white-space: pre-wrap;
   line-height: 1.6;
@@ -127,26 +118,25 @@
 .riskSection {
   display: flex;
   flex-direction: column;
-  gap: $spacing-02;
+  gap: 8px;
 }
 
 .riskToggle {
   background: transparent;
-  border: 1px solid $border-subtle;
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 4px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   cursor: pointer;
-  @include type-style('label-01');
-  padding: $spacing-01 $spacing-03;
+  padding: 4px 12px;
   transition: background-color 0.15s, color 0.15s;
   align-self: flex-start;
   display: flex;
   align-items: center;
-  gap: $spacing-02;
+  gap: 8px;
 
   &:hover {
-    background-color: $layer-hover-01;
-    color: $text-primary;
+    background-color: var(--wallet-surface-hover, #f0f3f8);
+    color: var(--wallet-text, #172033);
   }
 }
 
@@ -156,21 +146,19 @@
 
 .riskList {
   margin: 0;
-  padding-left: $spacing-05;
+  padding-left: 20px;
   display: flex;
   flex-direction: column;
-  gap: $spacing-01;
+  gap: 4px;
 }
 
 .riskItem {
-  @include type-style('body-01');
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   line-height: 1.5;
 }
 
 .cachedHint {
-  @include type-style('label-01');
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   text-align: right;
   margin: 0;
 }
@@ -179,7 +167,7 @@
 .chartSection {
   display: flex;
   flex-direction: column;
-  gap: $spacing-02;
+  gap: 8px;
 }
 
 .timeline {
@@ -194,7 +182,7 @@
     top: 0;
     bottom: 0;
     width: 2px;
-    background-color: $border-subtle;
+    background-color: var(--wallet-border, #dfe6ef);
     z-index: 0;
   }
 }
@@ -207,10 +195,9 @@
 .dateLabel {
   width: 70px;
   flex-shrink: 0;
-  @include type-style('label-01');
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   text-align: right;
-  padding: $spacing-03 $spacing-02 0 0;
+  padding: 12px 8px 0 0;
 }
 
 .dotColumn {
@@ -218,7 +205,7 @@
   flex-shrink: 0;
   display: flex;
   justify-content: center;
-  padding-top: $spacing-03;
+  padding-top: 12px;
   position: relative;
   z-index: 1;
 }
@@ -227,9 +214,9 @@
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background-color: $border-subtle;
+  background-color: var(--wallet-border, #dfe6ef);
   flex-shrink: 0;
-  box-shadow: 0 0 0 2px $layer-01;
+  box-shadow: 0 0 0 2px var(--wallet-surface, #ffffff);
 }
 
 .nodeContent {
@@ -241,12 +228,16 @@
 .chartsGrid {
   display: flex;
   flex-direction: column;
-  gap: $spacing-03;
+  gap: 12px;
 }
 
 .echartCard {
-  background-color: $layer-01;
-  border: 1px solid $border-subtle;
+  background-color: var(--wallet-surface, #ffffff);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 8px;
-  padding: $spacing-03;
+  padding: 12px;
 }
+.skeletonLine { display:block; height:12px; border-radius:6px; background:var(--wallet-surface-hover,#eef2f7); animation:swapSkeleton 1.1s ease-in-out infinite alternate; }
+.skeletonLine[data-heading="true"] { height:18px; }
+.skeletonBlock { display:block; border-radius:8px; background:var(--wallet-surface-hover,#eef2f7); animation:swapSkeleton 1.1s ease-in-out infinite alternate; }
+@keyframes swapSkeleton { to { opacity:.5; } }

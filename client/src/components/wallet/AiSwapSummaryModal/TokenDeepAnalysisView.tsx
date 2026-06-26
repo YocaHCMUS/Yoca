@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { SkeletonPlaceholder, SkeletonText } from "@carbon/react";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useCarbonChartBaseOption } from "@/util/carbon-chart-base";
@@ -21,6 +20,14 @@ interface TokenDeepAnalysisViewProps {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+function SkeletonLine({ width }: { width: string }) {
+  return <span className={styles.skeletonLine} style={{ width }} />;
+}
+
+function SkeletonBlock({ style }: { style?: { height?: number; width?: string; borderRadius?: number; marginBottom?: number } }) {
+  return <span className={styles.skeletonBlock} style={style} />;
+}
 
 function groupTradesByDay(timeline: TokenDeepAnalysisResponse["tradeTimeline"]): Map<number, TradeIndicator[]> {
   const dayMap = new Map<number, TradeIndicator[]>();
@@ -159,28 +166,28 @@ export function TokenDeepAnalysisView({
           <div className={styles.statsRow}>
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className={styles.statCard}>
-                <SkeletonText width="80%" />
-                <SkeletonPlaceholder style={{ height: 20, width: "50%", margin: "0 auto" }} />
+                <SkeletonLine width="80%" />
+                <SkeletonBlock style={{ height: 20, width: "50%" }} />
               </div>
             ))}
           </div>
           <div className={styles.analysisSection}>
-            <SkeletonText width="30%" />
-            <SkeletonText width="100%" />
-            <SkeletonText width="100%" />
-            <SkeletonText width="75%" />
+            <SkeletonLine width="30%" />
+            <SkeletonLine width="100%" />
+            <SkeletonLine width="100%" />
+            <SkeletonLine width="75%" />
           </div>
           <div style={{ marginTop: 4 }}>
-            <SkeletonText width="25%" />
-            <SkeletonText width="90%" />
-            <SkeletonText width="85%" />
+            <SkeletonLine width="25%" />
+            <SkeletonLine width="90%" />
+            <SkeletonLine width="85%" />
           </div>
         </div>
         <div className={styles.rightColumn}>
-          <SkeletonText width="40%" />
-          <SkeletonPlaceholder style={{ height: 200, width: "100%", borderRadius: 8, marginBottom: 12 }} />
-          <SkeletonText width="40%" />
-          <SkeletonPlaceholder style={{ height: 200, width: "100%", borderRadius: 8 }} />
+          <SkeletonLine width="40%" />
+          <SkeletonBlock style={{ height: 200, width: "100%", borderRadius: 8, marginBottom: 12 }} />
+          <SkeletonLine width="40%" />
+          <SkeletonBlock style={{ height: 200, width: "100%", borderRadius: 8 }} />
         </div>
       </div>
     );

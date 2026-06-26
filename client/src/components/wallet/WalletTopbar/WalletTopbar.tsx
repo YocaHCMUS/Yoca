@@ -1,31 +1,26 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Bell,
+  BellRing,
   Bookmark,
-  BookmarkFilled,
-  Notification,
-  NotificationFilled,
-  Repeat,
-  Share,
-  AiGenerate,
-  Report,
-  Download,
-  ChevronDown,
-  Edit,
-  Tag as TagIcon,
-  Wallet,
+  BookmarkCheck,
+  Bot,
   Copy,
-  Information,
-} from "@carbon/icons-react";
-import { InlineNotification, Tag, Tooltip } from "@carbon/react";
+  Info,
+  Pencil,
+  Repeat2,
+  Share2,
+  Tag,
+  Wallet,
+  X,
+} from "lucide-react";
 import client from "@/api/main";
 import { PeriodSelector } from "@/components/common/PeriodSelector/PeriodSelector";
 import { WalletLabelModal } from "@/components/wallet/WalletLabelModal/WalletLabelModal";
 import { WalletTagsModal } from "@/components/wallet/WalletTagsModal/WalletTagsModal";
 import {
   fetchWalletIntelligence,
-  fetchWalletOverview,
   type WalletIntelligenceResponse,
-  type WalletOverviewMultiPeriodResponse,
   type WalletOverviewPeriodKey,
 } from "@/services/wallet/walletApi";
 import {
@@ -37,7 +32,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWatchlist } from "@/contexts/WatchlistContext";
 import { PERIOD_OPTIONS } from "@/config/periodOptions";
 import { useNavigate } from "react-router";
-import type { TimePeriod } from "@/types/chart-filters.types";
 import { useWalletLabels } from "@/hooks/profile/useWalletLabels";
 import styles from "./WalletTopbar.module.scss";
 
@@ -92,7 +86,7 @@ function formatLocalizedWalletAge(
   const years = Math.floor(ageDays / 365);
   const remainingAfterYears = ageDays % 365;
   const months = Math.floor(remainingAfterYears / 30);
-  const days = remainingAfterYears % 30;
+  const days = ageDays % 30;
   const parts: string[] = [];
   if (years > 0) parts.push(`${years} ${units.year}`);
   if (months > 0) parts.push(`${months} ${units.month}`);
@@ -154,11 +148,6 @@ export interface WalletTopbarProps {
 export function WalletTopbar({
   address,
   onAiAnalysisOpen,
-  onAuditOpen,
-  onExportData,
-  onExportCharts,
-  onExportPdf,
-  isExporting,
   currentPeriod = "24H",
   winRatePeriod,
   onPeriodChange,
@@ -178,17 +167,16 @@ export function WalletTopbar({
   const label = labels[address] ?? "";
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
   const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
-  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [followedWallets, setFollowedWallets] = useState<FollowedWalletRow[]>(
     [],
   );
   const [followLoading, setFollowLoading] = useState(false);
   const [followPending, setFollowPending] = useState(false);
   const [followNotice, setFollowNotice] = useState<FollowNotice | null>(null);
-  const exportMenuRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const isBookmarked = walletWatchlist.some(
-    (a) => a.toLowerCase() === address.toLowerCase(),
+    (item) => item.toLowerCase() === address.toLowerCase(),
   );
   const isBookmarkPending = Boolean(walletPending[address]);
   const normalizedAddress = normalizeWalletAddress(address);
@@ -227,6 +215,7 @@ export function WalletTopbar({
     (identityStatus === "known" && identityName
       ? identityName
       : shortenWalletAddress(address));
+
   const safeWinRate = Math.max(
     0,
     Math.min(100, Number(winRateStats?.winRate ?? 0)),
@@ -259,7 +248,7 @@ export function WalletTopbar({
     if (!address || address === "null") return;
     fetchWalletIntelligence(address, "solana")
       .then(setIntelligence)
-      .catch(() => {});
+      .catch(() => setIntelligence(null));
   }, [address]);
 
   const loadFollowedWallets = useCallback(async () => {
@@ -272,9 +261,7 @@ export function WalletTopbar({
     setFollowLoading(true);
     try {
       const res = await client.api.alerts.index.$get();
-      if (!res.ok) {
-        throw new Error(`Failed to load followed wallets: ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`Failed to load followed wallets: ${res.status}`);
       const data = (await res.json()) as FollowedWalletRow[];
       setFollowedWallets(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -299,22 +286,6 @@ export function WalletTopbar({
       .catch(() => setTags([]));
   }, [address, user]);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        exportMenuRef.current &&
-        !exportMenuRef.current.contains(event.target as Node)
-      ) {
-        setIsExportMenuOpen(false);
-      }
-    };
-    if (isExportMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [isExportMenuOpen]);
-
   const handleCopyAddress = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(address);
@@ -324,9 +295,7 @@ export function WalletTopbar({
   }, [address]);
 
   const handleLabelSave = useCallback(
-    (newLabel: string) => {
-      setApiLabel(address, newLabel);
-    },
+    (newLabel: string) => setApiLabel(address, newLabel),
     [address, setApiLabel],
   );
 
@@ -352,7 +321,6 @@ export function WalletTopbar({
 
     setFollowNotice(null);
     setFollowPending(true);
-
     try {
       if (followedWallet) {
         const res = await (client.api.alerts as any)[":id"].$delete({
@@ -360,29 +328,19 @@ export function WalletTopbar({
         });
         if (res.status === 404) {
           await loadFollowedWallets();
-          setFollowNotice({
-            kind: "warning",
-            title: tr("wallet.followWalletNotFound"),
-          });
+          setFollowNotice({ kind: "warning", title: tr("wallet.followWalletNotFound") });
           return;
         }
-        if (!res.ok) {
-          throw new Error(`Failed to unfollow wallet: ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`Failed to unfollow wallet: ${res.status}`);
         await res.json().catch(() => null);
-        setFollowedWallets((prev) =>
-          prev.filter((row) => row.id !== followedWallet.id),
+        setFollowedWallets((current) =>
+          current.filter((row) => row.id !== followedWallet.id),
         );
-        setFollowNotice({
-          kind: "success",
-          title: tr("wallet.walletUnfollowed"),
-        });
+        setFollowNotice({ kind: "success", title: tr("wallet.walletUnfollowed") });
         return;
       }
 
-      const res = await client.api.alerts.index.$post({
-        json: { address: address.trim() },
-      });
+      const res = await client.api.alerts.index.$post({ json: { address: address.trim() } });
       const body = (await res.json().catch(() => null)) as
         | FollowWalletResponse
         | { error?: string }
@@ -399,14 +357,13 @@ export function WalletTopbar({
         return;
       }
       if (!res.ok || !body || !("wallet" in body)) {
-        const error =
-          body && "error" in body && typeof body.error === "string"
-            ? body.error
-            : `Failed to follow wallet: ${res.status}`;
+        const error = body && "error" in body && typeof body.error === "string"
+          ? body.error
+          : `Failed to follow wallet: ${res.status}`;
         throw new Error(error);
       }
 
-      setFollowedWallets((prev) => mergeFollowedWalletRows(prev, body.wallet));
+      setFollowedWallets((current) => mergeFollowedWalletRows(current, body.wallet));
       setFollowNotice({
         kind: body.heliusSync.ok ? "success" : "warning",
         title: tr("wallet.walletFollowed"),
@@ -419,388 +376,149 @@ export function WalletTopbar({
       console.error("[WalletTopbar] Failed to toggle followed wallet", error);
       setFollowNotice({
         kind: "error",
-        title: isFollowed
-          ? tr("wallet.unfollowWalletFailed")
-          : tr("wallet.followWalletFailed"),
+        title: isFollowed ? tr("wallet.unfollowWalletFailed") : tr("wallet.followWalletFailed"),
       });
       void loadFollowedWallets();
     } finally {
       setFollowPending(false);
     }
-  }, [
-    address,
-    followPending,
-    followedWallet,
-    isFollowed,
-    loadFollowedWallets,
-    tr,
-    user,
-  ]);
+  }, [address, followPending, followedWallet, isFollowed, loadFollowedWallets, tr, user]);
 
   const handleOpenFirstFunder = useCallback(
-    (funderAddress: string) => {
-      navigate(`/wallets/${encodeURIComponent(funderAddress)}`);
-    },
+    (funderAddress: string) => navigate(`/wallets/${encodeURIComponent(funderAddress)}`),
     [navigate],
   );
+
+  const handleShare = useCallback(async () => {
+    const shareData = { title: displayName, text: address, url: window.location.href };
+    try {
+      if (navigator.share) await navigator.share(shareData);
+      else await navigator.clipboard.writeText(window.location.href);
+    } catch {
+      // User cancelled native sharing or clipboard is unavailable.
+    }
+  }, [address, displayName]);
 
   return (
     <>
       <div
+        ref={cardRef}
         className={styles.topbar}
         data-chat-docked={isAiChatDocked ? "true" : "false"}
       >
-        <div className={styles.topbarLeft}>
-          <div className={styles.topbarAvatar}>
-            <Wallet size={16} />
-          </div>
-          <div className={styles.topbarIdentity}>
-            <div className={styles.topbarAddress}>
-              <span className={styles.topbarAddressText}>{displayName}</span>
-              {displayName !== shortenWalletAddress(address) &&
-                displayName !== address && (
-                  <span
-                    style={{
-                      fontSize: "12px",
-                      color: "var(--cds-text-secondary)",
-                      marginLeft: "4px",
-                      marginRight: "4px",
-                      fontFamily: "monospace",
-                    }}
-                  >
-                    {shortenWalletAddress(address)}
-                  </span>
-                )}
-              <button
-                type="button"
-                className={styles.copyBtn}
-                onClick={handleCopyAddress}
-                aria-label="Copy address"
-              >
-                <Copy size={13} />
-              </button>
-              <button
-                className={styles.editLabelBtn}
-                onClick={() => setIsLabelModalOpen(true)}
-                aria-label="Edit wallet label"
-                title="Assign custom label"
-              >
-                <Edit size={16} />
-              </button>
+        <section className={styles.identityCard} aria-label={String(tr("walletPage.currentWallet"))}>
+          <div className={styles.walletGlyph}><Wallet size={18} strokeWidth={1.75} /></div>
+          <div className={styles.identityContent}>
+            <div className={styles.identityHeading}>
+              <span className={styles.eyebrow}>{tr("walletPage.currentWallet")}</span>
+              <span className={styles.addressLine}>
+                <strong>{displayName}</strong>
+                <code>{shortenWalletAddress(address)}</code>
+                <button type="button" className={styles.inlineIconButton} onClick={handleCopyAddress} title={String(tr("walletPage.ui.copyAddress"))} aria-label={String(tr("walletPage.ui.copyAddress"))}>
+                  <Copy size={14} strokeWidth={1.85} />
+                </button>
+                <button type="button" className={styles.inlineIconButton} onClick={() => setIsLabelModalOpen(true)} title={String(tr("walletPage.ui.editLabel"))} aria-label={String(tr("walletPage.ui.editLabel"))}>
+                  <Pencil size={14} strokeWidth={1.85} />
+                </button>
+              </span>
             </div>
-            <div className={styles.topbarSub}>
-              {walletAgeLabel && (
-                <span className={styles.chipGreen}>{walletAgeLabel}</span>
-              )}
-              {identityStatus === "unknown" && (
-                <span className={styles.chipGray}>
-                  {tr("walletPage.unknownEntity")}
-                </span>
-              )}
-              {identityStatus === "known" && identityCategory && (
-                <Tag size="sm" type="teal">
-                  {identityCategory}
-                </Tag>
-              )}
+            <div className={styles.identityMeta}>
+              {walletAgeLabel && <span className={styles.metaPill}>{walletAgeLabel}</span>}
+              {identityStatus === "unknown" && <span className={styles.metaPill}>{tr("walletPage.unknownEntity")}</span>}
+              {identityStatus === "known" && identityCategory && <span className={`${styles.metaPill} ${styles.metaPillAccent}`}>{identityCategory}</span>}
               {firstFundLabel && (
-                <button
-                  type="button"
-                  className={styles.inlineTagBtn}
-                  onClick={() =>
-                    firstFund?.funderAddress &&
-                    handleOpenFirstFunder(firstFund.funderAddress)
-                  }
-                >
-                  <Tag size="sm" type="blue">
-                    {String(tr("walletPage.firstFunderTag"))}: {firstFundLabel}
-                  </Tag>
+                <button type="button" className={`${styles.metaPill} ${styles.metaPillAction}`} onClick={() => firstFund?.funderAddress && handleOpenFirstFunder(firstFund.funderAddress)}>
+                  {tr("walletPage.firstFunderTag")}: {shortenWalletAddress(firstFundLabel)}
                 </button>
               )}
-              {tags.map((tag) => (
-                <Tag key={tag} size="sm" type="cyan">
-                  {tag}
-                </Tag>
-              ))}
-              <button
-                type="button"
-                className={styles.inlineTagBtn}
-                onClick={() => user && setIsTagsModalOpen(true)}
-                disabled={!user}
-              >
-                <TagIcon size={16} />
+              {tags.slice(0, 2).map((tag) => <span key={tag} className={styles.metaPill}>{tag}</span>)}
+              <button type="button" className={styles.manageTagsButton} onClick={() => user && setIsTagsModalOpen(true)} disabled={!user} title={user ? String(tr("walletPage.manageTagsLabel")) : String(tr("walletPage.signInManageTagsLabel"))}>
+                <Tag size={13} strokeWidth={1.85} />
               </button>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className={styles.topbarCenter}>
-          <div className={styles.winRateMiniCard}>
-            <div className={styles.winRateMiniHeader}>
-              <span>{tr("walletPage.tokenWinRate.title")}</span>
-              <div className={styles.winRateTooltipWrap}>
-                <button
-                  type="button"
-                  className={styles.winRateInfoBtn}
-                  aria-label={String(
-                    tr("walletPage.tokenWinRate.explanationAria"),
-                  )}
-                  aria-describedby="wallet-win-rate-tooltip"
-                >
-                  <Information size={13} />
-                </button>
-
-                <div
-                  id="wallet-win-rate-tooltip"
-                  className={styles.winRateTooltipPanel}
-                  role="tooltip"
-                >
-                  <p>
-                    <strong>
-                      {tr("walletPage.tokenWinRate.tooltipWinRateLabel")}
-                    </strong>{" "}
-                    {tr("walletPage.tokenWinRate.tooltipWinRateDescription", {
-                      period: winRatePeriod,
-                    })}
-                  </p>
-
-                  <dl className={styles.winRateTooltipStats}>
-                    <div>
-                      <dt>
-                        {tr("walletPage.tokenWinRate.tooltipTotalTradedTokens")}
-                      </dt>
-                      <dd>
-                        {tr("walletPage.tokenWinRate.tooltipTokenValue", {
-                          value: formatCount(totalTraded),
-                        })}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>
-                        {tr(
-                          "walletPage.tokenWinRate.tooltipRealizedProfitTokens",
-                        )}
-                      </dt>
-                      <dd>
-                        {tr("walletPage.tokenWinRate.tooltipTokenValue", {
-                          value: formatCount(winCount),
-                        })}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>
-                        {tr(
-                          "walletPage.tokenWinRate.tooltipRealizedLossTokens",
-                        )}
-                      </dt>
-                      <dd>
-                        {tr("walletPage.tokenWinRate.tooltipTokenValue", {
-                          value: formatCount(lossCount),
-                        })}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>
-                        {tr("walletPage.tokenWinRate.tooltipClosedAvgLoss")}
-                      </dt>
-                      <dd>{formatSignedCurrency(avgLossUsd, "-")}</dd>
-                    </div>
-                  </dl>
-                </div>
-              </div>
+        <section className={styles.winRateCard} aria-label={String(tr("walletPage.tokenWinRate.title"))}>
+          <div className={styles.winRateHeader}>
+            <div>
+              <span className={styles.eyebrow}>{tr("walletPage.tokenWinRate.title")}</span>
+              <span className={styles.periodCaption}>{winRatePeriod}</span>
             </div>
-
-            <div className={styles.winRateMiniBody}>
-              <div className={styles.winRateMainCol}>
-                <div
-                  className={styles.winRateValue}
-                  data-positive={isHighWinRate}
-                >
-                  {winRateLoading
-                    ? "--"
-                    : hasWinRateStats
-                      ? formatWinRatePercent(safeWinRate)
-                      : "--"}
-                </div>
-                <div className={styles.winRateProgressWrap} aria-hidden="true">
-                  <div
-                    className={styles.winRateProgressWin}
-                    style={{
-                      width: `${winRateLoading || !hasWinRateStats ? 0 : safeWinRate}%`,
-                    }}
-                  />
-                  <div
-                    className={styles.winRateProgressLoss}
-                    style={{
-                      width: `${winRateLoading || !hasWinRateStats ? 0 : 100 - safeWinRate}%`,
-                    }}
-                  />
-                </div>
-                <div className={styles.winRateCounts} title={winRateSummary}>
-                  <span className={styles.winRateCountsText}>
-                    {winRateSummary}
-                  </span>
-                </div>
-              </div>
-
-              <div className={styles.winRateDivider} />
-
-              <div className={styles.winRateMetricCol}>
-                <span>{tr("walletPage.tokenWinRate.avgWin")}</span>
-                <strong className={styles.winRateMetricWin}>
-                  {formatSignedCurrency(avgWinUsd, "+")}
-                </strong>
-              </div>
-
-              <div className={styles.winRateMetricCol}>
-                <span>{tr("walletPage.tokenWinRate.avgLoss")}</span>
-                <strong className={styles.winRateMetricLoss}>
-                  {formatSignedCurrency(avgLossUsd, "-")}
-                </strong>
+            <div className={styles.winRateTooltipWrap}>
+              <button type="button" className={styles.infoButton} aria-label={String(tr("walletPage.tokenWinRate.explanationAria"))}>
+                <Info size={14} strokeWidth={1.9} />
+              </button>
+              <div className={styles.winRateTooltipPanel} role="tooltip">
+                <p><strong>{tr("walletPage.tokenWinRate.tooltipWinRateLabel")}</strong> {tr("walletPage.tokenWinRate.tooltipWinRateDescription", { period: winRatePeriod })}</p>
+                <dl>
+                  <div><dt>{tr("walletPage.tokenWinRate.tooltipTotalTradedTokens")}</dt><dd>{formatCount(totalTraded)}</dd></div>
+                  <div><dt>{tr("walletPage.tokenWinRate.tooltipRealizedProfitTokens")}</dt><dd>{formatCount(winCount)}</dd></div>
+                  <div><dt>{tr("walletPage.tokenWinRate.tooltipRealizedLossTokens")}</dt><dd>{formatCount(lossCount)}</dd></div>
+                  <div><dt>{tr("walletPage.tokenWinRate.tooltipClosedAvgLoss")}</dt><dd>{formatSignedCurrency(avgLossUsd, "-")}</dd></div>
+                </dl>
               </div>
             </div>
           </div>
-        </div>
+          <div className={styles.winRateBody}>
+            <div className={styles.winRatePrimary}>
+              <strong data-positive={isHighWinRate}>{winRateLoading || !hasWinRateStats ? "--" : formatWinRatePercent(safeWinRate)}</strong>
+              <div className={styles.winRateTrack} aria-hidden="true">
+                <span className={styles.winRateWin} style={{ width: `${winRateLoading || !hasWinRateStats ? 0 : safeWinRate}%` }} />
+                <span className={styles.winRateLoss} style={{ width: `${winRateLoading || !hasWinRateStats ? 0 : 100 - safeWinRate}%` }} />
+              </div>
+              <small>{winRateSummary}</small>
+            </div>
+            <div className={styles.winRateMetric}>
+              <span>{tr("walletPage.tokenWinRate.avgWin")}</span>
+              <strong className={styles.positiveMetric}>{formatSignedCurrency(avgWinUsd, "+")}</strong>
+            </div>
+            <div className={styles.winRateMetric}>
+              <span>{tr("walletPage.tokenWinRate.avgLoss")}</span>
+              <strong className={styles.negativeMetric}>{formatSignedCurrency(avgLossUsd, "-")}</strong>
+            </div>
+          </div>
+        </section>
 
-        <div className={styles.topbarRight}>
-          <div className={styles.topbarRow}>
-            <PeriodSelector
-              value={currentPeriod}
-              onChange={(key) => onPeriodChange(key as WalletOverviewPeriodKey)}
-              options={PERIOD_OPTIONS}
-              compact
-            />
+        <section className={styles.actionsCard} aria-label={String(tr("walletPage.ui.actions"))}>
+          <div className={styles.periodControl}>
+            <span className={styles.eyebrow}>{tr("walletPage.ui.period")}</span>
+            <PeriodSelector value={currentPeriod} onChange={(key) => onPeriodChange(key as WalletOverviewPeriodKey)} options={PERIOD_OPTIONS} compact />
           </div>
-          <div className={styles.topbarRow}>
-            <Tooltip
-              label={
-                isBookmarked
-                  ? tr("wallet.bookmarked")
-                  : tr("wallet.bookmarkWallet")
-              }
-              align="bottom-left"
-            >
-              <button
-                type="button"
-                className={styles.iconBtn}
-                onClick={handleBookmark}
-                disabled={!user || isBookmarkPending}
-              >
-                {isBookmarked ? (
-                  <BookmarkFilled size={16} />
-                ) : (
-                  <Bookmark size={16} />
-                )}
-              </button>
-            </Tooltip>
-            <Tooltip label={followButtonLabel} align="bottom-left">
-              <button
-                type="button"
-                className={`${styles.iconBtn} ${isFollowed ? styles.iconBtnActive : ""}`.trim()}
-                onClick={handleFollowWallet}
-                disabled={followButtonDisabled}
-                aria-label={followButtonLabel}
-                aria-pressed={isFollowed}
-                title={followButtonLabel}
-              >
-                {isFollowed ? <NotificationFilled size={16} /> : <Notification size={16} />}
-              </button>
-            </Tooltip>
-            <Tooltip label={tr("wallet.compareWallet")} align="bottom-left">
-              <button
-                type="button"
-                className={styles.iconBtn}
-                onClick={() =>
-                  window.location.assign(
-                    `/comparison/wallets?wallets=${encodeURIComponent(address)}`,
-                  )
-                }
-              >
-                <Repeat size={16} />
-              </button>
-            </Tooltip>
-            <Tooltip label={tr("wallet.shareWallet")} align="bottom-left">
-              <button type="button" className={styles.iconBtn}>
-                <Share size={16} />
-              </button>
-            </Tooltip>
-            <Tooltip label="AI Analysis" align="bottom-left">
-              <button
-                type="button"
-                className={styles.iconBtn}
-                onClick={onAiAnalysisOpen}
-              >
-                <AiGenerate size={16} />
-              </button>
-            </Tooltip>
-            {/* <Tooltip label="Forensic Audit" align="bottom-left">
-              <button type="button" className={styles.iconBtn} onClick={onAuditOpen}>
-                <Report size={16} />
-              </button>
-            </Tooltip>
-            <div className={styles.exportMenuWrapper} ref={exportMenuRef}>
-              <button
-                type="button"
-                className={styles.ibtn}
-                onClick={() => setIsExportMenuOpen((prev) => !prev)}
-                disabled={isExporting}
-              >
-                <Download size={13} />
-                {tr("charts.export")}
-                <ChevronDown size={13} />
-              </button>
-              {isExportMenuOpen && (
-                <div className={styles.exportMenu}>
-                  <button type="button" className={styles.exportMenuItem} onClick={onExportData} disabled={isExporting}>
-                    <Download size={16} />
-                    Export XLSX
-                  </button>
-                  <button type="button" className={styles.exportMenuItem} onClick={onExportCharts} disabled={isExporting}>
-                    <Download size={16} />
-                    Export Charts ZIP
-                  </button>
-                  <button type="button" className={styles.exportMenuItem} onClick={onExportPdf} disabled={isExporting}>
-                    <Download size={16} />
-                    Export PDF Report
-                  </button>
-                </div>
-              )}
-            </div> */}
+          <div className={styles.actionButtons}>
+            <button type="button" className={styles.actionButton} onClick={handleBookmark} disabled={!user || isBookmarkPending} title={isBookmarked ? String(tr("wallet.bookmarked")) : String(tr("wallet.bookmarkWallet"))}>
+              {isBookmarked ? <BookmarkCheck size={16} strokeWidth={1.85} /> : <Bookmark size={16} strokeWidth={1.85} />}
+            </button>
+            <button type="button" className={`${styles.actionButton} ${isFollowed ? styles.actionButtonActive : ""}`} onClick={handleFollowWallet} disabled={followButtonDisabled} aria-pressed={isFollowed} title={followButtonLabel}>
+              {isFollowed ? <BellRing size={16} strokeWidth={1.85} /> : <Bell size={16} strokeWidth={1.85} />}
+            </button>
+            <button type="button" className={styles.actionButton} onClick={() => window.location.assign(`/comparison/wallets?wallets=${encodeURIComponent(address)}`)} title={String(tr("wallet.compareWallet"))}>
+              <Repeat2 size={16} strokeWidth={1.85} />
+            </button>
+            <button type="button" className={styles.actionButton} onClick={() => void handleShare()} title={String(tr("wallet.shareWallet"))}>
+              <Share2 size={16} strokeWidth={1.85} />
+            </button>
+            <button type="button" className={`${styles.actionButton} ${styles.aiActionButton}`} onClick={onAiAnalysisOpen} title={String(tr("walletPage.aiAnalysis"))}>
+              <Bot size={16} strokeWidth={1.85} />
+              <span>{tr("walletPage.aiAnalysis")}</span>
+            </button>
           </div>
-        </div>
+        </section>
       </div>
 
       {followNotice && (
-        <div className={styles.followNotice}>
-          <InlineNotification
-            kind={followNotice.kind}
-            title={followNotice.title}
-            subtitle={followNotice.subtitle}
-            onClose={() => setFollowNotice(null)}
-            lowContrast
-          />
-          {followNotice.showManageAlerts && (
-            <a className={styles.noticeLink} href="/alerts">
-              {tr("wallet.manageAlerts")}
-            </a>
-          )}
+        <div className={styles.followNotice} data-kind={followNotice.kind} role="status">
+          <div>
+            <strong>{followNotice.title}</strong>
+            {followNotice.subtitle && <span>{followNotice.subtitle}</span>}
+            {followNotice.showManageAlerts && <a href="/alerts">{tr("wallet.manageAlerts")}</a>}
+          </div>
+          <button type="button" onClick={() => setFollowNotice(null)} aria-label={String(tr("walletPage.ui.dismiss"))}><X size={15} strokeWidth={1.85} /></button>
         </div>
       )}
 
-      <WalletLabelModal
-        isOpen={isLabelModalOpen}
-        onClose={() => setIsLabelModalOpen(false)}
-        onSave={handleLabelSave}
-        walletAddress={address}
-        initialLabel={label}
-      />
-      <WalletTagsModal
-        isOpen={isTagsModalOpen}
-        onClose={() => setIsTagsModalOpen(false)}
-        onSave={handleTagsSave}
-        walletAddress={address}
-        walletLabel={label || undefined}
-        initialTags={tags}
-      />
+      <WalletLabelModal isOpen={isLabelModalOpen} onClose={() => setIsLabelModalOpen(false)} onSave={handleLabelSave} walletAddress={address} initialLabel={label} />
+      <WalletTagsModal isOpen={isTagsModalOpen} onClose={() => setIsTagsModalOpen(false)} onSave={handleTagsSave} walletAddress={address} walletLabel={label || undefined} initialTags={tags} />
     </>
   );
 }

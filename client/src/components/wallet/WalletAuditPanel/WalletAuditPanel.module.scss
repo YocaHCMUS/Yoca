@@ -1,5 +1,3 @@
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/theme' as *;
 
 // ===== Root Panel =====
 .auditPanel {
@@ -32,7 +30,7 @@
 
 .gaugeTrack {
   fill: none;
-  stroke: $border-subtle;
+  stroke: var(--wallet-border, #dfe6ef);
   stroke-width: 10;
 }
 
@@ -64,7 +62,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   margin-top: 2px;
 }
 
@@ -96,13 +94,13 @@
 
 .personaMeta {
   font-size: 12px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
 }
 
 // ===== Summary card =====
 .summaryCard {
-  background: $layer-01;
-  border: 1px solid $border-subtle;
+  background: var(--wallet-surface, #ffffff);
+  border: 1px solid var(--wallet-border, #dfe6ef);
   border-radius: 12px;
   padding: 20px;
   display: flex;
@@ -115,14 +113,14 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   margin: 0;
 }
 
 .summaryText {
   font-size: 14px;
   line-height: 1.6;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   margin: 0;
   white-space: pre-wrap;
 }
@@ -147,7 +145,7 @@
   gap: 10px;
   font-size: 13px;
   line-height: 1.5;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
 }
 
 .obsBullet {
@@ -156,7 +154,7 @@
   height: 6px;
   margin-top: 6px;
   border-radius: 50%;
-  background: $border-strong;
+  background: var(--wallet-border-strong, #c7d0df);
 }
 
 .obsBulletRed {
@@ -183,26 +181,26 @@
   width: 140px;
   height: 140px;
   border-radius: 50%;
-  background: $layer-hover-01;
+  background: var(--wallet-surface-soft, #f5f7fb);
 }
 
 .skeletonBadge {
   width: 200px;
   height: 40px;
   border-radius: 10px;
-  background: $layer-hover-01;
+  background: var(--wallet-surface-soft, #f5f7fb);
 }
 
 .skeletonCard {
   height: 120px;
   border-radius: 12px;
-  background: $layer-hover-01;
+  background: var(--wallet-surface-soft, #f5f7fb);
 }
 
 .skeletonCardSmall {
   height: 180px;
   border-radius: 12px;
-  background: $layer-hover-01;
+  background: var(--wallet-surface-soft, #f5f7fb);
 }
 
 .scanningOverlay {
@@ -218,13 +216,13 @@
 .scanningTitle {
   font-size: 16px;
   font-weight: 600;
-  color: $text-primary;
+  color: var(--wallet-text, #172033);
   margin: 0;
 }
 
 .scanningSubtitle {
   font-size: 13px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
   margin: 0;
 }
 
@@ -237,7 +235,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: $border-strong;
+  background: var(--wallet-border-strong, #c7d0df);
   animation: pulse-dot 1.4s ease-in-out infinite;
 
   &:nth-child(2) { animation-delay: 0.2s; }
@@ -274,5 +272,5 @@
   gap: 16px;
   flex-wrap: wrap;
   font-size: 12px;
-  color: $text-secondary;
+  color: var(--wallet-muted, #67748a);
 }
