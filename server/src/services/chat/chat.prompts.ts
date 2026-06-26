@@ -109,6 +109,8 @@ export function buildToolSelectionPrompt(
     "- Trading behavior: get_wallet_swaps_compact + get_wallet_pnl_compact. Add get_wallet_transfers_compact when deposits, withdrawals, funding, or flow may affect interpretation.",
     "- Portfolio/holdings: get_wallet_portfolio + get_wallet_overview. Add get_wallet_pnl_compact when the query asks whether holdings explain gains or losses.",
     "- Risk: get_drawdown_chart + get_wallet_overview. Add get_wallet_pnl_compact when realized loss drivers matter.",
+    "- Token risk/manipulation: get_token_market_data + get_token_wash_trade_risk + search_news. Include wash trade patterns when discussing volume reliability or market manipulation risk.",
+    "- Wallet reputation: get_wallet_intelligence + get_wallet_overview. Use intelligence risk signals when interpreting PnL, activity, or portfolio data.",
     "",
     "Available tools:",
     toolList,

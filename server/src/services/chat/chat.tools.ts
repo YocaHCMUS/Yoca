@@ -11,6 +11,8 @@ import { getBirdeyeChartData } from "@sv/services/wallet/providers/birdeye-chart
 import type { ChatToolDefinition, ToolCachePolicy } from "./chat.types.js";
 import { getWalletTxDetail } from "@sv/services/wallet/walletDayActivity.service.js";
 import { compactWalletSwaps, compactWalletTransfers } from "@sv/services/wallet/walletTxCompaction.service.js";
+import { washTradingService } from "@sv/services/wash-trading.service.js";
+import { composeWalletIntelligence } from "@sv/services/wallet/walletIntelligence.service.js";
 import { z } from "zod";
 
 const BASE58_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -423,6 +425,36 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
       required: ["address", "signature"],
     },
   },
+  {
+    name: "get_token_wash_trade_risk",
+    description:
+      "Detect wash trading patterns for a token: circular trades (A\u2192B\u2192C\u2192A), same-amount transaction clusters, star-topology hub wallets, and volume anomalies (z-score outliers). Returns a risk score (0\u2013100), pattern flags, and GNN-based suspicious wallet scores. Use this when the user asks if a token\u2019s volume is organic, whether wash trading is happening, or to assess token market manipulation risk.",
+    input_schema: {
+      type: "object",
+      properties: {
+        tokenAddress: {
+          type: "string",
+          description: "Token mint address (base58) to analyze for wash trading patterns",
+        },
+      },
+      required: ["tokenAddress"],
+    },
+  },
+  {
+    name: "get_wallet_intelligence",
+    description:
+      "Fetch composed wallet intelligence: identity (known entity name/type/category), risk score/level, risk signals (e.g. exchange interactions, high tx count, known/unknown entity), first fund insight (funder, wallet age), and user tags. Use this when the user asks \u2018who owns this wallet?\u2019, \u2018is this wallet risky?\u2019, or for wallet reputation/trust assessment.",
+    input_schema: {
+      type: "object",
+      properties: {
+        address: {
+          type: "string",
+          description: "Solana wallet address (base58)",
+        },
+      },
+      required: ["address"],
+    },
+  },
 ];
 
 // ─── Tool Allowed Keys (derived from definitions) ──────────────────────────
@@ -434,6 +466,7 @@ const MULTI_ADDRESS_TOOLS = new Set([
   "get_wallet_pnl", "get_wallet_winrate", "get_pnl_chart",
   "get_wallet_portfolio", "get_historical_portfolio",
   "get_tx_detail",
+  "get_wallet_intelligence",
 ]);
 
 const EXTRA_ALLOWED_KEYS: Record<string, readonly string[]> = {};
@@ -837,6 +870,70 @@ function extractTokenDetailsForLLM(data: unknown): unknown {
   };
 }
 
+function extractWashTradeForLLM(data: unknown): unknown {
+  if (!data || typeof data !== "object") return null;
+  const d = data as {
+    riskScore?: number;
+    patterns?: { circularTrades?: number; sameAmountTransactions?: number; tightTimingClusters?: number; starTopology?: boolean; volumeAnomaly?: boolean };
+    summary?: { totalVolume?: number; volumeAnomalies?: number; circularTrades?: number };
+    suspiciousWallets?: Array<{ wallet: string; confidence: number; pattern: string; gnnScore: number }>;
+  };
+  return {
+    riskScore: d.riskScore ?? 0,
+    patterns: d.patterns,
+    summary: d.summary,
+    suspiciousWalletCount: d.suspiciousWallets?.length ?? 0,
+    topSuspiciousWallets: (d.suspiciousWallets ?? []).slice(0, 5).map((w) => ({
+      wallet: w.wallet,
+      confidence: w.confidence,
+      pattern: w.pattern,
+      gnnScore: w.gnnScore,
+    })),
+  };
+}
+
+function extractIntelligenceForLLM(data: unknown): unknown {
+  if (!data || typeof data !== "object") return null;
+  const d = data as {
+    address?: string;
+    identity?: {
+      status?: string;
+      category?: string | null;
+      type?: string | null;
+      name?: string | null;
+      tags?: string[];
+    };
+    analysis?: {
+      riskScore?: number;
+      riskLevel?: string;
+      signals?: string[];
+      firstFund?: {
+        funderLabel?: string | null;
+        funderAddress?: string | null;
+        walletAgeLabel?: string | null;
+        walletAgeDays?: number | null;
+        firstFundDate?: string | null;
+      } | null;
+    };
+  };
+  return {
+    address: d.address,
+    identity: {
+      status: d.identity?.status ?? "unknown",
+      category: d.identity?.category ?? null,
+      type: d.identity?.type ?? null,
+      name: d.identity?.name ?? null,
+      tags: d.identity?.tags ?? [],
+    },
+    analysis: {
+      riskScore: d.analysis?.riskScore ?? 50,
+      riskLevel: d.analysis?.riskLevel ?? "medium",
+      signals: d.analysis?.signals ?? [],
+      firstFund: d.analysis?.firstFund ?? null,
+    },
+  };
+}
+
 // ─── Handler Map ────────────────────────────────────────────────────────────
 
 const fromToMsRefinement = <T extends { fromMs?: number; toMs?: number }>(
@@ -1153,7 +1250,19 @@ export const TOOL_HANDLERS: Record<
     const { address, signature } = txDetailSchema.parse(input);
     const data = await getWalletTxDetail(address, signature);
     return { data, llmData: extractTxDetailForLLM(data, address) };
-  }
+  },
+
+  get_token_wash_trade_risk: async (input) => {
+    const { tokenAddress } = tokenAddressSchema.parse(input);
+    const data = await washTradingService.analyzeWashTrading(tokenAddress);
+    return { data, llmData: extractWashTradeForLLM(data) };
+  },
+
+  get_wallet_intelligence: async (input) => {
+    const { address } = addressOnlySchema.parse(input);
+    const data = await composeWalletIntelligence(address);
+    return { data, llmData: extractIntelligenceForLLM(data) };
+  },
 };
 
 // ─── Cache Policy ────────────────────────────────────────────────────────────
@@ -1194,6 +1303,10 @@ export const TOOL_CACHE_POLICY: Record<string, ToolCachePolicy> = {
   navigate_to_page: { ttlMs: 600_000, cacheable: true },
   // Tx detail — fairly stable per tx
   get_tx_detail: { ttlMs: 300_000, cacheable: true },
+  // On-chain + wash trading analysis — medium TTL
+  get_token_wash_trade_risk: { ttlMs: 300_000, cacheable: true },
+  // Wallet intelligence — medium TTL (identity data changes slowly)
+  get_wallet_intelligence: { ttlMs: 300_000, cacheable: true },
 };
 
 /**
@@ -1246,6 +1359,7 @@ const WALLET_SCOPED_TOOLS = new Set([
   "get_wallet_portfolio",
   "get_historical_portfolio",
   "get_wallet_audit",
+  "get_wallet_intelligence",
 ]);
 
 export function isWalletTool(name: string): boolean {
