@@ -65,14 +65,59 @@
   white-space:nowrap;
 }
 
-.colToken { width:14%; }
-.colBalance { width:10%; }
-.colProfit,.colRealized,.colUnrealized { width:8.75%; }
-.colBought,.colSold { width:9.5%; }
+.colToken { width:13.5%; }
+.colBalance { width:5%; }
+.colProfit,.colRealized,.colUnrealized { width:9%; }
+.colBought,.colSold { width:10%; }
 .colNet { width:8%; }
-.colTransactions { width:7%; }
+.colTransactions { width:11%; }
 .colAverage { width:9%; }
-.colGraph { width:6%; }
+.colGraph { width:6.5%; }
+
+/* Desktop: prioritize legibility for the dense transaction table. */
+@media (min-width: 1181px) {
+  .tokenListTable th:nth-child(n + 2):nth-child(-n + 8),
+  .tokenListTable td:nth-child(n + 2):nth-child(-n + 8),
+  .tokenListTable th:nth-child(10),
+  .tokenListTable td:nth-child(10) {
+    text-align:right;
+  }
+
+  .tokenListTable th:nth-child(9),
+  .tokenListTable td:nth-child(9),
+  .tokenListTable th:nth-child(11),
+  .tokenListTable td:nth-child(11) {
+    text-align:center;
+  }
+
+  .tokenListTable th:first-child,
+  .tokenListTable td:first-child {
+    padding-left:8px;
+  }
+
+  .tokenListTable th:nth-child(2),
+  .tokenListTable td:nth-child(2) {
+    padding-inline:4px;
+  }
+
+  .tokenListTable th:nth-child(9),
+  .tokenListTable td:nth-child(9) {
+    padding-inline:8px;
+  }
+
+  .tokenListTable .tradeCount {
+    width:100%;
+    justify-content:center;
+    gap:4px;
+    overflow:visible;
+    white-space:nowrap;
+  }
+
+  .tokenListTable .tradeCount b {
+    font-size:10.5px;
+    letter-spacing:-.015em;
+  }
+}
 
 .tokenListTable .tokenCell {
   min-width:0;
@@ -115,7 +160,7 @@
   .tokenListTable .chartButton svg { width:14px; height:14px; }
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 1180px) {
   .tokenListWrap { padding:10px; }
   .tokenListTable,.tokenListTable tbody,.tokenListTable tr { display:block; width:100%; }
   .tokenListTable thead { display:none; }
