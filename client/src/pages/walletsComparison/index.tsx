@@ -3,12 +3,24 @@ import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivi
 import { GeneralTab } from "@/components/wallet/WalletComparison/GeneralTab";
 import { HoldingTab } from "@/components/wallet/WalletComparison/HoldingTab";
 import { RiskTab } from "@/components/wallet/WalletComparison/RiskTab";
-import { WalletChat, ChatContextProvider } from "@/components/wallet/WalletChat";
+import {
+  WalletChat,
+  ChatContextProvider,
+} from "@/components/wallet/WalletChat";
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { applyRobotoRegularPdfFont } from "@/util/pdf-fonts";
 import { Button, Search, Stack } from "@carbon/react";
-import { ChartLine, Close, Download, SearchAdvanced, Wallet, User, Launch, AiGenerate, ChevronDown } from "@carbon/react/icons";
+import {
+  ChartLine,
+  Close,
+  Download,
+  SearchAdvanced,
+  Wallet,
+  User,
+  Launch,
+  AiGenerate,
+} from "@carbon/react/icons";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -38,6 +50,20 @@ const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
 const PDF_EXPORT_TOP_MARGIN_MM = 10;
 const PDF_EXPORT_SECTION_GAP_MM = 10;
 const PDF_EXPORT_SCALE = 2;
+
+function isEditableShortcutTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  const tagName = target.tagName.toLowerCase();
+  return (
+    target.isContentEditable ||
+    tagName === "input" ||
+    tagName === "textarea" ||
+    tagName === "select"
+  );
+}
 
 interface WalletComparisonSidebarProps {
   walletAddress: string;
@@ -111,9 +137,7 @@ function WalletComparisonSidebar({
                 onClick={() => onRemoveWallet(wallet)}
                 kind="tertiary"
               >
-                <span className={styles.buttonTag}>
-                  {wallet}
-                </span>
+                <span className={styles.buttonTag}>{wallet}</span>
               </Button>
               <Button
                 kind="ghost"
@@ -122,7 +146,7 @@ function WalletComparisonSidebar({
                 renderIcon={Launch}
                 iconDescription={tr("walletComparison.viewDeepDive")}
                 tooltipPosition="left"
-                onClick={() => window.open(`/wallets/${wallet}`, '_blank')}
+                onClick={() => window.open(`/wallets/${wallet}`, "_blank")}
                 className={styles.deepDiveButton}
               />
             </div>
@@ -168,7 +192,9 @@ export default function WalletsComparisonPage() {
   const [activeTab, setActiveTab] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
   /** Tabs that have been opened at least once — panels stay mounted but pause fetching when inactive. */
-  const [visitedTabs, setVisitedTabs] = useState<Set<number>>(() => new Set([0]));
+  const [visitedTabs, setVisitedTabs] = useState<Set<number>>(
+    () => new Set([0]),
+  );
   const [walletAddress, setWalletAddress] = useState("");
   const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -179,9 +205,9 @@ export default function WalletsComparisonPage() {
   const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
 
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [chatPosition, setChatPosition] = useState<"right" | "left" | "fullscreen">("right");
-  const [walletSectionOpen, setWalletSectionOpen] = useState(true);
-  const [chatSectionOpen, setChatSectionOpen] = useState(true);
+  const [chatPosition, setChatPosition] = useState<
+    "right" | "left" | "fullscreen"
+  >("right");
 
   const handleDayClick = (walletAddress: string, timestamp: number) => {
     setDayPopupTimestamp(timestamp);
@@ -198,7 +224,24 @@ export default function WalletsComparisonPage() {
       setActiveTab(0);
     }
   }, [selectedWallets.length]);
+  useEffect(() => {
+    const handleChatShortcut = (event: globalThis.KeyboardEvent) => {
+      if (
+        event.repeat ||
+        !event.shiftKey ||
+        event.code !== "Slash" ||
+        isEditableShortcutTarget(event.target)
+      ) {
+        return;
+      }
 
+      event.preventDefault();
+      setIsChatOpen(true);
+    };
+
+    window.addEventListener("keydown", handleChatShortcut);
+    return () => window.removeEventListener("keydown", handleChatShortcut);
+  }, []);
   const hasInitializedRef = useRef(false);
 
   // Pre-populate from ?wallets=addr1,addr2 query param.
@@ -226,41 +269,43 @@ export default function WalletsComparisonPage() {
         ref={activeTab === 0 ? exportRef : undefined}
         className={exportContainerClassName}
       >
-        <GeneralTab
-          key="wc-general"
-          walletAddresses={selectedWallets}
-          fetchEnabled={activeTab === 0}
-        />
+        <div style={{ position: "relative" }}>
+          <GeneralTab
+            key="wc-general"
+            walletAddresses={selectedWallets}
+            fetchEnabled={activeTab === 0}
+          />
+        </div>
       </div>,
       <div
         key="wc-holding-wrapper"
         ref={activeTab === 1 ? exportRef : undefined}
         className={exportContainerClassName}
       >
-        <HoldingTab
-          key="wc-holding"
-          walletAddresses={selectedWallets}
-          fetchEnabled={activeTab === 1}
-        />
+        <div style={{ position: "relative" }}>
+          <HoldingTab
+            key="wc-holding"
+            walletAddresses={selectedWallets}
+            fetchEnabled={activeTab === 1}
+          />
+        </div>
       </div>,
       <div
         key="wc-risk-wrapper"
         ref={activeTab === 2 ? exportRef : undefined}
         className={exportContainerClassName}
       >
-        <RiskTab
-          key="wc-risk"
-          walletAddresses={selectedWallets}
-          fetchEnabled={activeTab === 2}
-          onDayClick={handleDayClick}
-        />
+        <div style={{ position: "relative" }}>
+          <RiskTab
+            key="wc-risk"
+            walletAddresses={selectedWallets}
+            fetchEnabled={activeTab === 2}
+            onDayClick={handleDayClick}
+          />
+        </div>
       </div>,
     ],
-    [
-      selectedWallets,
-      activeTab,
-      exportContainerClassName,
-    ],
+    [selectedWallets, activeTab, exportContainerClassName],
   );
 
   const handleExportPDF = async (activeTabTranslationKey: string) => {
@@ -269,7 +314,8 @@ export default function WalletsComparisonPage() {
       return;
     }
 
-    const activeSegment = TAB_EXPORT_FILENAME_SEGMENTS[activeTab] ?? `Tab_${activeTab}`;
+    const activeSegment =
+      TAB_EXPORT_FILENAME_SEGMENTS[activeTab] ?? `Tab_${activeTab}`;
     const localizedTabName = String(
       tr(TAB_TRANSLATION_KEYS[activeTab] ?? "walletComparison.general"),
     );
@@ -281,12 +327,17 @@ export default function WalletsComparisonPage() {
       return;
     }
 
-    const reportTitle = selectedWallets.length === 1
-      ? String(tr("walletComparison.walletAnalysisReport"))
-      : String(tr("walletComparison.pdfReportTitle"));
+    const reportTitle =
+      selectedWallets.length === 1
+        ? String(tr("walletComparison.walletAnalysisReport"))
+        : String(tr("walletComparison.pdfReportTitle"));
     const generatedDateLabel = String(tr("walletComparison.pdfGeneratedDate"));
-    const walletsComparedLabel = String(tr("walletComparison.pdfWalletsCompared"));
-    const walletAddressesLabel = String(tr("walletComparison.pdfWalletAddresses"));
+    const walletsComparedLabel = String(
+      tr("walletComparison.pdfWalletsCompared"),
+    );
+    const walletAddressesLabel = String(
+      tr("walletComparison.pdfWalletAddresses"),
+    );
     const generatedDate = new Intl.DateTimeFormat(lang, {
       year: "numeric",
       month: "2-digit",
@@ -305,12 +356,19 @@ export default function WalletsComparisonPage() {
       tempHeader.style.border = "1px solid #d0d7de";
       tempHeader.style.borderRadius = "12px";
       tempHeader.style.boxSizing = "border-box";
-      tempHeader.style.fontFamily = "'DejaVu Sans', 'Arial Unicode MS', Arial, Tahoma, sans-serif";
+      tempHeader.style.fontFamily =
+        "'DejaVu Sans', 'Arial Unicode MS', Arial, Tahoma, sans-serif";
       tempHeader.style.color = "#0f172a";
 
-      const headerWallets = selectedWallets.length > 0
-        ? selectedWallets.map((address) => `<div style=\"line-height:1.45;word-break:break-all;\">${address}</div>`).join("")
-        : `<div>${String(tr("marketPage.na"))}</div>`;
+      const headerWallets =
+        selectedWallets.length > 0
+          ? selectedWallets
+              .map(
+                (address) =>
+                  `<div style=\"line-height:1.45;word-break:break-all;\">${address}</div>`,
+              )
+              .join("")
+          : `<div>${String(tr("marketPage.na"))}</div>`;
 
       tempHeader.innerHTML = `
         <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;">
@@ -352,18 +410,30 @@ export default function WalletsComparisonPage() {
       let currentY = PDF_EXPORT_TOP_MARGIN_MM;
 
       const headerImgData = headerCanvas.toDataURL("image/png");
-      const headerImgHeight = (headerCanvas.height * pdfWidth) / headerCanvas.width;
-      pdf.addImage(headerImgData, "PNG", 0, currentY, pdfWidth, headerImgHeight);
+      const headerImgHeight =
+        (headerCanvas.height * pdfWidth) / headerCanvas.width;
+      pdf.addImage(
+        headerImgData,
+        "PNG",
+        0,
+        currentY,
+        pdfWidth,
+        headerImgHeight,
+      );
       currentY += headerImgHeight + PDF_EXPORT_SECTION_GAP_MM;
 
-      const sections = exportTarget.querySelectorAll<HTMLElement>(`.${PDF_EXPORT_SECTION_CLASS}`);
+      const sections = exportTarget.querySelectorAll<HTMLElement>(
+        `.${PDF_EXPORT_SECTION_CLASS}`,
+      );
 
       if (sections.length === 0) {
         return;
       }
 
       for (const section of sections) {
-        const titleElement = section.querySelector<HTMLElement>(".hide-on-print-title");
+        const titleElement = section.querySelector<HTMLElement>(
+          ".hide-on-print-title",
+        );
         const sectionTitle = titleElement?.innerText.trim() ?? "";
         const previousStyleAttribute = titleElement
           ? titleElement.getAttribute("style")
@@ -382,7 +452,9 @@ export default function WalletsComparisonPage() {
             logging: false,
             onclone: (clonedDocument) => {
               clonedDocument
-                .querySelectorAll<HTMLElement>(".recharts-accessibility-layer, .recharts-tooltip-wrapper")
+                .querySelectorAll<HTMLElement>(
+                  ".recharts-accessibility-layer, .recharts-tooltip-wrapper",
+                )
                 .forEach((element) => {
                   element.style.display = "none";
                 });
@@ -461,98 +533,28 @@ export default function WalletsComparisonPage() {
     void handleExportPDF(activeTabTranslationKey);
   };
 
-  const activeWalletCount = selectedWallets.length;
-
   return (
     <PageWrapper noMarketTickers wideContent>
       <div className={styles.pageLayout}>
-        <ChatContextProvider addresses={selectedWallets} contextType="wallet-comparison" lang={lang}>
+        <ChatContextProvider
+          addresses={selectedWallets}
+          contextType="wallet-comparison"
+          lang={lang}
+        >
           {/* Left Sidebar */}
-          {chatPosition === "left" ? (
-            /* Accordion mode: wallet selector + AI chat collapsible sections */
-            <aside className={styles.leftSidebar}>
-              <div
-                className={styles.accordionSection}
-                data-open={walletSectionOpen}
-              >
-                <button
-                  type="button"
-                  className={styles.accordionHeader}
-                  onClick={() => setWalletSectionOpen((v) => !v)}
-                >
-                  <span className={styles.accordionHeaderTitle}>
-                    <Wallet size={14} />
-                    {activeWalletCount === 1
-                      ? tr("walletComparison.activeWallet")
-                      : tr("walletComparison.selectedWallets")}
-                  </span>
-                  <ChevronDown
-                    size={16}
-                    className={styles.accordionChevron}
-                    data-open={walletSectionOpen}
-                  />
-                </button>
-                {walletSectionOpen && (
-                  <div className={styles.accordionBody}>
-                    <WalletComparisonSidebar
-                      walletAddress={walletAddress}
-                      selectedWallets={selectedWallets}
-                      onWalletAddressChange={setWalletAddress}
-                      onWalletKeyPress={handleKeyPress}
-                      onRemoveWallet={handleRemoveWallet}
-                      onExport={handleSidebarExport}
-                      isExporting={isExporting}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div
-                className={`${styles.accordionSection} ${styles.accordionSectionChat}`}
-                data-open={chatSectionOpen}
-              >
-                <button
-                  type="button"
-                  className={styles.accordionHeader}
-                  onClick={() => setChatSectionOpen((v) => !v)}
-                >
-                  <span className={styles.accordionHeaderTitle}>
-                    <AiGenerate size={14} />
-                    {tr("walletComparison.aiChat")}
-                  </span>
-                  <ChevronDown
-                    size={16}
-                    className={styles.accordionChevron}
-                    data-open={chatSectionOpen}
-                  />
-                </button>
-                {chatSectionOpen && (
-                  <div className={styles.accordionBodyChat}>
-                    <WalletChat
-                      variant="sidebar"
-                      chatPosition="left"
-                      onChatPositionChange={setChatPosition}
-                    />
-                  </div>
-                )}
-              </div>
-            </aside>
-          ) : (
-            /* Normal mode: only wallet selector */
-            <aside className={styles.leftSidebar}>
-              <div className={styles.walletSection}>
-                <WalletComparisonSidebar
-                  walletAddress={walletAddress}
-                  selectedWallets={selectedWallets}
-                  onWalletAddressChange={setWalletAddress}
-                  onWalletKeyPress={handleKeyPress}
-                  onRemoveWallet={handleRemoveWallet}
-                  onExport={handleSidebarExport}
-                  isExporting={isExporting}
-                />
-              </div>
-            </aside>
-          )}
+          <aside className={styles.leftSidebar}>
+            <div className={styles.walletSection}>
+              <WalletComparisonSidebar
+                walletAddress={walletAddress}
+                selectedWallets={selectedWallets}
+                onWalletAddressChange={setWalletAddress}
+                onWalletKeyPress={handleKeyPress}
+                onRemoveWallet={handleRemoveWallet}
+                onExport={handleSidebarExport}
+                isExporting={isExporting}
+              />
+            </div>
+          </aside>
 
           <main className={styles.mainContent}>
             <WalletComparisonMainContent
@@ -563,21 +565,18 @@ export default function WalletsComparisonPage() {
             />
           </main>
 
-          {/* Chat inline panel (right dock — same as wallet page) */}
-          {chatPosition === "right" && isChatOpen && (
-            <div
-              className={styles.chatInline}
-              data-open={true}
-              data-side="right"
+          {/* Modal chat panel (right/left dock + fullscreen) */}
+          {!isChatOpen && (
+            <button
+              type="button"
+              className={styles.chatLauncher}
+              onClick={() => setIsChatOpen(true)}
+              title="Shift + /"
             >
-              <div className={styles.chatInlineInner}>
-                <WalletChat
-                  variant="sidebar"
-                  chatPosition={chatPosition}
-                  onChatPositionChange={setChatPosition}
-                />
-              </div>
-            </div>
+              <AiGenerate size={18} />
+              <span>{tr("chat.launcherLabel")}</span>
+              <kbd>Shift /</kbd>
+            </button>
           )}
 
           <RightSidebar
@@ -585,22 +584,19 @@ export default function WalletsComparisonPage() {
             onChatToggle={() => setIsChatOpen((v) => !v)}
           />
 
-          {/* Fullscreen overlay */}
-          {isChatOpen && chatPosition === "fullscreen" && (
-            <div className={styles.chatOverlay} data-position="fullscreen">
-              <div
-                className={styles.chatBackdrop}
-                onClick={() => setIsChatOpen(false)}
-              />
+          {isChatOpen && (
+            <div className={styles.chatOverlay} data-position={chatPosition}>
               <div className={styles.chatPanel}>
                 <WalletChat
                   variant="sidebar"
-                  chatPosition="fullscreen"
+                  chatPosition={chatPosition}
                   onChatPositionChange={setChatPosition}
+                  onRequestClose={() => setIsChatOpen(false)}
                 />
               </div>
             </div>
           )}
+
         </ChatContextProvider>
       </div>
 

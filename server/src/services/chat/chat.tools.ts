@@ -9,10 +9,25 @@ import { searchToken } from "./chat-token-search.js";
 import { searchNews, searchWeb } from "./chat-web-search.js";
 import { getBirdeyeChartData } from "@sv/services/wallet/providers/birdeye-chart-data.js";
 import type { ChatToolDefinition, ToolCachePolicy } from "./chat.types.js";
-import { isBaseAsset, getWalletTxDetail } from "@sv/services/wallet/walletDayActivity.service.js";
+import { getWalletTxDetail } from "@sv/services/wallet/walletDayActivity.service.js";
+import { compactWalletSwaps, compactWalletTransfers, compactWalletPnL } from "@sv/services/wallet/walletTxCompaction.service.js";
 import { z } from "zod";
 
 const BASE58_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+const DETAILED_TX_LIMIT = 100;
+const COMPACT_TX_LIMIT = 500;
+
+interface TransactionCoverage {
+  limit: number;
+  availableCount: number;
+  analyzedCount: number;
+  returnedCount: number;
+  isCapped: boolean;
+  scope: "complete_filtered_result" | "limited_filtered_sample";
+  coverageKind: "known_result_rows";
+  source: "wallet_service_result";
+  note: string;
+}
 
 // ─── Tool Definitions ───────────────────────────────────────────────────────
 
@@ -37,11 +52,13 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
       type: "object",
       properties: {
         address: { type: "string", description: "Solana wallet address (base58)" },
-        limit: { type: "number", description: "Max number of swaps to return (default 20)" },
+        limit: { type: "number", description: "Max number of swaps to return (default 20, max 100)" },
         tokenAddress: { type: "string", description: "Token mint address (base58) to filter swaps. NOT the symbol/name. Example: 'So11111111111111111111111111111111111111112' for SOL. Call search_token first if you only have a symbol." },
         type: { type: "string", enum: ["buy", "sell"], description: "Filter by swap direction: buy = token enters wallet, sell = token leaves wallet" },
         fromMs: { type: "number", description: "Start of time window (milliseconds since epoch). Defaults to 30 days ago." },
         toMs: { type: "number", description: "End of time window (milliseconds since epoch). Defaults to now." },
+        minAmountUsd: { type: "number", description: "Minimum USD value to include (skips dust transfers)" },
+        maxAmountUsd: { type: "number", description: "Maximum USD value to include (excludes large outliers)" },
       },
       required: ["address"],
     },
@@ -54,12 +71,51 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
       type: "object",
       properties: {
         address: { type: "string", description: "Solana wallet address (base58)" },
-        limit: { type: "number", description: "Max number of transfers to return (default 20)" },
+        limit: { type: "number", description: "Max number of transfers to return (default 20, max 100)" },
         tokenAddress: { type: "string", description: "Token mint address (base58) to filter transfers. NOT the symbol/name. Example: 'So11111111111111111111111111111111111111112' for SOL. Call search_token first if you only have a symbol." },
         direction: { type: "string", enum: ["in", "out"], description: "Filter by transfer direction: in = funds arriving, out = funds leaving" },
         fromMs: { type: "number", description: "Start of time window (milliseconds since epoch). Defaults to 30 days ago." },
         toMs: { type: "number", description: "End of time window (milliseconds since epoch). Defaults to now." },
         minAmountUsd: { type: "number", description: "Minimum USD value to include (skips dust transfers)" },
+        maxAmountUsd: { type: "number", description: "Maximum USD value to include (excludes large outliers)" },
+      },
+      required: ["address"],
+    },
+  },
+  {
+    name: "get_wallet_swaps_compact",
+    description:
+      "Fetch up to 500 wallet swaps and return a compact aggregate overview by token and buy/sell action. Prefer this for broad trading activity analysis, token summaries, and overview questions instead of raw trade rows.",
+    input_schema: {
+      type: "object",
+      properties: {
+        address: { type: "string", description: "Solana wallet address (base58)" },
+        limit: { type: "number", description: "Max number of swaps to analyze (default 500, max 500)" },
+        tokenAddress: { type: "string", description: "Token mint address (base58) to filter swaps. Call search_token first if you only have a symbol." },
+        type: { type: "string", enum: ["buy", "sell"], description: "Filter by swap direction" },
+        fromMs: { type: "number", description: "Start of absolute historical time window (milliseconds since epoch)." },
+        toMs: { type: "number", description: "End of absolute historical time window (milliseconds since epoch)." },
+        minAmountUsd: { type: "number", description: "Minimum USD value to include" },
+        maxAmountUsd: { type: "number", description: "Maximum USD value to include" },
+      },
+      required: ["address"],
+    },
+  },
+  {
+    name: "get_wallet_transfers_compact",
+    description:
+      "Fetch up to 500 wallet transfers and return a compact aggregate overview by token and direction. Prefer this for broad transfer activity analysis and overview questions instead of raw transfer rows.",
+    input_schema: {
+      type: "object",
+      properties: {
+        address: { type: "string", description: "Solana wallet address (base58)" },
+        limit: { type: "number", description: "Max number of transfers to analyze (default 500, max 500)" },
+        tokenAddress: { type: "string", description: "Token mint address (base58) to filter transfers. Call search_token first if you only have a symbol." },
+        direction: { type: "string", enum: ["in", "out"], description: "Filter by transfer direction" },
+        fromMs: { type: "number", description: "Start of absolute historical time window (milliseconds since epoch)." },
+        toMs: { type: "number", description: "End of absolute historical time window (milliseconds since epoch)." },
+        minAmountUsd: { type: "number", description: "Minimum USD value to include" },
+        maxAmountUsd: { type: "number", description: "Maximum USD value to include" },
       },
       required: ["address"],
     },
@@ -67,16 +123,18 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_balance_history",
     description:
-      "Fetch wallet balance over time (USD). Returns daily balance data points for a time period. Useful for balance trend charts.",
+      "Fetch wallet balance over time (USD). Returns daily balance data points. Supports time periods (7D, 30D, 60D, 90D, 1Y) or custom fromMs/toMs range. Useful for balance trend charts.",
     input_schema: {
       type: "object",
       properties: {
         address: { type: "string", description: "Solana wallet address (base58)" },
         timePeriod: {
           type: "string",
-          enum: ["7D", "30D"],
-          description: "Time period for balance history (default 30D)",
+          enum: ["7D", "30D", "60D", "90D", "1Y"],
+          description: "Time period for balance history (default 30D). Ignored if fromMs/toMs are provided.",
         },
+        fromMs: { type: "number", description: "Start of time window (epoch ms). Overrides timePeriod when provided." },
+        toMs: { type: "number", description: "End of time window (epoch ms). Defaults to now if fromMs is provided." },
       },
       required: ["address"],
     },
@@ -101,16 +159,18 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_drawdown_chart",
     description:
-      "Fetch drawdown (peak-to-trough decline) chart data for a wallet over time. Returns daily drawdown percentages showing how far the balance has fallen from its most recent peak. Useful for risk assessment and drawdown trend charts.",
+      "Fetch drawdown (peak-to-trough decline) chart data for a wallet over time. Returns daily drawdown percentages showing how far the balance has fallen from its most recent peak. Supports time periods (7D, 30D, 60D, 90D, 1Y) or custom fromMs/toMs range. Useful for risk assessment.",
     input_schema: {
       type: "object",
       properties: {
         address: { type: "string", description: "Solana wallet address (base58)" },
         timePeriod: {
           type: "string",
-          enum: ["7D", "30D"],
-          description: "Time period for drawdown data (default 30D)",
+          enum: ["7D", "30D", "60D", "90D", "1Y"],
+          description: "Time period for drawdown data (default 30D). Ignored if fromMs/toMs are provided.",
         },
+        fromMs: { type: "number", description: "Start of time window (epoch ms). Overrides timePeriod when provided." },
+        toMs: { type: "number", description: "End of time window (epoch ms). Defaults to now if fromMs is provided." },
       },
       required: ["address"],
     },
@@ -118,14 +178,35 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_wallet_pnl",
     description:
-      "Fetch profit & loss breakdown for a wallet. Returns per-token realized PnL, trade counts, win rates, and top profitable/losing tokens. Optionally filter by time range or a specific token address.",
+      "Fetch profit & loss breakdown for a wallet. Returns per-token realized PnL, trade counts, win rates, and top profitable/losing tokens. Supports filtering by time range, specific token, and USD value thresholds.",
     input_schema: {
       type: "object",
       properties: {
         address: { type: "string", description: "Solana wallet address (base58)" },
+        limit: { type: "number", description: "Max number of swaps to analyze for PnL (default 500, max 500)" },
         fromMs: { type: "number", description: "Start time (epoch ms) — only swaps after this time are included in PnL computation" },
         toMs: { type: "number", description: "End time (epoch ms) — only swaps before this time are included in PnL computation" },
         tokenAddress: { type: "string", description: "Token mint address (base58) to filter PnL. NOT the symbol/name. Example: 'So11111111111111111111111111111111111111112' for SOL. Call search_token first if you only have a symbol." },
+        minAmountUsd: { type: "number", description: "Minimum USD value per swap to include in PnL analysis" },
+        maxAmountUsd: { type: "number", description: "Maximum USD value per swap to include in PnL analysis" },
+      },
+      required: ["address"],
+    },
+  },
+  {
+    name: "get_wallet_pnl_compact",
+    description:
+      "Fetch up to 500 wallet swaps and return a compact aggregated PnL overview by token. Includes total PnL, win rate, top gainer/loser, and per-token breakdowns. Prefer this for broad PnL analysis and overview questions instead of raw per-token rows.",
+    input_schema: {
+      type: "object",
+      properties: {
+        address: { type: "string", description: "Solana wallet address (base58)" },
+        limit: { type: "number", description: "Max number of swaps to analyze for PnL (default 500, max 500)" },
+        fromMs: { type: "number", description: "Start time (epoch ms)" },
+        toMs: { type: "number", description: "End time (epoch ms)" },
+        tokenAddress: { type: "string", description: "Token mint address (base58) to filter PnL. Call search_token first if you only have a symbol." },
+        minAmountUsd: { type: "number", description: "Minimum USD value per swap to include" },
+        maxAmountUsd: { type: "number", description: "Maximum USD value per swap to include" },
       },
       required: ["address"],
     },
@@ -146,16 +227,18 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_pnl_chart",
     description:
-      "Fetch PnL time series data for a wallet. Returns daily PnL and cumulative PnL data points over a time period. Useful for PnL trend charts.",
+      "Fetch PnL time series data for a wallet. Returns daily PnL and cumulative PnL data points. Supports time periods (7D, 30D, 60D, 90D, 1Y) or custom fromMs/toMs range. Useful for PnL trend charts.",
     input_schema: {
       type: "object",
       properties: {
         address: { type: "string", description: "Solana wallet address (base58)" },
         timePeriod: {
           type: "string",
-          enum: ["7D", "30D"],
-          description: "Time period for PnL data (default 30D)",
+          enum: ["7D", "30D", "60D", "90D", "1Y"],
+          description: "Time period for PnL data (default 30D). Ignored if fromMs/toMs are provided.",
         },
+        fromMs: { type: "number", description: "Start of time window (epoch ms). Overrides timePeriod when provided." },
+        toMs: { type: "number", description: "End of time window (epoch ms). Defaults to now if fromMs is provided." },
       },
       required: ["address"],
     },
@@ -340,60 +423,103 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   },
 ];
 
+// ─── Tool Allowed Keys (derived from definitions) ──────────────────────────
+
+const MULTI_ADDRESS_TOOLS = new Set([
+  "get_wallet_swaps", "get_wallet_transfers",
+  "get_wallet_swaps_compact", "get_wallet_transfers_compact",
+  "get_balance_history", "get_drawdown_chart",
+  "get_wallet_pnl", "get_wallet_pnl_compact", "get_wallet_winrate", "get_pnl_chart",
+  "get_wallet_portfolio", "get_historical_portfolio",
+  "get_tx_detail",
+]);
+
+const EXTRA_ALLOWED_KEYS: Record<string, readonly string[]> = {};
+
+export const TOOL_ALLOWED_KEYS: Record<string, readonly string[]> = (() => {
+  const map: Record<string, string[]> = {};
+  for (const def of TOOL_DEFINITIONS) {
+    if (!def.name) continue;
+    const keys = Object.keys(def.input_schema.properties);
+    if (MULTI_ADDRESS_TOOLS.has(def.name) && !keys.includes("addresses")) {
+      keys.push("addresses");
+    }
+    map[def.name] = keys;
+  }
+  for (const [name, keys] of Object.entries(EXTRA_ALLOWED_KEYS)) {
+    map[name] = [...keys];
+  }
+  return map;
+})();
+
 // ─── Tool Execution ─────────────────────────────────────────────────────────
 
 function extractSwapsForLLM(
   swaps: unknown,
   limit: number,
-  type?: "buy" | "sell",
 ): unknown {
-  if (!swaps || typeof swaps !== "object") return [];
+  if (!swaps || typeof swaps !== "object") return { coverage: buildTransactionCoverage(0, limit), swaps: [] };
   const s = swaps as { swaps?: unknown[] };
-  if (!Array.isArray(s.swaps)) return [];
+  if (!Array.isArray(s.swaps)) return { coverage: buildTransactionCoverage(0, limit), swaps: [] };
 
-  let filtered = s.swaps as Record<string, unknown>[];
-
-  if (type) {
-    filtered = filtered.filter((swap) => {
-      const boughtAddr = (swap.bought as Record<string, unknown> | undefined)?.address as string | undefined;
-      const soldAddr = (swap.sold as Record<string, unknown> | undefined)?.address as string | undefined;
-      const isBuy = !isBaseAsset(boughtAddr) && isBaseAsset(soldAddr);
-      const isSell = isBaseAsset(boughtAddr) && !isBaseAsset(soldAddr);
-      if (type === "buy" && !isBuy) return false;
-      if (type === "sell" && !isSell) return false;
-      return true;
-    });
-  }
-
-  return filtered.slice(0, limit).map((swap) => ({
-    txHash: swap.transactionHash,
-    timestamp: swap.blockTimestampIso,
-    bought: swap.bought,
-    sold: swap.sold,
-    totalValueUsd: swap.totalValueUsd,
-    dex: swap.subcategory,
-  }));
+  return {
+    coverage: buildTransactionCoverage(s.swaps.length, limit),
+    swaps: s.swaps.slice(0, limit).map((swap) => {
+      const r = swap as Record<string, unknown>;
+      return {
+        txHash: r.transactionHash,
+        timestamp: r.blockTimestampIso,
+        bought: r.bought,
+        sold: r.sold,
+        totalValueUsd: r.totalValueUsd,
+        dex: r.subcategory,
+      };
+    }),
+  };
 }
-
 function extractTransfersForLLM(
   transfers: unknown,
   limit: number,
 ): unknown {
-  if (!transfers || typeof transfers !== "object") return [];
+  if (!transfers || typeof transfers !== "object") return { coverage: buildTransactionCoverage(0, limit), transfers: [] };
   const t = transfers as { transfers?: unknown[] };
-  if (!Array.isArray(t.transfers)) return [];
+  if (!Array.isArray(t.transfers)) return { coverage: buildTransactionCoverage(0, limit), transfers: [] };
 
-  return t.transfers.slice(0, limit).map((tr) => ({
-    from: (tr as Record<string, unknown>).from,
-    to: (tr as Record<string, unknown>).to,
-    amount: (tr as Record<string, unknown>).amount,
-    amountUsd: (tr as Record<string, unknown>).amountUsd,
-    token: (tr as Record<string, unknown>).tokenSymbol,
-    tokenAddress: (tr as Record<string, unknown>).tokenAddress,
-    timestamp: (tr as Record<string, unknown>).timestamp,
-  }));
+  return {
+    coverage: buildTransactionCoverage(t.transfers.length, limit),
+    transfers: t.transfers.slice(0, limit).map((tr) => {
+      const r = tr as Record<string, unknown>;
+      return {
+        from: r.from,
+        to: r.to,
+        amount: r.amount,
+        amountUsd: r.amountUsd,
+        token: r.tokenSymbol,
+        tokenAddress: r.tokenAddress,
+        timestamp: r.timestamp,
+      };
+    }),
+  };
 }
 
+export function buildTransactionCoverage(availableCount: number, limit: number): TransactionCoverage {
+  const normalizedLimit = Math.max(1, Math.trunc(limit));
+  const analyzedCount = Math.min(availableCount, normalizedLimit);
+  const isCapped = availableCount >= normalizedLimit;
+  return {
+    limit: normalizedLimit,
+    availableCount,
+    analyzedCount,
+    returnedCount: analyzedCount,
+    isCapped,
+    scope: isCapped ? "limited_filtered_sample" : "complete_filtered_result",
+    coverageKind: "known_result_rows",
+    source: "wallet_service_result",
+    note: isCapped
+      ? `Analyzed ${analyzedCount} known rows returned for this query window and hit the limit (${normalizedLimit}). More matching rows may exist; do not treat ${analyzedCount} as complete wallet history.`
+      : `Analyzed all ${analyzedCount} known rows returned for this query window. This is complete for the current bounded service result, not necessarily all chain history.`,
+  };
+}
 function extractPortfolioForLLM(
   portfolio: unknown,
   filters?: {
@@ -510,6 +636,7 @@ function extractPnLComputedForLLM(data: unknown): unknown {
       totalExited: b.totalExited,
     }))
     : [];
+  const coverage = s.coverage;
   return {
     tradeCount: s.tradeCount,
     realizedPnlUsd: s.realizedPnlUsd,
@@ -518,6 +645,13 @@ function extractPnLComputedForLLM(data: unknown): unknown {
     totalSoldUsd: s.totalSoldUsd,
     topProfitable: s.topProfitable,
     topLoser: s.topLoser,
+    coverage,
+    analyzedTrades: coverage && typeof coverage === "object" && !Array.isArray(coverage)
+      ? (coverage as Record<string, unknown>).analyzedCount
+      : s.tradeCount,
+    availableTrades: coverage && typeof coverage === "object" && !Array.isArray(coverage)
+      ? (coverage as Record<string, unknown>).availableCount
+      : s.tradeCount,
     tokenBreakdowns: breakdowns,
   };
 }
@@ -686,23 +820,38 @@ function extractTokenDetailsForLLM(data: unknown): unknown {
 
 // ─── Handler Map ────────────────────────────────────────────────────────────
 
+const fromToMsRefinement = <T extends { fromMs?: number; toMs?: number }>(
+  input: T,
+): boolean => input.fromMs == null || input.toMs == null || input.fromMs < input.toMs;
+
 const swapsFilterSchema = z.object({
   address: z.string().min(1),
-  limit: z.number().optional().default(500),
+  limit: z.number().int().positive().max(DETAILED_TX_LIMIT).optional().default(20),
   tokenAddress: z.string().regex(BASE58_REGEX, "Must be a valid base58 token mint address").optional(),
   type: z.enum(["buy", "sell"]).optional(),
   fromMs: z.number().optional(),
   toMs: z.number().optional(),
-});
+  minAmountUsd: z.number().optional(),
+  maxAmountUsd: z.number().optional(),
+}).refine(fromToMsRefinement, { message: "fromMs must be less than toMs" });
 
 const transfersFilterSchema = z.object({
   address: z.string().min(1),
-  limit: z.number().optional().default(500),
+  limit: z.number().int().positive().max(DETAILED_TX_LIMIT).optional().default(20),
   tokenAddress: z.string().regex(BASE58_REGEX, "Must be a valid base58 token mint address").optional(),
   direction: z.enum(["in", "out"]).optional(),
   fromMs: z.number().optional(),
   toMs: z.number().optional(),
   minAmountUsd: z.number().optional(),
+  maxAmountUsd: z.number().optional(),
+}).refine(fromToMsRefinement, { message: "fromMs must be less than toMs" });
+
+const compactSwapsFilterSchema = swapsFilterSchema.safeExtend({
+  limit: z.number().int().positive().max(COMPACT_TX_LIMIT).optional().default(COMPACT_TX_LIMIT),
+});
+
+const compactTransfersFilterSchema = transfersFilterSchema.safeExtend({
+  limit: z.number().int().positive().max(COMPACT_TX_LIMIT).optional().default(COMPACT_TX_LIMIT),
 });
 
 const portfolioFilterSchema = z.object({
@@ -714,7 +863,9 @@ const portfolioFilterSchema = z.object({
 const periodSchema = z.object({
   address: z.string().min(1),
   timePeriod: z.enum(["7D", "30D", "60D", "90D", "1Y"]).optional().default("30D"),
-});
+  fromMs: z.number().optional(),
+  toMs: z.number().optional(),
+}).refine(fromToMsRefinement, { message: "fromMs must be less than toMs" });
 
 const addressOnlySchema = z.object({
   address: z.string().min(1),
@@ -753,26 +904,46 @@ export const TOOL_HANDLERS: Record<
   },
 
   get_wallet_swaps: async (input) => {
-    const { address, limit, tokenAddress, type, fromMs, toMs } = swapsFilterSchema.parse(input);
-    const data = await getWalletSwaps(address, fromMs, toMs, tokenAddress);
-    return { data, llmData: extractSwapsForLLM(data, limit, type) };
+    const { address, limit, tokenAddress, type, fromMs, toMs, minAmountUsd, maxAmountUsd } = swapsFilterSchema.parse(input);
+    const data = await getWalletSwaps(address, fromMs, toMs, tokenAddress, type, minAmountUsd, maxAmountUsd, limit);
+    const coverage = buildTransactionCoverage(data.swaps.length, limit);
+    const limited = data.swaps.slice(0, limit);
+    return { data: { ...data, swaps: limited, coverage }, llmData: extractSwapsForLLM(data, limit) };
   },
 
   get_wallet_transfers: async (input) => {
-    const { address, limit, tokenAddress, direction, fromMs, toMs, minAmountUsd } = transfersFilterSchema.parse(input);
-    const data = await getWalletTransfers(address, fromMs, toMs, tokenAddress, direction, minAmountUsd);
-    return { data, llmData: extractTransfersForLLM(data, limit) };
+    const { address, limit, tokenAddress, direction, fromMs, toMs, minAmountUsd, maxAmountUsd } = transfersFilterSchema.parse(input);
+    const data = await getWalletTransfers(address, fromMs, toMs, tokenAddress, direction, minAmountUsd, maxAmountUsd, limit);
+    const coverage = buildTransactionCoverage(data.transfers.length, limit);
+    const limited = data.transfers.slice(0, limit);
+    return { data: { ...data, transfers: limited, coverage }, llmData: extractTransfersForLLM(data, limit) };
   },
 
+  get_wallet_swaps_compact: async (input) => {
+    const { address, limit, tokenAddress, type, fromMs, toMs, minAmountUsd, maxAmountUsd } = compactSwapsFilterSchema.parse(input);
+    const data = await getWalletSwaps(address, fromMs, toMs, tokenAddress, type, minAmountUsd, maxAmountUsd, limit);
+    const coverage = buildTransactionCoverage(data.swaps.length, limit);
+    const limited = data.swaps.slice(0, limit);
+    const compact = { ...compactWalletSwaps(limited), coverage, analyzedTrades: coverage.analyzedCount, availableTrades: coverage.availableCount };
+    return { data: { ...data, swaps: limited, coverage, compact }, llmData: compact };
+  },
+  get_wallet_transfers_compact: async (input) => {
+    const { address, limit, tokenAddress, direction, fromMs, toMs, minAmountUsd, maxAmountUsd } = compactTransfersFilterSchema.parse(input);
+    const data = await getWalletTransfers(address, fromMs, toMs, tokenAddress, direction, minAmountUsd, maxAmountUsd, limit);
+    const coverage = buildTransactionCoverage(data.transfers.length, limit);
+    const limited = data.transfers.slice(0, limit);
+    const compact = { ...compactWalletTransfers(limited, address), coverage, analyzedTransfers: coverage.analyzedCount, availableTransfers: coverage.availableCount };
+    return { data: { ...data, transfers: limited, coverage, compact }, llmData: compact };
+  },
   get_balance_history: async (input) => {
-    const { address, timePeriod } = periodSchema.parse(input);
-    const data = await getWalletBalanceHistory(address, timePeriod);
+    const { address, timePeriod, fromMs, toMs } = periodSchema.parse(input);
+    const data = await getWalletBalanceHistory(address, timePeriod, fromMs, toMs);
     return { data, llmData: extractBalanceHistoryForLLM(data, address) };
   },
 
   get_drawdown_chart: async (input) => {
-    const { address, timePeriod } = periodSchema.parse(input);
-    const balanceHistory = await getWalletBalanceHistory(address, timePeriod);
+    const { address, timePeriod, fromMs, toMs } = periodSchema.parse(input);
+    const balanceHistory = await getWalletBalanceHistory(address, timePeriod, fromMs, toMs);
     if (!balanceHistory?.length) {
       return { data: [], llmData: null };
     }
@@ -795,17 +966,37 @@ export const TOOL_HANDLERS: Record<
   },
 
   get_wallet_pnl: async (input) => {
-    const { address, fromMs, toMs, tokenAddress } = z.object({
+    const { address, limit, fromMs, toMs, tokenAddress, minAmountUsd, maxAmountUsd } = z.object({
       address: z.string().min(1),
+      limit: z.number().int().positive().max(500).optional(),
       fromMs: z.number().optional(),
       toMs: z.number().optional(),
       tokenAddress: z.string().regex(BASE58_REGEX, "Must be a valid base58 token mint address").optional(),
-    }).parse(input);
+      minAmountUsd: z.number().optional(),
+      maxAmountUsd: z.number().optional(),
+    }).refine(fromToMsRefinement, { message: "fromMs must be less than toMs" }).parse(input);
     const { getWalletPnLComputed } = await import(
       "@sv/services/wallet/walletAiSwapSummary.service.js"
     );
-    const data = await getWalletPnLComputed(address, { fromMs, toMs, tokenAddress });
+    const data = await getWalletPnLComputed(address, { fromMs, toMs, tokenAddress, limit, minAmountUsd, maxAmountUsd });
     return { data, llmData: extractPnLComputedForLLM(data) };
+  },
+  get_wallet_pnl_compact: async (input) => {
+    const { address, limit, fromMs, toMs, tokenAddress, minAmountUsd, maxAmountUsd } = z.object({
+      address: z.string().min(1),
+      limit: z.number().int().positive().max(500).optional(),
+      fromMs: z.number().optional(),
+      toMs: z.number().optional(),
+      tokenAddress: z.string().regex(BASE58_REGEX, "Must be a valid base58 token mint address").optional(),
+      minAmountUsd: z.number().optional(),
+      maxAmountUsd: z.number().optional(),
+    }).refine(fromToMsRefinement, { message: "fromMs must be less than toMs" }).parse(input);
+    const { getWalletPnLComputed } = await import(
+      "@sv/services/wallet/walletAiSwapSummary.service.js"
+    );
+    const data = await getWalletPnLComputed(address, { fromMs, toMs, tokenAddress, limit, minAmountUsd, maxAmountUsd });
+    const compact = compactWalletPnL(data);
+    return { data: { ...data, compact }, llmData: compact };
   },
 
   get_wallet_winrate: async (input) => {
@@ -818,8 +1009,8 @@ export const TOOL_HANDLERS: Record<
   },
 
   get_pnl_chart: async (input) => {
-    const { address, timePeriod } = periodSchema.parse(input);
-    const data = await getCumulativePnL(address, timePeriod);
+    const { address, timePeriod, fromMs, toMs } = periodSchema.parse(input);
+    const data = await getCumulativePnL(address, timePeriod, fromMs, toMs);
     return { data, llmData: extractPnLForLLM(data) };
   },
 
@@ -948,7 +1139,10 @@ export const TOOL_CACHE_POLICY: Record<string, ToolCachePolicy> = {
   // On-chain wallet data — stable, medium TTL
   get_wallet_swaps: { ttlMs: 300_000, cacheable: true },
   get_wallet_transfers: { ttlMs: 300_000, cacheable: true },
+  get_wallet_swaps_compact: { ttlMs: 300_000, cacheable: true },
+  get_wallet_transfers_compact: { ttlMs: 300_000, cacheable: true },
   get_wallet_pnl: { ttlMs: 300_000, cacheable: true },
+  get_wallet_pnl_compact: { ttlMs: 300_000, cacheable: true },
   get_wallet_winrate: { ttlMs: 300_000, cacheable: true },
   get_pnl_chart: { ttlMs: 300_000, cacheable: true },
   get_historical_portfolio: { ttlMs: 300_000, cacheable: true },
@@ -1006,9 +1200,12 @@ const WALLET_SCOPED_TOOLS = new Set([
   "get_wallet_overview",
   "get_wallet_swaps",
   "get_wallet_transfers",
+  "get_wallet_swaps_compact",
+  "get_wallet_transfers_compact",
   "get_balance_history",
   "get_drawdown_chart",
   "get_wallet_pnl",
+  "get_wallet_pnl_compact",
   "get_wallet_winrate",
   "get_pnl_chart",
   "get_wallet_portfolio",

@@ -71,6 +71,17 @@ const walletRequestSchema = z.object({
 
 const walletOverviewRequestSchema = walletRequestSchema;
 
+const walletTxQuerySchema = walletRequestSchema.extend({
+  fromMs: z.coerce.number().optional(),
+  toMs: z.coerce.number().optional(),
+  tokenAddress: z.string().optional(),
+  type: z.enum(["buy", "sell"]).optional(),
+  direction: z.enum(["in", "out"]).optional(),
+  minAmountUsd: z.coerce.number().optional(),
+  maxAmountUsd: z.coerce.number().optional(),
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+});
+
 const walletIdentityBatchRequestSchema = z.object({
   addresses: z
     .array(z.string().trim().min(1))
@@ -245,16 +256,12 @@ const app = new Hono()
     }
   })
   .get("/swap", async (c) => {
-    const query = c.req.query();
-    const params = walletRequestSchema.parse(query);
-    const address = params.address;
-
-    const limitParam = c.req.query("limit");
+    const params = walletTxQuerySchema.parse(c.req.query());
+    const { address, fromMs, toMs, tokenAddress, type, minAmountUsd, maxAmountUsd, limit } = params;
 
     try {
-      const txs = await getWalletSwaps(address);
-
-      return c.json(txs);
+      const txs = await getWalletSwaps(address, fromMs, toMs, tokenAddress, type, minAmountUsd, maxAmountUsd);
+      return c.json(limit ? { ...txs, swaps: txs.swaps.slice(0, limit) } : txs);
     } catch (err) {
       console.error("Failed to get wallet swaps", err);
       return c.json({ error: "Failed to get wallet swaps" }, 500);
@@ -412,8 +419,6 @@ const app = new Hono()
     async (c) => {
       const { walletAddress, tokenAddress } = c.req.valid("param");
       const limitParam = c.req.query("limit");
-      const cursor = c.req.query("cursor");
-      const before = c.req.query("before");
       const limit = limitParam ? Number(limitParam) : undefined;
 
       try {
@@ -426,9 +431,11 @@ const app = new Hono()
           return bought === normalizedToken || sold === normalizedToken;
         });
 
-        const trades = relevantSwaps.map((swap) =>
-          mapSwapToTokenTradeRow(swap, walletAddress, tokenAddress),
-        );
+        const trades = relevantSwaps
+          .slice(0, limit ?? relevantSwaps.length)
+          .map((swap) =>
+            mapSwapToTokenTradeRow(swap, walletAddress, tokenAddress),
+          );
 
         if (!trades) {
           return c.json(trades, statusCode.BadGateway);
@@ -444,20 +451,12 @@ const app = new Hono()
     },
   )
   .get("/transfers", async (c) => {
-    const query = c.req.query();
-    const params = walletRequestSchema.parse(query);
-    const address = params.address;
-
-    const limitParam = c.req.query("limit");
-    const cursor = c.req.query("cursor");
-    const before = c.req.query("before");
-
-    const limit = limitParam ? Number(limitParam) : undefined;
+    const params = walletTxQuerySchema.parse(c.req.query());
+    const { address, fromMs, toMs, tokenAddress, direction, minAmountUsd, maxAmountUsd, limit } = params;
 
     try {
-      const txs = await getWalletTransfers(address);
-
-      return c.json(txs);
+      const txs = await getWalletTransfers(address, fromMs, toMs, tokenAddress, direction, minAmountUsd, maxAmountUsd);
+      return c.json(limit ? { ...txs, transfers: txs.transfers.slice(0, limit) } : txs);
     } catch (err) {
       console.error("Failed to get wallet transfers", err);
       return c.json({ error: "Failed to get wallet transfers" }, 500);

@@ -462,6 +462,55 @@
   color: $text-primary;
   display: flex;
   align-items: center;
+  flex-shrink: 0;
+}
+
+.subheader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--cds-border-subtle-03);
+  background: $layer-01;
+  flex-shrink: 0;
+}
+
+.contextLabel {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 4px;
+  // background: $layer-02;
+  color: $text-secondary;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.contextTag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 160px;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid $border-subtle-01;
+  border-radius: 999px;
+  background: $layer-accent-01;
+  color: $text-secondary;
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+
+  &:hover {
+    background: $layer-hover-01;
+    color: $text-primary;
+  }
 }
 
 .walletSelect {
@@ -575,6 +624,33 @@
   flex: 1;
   overflow-y: auto;
   padding: 12px 12px 4px;
+}
+
+.contextChange {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+  color: $text-secondary;
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+
+  &::before,
+  &::after {
+    content: "";
+    flex: 1;
+    min-width: 16px;
+    border-top: 1px dashed $border-subtle-01;
+  }
+}
+
+.contextChangeAddresses {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--cds-support-info);
+  font-weight: 600;
 }
 
 .emptyState {
@@ -1705,9 +1781,7 @@
 }
 
 .sessionDropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
+  position: fixed;
   min-width: 240px;
   max-width: 320px;
   max-height: 300px;
@@ -1716,9 +1790,8 @@
   border: 1px solid var(--cds-border-subtle-03);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  z-index: 100;
+  z-index: 10001;
   padding: 4px;
-  margin-top: 4px;
 }
 
 .sessionDropdownTitle {

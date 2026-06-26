@@ -1,5 +1,5 @@
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/theme' as *;
+@use "@carbon/react/scss/spacing" as *;
+@use "@carbon/react/scss/theme" as *;
 
 // ===== Page Layout (outer flex for shell + sidebar) =====
 :global(.cds--content:has(.pageLayout)) {
@@ -7,6 +7,10 @@
 }
 
 .pageLayout {
+  --chat-panel-top-offset: calc(3.5rem + 16px);
+  --chat-panel-right-offset: 96px;
+  --chat-panel-left-offset: 16px;
+  --chat-panel-bottom-offset: 16px;
   display: flex;
   flex-direction: row;
   width: 100%;
@@ -171,7 +175,9 @@
   justify-content: center;
   padding: 5px;
   border-radius: 4px;
-  transition: color 0.15s, background-color 0.15s;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
   flex-shrink: 0;
 
   &:hover {
@@ -193,7 +199,7 @@
   // background: $layer-01;
 }
 
-.heroCell+.heroCell {
+.heroCell + .heroCell {
   border-left: 1px solid var(--cds-border-subtle-03);
 }
 
@@ -431,7 +437,7 @@
 
 .pfValue {
   font-size: 12px;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: "IBM Plex Mono", monospace;
   color: $text-primary;
 }
 
@@ -508,7 +514,7 @@
 }
 
 .exportMenu {
-  position: absolute;
+  position: fixed;
   right: 0;
   top: calc(100% + 6px);
   min-width: 240px;
@@ -546,7 +552,7 @@
 
 // ===== Utility styles =====
 .hiddenReportTemplate {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: -9999px;
   width: 0;
@@ -564,7 +570,7 @@
 
 .swapTokenAmount {
   color: $text-secondary;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: "IBM Plex Mono", monospace;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
@@ -578,7 +584,7 @@
 
 .tooltipTip {
   display: none;
-  position: absolute;
+  position: fixed;
   bottom: calc(100% + 5px);
   left: 50%;
   transform: translateX(-50%);
@@ -650,72 +656,132 @@
   }
 }
 
-// ===== Chat Inline (layout-integrated, right/left dock) =====
-.chatInline {
-  flex-shrink: 0;
-  max-width: 0;
-  overflow: hidden;
-  transition: max-width 0.3s ease;
-  display: flex;
-  border-left: 1px solid var(--cds-border-subtle-03);
-
-  &[data-open="true"] {
-    max-width: 460px;
-  }
-
-  &[data-side="left"] {
-    order: -1;
-    border-right: 1px solid var(--cds-border-subtle-03);
-    border-left: none;
-  }
-}
-
-.chatInlineInner {
-  width: 460px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+// ===== Chat Modal Launcher =====
+.chatLauncher {
+  position: fixed;
+  right: 56px;
+  bottom: 24px;
+  z-index: 70;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  max-width: min(320px, calc(100% - 88px));
+  padding: 0 12px;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 8px;
   background: $background;
+  color: $text-primary;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    transform 0.15s;
+
+  &:hover {
+    background: $layer-hover-01;
+    border-color: var(--cds-border-strong-01);
+    transform: translateY(-1px);
+  }
+
+  kbd {
+    flex-shrink: 0;
+    padding: 2px 6px;
+    border: 1px solid var(--cds-border-subtle-03);
+    border-radius: 4px;
+    color: $text-secondary;
+    background: $layer-01;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    font-weight: 500;
+  }
 }
 
-// ===== Chat Fullscreen Overlay =====
+// ===== Chat Modal Overlay =====
 .chatOverlay {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: 60;
-  display: flex;
-
-  &[data-position="fullscreen"] {
-    left: 0;
-    right: 0;
-  }
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
 }
 
 .chatBackdrop {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
   z-index: 0;
+  background: transparent;
+  pointer-events: none;
 }
 
 .chatPanel {
-  position: absolute;
-  inset: 0;
+  position: fixed;
   z-index: 1;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: $background;
+  border: 1px solid var(--cds-border-subtle-03);
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.38);
+  pointer-events: auto;
+  animation: chatPanelReveal 0.22s ease-out;
+}
 
-  .chatOverlay[data-position="fullscreen"] & {
-    inset: 24px;
-    // border-radius: 16px;
-    border: 1px solid var(--cds-border-subtle-03);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    max-width: 900px;
-    margin: 0 auto;
-    width: calc(100% - 48px);
+.chatOverlay[data-position="right"] .chatPanel {
+  top: var(--chat-panel-top-offset);
+  right: var(--chat-panel-right-offset);
+  bottom: var(--chat-panel-bottom-offset);
+  width: min(460px, calc(100% - var(--chat-panel-right-offset) - 32px));
+}
+
+.chatOverlay[data-position="left"] .chatPanel {
+  top: var(--chat-panel-top-offset);
+  bottom: var(--chat-panel-bottom-offset);
+  left: var(--chat-panel-left-offset);
+  width: min(460px, calc(100% - 48px));
+}
+
+.chatOverlay[data-position="fullscreen"] .chatPanel {
+  top: var(--chat-panel-top-offset);
+  right: 24px;
+  bottom: 24px;
+  left: 24px;
+  width: calc(100% - 48px);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+@keyframes chatPanelReveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .chatLauncher {
+    right: 52px;
+    bottom: 16px;
+  }
+
+  .chatOverlay[data-position="right"] .chatPanel,
+  .chatOverlay[data-position="left"] .chatPanel,
+  .chatOverlay[data-position="fullscreen"] .chatPanel {
+    top: 12px;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+    margin: 0;
   }
 }
 
