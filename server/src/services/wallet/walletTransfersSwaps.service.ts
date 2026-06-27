@@ -436,7 +436,7 @@ function mbl_extractActivity(
   const transfers: WalletTransferV2[] = [];
   const swapInsertValues: WalletSwapHistoryInsert[] = [];
   const transferInsertValues: WalletTransferHistoryInsert[] = [];
-  const tokenMetaInsertValues: TokenMetaInsert[] = [];
+  const tokenMetaInsertValuesByAddress = new Map<string, TokenMetaInsert>();
   const fetchedAtMs = dayjs.utc().valueOf();
 
   for (const transaction of transactions) {
@@ -465,9 +465,15 @@ function mbl_extractActivity(
           continue;
         }
 
-        tokenMetaInsertValues.push(
-          mbl_toTokenMetaInsert(action.swapAssetOut),
-          mbl_toTokenMetaInsert(action.swapAssetIn),
+        const tokenOutMeta = mbl_toTokenMetaInsert(action.swapAssetOut);
+        const tokenInMeta = mbl_toTokenMetaInsert(action.swapAssetIn);
+        tokenMetaInsertValuesByAddress.set(
+          tokenOutMeta.address,
+          tokenOutMeta,
+        );
+        tokenMetaInsertValuesByAddress.set(
+          tokenInMeta.address,
+          tokenInMeta,
         );
 
         swaps.push({
@@ -543,7 +549,11 @@ function mbl_extractActivity(
       }
 
       const tokenAddress = mbl_getAssetAddress(action.transferAsset);
-      tokenMetaInsertValues.push(mbl_toTokenMetaInsert(action.transferAsset));
+      const tokenMetaInsertValue = mbl_toTokenMetaInsert(action.transferAsset);
+      tokenMetaInsertValuesByAddress.set(
+        tokenMetaInsertValue.address,
+        tokenMetaInsertValue,
+      );
 
       transfers.push({
         transactionHash: transaction.txHash,
@@ -583,7 +593,7 @@ function mbl_extractActivity(
     transfers,
     swapInsertValues,
     transferInsertValues,
-    tokenMetaInsertValues,
+    tokenMetaInsertValues: Array.from(tokenMetaInsertValuesByAddress.values()),
   };
 }
 
@@ -1113,6 +1123,20 @@ export async function getWalletSwapHistory(
     });
   }
 
+  if (
+    cursor == null &&
+    storedEntries.length > 0 &&
+    latestCoveredToMs != null &&
+    latestCoveredToMs >= toMs
+  ) {
+    return postProcessWalletTxHistory({
+      entries: storedEntries,
+      limit,
+      fromExclusiveMs: fromMs,
+      hasUnresolvedRange: gaps.length > 0,
+    });
+  }
+
   if (gaps.length == 0) {
     const entries = await db_getSwapHistory(
       address,
@@ -1547,6 +1571,20 @@ export async function getWalletTransferHistory(
     gaps.push({
       fromExclusiveMs: fromMs,
       toInclusiveMs: cursorMs,
+    });
+  }
+
+  if (
+    cursor == null &&
+    storedEntries.length > 0 &&
+    latestCoveredToMs != null &&
+    latestCoveredToMs >= toMs
+  ) {
+    return postProcessWalletTxHistory({
+      entries: storedEntries,
+      limit,
+      fromExclusiveMs: fromMs,
+      hasUnresolvedRange: gaps.length > 0,
     });
   }
 
