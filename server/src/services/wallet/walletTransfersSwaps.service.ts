@@ -958,6 +958,7 @@ export async function getWalletSwapHistory(
   parsedCursor?: WalletHistoryCursor,
   minValueUsd?: number,
 ): Promise<WalletTransactionHistory<WalletSwapV2> | null> {
+  // Don't try to understand it, Just feel it - Christopher Nolan
   const cursor = parsedCursor ?? null;
   const normalizedMinValueUsd = normalizeMinValueUsd(minValueUsd);
   const requestedRange = cursor
@@ -985,6 +986,26 @@ export async function getWalletSwapHistory(
           WALLET_SWAP_HISTORY_LATEST_TOLERANCE_MS
       ? latestCoveredToMs
       : requestedRange.toMs;
+  const storedEntries = await db_getSwapHistory(
+    address,
+    fromMs,
+    toMs,
+    limit + 1,
+    cursor,
+    normalizedMinValueUsd,
+  );
+  const canAnswerFromStoredRows =
+    storedEntries.length > limit &&
+    (cursor != null ||
+      (latestCoveredToMs != null && latestCoveredToMs >= toMs));
+  if (canAnswerFromStoredRows) {
+    return postProcessWalletTxHistory({
+      entries: storedEntries,
+      limit,
+      fromExclusiveMs: fromMs,
+      hasUnresolvedRange: false,
+    });
+  }
 
   const intersecting = await db
     .select()
@@ -1405,6 +1426,26 @@ export async function getWalletTransferHistory(
           WALLET_TRANSFER_HISTORY_LATEST_TOLERANCE_MS
       ? latestCoveredToMs
       : requestedRange.toMs;
+  const storedEntries = await db_getTransferHistory(
+    address,
+    fromMs,
+    toMs,
+    limit + 1,
+    cursor,
+    normalizedMinValueUsd,
+  );
+  const canAnswerFromStoredRows =
+    storedEntries.length > limit &&
+    (cursor != null ||
+      (latestCoveredToMs != null && latestCoveredToMs >= toMs));
+  if (canAnswerFromStoredRows) {
+    return postProcessWalletTxHistory({
+      entries: storedEntries,
+      limit,
+      fromExclusiveMs: fromMs,
+      hasUnresolvedRange: false,
+    });
+  }
 
   const intersecting = await db
     .select()
