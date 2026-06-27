@@ -9,16 +9,18 @@ import { roundUsd } from "./walletNormalization.utils.js";
 import { getWalletTransfers } from "./walletTransfersSwaps.service.js";
 import { getWalletOverview } from "./walletOverview.service.js";
 import { db } from "@sv/db/index.js";
-import {
-    walletBalanceMonthHistory,
-    walletBalanceWeekHistory,
-} from "@sv/db/schema.js";
-import { and, between, eq, gte } from "drizzle-orm";
+import { walletBalanceHistory } from "@sv/db/schema.js";
+import { and, between, eq } from "drizzle-orm";
 import * as mobula from "@sv/util/util-mobula.js";
 import { mbl_WalletHistorySchema } from "../_types/wallet-raw-responses.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import dayjs from "dayjs";
-import { WALLET_BALANCE_HISTORY_CACHE_TTL_MS } from "@sv/config/constants.js";
+import {
+    DAY_MS,
+    WALLET_BALANCE_HISTORY_FETCH_TIMEOUT_MS,
+    WALLET_BALANCE_HISTORY_STORED_TTL_MS,
+    MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS,
+} from "@sv/config/constants.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
 import { excluded } from "@sv/util/orm-sql.js";
 
@@ -149,43 +151,71 @@ export async function getWalletBalanceHistory(
   };
   const balanceChartPeriod = toBalanceChartPeriod[timePeriod] ?? "month";
 
-  const nowUtc = dayjs.utc();
-  const end = nowUtc.valueOf();
-  const start = nowUtc.subtract(1, balanceChartPeriod).valueOf();
-  const thresholdDateMs = end - WALLET_BALANCE_HISTORY_CACHE_TTL_MS;
-
-  const balanceTable =
-    balanceChartPeriod == "week"
-      ? walletBalanceWeekHistory
-      : walletBalanceMonthHistory;
+  const end = dayjs.utc().valueOf() - MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS;
+  const start = dayjs.utc(end).subtract(1, balanceChartPeriod).valueOf();
+  const storedThresholdMs = end - WALLET_BALANCE_HISTORY_STORED_TTL_MS;
+  const expectedDailyPoints = balanceChartPeriod == "week" ? 7 : 30;
+  const minCoveragePoints = Math.max(1, expectedDailyPoints - 2);
 
   const res = await db
     .select()
-    .from(balanceTable)
+    .from(walletBalanceHistory)
     .where(
       and(
-        eq(balanceTable.address, address),
-        between(balanceTable.timestampMs, start, end),
-        gte(balanceTable.updatedAtMs, thresholdDateMs),
+        eq(walletBalanceHistory.address, address),
+        between(walletBalanceHistory.timestampMs, start, end),
       ),
     )
-    .orderBy(balanceTable.timestampMs);
+    .orderBy(walletBalanceHistory.timestampMs);
 
   if (res.length == 0) {
-    return fetchWalletBalanceHistory(address, balanceChartPeriod, start, end);
+    return fetchWalletBalanceHistory(address, start, end);
   }
 
-  return normalizeByDay(
+  const storedPoints = normalizeByDay(
     res.map((point) => ({
       timestampMs: point.timestampMs,
       usdValue: point.usdValue,
     })),
   );
+  const firstStoredPoint = storedPoints[0];
+  const lastStoredPoint = storedPoints[storedPoints.length - 1];
+  const newestStoredUpdateMs = res.reduce((latest, point) => {
+    const updatedAtMs = point.updatedAtMs ?? 0;
+    return updatedAtMs > latest ? updatedAtMs : latest;
+  }, 0);
+  const hasRangeCoverage =
+    firstStoredPoint != null &&
+    lastStoredPoint != null &&
+    firstStoredPoint.timestampMs <= start + DAY_MS &&
+    storedPoints.length >= minCoveragePoints;
+  const hasFreshTail =
+    lastStoredPoint != null && lastStoredPoint.timestampMs >= end - DAY_MS;
+  const storedUpdatedRecently = newestStoredUpdateMs >= storedThresholdMs;
+
+  if (hasRangeCoverage && hasFreshTail && storedUpdatedRecently) {
+    return storedPoints;
+  }
+
+  if (hasRangeCoverage && lastStoredPoint != null) {
+    const partialStart = Math.max(start, lastStoredPoint.timestampMs - DAY_MS);
+    const fetched = await fetchWalletBalanceHistory(
+      address,
+      partialStart,
+      end,
+    );
+    if (!fetched) {
+      return storedPoints;
+    }
+
+    return normalizeByDay([...storedPoints, ...fetched]);
+  }
+
+  return fetchWalletBalanceHistory(address, start, end);
 }
 
 async function fetchWalletBalanceHistory(
   address: string,
-  timePeriod: "week" | "month",
   startMs: number,
   endMs: number,
 ): Promise<WalletBalanceHistory> {
@@ -204,6 +234,7 @@ async function fetchWalletBalanceHistory(
     method: "GET",
     headers: mobula.getRequiredHeaders(),
     rlLimiter: mobula.limiter,
+    rlTimeoutMs: WALLET_BALANCE_HISTORY_FETCH_TIMEOUT_MS,
   });
 
   const res = await getTrackedApiResult(mbl_WalletHistorySchema, resp);
@@ -212,10 +243,19 @@ async function fetchWalletBalanceHistory(
   }
 
   const fetchedAtMs = dayjs.utc().valueOf();
-  const insertValues = res.data.balance_history.map((point) => ({
+  // Mobula period defines the baseline grid only. Balance-changing transfers
+  // are returned as extra points, so high-activity wallets can still produce
+  // very large responses. Keep the latest point per UTC day before storing.
+  const normalizedPoints = normalizeByDay(
+    res.data.balance_history.map((point) => ({
+      timestampMs: point[0],
+      usdValue: point[1],
+    })),
+  );
+  const insertValues = normalizedPoints.map((point) => ({
     address: address,
-    timestampMs: point[0],
-    usdValue: point[1],
+    timestampMs: point.timestampMs,
+    usdValue: point.usdValue,
     updatedAtMs: fetchedAtMs,
   }));
 
@@ -223,23 +263,15 @@ async function fetchWalletBalanceHistory(
     return [];
   }
 
-  const balanceTable =
-    timePeriod == "week" ? walletBalanceWeekHistory : walletBalanceMonthHistory;
-
-  await db.insert(balanceTable).values(insertValues).onConflictDoUpdate({
-    target: [balanceTable.address, balanceTable.timestampMs],
+  await db.insert(walletBalanceHistory).values(insertValues).onConflictDoUpdate({
+    target: [walletBalanceHistory.address, walletBalanceHistory.timestampMs],
     set: {
-      usdValue: excluded(balanceTable.usdValue),
-      updatedAtMs: excluded(balanceTable.updatedAtMs),
+      usdValue: excluded(walletBalanceHistory.usdValue),
+      updatedAtMs: excluded(walletBalanceHistory.updatedAtMs),
     },
   });
 
-  return normalizeByDay(
-    insertValues.map((point) => ({
-      usdValue: point.usdValue,
-      timestampMs: point.timestampMs,
-    })),
-  );
+  return normalizedPoints;
 }
 
 // Group data points by UTC day, keeping only the latest point per day.

@@ -47,49 +47,8 @@ export type WalletTokenBalanceHistorySelect =
 export type WalletTokenBalanceHistoryInsert =
   typeof walletTokenBalanceHistory.$inferInsert;
 
-// Currently in migration to Zerion API, this
-// table now store at max a month (can store previous
-// months but gaps won't be resolved)
 export const walletBalanceHistory = pgTable(
   "wallet_balance_history",
-  {
-    address: varchar("address", { length: 66 }).notNull(),
-    timestampMs: bigint("timestamp_ms", {
-      mode: "number",
-    }).notNull(),
-    usdValue: decimal("usd_value").notNull(),
-    updatedAtMs: bigint("updated_at_ms", {
-      mode: "number",
-    }).$onUpdate(() => dayjs.utc().valueOf()),
-  },
-  (t) => [
-    primaryKey({
-      columns: [t.address, t.timestampMs],
-    }),
-  ],
-);
-
-export const walletBalanceWeekHistory = pgTable(
-  "wallet_balance_week_history",
-  {
-    address: varchar("address", { length: 66 }).notNull(),
-    timestampMs: bigint("timestamp_ms", {
-      mode: "number",
-    }).notNull(),
-    usdValue: decimal("usd_value").notNull(),
-    updatedAtMs: bigint("updated_at_ms", {
-      mode: "number",
-    }).$onUpdate(() => dayjs.utc().valueOf()),
-  },
-  (t) => [
-    primaryKey({
-      columns: [t.address, t.timestampMs],
-    }),
-  ],
-);
-
-export const walletBalanceMonthHistory = pgTable(
-  "wallet_balance_month_history",
   {
     address: varchar("address", { length: 66 }).notNull(),
     timestampMs: bigint("timestamp_ms", {

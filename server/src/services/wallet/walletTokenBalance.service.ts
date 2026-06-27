@@ -11,7 +11,7 @@ import { rlFetch } from "@sv/util/rate-limit.js";
 import dayjs from "dayjs";
 import { and, between, eq, inArray } from "drizzle-orm";
 import {
-    WALLET_BALANCE_HISTORY_CACHE_TTL_MS,
+    WALLET_BALANCE_HISTORY_STORED_TTL_MS,
     ZRN_SOL_FUNGIBLE_ID,
 } from "@sv/config/constants.js";
 import * as zrn from "@sv/util/util-zerion.js";
@@ -130,7 +130,7 @@ export async function getWalletTokenBalanceHistory(
   const nowUtc = dayjs().utc();
   const end = nowUtc.valueOf();
   const start = nowUtc.subtract(1, zrnPeriod).valueOf();
-  const thresholdDateMs = end - WALLET_BALANCE_HISTORY_CACHE_TTL_MS;
+  const thresholdDateMs = end - WALLET_BALANCE_HISTORY_STORED_TTL_MS;
 
   const balanceTable =
     zrnPeriod == "week"
