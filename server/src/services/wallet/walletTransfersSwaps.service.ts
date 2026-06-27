@@ -311,6 +311,7 @@ export type WalletTransferToken = {
 
 export interface WalletSwapV2 {
   transactionHash: string;
+  actId: string;
   blockTimestampMs: number;
   bought: WalletTransferToken;
   sold: WalletTransferToken;
@@ -319,6 +320,7 @@ export interface WalletSwapV2 {
 
 export interface WalletTransferV2 {
   transactionHash: string;
+  actId: string;
   blockTimestampMs: number;
   token: WalletTransferToken;
   direction: "send" | "receive";
@@ -443,6 +445,7 @@ function mbl_extractActivity(
 
         swaps.push({
           transactionHash: transaction.txHash,
+          actId,
           blockTimestampMs: transaction.txDateMs,
           bought: {
             address: tokenInAddress,
@@ -517,6 +520,7 @@ function mbl_extractActivity(
 
       transfers.push({
         transactionHash: transaction.txHash,
+        actId,
         blockTimestampMs: transaction.txDateMs,
         token: {
           address: tokenAddress,
@@ -862,6 +866,7 @@ async function db_getSwapHistory(
     actId: item.actId,
     transaction: {
       transactionHash: item.transactionHash,
+      actId: item.actId,
       blockTimestampMs: item.blockTimestampMs,
       bought: {
         address: item.tokenIn,
@@ -1237,6 +1242,7 @@ async function db_getTransferHistory(
     actId: item.actId,
     transaction: {
       transactionHash: item.transactionHash,
+      actId: item.actId,
       blockTimestampMs: item.blockTimestampMs,
       token: {
         address: item.tokenAddress,

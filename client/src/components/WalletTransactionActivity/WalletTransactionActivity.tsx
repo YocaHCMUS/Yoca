@@ -26,6 +26,7 @@ import { SOLSCAN_TX_URL } from "@/config/constants";
 type WalletSwapData = {
   transactions: {
     transactionHash: string;
+    actId: string;
     blockTimestampMs: number;
     bought: {
       address: string;
@@ -51,6 +52,7 @@ type WalletSwapData = {
 type WalletTransferData = {
   transactions: {
     transactionHash: string;
+    actId: string;
     blockTimestampMs: number;
     token: {
       address: string;
@@ -192,7 +194,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
         const value = (
           <Txt size="sm">
             {tx.totalValueUsd != null
-              ? fmt.num.currency(tx.totalValueUsd)
+              ? fmt.num.compact.currency(tx.totalValueUsd)
               : "—"}
           </Txt>
         );
@@ -210,7 +212,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
         )
 
         return {
-          id: tx.transactionHash || `swap-${index}`,
+          id: `${tx.transactionHash}-${tx.actId}`,
           time,
           tokenSold: soldDisplay,
           tokenBought: boughtDisplay,
@@ -258,7 +260,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
         );
         const value = (
           <Txt size="sm">
-            {tx.valueUsd != null ? fmt.num.currency(tx.valueUsd) : "—"}
+            {tx.valueUsd != null ? fmt.num.compact.currency(tx.valueUsd) : "—"}
           </Txt>
         );
 
@@ -275,7 +277,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
         )
 
         return {
-          id: tx.transactionHash || `transfer-${index}`,
+          id: `${tx.transactionHash}-${tx.actId}`,
           time,
           sender,
           receiver,
@@ -334,7 +336,6 @@ export function WalletTransactionActivity({ address }: { address: string }) {
               pageSize={16}
               stickyHeader
               boxed
-              pageUnknown
               toolBar={
                 <LowValueFilter
                   id="hide-low-value-swaps"
@@ -397,7 +398,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
               pageSize={16}
               stickyHeader
               boxed
-              pageUnknown
+              // pageUnknown
               toolBar={
                 <LowValueFilter
                   id="hide-low-value-transfers"
