@@ -158,6 +158,17 @@ export const mbl_WalletPositionsSchema = z.object({
 
 export type MBL_WalletPositions = z.infer<typeof mbl_WalletPositionsSchema>;
 
+export const mbl_WalletHistorySchema = z.object({
+  data: z.object({
+    wallets: z.array(z.string()),
+    balance_usd: z.number(),
+    balance_history: z.array(z.tuple([z.number(), z.number()])),
+    backfill_status: z.enum(["processed", "processing", "pending"]).optional(),
+  }),
+});
+
+export type MBL_WalletHistory = z.infer<typeof mbl_WalletHistorySchema>;
+
 export const bds_WalletFirstFundSchema = z.object({
   success: z.boolean(),
   data: z.record(

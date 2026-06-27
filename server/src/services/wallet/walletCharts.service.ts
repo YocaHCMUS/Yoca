@@ -13,13 +13,14 @@ import {
     walletBalanceMonthHistory,
     walletBalanceWeekHistory,
 } from "@sv/db/schema.js";
-import { and, between, eq } from "drizzle-orm";
-import * as zrn from "@sv/util/util-zerion.js";
-import { zrn_WalletBalanceChartSchema } from "../_types/wallet-raw-responses.js";
+import { and, between, eq, gte } from "drizzle-orm";
+import * as mobula from "@sv/util/util-mobula.js";
+import { mbl_WalletHistorySchema } from "../_types/wallet-raw-responses.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import dayjs from "dayjs";
 import { WALLET_BALANCE_HISTORY_CACHE_TTL_MS } from "@sv/config/constants.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
+import { excluded } from "@sv/util/orm-sql.js";
 
 /**
  * Get UTC start-of-day timestamp (ms) for a given timestamp.
@@ -142,19 +143,21 @@ export async function getWalletBalanceHistory(
   timePeriod: WalletTimePeriod = "30D",
 ): Promise<WalletBalanceHistory> {
   // TODO: enforce this
-  const toZrnChartPeriod: Record<any, "week" | "month"> = {
+  const toBalanceChartPeriod: Record<string, "week" | "month"> = {
     "7D": "week",
     "30D": "month",
   };
-  const zrnPeriod = toZrnChartPeriod[timePeriod];
+  const balanceChartPeriod = toBalanceChartPeriod[timePeriod] ?? "month";
 
   const nowUtc = dayjs.utc();
   const end = nowUtc.valueOf();
-  const start = nowUtc.subtract(1, zrnPeriod).valueOf();
+  const start = nowUtc.subtract(1, balanceChartPeriod).valueOf();
   const thresholdDateMs = end - WALLET_BALANCE_HISTORY_CACHE_TTL_MS;
 
   const balanceTable =
-    zrnPeriod == "week" ? walletBalanceWeekHistory : walletBalanceMonthHistory;
+    balanceChartPeriod == "week"
+      ? walletBalanceWeekHistory
+      : walletBalanceMonthHistory;
 
   const res = await db
     .select()
@@ -163,12 +166,13 @@ export async function getWalletBalanceHistory(
       and(
         eq(balanceTable.address, address),
         between(balanceTable.timestampMs, start, end),
+        gte(balanceTable.updatedAtMs, thresholdDateMs),
       ),
     )
     .orderBy(balanceTable.timestampMs);
 
-  if (res.length == 0 || res[res.length - 1].timestampMs < thresholdDateMs) {
-    return fetchWalletBalanceHistory(address, zrnPeriod);
+  if (res.length == 0) {
+    return fetchWalletBalanceHistory(address, balanceChartPeriod, start, end);
   }
 
   return normalizeByDay(
@@ -182,37 +186,53 @@ export async function getWalletBalanceHistory(
 async function fetchWalletBalanceHistory(
   address: string,
   timePeriod: "week" | "month",
+  startMs: number,
+  endMs: number,
 ): Promise<WalletBalanceHistory> {
-  const url = zrn.getEndpoint(`/wallets/${address}/charts/${timePeriod}`);
-  const req = new URL(url);
-  req.search = new URLSearchParams({
-    currency: "usd",
-    "filter[positions]": "only_simple",
-    "filter[chain_ids]": "solana",
+  const endpoint = mobula.getEndpoint("/1/wallet/history");
+  endpoint.search = new URLSearchParams({
+    wallet: address,
+    blockchains: "solana:solana",
+    from: String(startMs),
+    to: String(endMs),
+    period: "1d",
+    filterSpam: "true",
+    unlistedAssets: "false",
   }).toString();
 
-  const resp = await rlFetch(req, {
+  const resp = await rlFetch(endpoint, {
     method: "GET",
-    headers: zrn.getRequiredHeaders(),
-    rlLimiter: zrn.limiter
+    headers: mobula.getRequiredHeaders(),
+    rlLimiter: mobula.limiter,
   });
 
-  const res = await getTrackedApiResult(zrn_WalletBalanceChartSchema, resp);
+  const res = await getTrackedApiResult(mbl_WalletHistorySchema, resp);
   if (!res) {
     return null;
   }
 
-  const insertValues = res.data.attributes.points.map((point) => ({
+  const fetchedAtMs = dayjs.utc().valueOf();
+  const insertValues = res.data.balance_history.map((point) => ({
     address: address,
-    // s -> ms
-    timestampMs: point[0] * 1000,
+    timestampMs: point[0],
     usdValue: point[1],
+    updatedAtMs: fetchedAtMs,
   }));
+
+  if (insertValues.length == 0) {
+    return [];
+  }
 
   const balanceTable =
     timePeriod == "week" ? walletBalanceWeekHistory : walletBalanceMonthHistory;
 
-  await db.insert(balanceTable).values(insertValues).onConflictDoNothing();
+  await db.insert(balanceTable).values(insertValues).onConflictDoUpdate({
+    target: [balanceTable.address, balanceTable.timestampMs],
+    set: {
+      usdValue: excluded(balanceTable.usdValue),
+      updatedAtMs: excluded(balanceTable.updatedAtMs),
+    },
+  });
 
   return normalizeByDay(
     insertValues.map((point) => ({
