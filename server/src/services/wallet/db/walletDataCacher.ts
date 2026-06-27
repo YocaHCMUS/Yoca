@@ -98,7 +98,7 @@ export async function saveOverviewCache(overview: WalletOverview): Promise<void>
     const period7d = overview.periods["7D"];
     const period30d = overview.periods["30D"];
     const period90d = overview.periods["90D"];
-    const periodAll = overview.periods["All"];
+    const periodAll = period90d;
 
     const keepIfNull = <T>(value: T | null | undefined): T | undefined =>
       value == null ? undefined : value;

@@ -16,7 +16,7 @@ import type {
  * Fetch RSS-filtered news for a token from GET /api/token-news.
  */
 export async function getTokenNews(query: TokenNewsQuery): Promise<NewsFilterResult> {
-    const resp = await client.api.tokenNews.index.$get({
+    const resp = await client.api["token-news"].$get({
         query: {
             address: query.address,
             symbol: query.symbol,
@@ -28,7 +28,7 @@ export async function getTokenNews(query: TokenNewsQuery): Promise<NewsFilterRes
         throw new Error(`Failed to fetch token news: ${resp.status}`);
     }
 
-    const payload = (await resp.json()) as TokenNewsApiResponse;
+    const payload = await resp.json();
     if (!payload.success) {
         throw new Error('Failed to fetch token news');
     }
@@ -56,7 +56,7 @@ export async function getExpandedNewsArticle(contentHash: string): Promise<NewsA
             return null;
         }
 
-        const data = (await resp.json()) as NewsArticleExpansionResult;
+        const data = await resp.json();
         return {
             article: data.article,
             token: data.token,

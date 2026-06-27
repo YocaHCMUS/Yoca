@@ -1,8 +1,8 @@
 import client from "@/api/main";
 import type {
-  TokenChartNewsEventsData,
-  TokenChartNewsEventsQuery,
-  TokenChartNewsEventsResponse,
+    TokenChartNewsEventsData,
+    TokenChartNewsEventsQuery,
+    TokenChartNewsEventsResponse,
 } from "@/types/chartNewsEvents";
 
 export async function getTokenChartNewsEvents({
@@ -14,7 +14,7 @@ export async function getTokenChartNewsEvents({
   forceRefresh = false,
   date,
 }: TokenChartNewsEventsQuery): Promise<TokenChartNewsEventsData> {
-  const response = await client.api.tokenChartNewsEvents.index.$get({
+  const response = await client.api["token-chart-news-events"].$get({
     query: {
       address,
       symbol,

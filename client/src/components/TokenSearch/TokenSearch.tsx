@@ -2,7 +2,7 @@ import client from "@/api/main";
 import { Flex } from "@/components/Flex";
 import { TknImg } from "@/components/TknImg";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { useGet } from "@/hooks/useGet";
+import { useGet, UseGetResp } from "@/hooks/useGet";
 import { InlineLoading, Search } from "@carbon/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TrendNum } from "../TrendNum";
@@ -46,8 +46,8 @@ export default function TokenSearch({
     };
   }, []);
 
-  const searchResults = useGet(
-    client.api.search.index,
+  const searchResults: UseGetResp<TokenSearchResult[]> = useGet(
+    client.api.search,
     200,
     { query: { q: debouncedQuery } },
     {

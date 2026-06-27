@@ -39,8 +39,7 @@ function normalizePeriod(period: TimePeriod): WalletOverviewPeriodKey {
     period === "24H" ||
     period === "7D" ||
     period === "30D" ||
-    period === "90D" ||
-    period === "All"
+    period === "90D"
   ) {
     return period;
   }

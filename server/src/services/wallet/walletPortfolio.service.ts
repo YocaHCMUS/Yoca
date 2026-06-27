@@ -1,8 +1,18 @@
 import { WALLET_PORTFOLIO_TTL_MS } from "@sv/config/constants.js";
 import type { WalletPortfolioItem } from "./dtos/walletDataObjects.js";
-import { enrichWalletPortfolioMetadata } from "./walletData.core.js";
+import {
+  enrichWalletPortfolioMetadata,
+  isValidPortfolioTokenAddress,
+  normalizePortfolioLookupAddress,
+  normalizePortfolioText,
+} from "./walletData.core.js";
 import { db } from "@sv/db/index.js";
-import { walletPortfolioCache } from "@sv/db/schema.js";
+import {
+  tokenMeta,
+  type TokenMetaInsert,
+  walletPortfolioCache,
+} from "@sv/db/schema.js";
+import { excludedAutoNonNullFromInsert } from "@sv/util/orm-sql.js";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { fetchHeliusSolanaPortfolio } from "./fetchers/walletDataFetcher.service.js";
@@ -19,6 +29,45 @@ const walletPortfolioCacheSchema = z.array(
     change24hPercent: z.number().optional(),
   }),
 );
+
+async function syncPortfolioTokenMeta(portfolio: WalletPortfolioItem[]) {
+  const valuesByAddress = new Map<string, TokenMetaInsert>();
+
+  for (const item of portfolio) {
+    if (!isValidPortfolioTokenAddress(item.tokenAddress)) {
+      continue;
+    }
+
+    const address = normalizePortfolioLookupAddress(item.tokenAddress);
+    const symbol = normalizePortfolioText(item.symbol);
+    const name = normalizePortfolioText(item.name);
+    const imageUrl = normalizePortfolioText(item.logoUri);
+
+    if (!symbol && !name && !imageUrl) {
+      continue;
+    }
+
+    valuesByAddress.set(address, {
+      address,
+      symbol,
+      name,
+      imageUrl,
+    });
+  }
+
+  const values = Array.from(valuesByAddress.values());
+  if (values.length == 0) {
+    return;
+  }
+
+  await db
+    .insert(tokenMeta)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [tokenMeta.address],
+      set: excludedAutoNonNullFromInsert(tokenMeta, tokenMeta.address, values),
+    });
+}
 
 export async function getWalletPortfolio(
   address: string,
@@ -41,6 +90,7 @@ export async function getWalletPortfolio(
     cachedDataResult.success &&
     cachedPortfolio[0].fetchedAt >= portfolioThreshold
   ) {
+    await syncPortfolioTokenMeta(cachedData);
     const enrichedCached = await enrichWalletPortfolioMetadata(cachedData, {
       address,
       source: "cache-hit",
@@ -68,6 +118,7 @@ export async function getWalletPortfolio(
 
   if (selectedPortfolio.length === 0) {
     if (cachedData.length > 0) {
+      await syncPortfolioTokenMeta(cachedData);
       const enrichedStale = await enrichWalletPortfolioMetadata(cachedData, {
         address,
         source: "stale-cache",
@@ -78,6 +129,7 @@ export async function getWalletPortfolio(
     return [];
   }
 
+  await syncPortfolioTokenMeta(selectedPortfolio);
   const enrichedPortfolio = await enrichWalletPortfolioMetadata(
     selectedPortfolio,
     {

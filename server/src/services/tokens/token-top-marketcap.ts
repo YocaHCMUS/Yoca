@@ -7,7 +7,7 @@ import {
   type TokenMetaInsert,
   type TopTokensByMarketCapInsert,
 } from "@sv/db/schema.js";
-import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
+import { excludedAutoNonNullFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { asc, gt } from "drizzle-orm";
 import type { CG_CoinMarkets } from "../_types/token-raw-responses.js";
@@ -80,7 +80,11 @@ export async function getTopTokensByMarketCap() {
     .values(metaValues)
     .onConflictDoUpdate({
       target: [tokenMeta.address],
-      set: excludedAutoFromInsert(tokenMeta, tokenMeta.address, metaValues),
+      set: excludedAutoNonNullFromInsert(
+        tokenMeta,
+        tokenMeta.address,
+        metaValues,
+      ),
     });
 
   return await db

@@ -121,7 +121,7 @@ export interface TokenAiChatResponse {
 export async function askTokenAiChat(
   payload: TokenAiChatPayload,
 ): Promise<TokenAiChatData> {
-  const response = await (client.api.tokenAiChat.index as any).$post({
+  const response = await client.api["token-ai-chat"].$post({
     json: payload,
   });
 

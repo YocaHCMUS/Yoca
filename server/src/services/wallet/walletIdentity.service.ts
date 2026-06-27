@@ -15,6 +15,7 @@ import {
     getRequiredHeaders,
     heliusFetch,
 } from "@sv/util/util-helius.js";
+import { statusCode } from "@sv/util/responses.js";
 
 export const WALLET_IDENTITY_MAX_BATCH_SIZE = 100;
 
@@ -65,6 +66,63 @@ export class WalletIdentityServiceError extends Error {
         this.statusCode = statusCode;
         this.providerStatusCode = providerStatusCode;
     }
+}
+
+export function mapWalletIdentityError(err: WalletIdentityServiceError): {
+    status: 400 | 401 | 502 | 503;
+    error: string;
+} {
+    if (err.code == "invalid_address") {
+        return {
+            status: statusCode.BadRequest,
+            error: "Invalid wallet address format",
+        };
+    }
+
+    if (err.code == "invalid_batch") {
+        return {
+            status: statusCode.BadRequest,
+            error: "Invalid identity batch payload",
+        };
+    }
+
+    if (err.code == "provider_unauthorized") {
+        return {
+            status: statusCode.Unauthorized,
+            error: "Wallet identity provider authorization failed",
+        };
+    }
+
+    if (
+        err.code == "provider_rate_limited" ||
+        err.code == "provider_unavailable"
+    ) {
+        return {
+            status: statusCode.ServiceUnavailable,
+            error: "Wallet identity provider is unavailable",
+        };
+    }
+
+    if (err.code == "provider_bad_request") {
+        return {
+            status: statusCode.BadRequest,
+            error: "Invalid request for wallet identity provider",
+        };
+    }
+
+    const fallbackStatus: 400 | 401 | 502 | 503 =
+        err.statusCode == statusCode.BadRequest
+            ? statusCode.BadRequest
+            : err.statusCode == statusCode.Unauthorized
+              ? statusCode.Unauthorized
+              : err.statusCode == statusCode.ServiceUnavailable
+                ? statusCode.ServiceUnavailable
+                : statusCode.BadGateway;
+
+    return {
+        status: fallbackStatus,
+        error: "Failed to fetch wallet identity",
+    };
 }
 
 function mapProviderStatusToError(status: number): WalletIdentityServiceError {
@@ -628,4 +686,3 @@ export async function getWalletIdentityBatch(
         ),
     };
 }
-

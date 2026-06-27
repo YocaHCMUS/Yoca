@@ -2,7 +2,7 @@ import { getWalletOverview } from "@sv/services/wallet/walletOverview.service.js
 import { getWalletSwaps, getWalletTransfers } from "@sv/services/wallet/walletTransfersSwaps.service.js";
 import { getWalletBalanceHistory, getCumulativePnL } from "@sv/services/wallet/walletCharts.service.js";
 import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
-import { getWinrateData } from "@sv/services/charts/winrate.service.js";
+import { getWinrateData } from "@sv/services/wallet/wallet-analysis.js";
 import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
 import { getTokenMeta, getTokenDetails } from "@sv/services/tokens/token-info.js";
 import { searchToken } from "./chat-token-search.js";

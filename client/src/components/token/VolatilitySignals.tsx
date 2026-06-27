@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ChevronDown,
-  ChevronRight,
-  Launch,
-  Renew,
+    ChevronDown,
+    ChevronRight,
+    Launch,
+    Renew,
 } from "@carbon/icons-react";
 import { Button, Select, SelectItem, SkeletonText } from "@carbon/react";
 import { getTokenVolatilityNews } from "@/services/tokenVolatility";
 import type {
-  RelatedNewsArticle,
-  VolatilityEvent,
-  VolatilitySummary,
-  VolatilityTimeframe,
+    RelatedNewsArticle,
+    VolatilityEvent,
+    VolatilitySummary,
+    VolatilityTimeframe,
 } from "@/types/volatility";
 import styles from "./VolatilitySignals.module.scss";
 
@@ -63,7 +63,7 @@ function formatDateTime(value: string | null) {
 
 function formatPrice(value: number) {
   if (!Number.isFinite(value)) return "-";
-  if (value === 0) return "$0";
+  if (value == 0) return "$0";
 
   const absValue = Math.abs(value);
   if (absValue < 0.0001) return `$${value.toExponential(2)}`;
@@ -89,7 +89,7 @@ function formatTimeDistance(hours: number | null) {
 }
 
 function getEventTypeLabel(type: VolatilityEvent["type"]) {
-  return type === "price_spike" ? "Price spike" : "Price drop";
+  return type == "price_spike" ? "Price spike" : "Price drop";
 }
 
 function getInitialState(): VolatilitySignalsState {
@@ -108,7 +108,7 @@ function getInitialState(): VolatilitySignalsState {
 }
 
 function RelatedNewsList({ articles }: { articles: RelatedNewsArticle[] }) {
-  if (articles.length === 0) {
+  if (articles.length == 0) {
     return (
       <p className={styles.noRelatedNews}>
         No related news found near this event.
@@ -359,9 +359,12 @@ export function VolatilitySignals({
             hideLabel
             id="volatility-timeframe-select"
             value={timeframe}
-            onChange={(event) =>
-              handleTimeframeChange(event.target.value as VolatilityTimeframe)
-            }
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value == "24h" || value == "daily") {
+                handleTimeframeChange(value);
+              }
+            }}
             disabled={state.isLoading}
           >
             <SelectItem value="24h" text="24h" />
@@ -426,7 +429,7 @@ export function VolatilitySignals({
       {!state.isLoading &&
         !state.error &&
         state.hasLoaded &&
-        visibleEvents.length === 0 && (
+        visibleEvents.length == 0 && (
           <div className={styles.empty}>
             No significant volatility signals found for this token.
           </div>
@@ -441,7 +444,7 @@ export function VolatilitySignals({
               <article
                 key={event.id}
                 className={`${styles.eventCard} ${
-                  event.type === "price_spike"
+                  event.type == "price_spike"
                     ? styles.priceSpike
                     : styles.priceDrop
                 }`}

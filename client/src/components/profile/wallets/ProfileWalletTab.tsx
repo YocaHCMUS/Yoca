@@ -123,7 +123,6 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
                     key={`pnl-${chartKey}`}
                     minHeight={360}
                     initialFilters={{ wallets: chartWallets }}
-                    autoRefresh={false}
                 />
             </div>
         </section>

@@ -12,17 +12,21 @@ import {
     Tab,
     Tabs,
     TabList,
-    Checkbox
+    Checkbox,
+    IconButton,
 } from "@carbon/react";
 import { TknImg } from "../TknImg";
 import { Flex } from "../Flex";
 import { Txt } from "../Txt";
 import { CpyBtn } from "../CpyBtn";
 import { TrendNum } from "../TrendNum";
+import { Launch } from "@carbon/icons-react";
+import { SOLSCAN_TX_URL } from "@/config/constants";
 
 type WalletSwapData = {
   transactions: {
     transactionHash: string;
+    actId: string;
     blockTimestampMs: number;
     bought: {
       address: string;
@@ -48,6 +52,7 @@ type WalletSwapData = {
 type WalletTransferData = {
   transactions: {
     transactionHash: string;
+    actId: string;
     blockTimestampMs: number;
     token: {
       address: string;
@@ -76,13 +81,7 @@ function LowValueFilter({
   const { tr } = useLocalization();
 
   return (
-    <Flex
-      align="center"
-      justify="end"
-      gap={2}
-      pBlock={3}
-      pInline={4}
-    >
+    <Flex align="center" justify="end" gap={2} pBlock={3} pInline={4}>
       <Checkbox
         id={id}
         labelText={tr("walletPage.hideLowValue")}
@@ -93,11 +92,17 @@ function LowValueFilter({
   );
 }
 
-function AddressCell({ address, secondary = false }: { address: string, secondary?: boolean }) {
+function AddressCell({
+  address,
+  secondary = false,
+}: {
+  address: string;
+  secondary?: boolean;
+}) {
   const { fmt } = useLocalization();
   return (
     <Flex gap={2} align="center">
-      <Txt size="sm" weight={secondary ? "regular" : "bold"} >
+      <Txt size="sm" weight={secondary ? "regular" : "bold"}>
         {fmt.text.address(address)}
       </Txt>
       <CpyBtn copyWhat={address} size="xs" />
@@ -106,11 +111,13 @@ function AddressCell({ address, secondary = false }: { address: string, secondar
 }
 
 function TokenAmountCell({
+  address,
   amount,
   symbol,
   logoUri,
   direction,
 }: {
+  address: string;
   amount: number;
   symbol: string;
   logoUri: string | null;
@@ -128,10 +135,8 @@ function TokenAmountCell({
       />
       <Flex gap={2} align="center">
         <TknImg size={22} src={logoUri} />
-        <Txt size="sm">
-          {symbol}
-        </Txt>
-        <CpyBtn copyWhat={symbol} size="xs" />
+        <Txt size="sm">{symbol}</Txt>
+        <CpyBtn copyWhat={address} size="xs" />
       </Flex>
     </Flex>
   );
@@ -143,79 +148,85 @@ export function WalletTransactionActivity({ address }: { address: string }) {
   const [selectedTransfer, setSelectedTransfer] =
     useState<WalletTransfer | null>(null);
   const [hideLowValue, setHideLowValue] = useState(false);
+  const minValueUsd = hideLowValue ? 1 : undefined;
 
   const swapResp: UseGetResp<WalletSwapData> = useGet(
     client.api.wallets.swaps.history[":address"],
     200,
-    { param: { address }, query: {} },
+    {
+      param: { address },
+      query: { minValueUsd },
+    },
   );
+
   const transferResp: UseGetResp<WalletTransferData> = useGet(
     client.api.wallets.transfers.history[":address"],
     200,
-    { param: { address }, query: {} },
+    { param: { address }, query: { minValueUsd } },
   );
 
   // Swap rows – plain text
   const swapRows = useMemo(() => {
     const transactions = swapResp.data?.transactions ?? [];
-    return transactions
-      .map((tx, index) => ({ tx, index }))
-      .filter(
-        ({ tx }) =>
-          !hideLowValue ||
-          tx.totalValueUsd == null ||
-          tx.totalValueUsd >= 1,
-      )
-      .map(({ tx, index }) => {
-        const soldSym = tx.sold.symbol?.toUpperCase() ?? tx.sold.address;
-        const boughtSym = tx.bought.symbol?.toUpperCase() ?? tx.bought.address;
-        const time = (
-          <Txt size="sm">
-            {fmt.datetime.relativeShort(tx.blockTimestampMs, true)}
-          </Txt>
-        );
-        const soldDisplay = (
-          <TokenAmountCell
-            amount={tx.sold.amount}
-            symbol={soldSym}
-            logoUri={tx.sold.logoUri}
-            direction="out"
-          />
-        );
-        const boughtDisplay = (
-          <TokenAmountCell
-            amount={tx.bought.amount}
-            symbol={boughtSym}
-            logoUri={tx.bought.logoUri}
-            direction="in"
-          />
-        );
-        const value = (
-          <Txt size="sm">
-            {tx.totalValueUsd != null
-              ? fmt.num.currency(tx.totalValueUsd)
-              : "—"}
-          </Txt>
-        );
+    return transactions.map((tx) => {
+      const soldSym = tx.sold.symbol?.toUpperCase() ?? tx.sold.address;
+      const boughtSym = tx.bought.symbol?.toUpperCase() ?? tx.bought.address;
+      const time = (
+        <Txt size="sm">
+          {fmt.datetime.relativeShort(tx.blockTimestampMs, true)}
+        </Txt>
+      );
+      const soldDisplay = (
+        <TokenAmountCell
+          address={tx.sold.address}
+          amount={tx.sold.amount}
+          symbol={soldSym}
+          logoUri={tx.sold.logoUri}
+          direction="out"
+        />
+      );
+      const boughtDisplay = (
+        <TokenAmountCell
+          address={tx.bought.address}
+          amount={tx.bought.amount}
+          symbol={boughtSym}
+          logoUri={tx.bought.logoUri}
+          direction="in"
+        />
+      );
+      const value = (
+        <Txt size="sm">{fmt.num.compact.currency(tx.totalValueUsd)}</Txt>
+      );
 
-        return {
-          id: tx.transactionHash || `swap-${index}`,
-          time,
-          tokenSold: soldDisplay,
-          tokenBought: boughtDisplay,
-          value,
-        };
-      });
-  }, [swapResp.data, fmt, hideLowValue]);
+      const transaction = (
+        <IconButton
+          href={`${SOLSCAN_TX_URL}/${tx.transactionHash}`}
+          label={tr("walletPage.openInSolscan")}
+          kind="ghost"
+          size="xs"
+          target="_blank"
+        >
+          <Launch size={12} />
+        </IconButton>
+      );
+
+      return {
+        id: `${tx.transactionHash}-${tx.actId}`,
+        time,
+        tokenSold: soldDisplay,
+        tokenBought: boughtDisplay,
+        value,
+        transaction,
+      };
+    });
+  }, [swapResp.data, fmt]);
 
   // Transfer rows – plain text
   const transferRows = useMemo(() => {
     const transactions = transferResp.data?.transactions ?? [];
 
     return transactions
-      .map((tx, index) => ({ tx, index }))
-      .filter(({ tx }) => !hideLowValue || tx.valueUsd >= 1)
-      .map(({ tx, index }) => {
+      .map((tx) => {
         const tokenSym = tx.token.symbol?.toUpperCase() ?? tx.token.address;
         const time = (
           <Txt size="sm">
@@ -238,6 +249,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
 
         const tokenDisplay = (
           <TokenAmountCell
+            address={tx.token.address}
             amount={tx.token.amount}
             symbol={tokenSym}
             logoUri={tx.token.logoUri}
@@ -245,21 +257,32 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           />
         );
         const value = (
-          <Txt size="sm">
-            {tx.valueUsd != null ? fmt.num.currency(tx.valueUsd) : "—"}
-          </Txt>
+          <Txt size="sm">{fmt.num.compact.currency(tx.valueUsd)}</Txt>
+        );
+
+        const transaction = (
+          <IconButton
+            href={`${SOLSCAN_TX_URL}/${tx.transactionHash}`}
+            label={tr("walletPage.openInSolscan")}
+            kind="ghost"
+            size="xs"
+            target="_blank"
+          >
+            <Launch size={12} />
+          </IconButton>
         );
 
         return {
-          id: tx.transactionHash || `transfer-${index}`,
+          id: `${tx.transactionHash}-${tx.actId}`,
           time,
           sender,
           receiver,
           token: tokenDisplay,
           value,
+          transaction,
         };
       });
-  }, [transferResp.data, fmt, address, hideLowValue]);
+  }, [transferResp.data, fmt, address]);
 
   // Headers – plain text
   const swapHeaders = [
@@ -267,6 +290,11 @@ export function WalletTransactionActivity({ address }: { address: string }) {
     { key: "tokenSold", header: tr("walletPage.tokenSold") },
     { key: "tokenBought", header: tr("walletPage.tokenBought") },
     { key: "value", header: tr("walletPage.value") },
+    {
+      key: "transaction",
+      header: tr("walletPage.transaction"),
+      align: "center" as const,
+    },
   ];
 
   const transferHeaders = [
@@ -275,6 +303,11 @@ export function WalletTransactionActivity({ address }: { address: string }) {
     { key: "receiver", header: tr("walletPage.receiver") },
     { key: "token", header: tr("walletPage.token") },
     { key: "value", header: tr("walletPage.value") },
+    {
+      key: "transaction",
+      header: tr("walletPage.transaction"),
+      align: "center" as const,
+    },
   ];
 
   const swapLoading = swapResp.isLoading;
@@ -299,7 +332,6 @@ export function WalletTransactionActivity({ address }: { address: string }) {
               pageSize={16}
               stickyHeader
               boxed
-              pageUnknown
               toolBar={
                 <LowValueFilter
                   id="hide-low-value-swaps"
@@ -307,47 +339,47 @@ export function WalletTransactionActivity({ address }: { address: string }) {
                   onChange={setHideLowValue}
                 />
               }
-              onRowClick={(row) => {
-                const transaction = swapResp.data?.transactions.find(
-                  (tx, index) =>
-                    (tx.transactionHash || `swap-${index}`) == row.id,
-                );
-                if (!transaction) return;
+              // onRowClick={(row) => {
+              //   const transaction = swapResp.data?.transactions.find(
+              //     (tx, index) =>
+              //       (tx.transactionHash || `swap-${index}`) == row.id,
+              //   );
+              //   if (!transaction) return;
 
-                const soldPriceUsd = transaction.sold.priceUsd ?? 0;
-                const boughtPriceUsd = transaction.bought.priceUsd ?? 0;
-                setSelectedSwap({
-                  transactionHash: transaction.transactionHash,
-                  transactionType: "swap",
-                  blockTimestampIso: new Date(
-                    transaction.blockTimestampMs,
-                  ).toISOString(),
-                  subcategory: null,
-                  walletAddress: address,
-                  pairAddress: "",
-                  tokensInvolved: `${transaction.sold.symbol ?? transaction.sold.address},${transaction.bought.symbol ?? transaction.bought.address}`,
-                  sold: {
-                    address: transaction.sold.address,
-                    amount: transaction.sold.amount,
-                    symbol: transaction.sold.symbol,
-                    name: transaction.sold.name,
-                    logoUri: transaction.sold.logoUri,
-                    priceUsd: soldPriceUsd,
-                    valueUsd: transaction.sold.amount * soldPriceUsd,
-                  },
-                  bought: {
-                    address: transaction.bought.address,
-                    amount: transaction.bought.amount,
-                    symbol: transaction.bought.symbol,
-                    name: transaction.bought.name,
-                    logoUri: transaction.bought.logoUri,
-                    priceUsd: boughtPriceUsd,
-                    valueUsd: transaction.bought.amount * boughtPriceUsd,
-                  },
-                  totalValueUsd: transaction.totalValueUsd,
-                  baseQuotePrice: null,
-                });
-              }}
+              //   const soldPriceUsd = transaction.sold.priceUsd ?? 0;
+              //   const boughtPriceUsd = transaction.bought.priceUsd ?? 0;
+              //   setSelectedSwap({
+              //     transactionHash: transaction.transactionHash,
+              //     transactionType: "swap",
+              //     blockTimestampIso: new Date(
+              //       transaction.blockTimestampMs,
+              //     ).toISOString(),
+              //     subcategory: null,
+              //     walletAddress: address,
+              //     pairAddress: "",
+              //     tokensInvolved: `${transaction.sold.symbol ?? transaction.sold.address},${transaction.bought.symbol ?? transaction.bought.address}`,
+              //     sold: {
+              //       address: transaction.sold.address,
+              //       amount: transaction.sold.amount,
+              //       symbol: transaction.sold.symbol,
+              //       name: transaction.sold.name,
+              //       logoUri: transaction.sold.logoUri,
+              //       priceUsd: soldPriceUsd,
+              //       valueUsd: transaction.sold.amount * soldPriceUsd,
+              //     },
+              //     bought: {
+              //       address: transaction.bought.address,
+              //       amount: transaction.bought.amount,
+              //       symbol: transaction.bought.symbol,
+              //       name: transaction.bought.name,
+              //       logoUri: transaction.bought.logoUri,
+              //       priceUsd: boughtPriceUsd,
+              //       valueUsd: transaction.bought.amount * boughtPriceUsd,
+              //     },
+              //     totalValueUsd: transaction.totalValueUsd,
+              //     baseQuotePrice: null,
+              //   });
+              // }}
             />
           </TabPanel>
 
@@ -362,7 +394,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
               pageSize={16}
               stickyHeader
               boxed
-              pageUnknown
+              // pageUnknown
               toolBar={
                 <LowValueFilter
                   id="hide-low-value-transfers"
@@ -370,36 +402,36 @@ export function WalletTransactionActivity({ address }: { address: string }) {
                   onChange={setHideLowValue}
                 />
               }
-              onRowClick={(row) => {
-                const transaction = transferResp.data?.transactions.find(
-                  (tx, index) =>
-                    (tx.transactionHash || `transfer-${index}`) == row.id,
-                );
-                if (!transaction) return;
+              // onRowClick={(row) => {
+              //   const transaction = transferResp.data?.transactions.find(
+              //     (tx, index) =>
+              //       (tx.transactionHash || `transfer-${index}`) == row.id,
+              //   );
+              //   if (!transaction) return;
 
-                setSelectedTransfer({
-                  from:
-                    transaction.direction == "send"
-                      ? address
-                      : transaction.counterpartyAddress,
-                  to:
-                    transaction.direction == "send"
-                      ? transaction.counterpartyAddress
-                      : address,
-                  amount: transaction.token.amount,
-                  amountUsd: transaction.valueUsd,
-                  timestamp: new Date(
-                    transaction.blockTimestampMs,
-                  ).toISOString(),
-                  tokenAddress: transaction.token.address,
-                  tokenSymbol: transaction.token.symbol ?? "Unknown",
-                  tokenName: transaction.token.name ?? undefined,
-                  tokenLogoUri: transaction.token.logoUri ?? undefined,
-                  priceUsd: transaction.token.priceUsd ?? undefined,
-                  transactionSignature: transaction.transactionHash,
-                  instructionIndex: 0,
-                });
-              }}
+              //   setSelectedTransfer({
+              //     from:
+              //       transaction.direction == "send"
+              //         ? address
+              //         : transaction.counterpartyAddress,
+              //     to:
+              //       transaction.direction == "send"
+              //         ? transaction.counterpartyAddress
+              //         : address,
+              //     amount: transaction.token.amount,
+              //     amountUsd: transaction.valueUsd,
+              //     timestamp: new Date(
+              //       transaction.blockTimestampMs,
+              //     ).toISOString(),
+              //     tokenAddress: transaction.token.address,
+              //     tokenSymbol: transaction.token.symbol ?? "Unknown",
+              //     tokenName: transaction.token.name ?? undefined,
+              //     tokenLogoUri: transaction.token.logoUri ?? undefined,
+              //     priceUsd: transaction.token.priceUsd ?? undefined,
+              //     transactionSignature: transaction.transactionHash,
+              //     instructionIndex: 0,
+              //   });
+              // }}
             />
           </TabPanel>
         </TabPanels>

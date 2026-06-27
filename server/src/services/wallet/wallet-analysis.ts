@@ -5,10 +5,7 @@ import {
     WALLET_WINRATE_90D_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
-import {
-    walletAnalyses,
-    type WalletAnalysisSelect,
-} from "@sv/db/schema.js";
+import { walletAnalyses, type WalletAnalysisSelect } from "@sv/db/schema.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import { mbl_WalletAnalysisSchema } from "@sv/services/_types/wallet-raw-responses.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
@@ -38,14 +35,6 @@ export interface WalletWinrateData {
   avgLossUsd: number;
 }
 
-export interface WinrateResponse {
-  wallets: WalletWinrateData[];
-  metadata: {
-    period: string;
-    timestamp: number;
-  };
-}
-
 const WINRATE_TTL_BY_PERIOD: Record<WinratePeriod, number> = {
   "24H": WALLET_WINRATE_24H_TTL_MS,
   "7D": WALLET_WINRATE_7D_TTL_MS,
@@ -59,31 +48,6 @@ const MOBULA_PERIOD_BY_WINRATE_PERIOD: Record<WinratePeriod, string> = {
   "30D": "30d",
   "90D": "90d",
 };
-
-function mapStoredWinrateToResponse(
-  row: WalletAnalysisSelect,
-): WalletWinrateData {
-  return {
-    walletAddress: row.walletAddress,
-    walletName: row.walletAddress,
-    winrate: row.winrate,
-    totalTrades: row.totalTrades,
-    winningTrades: row.winningTrades,
-    losingTrades: row.losingTrades,
-    winningDistribution: [
-      { range: "0%-50%", count: row.win0To50Count, min: 0, max: 50 },
-      { range: "50%-200%", count: row.win50To200Count, min: 50, max: 200 },
-      { range: "200%-500%", count: row.win200To500Count, min: 200, max: 500 },
-      { range: ">500%", count: row.winOver500Count, min: 500, max: Infinity },
-    ],
-    losingDistribution: [
-      { range: "-50%-0%", count: row.loss0To50Count, min: 0, max: 50 },
-      { range: "<-50%", count: row.lossOver50Count, min: 50, max: Infinity },
-    ],
-    avgWinUsd: row.avgWinUsd,
-    avgLossUsd: row.avgLossUsd,
-  };
-}
 
 export async function fetchWalletAnalysis(
   walletAddress: string,
@@ -103,7 +67,9 @@ export async function fetchWalletAnalysis(
   });
   const result = await getTrackedApiResult(mbl_WalletAnalysisSchema, response);
   if (!result) {
-    throw new Error(`Mobula wallet analysis returned invalid data (${response.status})`);
+    throw new Error(
+      `Mobula wallet analysis returned invalid data (${response.status})`,
+    );
   }
 
   const distribution = result.data.winRateDistribution;
@@ -124,7 +90,7 @@ export async function fetchWalletAnalysis(
   );
   const fetchedAtMs = dayjs.utc().valueOf();
 
-  const winrate = totalTrades > 0 ? winningTrades / totalTrades * 100 : 0;
+  const winrate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
 
   const rows = await db
     .insert(walletAnalyses)
@@ -155,6 +121,8 @@ export async function fetchWalletAnalysis(
       pnlUnrealizedUsd:
         result.data.stat.periodTotalPnlUSD -
         result.data.stat.periodRealizedPnlUSD,
+      periodTimeframes: result.data.periodTimeframes,
+      calendarBreakdown: result.data.calendarBreakdown ?? [],
       fetchedAtMs,
     })
     .onConflictDoUpdate({
@@ -184,6 +152,8 @@ export async function fetchWalletAnalysis(
         pnlUnrealizedUsd:
           result.data.stat.periodTotalPnlUSD -
           result.data.stat.periodRealizedPnlUSD,
+        periodTimeframes: result.data.periodTimeframes,
+        calendarBreakdown: result.data.calendarBreakdown ?? [],
         fetchedAtMs,
       },
     })
@@ -195,15 +165,6 @@ export async function fetchWalletAnalysis(
   }
 
   return saved;
-}
-
-export async function fetchWalletWinrateData(
-  walletAddress: string,
-  period: WinratePeriod,
-): Promise<WalletWinrateData> {
-  return mapStoredWinrateToResponse(
-    await fetchWalletAnalysis(walletAddress, period),
-  );
 }
 
 export async function getWalletAnalysis(
@@ -224,8 +185,7 @@ export async function getWalletAnalysis(
 
   if (
     stored &&
-    stored.fetchedAtMs >=
-      dayjs.utc().valueOf() - WINRATE_TTL_BY_PERIOD[period]
+    stored.fetchedAtMs >= dayjs.utc().valueOf() - WINRATE_TTL_BY_PERIOD[period]
   ) {
     return stored;
   }
@@ -246,33 +206,6 @@ export async function getWalletAnalysis(
   }
 }
 
-export async function getWalletWinrateData(
-  walletAddress: string,
-  period: WinratePeriod,
-): Promise<WalletWinrateData> {
-  return mapStoredWinrateToResponse(
-    await getWalletAnalysis(walletAddress, period),
-  );
-}
 
-export async function getWinrateData(
-  wallets: string[] = [],
-  period: WinratePeriod = "30D",
-): Promise<WinrateResponse> {
-  const normalizedWallets = Array.from(
-    new Set(wallets.map((wallet) => wallet.trim()).filter(Boolean)),
-  );
-  const winrateItems = await Promise.all(
-    normalizedWallets.map((walletAddress) =>
-      getWalletWinrateData(walletAddress, period),
-    ),
-  );
-
-  return {
-    wallets: winrateItems,
-    metadata: {
-      period,
-      timestamp: dayjs.utc().valueOf(),
-    },
-  };
-}
+export * from "./wallet-analysis/wallet-winrate";
+export * from "./wallet-analysis/wallet-pnl";
