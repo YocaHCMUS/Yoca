@@ -30,6 +30,10 @@ export const DAY_MS = 24 * 60 * 60 * 1000;
 export const HOUR_MS = 60 * 60 * 1000;
 export const MONTH_MS = 30 * DAY_MS;
 
+export const MOBULA_WALLET_ACTIVITY_PAGE_SIZE = 100;
+export const MOBULA_WALLET_ACTIVITY_MAX_PAGES = 10;
+export const MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS = 2;
+
 // Token chart intervals for hourly/daily gap detection
 export const TOKEN_CHART_HOURLY_INTERVAL_MS = HOUR_MS;
 export const TOKEN_CHART_DAILY_INTERVAL_MS = DAY_MS;

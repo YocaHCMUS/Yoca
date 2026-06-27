@@ -31,7 +31,10 @@ import {
     WALLET_SWAP_HISTORY_LATEST_TOLERANCE_MS,
     WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
     WALLET_TRANSFER_HISTORY_LATEST_TOLERANCE_MS,
-    MONTH_MS
+    MONTH_MS,
+    MOBULA_WALLET_ACTIVITY_MAX_PAGES,
+    MOBULA_WALLET_ACTIVITY_PAGE_SIZE,
+    MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS
 } from "@sv/config/constants";
 import { and, desc, eq, gt, inArray, lt, lte, max, or } from "drizzle-orm";
 
@@ -46,9 +49,7 @@ type WalletSwapHistoryInsert = typeof walletSwapHistory.$inferInsert;
 
 type WalletActivityTarget = "swap" | "transfer";
 
-const MOBULA_WALLET_ACTIVITY_PAGE_SIZE = 100;
-const MOBULA_WALLET_ACTIVITY_MAX_PAGES = 10;
-const MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS = 2;
+
 
 function normalizeTxLimit(reqLimit: number, maxLimit: number): number {
   if (!Number.isFinite(reqLimit)) return maxLimit;
