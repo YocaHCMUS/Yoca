@@ -1,13 +1,13 @@
 import { TOP_TOKENS_BY_MARKET_CAP_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-  tokenMarketData,
-  tokenMeta,
-  topTokensByMarketCap,
-  type TokenMetaInsert,
-  type TopTokensByMarketCapInsert,
+    tokenMarketData,
+    tokenMeta,
+    topTokensByMarketCap,
+    type TokenMetaInsert,
+    type TopTokensByMarketCapInsert,
 } from "@sv/db/schema.js";
-import { excludedAutoNonNullFromInsert } from "@sv/util/orm-sql.js";
+import { excludedAutoFromInsert, excludedAutoNonNullFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { asc, gt } from "drizzle-orm";
 import type { CG_CoinMarkets } from "../_types/token-raw-responses.js";
