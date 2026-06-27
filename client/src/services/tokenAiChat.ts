@@ -149,8 +149,6 @@ export async function askTokenAiChat(
     json: payload,
   });
 
-  response.json();
-
   if (response.ok) {
     return response.json();
   }
