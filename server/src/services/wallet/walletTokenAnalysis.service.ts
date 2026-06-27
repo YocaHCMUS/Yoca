@@ -315,6 +315,7 @@ export async function getTokenDeepAnalysis(
   address: string,
   tokenAddress: string,
   language: "en" | "vn" = "en",
+  beforeGenerate?: () => Promise<void>,
 ): Promise<TokenDeepAnalysisResponse> {
   const normalizedAddress = address.trim();
   const normalizedToken = tokenAddress.trim();
@@ -396,6 +397,9 @@ export async function getTokenDeepAnalysis(
       })),
     },
   };
+
+  getGenAiClient();
+  await beforeGenerate?.();
 
   const { analysis, riskNotes } = await callGeminiForToken(geminiPayload, language);
 

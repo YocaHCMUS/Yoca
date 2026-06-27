@@ -408,6 +408,7 @@ async function callGemini(
 export async function getWalletAiSwapSummary(
   address: string,
   language: "en" | "vn" = "en",
+  beforeGenerate?: () => Promise<void>,
 ): Promise<WalletAiSwapSummaryResponse> {
   const normalizedAddress = address.trim();
 
@@ -431,6 +432,9 @@ export async function getWalletAiSwapSummary(
       409,
     );
   }
+
+  getGenAiClient();
+  await beforeGenerate?.();
 
   const { summary, riskNotes } = await callGemini(
     computed.allTokenBreakdowns,

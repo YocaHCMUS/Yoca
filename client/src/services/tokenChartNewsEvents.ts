@@ -5,6 +5,18 @@ import type {
     TokenChartNewsEventsResponse,
 } from "@/types/chartNewsEvents";
 
+export class TokenChartNewsEventsApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly errorCode?: string,
+    readonly upgradePath?: string,
+  ) {
+    super(message);
+    this.name = "TokenChartNewsEventsApiError";
+  }
+}
+
 export async function getTokenChartNewsEvents({
   address,
   symbol,
@@ -26,11 +38,26 @@ export async function getTokenChartNewsEvents({
     },
   });
 
-  const payload = (await response.json()) as TokenChartNewsEventsResponse;
+  const payload = (await response.json()) as TokenChartNewsEventsResponse & {
+    success?: boolean;
+    error?: string;
+    message?: string;
+    errorCode?: string;
+    upgradePath?: string;
+  };
 
   if (!response.ok || !payload.success) {
-    throw new Error("Unable to load chart news events");
+    throw new TokenChartNewsEventsApiError(
+      payload.message || payload.error || "Unable to load chart news events",
+      response.status,
+      payload.errorCode,
+      payload.upgradePath,
+    );
   }
 
-  return payload.data;
+  return {
+    ...payload.data,
+    ...(payload.usage ? { usage: payload.usage } : {}),
+    ...(typeof payload.counted === "boolean" ? { counted: payload.counted } : {}),
+  };
 }

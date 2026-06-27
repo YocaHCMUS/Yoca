@@ -388,8 +388,8 @@ curl http://localhost:3000/api/v1/wash-trading/analyze?token=EPjFWaJY44r3XfCH2E6
 5. ✅ `server/scripts/gnn_wash_trading_service.py` (300+ lines)
 
 ### Documentation
-1. ✅ `docs/WASH_TRADING_DETECTION_GUIDE.md` (800+ lines)
-2. ✅ `docs/WASH_TRADING_QUICK_START.md` (400+ lines)
+1. ✅ `docs/wash-trading/WASH_TRADING_DETECTION_GUIDE.md` (800+ lines)
+2. ✅ `docs/wash-trading/WASH_TRADING_QUICK_START.md` (400+ lines)
 3. ✅ `server/scripts/gnn_requirements.txt`
 
 ### Configuration

@@ -280,10 +280,10 @@ Xem chi tiết tại: **WASH_TRADING_TROUBLESHOOTING.md**
 ## 🔗 Liên Kết Nhanh
 
 **Tài Liệu Nội Bộ:**
-- Implementation: `docs/WASH_TRADING_IMPLEMENTATION_GUIDE.md`
-- Troubleshooting: `docs/WASH_TRADING_TROUBLESHOOTING.md`
-- Advanced: `docs/WASH_TRADING_ADVANCED_TECHNIQUES.md`
-- References: `docs/WASH_TRADING_REFERENCES.md`
+- Implementation: `docs/wash-trading/WASH_TRADING_IMPLEMENTATION_GUIDE.md`
+- Troubleshooting: `docs/wash-trading/WASH_TRADING_TROUBLESHOOTING.md`
+- Advanced: `docs/wash-trading/WASH_TRADING_ADVANCED_TECHNIQUES.md`
+- References: `docs/wash-trading/WASH_TRADING_REFERENCES.md`
 
 **Code:**
 - Service: `server/src/services/wash-trading.service.ts` ✅

@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  date,
   decimal as dec,
   index,
   integer,
@@ -395,6 +396,28 @@ export const tokenAiChatCache = pgTable(
       table.model,
       table.evidenceHash,
     ),
+  ],
+);
+
+export const aiDailyUsage = pgTable(
+  "ai_daily_usage",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    feature: varchar("feature", { length: 64 }).notNull(),
+    usageDate: date("usage_date", { mode: "string" }).notNull(),
+    usageCount: integer("usage_count").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.userId, table.feature, table.usageDate],
+    }),
   ],
 );
 

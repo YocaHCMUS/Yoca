@@ -1,4 +1,15 @@
-import { solanaBase58Schema } from "@sv/middlewares/validation.js";
+import {
+  solanaBase58Schema,
+  userPayloadSchema,
+} from "@sv/middlewares/validation.js";
+import { AUTH_COOKIE_NAME } from "@sv/config/constants.js";
+import {
+  AI_FEATURES,
+  type AiUsageReservation,
+  getAiUsage,
+  releaseAiUsage,
+  reserveAiUsage,
+} from "@sv/services/ai-usage.service.js";
 import { getRssTokenNews, type RelatedTokenNewsArticle } from "@sv/services/rss-news.service.js";
 import {
     getTokenPriceVolatilityEvents,
@@ -13,12 +24,16 @@ import {
     type TokenVolatilityNewsCacheKey,
 } from "@sv/services/tokens/token-volatility-news-cache.js";
 import {
-    summarizeTokenVolatilityNews,
     type TokenVolatilityNewsSummary,
+  isTokenVolatilityGeminiConfigured,
+  summarizeTokenVolatilityNews,
 } from "@sv/services/tokens/token-volatility-summary.js";
 import { setErr } from "@sv/util/errors.js";
+import env from "@sv/util/load-env.js";
 import { statusCode } from "@sv/util/responses.js";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
+import { getCookie } from "hono/cookie";
+import { verify } from "hono/jwt";
 import z from "zod";
 
 const supportedTimeframes = ["24h", "hourly", "daily"] as const;
@@ -95,6 +110,19 @@ function getDefaultRelatedNewsWindowHours(
   timeframe: TokenVolatilityTimeframe,
 ) {
   return timeframe == "daily" ? 72 : 24;
+}
+
+async function getAuthenticatedUserId(c: Context) {
+  const token = getCookie(c, AUTH_COOKIE_NAME);
+  if (!token) return null;
+
+  try {
+    const payload = await verify(token, env.JWT_SECRET, { alg: "HS256" });
+    const parsed = userPayloadSchema.safeParse(payload);
+    return parsed.success ? parsed.data.id : null;
+  } catch {
+    return null;
+  }
 }
 
 async function getPossibleRelatedNewsForEvent({
@@ -188,9 +216,17 @@ const app = new Hono().get("/", async (c) => {
     maxEventsWithNews,
     includeSummary,
   };
+  const userId = includeSummary ? await getAuthenticatedUserId(c) : null;
 
+  if (includeSummary && !userId) {
+    return c.json(setErr("UNAUTHORIZED"), statusCode.Unauthorized);
+  }
+
+  let reservation: AiUsageReservation | undefined;
+  let usageCounted = false;
   try {
     if (!forceRefresh) {
+      let cached = null;
       try {
         const cached =
           await readTokenVolatilityNewsCache<TokenVolatilityNewsData>(
@@ -208,18 +244,22 @@ const app = new Hono().get("/", async (c) => {
             expiresAt: cached.expiresAt,
           });
 
-          const responseData: TokenVolatilityNewsResponseData = {
-            ...cached.data,
-            cache: {
-              hit: true,
-              expiresAt: cached.expiresAt,
-            },
-          };
+          const usage =
+            includeSummary && userId
+              ? await getAiUsage(userId, AI_FEATURES.VolatilitySignalSummary)
+              : undefined;
 
           return c.json(
             {
               success: true,
-              data: responseData,
+              ...(usage ? { usage, counted: false } : {}),
+              data: {
+                ...cached.data,
+                cache: {
+                  hit: true,
+                  expiresAt: cached.expiresAt,
+                },
+              },
             },
             statusCode.Ok,
           );
@@ -235,6 +275,8 @@ const app = new Hono().get("/", async (c) => {
           error: err instanceof Error ? err.message : String(err),
         });
       }
+
+      
     } else {
       console.info("[token-volatility-news] cache bypass requested", {
         token,
@@ -342,10 +384,53 @@ const app = new Hono().get("/", async (c) => {
       },
       events: eventsWithRelatedNews,
     };
-    const summary = includeSummary
-      ? await summarizeTokenVolatilityNews(dataWithoutSummary)
-      : null;
-    const freshData: TokenVolatilityNewsData = {
+    let summary = null;
+    let usage;
+
+    if (includeSummary && userId) {
+      if (isTokenVolatilityGeminiConfigured()) {
+        reservation = await reserveAiUsage(
+          userId,
+          AI_FEATURES.VolatilitySignalSummary,
+        );
+        if (!reservation.allowed) {
+          return c.json(
+            {
+              errorCode: "AI_DAILY_LIMIT_EXCEEDED",
+              success: false,
+              message:
+                "You have reached today's Volatility Signal Summary limit.",
+              ...reservation.usage,
+              upgradePath: "/pricing",
+            },
+            statusCode.TooManyRequests,
+          );
+        }
+
+        summary = await summarizeTokenVolatilityNews(dataWithoutSummary);
+        usageCounted =
+          summary.provider?.startsWith("gemini:") === true &&
+          !reservation.usage.disabled;
+        if (usageCounted) {
+          usage = reservation.usage;
+        } else {
+          await releaseAiUsage(reservation);
+          reservation = undefined;
+          usage = await getAiUsage(
+            userId,
+            AI_FEATURES.VolatilitySignalSummary,
+          );
+        }
+      } else {
+        summary = await summarizeTokenVolatilityNews(dataWithoutSummary);
+        usage = await getAiUsage(
+          userId,
+          AI_FEATURES.VolatilitySignalSummary,
+        );
+      }
+    }
+
+    const freshData = {
       ...dataWithoutSummary,
       summary,
     };
@@ -378,11 +463,28 @@ const app = new Hono().get("/", async (c) => {
     return c.json(
       {
         success: true,
-        data: responseData,
+        ...(usage ? { usage, counted: usageCounted } : {}),
+        data: {
+          ...freshData,
+          cache: {
+            hit: false,
+            expiresAt: expiresAt.toISOString(),
+          },
+        },
       },
       statusCode.Ok,
     );
   } catch (err) {
+    if (reservation?.allowed && !usageCounted) {
+      try {
+        await releaseAiUsage(reservation);
+      } catch (releaseErr) {
+        console.error(
+          "[token-volatility-news] failed to release AI usage:",
+          releaseErr,
+        );
+      }
+    }
     console.error("[token-volatility-news] error:", err);
     return c.json(
       {

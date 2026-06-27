@@ -6,13 +6,19 @@ import {
     Renew,
 } from "@carbon/icons-react";
 import { Button, Select, SelectItem, SkeletonText } from "@carbon/react";
-import { getTokenVolatilityNews } from "@/services/tokenVolatility";
+import {
+    getTokenVolatilityNews,
+    TokenVolatilityError,
+} from "@/services/tokenVolatility";
+import { useAuth } from "@/contexts/AuthContext";
 import type {
     RelatedNewsArticle,
+    VolatilityAiUsage,
     VolatilityEvent,
     VolatilitySummary,
     VolatilityTimeframe,
 } from "@/types/volatility";
+import { Link } from "react-router";
 import styles from "./VolatilitySignals.module.scss";
 
 interface VolatilitySignalsProps {
@@ -32,6 +38,8 @@ interface VolatilitySignalsState {
   isSummaryLoading: boolean;
   summaryError: string | null;
   summaryRequested: boolean;
+  usage: VolatilityAiUsage | null;
+  counted: boolean;
   isLoading: boolean;
   error: string | null;
   hasLoaded: boolean;
@@ -101,6 +109,8 @@ function getInitialState(): VolatilitySignalsState {
     isSummaryLoading: false,
     summaryError: null,
     summaryRequested: false,
+    usage: null,
+    counted: false,
     isLoading: false,
     error: null,
     hasLoaded: false,
@@ -171,6 +181,7 @@ export function VolatilitySignals({
   symbol,
   name,
 }: VolatilitySignalsProps) {
+  const { user, openAuthModal } = useAuth();
   const [threshold, setThreshold] = useState(20);
   const [timeframe, setTimeframe] = useState<VolatilityTimeframe>("daily");
   const [state, setState] = useState<VolatilitySignalsState>(getInitialState);
@@ -188,6 +199,10 @@ export function VolatilitySignals({
     includeSummary = false,
   ) => {
     if (!address || !symbol || !name) return;
+    if (includeSummary && !user) {
+      openAuthModal("login");
+      return;
+    }
 
     setState((prev) => ({
       ...prev,
@@ -196,6 +211,7 @@ export function VolatilitySignals({
       isSummaryLoading: false,
       summaryError: null,
       summaryRequested: includeSummary,
+      counted: false,
       isLoading: true,
       error: null,
       hasLoaded: prev.hasLoaded,
@@ -203,7 +219,7 @@ export function VolatilitySignals({
     setExpandedEvents(new Set());
 
     try {
-      const data = await getTokenVolatilityNews({
+      const resp = await getTokenVolatilityNews({
         address,
         symbol,
         name,
@@ -214,9 +230,10 @@ export function VolatilitySignals({
         forceRefresh,
         includeSummary,
       });
+      const data = resp.data; 
       const nextEvents = data.events.slice(0, MAX_EVENTS_RENDERED);
 
-      setState({
+      setState((prev) => ({
         events: nextEvents,
         dataPointsAnalyzed: data.dataPointsAnalyzed,
         cache: data.cache ?? null,
@@ -224,24 +241,46 @@ export function VolatilitySignals({
         isSummaryLoading: false,
         summaryError: null,
         summaryRequested: includeSummary,
+        usage: resp.usage ?? prev.usage,
+        counted: resp.counted ?? false,
         isLoading: false,
         error: null,
         hasLoaded: true,
-      });
+      }));
       setExpandedEvents(new Set(nextEvents[0] ? [nextEvents[0].id] : []));
     } catch (err) {
+      if (err instanceof TokenVolatilityError) {
+        if (err.usage) {
+          setState((prev) => ({ ...prev, usage: err.usage ?? prev.usage }));
+        }
+        if (err.status === 401) openAuthModal("login");
+      }
       setState((prev) => ({
         ...prev,
         isLoading: false,
         isSummaryLoading: false,
-        error:
-          err instanceof Error
+        error: includeSummary
+          ? null
+          : err instanceof Error
             ? err.message
             : "Unable to load volatility signals right now.",
+        summaryError: includeSummary
+          ? err instanceof Error
+            ? err.message
+            : "Unable to generate signal summary right now."
+          : prev.summaryError,
         hasLoaded: true,
       }));
     }
-  }, [address, symbol, name, threshold, timeframe]);
+  }, [
+    address,
+    symbol,
+    name,
+    threshold,
+    timeframe,
+    user,
+    openAuthModal,
+  ]);
 
   useEffect(() => {
     void fetchSignals(false, false);
@@ -269,6 +308,10 @@ export function VolatilitySignals({
 
   const handleGenerateSummary = async () => {
     if (!address || !symbol || !name) return;
+    if (!user) {
+      openAuthModal("login");
+      return;
+    }
 
     setState((prev) => ({
       ...prev,
@@ -278,7 +321,7 @@ export function VolatilitySignals({
     }));
 
     try {
-      const data = await getTokenVolatilityNews({
+      const resp = await getTokenVolatilityNews({
         address,
         symbol,
         name,
@@ -288,6 +331,7 @@ export function VolatilitySignals({
         maxEventsWithNews: MAX_EVENTS_WITH_NEWS,
         includeSummary: true,
       });
+      const data = resp.data;
       const nextEvents = data.events.slice(0, MAX_EVENTS_RENDERED);
 
       setState((prev) => ({
@@ -296,6 +340,8 @@ export function VolatilitySignals({
         dataPointsAnalyzed: data.dataPointsAnalyzed,
         cache: data.cache ?? null,
         summary: data.summary ?? null,
+        usage: resp.usage ?? prev.usage,
+        counted: resp.counted ?? false,
         isSummaryLoading: false,
         summaryError: null,
         hasLoaded: true,
@@ -305,6 +351,12 @@ export function VolatilitySignals({
         return new Set(nextEvents[0] ? [nextEvents[0].id] : []);
       });
     } catch (err) {
+      if (err instanceof TokenVolatilityError) {
+        if (err.usage) {
+          setState((prev) => ({ ...prev, usage: err.usage ?? prev.usage }));
+        }
+        if (err.status === 401) openAuthModal("login");
+      }
       setState((prev) => ({
         ...prev,
         isSummaryLoading: false,
@@ -315,6 +367,9 @@ export function VolatilitySignals({
       }));
     }
   };
+  const summaryQuotaExhausted = state.usage?.disabled
+    ? false
+    : state.usage?.remaining === 0;
 
   const toggleEvent = (eventId: string) => {
     setExpandedEvents((prev) => {
@@ -390,17 +445,33 @@ export function VolatilitySignals({
             kind="tertiary"
             size="sm"
             onClick={() => void handleGenerateSummary()}
-            disabled={state.isSummaryLoading}
+            disabled={state.isSummaryLoading || summaryQuotaExhausted}
           >
             {state.isSummaryLoading
               ? "Generating summary..."
-              : "Generate signal summary"}
+              : user
+                ? "Generate signal summary"
+                : "Sign in to generate summary"}
           </Button>
+          {state.usage && !state.usage.disabled && (
+            <span className={styles.summaryUsage}>
+              {state.usage.remaining}/{state.usage.limit} summaries remaining
+              today
+              {!state.counted && state.summary ? " | no usage charged" : ""}
+            </span>
+          )}
           {state.summaryError && (
             <span className={styles.summaryError}>
               Unable to generate signal summary right now.
             </span>
           )}
+        </div>
+      )}
+
+      {summaryQuotaExhausted && (
+        <div className={styles.quotaNotice}>
+          <span>Your summary limit resets at midnight UTC.</span>
+          <Link to="/pricing">Upgrade plan</Link>
         </div>
       )}
 

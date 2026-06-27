@@ -1,10 +1,12 @@
 import {
     addressSchema,
+    honoJwt,
     solanaBase58Schema,
     solanaSignatureSchema,
     validate,
     walletTokenTradesSchema,
 } from "@sv/middlewares/validation.js";
+import userExtract from "@sv/middlewares/user-extract.js";
 import type {
     WalletPortfolioItem,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
@@ -59,9 +61,18 @@ import {
     getTokenDeepAnalysis,
     mapWalletTokenAnalysisStatus,
 } from "@sv/services/wallet/walletTokenAnalysis.service.js";
+import {
+    AI_FEATURES,
+    type AiUsageMetadata,
+    type AiUsageReservation,
+    getAiUsage,
+    isAiFeatureLocked,
+    releaseAiUsage,
+    reserveAiUsage,
+} from "@sv/services/ai-usage.service.js";
 import { statusCode } from "@sv/util/responses.js";
 import { z } from "zod";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import walletAnalysis from "./wallets/wallet-analysis";
 import walletTags from "./wallets/wallet-tags";
 
@@ -137,6 +148,105 @@ const walletTransactionDetailQuerySchema = z.object({
 const walletAuditQuerySchema = z.object({
   force: z.enum(["1", "true", "0", "false"]).optional(),
 });
+
+class WalletAiDailyLimitError extends Error {
+  constructor(readonly usage: AiUsageMetadata) {
+    super("Wallet AI daily limit exceeded");
+  }
+}
+
+async function releaseWalletAiUsage(reservation?: AiUsageReservation) {
+  if (!reservation?.allowed) return;
+
+  try {
+    await releaseAiUsage(reservation);
+  } catch (e) {
+    console.error("[wallet-ai] failed to release AI usage", e);
+  }
+}
+
+function walletAiLimitResponse(usage: AiUsageMetadata) {
+  return {
+    errorCode: "AI_DAILY_LIMIT_EXCEEDED",
+    message:
+      "You have reached today's Wallet AI limit. Upgrade your plan for more daily analyses.",
+    ...usage,
+    upgradePath: "/pricing",
+  };
+}
+
+function walletAiLockedResponse(usage: AiUsageMetadata) {
+  return {
+    errorCode: "AI_FEATURE_LOCKED",
+    message: "This AI feature requires the Plus plan or higher.",
+    feature: usage.feature,
+    tier: usage.tier,
+    requiredTier: usage.requiredTier ?? "Plus",
+    upgradePath: "/pricing",
+  };
+}
+
+async function handleWalletAiAnalysis(c: Context) {
+  const { id: userId } = c.get("userPayload");
+  let reservation: AiUsageReservation | undefined;
+
+  try {
+    const body = c.req.valid("json");
+    const currentUsage = await getAiUsage(userId, AI_FEATURES.WalletAiAnalysis);
+    if (isAiFeatureLocked(AI_FEATURES.WalletAiAnalysis, currentUsage.tier)) {
+      return c.json(
+        walletAiLockedResponse(currentUsage),
+        statusCode.Forbidden,
+      );
+    }
+
+    const analysis = await getWalletAiAnalysis(
+      body.address,
+      body.language,
+      async () => {
+        reservation = await reserveAiUsage(
+          userId,
+          AI_FEATURES.WalletAiAnalysis,
+        );
+        if (!reservation.allowed) {
+          throw new WalletAiDailyLimitError(reservation.usage);
+        }
+      },
+    );
+    const usage =
+      reservation?.allowed == true
+        ? reservation.usage
+        : await getAiUsage(userId, AI_FEATURES.WalletAiAnalysis);
+
+    return c.json(
+      {
+        ...analysis,
+        usage,
+        counted:
+          reservation?.allowed == true && !reservation.usage.disabled,
+      },
+      statusCode.Ok,
+    );
+  } catch (e) {
+    if (e instanceof WalletAiDailyLimitError) {
+      return c.json(
+        walletAiLimitResponse(e.usage),
+        statusCode.TooManyRequests,
+      );
+    }
+
+    await releaseWalletAiUsage(reservation);
+
+    if (e instanceof WalletAnalysisServiceError) {
+      return c.json(
+        { error: e.message, code: e.code, details: e.details },
+        mapWalletAnalysisStatus(e.status),
+      );
+    }
+
+    return serverErr(c, e);
+  }
+}
 
 const app = new Hono()
   .route("/analysis", walletAnalysis)
@@ -360,48 +470,21 @@ const app = new Hono()
       return serverErr(c, e);
     }
   })
-  .post("/ai-analysis", validate("json", walletAnalysisRequestSchema), async (c) => {
-    
-    try {
-      const body = c.req.valid("json");
-
-      const analysis = await getWalletAiAnalysis(
-        body.address,
-        body.language,
-      );
-      return c.json(analysis, statusCode.Ok);
-    } catch (e) {
-      if (e instanceof WalletAnalysisServiceError) {
-        return c.json(
-          { error: e.message, code: e.code, details: e.details },
-          mapWalletAnalysisStatus(e.status),
-        );
-      }
-
-      return serverErr(c, e);
-    }
-  })
-  .post("/analysis", validate("json", walletAnalysisRequestSchema), async (c) => {
-    
-    try {
-      const body = c.req.valid("json");
-      const analysis = await getWalletAiAnalysis(
-        body.address,
-        body.language,
-      );
-      return c.json(analysis, statusCode.Ok);
-    } catch (e) {
-      if (e instanceof WalletAnalysisServiceError) {
-        return c.json(
-          { error: e.message, code: e.code, details: e.details },
-          mapWalletAnalysisStatus(e.status),
-        );
-      }
-
-      return serverErr(c, e);
-    }
-  })
-  .post("/ai-swap-summary", validate("json", walletAnalysisRequestSchema), async (c) => {
+  .post(
+    "/ai-analysis",
+    honoJwt,
+    userExtract,
+    validate("json", walletAnalysisRequestSchema),
+    handleWalletAiAnalysis,
+  )
+  .post(
+    "/analysis",
+    honoJwt,
+    userExtract,
+    validate("json", walletAnalysisRequestSchema),
+    handleWalletAiAnalysis,
+  )
+  .post("/ai-swap-summary", honoJwt, userExtract, validate("json", walletAnalysisRequestSchema), async (c) => {
   
     try {
       const body = c.req.valid("json");
@@ -436,7 +519,7 @@ const app = new Hono()
       return serverErr(c, err);
     }
   })
-  .post("/ai-swap-summary/token", validate("json", walletTokenAnalysisRequestSchema), async (c) => {
+  .post("/ai-swap-summary/token", honoJwt, userExtract, validate("json", walletTokenAnalysisRequestSchema), async (c) => {
     try {
       const body = c.req.valid("json");
 

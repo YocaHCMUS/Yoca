@@ -3,6 +3,7 @@ import client from "@/api/main";
 export type TokenAiTimeframe = "24h" | "7d" | "1m" | "3m" | "1y";
 export type TokenAiLanguage = "en" | "vi";
 export type TokenAiModelMode = "fast" | "balanced" | "deep";
+export type AIFeature = "ask_yoca_ai" | "general_ai_chat" | "token_chart_news_summary" | "volatility_signal_summary" | "wallet_ai_analysis" | "wash_trading_ai_analysis"
 export type TokenAiProvider =
   | "gemini"
   | "gemini_model_fallback"
@@ -116,33 +117,72 @@ export interface TokenAiChatData {
 export interface TokenAiChatResponse {
   success: true;
   data: TokenAiChatData;
+  usage: AiUsageMetadata;
+}
+
+export interface AiUsageMetadata {
+  feature: AIFeature;
+  tier: "Free" | "Lite" | "Plus" | "Pro";
+  limit: number;
+  used: number;
+  remaining: number;
+  resetsAt: string;
+  disabled?: boolean;
+}
+
+export class TokenAiChatError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly errorCode?: string,
+    public readonly usage?: AiUsageMetadata,
+  ) {
+    super(message);
+    this.name = "TokenAiChatError";
+  }
 }
 
 export async function askTokenAiChat(
   payload: TokenAiChatPayload,
-): Promise<TokenAiChatData> {
+): Promise<TokenAiChatResponse> {
   const response = await client.api["token-ai-chat"].$post({
     json: payload,
   });
 
-  if (!response.ok) {
-    let message = `Token AI chat failed (${response.status})`;
-    try {
-      const errorData = (await response.json()) as {
-        message?: string;
-        error?: string;
-      };
-      if (errorData.message?.trim()) {
-        message = errorData.message;
-      } else if (errorData.error?.trim()) {
-        message = errorData.error;
-      }
-    } catch {
-      // ignore parse failure
-    }
-    throw new Error(message);
+  response.json();
+
+  if (response.ok) {
+    return response.json();
   }
 
-  const data = (await response.json()) as TokenAiChatResponse;
-  return data.data;
+  let message = `Token AI chat failed (${response.status})`;
+  let errorCode: string | undefined;
+  let usage: AiUsageMetadata | undefined;
+
+  if (response.status == 429) {
+    const errorData = await response.json();
+
+    if ("feature" in errorData) {
+      message = errorData.message;
+      errorCode = errorData.errorCode;
+      usage =
+        errorData.feature &&
+        errorData.tier &&
+        typeof errorData.limit === "number" &&
+        typeof errorData.used === "number" &&
+        typeof errorData.remaining === "number" &&
+        errorData.resetsAt
+          ? {
+              feature: errorData.feature,
+              tier: errorData.tier,
+              limit: errorData.limit,
+              used: errorData.used,
+              remaining: errorData.remaining,
+              resetsAt: errorData.resetsAt,
+              disabled: errorData.disabled,
+            }
+          : undefined;
+    }
+  }
+  throw new TokenAiChatError(message, response.status, errorCode, usage);
 }

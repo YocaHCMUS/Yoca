@@ -1147,6 +1147,81 @@
   border-color: rgba(239, 159, 39, 0.35);
 }
 
+.plusGateBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.plusGateModal {
+  width: min(420px, 100%);
+  border-radius: 14px;
+  border: 1px solid var(--border-card);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.46);
+  padding: 22px;
+}
+
+.plusGateIcon {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(133, 183, 235, 0.14);
+  color: #85b7eb;
+  border: 1px solid rgba(133, 183, 235, 0.3);
+  font-size: 13px;
+  font-weight: 850;
+  margin-bottom: 14px;
+}
+
+.plusGateTitle {
+  margin: 0;
+  color: var(--text-title);
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.plusGateText {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.plusGateActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.plusGateUpgrade {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--bg-btn-pri);
+  color: var(--text-btn-pri);
+  font-size: 13px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
 /* Light mode clarity fixes for AI Verdict summary card */
 .light .aiSummaryCard {
   position: relative;
@@ -1214,6 +1289,15 @@
   background: #fff7ed;
   border-color: #fdba74;
   color: #7c2d12;
+}
+
+.light .plusGateBackdrop {
+  background: rgba(15, 23, 42, 0.38);
+}
+
+.light .plusGateModal {
+  border-color: #dbe3ed;
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.22);
 }
 
 .light .recommendation {

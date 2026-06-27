@@ -119,6 +119,8 @@ const ERROR = {
   NOT_FOUND: "Not found.",
   UNAUTHORIZED: "Unauthorized",
   RATE_LIMIT_EXCEEDED: "Too many requests. Please try again later.",
+  AI_DAILY_LIMIT_EXCEEDED:
+    "You have reached today's AI usage limit. Upgrade your plan for more requests.",
   BAD_GATEWAY: "Bad gateway. Please try again later.",
 } as const satisfies Record<ApiErrCode, string>;
 
@@ -357,7 +359,7 @@ export const translation = {
   pricing: {
     title: "Pricing",
     subtitle:
-      "Outfit your platform with real-time crypto data and insights from 200+ markets with just 1 integration.",
+      "Choose the daily AI capacity that fits how deeply you research the market.",
     placeholder: "To be updated",
     free: "FREE",
     period: {
@@ -365,6 +367,23 @@ export const translation = {
     },
     tiers: {
       standard: { name: "STANDARD" },
+    },
+    features: {
+      label: "AI usage included",
+      askYoca: "Ask Yoca AI: {{$count}} questions per day",
+      generalAiChat: "General AI Chat: {{$count}} messages per day",
+      tokenChartNewsSummary:
+        "Token Chart News Summary: {{$count}} summaries per day",
+      volatilitySummary:
+        "Volatility Signal Summary: {{$count}} generations per day",
+      walletAiAnalysis:
+        "Wallet AI Analysis: {{$count}} analyses per day",
+      washTradingAiAnalysis:
+        "Wash Trading AI Analysis: {{$count}} analyses per day",
+      walletAiAnalysisLocked: "Wallet AI Analysis: Plus required",
+      washTradingAiAnalysisLocked:
+        "Wash Trading AI Analysis: Plus required",
+      dailyReset: "Daily limits reset at 00:00 UTC",
     },
     cta: {
       buyNow: "Buy Now",
@@ -1064,6 +1083,7 @@ export const translation = {
       summary: "Summary",
       riskAnalysis: "Risk Analysis",
       cachedResult: "Cached result",
+      signInRequired: "Sign in to use Wallet AI Swap Summary.",
       allTokens: "All Tokens",
       entry: "Entry",
       exit: "Exit",
@@ -2142,6 +2162,12 @@ export const translation = {
       coingecko: "View on CoinGecko",
       aiWashTradingDetection: "Wash Trading Detection",
       aiWashTradingDetectionShort: "Wash Trading Detection",
+      washGateTitle: "Plus plan required",
+      washGateDescription:
+        "AI Wash Trading Detection is available on Plus and Pro. Upgrade before opening this analysis.",
+      washGateSignIn: "Sign in",
+      washGateClose: "Not now",
+      washGateUpgrade: "Upgrade",
     },
     chart: {
       loadingPool: "Loading chart...",

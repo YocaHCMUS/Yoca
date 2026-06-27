@@ -52,11 +52,23 @@ export interface TokenChartNewsEventsData {
     };
   };
   events: TokenChartNewsEvent[];
+  usage?: {
+    feature: "token_chart_news_summary";
+    tier: "Free" | "Lite" | "Plus" | "Pro";
+    limit: number;
+    used: number;
+    remaining: number;
+    resetsAt: string;
+    disabled?: boolean;
+  };
+  counted?: boolean;
 }
 
 export interface TokenChartNewsEventsResponse {
   success: true;
   data: TokenChartNewsEventsData;
+  usage?: TokenChartNewsEventsData["usage"];
+  counted?: boolean;
 }
 
 export interface TokenChartNewsEventsQuery {
