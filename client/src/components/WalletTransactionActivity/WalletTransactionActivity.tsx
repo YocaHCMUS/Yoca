@@ -168,72 +168,65 @@ export function WalletTransactionActivity({ address }: { address: string }) {
   // Swap rows – plain text
   const swapRows = useMemo(() => {
     const transactions = swapResp.data?.transactions ?? [];
-    return transactions
-      .filter(
-        (tx) =>
-          !hideLowValue || tx.totalValueUsd == null || tx.totalValueUsd >= 1,
-      )
-      .map((tx) => {
-        const soldSym = tx.sold.symbol?.toUpperCase() ?? tx.sold.address;
-        const boughtSym = tx.bought.symbol?.toUpperCase() ?? tx.bought.address;
-        const time = (
-          <Txt size="sm">
-            {fmt.datetime.relativeShort(tx.blockTimestampMs, true)}
-          </Txt>
-        );
-        const soldDisplay = (
-          <TokenAmountCell
-            address={tx.sold.address}
-            amount={tx.sold.amount}
-            symbol={soldSym}
-            logoUri={tx.sold.logoUri}
-            direction="out"
-          />
-        );
-        const boughtDisplay = (
-          <TokenAmountCell
-            address={tx.bought.address}
-            amount={tx.bought.amount}
-            symbol={boughtSym}
-            logoUri={tx.bought.logoUri}
-            direction="in"
-          />
-        );
-        const value = (
-          <Txt size="sm">{fmt.num.compact.currency(tx.totalValueUsd)}</Txt>
-        );
+    return transactions.map((tx) => {
+      const soldSym = tx.sold.symbol?.toUpperCase() ?? tx.sold.address;
+      const boughtSym = tx.bought.symbol?.toUpperCase() ?? tx.bought.address;
+      const time = (
+        <Txt size="sm">
+          {fmt.datetime.relativeShort(tx.blockTimestampMs, true)}
+        </Txt>
+      );
+      const soldDisplay = (
+        <TokenAmountCell
+          address={tx.sold.address}
+          amount={tx.sold.amount}
+          symbol={soldSym}
+          logoUri={tx.sold.logoUri}
+          direction="out"
+        />
+      );
+      const boughtDisplay = (
+        <TokenAmountCell
+          address={tx.bought.address}
+          amount={tx.bought.amount}
+          symbol={boughtSym}
+          logoUri={tx.bought.logoUri}
+          direction="in"
+        />
+      );
+      const value = (
+        <Txt size="sm">{fmt.num.compact.currency(tx.totalValueUsd)}</Txt>
+      );
 
-        const transaction = (
-          <IconButton
-            href={`${SOLSCAN_TX_URL}/${tx.transactionHash}`}
-            label={tr("walletPage.openInSolscan")}
-            kind="ghost"
-            size="xs"
-            target="_blank"
-          >
-            <Launch size={12} />
-          </IconButton>
-        );
+      const transaction = (
+        <IconButton
+          href={`${SOLSCAN_TX_URL}/${tx.transactionHash}`}
+          label={tr("walletPage.openInSolscan")}
+          kind="ghost"
+          size="xs"
+          target="_blank"
+        >
+          <Launch size={12} />
+        </IconButton>
+      );
 
-        return {
-          id: `${tx.transactionHash}-${tx.actId}`,
-          time,
-          tokenSold: soldDisplay,
-          tokenBought: boughtDisplay,
-          value,
-          transaction,
-        };
-      });
-  }, [swapResp.data, fmt, hideLowValue]);
+      return {
+        id: `${tx.transactionHash}-${tx.actId}`,
+        time,
+        tokenSold: soldDisplay,
+        tokenBought: boughtDisplay,
+        value,
+        transaction,
+      };
+    });
+  }, [swapResp.data, fmt]);
 
   // Transfer rows – plain text
   const transferRows = useMemo(() => {
     const transactions = transferResp.data?.transactions ?? [];
 
     return transactions
-      .map((tx, index) => ({ tx, index }))
-      .filter(({ tx }) => !hideLowValue || tx.valueUsd >= 1)
-      .map(({ tx, index }) => {
+      .map((tx) => {
         const tokenSym = tx.token.symbol?.toUpperCase() ?? tx.token.address;
         const time = (
           <Txt size="sm">
@@ -289,7 +282,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           transaction,
         };
       });
-  }, [transferResp.data, fmt, address, hideLowValue]);
+  }, [transferResp.data, fmt, address]);
 
   // Headers – plain text
   const swapHeaders = [
