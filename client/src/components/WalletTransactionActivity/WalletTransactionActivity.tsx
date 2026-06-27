@@ -12,13 +12,16 @@ import {
     Tab,
     Tabs,
     TabList,
-    Checkbox
+    Checkbox,
+    IconButton,
 } from "@carbon/react";
 import { TknImg } from "../TknImg";
 import { Flex } from "../Flex";
 import { Txt } from "../Txt";
 import { CpyBtn } from "../CpyBtn";
 import { TrendNum } from "../TrendNum";
+import { Launch } from "@carbon/icons-react";
+import { SOLSCAN_TX_URL } from "@/config/constants";
 
 type WalletSwapData = {
   transactions: {
@@ -76,13 +79,7 @@ function LowValueFilter({
   const { tr } = useLocalization();
 
   return (
-    <Flex
-      align="center"
-      justify="end"
-      gap={2}
-      pBlock={3}
-      pInline={4}
-    >
+    <Flex align="center" justify="end" gap={2} pBlock={3} pInline={4}>
       <Checkbox
         id={id}
         labelText={tr("walletPage.hideLowValue")}
@@ -93,11 +90,17 @@ function LowValueFilter({
   );
 }
 
-function AddressCell({ address, secondary = false }: { address: string, secondary?: boolean }) {
+function AddressCell({
+  address,
+  secondary = false,
+}: {
+  address: string;
+  secondary?: boolean;
+}) {
   const { fmt } = useLocalization();
   return (
     <Flex gap={2} align="center">
-      <Txt size="sm" weight={secondary ? "regular" : "bold"} >
+      <Txt size="sm" weight={secondary ? "regular" : "bold"}>
         {fmt.text.address(address)}
       </Txt>
       <CpyBtn copyWhat={address} size="xs" />
@@ -128,9 +131,7 @@ function TokenAmountCell({
       />
       <Flex gap={2} align="center">
         <TknImg size={22} src={logoUri} />
-        <Txt size="sm">
-          {symbol}
-        </Txt>
+        <Txt size="sm">{symbol}</Txt>
         <CpyBtn copyWhat={symbol} size="xs" />
       </Flex>
     </Flex>
@@ -162,9 +163,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
       .map((tx, index) => ({ tx, index }))
       .filter(
         ({ tx }) =>
-          !hideLowValue ||
-          tx.totalValueUsd == null ||
-          tx.totalValueUsd >= 1,
+          !hideLowValue || tx.totalValueUsd == null || tx.totalValueUsd >= 1,
       )
       .map(({ tx, index }) => {
         const soldSym = tx.sold.symbol?.toUpperCase() ?? tx.sold.address;
@@ -197,6 +196,18 @@ export function WalletTransactionActivity({ address }: { address: string }) {
               : "—"}
           </Txt>
         );
+        
+        const transaction = (
+          <IconButton
+            href={`${SOLSCAN_TX_URL}/${tx.transactionHash}`}
+            label={tr("walletPage.openInSolscan")}
+            kind="ghost"
+            size="xs"
+            target="_blank"
+          >
+            <Launch size={12} />
+          </IconButton>
+        )
 
         return {
           id: tx.transactionHash || `swap-${index}`,
@@ -204,6 +215,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           tokenSold: soldDisplay,
           tokenBought: boughtDisplay,
           value,
+          transaction
         };
       });
   }, [swapResp.data, fmt, hideLowValue]);
@@ -250,6 +262,18 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           </Txt>
         );
 
+        const transaction = (
+          <IconButton
+            href={`${SOLSCAN_TX_URL}/${tx.transactionHash}`}
+            label={tr("walletPage.openInSolscan")}
+            kind="ghost"
+            size="xs"
+            target="_blank"
+          >
+            <Launch size={12} />
+          </IconButton>
+        )
+
         return {
           id: tx.transactionHash || `transfer-${index}`,
           time,
@@ -257,6 +281,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           receiver,
           token: tokenDisplay,
           value,
+          transaction,
         };
       });
   }, [transferResp.data, fmt, address, hideLowValue]);
@@ -267,6 +292,11 @@ export function WalletTransactionActivity({ address }: { address: string }) {
     { key: "tokenSold", header: tr("walletPage.tokenSold") },
     { key: "tokenBought", header: tr("walletPage.tokenBought") },
     { key: "value", header: tr("walletPage.value") },
+    {
+      key: "transaction",
+      header: tr("walletPage.transaction"),
+      align: "center" as const,
+    },
   ];
 
   const transferHeaders = [
@@ -275,6 +305,11 @@ export function WalletTransactionActivity({ address }: { address: string }) {
     { key: "receiver", header: tr("walletPage.receiver") },
     { key: "token", header: tr("walletPage.token") },
     { key: "value", header: tr("walletPage.value") },
+    {
+      key: "transaction",
+      header: tr("walletPage.transaction"),
+      align: "center" as const,
+    },
   ];
 
   const swapLoading = swapResp.isLoading;

@@ -169,6 +169,101 @@ export const mbl_WalletHistorySchema = z.object({
 
 export type MBL_WalletHistory = z.infer<typeof mbl_WalletHistorySchema>;
 
+const mbl_WalletActivityAssetSchema = z.object({
+  id: z.number().nullable(),
+  name: z.string(),
+  symbol: z.string(),
+  decimals: z.number(),
+  totalSupply: z.number(),
+  circulatingSupply: z.number(),
+  price: z.number(),
+  liquidity: z.number(),
+  priceChange24hPercent: z.number(),
+  marketCapUsd: z.number(),
+  logo: z.string().nullable(),
+  contract: z.string(),
+});
+
+const mbl_WalletActivitySwapActionSchema = z.object({
+  model: z.literal("swap"),
+  swapType: z.string(),
+  swapRawAmountOut: z.number(),
+  swapRawAmountIn: z.number(),
+  swapAmountOut: z.number(),
+  swapAmountIn: z.number(),
+  swapPriceUsdTokenOut: z.number(),
+  swapPriceUsdTokenIn: z.number(),
+  swapAmountUsd: z.number(),
+  swapTransactionSenderAddress: z.string(),
+  swapBaseAddress: z.string(),
+  swapQuoteAddress: z.string(),
+  swapAmountQuote: z.number(),
+  swapAmountBase: z.number(),
+  swapAssetIn: mbl_WalletActivityAssetSchema,
+  swapAssetOut: mbl_WalletActivityAssetSchema,
+  swapPlatform: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      logo: z.string().nullable(),
+    })
+    .nullable(),
+  swapTotalFeesUsd: z.number().nullable(),
+  swapGasFeesUsd: z.number().nullable(),
+  swapPlatformFeesUsd: z.number().nullable(),
+  swapMevFeesUsd: z.number().nullable(),
+});
+
+const mbl_WalletActivityTransferActionSchema = z.object({
+  model: z.literal("transfer"),
+  transferRawAmount: z.string(),
+  transferAmount: z.number(),
+  transferAmountUsd: z.number(),
+  transferType: z.enum([
+    "VAULT_DEPOSIT",
+    "VAULT_WITHDRAW",
+    "VAULT_UNSTAKE",
+    "TOKEN_IN",
+    "TOKEN_OUT",
+    "NATIVE_IN",
+    "NATIVE_OUT",
+  ]),
+  transferFromAddress: z.string().nullable(),
+  transferToAddress: z.string().nullable(),
+  transferAsset: mbl_WalletActivityAssetSchema,
+});
+
+export const mbl_WalletActivitySchema = z.object({
+  data: z.array(
+    z.object({
+      chainId: z.string(),
+      txDateMs: z.number(),
+      txDateIso: z.string(),
+      txHash: z.string(),
+      txRawFeesNative: z.string(),
+      txFeesNativeUsd: z.number(),
+      txBlockNumber: z.number(),
+      txIndex: z.number(),
+      txAction: z.string().nullable(),
+      actions: z.array(
+        z.discriminatedUnion("model", [
+          mbl_WalletActivitySwapActionSchema,
+          mbl_WalletActivityTransferActionSchema,
+        ]),
+      ),
+    }),
+  ),
+  pagination: z.object({
+    page: z.number(),
+    offset: z.number(),
+    limit: z.number(),
+    pageEntries: z.number(),
+  }),
+  backfillStatus: z.enum(["processed", "processing", "pending"]).optional(),
+});
+
+export type MBL_WalletActivity = z.infer<typeof mbl_WalletActivitySchema>;
+
 export const bds_WalletFirstFundSchema = z.object({
   success: z.boolean(),
   data: z.record(
