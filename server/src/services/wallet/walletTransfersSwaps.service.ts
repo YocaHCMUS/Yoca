@@ -9,7 +9,7 @@ import { resolveRequestedRange } from "@sv/services/wallet/walletRange.utils.js"
 import * as mobula from "@sv/util/util-mobula";
 import { rlFetch } from "@sv/util/rate-limit";
 import { getTrackedApiResult } from "@sv/middlewares/validation";
-import { excluded } from "@sv/util/orm-sql.js";
+import { excluded, excludedAutoNonNullFromInsert } from "@sv/util/orm-sql.js";
 import {
     mbl_WalletActivitySchema,
     type MBL_WalletActivity,
@@ -645,7 +645,14 @@ async function mbl_writeActivityHistory(input: {
     await db
       .insert(tokenMeta)
       .values(input.tokenMetaInsertValues)
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        target: [tokenMeta.address],
+        set: excludedAutoNonNullFromInsert(
+          tokenMeta,
+          tokenMeta.address,
+          input.tokenMetaInsertValues,
+        ),
+      });
   }
 }
 
