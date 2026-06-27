@@ -342,47 +342,47 @@ export function WalletTransactionActivity({ address }: { address: string }) {
                   onChange={setHideLowValue}
                 />
               }
-              onRowClick={(row) => {
-                const transaction = swapResp.data?.transactions.find(
-                  (tx, index) =>
-                    (tx.transactionHash || `swap-${index}`) == row.id,
-                );
-                if (!transaction) return;
+              // onRowClick={(row) => {
+              //   const transaction = swapResp.data?.transactions.find(
+              //     (tx, index) =>
+              //       (tx.transactionHash || `swap-${index}`) == row.id,
+              //   );
+              //   if (!transaction) return;
 
-                const soldPriceUsd = transaction.sold.priceUsd ?? 0;
-                const boughtPriceUsd = transaction.bought.priceUsd ?? 0;
-                setSelectedSwap({
-                  transactionHash: transaction.transactionHash,
-                  transactionType: "swap",
-                  blockTimestampIso: new Date(
-                    transaction.blockTimestampMs,
-                  ).toISOString(),
-                  subcategory: null,
-                  walletAddress: address,
-                  pairAddress: "",
-                  tokensInvolved: `${transaction.sold.symbol ?? transaction.sold.address},${transaction.bought.symbol ?? transaction.bought.address}`,
-                  sold: {
-                    address: transaction.sold.address,
-                    amount: transaction.sold.amount,
-                    symbol: transaction.sold.symbol,
-                    name: transaction.sold.name,
-                    logoUri: transaction.sold.logoUri,
-                    priceUsd: soldPriceUsd,
-                    valueUsd: transaction.sold.amount * soldPriceUsd,
-                  },
-                  bought: {
-                    address: transaction.bought.address,
-                    amount: transaction.bought.amount,
-                    symbol: transaction.bought.symbol,
-                    name: transaction.bought.name,
-                    logoUri: transaction.bought.logoUri,
-                    priceUsd: boughtPriceUsd,
-                    valueUsd: transaction.bought.amount * boughtPriceUsd,
-                  },
-                  totalValueUsd: transaction.totalValueUsd,
-                  baseQuotePrice: null,
-                });
-              }}
+              //   const soldPriceUsd = transaction.sold.priceUsd ?? 0;
+              //   const boughtPriceUsd = transaction.bought.priceUsd ?? 0;
+              //   setSelectedSwap({
+              //     transactionHash: transaction.transactionHash,
+              //     transactionType: "swap",
+              //     blockTimestampIso: new Date(
+              //       transaction.blockTimestampMs,
+              //     ).toISOString(),
+              //     subcategory: null,
+              //     walletAddress: address,
+              //     pairAddress: "",
+              //     tokensInvolved: `${transaction.sold.symbol ?? transaction.sold.address},${transaction.bought.symbol ?? transaction.bought.address}`,
+              //     sold: {
+              //       address: transaction.sold.address,
+              //       amount: transaction.sold.amount,
+              //       symbol: transaction.sold.symbol,
+              //       name: transaction.sold.name,
+              //       logoUri: transaction.sold.logoUri,
+              //       priceUsd: soldPriceUsd,
+              //       valueUsd: transaction.sold.amount * soldPriceUsd,
+              //     },
+              //     bought: {
+              //       address: transaction.bought.address,
+              //       amount: transaction.bought.amount,
+              //       symbol: transaction.bought.symbol,
+              //       name: transaction.bought.name,
+              //       logoUri: transaction.bought.logoUri,
+              //       priceUsd: boughtPriceUsd,
+              //       valueUsd: transaction.bought.amount * boughtPriceUsd,
+              //     },
+              //     totalValueUsd: transaction.totalValueUsd,
+              //     baseQuotePrice: null,
+              //   });
+              // }}
             />
           </TabPanel>
 
@@ -405,36 +405,36 @@ export function WalletTransactionActivity({ address }: { address: string }) {
                   onChange={setHideLowValue}
                 />
               }
-              onRowClick={(row) => {
-                const transaction = transferResp.data?.transactions.find(
-                  (tx, index) =>
-                    (tx.transactionHash || `transfer-${index}`) == row.id,
-                );
-                if (!transaction) return;
+              // onRowClick={(row) => {
+              //   const transaction = transferResp.data?.transactions.find(
+              //     (tx, index) =>
+              //       (tx.transactionHash || `transfer-${index}`) == row.id,
+              //   );
+              //   if (!transaction) return;
 
-                setSelectedTransfer({
-                  from:
-                    transaction.direction == "send"
-                      ? address
-                      : transaction.counterpartyAddress,
-                  to:
-                    transaction.direction == "send"
-                      ? transaction.counterpartyAddress
-                      : address,
-                  amount: transaction.token.amount,
-                  amountUsd: transaction.valueUsd,
-                  timestamp: new Date(
-                    transaction.blockTimestampMs,
-                  ).toISOString(),
-                  tokenAddress: transaction.token.address,
-                  tokenSymbol: transaction.token.symbol ?? "Unknown",
-                  tokenName: transaction.token.name ?? undefined,
-                  tokenLogoUri: transaction.token.logoUri ?? undefined,
-                  priceUsd: transaction.token.priceUsd ?? undefined,
-                  transactionSignature: transaction.transactionHash,
-                  instructionIndex: 0,
-                });
-              }}
+              //   setSelectedTransfer({
+              //     from:
+              //       transaction.direction == "send"
+              //         ? address
+              //         : transaction.counterpartyAddress,
+              //     to:
+              //       transaction.direction == "send"
+              //         ? transaction.counterpartyAddress
+              //         : address,
+              //     amount: transaction.token.amount,
+              //     amountUsd: transaction.valueUsd,
+              //     timestamp: new Date(
+              //       transaction.blockTimestampMs,
+              //     ).toISOString(),
+              //     tokenAddress: transaction.token.address,
+              //     tokenSymbol: transaction.token.symbol ?? "Unknown",
+              //     tokenName: transaction.token.name ?? undefined,
+              //     tokenLogoUri: transaction.token.logoUri ?? undefined,
+              //     priceUsd: transaction.token.priceUsd ?? undefined,
+              //     transactionSignature: transaction.transactionHash,
+              //     instructionIndex: 0,
+              //   });
+              // }}
             />
           </TabPanel>
         </TabPanels>

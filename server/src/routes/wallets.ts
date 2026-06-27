@@ -25,8 +25,6 @@ import {
 } from "@sv/services/wallet/walletOverview.service.js";
 import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
 import {
-    getWalletRecentSwaps,
-    getWalletRecentTransfers,
     getWalletSwapHistory,
     getWalletTransferHistory,
     getWalletSwaps,
@@ -68,7 +66,6 @@ import walletTags from "./wallets/wallet-tags";
 
 import { serverErr, setErr } from "@sv/util/errors";
 import {
-    WALLET_RECENT_TRANSACTIONS_MAX_COUNT,
     WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
     WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
 } from "@sv/config/constants.js";
@@ -172,37 +169,6 @@ const app = new Hono()
     }
   })
   .get(
-    "/swaps/recent/:address",
-    validate("param", addressSchema),
-    validate(
-      "query",
-      z.object({
-        limit: z.coerce
-          .number()
-          .int()
-          .min(1)
-          .max(WALLET_RECENT_TRANSACTIONS_MAX_COUNT)
-          .optional(),
-      }),
-    ),
-    async (c) => {
-      try {
-        const { address } = c.req.valid("param");
-        const { limit } = c.req.valid("query");
-        const txs = await getWalletRecentSwaps(address, limit);
-        if (!txs) {
-          return c.json(
-            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
-            statusCode.BadGateway,
-          );
-        }
-        return c.json(txs);
-      } catch (e) {
-        return serverErr(c, e);
-      }
-    },
-  )
-  .get(
     "/swaps/history/:address",
     validate("param", addressSchema),
     validate("query", walletSwapHistoryQuerySchema),
@@ -218,37 +184,6 @@ const app = new Hono()
           limit,
           cursor,
         );
-        if (!txs) {
-          return c.json(
-            setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
-            statusCode.BadGateway,
-          );
-        }
-        return c.json(txs);
-      } catch (e) {
-        return serverErr(c, e);
-      }
-    },
-  )
-  .get(
-    "/transfers/recent/:address",
-    validate("param", addressSchema),
-    validate(
-      "query",
-      z.object({
-        limit: z.coerce
-          .number()
-          .int()
-          .min(1)
-          .max(WALLET_RECENT_TRANSACTIONS_MAX_COUNT)
-          .optional(),
-      }),
-    ),
-    async (c) => {
-      try {
-        const { address } = c.req.valid("param");
-        const { limit } = c.req.valid("query");
-        const txs = await getWalletRecentTransfers(address, limit);
         if (!txs) {
           return c.json(
             setErr("FAILED_TO_FETCH_REQUESTED_DATA"),
