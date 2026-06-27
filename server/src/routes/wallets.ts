@@ -72,7 +72,7 @@ import {
 } from "@sv/services/ai-usage.service.js";
 import { statusCode } from "@sv/util/responses.js";
 import { z } from "zod";
-import { Hono, type Context } from "hono";
+import { Hono } from "hono";
 import walletAnalysis from "./wallets/wallet-analysis";
 import walletTags from "./wallets/wallet-tags";
 
@@ -184,68 +184,6 @@ function walletAiLockedResponse(usage: AiUsageMetadata) {
     requiredTier: usage.requiredTier ?? "Plus",
     upgradePath: "/pricing",
   };
-}
-
-async function handleWalletAiAnalysis(c: Context) {
-  const { id: userId } = c.get("userPayload");
-  let reservation: AiUsageReservation | undefined;
-
-  try {
-    const body = c.req.valid("json");
-    const currentUsage = await getAiUsage(userId, AI_FEATURES.WalletAiAnalysis);
-    if (isAiFeatureLocked(AI_FEATURES.WalletAiAnalysis, currentUsage.tier)) {
-      return c.json(
-        walletAiLockedResponse(currentUsage),
-        statusCode.Forbidden,
-      );
-    }
-
-    const analysis = await getWalletAiAnalysis(
-      body.address,
-      body.language,
-      async () => {
-        reservation = await reserveAiUsage(
-          userId,
-          AI_FEATURES.WalletAiAnalysis,
-        );
-        if (!reservation.allowed) {
-          throw new WalletAiDailyLimitError(reservation.usage);
-        }
-      },
-    );
-    const usage =
-      reservation?.allowed == true
-        ? reservation.usage
-        : await getAiUsage(userId, AI_FEATURES.WalletAiAnalysis);
-
-    return c.json(
-      {
-        ...analysis,
-        usage,
-        counted:
-          reservation?.allowed == true && !reservation.usage.disabled,
-      },
-      statusCode.Ok,
-    );
-  } catch (e) {
-    if (e instanceof WalletAiDailyLimitError) {
-      return c.json(
-        walletAiLimitResponse(e.usage),
-        statusCode.TooManyRequests,
-      );
-    }
-
-    await releaseWalletAiUsage(reservation);
-
-    if (e instanceof WalletAnalysisServiceError) {
-      return c.json(
-        { error: e.message, code: e.code, details: e.details },
-        mapWalletAnalysisStatus(e.status),
-      );
-    }
-
-    return serverErr(c, e);
-  }
 }
 
 const app = new Hono()
@@ -456,90 +394,166 @@ const app = new Hono()
       return serverErr(c, e);
     }
   })
-  .post("/identity/batch", validate("json", walletIdentityBatchRequestSchema), async (c) => {
-    try {
-      const { addresses } = c.req.valid("json");
-      const identityBatch = await getWalletIdentityBatch(addresses);
-      return c.json(identityBatch, statusCode.Ok);
-    } catch (e) {
-      if (e instanceof WalletIdentityServiceError) {
-        const mapped = mapWalletIdentityError(e);
-        return c.json({ error: mapped.error, code: e.code }, mapped.status);
-      }
+  .post(
+    "/identity/batch",
+    validate("json", walletIdentityBatchRequestSchema),
+    async (c) => {
+      try {
+        const { addresses } = c.req.valid("json");
+        const identityBatch = await getWalletIdentityBatch(addresses);
+        return c.json(identityBatch, statusCode.Ok);
+      } catch (e) {
+        if (e instanceof WalletIdentityServiceError) {
+          const mapped = mapWalletIdentityError(e);
+          return c.json({ error: mapped.error, code: e.code }, mapped.status);
+        }
 
-      return serverErr(c, e);
-    }
-  })
+        return serverErr(c, e);
+      }
+    },
+  )
   .post(
     "/ai-analysis",
     honoJwt,
     userExtract,
     validate("json", walletAnalysisRequestSchema),
-    handleWalletAiAnalysis,
+    async (c) => {
+      const { id: userId } = c.get("userPayload");
+      let reservation: AiUsageReservation | undefined;
+
+      try {
+        const body = c.req.valid("json");
+        const currentUsage = await getAiUsage(
+          userId,
+          AI_FEATURES.WalletAiAnalysis,
+        );
+        if (
+          isAiFeatureLocked(AI_FEATURES.WalletAiAnalysis, currentUsage.tier)
+        ) {
+          return c.json(
+            walletAiLockedResponse(currentUsage),
+            statusCode.Forbidden,
+          );
+        }
+
+        const analysis = await getWalletAiAnalysis(
+          body.address,
+          body.language,
+          async () => {
+            reservation = await reserveAiUsage(
+              userId,
+              AI_FEATURES.WalletAiAnalysis,
+            );
+            if (!reservation.allowed) {
+              throw new WalletAiDailyLimitError(reservation.usage);
+            }
+          },
+        );
+        const usage =
+          reservation?.allowed == true
+            ? reservation.usage
+            : await getAiUsage(userId, AI_FEATURES.WalletAiAnalysis);
+
+        return c.json(
+          {
+            ...analysis,
+            usage,
+            counted:
+              reservation?.allowed == true && !reservation.usage.disabled,
+          },
+          statusCode.Ok,
+        );
+      } catch (e) {
+        if (e instanceof WalletAiDailyLimitError) {
+          return c.json(
+            walletAiLimitResponse(e.usage),
+            statusCode.TooManyRequests,
+          );
+        }
+
+        await releaseWalletAiUsage(reservation);
+
+        if (e instanceof WalletAnalysisServiceError) {
+          return c.json(
+            { error: e.message, code: e.code, details: e.details },
+            mapWalletAnalysisStatus(e.status),
+          );
+        }
+
+        return serverErr(c, e);
+      }
+    },
   )
+  .post("/analysis", async (c) => {
+    return c.redirect("/ai-summary");
+  })
   .post(
-    "/analysis",
+    "/ai-swap-summary",
     honoJwt,
     userExtract,
     validate("json", walletAnalysisRequestSchema),
-    handleWalletAiAnalysis,
+    async (c) => {
+      try {
+        const body = c.req.valid("json");
+        const summary = await getWalletAiSwapSummary(
+          body.address,
+          body.language,
+        );
+        return c.json(summary, statusCode.Ok);
+      } catch (err) {
+        if (err instanceof WalletAiSwapSummaryServiceError) {
+          const errCode = err.code;
+          const statusByCode: Record<
+            WalletAiSwapSummaryServiceError["code"],
+            400 | 409 | 502
+          > = {
+            invalid_address: statusCode.BadRequest,
+            no_data: statusCode.Conflict,
+            model_error: statusCode.BadGateway,
+            invalid_model_response: statusCode.BadGateway,
+            provider_unknown: statusCode.BadGateway,
+          };
+          return c.json(
+            { error: err.message, code: errCode },
+            statusByCode[errCode],
+          );
+        }
+
+        if (err instanceof Error) {
+          console.error("Failed to get wallet AI swap summary", err.message);
+        }
+
+        return serverErr(c, err);
+      }
+    },
   )
-  .post("/ai-swap-summary", honoJwt, userExtract, validate("json", walletAnalysisRequestSchema), async (c) => {
-  
-    try {
-      const body = c.req.valid("json");
-      const summary = await getWalletAiSwapSummary(
-        body.address,
-        body.language,
-      );
-      return c.json(summary, statusCode.Ok);
-    } catch (err) {
-      if (err instanceof WalletAiSwapSummaryServiceError) {
-        const errCode = err.code;
-        const statusByCode: Record<
-          WalletAiSwapSummaryServiceError["code"],
-          400 | 409 | 502
-        > = {
-          invalid_address: statusCode.BadRequest,
-          no_data: statusCode.Conflict,
-          model_error: statusCode.BadGateway,
-          invalid_model_response: statusCode.BadGateway,
-          provider_unknown: statusCode.BadGateway,
-        };
-        return c.json(
-          { error: err.message, code: errCode },
-          statusByCode[errCode],
+  .post(
+    "/ai-swap-summary/token",
+    honoJwt,
+    userExtract,
+    validate("json", walletTokenAnalysisRequestSchema),
+    async (c) => {
+      try {
+        const body = c.req.valid("json");
+
+        const analysis = await getTokenDeepAnalysis(
+          body.address,
+          body.tokenAddress,
+          body.language ?? "en",
         );
+        return c.json(analysis, statusCode.Ok);
+      } catch (e) {
+        if (e instanceof WalletTokenAnalysisServiceError) {
+          return c.json(
+            { error: e.message, code: e.code },
+            mapWalletTokenAnalysisStatus(e.code),
+          );
+        }
+
+        return serverErr(c, e);
       }
-
-      if (err instanceof Error) {
-        console.error("Failed to get wallet AI swap summary", err.message);
-      }
-
-      return serverErr(c, err);
-    }
-  })
-  .post("/ai-swap-summary/token", honoJwt, userExtract, validate("json", walletTokenAnalysisRequestSchema), async (c) => {
-    try {
-      const body = c.req.valid("json");
-
-      const analysis = await getTokenDeepAnalysis(
-        body.address,
-        body.tokenAddress,
-        body.language ?? "en",
-      );
-      return c.json(analysis, statusCode.Ok);
-    } catch (e) {
-      if (e instanceof WalletTokenAnalysisServiceError) {
-        return c.json(
-          { error: e.message, code: e.code },
-          mapWalletTokenAnalysisStatus(e.code),
-        );
-      }
-
-      return serverErr(c, e);
-    }
-  })
+    },
+  )
   .get("/intelligence", validate("query", addressSchema), async (c) => {
     try {
       const { address } = c.req.valid("query");
@@ -625,42 +639,58 @@ const app = new Hono()
       }
     },
   )
-  .get("/day-activity", validate("query", walletDayActivityQuerySchema), async (c) => {    
-    try {
-      const { address, dayMs } = c.req.valid("query");
-      const summary = await getWalletDayActivitySummary(address, dayMs);
-      return c.json(summary, statusCode.Ok);
-    } catch (e) {
-      return serverErr(c, e);
-    }
-  })
-  .get("/tx-detail", validate("query", walletTransactionDetailQuerySchema), async (c) => {
-    try {
-      const { address, signature } = c.req.valid("query");  
-      const detail = await getWalletTxDetail(address, signature);
-      return c.json(detail, statusCode.Ok);
-    } catch (err) {
-      return serverErr(c, err);
-    }
-  })
-  .get("/tx-instructions", validate("query", walletTransactionDetailQuerySchema), async (c) => {
-    try {      
-      const { address, signature } = c.req.valid("query");
-      const detail = await getWalletTxInstructionDetail(address, signature);
-      return c.json(detail, statusCode.Ok);
-    } catch (e) {
-      return serverErr(c, e);
-    }
-  })
-  .get("/token-price-chart", validate("query", walletDayActivityQuerySchema), async (c) => {
-    try {
-      const { address, dayMs } = c.req.valid("query");
-      const items = await getTokenPriceChartForDay(address, dayMs);
-      return c.json({ items: items ?? [] }, statusCode.Ok);
-    } catch (e) {
-      return serverErr(c, e);
-    }
-  })
+  .get(
+    "/day-activity",
+    validate("query", walletDayActivityQuerySchema),
+    async (c) => {
+      try {
+        const { address, dayMs } = c.req.valid("query");
+        const summary = await getWalletDayActivitySummary(address, dayMs);
+        return c.json(summary, statusCode.Ok);
+      } catch (e) {
+        return serverErr(c, e);
+      }
+    },
+  )
+  .get(
+    "/tx-detail",
+    validate("query", walletTransactionDetailQuerySchema),
+    async (c) => {
+      try {
+        const { address, signature } = c.req.valid("query");
+        const detail = await getWalletTxDetail(address, signature);
+        return c.json(detail, statusCode.Ok);
+      } catch (err) {
+        return serverErr(c, err);
+      }
+    },
+  )
+  .get(
+    "/tx-instructions",
+    validate("query", walletTransactionDetailQuerySchema),
+    async (c) => {
+      try {
+        const { address, signature } = c.req.valid("query");
+        const detail = await getWalletTxInstructionDetail(address, signature);
+        return c.json(detail, statusCode.Ok);
+      } catch (e) {
+        return serverErr(c, e);
+      }
+    },
+  )
+  .get(
+    "/token-price-chart",
+    validate("query", walletDayActivityQuerySchema),
+    async (c) => {
+      try {
+        const { address, dayMs } = c.req.valid("query");
+        const items = await getTokenPriceChartForDay(address, dayMs);
+        return c.json({ items: items ?? [] }, statusCode.Ok);
+      } catch (e) {
+        return serverErr(c, e);
+      }
+    },
+  );
 
 export default app;
 

@@ -1,3 +1,5 @@
+import { AIFeature } from "@/services/tokenAiChat";
+
 export type VolatilitySeverity = "medium" | "high" | "extreme";
 export type RelatedNewsConfidence = "high" | "medium" | "low";
 export type VolatilityTimeframe = "24h" | "daily";
@@ -40,7 +42,7 @@ export interface VolatilitySummary {
 }
 
 export interface VolatilityAiUsage {
-  feature: "volatility_signal_summary";
+  feature: AIFeature;
   tier: "Free" | "Lite" | "Plus" | "Pro";
   limit: number;
   used: number;

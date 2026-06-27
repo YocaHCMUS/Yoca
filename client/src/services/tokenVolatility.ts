@@ -1,8 +1,8 @@
 import client from "@/api/main";
 import type {
-  TokenVolatilityNewsQuery,
-  VolatilityAiUsage,
-  VolatilitySignalResponse,
+    TokenVolatilityNewsQuery,
+    VolatilityAiUsage,
+    VolatilitySignalResponse,
 } from "@/types/volatility";
 
 export class TokenVolatilityError extends Error {
@@ -19,7 +19,7 @@ export class TokenVolatilityError extends Error {
 
 export async function getTokenVolatilityNews(
   query: TokenVolatilityNewsQuery,
-) : Promise<VolatilitySignalResponse["data"]> {
+) : Promise<VolatilitySignalResponse> {
   const resp = await client.api["token-volatility-news"].$get({
     query: {
       address: query.address,
@@ -86,7 +86,8 @@ export async function getTokenVolatilityNews(
   }
 
   return {
-    ...payload.data,
+    success: true,
+    data: payload.data,
     usage: payload.usage,
     counted: payload.counted ?? false,
   };
