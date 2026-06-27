@@ -113,6 +113,7 @@ function createWalletHistoryQuerySchema(maxLimit: number) {
     toMs: z.coerce.number().int().min(0).optional(),
     limit: z.coerce.number().int().min(1).max(maxLimit).optional(),
     cursor: walletHistoryCursorQuerySchema.optional(),
+    minValueUsd: z.coerce.number().min(0).optional(),
   });
 }
 
@@ -175,7 +176,8 @@ const app = new Hono()
     async (c) => {
       try {
         const { address } = c.req.valid("param");
-        const { limit, fromMs, toMs, cursor } = c.req.valid("query");
+        const { limit, fromMs, toMs, cursor, minValueUsd } =
+          c.req.valid("query");
 
         const txs = await getWalletSwapHistory(
           address,
@@ -183,6 +185,7 @@ const app = new Hono()
           toMs,
           limit,
           cursor,
+          minValueUsd,
         );
         if (!txs) {
           return c.json(
@@ -203,7 +206,8 @@ const app = new Hono()
     async (c) => {
       try {
         const { address } = c.req.valid("param");
-        const { limit, fromMs, toMs, cursor } = c.req.valid("query");
+        const { limit, fromMs, toMs, cursor, minValueUsd } =
+          c.req.valid("query");
 
         const txs = await getWalletTransferHistory(
           address,
@@ -211,6 +215,7 @@ const app = new Hono()
           toMs,
           limit,
           cursor,
+          minValueUsd,
         );
         if (!txs) {
           return c.json(

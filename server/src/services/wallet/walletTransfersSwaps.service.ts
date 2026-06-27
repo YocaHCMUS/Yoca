@@ -36,7 +36,7 @@ import {
     MOBULA_WALLET_ACTIVITY_PAGE_SIZE,
     MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS
 } from "@sv/config/constants";
-import { and, desc, eq, gt, inArray, lt, lte, max, or } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, lt, lte, max, or } from "drizzle-orm";
 
 type MBL_WalletActivityTransaction = MBL_WalletActivity["data"][number];
 type MBL_WalletActivityAction =
@@ -54,6 +54,20 @@ type WalletActivityTarget = "swap" | "transfer";
 function normalizeTxLimit(reqLimit: number, maxLimit: number): number {
   if (!Number.isFinite(reqLimit)) return maxLimit;
   return Math.min(Math.max(Math.trunc(reqLimit), 1), maxLimit);
+}
+
+function normalizeMinValueUsd(minValueUsd?: number): number | null {
+  if (minValueUsd == null) return null;
+  if (!Number.isFinite(minValueUsd)) return null;
+  return Math.max(0, minValueUsd);
+}
+
+function matchesMinValueUsd(
+  valueUsd: number | null,
+  minValueUsd: number | null,
+): boolean {
+  if (minValueUsd == null) return true;
+  return valueUsd != null && valueUsd >= minValueUsd;
 }
 
 export type WalletHistoryCursor = {
@@ -629,6 +643,7 @@ async function mbl_fetchWalletActivityRange({
   target,
   limit,
   maxLimit,
+  minValueUsd,
 }: {
   address: string;
   fromMs: number;
@@ -636,8 +651,10 @@ async function mbl_fetchWalletActivityRange({
   target: WalletActivityTarget;
   limit: number;
   maxLimit: number;
+  minValueUsd?: number | null;
 }): Promise<WalletActivityFetchResult | null> {
   const targetLimit = normalizeTxLimit(limit, maxLimit);
+  const normalizedMinValueUsd = normalizeMinValueUsd(minValueUsd ?? undefined);
   const swaps: WalletSwapV2[] = [];
   const transfers: WalletTransferV2[] = [];
   let offset = 0;
@@ -683,7 +700,14 @@ async function mbl_fetchWalletActivityRange({
     swaps.push(...extracted.swaps);
     transfers.push(...extracted.transfers);
 
-    const targetCount = target == "swap" ? swaps.length : transfers.length;
+    const targetCount =
+      target == "swap"
+        ? swaps.filter((swap) =>
+            matchesMinValueUsd(swap.totalValueUsd, normalizedMinValueUsd),
+          ).length
+        : transfers.filter((transfer) =>
+            matchesMinValueUsd(transfer.valueUsd, normalizedMinValueUsd),
+          ).length;
     const pageExhausted =
       result.pagination.pageEntries < MOBULA_WALLET_ACTIVITY_PAGE_SIZE;
     if (targetCount >= targetLimit) {
@@ -699,11 +723,20 @@ async function mbl_fetchWalletActivityRange({
   }
 
   const cutOffByLimit = !exhaustedRange;
+  const filteredSwaps = swaps.filter((swap) =>
+    matchesMinValueUsd(swap.totalValueUsd, normalizedMinValueUsd),
+  );
+  const filteredTransfers = transfers.filter((transfer) =>
+    matchesMinValueUsd(transfer.valueUsd, normalizedMinValueUsd),
+  );
   return {
-    swaps: swaps.slice(0, target == "swap" ? targetLimit : swaps.length),
-    transfers: transfers.slice(
+    swaps: filteredSwaps.slice(
       0,
-      target == "transfer" ? targetLimit : transfers.length,
+      target == "swap" ? targetLimit : filteredSwaps.length,
+    ),
+    transfers: filteredTransfers.slice(
+      0,
+      target == "transfer" ? targetLimit : filteredTransfers.length,
     ),
     coveredFromExclusiveMs: cutOffByLimit
       ? Math.max(
@@ -728,8 +761,16 @@ async function fetchWalletSwapHistoryGap(
   fromMs: number,
   toMs: number,
   limit?: number,
+  minValueUsd?: number | null,
 ): Promise<WalletSwapHistoryFetchResult | null> {
-  return await fetchWalletSwapHistoryCore(address, fromMs, toMs, limit, false);
+  return await fetchWalletSwapHistoryCore(
+    address,
+    fromMs,
+    toMs,
+    limit,
+    false,
+    minValueUsd,
+  );
 }
 
 async function fetchWalletSwapHistoryCore(
@@ -738,6 +779,7 @@ async function fetchWalletSwapHistoryCore(
   toMs: number,
   limit: number = WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
   writeMeta: boolean = true,
+  minValueUsd?: number | null,
 ): Promise<WalletSwapHistoryFetchResult | null> {
   const res = await mbl_fetchWalletActivityRange({
     address,
@@ -746,6 +788,7 @@ async function fetchWalletSwapHistoryCore(
     limit,
     maxLimit: WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
     target: "swap",
+    minValueUsd,
   });
 
   if (!res) return null;
@@ -816,12 +859,17 @@ async function db_getSwapHistory(
   toInclusiveMs: number,
   limit: number,
   cursor: WalletHistoryCursor | null,
+  minValueUsd?: number | null,
 ): Promise<WalletTransaction<WalletSwapV2>[]> {
+  const normalizedMinValueUsd = normalizeMinValueUsd(minValueUsd ?? undefined);
   const predicates = [
     eq(walletSwapHistory.address, address),
     gt(walletSwapHistory.blockTimestampMs, fromExclusiveMs),
     lte(walletSwapHistory.blockTimestampMs, toInclusiveMs),
   ];
+  if (normalizedMinValueUsd != null) {
+    predicates.push(gte(walletSwapHistory.valueUsd, normalizedMinValueUsd));
+  }
   if (cursor) {
     const cursorPredicate = or(
       lt(walletSwapHistory.blockTimestampMs, cursor.blockTimestampMs),
@@ -895,8 +943,10 @@ export async function getWalletSwapHistory(
   requestToMs?: number,
   limit = WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
   parsedCursor?: WalletHistoryCursor,
+  minValueUsd?: number,
 ): Promise<WalletTransactionHistory<WalletSwapV2> | null> {
   const cursor = parsedCursor ?? null;
+  const normalizedMinValueUsd = normalizeMinValueUsd(minValueUsd);
   const requestedRange = cursor
     ? {
         fromMs: cursor.fromExclusiveMs,
@@ -936,13 +986,27 @@ export async function getWalletSwapHistory(
     .orderBy(desc(walletSwapHistoryMeta.toInclusiveMs));
 
   if (intersecting.length == 0) {
-    const fetched = await fetchWalletSwapHistoryCore(
-      address,
-      fromMs,
-      toMs,
-      limit,
-      true,
-    );
+    let fetchToMs = toMs;
+    let fetched: WalletSwapHistoryFetchResult | null = null;
+    while (fetchToMs > fromMs) {
+      fetched = await fetchWalletSwapHistoryCore(
+        address,
+        fromMs,
+        fetchToMs,
+        limit,
+        true,
+        normalizedMinValueUsd,
+      );
+      if (!fetched) return null;
+      if (
+        fetched.values.length > 0 ||
+        !fetched.cutOffByLimit ||
+        fetched.coveredFromExclusiveMs <= fromMs
+      ) {
+        break;
+      }
+      fetchToMs = fetched.coveredFromExclusiveMs;
+    }
     if (!fetched) return null;
 
     const hasUnresolvedRange =
@@ -953,6 +1017,7 @@ export async function getWalletSwapHistory(
       toMs,
       limit + 1,
       cursor,
+      normalizedMinValueUsd,
     );
     return postProcessWalletTxHistory({
       entries,
@@ -1014,6 +1079,7 @@ export async function getWalletSwapHistory(
       toMs,
       limit + 1,
       cursor,
+      normalizedMinValueUsd,
     );
     return postProcessWalletTxHistory({
       entries,
@@ -1029,27 +1095,47 @@ export async function getWalletSwapHistory(
   }[] = [];
   let safeFromExclusiveMs: number | null = null;
   for (const gap of gaps) {
-    const gapRes = await fetchWalletSwapHistoryGap(
-      address,
-      gap.fromExclusiveMs,
-      gap.toInclusiveMs,
-      limit,
-    );
+    let gapToMs = gap.toInclusiveMs;
+    while (gapToMs > gap.fromExclusiveMs) {
+      const gapRes = await fetchWalletSwapHistoryGap(
+        address,
+        gap.fromExclusiveMs,
+        gapToMs,
+        limit,
+        normalizedMinValueUsd,
+      );
 
-    if (!gapRes) {
-      // TODO: Distinguish verified-empty gaps from fetch/extraction failures;
-      // failures must terminate filling without marking the gap as covered.
-      fetchedGapIntervals.push(gap);
-      continue;
+      if (!gapRes) {
+        // TODO: Distinguish verified-empty gaps from fetch/extraction failures;
+        // failures must terminate filling without marking the gap as covered.
+        fetchedGapIntervals.push({
+          fromExclusiveMs: gap.fromExclusiveMs,
+          toInclusiveMs: gapToMs,
+        });
+        break;
+      }
+
+      fetchedGapIntervals.push({
+        fromExclusiveMs: gapRes.coveredFromExclusiveMs,
+        toInclusiveMs: gapRes.coveredToInclusiveMs,
+      });
+
+      if (!gapRes.cutOffByLimit) {
+        break;
+      }
+
+      if (
+        gapRes.values.length > 0 ||
+        gapRes.coveredFromExclusiveMs <= gap.fromExclusiveMs
+      ) {
+        safeFromExclusiveMs = gapRes.coveredFromExclusiveMs;
+        break;
+      }
+
+      gapToMs = gapRes.coveredFromExclusiveMs;
     }
 
-    fetchedGapIntervals.push({
-      fromExclusiveMs: gapRes.coveredFromExclusiveMs,
-      toInclusiveMs: gapRes.coveredToInclusiveMs,
-    });
-
-    if (gapRes.cutOffByLimit) {
-      safeFromExclusiveMs = gapRes.coveredFromExclusiveMs;
+    if (safeFromExclusiveMs != null) {
       break;
     }
   }
@@ -1101,6 +1187,7 @@ export async function getWalletSwapHistory(
     toMs,
     limit + 1,
     cursor,
+    normalizedMinValueUsd,
   );
   return postProcessWalletTxHistory({
     entries,
@@ -1123,6 +1210,7 @@ async function fetchWalletTransferHistoryGap(
   fromMs: number,
   toMs: number,
   limit?: number,
+  minValueUsd?: number | null,
 ): Promise<WalletTransferHistoryFetchResult | null> {
   return await fetchWalletTransferHistoryCore(
     address,
@@ -1130,6 +1218,7 @@ async function fetchWalletTransferHistoryGap(
     toMs,
     limit,
     false,
+    minValueUsd,
   );
 }
 
@@ -1139,6 +1228,7 @@ async function fetchWalletTransferHistoryCore(
   toMs: number,
   limit: number = WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
   writeMeta: boolean = true,
+  minValueUsd?: number | null,
 ): Promise<WalletTransferHistoryFetchResult | null> {
   const res = await mbl_fetchWalletActivityRange({
     address,
@@ -1147,6 +1237,7 @@ async function fetchWalletTransferHistoryCore(
     limit,
     maxLimit: WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
     target: "transfer",
+    minValueUsd,
   });
 
   if (!res) return null;
@@ -1194,12 +1285,17 @@ async function db_getTransferHistory(
   toInclusiveMs: number,
   limit: number,
   cursor: WalletHistoryCursor | null,
+  minValueUsd?: number | null,
 ): Promise<WalletTransaction<WalletTransferV2>[]> {
+  const normalizedMinValueUsd = normalizeMinValueUsd(minValueUsd ?? undefined);
   const predicates = [
     eq(walletTransferHistory.address, address),
     gt(walletTransferHistory.blockTimestampMs, fromExclusiveMs),
     lte(walletTransferHistory.blockTimestampMs, toInclusiveMs),
   ];
+  if (normalizedMinValueUsd != null) {
+    predicates.push(gte(walletTransferHistory.valueUsd, normalizedMinValueUsd));
+  }
   if (cursor) {
     const cursorPredicate = or(
       lt(walletTransferHistory.blockTimestampMs, cursor.blockTimestampMs),
@@ -1265,8 +1361,10 @@ export async function getWalletTransferHistory(
   requestToMs?: number,
   limit = WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
   parsedCursor?: WalletHistoryCursor,
+  minValueUsd?: number,
 ): Promise<WalletTransactionHistory<WalletTransferV2> | null> {
   const cursor = parsedCursor ?? null;
+  const normalizedMinValueUsd = normalizeMinValueUsd(minValueUsd);
   const requestedRange = cursor
     ? {
         fromMs: cursor.fromExclusiveMs,
@@ -1308,13 +1406,27 @@ export async function getWalletTransferHistory(
     .orderBy(desc(walletTransferHistoryMeta.toInclusiveMs));
 
   if (intersecting.length == 0) {
-    const fetched = await fetchWalletTransferHistoryCore(
-      address,
-      fromMs,
-      toMs,
-      limit,
-      true,
-    );
+    let fetchToMs = toMs;
+    let fetched: WalletTransferHistoryFetchResult | null = null;
+    while (fetchToMs > fromMs) {
+      fetched = await fetchWalletTransferHistoryCore(
+        address,
+        fromMs,
+        fetchToMs,
+        limit,
+        true,
+        normalizedMinValueUsd,
+      );
+      if (!fetched) return null;
+      if (
+        fetched.values.length > 0 ||
+        !fetched.cutOffByLimit ||
+        fetched.coveredFromExclusiveMs <= fromMs
+      ) {
+        break;
+      }
+      fetchToMs = fetched.coveredFromExclusiveMs;
+    }
     if (!fetched) return null;
 
     const hasUnresolvedRange =
@@ -1325,6 +1437,7 @@ export async function getWalletTransferHistory(
       toMs,
       limit + 1,
       cursor,
+      normalizedMinValueUsd,
     );
 
     return postProcessWalletTxHistory({
@@ -1383,6 +1496,7 @@ export async function getWalletTransferHistory(
       toMs,
       limit + 1,
       cursor,
+      normalizedMinValueUsd,
     );
 
     return postProcessWalletTxHistory({
@@ -1399,27 +1513,47 @@ export async function getWalletTransferHistory(
   }[] = [];
   let safeFromExclusiveMs: number | null = null;
   for (const gap of gaps) {
-    const gapRes = await fetchWalletTransferHistoryGap(
-      address,
-      gap.fromExclusiveMs,
-      gap.toInclusiveMs,
-      limit,
-    );
+    let gapToMs = gap.toInclusiveMs;
+    while (gapToMs > gap.fromExclusiveMs) {
+      const gapRes = await fetchWalletTransferHistoryGap(
+        address,
+        gap.fromExclusiveMs,
+        gapToMs,
+        limit,
+        normalizedMinValueUsd,
+      );
 
-    if (!gapRes) {
-      // TODO: Distinguish verified-empty gaps from fetch/extraction failures;
-      // failures must terminate filling without marking the gap as covered.
-      fetchedGapIntervals.push(gap);
-      continue;
+      if (!gapRes) {
+        // TODO: Distinguish verified-empty gaps from fetch/extraction failures;
+        // failures must terminate filling without marking the gap as covered.
+        fetchedGapIntervals.push({
+          fromExclusiveMs: gap.fromExclusiveMs,
+          toInclusiveMs: gapToMs,
+        });
+        break;
+      }
+
+      fetchedGapIntervals.push({
+        fromExclusiveMs: gapRes.coveredFromExclusiveMs,
+        toInclusiveMs: gapRes.coveredToInclusiveMs,
+      });
+
+      if (!gapRes.cutOffByLimit) {
+        break;
+      }
+
+      if (
+        gapRes.values.length > 0 ||
+        gapRes.coveredFromExclusiveMs <= gap.fromExclusiveMs
+      ) {
+        safeFromExclusiveMs = gapRes.coveredFromExclusiveMs;
+        break;
+      }
+
+      gapToMs = gapRes.coveredFromExclusiveMs;
     }
 
-    fetchedGapIntervals.push({
-      fromExclusiveMs: gapRes.coveredFromExclusiveMs,
-      toInclusiveMs: gapRes.coveredToInclusiveMs,
-    });
-
-    if (gapRes.cutOffByLimit) {
-      safeFromExclusiveMs = gapRes.coveredFromExclusiveMs;
+    if (safeFromExclusiveMs != null) {
       break;
     }
   }
@@ -1471,6 +1605,7 @@ export async function getWalletTransferHistory(
     toMs,
     limit + 1,
     cursor,
+    normalizedMinValueUsd,
   );
 
   return postProcessWalletTxHistory({

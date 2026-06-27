@@ -3,11 +3,11 @@ import { useChartContext } from "@/contexts/ChartContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useChartFiltersSync } from "@/hooks/useChartFiltersSync";
 import {
-  CHART_COLOR_PALETTE,
-  useCarbonChartBaseOption,
+    CHART_COLOR_PALETTE,
+    useCarbonChartBaseOption,
 } from "@/util/carbon-chart-base";
 import {
-  formatTimestampWithTimezone,
+    formatTimestampWithTimezone,
 } from "@/util/chart-helpers";
 import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
 import { attachChartDayClick } from "@/util/chart-click";
@@ -47,8 +47,6 @@ export interface PnLChartProps {
   title?: string;
   minHeight?: number;
   initialWallets?: string[];
-  autoRefresh?: boolean;
-  refreshInterval?: number;
   className?: string;
   initialViewMode?: "daily" | "cumulative" | "both";
   initialFilters?: {
@@ -78,7 +76,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   const [displayMode, setDisplayMode] = useState<PnLDisplayMode>(
     initialViewMode,
   );
-  const [chartTimePeriod, setChartTimePeriod] = useState<PnLTimePeriod>("30D");
+  const [chartTimePeriod, setChartTimePeriod] = useState<PnLTimePeriod>("7D");
 
   const { walletsString } = useChartFiltersSync({
     initialFilters: initialFilters || {

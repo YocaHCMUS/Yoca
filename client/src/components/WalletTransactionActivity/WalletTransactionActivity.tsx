@@ -111,11 +111,13 @@ function AddressCell({
 }
 
 function TokenAmountCell({
+  address,
   amount,
   symbol,
   logoUri,
   direction,
 }: {
+  address: string;
   amount: number;
   symbol: string;
   logoUri: string | null;
@@ -134,7 +136,7 @@ function TokenAmountCell({
       <Flex gap={2} align="center">
         <TknImg size={22} src={logoUri} />
         <Txt size="sm">{symbol}</Txt>
-        <CpyBtn copyWhat={symbol} size="xs" />
+        <CpyBtn copyWhat={address} size="xs" />
       </Flex>
     </Flex>
   );
@@ -150,8 +152,12 @@ export function WalletTransactionActivity({ address }: { address: string }) {
   const swapResp: UseGetResp<WalletSwapData> = useGet(
     client.api.wallets.swaps.history[":address"],
     200,
-    { param: { address }, query: {} },
+    {
+      param: {address},
+      query: {}
+    }
   );
+
   const transferResp: UseGetResp<WalletTransferData> = useGet(
     client.api.wallets.transfers.history[":address"],
     200,
@@ -162,12 +168,11 @@ export function WalletTransactionActivity({ address }: { address: string }) {
   const swapRows = useMemo(() => {
     const transactions = swapResp.data?.transactions ?? [];
     return transactions
-      .map((tx, index) => ({ tx, index }))
       .filter(
-        ({ tx }) =>
+        (tx) =>
           !hideLowValue || tx.totalValueUsd == null || tx.totalValueUsd >= 1,
       )
-      .map(({ tx, index }) => {
+      .map((tx) => {
         const soldSym = tx.sold.symbol?.toUpperCase() ?? tx.sold.address;
         const boughtSym = tx.bought.symbol?.toUpperCase() ?? tx.bought.address;
         const time = (
@@ -177,6 +182,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
         );
         const soldDisplay = (
           <TokenAmountCell
+            address={tx.sold.address}
             amount={tx.sold.amount}
             symbol={soldSym}
             logoUri={tx.sold.logoUri}
@@ -185,6 +191,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
         );
         const boughtDisplay = (
           <TokenAmountCell
+            address={tx.bought.address}
             amount={tx.bought.amount}
             symbol={boughtSym}
             logoUri={tx.bought.logoUri}
@@ -192,13 +199,9 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           />
         );
         const value = (
-          <Txt size="sm">
-            {tx.totalValueUsd != null
-              ? fmt.num.compact.currency(tx.totalValueUsd)
-              : "—"}
-          </Txt>
+          <Txt size="sm">{fmt.num.compact.currency(tx.totalValueUsd)}</Txt>
         );
-        
+
         const transaction = (
           <IconButton
             href={`${SOLSCAN_TX_URL}/${tx.transactionHash}`}
@@ -209,7 +212,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           >
             <Launch size={12} />
           </IconButton>
-        )
+        );
 
         return {
           id: `${tx.transactionHash}-${tx.actId}`,
@@ -217,7 +220,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           tokenSold: soldDisplay,
           tokenBought: boughtDisplay,
           value,
-          transaction
+          transaction,
         };
       });
   }, [swapResp.data, fmt, hideLowValue]);
@@ -252,6 +255,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
 
         const tokenDisplay = (
           <TokenAmountCell
+            address={tx.token.address}
             amount={tx.token.amount}
             symbol={tokenSym}
             logoUri={tx.token.logoUri}
@@ -259,9 +263,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           />
         );
         const value = (
-          <Txt size="sm">
-            {tx.valueUsd != null ? fmt.num.compact.currency(tx.valueUsd) : "—"}
-          </Txt>
+          <Txt size="sm">{fmt.num.compact.currency(tx.valueUsd)}</Txt>
         );
 
         const transaction = (
@@ -274,7 +276,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           >
             <Launch size={12} />
           </IconButton>
-        )
+        );
 
         return {
           id: `${tx.transactionHash}-${tx.actId}`,

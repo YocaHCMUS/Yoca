@@ -6,11 +6,10 @@ import { WalletHoldingsPanel } from "@/components/wallet/WalletHoldingsPanel/Wal
 import { RightSidebar } from "./RightSidebar.tsx";
 import { WalletChat, ChatContextProvider } from "@/components/wallet/WalletChat";
 import { AiAnalysisModal } from "@/components/wallet/AiAnalysisModal/AiAnalysisModal.tsx";
-import { tableHeaderLabel } from "@/components/tables/Table.tsx";
 import { useWalletWinrate } from "@/hooks/useWalletWinrate";
 import {
-  WalletReportTemplate,
-  type WalletReportSection,
+    WalletReportTemplate,
+    type WalletReportSection,
 } from "@/components/WalletReportTemplate";
 import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
@@ -19,41 +18,40 @@ import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { useExportReport } from "@/hooks/useExportReport.ts";
 import { useGet } from "@/hooks/useGet";
 import {
-  fetchWalletSwaps,
-  fetchWalletTransfers,
-  fetchWalletPortfolio,
-  fetchWalletOverview,
-  fetchWalletIntelligence,
-  type WalletSwap,
-  type WalletTransfer,
-  type WalletPortfolioItem,
-  type WalletIntelligenceResponse,
-  type WalletOverviewMultiPeriodResponse,
-  type WalletPageInfo,
+    fetchWalletSwaps,
+    fetchWalletTransfers,
+    fetchWalletPortfolio,
+    fetchWalletOverview,
+    fetchWalletIntelligence,
+    type WalletSwap,
+    type WalletTransfer,
+    type WalletPortfolioItem,
+    type WalletIntelligenceResponse,
+    type WalletOverviewMultiPeriodResponse,
+    type WalletPageInfo,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import { Close } from "@carbon/icons-react";
-import { Button } from "@carbon/react";
 import JSZip from "jszip";
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
 import { useParams } from "react-router";
 import * as XLSX from "xlsx";
 import {
-  buildPortfolioMetaMap,
-  mapPortfolioItems,
+    buildPortfolioMetaMap,
+    mapPortfolioItems,
 } from "../../util/wallet-portfolio-mapper.ts";
 import styles from "./index.module.scss";
 import {
-  TokenAverageTradePrice,
-  TokenDetailsDemo,
+    TokenAverageTradePrice,
+    TokenDetailsDemo,
 } from "./TokenDetailsDemo.tsx";
 // import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
@@ -62,7 +60,6 @@ import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivi
 import { AiSwapSummaryModal } from "@/components/wallet/AiSwapSummaryModal";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
 import type { WalletOverviewPeriodKey } from "@/services/wallet/walletApi.ts";
-import { TimePeriod } from "@/types/chart-filters.types.ts";
 import { WalletTransactionActivity } from "@/components/WalletTransactionActivity/WalletTransactionActivity";
 
 type ChatPosition = "right" | "left" | "fullscreen";
@@ -1026,7 +1023,6 @@ export default function WalletPage() {
               <div className={styles.section}>
                 <PnLChart
                   minHeight={324}
-                  autoRefresh
                   initialFilters={{ wallets: [walletAddress] }}
                   onDayClick={(_wallet, ts) => {
                     setDayPopupTimestamp(ts);
