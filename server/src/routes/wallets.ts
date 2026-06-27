@@ -30,6 +30,7 @@ import {
     getWalletSwaps,
     getWalletTransfers,
     mapSwapToTokenTradeRow,
+    parseWalletHistoryCursorQuery,
     walletHistoryCursorQuerySchema,
 } from "@sv/services/wallet/walletTransfersSwaps.service.js";
 import {
@@ -178,13 +179,24 @@ const app = new Hono()
         const { address } = c.req.valid("param");
         const { limit, fromMs, toMs, cursor, minValueUsd } =
           c.req.valid("query");
+        const parsedCursor = parseWalletHistoryCursorQuery(cursor);
+        if (!parsedCursor.success) {
+          return c.json(
+            {
+              ...setErr("VALIDATION_ERR"),
+              message: "Invalid query parameters",
+              details: parsedCursor.error.issues,
+            },
+            statusCode.UnprocessableEntity,
+          );
+        }
 
         const txs = await getWalletSwapHistory(
           address,
           fromMs,
           toMs,
           limit,
-          cursor,
+          parsedCursor.data,
           minValueUsd,
         );
         if (!txs) {
@@ -208,13 +220,24 @@ const app = new Hono()
         const { address } = c.req.valid("param");
         const { limit, fromMs, toMs, cursor, minValueUsd } =
           c.req.valid("query");
+        const parsedCursor = parseWalletHistoryCursorQuery(cursor);
+        if (!parsedCursor.success) {
+          return c.json(
+            {
+              ...setErr("VALIDATION_ERR"),
+              message: "Invalid query parameters",
+              details: parsedCursor.error.issues,
+            },
+            statusCode.UnprocessableEntity,
+          );
+        }
 
         const txs = await getWalletTransferHistory(
           address,
           fromMs,
           toMs,
           limit,
-          cursor,
+          parsedCursor.data,
           minValueUsd,
         );
         if (!txs) {

@@ -130,7 +130,7 @@ export function mapSwapToTokenTradeRow(
   };
 }
 
-const walletHistoryCursorSchema = z
+const walletHistoryCursorPartsSchema = z
   .tuple([
     z.literal("1"),
     z.coerce.number<string>().int().min(0),
@@ -141,22 +141,35 @@ const walletHistoryCursorSchema = z
   .refine(
     (cursor) => cursor[1] < cursor[2],
     "Cursor row must be inside its history range",
-  )
-  .transform((cursor): WalletHistoryCursor => ({
-    version: 1,
-    fromExclusiveMs: cursor[1],
-    blockTimestampMs: cursor[2],
-    transactionHash: cursor[3],
-    actId: cursor[4],
-  }));
+  );
 
 export const walletHistoryCursorQuerySchema = z
   .string()
   .trim()
   .min(1)
-  .max(2048)
-  .transform((rawCursor) => rawCursor.split(","))
-  .pipe(walletHistoryCursorSchema);
+  .max(2048);
+
+export function parseWalletHistoryCursorQuery(
+  rawCursor?: string,
+):
+  | { success: true; data: WalletHistoryCursor | undefined }
+  | { success: false; error: z.ZodError } {
+  if (rawCursor == null) return { success: true, data: undefined };
+  const parsed = walletHistoryCursorPartsSchema.safeParse(rawCursor.split(","));
+  if (!parsed.success) return { success: false, error: parsed.error };
+  const cursor = parsed.data;
+
+  return {
+    success: true,
+    data: {
+      version: 1,
+      fromExclusiveMs: cursor[1],
+      blockTimestampMs: cursor[2],
+      transactionHash: cursor[3],
+      actId: cursor[4],
+    },
+  };
+}
 
 function postProcessWalletTxHistory<T>(data: {
   entries: WalletTransaction<T>[];
