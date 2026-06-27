@@ -1,18 +1,15 @@
 // I stopped trying to understand this a while ago
 import type {
-    ClientRequest,
     ClientRequestOptions,
-    ClientResponse,
+    ClientResponse
 } from "hono/client";
 import useSWR from "swr";
 
 type GetInput<T> =
-  T extends ClientRequest<any, any, infer S>
-    ? S["$get"] extends { input: infer R }
-      ? R
-      : {}
+  T extends { $get: (args: infer A, options?: ClientRequestOptions) => any }
+    ? NonNullable<A>
     : {};
-
+    
 type HasRequiredKeys<T> = T extends object
   ? {
       [K in keyof T]-?: {} extends Pick<T, K> ? never : K;
