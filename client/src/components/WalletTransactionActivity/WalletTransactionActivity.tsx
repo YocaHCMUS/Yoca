@@ -148,20 +148,21 @@ export function WalletTransactionActivity({ address }: { address: string }) {
   const [selectedTransfer, setSelectedTransfer] =
     useState<WalletTransfer | null>(null);
   const [hideLowValue, setHideLowValue] = useState(false);
+  const minValueUsd = hideLowValue ? 1 : undefined;
 
   const swapResp: UseGetResp<WalletSwapData> = useGet(
     client.api.wallets.swaps.history[":address"],
     200,
     {
-      param: {address},
-      query: {}
-    }
+      param: { address },
+      query: { minValueUsd },
+    },
   );
 
   const transferResp: UseGetResp<WalletTransferData> = useGet(
     client.api.wallets.transfers.history[":address"],
     200,
-    { param: { address }, query: {} },
+    { param: { address }, query: { minValueUsd } },
   );
 
   // Swap rows – plain text
