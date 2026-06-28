@@ -30,6 +30,7 @@ export const DAY_MS = 24 * 60 * 60 * 1000;
 export const HOUR_MS = 60 * 60 * 1000;
 export const MONTH_MS = 30 * DAY_MS;
 
+export const MOUBAL_SOL_CONTRACT = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 export const MOBULA_WALLET_ACTIVITY_PAGE_SIZE = 100;
 export const MOBULA_WALLET_ACTIVITY_MAX_PAGES = 10;
 export const MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS = 2;
