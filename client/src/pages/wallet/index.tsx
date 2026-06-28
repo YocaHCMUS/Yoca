@@ -4,7 +4,10 @@ import { WalletTopbar } from "@/components/wallet/WalletTopbar/WalletTopbar.tsx"
 import { WalletHero } from "@/components/wallet/WalletHero/WalletHero.tsx";
 import { WalletHoldingsPanel } from "@/components/wallet/WalletHoldingsPanel/WalletHoldingsPanel.tsx";
 import { RightSidebar } from "./RightSidebar.tsx";
-import { WalletChat, ChatContextProvider } from "@/components/wallet/WalletChat";
+import {
+  WalletChat,
+  ChatContextProvider,
+} from "@/components/wallet/WalletChat";
 import { AiAnalysisModal } from "@/components/wallet/AiAnalysisModal/AiAnalysisModal.tsx";
 import { useWalletWinrate } from "@/hooks/useWalletWinrate";
 import {
@@ -31,7 +34,8 @@ import {
     type WalletPageInfo,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
-import { Close } from "@carbon/icons-react";
+import { AiGenerate, Close } from "@carbon/icons-react";
+import { Button } from "@carbon/react";
 import JSZip from "jszip";
 import {
     useCallback,
@@ -63,6 +67,20 @@ import type { WalletOverviewPeriodKey } from "@/services/wallet/walletApi.ts";
 import { WalletTransactionActivity } from "@/components/WalletTransactionActivity/WalletTransactionActivity";
 
 type ChatPosition = "right" | "left" | "fullscreen";
+
+function isEditableShortcutTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  const tagName = target.tagName.toLowerCase();
+  return (
+    target.isContentEditable ||
+    tagName === "input" ||
+    tagName === "textarea" ||
+    tagName === "select"
+  );
+}
 
 function chunkArray<T>(items: T[], size: number): T[][] {
   if (size <= 0 || items.length === 0) {
@@ -344,7 +362,24 @@ export default function WalletPage() {
         setWalletTags([]);
       });
   }, [address]);
+  useEffect(() => {
+    const handleChatShortcut = (event: globalThis.KeyboardEvent) => {
+      if (
+        event.repeat ||
+        !event.shiftKey ||
+        event.code !== "Slash" ||
+        isEditableShortcutTarget(event.target)
+      ) {
+        return;
+      }
 
+      event.preventDefault();
+      setIsChatOpen(true);
+    };
+
+    window.addEventListener("keydown", handleChatShortcut);
+    return () => window.removeEventListener("keydown", handleChatShortcut);
+  }, []);
   const loadPortfolioData = useCallback(async (): Promise<
     WalletPortfolioItem[]
   > => {
@@ -575,10 +610,11 @@ export default function WalletPage() {
         fmt.datetime.relativeShort(transfer.timestamp, true),
         transfer.from,
         transfer.to,
-        `${typeof transfer.tokenSymbol === "string" &&
+        `${
+          typeof transfer.tokenSymbol === "string" &&
           transfer.tokenSymbol.trim().length > 0
-          ? transfer.tokenSymbol
-          : "Unknown"
+            ? transfer.tokenSymbol
+            : "Unknown"
         } (${fmt.num.decimal(transfer.amount)})`,
         transfer.amountUsd != null ? fmt.num.currency(transfer.amountUsd) : "—",
       ]);
@@ -912,10 +948,11 @@ export default function WalletPage() {
           fmt.datetime.relativeShort(transfer.timestamp, true),
           transfer.from,
           transfer.to,
-          `${typeof transfer.tokenSymbol === "string" &&
+          `${
+            typeof transfer.tokenSymbol === "string" &&
             transfer.tokenSymbol.trim().length > 0
-            ? transfer.tokenSymbol
-            : "Unknown"
+              ? transfer.tokenSymbol
+              : "Unknown"
           } (${fmt.num.decimal(transfer.amount)})`,
         ])}
         chunkSize={PDF_TABLE_ROWS_PER_PAGE}
@@ -974,7 +1011,6 @@ export default function WalletPage() {
               avgBuyPrice={selectedToken.avgBuyCost}
               avgSellPrice={selectedToken.avgSellCost}
             />
-
           </>
         ),
         size: "lg",
@@ -1052,18 +1088,23 @@ export default function WalletPage() {
           </div>
         </div>
 
-        {/* Layout-integrated chat panel (right/left dock) */}
-        <ChatContextProvider addresses={[walletAddress]} contextType="wallet" lang={lang}>
-          {isChatOpen && chatPosition !== "fullscreen" && (
-            <div
-              className={styles.chatInline}
-              data-side={chatPosition}
-              data-open={true}
+        {/* Modal chat panel (right/left dock + fullscreen) */}
+        <ChatContextProvider
+          addresses={[walletAddress]}
+          contextType="wallet"
+          lang={lang}
+        >
+          {!isChatOpen && (
+            <button
+              type="button"
+              className={styles.chatLauncher}
+              onClick={() => setIsChatOpen(true)}
+              title="Shift + /"
             >
-              <div className={styles.chatInlineInner}>
-                <WalletChat variant="sidebar" chatPosition={chatPosition} onChatPositionChange={setChatPosition} />
-              </div>
-            </div>
+              <AiGenerate size={18} />
+              <span>{tr("chat.launcherLabel")}</span>
+              <kbd>Shift /</kbd>
+            </button>
           )}
 
           <RightSidebar
@@ -1072,12 +1113,15 @@ export default function WalletPage() {
             onChatToggle={() => setIsChatOpen((v) => !v)}
           />
 
-          {/* Fullscreen overlay */}
-          {isChatOpen && chatPosition === "fullscreen" && (
-            <div className={styles.chatOverlay} data-position="fullscreen">
-              <div className={styles.chatBackdrop} onClick={() => setIsChatOpen(false)} />
+          {isChatOpen && (
+            <div className={styles.chatOverlay} data-position={chatPosition}>
               <div className={styles.chatPanel}>
-                <WalletChat variant="sidebar" chatPosition={chatPosition} onChatPositionChange={setChatPosition} />
+                <WalletChat
+                  variant="sidebar"
+                  chatPosition={chatPosition}
+                  onChatPositionChange={setChatPosition}
+                  onRequestClose={() => setIsChatOpen(false)}
+                />
               </div>
             </div>
           )}
@@ -1162,7 +1206,6 @@ export default function WalletPage() {
           </div>
         </div>
       )}
-
     </PageWrapper>
   );
 }

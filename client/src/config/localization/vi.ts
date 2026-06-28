@@ -1977,6 +1977,7 @@ export const translation = defineTranslation({
     sendButtonTitle: "Gửi",
     promptMenuBtn: "Menu câu hỏi",
     fabTitle: "Mở AI Chat",
+    launcherLabel: "Hỏi YOCA AI",
     seriesLabel: "Series thứ {{count}}",
     tldr: "TLDR",
     warnings: "Cảnh báo",

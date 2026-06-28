@@ -126,6 +126,7 @@ function createWalletHistoryQuerySchema(maxLimit: number) {
     limit: z.coerce.number().int().min(1).max(maxLimit).optional(),
     cursor: walletHistoryCursorQuerySchema.optional(),
     minValueUsd: z.coerce.number().min(0).optional(),
+    maxValueUsd: z.coerce.number().min(0).optional(),
   });
 }
 
@@ -225,7 +226,7 @@ const app = new Hono()
     async (c) => {
       try {
         const { address } = c.req.valid("param");
-        const { limit, fromMs, toMs, cursor, minValueUsd } =
+        const { limit, fromMs, toMs, cursor, minValueUsd, maxValueUsd } =
           c.req.valid("query");
         const parsedCursor = parseWalletHistoryCursorQuery(cursor);
         if (!parsedCursor.success) {
@@ -246,6 +247,7 @@ const app = new Hono()
           limit,
           parsedCursor.data,
           minValueUsd,
+          maxValueUsd,
         );
         if (!txs) {
           return c.json(
@@ -266,7 +268,7 @@ const app = new Hono()
     async (c) => {
       try {
         const { address } = c.req.valid("param");
-        const { limit, fromMs, toMs, cursor, minValueUsd } =
+        const { limit, fromMs, toMs, cursor, minValueUsd, maxValueUsd } =
           c.req.valid("query");
         const parsedCursor = parseWalletHistoryCursorQuery(cursor);
         if (!parsedCursor.success) {
@@ -287,6 +289,7 @@ const app = new Hono()
           limit,
           parsedCursor.data,
           minValueUsd,
+          maxValueUsd,
         );
         if (!txs) {
           return c.json(

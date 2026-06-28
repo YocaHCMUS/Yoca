@@ -35,7 +35,7 @@ import {
   pickResolvedValue,
   RESOLVABLE_TOOLS,
 } from "./chat-tool-normalizer.js";
-import type { ChartSpec, TableSpec, ToolDataReference, WalletConfidence, WalletWarning, WalletChatSection } from "./chat.types.js";
+import type { ActionSpec, ChartSpec, TableSpec, ToolDataReference, WalletConfidence, WalletWarning, WalletChatSection } from "./chat.types.js";
 import { z } from "zod";
 import { WALLET_CHAT_RESPONSE_LIMITS as L } from "./chat-fallback.js";
 
@@ -508,6 +508,80 @@ export function repairMissingDataRefs(
 
   return repaired;
 }
+
+
+function visitValues(value: unknown, visitor: (record: Record<string, unknown>) => boolean): boolean {
+  if (value == null) return false;
+  if (Array.isArray(value)) return value.some((item) => visitValues(item, visitor));
+  if (typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  if (visitor(record)) return true;
+  return Object.values(record).some((item) => visitValues(item, visitor));
+}
+
+export function hasCappedToolResults(allResults: ChatToolResult[]): boolean {
+  return allResults.some((result) => visitValues(result.data, (record) => {
+    const coverage = record.coverage;
+    if (coverage && typeof coverage === "object" && !Array.isArray(coverage)) {
+      return (coverage as Record<string, unknown>).isCapped === true;
+    }
+    return record.isCapped === true || record.scope === "limited_filtered_sample";
+  }));
+}
+
+export function computeFallbackConfidence(allResults: ChatToolResult[]): WalletConfidence {
+  if (allResults.some((result) => result.error) || hasCappedToolResults(allResults)) return "Low";
+  return "Medium";
+}
+
+function collectTokenSymbols(value: unknown, out: string[]): void {
+  if (out.length >= 4 || value == null) return;
+  if (Array.isArray(value)) {
+    for (const item of value) collectTokenSymbols(item, out);
+    return;
+  }
+  if (typeof value !== "object") return;
+
+  const record = value as Record<string, unknown>;
+  const symbol = record.symbol ?? record.token;
+  if (typeof symbol === "string" && symbol.trim() && !out.includes(symbol.trim())) {
+    out.push(symbol.trim());
+  }
+  for (const item of Object.values(record)) collectTokenSymbols(item, out);
+}
+
+function firstTokenSymbols(allResults: ChatToolResult[]): string[] {
+  const symbols: string[] = [];
+  for (const result of allResults) collectTokenSymbols(result.data, symbols);
+  return symbols;
+}
+
+export function synthesizeFollowUpActions(allResults: ChatToolResult[]): ActionSpec[] {
+  const toolNames = new Set(allResults.map((result) => result.name));
+  const symbols = firstTokenSymbols(allResults);
+  const actions: ActionSpec[] = [];
+
+  const add = (label: string, query: string): void => {
+    if (actions.length >= 5 || actions.some((action) => action.label === label)) return;
+    actions.push({ label, href: `#ask:${query}`, index: null });
+  };
+
+  if (symbols.length >= 2) add(`Compare ${symbols[0]} vs ${symbols[1]}`, `Compare ${symbols[0]} and ${symbols[1]} performance in this wallet`);
+  if (symbols.length >= 1) add(`Analyze ${symbols[0]} driver`, `What drove the ${symbols[0]} result for this wallet?`);
+  if ([...toolNames].some((name) => name.includes("pnl"))) {
+    add("Break down PnL drivers", "Break down the realized PnL by biggest winners, losers, and concentration risk");
+  }
+  if ([...toolNames].some((name) => name.includes("swap") || name.includes("transfer"))) {
+    add("Inspect recent activity", "Which recent transactions best explain this wallet activity?");
+  }
+  if ([...toolNames].some((name) => name.includes("portfolio") || name.includes("balance"))) {
+    add("Check portfolio risk", "Which holdings create the most portfolio concentration or drawdown risk?");
+  }
+  add("Expand the time window", "Compare this result with the previous 30 days for the same wallet");
+  add("Find weakest signal", "What is the weakest or least reliable signal in this analysis?");
+
+  return actions.slice(0, 5);
+}
 async function generateResponse(
   query: string,
   allResults: ChatToolResult[],
@@ -526,7 +600,7 @@ async function generateResponse(
     };
   }
 
-  const prompt = buildResponseGenerationPrompt(query, allResults, history, language);
+  const prompt = buildResponseGenerationPrompt(query, allResults, history);
   chatDebug("generateResponse: prompt built", { resultCount: allResults.length });
 
   const raw = await callGemini(prompt, CHAT_SYSTEM_INSTRUCTION);
@@ -664,12 +738,12 @@ async function generateResponse(
     dataRefs,
     charts,
     tables,
-    actions: actions.length > 0 ? actions : undefined,
+    actions: actions.length > 0 ? actions : synthesizeFollowUpActions(allResults),
     sources: sources && sources.length > 0 ? sources : undefined,
     tldr: validatedTldr,
     sections: validatedSections,
     warnings: validatedWarnings,
-    confidence: validatedConfidence,
+    confidence: validatedConfidence ?? computeFallbackConfidence(allResults),
     asOf: new Date().toISOString(),
     generatedAt: new Date().toISOString(),
   };

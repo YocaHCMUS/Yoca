@@ -186,7 +186,7 @@ export const TRANSACTION_FETCH_MAX_ITEM_COUNT = readNumberEnv(
   500,
 ); // get 500 earliest txs
 
-export const SWAPS_SAMPLE_SIZE = 200;
+export const SWAPS_SAMPLE_SIZE = 500;
 export const GEMINI_MODEL = env.GEMINI_SWAP_SUMMARY_MODEL?.trim() || "";
 
 // Chatbot

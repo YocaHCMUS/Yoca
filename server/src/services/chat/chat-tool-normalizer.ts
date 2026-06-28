@@ -5,13 +5,14 @@ const DEFAULT_TX_LOOKBACK_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const DETAILED_LIMITS = new Set(["get_wallet_swaps", "get_wallet_transfers"]);
-const COMPACT_LIMITS = new Set(["get_wallet_swaps_compact", "get_wallet_transfers_compact"]);
+const COMPACT_LIMITS = new Set(["get_wallet_swaps_compact", "get_wallet_transfers_compact", "get_wallet_pnl_compact"]);
 const RANGE_TOOLS = new Set([
   "get_wallet_swaps",
   "get_wallet_transfers",
   "get_wallet_swaps_compact",
   "get_wallet_transfers_compact",
   "get_wallet_pnl",
+  "get_wallet_pnl_compact",
 ]);
 
 export interface NormalizeToolOptions {

@@ -36,6 +36,7 @@ import {
     MOBULA_WALLET_ACTIVITY_PAGE_SIZE,
     MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS
 } from "@sv/config/constants";
+import { isBaseAsset } from "./walletDayActivity.service.js";
 import { and, desc, eq, gt, gte, inArray, lt, lte, max, or } from "drizzle-orm";
 
 type MBL_WalletActivityTransaction = MBL_WalletActivity["data"][number];
@@ -62,12 +63,22 @@ function normalizeMinValueUsd(minValueUsd?: number): number | null {
   return Math.max(0, minValueUsd);
 }
 
-function matchesMinValueUsd(
+function normalizeMaxValueUsd(maxValueUsd?: number): number | null {
+  if (maxValueUsd == null) return null;
+  if (!Number.isFinite(maxValueUsd)) return null;
+  return Math.max(0, maxValueUsd);
+}
+
+function matchesValueUsd(
   valueUsd: number | null,
   minValueUsd: number | null,
+  maxValueUsd: number | null,
 ): boolean {
-  if (minValueUsd == null) return true;
-  return valueUsd != null && valueUsd >= minValueUsd;
+  if (minValueUsd == null && maxValueUsd == null) return true;
+  if (valueUsd == null) return false;
+  if (minValueUsd != null && valueUsd < minValueUsd) return false;
+  if (maxValueUsd != null && valueUsd > maxValueUsd) return false;
+  return true;
 }
 
 export type WalletHistoryCursor = {
@@ -200,59 +211,78 @@ export async function getWalletTransfers(
   address: string,
   from?: number,
   to?: number,
-  tokenAddress?: string,
+  _tokenAddress?: string,
   direction?: "in" | "out",
   minAmountUsd?: number,
   maxAmountUsd?: number,
+  limit: number = WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
 ): Promise<WalletTransfersResponse> {
   const requestedRange = resolveRequestedRange(from, to);
-  const history = await getWalletTransferHistory(
-    address,
-    requestedRange.fromMs,
-    requestedRange.toMs,
-    WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
-  );
-  if (history == null) {
-    throw new Error(`Failed to get wallet transfer history for ${address}`);
-  }
+  if (limit < 1) limit = WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT;
 
-  const transfers = history.transactions
-    .filter((transfer) => {
-      if (tokenAddress != null && transfer.token.address != tokenAddress) {
-        return false;
+  const accumulated: WalletTransfer[] = [];
+  let historyCursor: string | null = null;
+
+  while (accumulated.length < limit) {
+    const parsedCursor = parseWalletHistoryCursorQuery(historyCursor ?? undefined);
+    if (!parsedCursor.success) {
+      throw new Error("Invalid wallet transfer history cursor");
+    }
+    const history = await getWalletTransferHistory(
+      address,
+      requestedRange.fromMs,
+      requestedRange.toMs,
+      WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
+      parsedCursor.data,
+      minAmountUsd,
+      maxAmountUsd,
+    );
+    if (history == null) {
+      if (accumulated.length == 0) {
+        throw new Error(`Failed to get wallet transfer history for ${address}`);
       }
-      if (direction == "in" && transfer.direction != "receive") return false;
-      if (direction == "out" && transfer.direction != "send") return false;
-      if (minAmountUsd != null && transfer.valueUsd < minAmountUsd) return false;
-      return true;
-    })
-    .map((transfer): WalletTransfer => ({
-      from:
-        transfer.direction == "send"
-          ? address
-          : transfer.counterpartyAddress,
-      to:
-        transfer.direction == "receive"
-          ? address
-          : transfer.counterpartyAddress,
-      amount: transfer.token.amount,
-      amountUsd: transfer.valueUsd,
-      timestamp: new Date(transfer.blockTimestampMs).toISOString(),
-      tokenAddress: transfer.token.address,
-      tokenSymbol: transfer.token.symbol ?? "",
-      tokenName: transfer.token.name ?? undefined,
-      tokenLogoUri: transfer.token.logoUri ?? undefined,
-      priceUsd: transfer.token.priceUsd ?? undefined,
-      transactionSignature: transfer.transactionHash,
-      instructionIndex: 0,
-    }));
+      break;
+    }
+
+    historyCursor = history.cursor;
+
+    const pageTransfers = history.transactions
+      .filter((transfer) => {
+        // Token filtering is intentionally deferred for history-backed queries.
+        // if (_tokenAddress != null && transfer.token.address != _tokenAddress) return false;
+        if (direction == "in" && transfer.direction != "receive") return false;
+        if (direction == "out" && transfer.direction != "send") return false;
+        return true;
+      })
+      .map((transfer): WalletTransfer => ({
+        from: transfer.direction == "send" ? address : transfer.counterpartyAddress,
+        to: transfer.direction == "receive" ? address : transfer.counterpartyAddress,
+        amount: transfer.token.amount,
+        amountUsd: transfer.valueUsd,
+        timestamp: new Date(transfer.blockTimestampMs).toISOString(),
+        tokenAddress: transfer.token.address,
+        tokenSymbol: transfer.token.symbol ?? "",
+        tokenName: transfer.token.name ?? undefined,
+        tokenLogoUri: transfer.token.logoUri ?? undefined,
+        priceUsd: transfer.token.priceUsd ?? undefined,
+        transactionSignature: transfer.transactionHash,
+        instructionIndex: 0,
+      }));
+
+    for (const tr of pageTransfers) {
+      accumulated.push(tr);
+      if (accumulated.length >= limit) break;
+    }
+
+    if (accumulated.length >= limit || history.cursor == null) break;
+  }
 
   return {
     address,
-    transfers,
+    transfers: accumulated.slice(0, limit),
     pageInfo: toWalletPageInfo({
-      hasMore: history.cursor != null,
-      nextCursor: history.cursor,
+      hasMore: accumulated.length >= limit && historyCursor != null,
+      nextCursor: historyCursor,
       source: "cache",
     }),
   };
@@ -262,70 +292,108 @@ export async function getWalletSwaps(
   address: string,
   from?: number,
   to?: number,
-  tokenAddress?: string,
+  _tokenAddress?: string,
   type?: "buy" | "sell",
   minAmountUsd?: number,
   maxAmountUsd?: number,
+  limit: number = WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
 ): Promise<WalletSwapsResponse> {
   const requestedRange = resolveRequestedRange(from, to);
-  const history = await getWalletSwapHistory(
-    address,
-    requestedRange.fromMs,
-    requestedRange.toMs,
-    WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
-  );
-  if (history == null) {
-    throw new Error(`Failed to get wallet swap history for ${address}`);
+  if (limit < 1) limit = WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT;
+
+  const accumulated: WalletSwap[] = [];
+  let historyCursor: string | null = null;
+
+  while (accumulated.length < limit) {
+    const parsedCursor = parseWalletHistoryCursorQuery(historyCursor ?? undefined);
+    if (!parsedCursor.success) {
+      throw new Error("Invalid wallet swap history cursor");
+    }
+    const history = await getWalletSwapHistory(
+      address,
+      requestedRange.fromMs,
+      requestedRange.toMs,
+      WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
+      parsedCursor.data,
+      minAmountUsd,
+      maxAmountUsd,
+    );
+    if (history == null) {
+      if (accumulated.length == 0) {
+        throw new Error(`Failed to get wallet swap history for ${address}`);
+      }
+      break;
+    }
+
+    historyCursor = history.cursor;
+
+    const pageSwaps = history.transactions
+      .filter((_swap) => {
+        // Token filtering is intentionally deferred for history-backed queries.
+        // return (
+        //   _tokenAddress == null ||
+        //   _swap.bought.address == _tokenAddress ||
+        //   _swap.sold.address == _tokenAddress
+        // );
+        return true;
+      })
+      .map((swap): WalletSwap => {
+        const boughtLabel =
+          swap.bought.symbol ?? swap.bought.name ?? swap.bought.address;
+        const soldLabel =
+          swap.sold.symbol ?? swap.sold.name ?? swap.sold.address;
+
+        return {
+          transactionHash: swap.transactionHash,
+          transactionType: "trade",
+          blockTimestampIso: new Date(swap.blockTimestampMs).toISOString(),
+          subcategory: null,
+          walletAddress: address,
+          pairAddress: "",
+          tokensInvolved: `${boughtLabel}/${soldLabel}`,
+          bought: {
+            ...swap.bought,
+            priceUsd: swap.bought.priceUsd ?? 0,
+            valueUsd:
+              swap.bought.priceUsd == null
+                ? 0
+                : swap.bought.amount * swap.bought.priceUsd,
+          },
+          sold: {
+            ...swap.sold,
+            priceUsd: swap.sold.priceUsd ?? 0,
+            valueUsd:
+              swap.sold.priceUsd == null
+                ? 0
+                : swap.sold.amount * swap.sold.priceUsd,
+          },
+          totalValueUsd: swap.totalValueUsd,
+          baseQuotePrice: null,
+        };
+      });
+
+    for (const swap of pageSwaps) {
+      if (type) {
+        const boughtAddr = swap.bought.address;
+        const soldAddr = swap.sold.address;
+        const isBuy = !isBaseAsset(boughtAddr) && isBaseAsset(soldAddr);
+        const isSell = isBaseAsset(boughtAddr) && !isBaseAsset(soldAddr);
+        if (type == "buy" && !isBuy) continue;
+        if (type == "sell" && !isSell) continue;
+      }
+      accumulated.push(swap);
+      if (accumulated.length >= limit) break;
+    }
+
+    if (accumulated.length >= limit || history.cursor == null) break;
   }
-
-  const swaps = history.transactions
-    .filter(
-      (swap) =>
-        tokenAddress == null ||
-        swap.bought.address == tokenAddress ||
-        swap.sold.address == tokenAddress,
-    )
-    .map((swap): WalletSwap => {
-      const boughtLabel =
-        swap.bought.symbol ?? swap.bought.name ?? swap.bought.address;
-      const soldLabel =
-        swap.sold.symbol ?? swap.sold.name ?? swap.sold.address;
-
-      return {
-        transactionHash: swap.transactionHash,
-        transactionType: "trade",
-        blockTimestampIso: new Date(swap.blockTimestampMs).toISOString(),
-        subcategory: null,
-        walletAddress: address,
-        pairAddress: "",
-        tokensInvolved: `${boughtLabel}/${soldLabel}`,
-        bought: {
-          ...swap.bought,
-          priceUsd: swap.bought.priceUsd ?? 0,
-          valueUsd:
-            swap.bought.priceUsd == null
-              ? 0
-              : swap.bought.amount * swap.bought.priceUsd,
-        },
-        sold: {
-          ...swap.sold,
-          priceUsd: swap.sold.priceUsd ?? 0,
-          valueUsd:
-            swap.sold.priceUsd == null
-              ? 0
-              : swap.sold.amount * swap.sold.priceUsd,
-        },
-        totalValueUsd: swap.totalValueUsd,
-        baseQuotePrice: null,
-      };
-    });
 
   return {
     address,
-    swaps,
+    swaps: accumulated.slice(0, limit),
     pageInfo: toWalletPageInfo({
-      hasMore: history.cursor != null,
-      nextCursor: history.cursor,
+      hasMore: accumulated.length >= limit && historyCursor != null,
+      nextCursor: historyCursor,
       source: "cache",
     }),
   };
@@ -678,6 +746,7 @@ async function mbl_fetchWalletActivityRange({
   limit,
   maxLimit,
   minValueUsd,
+  maxValueUsd,
 }: {
   address: string;
   fromMs: number;
@@ -686,9 +755,11 @@ async function mbl_fetchWalletActivityRange({
   limit: number;
   maxLimit: number;
   minValueUsd?: number | null;
+  maxValueUsd?: number | null;
 }): Promise<WalletActivityFetchResult | null> {
   const targetLimit = normalizeTxLimit(limit, maxLimit);
   const normalizedMinValueUsd = normalizeMinValueUsd(minValueUsd ?? undefined);
+  const normalizedMaxValueUsd = normalizeMaxValueUsd(maxValueUsd ?? undefined);
   const swaps: WalletSwapV2[] = [];
   const transfers: WalletTransferV2[] = [];
   let offset = 0;
@@ -737,10 +808,18 @@ async function mbl_fetchWalletActivityRange({
     const targetCount =
       target == "swap"
         ? swaps.filter((swap) =>
-            matchesMinValueUsd(swap.totalValueUsd, normalizedMinValueUsd),
+            matchesValueUsd(
+              swap.totalValueUsd,
+              normalizedMinValueUsd,
+              normalizedMaxValueUsd,
+            ),
           ).length
         : transfers.filter((transfer) =>
-            matchesMinValueUsd(transfer.valueUsd, normalizedMinValueUsd),
+            matchesValueUsd(
+              transfer.valueUsd,
+              normalizedMinValueUsd,
+              normalizedMaxValueUsd,
+            ),
           ).length;
     const pageExhausted =
       result.pagination.pageEntries < MOBULA_WALLET_ACTIVITY_PAGE_SIZE;
@@ -758,10 +837,18 @@ async function mbl_fetchWalletActivityRange({
 
   const cutOffByLimit = !exhaustedRange;
   const filteredSwaps = swaps.filter((swap) =>
-    matchesMinValueUsd(swap.totalValueUsd, normalizedMinValueUsd),
+    matchesValueUsd(
+      swap.totalValueUsd,
+      normalizedMinValueUsd,
+      normalizedMaxValueUsd,
+    ),
   );
   const filteredTransfers = transfers.filter((transfer) =>
-    matchesMinValueUsd(transfer.valueUsd, normalizedMinValueUsd),
+    matchesValueUsd(
+      transfer.valueUsd,
+      normalizedMinValueUsd,
+      normalizedMaxValueUsd,
+    ),
   );
   return {
     swaps: filteredSwaps.slice(
@@ -796,6 +883,7 @@ async function fetchWalletSwapHistoryGap(
   toMs: number,
   limit?: number,
   minValueUsd?: number | null,
+  maxValueUsd?: number | null,
 ): Promise<WalletSwapHistoryFetchResult | null> {
   return await fetchWalletSwapHistoryCore(
     address,
@@ -804,6 +892,7 @@ async function fetchWalletSwapHistoryGap(
     limit,
     false,
     minValueUsd,
+    maxValueUsd,
   );
 }
 
@@ -814,6 +903,7 @@ async function fetchWalletSwapHistoryCore(
   limit: number = WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
   writeMeta: boolean = true,
   minValueUsd?: number | null,
+  maxValueUsd?: number | null,
 ): Promise<WalletSwapHistoryFetchResult | null> {
   const res = await mbl_fetchWalletActivityRange({
     address,
@@ -823,6 +913,7 @@ async function fetchWalletSwapHistoryCore(
     maxLimit: WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
     target: "swap",
     minValueUsd,
+    maxValueUsd,
   });
 
   if (!res) return null;
@@ -894,8 +985,10 @@ async function db_getSwapHistory(
   limit: number,
   cursor: WalletHistoryCursor | null,
   minValueUsd?: number | null,
+  maxValueUsd?: number | null,
 ): Promise<WalletTransaction<WalletSwapV2>[]> {
   const normalizedMinValueUsd = normalizeMinValueUsd(minValueUsd ?? undefined);
+  const normalizedMaxValueUsd = normalizeMaxValueUsd(maxValueUsd ?? undefined);
   const predicates = [
     eq(walletSwapHistory.address, address),
     gt(walletSwapHistory.blockTimestampMs, fromExclusiveMs),
@@ -903,6 +996,9 @@ async function db_getSwapHistory(
   ];
   if (normalizedMinValueUsd != null) {
     predicates.push(gte(walletSwapHistory.valueUsd, normalizedMinValueUsd));
+  }
+  if (normalizedMaxValueUsd != null) {
+    predicates.push(lte(walletSwapHistory.valueUsd, normalizedMaxValueUsd));
   }
   if (cursor) {
     const cursorPredicate = or(
@@ -978,10 +1074,12 @@ export async function getWalletSwapHistory(
   limit = WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
   parsedCursor?: WalletHistoryCursor,
   minValueUsd?: number,
+  maxValueUsd?: number,
 ): Promise<WalletTransactionHistory<WalletSwapV2> | null> {
   // Don't try to understand it, Just feel it - Christopher Nolan
   const cursor = parsedCursor ?? null;
   const normalizedMinValueUsd = normalizeMinValueUsd(minValueUsd);
+  const normalizedMaxValueUsd = normalizeMaxValueUsd(maxValueUsd);
   const requestedRange = cursor
     ? {
         fromMs: cursor.fromExclusiveMs,
@@ -1014,6 +1112,7 @@ export async function getWalletSwapHistory(
     limit + 1,
     cursor,
     normalizedMinValueUsd,
+    normalizedMaxValueUsd,
   );
   const canAnswerFromStoredRows =
     storedEntries.length > limit &&
@@ -1051,6 +1150,7 @@ export async function getWalletSwapHistory(
         limit,
         true,
         normalizedMinValueUsd,
+        normalizedMaxValueUsd,
       );
       if (!fetched) return null;
       if (
@@ -1073,6 +1173,7 @@ export async function getWalletSwapHistory(
       limit + 1,
       cursor,
       normalizedMinValueUsd,
+      normalizedMaxValueUsd,
     );
     return postProcessWalletTxHistory({
       entries,
@@ -1149,6 +1250,7 @@ export async function getWalletSwapHistory(
       limit + 1,
       cursor,
       normalizedMinValueUsd,
+      normalizedMaxValueUsd,
     );
     return postProcessWalletTxHistory({
       entries,
@@ -1172,6 +1274,7 @@ export async function getWalletSwapHistory(
         gapToMs,
         limit,
         normalizedMinValueUsd,
+        normalizedMaxValueUsd,
       );
 
       if (!gapRes) {
@@ -1257,6 +1360,7 @@ export async function getWalletSwapHistory(
     limit + 1,
     cursor,
     normalizedMinValueUsd,
+    normalizedMaxValueUsd,
   );
   return postProcessWalletTxHistory({
     entries,
@@ -1280,6 +1384,7 @@ async function fetchWalletTransferHistoryGap(
   toMs: number,
   limit?: number,
   minValueUsd?: number | null,
+  maxValueUsd?: number | null,
 ): Promise<WalletTransferHistoryFetchResult | null> {
   return await fetchWalletTransferHistoryCore(
     address,
@@ -1288,6 +1393,7 @@ async function fetchWalletTransferHistoryGap(
     limit,
     false,
     minValueUsd,
+    maxValueUsd,
   );
 }
 
@@ -1298,6 +1404,7 @@ async function fetchWalletTransferHistoryCore(
   limit: number = WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
   writeMeta: boolean = true,
   minValueUsd?: number | null,
+  maxValueUsd?: number | null,
 ): Promise<WalletTransferHistoryFetchResult | null> {
   const res = await mbl_fetchWalletActivityRange({
     address,
@@ -1307,6 +1414,7 @@ async function fetchWalletTransferHistoryCore(
     maxLimit: WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
     target: "transfer",
     minValueUsd,
+    maxValueUsd,
   });
 
   if (!res) return null;
@@ -1355,8 +1463,10 @@ async function db_getTransferHistory(
   limit: number,
   cursor: WalletHistoryCursor | null,
   minValueUsd?: number | null,
+  maxValueUsd?: number | null,
 ): Promise<WalletTransaction<WalletTransferV2>[]> {
   const normalizedMinValueUsd = normalizeMinValueUsd(minValueUsd ?? undefined);
+  const normalizedMaxValueUsd = normalizeMaxValueUsd(maxValueUsd ?? undefined);
   const predicates = [
     eq(walletTransferHistory.address, address),
     gt(walletTransferHistory.blockTimestampMs, fromExclusiveMs),
@@ -1364,6 +1474,9 @@ async function db_getTransferHistory(
   ];
   if (normalizedMinValueUsd != null) {
     predicates.push(gte(walletTransferHistory.valueUsd, normalizedMinValueUsd));
+  }
+  if (normalizedMaxValueUsd != null) {
+    predicates.push(lte(walletTransferHistory.valueUsd, normalizedMaxValueUsd));
   }
   if (cursor) {
     const cursorPredicate = or(
@@ -1431,9 +1544,11 @@ export async function getWalletTransferHistory(
   limit = WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
   parsedCursor?: WalletHistoryCursor,
   minValueUsd?: number,
+  maxValueUsd?: number,
 ): Promise<WalletTransactionHistory<WalletTransferV2> | null> {
   const cursor = parsedCursor ?? null;
   const normalizedMinValueUsd = normalizeMinValueUsd(minValueUsd);
+  const normalizedMaxValueUsd = normalizeMaxValueUsd(maxValueUsd);
   const requestedRange = cursor
     ? {
         fromMs: cursor.fromExclusiveMs,
@@ -1468,6 +1583,7 @@ export async function getWalletTransferHistory(
     limit + 1,
     cursor,
     normalizedMinValueUsd,
+    normalizedMaxValueUsd,
   );
   const canAnswerFromStoredRows =
     storedEntries.length > limit &&
@@ -1505,6 +1621,7 @@ export async function getWalletTransferHistory(
         limit,
         true,
         normalizedMinValueUsd,
+        normalizedMaxValueUsd,
       );
       if (!fetched) return null;
       if (
@@ -1527,6 +1644,7 @@ export async function getWalletTransferHistory(
       limit + 1,
       cursor,
       normalizedMinValueUsd,
+      normalizedMaxValueUsd,
     );
 
     return postProcessWalletTxHistory({
@@ -1600,6 +1718,7 @@ export async function getWalletTransferHistory(
       limit + 1,
       cursor,
       normalizedMinValueUsd,
+      normalizedMaxValueUsd,
     );
 
     return postProcessWalletTxHistory({
@@ -1624,6 +1743,7 @@ export async function getWalletTransferHistory(
         gapToMs,
         limit,
         normalizedMinValueUsd,
+        normalizedMaxValueUsd,
       );
 
       if (!gapRes) {
@@ -1709,6 +1829,7 @@ export async function getWalletTransferHistory(
     limit + 1,
     cursor,
     normalizedMinValueUsd,
+    normalizedMaxValueUsd,
   );
 
   return postProcessWalletTxHistory({
