@@ -100,172 +100,205 @@ export function ProfileActivityTab({
     tr("walletPage.time"),
   ];
 
+  const renderEmptyState = (
+    eyebrow: string,
+    title: string,
+    description: string,
+  ) => (
+    <div className={`${styles.sectionCard} ${styles.tableEmptyState}`}>
+      <span className={styles.tableEmptyEyebrow}>{eyebrow}</span>
+      <h3 className={styles.tableEmptyTitle}>{title}</h3>
+      <p className={styles.tableEmptyDescription}>{description}</p>
+    </div>
+  );
+
   return (
     <section className={styles.contentStack}>
-      <Table
-        title={tr("profileTabs.activity.swapsTableTitle") as string}
-        headers={swapTableHeaders}
-        initialFilters={{}}
-        fetcher={Promise.resolve([])}
-        filterSchema={{
-          0: { type: FilterType.Select },
-          1: { type: FilterType.Select },
-          2: { type: FilterType.Select },
-          3: { type: FilterType.Select },
-          4: { type: FilterType.Range, min: 0, max: 1000000, step: 100 },
-        }}
-        dataEntries={swapTableData}
-        cellRenderers={[
-          null,
-          (value) => new Date(String(value)).toLocaleString(),
-          null,
-          null,
-          (value) => fmt.num.compact.currency(Number(value)),
-        ]}
-        isSortable={[true, true, true, true, true]}
-        sortConfigs={{
-          1: { type: SortType.Date },
-          4: { type: SortType.Number },
-        }}
-        onRowClick={(_, rowIndex) => {
-          const swap = swapsRaw[rowIndex >= 0 ? rowIndex : -1];
-          if (!swap) {
-            return;
-          }
+      {swapRows.length > 0 ? (
+        <Table
+          title={tr("profileTabs.activity.swapsTableTitle") as string}
+          headers={swapTableHeaders}
+          initialFilters={{}}
+          fetcher={Promise.resolve([])}
+          filterSchema={{
+            0: { type: FilterType.Select },
+            1: { type: FilterType.Select },
+            2: { type: FilterType.Select },
+            3: { type: FilterType.Select },
+            4: { type: FilterType.Range, min: 0, max: 1000000, step: 100 },
+          }}
+          dataEntries={swapTableData}
+          cellRenderers={[
+            null,
+            (value) => new Date(String(value)).toLocaleString(),
+            null,
+            null,
+            (value) => fmt.num.compact.currency(Number(value)),
+          ]}
+          isSortable={[true, true, true, true, true]}
+          sortConfigs={{
+            1: { type: SortType.Date },
+            4: { type: SortType.Number },
+          }}
+          onRowClick={(_, rowIndex) => {
+            const swap = swapsRaw[rowIndex >= 0 ? rowIndex : -1];
+            if (!swap) {
+              return;
+            }
 
-          setSelectedSwap(swap);
-          setSwapModalOpen(true);
-        }}
-        loading={loading}
-      />
+            setSelectedSwap(swap);
+            setSwapModalOpen(true);
+          }}
+          loading={loading}
+          wrapperClassName={styles.activityTableSurface}
+        />
+      ) : (
+        renderEmptyState(
+          "Swap activity",
+          "No swaps yet",
+          "Your recent swap activity will appear here once linked wallets begin trading.",
+        )
+      )}
 
-      <Table
-        title={tr("profileTabs.activity.transfersTableTitle") as string}
-        headers={transferTableHeaders}
-        initialFilters={{}}
-        fetcher={Promise.resolve([])}
-        filterSchema={{
-          0: { type: FilterType.Select },
-          1: { type: FilterType.Select },
-          2: { type: FilterType.Select },
-          3: { type: FilterType.Range, min: 0, max: 1000000, step: 0.000001 },
-          4: { type: FilterType.Range, min: 0, max: 1000000, step: 0.01 },
-          5: { type: FilterType.Select },
-        }}
-        dataEntries={transferTableData}
-        cellRenderers={[
-          (value) => {
-            const address = String(value);
-            const isLinked = linkedWalletAddressSet.has(address.toLowerCase());
+      {transferRows.length > 0 ? (
+        <Table
+          title={tr("profileTabs.activity.transfersTableTitle") as string}
+          headers={transferTableHeaders}
+          initialFilters={{}}
+          fetcher={Promise.resolve([])}
+          filterSchema={{
+            0: { type: FilterType.Select },
+            1: { type: FilterType.Select },
+            2: { type: FilterType.Select },
+            3: { type: FilterType.Range, min: 0, max: 1000000, step: 0.000001 },
+            4: { type: FilterType.Range, min: 0, max: 1000000, step: 0.01 },
+            5: { type: FilterType.Select },
+          }}
+          dataEntries={transferTableData}
+          cellRenderers={[
+            (value) => {
+              const address = String(value);
+              const isLinked = linkedWalletAddressSet.has(address.toLowerCase());
 
-            return (
-              <span
-                style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
-              >
-                {fmt.text.address(address)}
-                {isLinked ? (
-                  <Link
-                    size={16}
-                    title="Linked wallet"
-                    aria-label="Linked wallet"
-                  />
-                ) : null}
-              </span>
-            );
-          },
-          (value) => {
-            const address = String(value);
-            const isLinked = linkedWalletAddressSet.has(address.toLowerCase());
+              return (
+                <span
+                  style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+                >
+                  {fmt.text.address(address)}
+                  {isLinked ? (
+                    <Link
+                      size={16}
+                      title="Linked wallet"
+                      aria-label="Linked wallet"
+                    />
+                  ) : null}
+                </span>
+              );
+            },
+            (value) => {
+              const address = String(value);
+              const isLinked = linkedWalletAddressSet.has(address.toLowerCase());
 
-            return (
-              <span
-                style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
-              >
-                {fmt.text.address(address)}
-                {isLinked ? (
-                  <Link
-                    size={16}
-                    title="Linked wallet"
-                    aria-label="Linked wallet"
-                  />
-                ) : null}
-              </span>
-            );
-          },
-          null,
-          (value) =>
-            Number(value).toLocaleString(undefined, {
-              maximumFractionDigits: 6,
-            }),
-          (value) => fmt.num.compact.currency(Number(value)),
-          (value) => new Date(String(value)).toLocaleString(),
-        ]}
-        isSortable={[true, true, true, true, true, true]}
-        sortConfigs={{
-          3: { type: SortType.Number },
-          4: { type: SortType.Number },
-          5: { type: SortType.Date },
-        }}
-        loading={loading}
-      />
+              return (
+                <span
+                  style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+                >
+                  {fmt.text.address(address)}
+                  {isLinked ? (
+                    <Link
+                      size={16}
+                      title="Linked wallet"
+                      aria-label="Linked wallet"
+                    />
+                  ) : null}
+                </span>
+              );
+            },
+            null,
+            (value) =>
+              Number(value).toLocaleString(undefined, {
+                maximumFractionDigits: 6,
+              }),
+            (value) => fmt.num.compact.currency(Number(value)),
+            (value) => new Date(String(value)).toLocaleString(),
+          ]}
+          isSortable={[true, true, true, true, true, true]}
+          sortConfigs={{
+            3: { type: SortType.Number },
+            4: { type: SortType.Number },
+            5: { type: SortType.Date },
+          }}
+          loading={loading}
+          wrapperClassName={styles.activityTableSurface}
+        />
+      ) : (
+        renderEmptyState(
+          "Transfer activity",
+          "No transfers yet",
+          "Incoming and outgoing token transfers will appear here once tracked wallets have on-chain movement.",
+        )
+      )}
 
-      <div className={styles.sectionCard}>
-        <div className={styles.cardsGrid}>
-          {visibleCards.map((card) => (
-            <article key={card.walletId} className={styles.activityCard}>
-              <div className={styles.walletCardHeader}>
-                <h4>{card.walletLabel}</h4>
-                <div className={styles.walletMetaActions}>
-                  <a
-                    href={`/wallets/${card.walletId}`}
-                    className={styles.walletAddressLink}
-                    title={card.walletAddress}
-                  >
-                    {fmt.text.address(card.walletAddress)}
-                  </a>
-                  {/* <CopyButton 
-                                        onClick={() => navigator.clipboard.writeText(card.walletAddress)}
-                                        title="Copy address"
-                                        
-                                        /> */}
-                  <button
-                    type="button"
-                    className={styles.copyAddressButton}
-                    onClick={() =>
-                      navigator.clipboard.writeText(card.walletAddress)
-                    }
-                    aria-label={`Copy wallet address for ${card.walletLabel}`}
-                    title="Copy address"
-                  >
-                    <Copy size={16} />
-                  </button>
+      {visibleCards.length > 0 ? (
+        <div className={styles.sectionCard}>
+          <div className={styles.cardsGrid}>
+            {visibleCards.map((card) => (
+              <article key={card.walletId} className={styles.activityCard}>
+                <div className={styles.walletCardHeader}>
+                  <h4>{card.walletLabel}</h4>
+                  <div className={styles.walletMetaActions}>
+                    <a
+                      href={`/wallets/${card.walletId}`}
+                      className={styles.walletAddressLink}
+                      title={card.walletAddress}
+                    >
+                      {fmt.text.address(card.walletAddress)}
+                    </a>
+                    <button
+                      type="button"
+                      className={styles.copyAddressButton}
+                      onClick={() =>
+                        navigator.clipboard.writeText(card.walletAddress)
+                      }
+                      aria-label={`Copy wallet address for ${card.walletLabel}`}
+                      title="Copy address"
+                    >
+                      <Copy size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <WalletOverviewValueSection
-                value={card.totalAssetValueUsd}
-                unrealizedPnlInPeriod={card.unrealizedPnlInPeriodUsd}
-                loading={false}
-              />
-              <WalletOverviewTradingSection
-                tradingVolume={card.tradingVolumeUsd}
-                buyTradingVolume={card.buyTradingVolumeUsd}
-                sellTradingVolume={card.sellTradingVolumeUsd}
-                buyTransactionCount={card.buyTransactionCount}
-                sellTransactionCount={card.sellTransactionCount}
-                tokenAmountTraded={card.tokenAmountTraded}
-                tokenAmountHolding={card.tokenAmountHolding}
-                loading={false}
-              />
-              <WalletOverviewPnLSection
-                totalPnL={card.totalPnlUsd}
-                realizedPnL={card.realizedPnlUsd}
-                unrealizedPnL={card.unrealizedPnlUsd}
-                loading={false}
-              />
-            </article>
-          ))}
+                <WalletOverviewValueSection
+                  value={card.totalAssetValueUsd}
+                  unrealizedPnlInPeriod={card.unrealizedPnlInPeriodUsd}
+                  loading={false}
+                />
+                <WalletOverviewTradingSection
+                  tradingVolume={card.tradingVolumeUsd}
+                  buyTradingVolume={card.buyTradingVolumeUsd}
+                  sellTradingVolume={card.sellTradingVolumeUsd}
+                  buyTransactionCount={card.buyTransactionCount}
+                  sellTransactionCount={card.sellTransactionCount}
+                  tokenAmountTraded={card.tokenAmountTraded}
+                  tokenAmountHolding={card.tokenAmountHolding}
+                  loading={false}
+                />
+                <WalletOverviewPnLSection
+                  totalPnL={card.totalPnlUsd}
+                  realizedPnL={card.realizedPnlUsd}
+                  unrealizedPnL={card.unrealizedPnlUsd}
+                  loading={false}
+                />
+              </article>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        renderEmptyState(
+          "Wallet snapshots",
+          "No wallet summaries yet",
+          "Per-wallet value, trading, and PnL snapshots will appear here when linked wallets have tracked activity.",
+        )
+      )}
       {/* 
             <div className={styles.sectionCard}>
                 <ProfileTradeFrequencyHeatmap

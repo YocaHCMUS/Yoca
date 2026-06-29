@@ -20,6 +20,7 @@ export interface TabContainerProps {
   /** Tab orientation: 'horizontal' (default) places tabs on top, 'vertical' places tabs on left */
   orientation?: "horizontal" | "vertical";
   style?: CSSProperties;
+  variant?: "default" | "profile";
 }
 
 export const TabContainer: React.FC<TabContainerProps> = ({
@@ -33,13 +34,15 @@ export const TabContainer: React.FC<TabContainerProps> = ({
   visitedTabIndices,
   orientation = "horizontal",
   style,
+  variant = "default",
 }) => {
   const hasActions = Boolean(actions);
   const isVertical = orientation === "vertical";
+  const isProfileVariant = variant === "profile";
 
   return (
     <div
-      className={`${styles.tabContainer} ${isVertical ? styles.tabContainerVertical : ""}`.trim()}
+      className={`${styles.tabContainer} ${isVertical ? styles.tabContainerVertical : ""} ${isProfileVariant ? styles.tabContainerProfile : ""}`.trim()}
       style={style}
     >
       {/* Tab Headers */}

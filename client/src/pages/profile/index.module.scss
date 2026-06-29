@@ -8,48 +8,6 @@
   }
 }
 
-.hero {
-  max-width: 640px;
-  margin: 0 auto $spacing-09;
-  text-align: center;
-}
-
-.title {
-  @include type-style("productive-heading-04");
-  color: var(--cds-text-primary);
-}
-
-.subtitle {
-  @include type-style("body-compact-01");
-  margin-top: $spacing-04;
-  color: var(--cds-text-secondary);
-}
-
-.card {
-  max-width: 640px;
-  margin: 0 auto;
-  border: 1px solid var(--cds-border-subtle);
-  border-radius: 4px;
-  background: var(--cds-layer);
-}
-
-.formRow {
-  display: grid;
-  gap: $spacing-05;
-  margin-bottom: $spacing-06;
-
-  @media (min-width: 672px) {
-    grid-template-columns: 1fr auto;
-    align-items: end;
-  }
-}
-
-.signInWrap {
-  text-align: center;
-  padding: $spacing-09 0;
-  color: var(--cds-text-secondary);
-}
-
 .tabSection {
   display: flex;
   flex: 1;
@@ -63,7 +21,19 @@
 }
 
 .profileTabsShell {
+  min-height: 100%;
   height: 100%;
-  min-height: 0;
+  padding: $spacing-05;
   overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.14), transparent 22rem),
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.1), transparent 18rem),
+    linear-gradient(180deg, var(--yoca-bg, #070a13), var(--yoca-bg-soft, #0b1020));
+  color: var(--yoca-text-main, #f8fafc);
+}
+
+@media (max-width: 960px) {
+  .profileTabsShell {
+    padding: $spacing-04;
+  }
 }

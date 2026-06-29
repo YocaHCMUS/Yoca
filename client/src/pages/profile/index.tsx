@@ -136,6 +136,7 @@ export default function ProfilePage() {
             tabs={tabsConfig.nodes}
             onTabChange={setActiveTab}
             orientation="vertical"
+            variant="profile"
             style={{ height: "100%" }}
           />
         </div>
