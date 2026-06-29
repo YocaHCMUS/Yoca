@@ -19,6 +19,7 @@ import {
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { PublicKey } from "@solana/web3.js";
 import { useEffect, useMemo, useState } from "react";
+import styles from "./CreateAlertRuleModal.module.scss";
 
 function defaultExpiryLocal(): string {
   const d = new Date();
@@ -176,7 +177,12 @@ export function CreateAlertRuleModal({
   };
 
   return (
-    <ComposedModal open={open} onClose={onClose} size="md">
+    <ComposedModal
+      open={open}
+      onClose={onClose}
+      size="md"
+      className={styles.modalRoot}
+    >
       <ModalHeader
         label={tr("alertsPage.ruleModalLabel")}
         title={tr("alertsPage.ruleModalTitle")}
@@ -184,9 +190,10 @@ export function CreateAlertRuleModal({
       <ModalBody
         aria-label={tr("alertsPage.ruleModalTitle")}
         hasScrollingContent
+        className={styles.modalBody}
       >
-        <Stack gap={6}>
-          <p style={{ color: "var(--cds-text-secondary)", margin: 0 }}>
+        <Stack gap={6} className={styles.modalContent}>
+          <p className={styles.stepIndicator}>
             {step === 1
               ? tr("alertsPage.ruleStep1Indicator")
               : tr("alertsPage.ruleStep2Indicator")}
@@ -198,11 +205,12 @@ export function CreateAlertRuleModal({
               title={errorMsg}
               lowContrast
               onClose={() => setErrorMsg(null)}
+              className={styles.notice}
             />
           ) : null}
 
           {step === 1 ? (
-            <Stack gap={5}>
+            <Stack gap={5} className={styles.stepFields}>
               <TextInput
                 id="rule-wallet"
                 labelText={tr("alertsPage.ruleTraderLabel")}
@@ -230,7 +238,7 @@ export function CreateAlertRuleModal({
                 <SelectItem value="ALL" text={tr("alertsPage.ruleActionAll")} />
               </Select>
 
-              <Stack gap={3} orientation="horizontal">
+              <div className={styles.dualFieldRow}>
                 <TextInput
                   id="rule-vol-min"
                   type="number"
@@ -247,7 +255,7 @@ export function CreateAlertRuleModal({
                   onChange={(e) => setMaxVolume(e.target.value)}
                   min={0}
                 />
-              </Stack>
+              </div>
 
               <Select
                 id="rule-unit"
@@ -288,7 +296,7 @@ export function CreateAlertRuleModal({
               />
             </Stack>
           ) : (
-            <Stack gap={5}>
+            <Stack gap={5} className={styles.stepFields}>
               <Toggle
                 id="rule-use-default"
                 labelText={tr("alertsPage.ruleUseDefault")}
@@ -299,7 +307,7 @@ export function CreateAlertRuleModal({
               />
 
               {!useDefaultDelivery ? (
-                <Stack gap={4}>
+                <Stack gap={4} className={styles.deliveryOverrides}>
                   <TextInput
                     id="rule-discord-ov"
                     labelText={tr("alertsPage.ruleDiscordOverride")}
@@ -324,7 +332,7 @@ export function CreateAlertRuleModal({
                 onChange={(e) => setAlertName(e.target.value)}
               />
 
-              <div>
+              <div className={styles.previewCard}>
                 <p className="cds--label">
                   {tr("alertsPage.rulePreviewLabel")}
                 </p>
@@ -342,7 +350,7 @@ export function CreateAlertRuleModal({
         </Stack>
       </ModalBody>
 
-      <ModalFooter>
+      <ModalFooter className={styles.modalFooter}>
         {step === 2 ? (
           <Button
             kind="secondary"
