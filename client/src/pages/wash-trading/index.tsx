@@ -2,8 +2,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import * as echarts from "echarts";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { PageWrapper } from "@/components/wrapper/PageWrapper";
+import { useAuth } from "@/contexts/AuthContext";
 import { useUserTheme } from "@/contexts/ThemeContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { getUserSubscription, type PlanTier } from "@/services/profile/subscriptionApi";
 import styles from "./wash-trading.module.scss";
 
 const API_DOMAIN: string = import.meta.env.VITE_CLIENT_API_DOMAIN || "";
@@ -103,6 +105,17 @@ interface ApiResponse {
   data?: WashTradingResult;
   error?: string;
   message?: string;
+  errorCode?: string;
+  upgradePath?: string;
+  usage?: {
+    feature: "wash_trading_ai_analysis";
+    tier: "Free" | "Lite" | "Plus" | "Pro";
+    limit: number;
+    used: number;
+    remaining: number;
+    resetsAt: string;
+    disabled?: boolean;
+  };
 }
 
 const shortAddress = (address?: string) => {
@@ -117,6 +130,8 @@ const getSeverityColor = (severity: Severity) => {
   if (severity === "success") return "#639922";
   return "var(--text-muted)";
 };
+
+const hasWashTradingTier = (tier: "Free" | PlanTier) => tier === "Plus" || tier === "Pro";
 
 
 const normalizeRiskLevel = (riskLevel: string): RiskLevel => {
@@ -1059,6 +1074,7 @@ const LogItem: React.FC<{ time: string; text: string; color: string }> = ({ time
 const WashTradingPage: React.FC = () => {
   const { theme } = useUserTheme();
   const { tr, lang, fmt } = useLocalization();
+  const { user, isUserLoading, openAuthModal } = useAuth();
   const isLight = theme === "light";
   const navigate = useNavigate();
   const { mint } = useParams<{ mint: string }>();
@@ -1073,12 +1089,18 @@ const WashTradingPage: React.FC = () => {
   const [manualMint, setManualMint] = useState(mint || "");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [upgradePath, setUpgradePath] = useState<string | null>(null);
+  const [aiUsage, setAiUsage] = useState<ApiResponse["usage"]>(undefined);
   const [result, setResult] = useState<WashTradingResult | null>(null);
   const [algoTab, setAlgoTab] = useState<GnnAlgorithm>(["GCN", "GAT", "GraphSAGE"].includes(algorithmFromUrl) ? algorithmFromUrl : "GCN");
   const [walletFilter, setWalletFilter] = useState<"All" | "High risk" | "New">("All");
   const [selectedWalletAddress, setSelectedWalletAddress] = useState<string | null>(null);
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
   const [isAiVerdictOpen, setIsAiVerdictOpen] = useState(true);
+  const [planTier, setPlanTier] = useState<"Free" | PlanTier>("Free");
+  const [isPlanLoading, setIsPlanLoading] = useState(false);
+  const [isPlusGateOpen, setIsPlusGateOpen] = useState(false);
+  const canUseWashTradingAi = hasWashTradingTier(planTier);
 
   useEffect(() => {
     setManualMint(mint || "");
@@ -1108,6 +1130,43 @@ const WashTradingPage: React.FC = () => {
     setSymbol(symbolFromUrl);
   }, [symbolFromUrl]);
 
+  useEffect(() => {
+    if (isUserLoading) return;
+    if (!user) {
+      setPlanTier("Free");
+      setIsPlanLoading(false);
+      return;
+    }
+
+    let active = true;
+    setIsPlanLoading(true);
+    getUserSubscription()
+      .then((subscription) => {
+        if (!active) return;
+        const isCurrent =
+          subscription &&
+          (subscription.status === "active" || subscription.status === "trialing") &&
+          (!subscription.currentPeriodEnd || new Date(subscription.currentPeriodEnd).getTime() > Date.now());
+        setPlanTier(isCurrent ? subscription.planTier : "Free");
+      })
+      .catch((err) => {
+        console.error("Failed to fetch subscription for wash trading gate", err);
+        if (active) setPlanTier("Free");
+      })
+      .finally(() => {
+        if (active) setIsPlanLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user, isUserLoading]);
+
+  useEffect(() => {
+    if (!user || isUserLoading || isPlanLoading || canUseWashTradingAi) return;
+    setIsPlusGateOpen(true);
+  }, [user, isUserLoading, isPlanLoading, canUseWashTradingAi]);
+
   const targetMint = mint || manualMint.trim();
 
   const handleAnalyze = useCallback(async () => {
@@ -1116,9 +1175,22 @@ const WashTradingPage: React.FC = () => {
       setError(String(tr("washTrading.errors.missingMint")));
       return;
     }
+    if (isUserLoading || isPlanLoading) return;
+    if (!user) {
+      openAuthModal("login");
+      setError("Sign in to use Wash Trading AI Analysis.");
+      return;
+    }
+    if (!canUseWashTradingAi) {
+      setError(null);
+      setUpgradePath("/pricing");
+      setIsPlusGateOpen(true);
+      return;
+    }
 
     setIsAnalyzing(true);
     setError(null);
+    setUpgradePath(null);
 
     try {
       const response = await fetch(`${API_DOMAIN}/api/v1/wash-trading/ai-analyze`, {
@@ -1137,17 +1209,25 @@ const WashTradingPage: React.FC = () => {
 
       const payload = (await response.json()) as ApiResponse;
       if (!response.ok || !payload.success || !payload.data) {
+        if (response.status === 401) openAuthModal("login");
+        if (
+          payload.errorCode === "AI_FEATURE_LOCKED" ||
+          payload.errorCode === "AI_DAILY_LIMIT_EXCEEDED"
+        ) {
+          setUpgradePath(payload.upgradePath ?? "/pricing");
+        }
         throw new Error(payload.message || payload.error || String(tr("washTrading.errors.analysisFailed")));
       }
 
       setResult(payload.data);
+      setAiUsage(payload.usage);
       setSelectedWalletAddress(payload.data.suspiciousWallets[0]?.wallet ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(tr("washTrading.errors.apiFailed")));
     } finally {
       setIsAnalyzing(false);
     }
-  }, [symbol, targetMint, timeframe, algoTab, lang, tr]);
+  }, [symbol, targetMint, timeframe, algoTab, lang, tr, isUserLoading, isPlanLoading, openAuthModal, user, canUseWashTradingAi]);
 
   useEffect(() => {
     if (mint) {
@@ -1282,7 +1362,11 @@ const WashTradingPage: React.FC = () => {
                   <span>{tr("washTrading.verdict.toggle")}</span>
                   <span className={styles.verdictToggleIcon}>{isAiVerdictOpen ? "▴" : "▾"}</span>
                 </button>
-                <button className={`${styles.btnPrimary} ${isAnalyzing ? styles.loading : ""}`} onClick={handleAnalyze} disabled={isAnalyzing}>
+                <button
+                  className={`${styles.btnPrimary} ${isAnalyzing ? styles.loading : ""}`}
+                  onClick={handleAnalyze}
+                  disabled={isAnalyzing || isPlanLoading || (!!user && !canUseWashTradingAi)}
+                >
                   {isAnalyzing ? tr("washTrading.inputs.analyzing") : tr("washTrading.inputs.runAnalyze")}
                 </button>
               </div>
@@ -1291,7 +1375,17 @@ const WashTradingPage: React.FC = () => {
         </div>
 
         <div className={styles.scrollBody}>
-          {error && <div className={styles.errorBox}>{error}</div>}
+          {error && (
+            <div className={styles.errorBox}>
+              {error}
+              {upgradePath && (
+                <>
+                  {" "}
+                  <a href={upgradePath}>Upgrade plan</a>
+                </>
+              )}
+            </div>
+          )}
 
         {isAiVerdictOpen && (
           <div id="ai-verdict-panel" className={styles.aiSummaryCard}>
@@ -1300,6 +1394,11 @@ const WashTradingPage: React.FC = () => {
               <strong>{verdictLabel}</strong>
             </div>
             <p>{result?.aiAnalysis.summary ?? tr("washTrading.verdict.defaultSummary")}</p>
+            {aiUsage && !aiUsage.disabled && (
+              <div className={styles.sourceNotice}>
+                {aiUsage.remaining}/{aiUsage.limit} Wash Trading AI analyses left today
+              </div>
+            )}
             {result?.dataSource && (
               <div className={`${styles.sourceNotice} ${result.dataSource === "demo-fallback" ? styles.sourceWarning : styles.sourceLive}`}>
                 {tr("washTrading.verdict.dataSource")} <strong>{result.dataSource}</strong>
@@ -1495,6 +1594,36 @@ const WashTradingPage: React.FC = () => {
           </div>
         </div>
         </div>
+
+        {isPlusGateOpen && user && !canUseWashTradingAi && (
+          <div
+            className={styles.plusGateBackdrop}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Wash Trading AI Analysis requires Plus"
+            onClick={() => setIsPlusGateOpen(false)}
+          >
+            <div className={styles.plusGateModal} onClick={(event) => event.stopPropagation()}>
+              <div className={styles.plusGateIcon}>AI</div>
+              <h2 className={styles.plusGateTitle}>Plus plan required</h2>
+              <p className={styles.plusGateText}>
+                AI Wash Trading Analysis is available on Plus and Pro. Your current plan is {planTier}.
+              </p>
+              <div className={styles.plusGateActions}>
+                <button
+                  type="button"
+                  className={styles.btnSecondary}
+                  onClick={() => setIsPlusGateOpen(false)}
+                >
+                  Not now
+                </button>
+                <Link className={styles.plusGateUpgrade} to="/pricing">
+                  Upgrade
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
 
         {isGraphModalOpen && (
           <div

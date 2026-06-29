@@ -4,16 +4,18 @@ import { Close, ChevronDown, ChevronRight } from "@carbon/react/icons";
 import { SkeletonPlaceholder, SkeletonText } from "@carbon/react";
 import { ID_MODAL_ROOT } from "@/config/constants";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
-import TrendNumWithSign from "@/components/TrendNumWithSign.tsx";
 import {
   fetchWalletAiSwapSummary,
+  WalletAiApiError,
   type WalletAiSwapSummaryResponse,
   type WalletAiAnalysisLanguage,
 } from "@/services/wallet/walletApi";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { TokenDeepAnalysisView } from "./TokenDeepAnalysisView";
 // import { MiniHistogram } from "./MiniHistogram";
 import styles from "./ai-swap-summary.module.scss";
+import { TrendNum } from "@/components/TrendNum";
 
 const PAGE_SIZE = 10;
 
@@ -70,7 +72,7 @@ function SummaryContent({
           <div className={styles.statCard}>
             <span className={styles.statLabel}>{tr("walletPage.aiSwapSummary.realizedPnl")}</span>
             <span className={styles.statValue}>
-              <TrendNumWithSign
+              <TrendNum
                 value={report.realizedPnlUsd}
                 prefixes="plus-minus"
                 formatter={fmt.num.currency}
@@ -155,7 +157,7 @@ function SummaryContent({
                   />
                   <span className={styles.rankedSpacer} />
                   <span className={styles.rankedPnl}>
-                    <TrendNumWithSign
+                    <TrendNum
                       value={t.pnlUsd}
                       prefixes="plus-minus"
                       formatter={fmt.num.currency}
@@ -297,6 +299,7 @@ export function AiSwapSummaryModal({
   walletAddress,
 }: AiSwapSummaryModalProps) {
   const { tr, lang } = useLocalization();
+  const { user, isUserLoading, openAuthModal } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<WalletAiSwapSummaryResponse | null>(null);
@@ -307,6 +310,12 @@ export function AiSwapSummaryModal({
 
   const fetch = useCallback(async () => {
     if (!isOpen || !walletAddress) return;
+    if (isUserLoading) return;
+    if (!user) {
+      openAuthModal("login");
+      setError(String(tr("walletPage.aiSwapSummary.signInRequired")));
+      return;
+    }
     setLoading(true);
     setError(null);
     setReport(null);
@@ -314,11 +323,22 @@ export function AiSwapSummaryModal({
       const result = await fetchWalletAiSwapSummary(walletAddress, apiLanguage);
       setReport(result);
     } catch (err) {
+      if (err instanceof WalletAiApiError) {
+        if (err.status === 401) openAuthModal("login");
+      }
       setError(err instanceof Error ? err.message : "Failed to load AI swap summary");
     } finally {
       setLoading(false);
     }
-  }, [isOpen, walletAddress, apiLanguage]);
+  }, [
+    isOpen,
+    walletAddress,
+    apiLanguage,
+    user,
+    isUserLoading,
+    openAuthModal,
+    tr,
+  ]);
 
   useEffect(() => {
     if (isOpen) {
@@ -427,7 +447,10 @@ export function AiSwapSummaryModal({
             </button>
           </div>
         ) : activeTab === SUMMARY_TAB_ID && report ? (
-          <SummaryContent report={report} onOpenTokenTab={openTokenTab} />
+          <SummaryContent
+            report={report}
+            onOpenTokenTab={openTokenTab}
+          />
         ) : activeTab !== SUMMARY_TAB_ID ? (
           <TokenDeepAnalysisView
             walletAddress={walletAddress}

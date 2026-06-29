@@ -25,6 +25,7 @@ export const ErrCodes = {
   notFound: "NOT_FOUND",
   unauthorized: "UNAUTHORIZED",
   rateLimitExceeded: "RATE_LIMIT_EXCEEDED",
+  aiDailyLimitExceeded: "AI_DAILY_LIMIT_EXCEEDED",
   badGateway: "BAD_GATEWAY",
 } as const;
 

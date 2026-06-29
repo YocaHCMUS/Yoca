@@ -245,6 +245,94 @@ export interface WalletIntelligenceResponse {
 
 export type WalletAiAnalysisLanguage = "en" | "vn";
 
+export type WalletAiFeature =
+  | "wallet_ai_analysis"
+  | "wash_trading_ai_analysis"
+  | "general_ai_chat"
+  | "token_chart_news_summary";
+
+export interface WalletAiUsage {
+  feature: WalletAiFeature;
+  tier: "Free" | "Lite" | "Plus" | "Pro";
+  limit: number;
+  used: number;
+  remaining: number;
+  resetsAt: string;
+  requiredTier?: "Lite" | "Plus" | "Pro";
+  disabled?: boolean;
+}
+
+export class WalletAiApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly errorCode?: string,
+    public readonly usage?: WalletAiUsage,
+    public readonly upgradePath?: string,
+  ) {
+    super(message);
+    this.name = "WalletAiApiError";
+  }
+}
+
+async function walletAiError(response: Response, fallback: string) {
+  let message = fallback;
+  let errorCode: string | undefined;
+  let usage: WalletAiUsage | undefined;
+  let upgradePath: string | undefined;
+
+  try {
+    const errorData = await response.json() as {
+      error?: string;
+      message?: string;
+      errorCode?: string;
+      feature?: WalletAiFeature;
+      tier?: WalletAiUsage["tier"];
+      limit?: number;
+      used?: number;
+      remaining?: number;
+      resetsAt?: string;
+      requiredTier?: WalletAiUsage["requiredTier"];
+      disabled?: boolean;
+      upgradePath?: string;
+    };
+    message =
+      errorData.message?.trim() ||
+      errorData.error?.trim() ||
+      message;
+    errorCode = errorData.errorCode;
+    usage =
+      errorData.feature &&
+      errorData.tier &&
+      typeof errorData.limit === "number" &&
+      typeof errorData.used === "number" &&
+      typeof errorData.remaining === "number" &&
+      errorData.resetsAt
+        ? {
+            feature: errorData.feature,
+            tier: errorData.tier,
+            limit: errorData.limit,
+            used: errorData.used,
+            remaining: errorData.remaining,
+            resetsAt: errorData.resetsAt,
+            requiredTier: errorData.requiredTier,
+            disabled: errorData.disabled,
+          }
+        : undefined;
+    upgradePath = errorData.upgradePath;
+  } catch {
+    // Keep the status-based fallback when the response body is not JSON.
+  }
+
+  return new WalletAiApiError(
+    message,
+    response.status,
+    errorCode,
+    usage,
+    upgradePath,
+  );
+}
+
 export interface WalletAiSwapSummaryTokenPnl {
   address: string;
   symbol: string | null;
@@ -295,18 +383,10 @@ export async function fetchWalletAiSwapSummary(
   });
 
   if (!response.ok) {
-    let message = `Failed to fetch wallet AI swap summary (${response.status})`;
-    try {
-      const errorData = await response.json() as { error?: string; message?: string; code?: string };
-      if (typeof errorData?.message === "string" && errorData.message.trim()) {
-        message = errorData.message;
-      } else if (typeof errorData?.error === "string" && errorData.error.trim()) {
-        message = errorData.error;
-      }
-    } catch {
-      // ignore parse failure
-    }
-    throw new Error(message);
+    throw await walletAiError(
+      response,
+      `Failed to fetch wallet AI swap summary (${response.status})`,
+    );
   }
 
   const data = await response.json();
@@ -361,18 +441,10 @@ export async function fetchTokenDeepAnalysis(
   });
 
   if (!response.ok) {
-    let message = `Failed to fetch token deep analysis (${response.status})`;
-    try {
-      const errorData = await response.json() as { error?: string; message?: string; code?: string };
-      if (typeof errorData?.message === "string" && errorData.message.trim()) {
-        message = errorData.message;
-      } else if (typeof errorData?.error === "string" && errorData.error.trim()) {
-        message = errorData.error;
-      }
-    } catch {
-      // ignore parse failure
-    }
-    throw new Error(message);
+    throw await walletAiError(
+      response,
+      `Failed to fetch token deep analysis (${response.status})`,
+    );
   }
 
   const data = await response.json();
@@ -421,9 +493,11 @@ export interface WalletAiAnalysisResponse {
   summary: string;
   signals: string[];
   reference?: WalletAiReferenceEntry[];
+  usage?: WalletAiUsage;
+  counted?: boolean;
 }
 
-export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D" | "All";
+export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D";
 
 export interface WalletOverviewPeriodStats {
   tradingVolumeUsd: number | null;
@@ -536,12 +610,17 @@ export function fetchWalletTransfers(
     chain?: string;
     limit?: number;
     cursor?: string;
+    minValueUsd?: number;
     before?: string;
   },
 ): Promise<WalletTransfersResponse> {
   return client.api.wallets.transfers.history[":address"].$get({
     param: { address },
-    query: { limit: params?.limit },
+    query: {
+      limit: params?.limit,
+      cursor: params?.cursor,
+      minValueUsd: params?.minValueUsd,
+    },
   }).then(resp => {
     if (resp.ok) {
       return resp.json().then(transfers => ({
@@ -590,12 +669,17 @@ export function fetchWalletSwaps(
     chain?: string;
     limit?: number;
     cursor?: string;
+    minValueUsd?: number;
     before?: string;
   },
 ): Promise<WalletSwapsResponse> {
   return client.api.wallets.swaps.history[":address"].$get({
     param: { address },
-    query: { limit: params?.limit },
+    query: {
+      limit: params?.limit,
+      cursor: params?.cursor,
+      minValueUsd: params?.minValueUsd,
+    },
   }).then(resp => {
     if (resp.ok) {
       return resp.json().then(swaps => ({
@@ -736,9 +820,11 @@ export function fetchWalletAiAnalysis(
   return client.api.wallets["ai-analysis"].$post({
     json: { address, language },
   }).then(async resp => {
-    if (resp.ok) return resp.json();
-    console.error(`API Error ${resp.status}`);
-    throw new Error(`API Error ${resp.status}`);
+    if (resp.ok) return (await resp.json()) as WalletAiAnalysisResponse;
+    throw await walletAiError(
+      resp,
+      `Failed to fetch wallet AI analysis (${resp.status})`,
+    );
   });
 }
 
@@ -804,6 +890,7 @@ export function fetchWalletAudit(
 ): Promise<WalletAuditReport> {
   return client.api.wallets[":address"].audit.$get({
     param: { address },
+    query: { force: options?.force ? "true" : undefined },
   }).then(resp => {
     if (resp.ok) return resp.json();
     console.error(`API Error: ${resp.status}`);

@@ -2,7 +2,7 @@ import { getWalletOverview } from "@sv/services/wallet/walletOverview.service.js
 import { getWalletSwaps, getWalletTransfers } from "@sv/services/wallet/walletTransfersSwaps.service.js";
 import { getWalletBalanceHistory, getCumulativePnL } from "@sv/services/wallet/walletCharts.service.js";
 import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
-import { getWinrateData } from "@sv/services/charts/winrate.service.js";
+import { getWinrateData } from "@sv/services/wallet/wallet-analysis.js";
 import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
 import { getTokenMeta, getTokenDetails } from "@sv/services/tokens/token-info.js";
 import { searchToken } from "./chat-token-search.js";
@@ -1021,7 +1021,7 @@ export const TOOL_HANDLERS: Record<
 
   get_wallet_swaps: async (input) => {
     const { address, limit, tokenAddress, type, fromMs, toMs, minAmountUsd, maxAmountUsd } = swapsFilterSchema.parse(input);
-    const data = await getWalletSwaps(address, fromMs, toMs, tokenAddress, type, minAmountUsd, maxAmountUsd, limit);
+    const data = await getWalletSwaps(address, fromMs, toMs, tokenAddress, type, minAmountUsd, maxAmountUsd);
     const coverage = buildTransactionCoverage(data.swaps.length, limit, data.pageInfo?.hasMore);
     const limited = data.swaps.slice(0, limit);
     return { data: { ...data, swaps: limited, coverage }, llmData: extractSwapsForLLM(data, limit) };
@@ -1029,7 +1029,7 @@ export const TOOL_HANDLERS: Record<
 
   get_wallet_transfers: async (input) => {
     const { address, limit, tokenAddress, direction, fromMs, toMs, minAmountUsd, maxAmountUsd } = transfersFilterSchema.parse(input);
-    const data = await getWalletTransfers(address, fromMs, toMs, tokenAddress, direction, minAmountUsd, maxAmountUsd, limit);
+    const data = await getWalletTransfers(address, fromMs, toMs, tokenAddress, direction, minAmountUsd, maxAmountUsd);
     const coverage = buildTransactionCoverage(data.transfers.length, limit, data.pageInfo?.hasMore);
     const limited = data.transfers.slice(0, limit);
     return { data: { ...data, transfers: limited, coverage }, llmData: extractTransfersForLLM(data, limit) };
@@ -1037,7 +1037,7 @@ export const TOOL_HANDLERS: Record<
 
   get_wallet_swaps_compact: async (input) => {
     const { address, limit, tokenAddress, type, fromMs, toMs, minAmountUsd, maxAmountUsd } = compactSwapsFilterSchema.parse(input);
-    const data = await getWalletSwaps(address, fromMs, toMs, tokenAddress, type, minAmountUsd, maxAmountUsd, limit);
+    const data = await getWalletSwaps(address, fromMs, toMs, tokenAddress, type, minAmountUsd, maxAmountUsd);
     const coverage = buildTransactionCoverage(data.swaps.length, limit, data.pageInfo?.hasMore);
     const limited = data.swaps.slice(0, limit);
     const isCapped = coverage.isCapped || coverage.hasMore;
@@ -1053,7 +1053,7 @@ export const TOOL_HANDLERS: Record<
   },
   get_wallet_transfers_compact: async (input) => {
     const { address, limit, tokenAddress, direction, fromMs, toMs, minAmountUsd, maxAmountUsd } = compactTransfersFilterSchema.parse(input);
-    const data = await getWalletTransfers(address, fromMs, toMs, tokenAddress, direction, minAmountUsd, maxAmountUsd, limit);
+    const data = await getWalletTransfers(address, fromMs, toMs, tokenAddress, direction, minAmountUsd, maxAmountUsd);
     const coverage = buildTransactionCoverage(data.transfers.length, limit, data.pageInfo?.hasMore);
     const limited = data.transfers.slice(0, limit);
     const isCapped = coverage.isCapped || coverage.hasMore;

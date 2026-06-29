@@ -3,16 +3,16 @@ import type { WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObject
 import { zrn_WalletBalanceChartSchema } from "../_types/wallet-raw-responses.js";
 import { db } from "@sv/db/index.js";
 import {
-  walletTokenBalanceMonthHistory,
-  walletTokenBalanceWeekHistory,
-  zerionTokenList,
+    walletTokenBalanceMonthHistory,
+    walletTokenBalanceWeekHistory,
+    zerionTokenList,
 } from "@sv/db/schema.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
 import dayjs from "dayjs";
 import { and, between, eq, inArray } from "drizzle-orm";
 import {
-  WALLET_BALANCE_HISTORY_CACHE_TTL_MS,
-  ZRN_SOL_FUNGIBLE_ID,
+    WALLET_BALANCE_HISTORY_STORED_TTL_MS,
+    ZRN_SOL_FUNGIBLE_ID,
 } from "@sv/config/constants.js";
 import * as zrn from "@sv/util/util-zerion.js";
 import { zrn_FungiblesResponseSchema } from "../_types/token-raw-responses.js";
@@ -130,7 +130,7 @@ export async function getWalletTokenBalanceHistory(
   const nowUtc = dayjs().utc();
   const end = nowUtc.valueOf();
   const start = nowUtc.subtract(1, zrnPeriod).valueOf();
-  const thresholdDateMs = end - WALLET_BALANCE_HISTORY_CACHE_TTL_MS;
+  const thresholdDateMs = end - WALLET_BALANCE_HISTORY_STORED_TTL_MS;
 
   const balanceTable =
     zrnPeriod == "week"
@@ -260,7 +260,7 @@ export async function fetchWalletTokenBalanceHistory(
         tokenAddress: entry.addr,
         // s -> ms
         timestampMs: point[0] * 1000,
-        usdValue: point[1] * 1000,
+        usdValue: point[1],
       })),
     );
 

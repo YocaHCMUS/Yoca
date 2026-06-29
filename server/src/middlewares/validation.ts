@@ -23,6 +23,13 @@ export const solanaBase58Schema = z
   .max(44)
   .regex(/^[1-9A-HJ-NP-Za-km-z]+$/);
 
+export const solanaSignatureSchema = z
+  .string()
+  .trim()
+  .min(87)
+  .max(88)
+  .regex(/^[1-9A-HJ-NP-Za-km-z]+$/);
+
 export const paginationSchema = z.object({
   limit: z.coerce.number(),
   offset: z.coerce.number(),
@@ -443,6 +450,7 @@ export const envSchema = z.object({
     .optional()
     .default("gemini-3.1-flash-lite"),
   CHAT_MODEL: z.string().optional().default("gemini-3.1-flash-lite"),
+  AI_USAGE_LIMIT_ENABLED: z.enum(["true", "false"]),
 });
 
 export type Env = z.infer<typeof envSchema>;

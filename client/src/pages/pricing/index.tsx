@@ -1,6 +1,6 @@
 import "@/styles/landing-tailwind.css";
 import { useState, useEffect } from "react";
-import { Zap } from "lucide-react";
+import { Check, Zap } from "lucide-react";
 import { LandingFooter, LandingNavbar } from "@/components/landing";
 import {
   LANDING_ACCENT_GLOW,
@@ -44,46 +44,106 @@ const pricingCardClass =
 const pricingCtaClass =
   "w-full min-h-11 py-3 rounded-full text-xs font-bold uppercase tracking-[0.18em] bg-[var(--landing-button-secondary-bg)] border border-[var(--landing-button-secondary-border)] hover:bg-[var(--landing-button-secondary-hover-bg)] hover:border-[var(--landing-button-secondary-hover-border)] transition-all duration-300 text-[var(--landing-foreground)]";
 
+function PricingFeatures({
+  label,
+  features,
+}: {
+  label: string;
+  features: string[];
+}) {
+  return (
+    <div className="space-y-4">
+      <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#14F195]">
+        {label}
+      </p>
+      <ul className="space-y-3">
+        {features.map((feature) => (
+          <li
+            key={feature}
+            className="flex items-start gap-3 text-sm leading-relaxed text-[var(--landing-muted)]"
+          >
+            <Check
+              className="mt-0.5 h-4 w-4 shrink-0 text-[#14F195]"
+              aria-hidden="true"
+            />
+            <span>{feature}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function PricingPage() {
   const { user } = useAuth();
   const { tr } = useLocalization();
   const { theme } = useUserTheme();
   const [isStandard, setIsStandard] = useState(false);
-  const placeholder = tr("pricing.placeholder");
+  const featureLabel = String(tr("pricing.features.label"));
+  const aiFeature = (
+    key:
+      | "pricing.features.askYoca"
+      | "pricing.features.volatilitySummary"
+      | "pricing.features.generalAiChat"
+      | "pricing.features.tokenChartNewsSummary"
+      | "pricing.features.walletAiAnalysis"
+      | "pricing.features.washTradingAiAnalysis",
+    count: number,
+  ) => String(tr(key, { $count: count }));
   const localizedLite = {
     ...LITE_DATA,
     period: tr("pricing.period.month"),
-    included: placeholder,
-    apiLimit: placeholder,
-    overage: placeholder,
-    websocket: placeholder,
+    features: [
+      aiFeature("pricing.features.askYoca", 20),
+      aiFeature("pricing.features.generalAiChat", 20),
+      aiFeature("pricing.features.tokenChartNewsSummary", 20),
+      aiFeature("pricing.features.volatilitySummary", 25),
+      String(tr("pricing.features.walletAiAnalysisLocked")),
+      String(tr("pricing.features.washTradingAiAnalysisLocked")),
+      String(tr("pricing.features.dailyReset")),
+    ],
     cta: tr("pricing.cta.buyNow"),
   };
   const localizedStandard = {
     ...STANDARD_DATA,
     price: tr("pricing.free"),
     period: undefined,
-    included: placeholder,
-    apiLimit: placeholder,
-    overage: placeholder,
-    websocket: placeholder,
+    features: [
+      aiFeature("pricing.features.askYoca", 5),
+      aiFeature("pricing.features.generalAiChat", 5),
+      aiFeature("pricing.features.tokenChartNewsSummary", 5),
+      aiFeature("pricing.features.volatilitySummary", 10),
+      String(tr("pricing.features.walletAiAnalysisLocked")),
+      String(tr("pricing.features.washTradingAiAnalysisLocked")),
+      String(tr("pricing.features.dailyReset")),
+    ],
     cta: tr("pricing.cta.tryForFree"),
   };
   const localizedPlus = {
     ...PLUS_TIER,
     period: tr("pricing.period.month"),
-    included: placeholder,
-    apiLimit: placeholder,
-    overage: placeholder,
-    features: [placeholder, placeholder, placeholder, placeholder],
+    features: [
+      aiFeature("pricing.features.askYoca", 50),
+      aiFeature("pricing.features.generalAiChat", 50),
+      aiFeature("pricing.features.tokenChartNewsSummary", 50),
+      aiFeature("pricing.features.volatilitySummary", 50),
+      aiFeature("pricing.features.walletAiAnalysis", 50),
+      aiFeature("pricing.features.washTradingAiAnalysis", 50),
+      String(tr("pricing.features.dailyReset")),
+    ],
   };
   const localizedPro = {
     ...PRO_TIER,
     period: tr("pricing.period.month"),
-    included: placeholder,
-    apiLimit: placeholder,
-    overage: placeholder,
-    features: [placeholder, placeholder, placeholder, placeholder, placeholder],
+    features: [
+      aiFeature("pricing.features.askYoca", 100),
+      aiFeature("pricing.features.generalAiChat", 100),
+      aiFeature("pricing.features.tokenChartNewsSummary", 100),
+      aiFeature("pricing.features.volatilitySummary", 100),
+      aiFeature("pricing.features.walletAiAnalysis", 100),
+      aiFeature("pricing.features.washTradingAiAnalysis", 100),
+      String(tr("pricing.features.dailyReset")),
+    ],
   };
   const col1 = isStandard ? localizedStandard : localizedLite;
   const isLightTheme = theme === "light";
@@ -218,9 +278,10 @@ export default function PricingPage() {
 
                 {/* Metrics */}
                 <div className="flex-1">
-                  <p className="text-[15px] font-semibold text-[#14F195]">
-                    {placeholder}
-                  </p>
+                  <PricingFeatures
+                    label={featureLabel}
+                    features={col1.features}
+                  />
                 </div>
 
                 {/* Toggle + CTA */}
@@ -290,9 +351,10 @@ export default function PricingPage() {
                 </div>
 
                 <div className="flex-1">
-                  <p className="text-[15px] font-semibold text-[#14F195]">
-                    {placeholder}
-                  </p>
+                  <PricingFeatures
+                    label={featureLabel}
+                    features={localizedPlus.features}
+                  />
                 </div>
 
                 {/* CTA */}
@@ -327,9 +389,10 @@ export default function PricingPage() {
                 </div>
 
                 <div className="flex-1">
-                  <p className="text-[15px] font-semibold text-[#14F195]">
-                    {placeholder}
-                  </p>
+                  <PricingFeatures
+                    label={featureLabel}
+                    features={localizedPro.features}
+                  />
                 </div>
 
                 {/* CTA */}

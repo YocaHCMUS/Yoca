@@ -6,6 +6,13 @@ import userExtract from "@sv/middlewares/user-extract.js";
 import { setErr } from "@sv/util/errors.js";
 import { statusCode } from "@sv/util/responses.js";
 import {
+  AI_FEATURES,
+  type AiUsageMetadata,
+  type AiUsageReservation,
+  releaseAiUsage,
+  reserveAiUsage,
+} from "@sv/services/ai-usage.service.js";
+import {
   buildSessionContext,
   createSession,
   deleteSession,
@@ -80,6 +87,14 @@ const toolDataReferenceSchema = z.object({
 const toolDataResolveSchema = z.object({
   refs: z.array(toolDataReferenceSchema).min(1).max(20),
 });
+function chatAiLimitResponse(usage: AiUsageMetadata) {
+  return {
+    errorCode: "AI_DAILY_LIMIT_EXCEEDED",
+    message: "You have reached today's General AI Chat limit.",
+    ...usage,
+    upgradePath: "/pricing",
+  };
+}
 
 const updateSessionSchema = z.object({
   messages: z
@@ -107,6 +122,8 @@ const updateSessionSchema = z.object({
 
 // Protected chat route (POST /)              
 const chatRoute = new Hono().post("/", honoJwt, userExtract, async (c) => {
+  let reservation: AiUsageReservation | undefined;
+
   try {
     const { id: userId } = c.get("userPayload")!;
 
@@ -121,6 +138,14 @@ const chatRoute = new Hono().post("/", honoJwt, userExtract, async (c) => {
     }
 
     const { addresses, query, language, history, sessionId, contextType, skipCache, skipSessionSave, promptId } = parsed.data;
+    reservation = await reserveAiUsage(userId, AI_FEATURES.GeneralAiChat);
+    if (!reservation.allowed) {
+      return c.json(
+        chatAiLimitResponse(reservation.usage),
+        statusCode.TooManyRequests,
+      );
+    }
+
     const response = await answerChatQuery(addresses, query, language, history, skipCache);
 
     if (promptId) {
@@ -203,10 +228,23 @@ const chatRoute = new Hono().post("/", honoJwt, userExtract, async (c) => {
     }
 
     return c.json(
-      { ...response, sessionId: activeSessionId },
+      {
+        ...response,
+        sessionId: activeSessionId,
+        usage: reservation.usage,
+        counted: !reservation.usage.disabled,
+      },
       200,
     );
   } catch (err) {
+    if (reservation?.allowed) {
+      try {
+        await releaseAiUsage(reservation);
+      } catch (releaseErr) {
+        console.error("[chat.route] failed to release AI usage:", releaseErr);
+      }
+    }
+
     console.error("[chat.route] Error:", err);
     return c.json(
       {

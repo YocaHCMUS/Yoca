@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Close, Draggable } from "@carbon/icons-react";
 import { SkeletonText, TextAreaSkeleton } from "@carbon/react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization, type TranslateFunction } from "@/contexts/LocalizationContext";
 import {
   fetchWalletAiAnalysis,
@@ -12,6 +13,7 @@ import {
   type WalletPortfolioItem,
   type WalletSwap,
   type WalletAiAnalysisLanguage,
+  WalletAiApiError,
 } from "@/services/wallet/walletApi";
 import { renderWalletAiReferenceText } from "@/services/wallet/walletAiReferenceRenderer.service";
 import styles from "./WalletAiAnalysisPopup.module.scss";
@@ -135,6 +137,7 @@ export function WalletAiAnalysisPopup({
   lang,
 }: WalletAiAnalysisPopupProps) {
   const { tr } = useLocalization();
+  const { user, isUserLoading, openAuthModal } = useAuth();
   const [position, setPosition] = useState(DEFAULT_POSITION);
   const [dragging, setDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
@@ -142,15 +145,23 @@ export function WalletAiAnalysisPopup({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [upgradePath, setUpgradePath] = useState<string | null>(null);
   const [report, setReport] = useState<WalletAiAnalysisResponse | null>(null);
 
   const apiLanguage: WalletAiAnalysisLanguage = lang === "vi" ? "vn" : "en";
 
   const fetchAnalysis = useCallback(async () => {
     if (!walletAddress || walletAddress === "null") return;
+    if (isUserLoading) return;
+    if (!user) {
+      openAuthModal("login");
+      setError("Sign in to use Wallet AI Analysis.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
+    setUpgradePath(null);
     setReport(null);
 
     try {
@@ -181,6 +192,16 @@ export function WalletAiAnalysisPopup({
       const response = await fetchWalletAiAnalysis(walletAddress, apiLanguage);
       setReport(response);
     } catch (err) {
+      if (err instanceof WalletAiApiError) {
+        if (err.status === 401) openAuthModal("login");
+        if (
+          err.errorCode === "AI_FEATURE_LOCKED" ||
+          err.errorCode === "AI_DAILY_LIMIT_EXCEEDED"
+        ) {
+          setUpgradePath(err.upgradePath ?? "/pricing");
+        }
+      }
+
       setError(
         err instanceof Error
           ? err.message
@@ -189,7 +210,7 @@ export function WalletAiAnalysisPopup({
     } finally {
       setLoading(false);
     }
-  }, [walletAddress, apiLanguage, tr]);
+  }, [walletAddress, apiLanguage, tr, isUserLoading, openAuthModal, user]);
 
   useEffect(() => {
     if (isOpen && !report && !loading) {
@@ -258,14 +279,28 @@ export function WalletAiAnalysisPopup({
         {error && (
           <div className={styles.errorContainer}>
             <p className={styles.errorText}>{error}</p>
-            <button className={styles.retryBtn} onClick={() => void fetchAnalysis()}>
-              {tr("walletPage.aiAnalysisRetry")}
-            </button>
+            {upgradePath ? (
+              <a className={styles.retryBtn} href={upgradePath}>
+                Upgrade plan
+              </a>
+            ) : (
+              <button className={styles.retryBtn} onClick={() => void fetchAnalysis()}>
+                {tr("walletPage.aiAnalysisRetry")}
+              </button>
+            )}
           </div>
         )}
 
         {report && !loading && (
-          renderReportContent(report, tr)
+          <>
+            {report.usage && !report.usage.disabled && (
+              <div className={styles.emptyText}>
+                {report.usage.remaining}/{report.usage.limit} Wallet AI Analysis left today
+                {report.counted === false ? " · no usage charged" : ""}
+              </div>
+            )}
+            {renderReportContent(report, tr)}
+          </>
         )}
 
         {!loading && !error && !report && (

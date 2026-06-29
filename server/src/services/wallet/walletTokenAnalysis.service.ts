@@ -19,6 +19,7 @@ import {
   type TokenPnlDistribution,
 } from "./dtos/walletTokenAnalysisObjects.js";
 import env from "@sv/util/load-env.js";
+import { statusCode } from "@sv/util/responses.js";
 // ---------------------------------------------------------------------------
 // Error
 // ---------------------------------------------------------------------------
@@ -33,6 +34,24 @@ export class WalletTokenAnalysisServiceError extends Error {
     this.code = code;
     this.status = status;
   }
+}
+
+export function mapWalletTokenAnalysisStatus(
+  code: WalletTokenAnalysisServiceError["code"],
+): 400 | 409 | 502 {
+  const statusByCode: Record<
+    WalletTokenAnalysisServiceError["code"],
+    400 | 409 | 502
+  > = {
+    invalid_address: statusCode.BadRequest,
+    invalid_token: statusCode.BadRequest,
+    no_data: statusCode.Conflict,
+    model_error: statusCode.BadGateway,
+    invalid_model_response: statusCode.BadGateway,
+    provider_unknown: statusCode.BadGateway,
+  };
+
+  return statusByCode[code];
 }
 
 // ---------------------------------------------------------------------------
@@ -296,6 +315,7 @@ export async function getTokenDeepAnalysis(
   address: string,
   tokenAddress: string,
   language: "en" | "vn" = "en",
+  beforeGenerate?: () => Promise<void>,
 ): Promise<TokenDeepAnalysisResponse> {
   const normalizedAddress = address.trim();
   const normalizedToken = tokenAddress.trim();
@@ -377,6 +397,9 @@ export async function getTokenDeepAnalysis(
       })),
     },
   };
+
+  getGenAiClient();
+  await beforeGenerate?.();
 
   const { analysis, riskNotes } = await callGeminiForToken(geminiPayload, language);
 

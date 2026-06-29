@@ -432,6 +432,7 @@ async function callGemini(
 export async function getWalletAiSwapSummary(
   address: string,
   language: "en" | "vn" = "en",
+  beforeGenerate?: () => Promise<void>,
 ): Promise<WalletAiSwapSummaryResponse> {
   const normalizedAddress = address.trim();
 
@@ -455,6 +456,9 @@ export async function getWalletAiSwapSummary(
       409,
     );
   }
+
+  getGenAiClient();
+  await beforeGenerate?.();
 
   const { summary, riskNotes } = await callGemini(
     computed.allTokenBreakdowns,
@@ -569,7 +573,6 @@ export async function getWalletPnLComputed(
     undefined,
     filters?.minAmountUsd,
     filters?.maxAmountUsd,
-    pnlLimit,
   );
   const recent = swapsResult.swaps ?? [];
   const coverage = buildPnLCoverage(recent.length, pnlLimit, swapsResult.pageInfo?.hasMore);

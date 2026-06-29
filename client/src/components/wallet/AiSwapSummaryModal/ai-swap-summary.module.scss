@@ -37,6 +37,24 @@
   flex-shrink: 0;
 }
 
+.quotaBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-03;
+  padding: $spacing-03 $spacing-04;
+  border: 1px solid $border-subtle;
+  border-radius: 6px;
+  background-color: $layer-02;
+  color: $text-secondary;
+  @include type-style('label-01');
+
+  a {
+    color: $link-primary;
+    font-weight: 600;
+  }
+}
+
 .title {
   @include type-style('heading-02');
   color: $text-primary;
@@ -515,4 +533,14 @@
     background-color: var(--button-primary, #0f62fe);
     color: $text-on-color;
   }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+}
+
+.upgradeLink {
+  color: $link-primary;
+  font-weight: 600;
 }

@@ -31,6 +31,7 @@ import {
   normalizeWalletAiLanguage,
   resolveWalletAiAnalysisWebhookEndpoint,
 } from "@sv/services/wallet/util/walletAnalysis.utils.js";
+import { statusCode } from "@sv/util/responses.js";
 import { z } from "zod";
 
 const WALLET_AI_ANALYSIS_TIMEOUT_MS = 180_000;
@@ -52,6 +53,22 @@ export class WalletAnalysisServiceError extends Error {
     this.status = status;
     this.details = details;
   }
+}
+
+export function mapWalletAnalysisStatus(status: number): 400 | 409 | 502 | 504 {
+  if (status == statusCode.BadRequest) {
+    return statusCode.BadRequest;
+  }
+
+  if (status == statusCode.Conflict) {
+    return statusCode.Conflict;
+  }
+
+  if (status == statusCode.GatewayTimeout) {
+    return statusCode.GatewayTimeout;
+  }
+
+  return statusCode.BadGateway;
 }
 
 async function checkDependencies(
@@ -100,6 +117,7 @@ async function checkDependencies(
 export async function getWalletAiAnalysis(
   address: string,
   language?: string,
+  beforeGenerate?: () => Promise<void>,
 ): Promise<WalletAiAnalysisResponse> {
   const normalizedAddress = address.trim();
   const normalizedLanguage = normalizeWalletAiLanguage(language);
@@ -171,6 +189,8 @@ export async function getWalletAiAnalysis(
   }
 
   try {
+    await beforeGenerate?.();
+
     const payload = await callViaAcms(
       "n8n",
       "analyse-wallet",

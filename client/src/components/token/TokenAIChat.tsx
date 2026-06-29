@@ -7,10 +7,13 @@ import { Link } from "react-router";
 
 import {
   askTokenAiChat,
+  TokenAiChatError,
+  type AiUsageMetadata,
   type TokenAiChatData,
   type TokenAiSection,
   type TokenAiTimeframe,
 } from "@/services/tokenAiChat";
+import { useAuth } from "@/contexts/AuthContext";
 
 import styles from "./TokenAIChat.module.scss";
 
@@ -533,8 +536,10 @@ export function TokenAIChat({
   name,
   timeframe = "24h",
 }: TokenAIChatProps) {
+  const { user, openAuthModal } = useAuth();
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<TokenAiChatData | null>(null);
+  const [usage, setUsage] = useState<AiUsageMetadata | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAllEvidence, setShowAllEvidence] = useState(false);
@@ -561,17 +566,29 @@ export function TokenAIChat({
   const visibleSources = showAllSources
     ? answer?.sources ?? []
     : answer?.sources.slice(0, 5) ?? [];
+  const quotaExhausted = usage?.disabled ? false : usage?.remaining === 0;
 
   const submitQuestion = async (nextQuestion = trimmedQuestion) => {
     const finalQuestion = nextQuestion.trim();
-    if (!finalQuestion || finalQuestion.length > 500 || isLoading) return;
+    if (
+      !finalQuestion ||
+      finalQuestion.length > 500 ||
+      isLoading ||
+      quotaExhausted
+    ) {
+      return;
+    }
+    if (!user) {
+      openAuthModal("login");
+      return;
+    }
 
     setQuestion(finalQuestion);
     setIsLoading(true);
     setError(null);
 
     try {
-      const data = await askTokenAiChat({
+      const result = await askTokenAiChat({
         address,
         symbol,
         name,
@@ -580,10 +597,15 @@ export function TokenAIChat({
         includeNews: true,
         includeVolatility: true,
       });
-      setAnswer(data);
+      setAnswer(result.data);
+      setUsage(result.usage);
       setShowAllEvidence(false);
       setShowAllSources(false);
     } catch (err) {
+      if (err instanceof TokenAiChatError) {
+        if (err.usage) setUsage(err.usage);
+        if (err.status === 401) openAuthModal("login");
+      }
       setError(err instanceof Error ? err.message : "Token AI chat failed.");
     } finally {
       setIsLoading(false);
@@ -609,49 +631,74 @@ export function TokenAIChat({
             type="button"
             className={styles.chip}
             onClick={() => submitQuestion(suggestion)}
-            disabled={isLoading}
+            disabled={isLoading || quotaExhausted}
           >
             {suggestion}
           </button>
         ))}
       </div>
 
-      <div className={styles.inputRow}>
-        <TextArea
-          labelText=""
-          hideLabel
-          value={question}
-          maxLength={500}
-          placeholder="Ask about price moves, news, risk, signals, or what to watch."
-          rows={3}
-          onChange={(event) => setQuestion(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              submitQuestion();
-            }
-          }}
-          disabled={isLoading}
-          invalid={trimmedQuestion.length > 500}
-          invalidText="Question must be 500 characters or fewer."
-        />
-        <Button
-          kind="primary"
-          size="md"
-          renderIcon={Send}
-          onClick={() => submitQuestion()}
-          disabled={isLoading || Boolean(validationError)}
-        >
-          Send
-        </Button>
-      </div>
+      {user ? (
+        <>
+          <div className={styles.inputRow}>
+            <TextArea
+              labelText=""
+              hideLabel
+              value={question}
+              maxLength={500}
+              placeholder="Ask about price moves, news, risk, signals, or what to watch."
+              rows={3}
+              onChange={(event) => setQuestion(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  submitQuestion();
+                }
+              }}
+              disabled={isLoading || quotaExhausted}
+              invalid={trimmedQuestion.length > 500}
+              invalidText="Question must be 500 characters or fewer."
+            />
+            <Button
+              kind="primary"
+              size="md"
+              renderIcon={Send}
+              onClick={() => submitQuestion()}
+              disabled={isLoading || quotaExhausted || Boolean(validationError)}
+            >
+              Send
+            </Button>
+          </div>
 
-      <div className={styles.inputMeta}>
-        <span>{trimmedQuestion.length}/500</span>
-        {trimmedQuestion.length > 0 && validationError && (
-          <span className={styles.validation}>{validationError}</span>
-        )}
-      </div>
+          <div className={styles.inputMeta}>
+            <span>{trimmedQuestion.length}/500</span>
+            {usage && !usage.disabled && (
+              <span>
+                {usage.remaining}/{usage.limit} questions remaining today (
+                {usage.tier})
+              </span>
+            )}
+            {trimmedQuestion.length > 0 && validationError && (
+              <span className={styles.validation}>{validationError}</span>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className={styles.authGate}>
+          <div>
+            <strong>Sign in to ask Yoca AI your own questions</strong>
+            <p>Get 5 free questions every day.</p>
+          </div>
+          <div className={styles.authGateActions}>
+            <Button size="sm" onClick={() => openAuthModal("login")}>
+              Sign in
+            </Button>
+            <Link to="/pricing" className={styles.learnMoreLink}>
+              Learn more
+            </Link>
+          </div>
+        </div>
+      )}
 
       {isLoading && (
         <div className={styles.loading} aria-live="polite">
@@ -660,6 +707,13 @@ export function TokenAIChat({
       )}
 
       {error && <div className={styles.error}>{error}</div>}
+
+      {quotaExhausted && (
+        <div className={styles.quotaNotice}>
+          <span>Your daily Ask Yoca AI limit resets at midnight UTC.</span>
+          <Link to="/pricing">Upgrade plan</Link>
+        </div>
+      )}
 
       {answer && !isLoading && (
         <div className={styles.answer}>

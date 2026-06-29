@@ -56,6 +56,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
     inputText,
     isLoading,
     error,
+    usage,
     showPromptMenu,
     showSessionMenu,
     sessions,
@@ -166,6 +167,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
     trimmedInput.length === 0 ? null
       : trimmedInput.length > MAX_INPUT_LENGTH ? tr("chat.inputOverLimit", { max: MAX_INPUT_LENGTH })
         : null;
+  const quotaExhausted = usage?.disabled ? false : usage?.remaining === 0;
 
   // ─── Auth gate ───────────────────────────────────────────────────────
   const getMessageContext = useCallback((msg?: ChatMessageItem): NonNullable<ChatMessageItem["context"]> => {
@@ -540,13 +542,15 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={tr("chat.inputPlaceholder")}
-            disabled={isLoading}
+            disabled={isLoading || quotaExhausted}
             className={styles.inputTextarea}
             rows={3}
           />
           <div className={styles.inputFooter}>
             <span className={styles.charCount}>
-              {tr("chat.inputCounter", { current: String(inputText.length), max: MAX_INPUT_LENGTH })}
+              {usage && !usage.disabled
+                ? `${usage.remaining}/${usage.limit} chats left today`
+                : tr("chat.inputCounter", { current: String(inputText.length), max: MAX_INPUT_LENGTH })}
             </span>
             <div className={styles.inputActions}>
               <button
@@ -561,7 +565,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
               <button
                 type="button"
                 onClick={() => sendQuery(inputText)}
-                disabled={isLoading || !inputText.trim() || inputText.length > MAX_INPUT_LENGTH}
+                disabled={isLoading || quotaExhausted || !inputText.trim() || inputText.length > MAX_INPUT_LENGTH}
                 className={styles.iconBtn}
               >
                 <Send size={16} />
@@ -571,6 +575,11 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
         </div>
         {inputText.length > 0 && inputValidationError && (
           <div className={styles.validationError}>{inputValidationError}</div>
+        )}
+        {quotaExhausted && (
+          <div className={styles.validationError}>
+            Daily AI chat limit reached. <a href="/pricing">Upgrade plan</a>
+          </div>
         )}
       </div>
     </div>

@@ -101,6 +101,16 @@ export interface ToolDataReference {
   generatedAt: string;
 }
 
+export interface ChatAiUsage {
+  feature: "general_ai_chat";
+  tier: "Free" | "Lite" | "Plus" | "Pro";
+  limit: number;
+  used: number;
+  remaining: number;
+  resetsAt: string;
+  disabled?: boolean;
+}
+
 export interface ChatResponse {
   text: string;
   data: Record<string, unknown>;
@@ -114,6 +124,8 @@ export interface ChatResponse {
   evidence?: WalletChatEvidence[];
   warnings?: WalletWarning[];
   confidence?: WalletConfidence;
+  usage?: ChatAiUsage;
+  counted?: boolean;
 }
 
 export interface ChatMessageItem {

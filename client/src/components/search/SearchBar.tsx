@@ -3,12 +3,12 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import { Close, Search as SearchIcon } from "@carbon/react/icons";
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type KeyboardEvent,
 } from "react";
 import { useNavigate } from "react-router";
 import { PoolResultItem, type PoolResult } from "./PoolResultItem";
@@ -49,7 +49,7 @@ export function SearchBar({ onClose }: SearchBarProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const searchResults = useGet(
-    client.api.search.index,
+    client.api.search,
     200,
     { query: { q: debouncedQuery } },
     {
