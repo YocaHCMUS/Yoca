@@ -33,6 +33,7 @@ import {
   normalizeToolInput,
   pickResolvedValue,
   RESOLVABLE_TOOLS,
+  stableStringify,
 } from "./chat-tool-normalizer.js";
 import type { ActionSpec, ChartSpec, ChatSource, TableSpec, ToolDataReference, WalletConfidence, WalletWarning, WalletChatSection, WebSearchArticle } from "./chat.types.js";
 import { z } from "zod";
@@ -210,6 +211,8 @@ async function resolveToolDependencies(
 ): Promise<{ tools: ChatToolCall[]; resolverResults: ChatToolResult[] }> {
   const resolvedTools: ChatToolCall[] = [];
   const resolverResults: ChatToolResult[] = [];
+  const resolverCache = new Map<string, { data: unknown; llmData: unknown }>();
+  const resolverKeys = new Set<string>();
 
   for (const tool of tools) {
     const input: Record<string, unknown> = { ...tool.input };
@@ -243,8 +246,22 @@ async function resolveToolDependencies(
       }
 
       const normalizedResolverInput = normalizeToolInput(spec.tool, spec.input, { query });
+      const cacheKey = `${spec.tool}:${stableStringify(normalizedResolverInput)}`;
       try {
-        const { data, llmData } = await handler(normalizedResolverInput);
+        let data: unknown;
+        let llmData: unknown;
+        const cached = resolverCache.get(cacheKey);
+        if (cached) {
+          data = cached.data;
+          llmData = cached.llmData;
+        } else {
+          const result = await handler(normalizedResolverInput);
+          data = result.data;
+          llmData = result.llmData;
+          resolverCache.set(cacheKey, { data, llmData });
+        }
+        resolverKeys.add(cacheKey);
+
         const picked = pickResolvedValue(llmData, spec.pick) ?? pickResolvedValue(data, spec.pick);
         resolverResults.push({
           name: spec.tool,
@@ -252,7 +269,7 @@ async function resolveToolDependencies(
           data: llmData,
           fullData: data,
         });
-        if (picked == null || picked === "") {
+        if (picked == null) {
           failed = true;
           resolverResults.push({
             name: tool.name,
@@ -283,7 +300,13 @@ async function resolveToolDependencies(
     }
   }
 
-  return { tools: resolvedTools, resolverResults };
+  // Remove tools that already ran as resolvers (standalone dedup)
+  const filtered = resolvedTools.filter((tool) => {
+    const key = `${tool.name}:${stableStringify(tool.input)}`;
+    return !resolverKeys.has(key);
+  });
+
+  return { tools: filtered, resolverResults };
 }
 async function executeToolsForAllAddresses(
   addresses: string[],
