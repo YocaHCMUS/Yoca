@@ -1017,7 +1017,7 @@ export default function WalletPage() {
         onClose: () => setSelectedToken(null),
       }}
     >
-      <div className={styles.pageLayout}>
+      <div className={`${styles.pageLayout}${isRightSidebarOpen ? ` ${styles.rightSidebarExpanded}` : ''}`}>
         <div className={styles.shell}>
           <WalletTopbar
             address={walletAddress}

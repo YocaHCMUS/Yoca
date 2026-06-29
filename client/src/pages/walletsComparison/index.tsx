@@ -205,6 +205,7 @@ export default function WalletsComparisonPage() {
   const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
 
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [chatPosition, setChatPosition] = useState<
     "right" | "left" | "fullscreen"
   >("right");
@@ -535,7 +536,7 @@ export default function WalletsComparisonPage() {
 
   return (
     <PageWrapper noMarketTickers wideContent>
-      <div className={styles.pageLayout}>
+      <div className={`${styles.pageLayout}${isRightSidebarOpen ? ` ${styles.rightSidebarExpanded}` : ''}`}>
         <ChatContextProvider
           addresses={selectedWallets}
           contextType="wallet-comparison"
@@ -582,6 +583,7 @@ export default function WalletsComparisonPage() {
           <RightSidebar
             isChatOpen={isChatOpen}
             onChatToggle={() => setIsChatOpen((v) => !v)}
+            onToggle={setIsRightSidebarOpen}
           />
 
           {isChatOpen && (

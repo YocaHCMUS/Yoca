@@ -11,6 +11,7 @@
   --chat-panel-right-offset: 96px;
   --chat-panel-left-offset: 16px;
   --chat-panel-bottom-offset: 16px;
+  --chat-launcher-offset: 56px;
   display: flex;
   flex-direction: row;
   width: 100%;
@@ -18,6 +19,11 @@
   min-height: 0;
   overflow: hidden;
   position: relative;
+
+  &.rightSidebarExpanded {
+    --chat-panel-right-offset: 356px;
+    --chat-launcher-offset: 316px;
+  }
 }
 
 // ===== Shell (outer wrapper) =====
@@ -659,7 +665,7 @@
 // ===== Chat Modal Launcher =====
 .chatLauncher {
   position: fixed;
-  right: 56px;
+  right: var(--chat-launcher-offset);
   bottom: 24px;
   z-index: 70;
   display: inline-flex;
