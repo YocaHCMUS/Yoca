@@ -156,7 +156,7 @@ export function buildToolSelectionPrompt(
     "If one tool needs a value from another tool, nest a \"resolveFrom\" object as the VALUE of the dependent parameter (not as a separate tool, not at the tool level):",
     "  Example — resolve SOL's mint address for get_token_market_data:",
     "  {\"name\": \"get_token_market_data\", \"input\": {\"tokenAddress\": {\"resolveFrom\": {\"tool\": \"search_token\", \"input\": {\"query\": \"SOL\"}, \"pick\": \"first.address\"}}}}",
-    "  The resolver tool MUST also be in the tools array. search_token returns a flat array; use \"first\" for the 0th element.",
+    "  The resolver tool MUST also be in the tools array. Supported pick syntax: dot path (\"address\"), \"first\" for array[0], bracket notation e.g. \"[0]\", \"tokens[0]\", \"tokens[first]\".",
     "If you already have enough data to answer, respond with: { \"type\": \"no_tool\", \"message\": \"ready\" }",
     "If no tool is relevant, respond with: { \"type\": \"no_tool\", \"message\": \"explanation\" }",
     "If the query is about something that can be answered with general knowledge, respond with: { \"type\": \"general\", \"message\": \"answer\" }",
