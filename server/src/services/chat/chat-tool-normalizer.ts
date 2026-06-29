@@ -5,14 +5,13 @@ const DEFAULT_TX_LOOKBACK_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const DETAILED_LIMITS = new Set(["get_wallet_swaps", "get_wallet_transfers"]);
-const COMPACT_LIMITS = new Set(["get_wallet_swaps_compact", "get_wallet_transfers_compact", "get_wallet_pnl_compact"]);
+const COMPACT_LIMITS = new Set(["get_wallet_swaps_compact", "get_wallet_transfers_compact"]);
 const RANGE_TOOLS = new Set([
   "get_wallet_swaps",
   "get_wallet_transfers",
   "get_wallet_swaps_compact",
   "get_wallet_transfers_compact",
   "get_wallet_pnl",
-  "get_wallet_pnl_compact",
 ]);
 
 export interface NormalizeToolOptions {
@@ -105,7 +104,7 @@ function extractRelativeRangeMs(query: string, nowMs: number): { fromMs: number;
 function normalizeTimePeriod(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const normalized = value.trim().toUpperCase();
-  if (["7D", "30D", "60D", "90D", "1Y"].includes(normalized)) return normalized;
+  if (["7D", "30D"].includes(normalized)) return normalized;
   return undefined;
 }
 
