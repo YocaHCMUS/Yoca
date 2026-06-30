@@ -1,80 +1,60 @@
-/* ── Container — identical to .dexTableContainer ─────────────────── */
 .traderTableContainer {
   width: 100%;
-  overflow-x: auto;
-  overflow-y: auto;
-  max-height: calc(100vh - 240px);
-  border-radius: 4px;
-  background-color: var(--cds-layer, #161616);
-  border: 1px solid var(--cds-border-subtle, #393939);
+  max-height: calc(100vh - 18rem);
+  overflow: auto;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-md);
+  background: var(--yoca-surface);
+  box-shadow: var(--yoca-shadow-card);
 
   &::-webkit-scrollbar {
-    height: 8px;
-    width: 6px;
-    display: block !important;
+    width: 0.5rem;
+    height: 0.5rem;
   }
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
+
   &::-webkit-scrollbar-thumb {
-    background: var(--cds-border-strong, #525252);
-    border-radius: 4px;
+    border: 2px solid var(--yoca-surface);
+    border-radius: 999px;
+    background: var(--yoca-border);
   }
 }
 
-/* ── Table — mirrors .dexTable exactly ────────────────────────────── */
 .traderTable {
   width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  font-size: 0.875rem;
+  min-width: 31rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--yoca-text-soft);
+  font-size: 0.8125rem;
   text-align: right;
   white-space: nowrap;
 
   th,
   td {
-    padding: 0 8px;
-    border-bottom: 1px solid var(--cds-border-subtle, #393939);
-    border-right: 1px solid var(--cds-border-subtle, #393939);
+    padding: 0.8125rem 0.625rem;
+    border-bottom: 1px solid var(--yoca-border);
     vertical-align: middle;
   }
 
-  /* Last column: no right border */
-  th:last-child,
-  td:last-child {
-    border-right: none;
-  }
-
-  /* Star column: no right border */
-  th.thStar,
-  td.tdStar {
-    border-right: none;
-  }
-
-  /* Header */
   th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    color: var(--yoca-text-muted);
+    background: var(--yoca-surface-elevated);
+    font-size: 0.625rem;
+    font-weight: 750;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    font-weight: 700;
-    color: var(--cds-text-secondary, #c6c6c6);
-    background-color: var(--cds-layer-01, #262626);
-    cursor: default;
-    user-select: none;
-    transition: background-color 0.1s ease;
-    font-size: 0.8125rem;
-    letter-spacing: 0.3px;
-    height: 48px;
-    text-align: right;
   }
 
-  /* Body rows */
   tbody tr {
-    height: 48px;
-    background-color: var(--cds-layer-02, #ffffff);
-    transition: background-color 0.1s ease;
-    font-weight: 500;
+    min-height: 3.75rem;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
 
     &:hover {
-      background-color: var(--cds-layer-hover, #262626);
+      background: var(--yoca-surface-hover);
+      box-shadow: inset 3px 0 0 var(--yoca-accent);
     }
 
     &:last-child td {
@@ -83,53 +63,40 @@
   }
 }
 
-/* ── Column sizing ────────────────────────────────────────────────── */
-.thStar {
-  width: 36px;
-  text-align: center !important;
-  padding: 0 4px !important;
-}
-
-.thTrader {
-  text-align: left !important;
-  width: 36%;
-}
-
-.thRight {
-  text-align: right !important;
-}
-
+.thStar,
 .tdStar {
+  width: 2.5rem;
+  padding-inline: 0.375rem !important;
   text-align: center !important;
-  padding: 0 4px !important;
-  width: 36px;
 }
 
+.thTrader,
 .tdTrader {
+  width: 36%;
   text-align: left !important;
 }
 
+.thRight,
 .tdRight {
   text-align: right !important;
 }
 
-/* ── Watchlist star button ───────────────────────────────────────── */
-.starBtn {
+.starBtn,
+.copyBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  color: var(--yoca-text-muted);
   background: transparent;
-  border: none;
-  border-radius: 4px;
   cursor: pointer;
-  color: var(--cds-text-secondary, #8d8d8d);
-  transition: color 0.15s, background 0.15s;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 
   &:hover:not(:disabled) {
-    background: var(--cds-layer-hover, #353535);
-    color: var(--cds-text-primary, #ffffff);
+    border-color: var(--yoca-border);
+    color: var(--yoca-text-main);
+    background: var(--yoca-surface-hover);
   }
 
   &:disabled {
@@ -138,77 +105,85 @@
   }
 }
 
-.starBtnActive {
-  color: #f0c040 !important;
+.starBtn {
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
-/* ── Trader cell ─────────────────────────────────────────────────── */
+.starBtnActive {
+  color: var(--yoca-warning) !important;
+  background: rgba(245, 158, 11, 0.1) !important;
+}
+
 .traderCell {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
   width: fit-content;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
 
   &:hover .walletAddress {
-    text-decoration: underline;
+    color: var(--yoca-accent);
   }
 }
 
-
 .rank {
-  color: var(--cds-text-placeholder, #6f6f6f);
-  font-family: monospace;
-  font-size: 0.75rem;
-  min-width: 20px;
-  display: inline-block;
+  display: inline-flex;
+  min-width: 1.875rem;
+  height: 1.375rem;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 0.25rem;
+  border: 1px solid var(--yoca-border);
+  border-radius: 999px;
+  color: var(--yoca-text-muted);
+  background: rgba(148, 163, 184, 0.06);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.625rem;
 }
 
 .walletAddress {
-  color: var(--cds-text-primary, #ffffff);
-  font-size: 0.875rem;
-  font-family: monospace;
+  color: var(--yoca-text-main);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  transition: color 0.15s ease;
 }
+
 .copyBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--cds-text-secondary, #8d8d8d);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: all 0.15s;
-
-  &:hover {
-    color: var(--cds-text-primary, #ffffff);
-    background: var(--cds-layer-hover, #353535);
-  }
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
 }
 
-/* ── Numbers ──────────────────────────────────────────────────────── */
 .numVal {
+  color: var(--yoca-text-soft);
+  font-size: 0.8125rem;
+  font-weight: 650;
   font-variant-numeric: tabular-nums;
-  font-weight: 500;
-  color: var(--cds-text-primary, #f4f4f4);
 }
 
 .positive {
-  color: var(--cds-support-success, #24a148);
+  color: var(--yoca-success);
 }
 
 .negative {
-  color: var(--cds-support-error, #da1e28);
+  color: var(--yoca-danger);
 }
 
 .neutral {
-  color: var(--cds-text-helper, #8d8d8d);
+  color: var(--yoca-text-muted);
 }
 
-/* ── Empty / loading state ───────────────────────────────────────── */
 .emptyCell {
-  text-align: center !important;
+  min-height: 14rem;
   padding: 2.5rem !important;
-  color: var(--cds-text-secondary, #8d8d8d);
+  color: var(--yoca-text-muted);
+  text-align: center !important;
+}
+
+@media (max-width: 48rem) {
+  .traderTableContainer {
+    border-radius: var(--yoca-radius-md);
+  }
 }

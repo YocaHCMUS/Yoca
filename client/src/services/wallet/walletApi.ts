@@ -616,11 +616,7 @@ export function fetchWalletTransfers(
 ): Promise<WalletTransfersResponse> {
   return client.api.wallets.transfers.history[":address"].$get({
     param: { address },
-    query: {
-      limit: params?.limit,
-      cursor: params?.cursor,
-      minValueUsd: params?.minValueUsd,
-    },
+    query: { limit: params?.limit?.toString() },
   }).then(resp => {
     if (resp.ok) {
       return resp.json().then(transfers => ({
@@ -675,11 +671,7 @@ export function fetchWalletSwaps(
 ): Promise<WalletSwapsResponse> {
   return client.api.wallets.swaps.history[":address"].$get({
     param: { address },
-    query: {
-      limit: params?.limit,
-      cursor: params?.cursor,
-      minValueUsd: params?.minValueUsd,
-    },
+    query: { limit: params?.limit?.toString() },
   }).then(resp => {
     if (resp.ok) {
       return resp.json().then(swaps => ({

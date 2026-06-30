@@ -39,20 +39,20 @@ import {
   User,
   Wikis,
 } from "@carbon/react/icons";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { SignInModal } from "../auth/SignInModal";
 import MarketTicker from "../MarketTicker";
-import { Divider } from "../partials/Divider/Divider";
 import { SearchBar } from "../search/SearchBar";
 import styles from "./PageWrapper.module.scss";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 
-function ThemeToggleGlobalAction() {
+function ThemeToggleGlobalAction({ className }: { className?: string }) {
   const { theme, toggleTheme } = useUserTheme();
   const { tr } = useLocalization();
 
   return (
     <HeaderGlobalAction
+      className={className}
       aria-label={
         theme == "dark"
           ? tr("nav.switchToDarkTheme")
@@ -117,13 +117,9 @@ export function PageWrapper({
 }: PageWrapperProps) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
-  const {
-    user,
-    signOut,
-    isSignInOpen,
-    openAuthModal,
-    closeAuthModal,
-  } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const languageMenuRef = useRef<HTMLDivElement | null>(null);
   const [openPanel, setOpenPanel] = useState<
     "lang" | "account" | "notifications" | null
   >(null);
@@ -173,6 +169,32 @@ export function PageWrapper({
     }
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (openPanel != "lang") return;
+
+    const handleMouseDown = (event: MouseEvent) => {
+      if (
+        languageMenuRef.current &&
+        !languageMenuRef.current.contains(event.target as Node)
+      ) {
+        setOpenPanel(null);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key == "Escape") {
+        setOpenPanel(null);
+      }
+    };
+
+    window.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openPanel]);
+
   const toggleSideNav = () => {
     setIsSideNavExpanded((prev) => !prev);
   };
@@ -186,11 +208,32 @@ export function PageWrapper({
     setOpenPanel((prev) => (prev == panel ? null : panel));
   };
 
+  const handleLanguageSelect = (nextLang: "en" | "vi") => {
+    setLang(nextLang);
+    setOpenPanel(null);
+  };
+
   function NavHeaderItems() {
     return (
       <>
-        <HeaderMenuItem href="/market">{tr("nav.market")}</HeaderMenuItem>
-        <HeaderMenuItem href="/alerts">{tr("nav.alerts")}</HeaderMenuItem>
+        <HeaderMenuItem
+          className={
+            location.pathname == "/market" ? styles.headerNavItemActive : undefined
+          }
+          aria-current={location.pathname == "/market" ? "page" : undefined}
+          href="/market"
+        >
+          {tr("nav.market")}
+        </HeaderMenuItem>
+        <HeaderMenuItem
+          className={
+            location.pathname == "/alerts" ? styles.headerNavItemActive : undefined
+          }
+          aria-current={location.pathname == "/alerts" ? "page" : undefined}
+          href="/alerts"
+        >
+          {tr("nav.alerts")}
+        </HeaderMenuItem>
       </>
     );
   }
@@ -224,16 +267,23 @@ export function PageWrapper({
 
   return (
     <>
-      <Header>
+      <Header className={styles.appHeader}>
         <HeaderMenuButton
+          className={styles.headerMenuButton}
           aria-label={isSideNavExpanded ? "Close menu" : "Open menu"}
           isActive={isSideNavExpanded}
           aria-expanded={isSideNavExpanded}
           onClick={toggleSideNav}
         />
 
-        <HeaderName href="/market" prefix="" style={{ textDecoration: "none" }}>
+        <HeaderName
+          className={styles.headerName}
+          href="/market"
+          prefix=""
+          style={{ textDecoration: "none" }}
+        >
           <Stack
+            className={styles.headerBrand}
             gap={3}
             orientation="horizontal"
             style={{ alignItems: "center", fontWeight: "bold" }}
@@ -243,27 +293,74 @@ export function PageWrapper({
           </Stack>
         </HeaderName>
 
-        <HeaderNavigation>
+        <HeaderNavigation className={styles.headerNavigation}>
           <NavHeaderItems />
         </HeaderNavigation>
 
-        <HeaderGlobalBar>
+        <HeaderGlobalBar className={styles.headerGlobalBar}>
           <HeaderGlobalAction
+            className={styles.headerGlobalAction}
             aria-label={tr("nav.search")}
             onClick={() => setIsSearchOpen(true)}
           >
             <Search size={20} />
           </HeaderGlobalAction>
 
-          <HeaderGlobalAction
-            aria-label={tr("nav.language")}
-            isActive={openPanel == "lang"}
-            onClick={() => togglePanel("lang")}
-          >
-            <Wikis size={20} />
-          </HeaderGlobalAction>
+          <div className={styles.languageMenuAnchor} ref={languageMenuRef}>
+            <HeaderGlobalAction
+              className={styles.headerGlobalAction}
+              aria-label={tr("nav.language")}
+              aria-haspopup="menu"
+              aria-expanded={openPanel == "lang"}
+              isActive={openPanel == "lang"}
+              onClick={() => togglePanel("lang")}
+            >
+              <Wikis size={20} />
+            </HeaderGlobalAction>
+
+            {openPanel == "lang" && (
+              <div
+                className={styles.languageMenu}
+                role="menu"
+                aria-label={tr("nav.language")}
+              >
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={lang == "vi"}
+                  className={`${styles.languageMenuOption} ${
+                    lang == "vi" ? styles.languageMenuOptionActive : ""
+                  }`}
+                  onClick={() => handleLanguageSelect("vi")}
+                >
+                  <span className={styles.languageMenuLocale}>
+                    {"Ti\u1ebfng Vi\u1ec7t"}
+                  </span>
+                  <span className={styles.languageMenuLabel}>
+                    {"Ti\u1ebfng Vi\u1ec7t (Vietnamese)"}
+                  </span>
+                  {lang == "vi" && <Checkmark size={16} />}
+                </button>
+
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={lang == "en"}
+                  className={`${styles.languageMenuOption} ${
+                    lang == "en" ? styles.languageMenuOptionActive : ""
+                  }`}
+                  onClick={() => handleLanguageSelect("en")}
+                >
+                  <span className={styles.languageMenuLocale}>{"M\u1ef9"}</span>
+                  <span className={styles.languageMenuLabel}>English</span>
+                  {lang == "en" && <Checkmark size={16} />}
+                </button>
+              </div>
+            )}
+          </div>
 
           <HeaderGlobalAction
+            className={styles.headerGlobalAction}
             aria-label={tr("nav.notification")}
             isActive={isHeaderNotificationPanelOpen}
             onClick={() => togglePanel("notifications")}
@@ -272,15 +369,18 @@ export function PageWrapper({
           </HeaderGlobalAction>
 
           <HeaderGlobalAction
+            className={styles.headerGlobalAction}
             aria-label={tr("nav.account")}
             isActive={openPanel == "account"}
             onClick={() => {
-              if (user) {
-                togglePanel("account");
-              } else {
+              if (!user) {
                 setOpenPanel(null);
-                openAuthModal("login");
+                setIsSignInOpen(true);
+                return;
               }
+
+              setOpenPanel(null);
+              navigate("/profile");
             }}
           >
             {user?.avatarUrl ? (
@@ -290,52 +390,74 @@ export function PageWrapper({
             )}
           </HeaderGlobalAction>
 
-          <ThemeToggleGlobalAction />
+          <ThemeToggleGlobalAction className={styles.headerGlobalAction} />
         </HeaderGlobalBar>
 
         <HeaderPanel
           className={styles.headerPanel}
-          expanded={openPanel == "lang"}
+          expanded={false}
+          addFocusListeners={false}
           onHeaderPanelFocus={() => setOpenPanel(null)}
         >
-          <Switcher
-            aria-label="Language Switcher"
-            expanded={openPanel == "lang"}
+          <section
+            className={styles.languagePanelContent}
+            aria-label={tr("nav.language")}
           >
-            <SwitcherItem
-              aria-labelledby="lang-vi"
-              onClick={() => {
-                setLang("vi");
-                setOpenPanel(null);
-              }}
+            <div className={styles.languagePanelHeader}>
+              <strong>{tr("nav.language")}</strong>
+              <span>{lang === "en" ? "English" : "Tiếng Việt"}</span>
+            </div>
+
+            <div
+              className={styles.languageOptions}
+              role="radiogroup"
+              aria-label={tr("nav.language")}
             >
-              <Stack
-                orientation="horizontal"
-                gap={4}
-                style={{ alignItems: "center" }}
+              <button
+                type="button"
+                role="radio"
+                aria-checked={lang == "en"}
+                className={`${styles.languageOption} ${
+                  lang == "en" ? styles.languageOptionActive : ""
+                }`}
+                onClick={() => handleLanguageSelect("en")}
               >
-                <p>{tr("lang.vi")}</p>
-                {lang == "vi" && <Checkmark size={16} />}
-              </Stack>
-            </SwitcherItem>
-            <Divider />
-            <SwitcherItem
-              aria-labelledby="lang-en"
-              onClick={() => {
-                setLang("en");
-                setOpenPanel(null);
-              }}
-            >
-              <Stack
-                orientation="horizontal"
-                gap={4}
-                style={{ alignItems: "center" }}
+                <span className={styles.languageOptionLabel}>English</span>
+                <span className={styles.languageOptionMeta}>
+                  {lang == "en" ? (
+                    <>
+                      <Checkmark size={16} />
+                      <span>Current</span>
+                    </>
+                  ) : (
+                    <span>Switch</span>
+                  )}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                role="radio"
+                aria-checked={lang == "vi"}
+                className={`${styles.languageOption} ${
+                  lang == "vi" ? styles.languageOptionActive : ""
+                }`}
+                onClick={() => handleLanguageSelect("vi")}
               >
-                <p>{tr("lang.en")}</p>
-                {lang == "en" && <Checkmark size={16} />}
-              </Stack>
-            </SwitcherItem>
-          </Switcher>
+                <span className={styles.languageOptionLabel}>Tiếng Việt</span>
+                <span className={styles.languageOptionMeta}>
+                  {lang == "vi" ? (
+                    <>
+                      <Checkmark size={16} />
+                      <span>Current</span>
+                    </>
+                  ) : (
+                    <span>Switch</span>
+                  )}
+                </span>
+              </button>
+            </div>
+          </section>
         </HeaderPanel>
 
         <HeaderPanel
@@ -423,6 +545,7 @@ export function PageWrapper({
         )}
 
         <SideNav
+          className={styles.appSideNav}
           aria-label="Side navigation"
           expanded={isSideNavExpanded}
           isPersistent={false}
@@ -451,11 +574,11 @@ export function PageWrapper({
         id="main-content"
         className={
           isAnyExtraPanelOpen
-            ? styles.contentDimmed
+            ? `${styles.appContent} ${styles.contentDimmed}`
             : wideContent
-              ? styles.wideContent
-              : ""
-        }
+              ? `${styles.appContent} ${styles.wideContent}`
+              : styles.appContent
+          }
         style={
           {
             "--page-content-top-offset": noMarketTickers ? "0rem" : "3.5rem",

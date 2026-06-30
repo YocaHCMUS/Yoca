@@ -1,22 +1,29 @@
 @use "@carbon/react/scss/theme" as *;
-// @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-$color-success: #16c784;
-$color-danger: #ea3943;
-$divider: rgba(0, 0, 0, 0.06);
 
 .container {
   display: flex;
   flex-direction: column;
+  gap: 14px;
   width: 100%;
-  background: $background;
   box-sizing: border-box;
-  padding: 0 16px;
 }
 
-// ===== Price Header Section =====
+.priceHeader,
+.rangeSection,
+.statsSection,
+.infoSection,
+.historicalSection {
+  padding: 14px 14px 0;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-md);
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .priceHeader {
-  padding: 16px 0;
+  padding-bottom: 14px;
+  background:
+    linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(37, 99, 235, 0.05)),
+    rgba(255, 255, 255, 0.03);
 }
 
 .priceRow {
@@ -28,41 +35,44 @@ $divider: rgba(0, 0, 0, 0.06);
 
 .priceMain {
   font-size: 32px;
-  font-weight: 700;
-  color: $text-primary;
-  letter-spacing: -0.5px;
+  font-weight: 800;
+  color: var(--yoca-text-main);
+  letter-spacing: -0.04em;
 }
 
 .priceChange {
-  font-size: 18px;
-  font-weight: 600;
-
-  &.positive {
-    color: $color-success;
-  }
-
-  &.negative {
-    color: $color-danger;
-  }
-}
-
-.priceChangePeriod {
-  font-weight: 400;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--yoca-border);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--yoca-text-soft);
 }
 
 .positive {
-  color: $color-success;
-  font-weight: 600;
+  color: var(--yoca-success);
+  border-color: rgba(34, 197, 94, 0.28);
+  background: rgba(34, 197, 94, 0.08);
 }
 
 .negative {
-  color: $color-danger;
-  font-weight: 600;
+  color: var(--yoca-danger);
+  border-color: rgba(239, 68, 68, 0.28);
+  background: rgba(239, 68, 68, 0.08);
 }
 
 .neutral {
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
+}
+
+.priceChangePeriod {
   font-weight: 500;
+  color: inherit;
 }
 
 .priceBtc {
@@ -71,86 +81,81 @@ $divider: rgba(0, 0, 0, 0.06);
   gap: 6px;
   margin-top: 4px;
   font-size: 13px;
-  color: $text-helper;
+  color: var(--yoca-text-muted);
   font-weight: 400;
 }
 
 .priceBtcChange {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
 
   &.positive {
-    color: $color-success;
+    color: var(--yoca-success);
   }
 
   &.negative {
-    color: $color-danger;
+    color: var(--yoca-danger);
   }
 }
 
-// ===== 24h Range Bar =====
 .rangeSection {
-  padding: 12px 0;
-  border-bottom: 1px solid $divider;
+  padding-bottom: 14px;
 }
 
 .rangeMinMax {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
-.rangeLabel {
-  font-size: 14px;
-  font-weight: 500;
-  color: $text-primary;
-}
-
+.rangeLabel,
 .rangeValue {
-  font-size: 14px;
-  font-weight: 500;
-  color: $text-primary;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--yoca-text-soft);
 }
 
 .rangeBar {
   width: 100%;
-  height: 6px;
+  height: 8px;
   background: linear-gradient(
     to right,
-    $color-danger 0%,
-    #ffd700 50%,
-    $color-success 100%
+    rgba(239, 68, 68, 0.75) 0%,
+    rgba(245, 158, 11, 0.85) 50%,
+    rgba(34, 197, 94, 0.8) 100%
   );
-  border-radius: 3px;
+  border-radius: 999px;
   position: relative;
-  margin: 4px 0;
+  margin: 4px 0 0;
+  overflow: hidden;
 }
 
 .rangeIndicator {
   position: absolute;
-  top: -3px;
-  width: 12px;
-  height: 12px;
-  background: $text-primary;
+  top: -4px;
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
   border-radius: 50%;
-  border: 2px solid $background;
+  border: 2px solid rgba(124, 58, 237, 0.7);
   transform: translateX(-50%);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 
-// ===== Stats Rows =====
 .statsSection {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  gap: 0;
+  padding-bottom: 4px;
 }
 
 .statRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 0;
-  border-bottom: 1px solid $divider;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--yoca-border);
 
   &:last-child {
     border-bottom: none;
@@ -160,10 +165,10 @@ $divider: rgba(0, 0, 0, 0.06);
 .statLabel {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 14px;
-  font-weight: 400;
-  color: $text-secondary;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--yoca-text-muted);
   cursor: default;
 }
 
@@ -183,30 +188,29 @@ $divider: rgba(0, 0, 0, 0.06);
 }
 
 .infoIcon {
-  fill: $text-helper;
+  fill: var(--yoca-text-muted);
 
   &:hover {
-    fill: $text-primary;
+    fill: var(--yoca-text-main);
   }
 }
 
 .tooltipContent {
   position: absolute;
-  top: calc(100% + 4px);
-  left: -12px; // Align to the left to grow towards center, avoiding right screen edge overflow
+  top: calc(100% + 6px);
+  left: -12px;
   width: max-content;
   max-width: 260px;
-  background-color: $layer-01;
-  color: $text-primary;
-  border: 1px solid $border-subtle;
-  border-radius: 6px;
-  padding: 10px 14px;
-  font-size: 13px;
+  background: rgba(11, 16, 32, 0.96);
+  color: var(--yoca-text-main);
+  border: 1px solid var(--yoca-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
   font-weight: 400;
   line-height: 1.5;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--yoca-shadow-card);
   z-index: 200;
-
   opacity: 0;
   visibility: hidden;
   transition:
@@ -219,9 +223,9 @@ $divider: rgba(0, 0, 0, 0.06);
 }
 
 .statValue {
-  font-size: 14px;
-  font-weight: 600;
-  color: $text-primary;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--yoca-text-main);
   text-align: right;
 }
 
@@ -233,23 +237,20 @@ $divider: rgba(0, 0, 0, 0.06);
 
 .infinity {
   font-size: 18px;
-  font-weight: 400;
+  font-weight: 500;
 }
 
-// ===== Info Section =====
 .infoSection {
-  padding: 4px 0;
-  border-bottom: 1px solid $divider;
-  margin-bottom: 4px;
+  padding-bottom: 4px;
 }
 
 .infoRow {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 10px 0;
   gap: 12px;
-  border-bottom: 1px solid $divider;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--yoca-border);
 
   &:last-child {
     border-bottom: none;
@@ -257,9 +258,9 @@ $divider: rgba(0, 0, 0, 0.06);
 }
 
 .infoLabel {
-  font-size: 14px;
-  font-weight: 400;
-  color: $text-secondary;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--yoca-text-muted);
   flex-shrink: 0;
   padding-top: 2px;
 }
@@ -267,7 +268,7 @@ $divider: rgba(0, 0, 0, 0.06);
 .infoLink {
   font-size: 14px;
   font-weight: 500;
-  color: $link-primary;
+  color: var(--yoca-primary-2);
   text-decoration: none;
   text-align: right;
 
@@ -280,8 +281,14 @@ $divider: rgba(0, 0, 0, 0.06);
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  /* Increased gap slightly */
   justify-content: flex-end;
+}
+
+.infoBadge,
+.infoBadgeMainLink,
+.infoBadgeDropdownBtnOnly,
+.dropdownItemAnimated {
+  color: var(--yoca-text-main) !important;
 }
 
 .infoBadge {
@@ -292,23 +299,20 @@ $divider: rgba(0, 0, 0, 0.06);
   font-weight: 600;
   line-height: 16px;
   padding: 6px 10px;
-  border-radius: 8px;
-  background-color: $layer-hover-01;
-  color: $text-primary;
-  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--yoca-text-main) !important;
+  border: 1px solid var(--yoca-border);
   text-decoration: none;
   white-space: nowrap;
-  transition: background 0.15s;
-
-  /* Add distinct styling in light mode if needed, we'll rely on the theme var $layer-01 usually */
-  /* Wait, the screenshot shows it a bit gray-ish. We can use $layer-hover-01 as the base */
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 
   &[href]:hover {
-    background-color: $layer-selected-hover-01;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(124, 58, 237, 0.28);
   }
-
-  /* Override any link colors */
-  color: $text-primary !important;
 
   svg {
     fill: currentColor;
@@ -325,7 +329,8 @@ $divider: rgba(0, 0, 0, 0.06);
   padding: 0;
   background-color: transparent;
   border: none;
-  border-radius: 8px;
+  border-radius: 999px;
+  overflow: hidden;
 }
 
 .infoBadgeMainLink {
@@ -336,37 +341,38 @@ $divider: rgba(0, 0, 0, 0.06);
   font-size: 12px;
   font-weight: 600;
   line-height: 16px;
-  color: $text-primary !important;
+  color: var(--yoca-text-main) !important;
   text-decoration: none;
-  background-color: $layer-hover-01;
-  border-right: 2px solid $border-subtle;
-  border-top-left-radius: 8px;
-  border-bottom-left-radius: 8px;
-  transition: background 0.15s;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--yoca-border);
+  border-right: none;
+  border-top-left-radius: 999px;
+  border-bottom-left-radius: 999px;
+  transition: background 0.15s ease;
 
   &:hover {
-    background-color: $layer-selected-hover-01;
+    background: rgba(255, 255, 255, 0.06);
   }
 }
 
 .infoBadgeDropdownBtnOnly {
-  background-color: $layer-hover-01;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--yoca-border);
   padding: 6px 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-top-right-radius: 8px;
-  border-bottom-right-radius: 8px;
-  transition: background 0.15s;
+  border-top-right-radius: 999px;
+  border-bottom-right-radius: 999px;
+  transition: background 0.15s ease;
 
   &:hover {
-    background-color: $layer-selected-hover-01;
+    background: rgba(255, 255, 255, 0.06);
   }
 
   .chevronIcon {
-    color: $text-primary;
+    color: var(--yoca-text-main);
   }
 }
 
@@ -374,65 +380,57 @@ $divider: rgba(0, 0, 0, 0.06);
   position: absolute;
   right: 0;
   top: calc(100% + 8px);
-  background: #ffffff;
-  border: 1px solid $border-subtle;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: rgba(11, 16, 32, 0.96);
+  border: 1px solid var(--yoca-border);
+  border-radius: 14px;
+  box-shadow: var(--yoca-shadow-card);
   z-index: 100;
   padding: 8px;
   animation: dropdownFadeIn 0.1s ease-out;
   min-width: 210px;
-  /* 1.5x wider */
   max-height: 170px;
-  /* enough for 4 items (~40px each + padding) */
   overflow-y: auto;
-
-  /* Dark mode support */
-  @media (prefers-color-scheme: dark) {
-    background: $layer-01;
-  }
+  backdrop-filter: blur(18px);
 }
 
 .dropdownItemAnimated {
   display: flex;
   align-items: center;
-  padding: 10px 8px;
-  /* Slightly tighter vertical padding */
-  font-size: 13px;
-  /* Smaller font inside dropdown */
+  padding: 9px 10px;
+  font-size: 12px;
   line-height: 16px;
   font-weight: 600;
-  color: $text-secondary !important;
+  color: var(--yoca-text-soft) !important;
   text-decoration: none;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
   white-space: nowrap;
-  border-radius: 8px;
+  border-radius: 10px;
 
   &:hover {
-    background: $layer-hover-01;
-    color: $text-primary !important;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--yoca-text-main) !important;
   }
 }
 
-// ===== Historical Price Section =====
 .historicalSection {
-  padding-top: 4px;
+  padding-bottom: 4px;
 }
 
 .sectionTitle {
   font-size: 14px;
-  font-weight: 700;
-  color: $text-primary;
-  padding: 16px 0;
+  font-weight: 800;
+  color: var(--yoca-text-main);
+  padding: 14px 0 12px;
 }
 
 .historicalRow {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 16px 0;
-  border-bottom: 1px solid $divider;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--yoca-border);
 
   &:last-child {
     border-bottom: none;
@@ -440,9 +438,9 @@ $divider: rgba(0, 0, 0, 0.06);
 }
 
 .historicalLabel {
-  font-size: 14px;
-  font-weight: 400;
-  color: $text-secondary;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--yoca-text-muted);
 }
 
 .historicalValue {
@@ -453,9 +451,9 @@ $divider: rgba(0, 0, 0, 0.06);
 }
 
 .historicalPrice {
-  font-size: 14px;
-  font-weight: 600;
-  color: $text-primary;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--yoca-text-main);
 }
 
 .historicalMeta {
@@ -466,23 +464,22 @@ $divider: rgba(0, 0, 0, 0.06);
 
 .historicalChange {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
 
   &.positive {
-    color: $color-success;
+    color: var(--yoca-success);
   }
 
   &.negative {
-    color: $color-danger;
+    color: var(--yoca-danger);
   }
 }
 
 .historicalDate {
-  font-size: 13px;
-  color: $text-helper;
+  font-size: 12px;
+  color: var(--yoca-text-muted);
 }
 
-// ===== Converter Section =====
 .converterSection {
   padding-top: 4px;
 }
@@ -492,7 +489,7 @@ $divider: rgba(0, 0, 0, 0.06);
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid $divider;
+  border-bottom: 1px solid var(--yoca-border);
   gap: 8px;
 }
 
@@ -503,10 +500,9 @@ $divider: rgba(0, 0, 0, 0.06);
   outline: none;
   font-size: 16px;
   font-weight: 600;
-  color: #000;
+  color: var(--yoca-text-main);
   min-width: 0;
 
-  // Remove number input arrows
   &::-webkit-outer-spin-button,
   &::-webkit-inner-spin-button {
     -webkit-appearance: none;
@@ -521,38 +517,37 @@ $divider: rgba(0, 0, 0, 0.06);
   flex: 1;
   font-size: 16px;
   font-weight: 500;
-  color: #000;
+  color: var(--yoca-text-main);
 }
 
 .converterSymbol {
   font-size: 13px;
   font-weight: 600;
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   white-space: nowrap;
 }
 
 .converterSelect {
   background: transparent;
-  border: 1px solid $divider;
-  border-radius: 4px;
-  padding: 4px 6px;
+  border: 1px solid var(--yoca-border);
+  border-radius: 10px;
+  padding: 4px 8px;
   font-size: 13px;
   font-weight: 600;
-  color: #000;
+  color: var(--yoca-text-main);
   cursor: pointer;
   outline: none;
 
   &:hover {
-    border-color: $border-strong;
+    border-color: rgba(124, 58, 237, 0.28);
   }
 
   option {
-    background: $background;
-    color: #000;
+    background: #070a13;
+    color: var(--yoca-text-main);
   }
 }
 
-// ===== Info Section =====
 .infoSection {
   padding-top: 4px;
 }
@@ -561,8 +556,8 @@ $divider: rgba(0, 0, 0, 0.06);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 0;
-  border-bottom: 1px solid $divider;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--yoca-border);
   gap: 12px;
 
   &:last-child {
@@ -571,9 +566,9 @@ $divider: rgba(0, 0, 0, 0.06);
 }
 
 .infoLabel {
-  font-size: 14px;
-  font-weight: 400;
-  color: $text-helper;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--yoca-text-muted);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -586,81 +581,47 @@ $divider: rgba(0, 0, 0, 0.06);
   justify-content: flex-end;
 }
 
-.badge {
+.badge,
+.badgeLink,
+.badgeClickable,
+.badgeToggle {
   display: inline-flex;
   align-items: center;
   padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid $border-subtle;
-  background: $background;
+  border-radius: 999px;
+  border: 1px solid var(--yoca-border);
+  background: rgba(255, 255, 255, 0.04);
   font-size: 12px;
   font-weight: 500;
-  color: #000;
+  color: var(--yoca-text-main);
   white-space: nowrap;
 }
 
 .badgeLink {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid $border-subtle;
-  background: $background;
-  font-size: 12px;
-  font-weight: 500;
-  color: #000;
   text-decoration: none;
   cursor: pointer;
   transition: all 0.15s ease;
-  white-space: nowrap;
 
   &:hover {
-    border-color: $border-strong;
-    background: $layer-01;
+    border-color: rgba(124, 58, 237, 0.28);
+    background: rgba(255, 255, 255, 0.06);
   }
 }
 
-.badgeClickable {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid $border-subtle;
-  background: $background;
-  font-size: 12px;
-  font-weight: 500;
-  color: #000;
+.badgeClickable,
+.badgeToggle {
   cursor: pointer;
   transition: all 0.15s ease;
-  white-space: nowrap;
 
   &:hover {
-    border-color: $border-strong;
-    background: $layer-01;
+    border-color: rgba(124, 58, 237, 0.28);
+    background: rgba(255, 255, 255, 0.06);
   }
 }
 
 .badgeToggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid $border-subtle;
-  background: $background;
-  font-size: 12px;
-  font-weight: 500;
-  color: $text-secondary;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
+  color: var(--yoca-text-muted);
   user-select: none;
-
-  &:hover {
-    border-color: $border-strong;
-    background: $layer-01;
-  }
 }
 
 .chevronDown {
@@ -681,7 +642,7 @@ $divider: rgba(0, 0, 0, 0.06);
 
 .infoRowExpandable {
   position: relative;
-  border-bottom: 1px solid $divider;
+  border-bottom: 1px solid var(--yoca-border);
 
   &:last-child {
     border-bottom: none;
@@ -701,13 +662,14 @@ $divider: rgba(0, 0, 0, 0.06);
   right: 0;
   top: 100%;
   min-width: 200px;
-  background: $background;
-  border: 1px solid $border-subtle;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  background: rgba(11, 16, 32, 0.96);
+  border: 1px solid var(--yoca-border);
+  border-radius: 14px;
+  box-shadow: var(--yoca-shadow-card);
   z-index: 50;
-  padding: 4px 0;
+  padding: 6px;
   animation: dropdownFadeIn 0.15s ease;
+  backdrop-filter: blur(18px);
 }
 
 @keyframes dropdownFadeIn {
@@ -724,16 +686,18 @@ $divider: rgba(0, 0, 0, 0.06);
 
 .dropdownItem {
   display: block;
-  padding: 8px 16px;
+  padding: 8px 10px;
   font-size: 13px;
-  font-weight: 400;
-  color: #000;
+  font-weight: 500;
+  color: var(--yoca-text-soft);
   text-decoration: none;
   cursor: pointer;
-  transition: background 0.1s ease;
+  transition: background 0.1s ease, color 0.1s ease;
+  border-radius: 10px;
 
   &:hover {
-    background: $layer-01;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--yoca-text-main);
   }
 }
 
@@ -741,9 +705,29 @@ $divider: rgba(0, 0, 0, 0.06);
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  border-radius: 4px;
-  background: $layer-01;
-  font-size: 13px;
-  font-weight: 600;
-  color: $text-secondary;
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.08);
+  border: 1px solid rgba(45, 212, 191, 0.22);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--yoca-accent);
+}
+
+@media (max-width: 768px) {
+  .priceMain {
+    font-size: 28px;
+  }
+
+  .priceChange {
+    font-size: 12px;
+  }
+
+  .infoRow,
+  .historicalRow {
+    align-items: flex-start;
+  }
+
+  .statRow {
+    padding: 11px 0;
+  }
 }

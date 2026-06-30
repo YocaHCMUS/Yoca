@@ -645,8 +645,7 @@ export function TokenDetailsDemo({
       title={tr("walletPage.tokensLastTraded")}
       description={tr("walletPage.tokensLastTradedDescription")}
       rows={rows}
-      height={800}
-      stickyHeader
+      height="auto"
       enablePagination
       headers={[
         {

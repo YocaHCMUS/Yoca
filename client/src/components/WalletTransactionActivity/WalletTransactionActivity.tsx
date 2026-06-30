@@ -22,6 +22,7 @@ import { CpyBtn } from "../CpyBtn";
 import { TrendNum } from "../TrendNum";
 import { Launch } from "@carbon/icons-react";
 import { SOLSCAN_TX_URL } from "@/config/constants";
+import styles from "./WalletTransactionActivity.module.scss";
 
 type WalletSwapData = {
   transactions: {
@@ -81,7 +82,14 @@ function LowValueFilter({
   const { tr } = useLocalization();
 
   return (
-    <Flex align="center" justify="end" gap={2} pBlock={3} pInline={4}>
+    <Flex
+      className={styles.lowValueFilter}
+      align="center"
+      justify="end"
+      gap={2}
+      pBlock={3}
+      pInline={4}
+    >
       <Checkbox
         id={id}
         labelText={tr("walletPage.hideLowValue")}
@@ -314,128 +322,133 @@ export function WalletTransactionActivity({ address }: { address: string }) {
   const transferLoading = transferResp.isLoading;
 
   return (
-    <div style={{ padding: "0.5rem" }}>
-      <Tabs>
+    <div className={styles.root}>
+      <div className={styles.tabs}>
+        <Tabs>
         <TabList scrollDebounceWait={200} fullWidth contained>
           <Tab>Swaps</Tab>
           <Tab>Transfers</Tab>
         </TabList>
         <TabPanels>
           <TabPanel>
-            <Tble
-              key="swaps"
-              rows={swapRows}
-              headers={swapHeaders}
-              loading={swapLoading}
-              height={480}
-              enablePagination
-              pageSize={16}
-              stickyHeader
-              boxed
-              toolBar={
-                <LowValueFilter
-                  id="hide-low-value-swaps"
-                  checked={hideLowValue}
-                  onChange={setHideLowValue}
-                />
-              }
-              // onRowClick={(row) => {
-              //   const transaction = swapResp.data?.transactions.find(
-              //     (tx, index) =>
-              //       (tx.transactionHash || `swap-${index}`) == row.id,
-              //   );
-              //   if (!transaction) return;
+            <div className={styles.tabPanel}>
+              <Tble
+                key="swaps"
+                rows={swapRows}
+                headers={swapHeaders}
+                loading={swapLoading}
+                height="auto"
+                enablePagination
+                pageSize={16}
+                boxed
+                pageUnknown
+                toolBar={
+                  <LowValueFilter
+                    id="hide-low-value-swaps"
+                    checked={hideLowValue}
+                    onChange={setHideLowValue}
+                  />
+                }
+                onRowClick={(row) => {
+                  const transaction = swapResp.data?.transactions.find(
+                    (tx, index) =>
+                      (tx.transactionHash || `swap-${index}`) == row.id,
+                  );
+                  if (!transaction) return;
 
-              //   const soldPriceUsd = transaction.sold.priceUsd ?? 0;
-              //   const boughtPriceUsd = transaction.bought.priceUsd ?? 0;
-              //   setSelectedSwap({
-              //     transactionHash: transaction.transactionHash,
-              //     transactionType: "swap",
-              //     blockTimestampIso: new Date(
-              //       transaction.blockTimestampMs,
-              //     ).toISOString(),
-              //     subcategory: null,
-              //     walletAddress: address,
-              //     pairAddress: "",
-              //     tokensInvolved: `${transaction.sold.symbol ?? transaction.sold.address},${transaction.bought.symbol ?? transaction.bought.address}`,
-              //     sold: {
-              //       address: transaction.sold.address,
-              //       amount: transaction.sold.amount,
-              //       symbol: transaction.sold.symbol,
-              //       name: transaction.sold.name,
-              //       logoUri: transaction.sold.logoUri,
-              //       priceUsd: soldPriceUsd,
-              //       valueUsd: transaction.sold.amount * soldPriceUsd,
-              //     },
-              //     bought: {
-              //       address: transaction.bought.address,
-              //       amount: transaction.bought.amount,
-              //       symbol: transaction.bought.symbol,
-              //       name: transaction.bought.name,
-              //       logoUri: transaction.bought.logoUri,
-              //       priceUsd: boughtPriceUsd,
-              //       valueUsd: transaction.bought.amount * boughtPriceUsd,
-              //     },
-              //     totalValueUsd: transaction.totalValueUsd,
-              //     baseQuotePrice: null,
-              //   });
-              // }}
-            />
+                  const soldPriceUsd = transaction.sold.priceUsd ?? 0;
+                  const boughtPriceUsd = transaction.bought.priceUsd ?? 0;
+                  setSelectedSwap({
+                    transactionHash: transaction.transactionHash,
+                    transactionType: "swap",
+                    blockTimestampIso: new Date(
+                      transaction.blockTimestampMs,
+                    ).toISOString(),
+                    subcategory: null,
+                    walletAddress: address,
+                    pairAddress: "",
+                    tokensInvolved: `${transaction.sold.symbol ?? transaction.sold.address},${transaction.bought.symbol ?? transaction.bought.address}`,
+                    sold: {
+                      address: transaction.sold.address,
+                      amount: transaction.sold.amount,
+                      symbol: transaction.sold.symbol,
+                      name: transaction.sold.name,
+                      logoUri: transaction.sold.logoUri,
+                      priceUsd: soldPriceUsd,
+                      valueUsd: transaction.sold.amount * soldPriceUsd,
+                    },
+                    bought: {
+                      address: transaction.bought.address,
+                      amount: transaction.bought.amount,
+                      symbol: transaction.bought.symbol,
+                      name: transaction.bought.name,
+                      logoUri: transaction.bought.logoUri,
+                      priceUsd: boughtPriceUsd,
+                      valueUsd: transaction.bought.amount * boughtPriceUsd,
+                    },
+                    totalValueUsd: transaction.totalValueUsd,
+                    baseQuotePrice: null,
+                  });
+                }}
+              />
+            </div>
           </TabPanel>
 
           <TabPanel>
-            <Tble
-              key="transfers"
-              rows={transferRows}
-              headers={transferHeaders}
-              loading={transferLoading}
-              height={480}
-              enablePagination
-              pageSize={16}
-              stickyHeader
-              boxed
-              // pageUnknown
-              toolBar={
-                <LowValueFilter
-                  id="hide-low-value-transfers"
-                  checked={hideLowValue}
-                  onChange={setHideLowValue}
-                />
-              }
-              // onRowClick={(row) => {
-              //   const transaction = transferResp.data?.transactions.find(
-              //     (tx, index) =>
-              //       (tx.transactionHash || `transfer-${index}`) == row.id,
-              //   );
-              //   if (!transaction) return;
+            <div className={styles.tabPanel}>
+              <Tble
+                key="transfers"
+                rows={transferRows}
+                headers={transferHeaders}
+                loading={transferLoading}
+                height="auto"
+                enablePagination
+                pageSize={16}
+                boxed
+                pageUnknown
+                toolBar={
+                  <LowValueFilter
+                    id="hide-low-value-transfers"
+                    checked={hideLowValue}
+                    onChange={setHideLowValue}
+                  />
+                }
+                onRowClick={(row) => {
+                  const transaction = transferResp.data?.transactions.find(
+                    (tx, index) =>
+                      (tx.transactionHash || `transfer-${index}`) == row.id,
+                  );
+                  if (!transaction) return;
 
-              //   setSelectedTransfer({
-              //     from:
-              //       transaction.direction == "send"
-              //         ? address
-              //         : transaction.counterpartyAddress,
-              //     to:
-              //       transaction.direction == "send"
-              //         ? transaction.counterpartyAddress
-              //         : address,
-              //     amount: transaction.token.amount,
-              //     amountUsd: transaction.valueUsd,
-              //     timestamp: new Date(
-              //       transaction.blockTimestampMs,
-              //     ).toISOString(),
-              //     tokenAddress: transaction.token.address,
-              //     tokenSymbol: transaction.token.symbol ?? "Unknown",
-              //     tokenName: transaction.token.name ?? undefined,
-              //     tokenLogoUri: transaction.token.logoUri ?? undefined,
-              //     priceUsd: transaction.token.priceUsd ?? undefined,
-              //     transactionSignature: transaction.transactionHash,
-              //     instructionIndex: 0,
-              //   });
-              // }}
-            />
+                  setSelectedTransfer({
+                    from:
+                      transaction.direction == "send"
+                        ? address
+                        : transaction.counterpartyAddress,
+                    to:
+                      transaction.direction == "send"
+                        ? transaction.counterpartyAddress
+                        : address,
+                    amount: transaction.token.amount,
+                    amountUsd: transaction.valueUsd,
+                    timestamp: new Date(
+                      transaction.blockTimestampMs,
+                    ).toISOString(),
+                    tokenAddress: transaction.token.address,
+                    tokenSymbol: transaction.token.symbol ?? "Unknown",
+                    tokenName: transaction.token.name ?? undefined,
+                    tokenLogoUri: transaction.token.logoUri ?? undefined,
+                    priceUsd: transaction.token.priceUsd ?? undefined,
+                    transactionSignature: transaction.transactionHash,
+                    instructionIndex: 0,
+                  });
+                }}
+              />
+            </div>
           </TabPanel>
         </TabPanels>
-      </Tabs>
+        </Tabs>
+      </div>
       <SwapDetailModal
         isOpen={selectedSwap != null}
         onClose={() => setSelectedSwap(null)}
