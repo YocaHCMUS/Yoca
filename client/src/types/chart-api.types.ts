@@ -733,6 +733,7 @@ export interface WinrateResponse extends ChartResponseBase {
       /** Upper bound of bin (%) */
       max: number;
     }[];
+
   }[];
 
   /** Response metadata */

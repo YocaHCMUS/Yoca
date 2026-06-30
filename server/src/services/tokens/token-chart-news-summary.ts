@@ -98,6 +98,10 @@ function getGeminiApiKey() {
   return env.GOOGLE_AI_KEY;
 }
 
+export function isTokenChartNewsSummaryGeminiConfigured() {
+  return Boolean(getGeminiApiKey());
+}
+
 function normalizeText(value: string | null | undefined, maxLength: number) {
   return cleanArticleText(value ?? "", undefined, maxLength);
 }
@@ -532,6 +536,7 @@ function buildSummaryPrompt(
 
 export async function summarizeTokenChartNewsEvent(
   input: TokenChartNewsEventSummaryInput,
+  beforeGenerate?: () => Promise<void>,
 ): Promise<TokenChartNewsEventSummary> {
   const promptArticles = await buildArticlesForPrompt(input.articles);
   const apiKey = getGeminiApiKey();
@@ -544,6 +549,8 @@ export async function summarizeTokenChartNewsEvent(
   }
 
   try {
+    await beforeGenerate?.();
+
     const client = new GoogleGenAI({ apiKey });
     const response = await client.models.generateContent({
       model: TOKEN_CHART_NEWS_SUMMARY_MODEL,

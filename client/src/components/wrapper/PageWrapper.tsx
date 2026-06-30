@@ -117,7 +117,7 @@ export function PageWrapper({
 }: PageWrapperProps) {
   const [isSideNavExpanded, setIsSideNavExpanded] = useState(false);
   const { tr, lang, setLang } = useLocalization();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isSignInOpen, openAuthModal, closeAuthModal } = useAuth();
   const navigate = useNavigate();
   const languageMenuRef = useRef<HTMLDivElement | null>(null);
   const [openPanel, setOpenPanel] = useState<
@@ -125,21 +125,21 @@ export function PageWrapper({
   >(null);
   const location = useLocation();
   const [isExtraPanelOpen, setIsExtraHeaderPanelOpen] = useState(false);
-  const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const isHeaderNotificationPanelOpen = openPanel == "notifications";
   const isAnyExtraPanelOpen = isExtraPanelOpen || isHeaderNotificationPanelOpen;
 
   useEffect(() => {
-    if (authPopup && isSignInOpen != authPopup.isOpen)
-      setIsSignInOpen(authPopup.isOpen);
-  }, [authPopup]);
+    if (!authPopup) return;
+    if (authPopup.isOpen) openAuthModal("login");
+    else closeAuthModal();
+  }, [authPopup, closeAuthModal, openAuthModal]);
 
   useEffect(() => {
     if (authPopup && !isSignInOpen) {
       authPopup.onClose();
     }
-  }, [isSignInOpen]);
+  }, [authPopup, isSignInOpen]);
 
   // Ctrl+K / Cmd+K to open search
   useEffect(() => {
@@ -375,8 +375,7 @@ export function PageWrapper({
             onClick={() => {
               if (!user) {
                 setOpenPanel(null);
-                setIsSignInOpen(true);
-                return;
+                openAuthModal("login");
               }
 
               setOpenPanel(null);
@@ -567,7 +566,7 @@ export function PageWrapper({
         />
       )}
 
-      <SignInModal open={isSignInOpen} onClose={() => setIsSignInOpen(false)} />
+      <SignInModal open={isSignInOpen} onClose={closeAuthModal} />
       {isSearchOpen && <SearchBar onClose={() => setIsSearchOpen(false)} />}
 
       <Content

@@ -4,13 +4,15 @@ import { WalletTopbar } from "@/components/wallet/WalletTopbar/WalletTopbar.tsx"
 import { WalletHero } from "@/components/wallet/WalletHero/WalletHero.tsx";
 import { WalletHoldingsPanel } from "@/components/wallet/WalletHoldingsPanel/WalletHoldingsPanel.tsx";
 import { RightSidebar } from "./RightSidebar.tsx";
-import { WalletChat, ChatContextProvider } from "@/components/wallet/WalletChat";
+import {
+  WalletChat,
+  ChatContextProvider,
+} from "@/components/wallet/WalletChat";
 import { AiAnalysisModal } from "@/components/wallet/AiAnalysisModal/AiAnalysisModal.tsx";
-import { tableHeaderLabel } from "@/components/tables/Table.tsx";
 import { useWalletWinrate } from "@/hooks/useWalletWinrate";
 import {
-  WalletReportTemplate,
-  type WalletReportSection,
+    WalletReportTemplate,
+    type WalletReportSection,
 } from "@/components/WalletReportTemplate";
 import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
@@ -19,41 +21,41 @@ import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { useExportReport } from "@/hooks/useExportReport.ts";
 import { useGet } from "@/hooks/useGet";
 import {
-  fetchWalletSwaps,
-  fetchWalletTransfers,
-  fetchWalletPortfolio,
-  fetchWalletOverview,
-  fetchWalletIntelligence,
-  type WalletSwap,
-  type WalletTransfer,
-  type WalletPortfolioItem,
-  type WalletIntelligenceResponse,
-  type WalletOverviewMultiPeriodResponse,
-  type WalletPageInfo,
+    fetchWalletSwaps,
+    fetchWalletTransfers,
+    fetchWalletPortfolio,
+    fetchWalletOverview,
+    fetchWalletIntelligence,
+    type WalletSwap,
+    type WalletTransfer,
+    type WalletPortfolioItem,
+    type WalletIntelligenceResponse,
+    type WalletOverviewMultiPeriodResponse,
+    type WalletPageInfo,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
-import { Close } from "@carbon/icons-react";
+import { AiGenerate, Close } from "@carbon/icons-react";
 import { Button } from "@carbon/react";
 import JSZip from "jszip";
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
 import { useParams } from "react-router";
 import * as XLSX from "xlsx";
 import {
-  buildPortfolioMetaMap,
-  mapPortfolioItems,
+    buildPortfolioMetaMap,
+    mapPortfolioItems,
 } from "../../util/wallet-portfolio-mapper.ts";
 import styles from "./index.module.scss";
 import {
-  TokenAverageTradePrice,
-  TokenDetailsDemo,
+    TokenAverageTradePrice,
+    TokenDetailsDemo,
 } from "./TokenDetailsDemo.tsx";
 // import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
@@ -62,10 +64,23 @@ import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivi
 import { AiSwapSummaryModal } from "@/components/wallet/AiSwapSummaryModal";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
 import type { WalletOverviewPeriodKey } from "@/services/wallet/walletApi.ts";
-import { TimePeriod } from "@/types/chart-filters.types.ts";
 import { WalletTransactionActivity } from "@/components/WalletTransactionActivity/WalletTransactionActivity";
 
 type ChatPosition = "right" | "left" | "fullscreen";
+
+function isEditableShortcutTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  const tagName = target.tagName.toLowerCase();
+  return (
+    target.isContentEditable ||
+    tagName === "input" ||
+    tagName === "textarea" ||
+    tagName === "select"
+  );
+}
 
 function chunkArray<T>(items: T[], size: number): T[][] {
   if (size <= 0 || items.length === 0) {
@@ -146,7 +161,7 @@ export default function WalletPage() {
 
   const { stats, loading } = useWalletWinrate(
     walletAddress,
-    selectedPeriod === "All" ? "90D" : selectedPeriod,
+    selectedPeriod,
   );
   const [selectedToken, setSelectedToken] = useState<{
     address: string;
@@ -360,7 +375,24 @@ export default function WalletPage() {
         setWalletTags([]);
       });
   }, [address]);
+  useEffect(() => {
+    const handleChatShortcut = (event: globalThis.KeyboardEvent) => {
+      if (
+        event.repeat ||
+        !event.shiftKey ||
+        event.code !== "Slash" ||
+        isEditableShortcutTarget(event.target)
+      ) {
+        return;
+      }
 
+      event.preventDefault();
+      setIsChatOpen(true);
+    };
+
+    window.addEventListener("keydown", handleChatShortcut);
+    return () => window.removeEventListener("keydown", handleChatShortcut);
+  }, []);
   const loadPortfolioData = useCallback(async (): Promise<
     WalletPortfolioItem[]
   > => {
@@ -591,10 +623,11 @@ export default function WalletPage() {
         fmt.datetime.relativeShort(transfer.timestamp, true),
         transfer.from,
         transfer.to,
-        `${typeof transfer.tokenSymbol === "string" &&
+        `${
+          typeof transfer.tokenSymbol === "string" &&
           transfer.tokenSymbol.trim().length > 0
-          ? transfer.tokenSymbol
-          : "Unknown"
+            ? transfer.tokenSymbol
+            : "Unknown"
         } (${fmt.num.decimal(transfer.amount)})`,
         transfer.amountUsd != null ? fmt.num.currency(transfer.amountUsd) : "—",
       ]);
@@ -928,10 +961,11 @@ export default function WalletPage() {
           fmt.datetime.relativeShort(transfer.timestamp, true),
           transfer.from,
           transfer.to,
-          `${typeof transfer.tokenSymbol === "string" &&
+          `${
+            typeof transfer.tokenSymbol === "string" &&
             transfer.tokenSymbol.trim().length > 0
-            ? transfer.tokenSymbol
-            : "Unknown"
+              ? transfer.tokenSymbol
+              : "Unknown"
           } (${fmt.num.decimal(transfer.amount)})`,
         ])}
         chunkSize={PDF_TABLE_ROWS_PER_PAGE}
@@ -970,8 +1004,33 @@ export default function WalletPage() {
     <PageWrapper
       noMarketTickers
       wideContent
+      extraHeaderPanel={{
+        isOpen: !!selectedToken,
+        content: selectedToken && (
+          <>
+            <TokenAverageTradePrice
+              walletAddress={address}
+              tokenAddress={selectedToken.address}
+              tokenImgUrl={
+                tokenMeta.data?.[selectedToken.address]?.imageUrl || null
+              }
+              tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
+              tokenSymbol={
+                tokenMeta.data?.[selectedToken.address]?.symbol || null
+              }
+              tokenCurrentPrice={
+                tokenMarket.data?.[selectedToken.address]?.priceUsd || null
+              }
+              avgBuyPrice={selectedToken.avgBuyCost}
+              avgSellPrice={selectedToken.avgSellCost}
+            />
+          </>
+        ),
+        size: "lg",
+        onClose: () => setSelectedToken(null),
+      }}
     >
-      <div className={styles.pageLayout}>
+      <div className={`${styles.pageLayout}${isRightSidebarOpen ? ` ${styles.rightSidebarExpanded}` : ''}`}>
         <div className={styles.shell}>
           <section className={styles.pageIntro}>
             <div className={styles.pageEyebrow}>Wallet Intelligence</div>
@@ -995,17 +1054,15 @@ export default function WalletPage() {
               isPagePdfExporting || isDataExporting || isChartsExporting
             }
             currentPeriod={selectedPeriod}
-            winRatePeriod={selectedPeriod === "All" ? "90D" : selectedPeriod}
             onPeriodChange={(period) => setSelectedPeriod(period)}
-            winRateStats={stats}
-            winRateLoading={loading}
-            isAiChatDocked={isChatOpen && chatPosition !== "fullscreen"}
           />
 
           <WalletHero
             overview={overviewReport}
             selectedPeriod={selectedPeriod}
             loading={false}
+            winRateStats={stats}
+            winRateLoading={loading}
           />
 
           <div className={styles.body}>
@@ -1026,7 +1083,6 @@ export default function WalletPage() {
               <div className={styles.section}>
                 <PnLChart
                   minHeight={324}
-                  autoRefresh
                   initialFilters={{ wallets: [walletAddress] }}
                   onDayClick={(_wallet, ts) => {
                     setDayPopupTimestamp(ts);
@@ -1056,18 +1112,23 @@ export default function WalletPage() {
           </section>
         </div>
 
-        {/* Layout-integrated chat panel (right/left dock) */}
-        <ChatContextProvider addresses={[walletAddress]} contextType="wallet" lang={lang}>
-          {isChatOpen && chatPosition !== "fullscreen" && (
-            <div
-              className={styles.chatInline}
-              data-side={chatPosition}
-              data-open={true}
+        {/* Modal chat panel (right/left dock + fullscreen) */}
+        <ChatContextProvider
+          addresses={[walletAddress]}
+          contextType="wallet"
+          lang={lang}
+        >
+          {!isChatOpen && (
+            <button
+              type="button"
+              className={styles.chatLauncher}
+              onClick={() => setIsChatOpen(true)}
+              title="Shift + /"
             >
-              <div className={styles.chatInlineInner}>
-                <WalletChat variant="sidebar" chatPosition={chatPosition} onChatPositionChange={setChatPosition} />
-              </div>
-            </div>
+              <AiGenerate size={18} />
+              <span>{tr("chat.launcherLabel")}</span>
+              <kbd>Shift /</kbd>
+            </button>
           )}
 
           <RightSidebar
@@ -1076,12 +1137,15 @@ export default function WalletPage() {
             onChatToggle={() => setIsChatOpen((v) => !v)}
           />
 
-          {/* Fullscreen overlay */}
-          {isChatOpen && chatPosition === "fullscreen" && (
-            <div className={styles.chatOverlay} data-position="fullscreen">
-              <div className={styles.chatBackdrop} onClick={() => setIsChatOpen(false)} />
+          {isChatOpen && (
+            <div className={styles.chatOverlay} data-position={chatPosition}>
               <div className={styles.chatPanel}>
-                <WalletChat variant="sidebar" chatPosition={chatPosition} onChatPositionChange={setChatPosition} />
+                <WalletChat
+                  variant="sidebar"
+                  chatPosition={chatPosition}
+                  onChatPositionChange={setChatPosition}
+                  onRequestClose={() => setIsChatOpen(false)}
+                />
               </div>
             </div>
           )}
@@ -1218,7 +1282,6 @@ export default function WalletPage() {
           </div>
         </div>
       )}
-
     </PageWrapper>
   );
 }

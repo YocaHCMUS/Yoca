@@ -1,3 +1,5 @@
+import { AIFeature } from "@/services/tokenAiChat";
+
 export type VolatilitySeverity = "medium" | "high" | "extreme";
 export type RelatedNewsConfidence = "high" | "medium" | "low";
 export type VolatilityTimeframe = "24h" | "daily";
@@ -39,8 +41,20 @@ export interface VolatilitySummary {
   provider?: string;
 }
 
+export interface VolatilityAiUsage {
+  feature: AIFeature;
+  tier: "Free" | "Lite" | "Plus" | "Pro";
+  limit: number;
+  used: number;
+  remaining: number;
+  resetsAt: string;
+  disabled?: boolean;
+}
+
 export interface VolatilitySignalResponse {
   success: boolean;
+  usage?: VolatilityAiUsage;
+  counted?: boolean;
   data: {
     token: {
       address: string;

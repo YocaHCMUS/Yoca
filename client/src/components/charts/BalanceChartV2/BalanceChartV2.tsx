@@ -110,15 +110,18 @@ export function BalanceChartV2({
         const forSort = [...data];
         forSort.sort((a, b) => {
           if (a.valueUsd > b.valueUsd) {
-            return 1;
-          }
-          if (a.valueUsd < b.valueUsd) {
             return -1;
           }
-          if (a.amount > b.amount) {
+          if (a.valueUsd < b.valueUsd) {
             return 1;
           }
-          return -1;
+          if (a.amount > b.amount) {
+            return -1;
+          }
+          if (a.amount < b.amount) {
+            return 1;
+          }
+          return 0;
         });
         return forSort;
       },

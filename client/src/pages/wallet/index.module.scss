@@ -5,6 +5,11 @@
 }
 
 .pageLayout {
+  --chat-panel-top-offset: calc(3.5rem + 16px);
+  --chat-panel-right-offset: 96px;
+  --chat-panel-left-offset: 16px;
+  --chat-panel-bottom-offset: 16px;
+  --chat-launcher-offset: 56px;
   display: flex;
   width: 100%;
   height: calc(100vh - 3.5rem);
@@ -15,6 +20,11 @@
     radial-gradient(circle at top left, rgba(124, 58, 237, 0.14), transparent 28%),
     radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 30%),
     linear-gradient(180deg, var(--yoca-bg, #070a13) 0%, var(--yoca-bg-soft, #0b1020) 100%);
+
+  &.rightSidebarExpanded {
+    --chat-panel-right-offset: 356px;
+    --chat-launcher-offset: 316px;
+  }
 }
 
 .shell {
@@ -337,47 +347,137 @@
   box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.32));
 }
 
-.chatOverlay {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: 60;
-  display: flex;
+.chatLauncher {
+  position: fixed;
+  right: var(--chat-launcher-offset);
+  bottom: 24px;
+  z-index: 70;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  max-width: min(320px, calc(100% - 88px));
+  padding: 0 12px;
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+  border-radius: 12px;
+  background: var(--yoca-surface-elevated, rgba(24, 31, 48, 0.92));
+  color: var(--yoca-text-main, #f8fafc);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  backdrop-filter: blur(18px);
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
 
-  &[data-position='fullscreen'] {
-    left: 0;
-    right: 0;
+  &:hover {
+    background: rgba(124, 58, 237, 0.16);
+    border-color: rgba(124, 58, 237, 0.3);
+    transform: translateY(-1px);
+  }
+
+  kbd {
+    flex-shrink: 0;
+    padding: 2px 6px;
+    border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+    border-radius: 6px;
+    color: var(--yoca-text-muted, #94a3b8);
+    background: rgba(255, 255, 255, 0.04);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    font-weight: 500;
   }
 }
 
-.chatBackdrop {
-  position: absolute;
+.chatOverlay {
+  position: fixed;
   inset: 0;
-  background: rgba(3, 6, 14, 0.68);
-  backdrop-filter: blur(10px);
+  z-index: 80;
+  pointer-events: none;
+}
+
+.chatOverlay[data-position="right"] .chatPanel {
+  top: var(--chat-panel-top-offset);
+  right: var(--chat-panel-right-offset);
+  bottom: var(--chat-panel-bottom-offset);
+  width: min(460px, calc(100% - var(--chat-panel-right-offset) - 32px));
+}
+
+.chatOverlay[data-position="left"] .chatPanel {
+  top: var(--chat-panel-top-offset);
+  bottom: var(--chat-panel-bottom-offset);
+  left: var(--chat-panel-left-offset);
+  width: min(460px, calc(100% - 48px));
+}
+
+.chatOverlay[data-position="fullscreen"] .chatPanel {
+  top: var(--chat-panel-top-offset);
+  right: 24px;
+  bottom: 24px;
+  left: 24px;
+  width: calc(100% - 48px);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.chatBackdrop {
+  position: fixed;
+  inset: 0;
   z-index: 0;
+  background: transparent;
+  pointer-events: none;
 }
 
 .chatPanel {
-  position: absolute;
-  inset: 0;
+  position: fixed;
   z-index: 1;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: transparent;
+  pointer-events: auto;
+  animation: chatPanelReveal 0.22s ease-out;
 
   .chatOverlay[data-position='fullscreen'] & {
-    inset: 24px;
-    border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
-    border-radius: 22px;
     background:
       linear-gradient(180deg, rgba(124, 58, 237, 0.06), rgba(255, 255, 255, 0.02)),
       var(--yoca-surface-elevated, rgba(24, 31, 48, 0.92));
+    border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+    border-radius: 22px;
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
-    max-width: 960px;
-    margin: 0 auto;
-    width: calc(100% - 48px);
-    overflow: hidden;
+  }
+}
+
+@keyframes chatPanelReveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .chatLauncher {
+    right: 52px;
+    bottom: 16px;
+  }
+
+  .chatOverlay[data-position="right"] .chatPanel,
+  .chatOverlay[data-position="left"] .chatPanel,
+  .chatOverlay[data-position="fullscreen"] .chatPanel {
+    top: 12px;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+    margin: 0;
   }
 }
 

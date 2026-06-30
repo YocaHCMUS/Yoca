@@ -1,10 +1,12 @@
-import { useCallback, useContext, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
-import { Add, ChevronDown, Maximize, OpenPanelLeft, OpenPanelRight, Playlist, Send, TrashCan } from "@carbon/icons-react";
+import { Add, ChevronDown, Close, Maximize, OpenPanelLeft, OpenPanelRight, Playlist, Send, TrashCan } from "@carbon/icons-react";
 import { WalletChatMessage } from "./WalletChatMessage";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
 import { ChatPromptMenu } from "./ChatPromptMenu";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { useUserTheme } from "@/contexts/ThemeContext";
 import type { LangKeys } from "@/config/localization";
 import type { ChatSessionContextType } from "./useChatSessions";
 import type { ChatMessageItem } from "./types";
@@ -13,6 +15,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ChatContext, ChatContextProvider, MAX_INPUT_LENGTH, useChatContext } from "./ChatContext";
 
 const MAX_QUICK_QUESTIONS = 5;
+const SESSION_MENU_WIDTH = 320;
+const SESSION_MENU_MAX_HEIGHT = 300;
+const SESSION_MENU_OFFSET = 4;
+const VIEWPORT_PADDING = 8;
 
 interface Props {
   address?: string;
@@ -22,21 +28,26 @@ interface Props {
   chatPosition: "right" | "left" | "fullscreen";
   onChatPositionChange: (position: "right" | "left" | "fullscreen") => void;
   contextType?: ChatSessionContextType;
+  onRequestClose?: () => void;
 }
 
-function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAddresses }: {
+function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAddresses, onRequestClose }: {
   variant: "widget" | "sidebar";
   chatPosition: "right" | "left" | "fullscreen";
   onChatPositionChange: (position: "right" | "left" | "fullscreen") => void;
   walletAddresses: string[];
+  onRequestClose?: () => void;
 }) {
   const { tr, fmt } = useLocalization();
+  const { themeRef } = useUserTheme();
   const { user, isUserLoading } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(variant === "sidebar");
   const [isMinimized, setIsMinimized] = useState(false);
+  const [sessionDropdownStyle, setSessionDropdownStyle] = useState<CSSProperties>();
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const sessionToggleRef = useRef<HTMLButtonElement>(null);
   const sessionMenuRef = useRef<HTMLDivElement>(null);
   const [activeMessageContext, setActiveMessageContext] = useState<ChatMessageItem["context"] | null>(null);
 
@@ -45,6 +56,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
     inputText,
     isLoading,
     error,
+    usage,
     showPromptMenu,
     showSessionMenu,
     sessions,
@@ -83,17 +95,47 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
     el.style.height = Math.min(el.scrollHeight, maxHeight) + "px";
   }, [inputText]);
 
+  const updateSessionDropdownPosition = useCallback(() => {
+    const toggle = sessionToggleRef.current;
+    if (!toggle) return;
+
+    const rect = toggle.getBoundingClientRect();
+    const maxLeft = window.innerWidth - SESSION_MENU_WIDTH - VIEWPORT_PADDING;
+    const maxTop = window.innerHeight - SESSION_MENU_MAX_HEIGHT - VIEWPORT_PADDING;
+
+    setSessionDropdownStyle({
+      left: Math.max(VIEWPORT_PADDING, Math.min(rect.right - SESSION_MENU_WIDTH, maxLeft)),
+      top: Math.max(VIEWPORT_PADDING, Math.min(rect.bottom + SESSION_MENU_OFFSET, maxTop)),
+      width: SESSION_MENU_WIDTH,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!showSessionMenu) return;
+    updateSessionDropdownPosition();
+  }, [showSessionMenu, chatPosition, updateSessionDropdownPosition]);
+
   useEffect(() => {
     if (!showSessionMenu) return;
-    const handler = (e: MouseEvent) => {
-      if (sessionMenuRef.current && !sessionMenuRef.current.contains(e.target as Node)) {
-        setShowSessionMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showSessionMenu, setShowSessionMenu]);
 
+    const handlePointerDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (sessionMenuRef.current?.contains(target) || sessionToggleRef.current?.contains(target)) {
+        return;
+      }
+      setShowSessionMenu(false);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("resize", updateSessionDropdownPosition);
+    window.addEventListener("scroll", updateSessionDropdownPosition, true);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("resize", updateSessionDropdownPosition);
+      window.removeEventListener("scroll", updateSessionDropdownPosition, true);
+    };
+  }, [showSessionMenu, setShowSessionMenu, updateSessionDropdownPosition]);
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -125,6 +167,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
     trimmedInput.length === 0 ? null
       : trimmedInput.length > MAX_INPUT_LENGTH ? tr("chat.inputOverLimit", { max: MAX_INPUT_LENGTH })
         : null;
+  const quotaExhausted = usage?.disabled ? false : usage?.remaining === 0;
 
   // ─── Auth gate ───────────────────────────────────────────────────────
   const getMessageContext = useCallback((msg?: ChatMessageItem): NonNullable<ChatMessageItem["context"]> => {
@@ -356,7 +399,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
   };
 
   const renderSessionMenu = () => (
-    <div ref={sessionMenuRef} className={styles.sessionDropdown}>
+    <div ref={sessionMenuRef} className={styles.sessionDropdown} style={sessionDropdownStyle}>
       <div className={styles.sessionDropdownTitle}>{tr("chat.sessions")}</div>
       {sessions.length === 0 && (
         <div className={styles.sessionEmpty}>{tr("chat.noSessions")}</div>
@@ -395,6 +438,9 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
   );
 
   const wrapperClass = variant === "sidebar" ? styles.sidebarContainer : styles.widgetContainer;
+  const sessionMenu = showSessionMenu
+    ? themeRef.current ? createPortal(renderSessionMenu(), themeRef.current) : renderSessionMenu()
+    : null;
 
   return (
     <div className={wrapperClass}>
@@ -405,6 +451,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
         <div className={styles.headerActions}>
           <div className={styles.sessionSelector}>
             <button
+              ref={sessionToggleRef}
               type="button"
               className={styles.sessionToggle}
               onClick={() => setShowSessionMenu((v) => !v)}
@@ -414,7 +461,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
               </span>
               <ChevronDown size={12} />
             </button>
-            {showSessionMenu && renderSessionMenu()}
+            {sessionMenu}
           </div>
           <button
             className={styles.headerBtn}
@@ -448,6 +495,17 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
           >
             <Add size={16} />
           </button>
+          {onRequestClose && (
+            <button
+              type="button"
+              onClick={onRequestClose}
+              className={styles.headerBtn}
+              aria-label={tr("chat.close")}
+              title={tr("chat.close")}
+            >
+              <Close size={16} />
+            </button>
+          )}
           {variant === "widget" && (
             <>
               <button
@@ -484,13 +542,15 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={tr("chat.inputPlaceholder")}
-            disabled={isLoading}
+            disabled={isLoading || quotaExhausted}
             className={styles.inputTextarea}
             rows={3}
           />
           <div className={styles.inputFooter}>
             <span className={styles.charCount}>
-              {tr("chat.inputCounter", { current: String(inputText.length), max: MAX_INPUT_LENGTH })}
+              {usage && !usage.disabled
+                ? `${usage.remaining}/${usage.limit} chats left today`
+                : tr("chat.inputCounter", { current: String(inputText.length), max: MAX_INPUT_LENGTH })}
             </span>
             <div className={styles.inputActions}>
               <button
@@ -505,7 +565,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
               <button
                 type="button"
                 onClick={() => sendQuery(inputText)}
-                disabled={isLoading || !inputText.trim() || inputText.length > MAX_INPUT_LENGTH}
+                disabled={isLoading || quotaExhausted || !inputText.trim() || inputText.length > MAX_INPUT_LENGTH}
                 className={styles.iconBtn}
               >
                 <Send size={16} />
@@ -516,16 +576,21 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
         {inputText.length > 0 && inputValidationError && (
           <div className={styles.validationError}>{inputValidationError}</div>
         )}
+        {quotaExhausted && (
+          <div className={styles.validationError}>
+            Daily AI chat limit reached. <a href="/pricing">Upgrade plan</a>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-export function WalletChat({ address, addresses, lang, variant = "widget", chatPosition, onChatPositionChange, contextType: contextTypeProp }: Props) {
+export function WalletChat({ address, addresses, lang, variant = "widget", chatPosition, onChatPositionChange, contextType: contextTypeProp, onRequestClose }: Props) {
   const existingCtx = useContext(ChatContext);
 
   if (existingCtx) {
-    return <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} walletAddresses={existingCtx.addresses} />;
+    return <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} walletAddresses={existingCtx.addresses} onRequestClose={onRequestClose} />;
   }
 
   const activeAddresses = [address, ...(addresses ?? [])].filter(Boolean) as string[];
@@ -533,7 +598,7 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
 
   return (
     <ChatContextProvider addresses={activeAddresses} contextType={contextType} lang={lang}>
-      <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} walletAddresses={activeAddresses} />
+      <WalletChatInner variant={variant} chatPosition={chatPosition} onChatPositionChange={onChatPositionChange} walletAddresses={activeAddresses} onRequestClose={onRequestClose} />
     </ChatContextProvider>
   );
 }

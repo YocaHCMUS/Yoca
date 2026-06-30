@@ -9,17 +9,20 @@ import { roundUsd } from "./walletNormalization.utils.js";
 import { getWalletTransfers } from "./walletTransfersSwaps.service.js";
 import { getWalletOverview } from "./walletOverview.service.js";
 import { db } from "@sv/db/index.js";
-import {
-    walletBalanceMonthHistory,
-    walletBalanceWeekHistory,
-} from "@sv/db/schema.js";
+import { walletBalanceHistory } from "@sv/db/schema.js";
 import { and, between, eq } from "drizzle-orm";
-import * as zrn from "@sv/util/util-zerion.js";
-import { zrn_WalletBalanceChartSchema } from "../_types/wallet-raw-responses.js";
+import * as mobula from "@sv/util/util-mobula.js";
+import { mbl_WalletHistorySchema } from "../_types/wallet-raw-responses.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import dayjs from "dayjs";
-import { WALLET_BALANCE_HISTORY_CACHE_TTL_MS } from "@sv/config/constants.js";
+import {
+    DAY_MS,
+    WALLET_BALANCE_HISTORY_FETCH_TIMEOUT_MS,
+    WALLET_BALANCE_HISTORY_STORED_TTL_MS,
+    MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS,
+} from "@sv/config/constants.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
+import { excluded } from "@sv/util/orm-sql.js";
 
 /**
  * Get UTC start-of-day timestamp (ms) for a given timestamp.
@@ -140,86 +143,137 @@ type WalletBalanceHistory =
 export async function getWalletBalanceHistory(
   address: string,
   timePeriod: WalletTimePeriod = "30D",
+  _fromMs?: number,
+  _toMs?: number,
 ): Promise<WalletBalanceHistory> {
   // TODO: enforce this
-  const toZrnChartPeriod: Record<any, "week" | "month"> = {
+  const toBalanceChartPeriod: Record<string, "week" | "month"> = {
     "7D": "week",
     "30D": "month",
   };
-  const zrnPeriod = toZrnChartPeriod[timePeriod];
+  const balanceChartPeriod = toBalanceChartPeriod[timePeriod] ?? "month";
 
-  const nowUtc = dayjs.utc();
-  const end = nowUtc.valueOf();
-  const start = nowUtc.subtract(1, zrnPeriod).valueOf();
-  const thresholdDateMs = end - WALLET_BALANCE_HISTORY_CACHE_TTL_MS;
-
-  const balanceTable =
-    zrnPeriod == "week" ? walletBalanceWeekHistory : walletBalanceMonthHistory;
+  const end = dayjs.utc().valueOf() - MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS;
+  const start = dayjs.utc(end).subtract(1, balanceChartPeriod).valueOf();
+  const storedThresholdMs = end - WALLET_BALANCE_HISTORY_STORED_TTL_MS;
+  const expectedDailyPoints = balanceChartPeriod == "week" ? 7 : 30;
+  const minCoveragePoints = Math.max(1, expectedDailyPoints - 2);
 
   const res = await db
     .select()
-    .from(balanceTable)
+    .from(walletBalanceHistory)
     .where(
       and(
-        eq(balanceTable.address, address),
-        between(balanceTable.timestampMs, start, end),
+        eq(walletBalanceHistory.address, address),
+        between(walletBalanceHistory.timestampMs, start, end),
       ),
     )
-    .orderBy(balanceTable.timestampMs);
+    .orderBy(walletBalanceHistory.timestampMs);
 
-  if (res.length == 0 || res[res.length - 1].timestampMs < thresholdDateMs) {
-    return fetchWalletBalanceHistory(address, zrnPeriod);
+  if (res.length == 0) {
+    return fetchWalletBalanceHistory(address, start, end);
   }
 
-  return normalizeByDay(
+  const storedPoints = normalizeByDay(
     res.map((point) => ({
       timestampMs: point.timestampMs,
       usdValue: point.usdValue,
     })),
   );
+  const firstStoredPoint = storedPoints[0];
+  const lastStoredPoint = storedPoints[storedPoints.length - 1];
+  const newestStoredUpdateMs = res.reduce((latest, point) => {
+    const updatedAtMs = point.updatedAtMs ?? 0;
+    return updatedAtMs > latest ? updatedAtMs : latest;
+  }, 0);
+  const hasRangeCoverage =
+    firstStoredPoint != null &&
+    lastStoredPoint != null &&
+    firstStoredPoint.timestampMs <= start + DAY_MS &&
+    storedPoints.length >= minCoveragePoints;
+  const hasFreshTail =
+    lastStoredPoint != null && lastStoredPoint.timestampMs >= end - DAY_MS;
+  const storedUpdatedRecently = newestStoredUpdateMs >= storedThresholdMs;
+
+  if (hasRangeCoverage && hasFreshTail && storedUpdatedRecently) {
+    return storedPoints;
+  }
+
+  if (hasRangeCoverage && lastStoredPoint != null) {
+    const partialStart = Math.max(start, lastStoredPoint.timestampMs - DAY_MS);
+    const fetched = await fetchWalletBalanceHistory(
+      address,
+      partialStart,
+      end,
+    );
+    if (!fetched) {
+      return storedPoints;
+    }
+
+    return normalizeByDay([...storedPoints, ...fetched]);
+  }
+
+  return fetchWalletBalanceHistory(address, start, end);
 }
 
 async function fetchWalletBalanceHistory(
   address: string,
-  timePeriod: "week" | "month",
+  startMs: number,
+  endMs: number,
 ): Promise<WalletBalanceHistory> {
-  const url = zrn.getEndpoint(`/wallets/${address}/charts/${timePeriod}`);
-  const req = new URL(url);
-  req.search = new URLSearchParams({
-    currency: "usd",
-    "filter[positions]": "only_simple",
-    "filter[chain_ids]": "solana",
+  const endpoint = mobula.getEndpoint("/1/wallet/history");
+  endpoint.search = new URLSearchParams({
+    wallet: address,
+    blockchains: "solana:solana",
+    from: String(startMs),
+    to: String(endMs),
+    period: "1d",
+    filterSpam: "true",
+    unlistedAssets: "false",
   }).toString();
 
-  const resp = await rlFetch(req, {
+  const resp = await rlFetch(endpoint, {
     method: "GET",
-    headers: zrn.getRequiredHeaders(),
-    rlLimiter: zrn.limiter
+    headers: mobula.getRequiredHeaders(),
+    rlLimiter: mobula.limiter,
+    rlTimeoutMs: WALLET_BALANCE_HISTORY_FETCH_TIMEOUT_MS,
   });
 
-  const res = await getTrackedApiResult(zrn_WalletBalanceChartSchema, resp);
+  const res = await getTrackedApiResult(mbl_WalletHistorySchema, resp);
   if (!res) {
     return null;
   }
 
-  const insertValues = res.data.attributes.points.map((point) => ({
-    address: address,
-    // s -> ms
-    timestampMs: point[0] * 1000,
-    usdValue: point[1] * 1000,
-  }));
-
-  const balanceTable =
-    timePeriod == "week" ? walletBalanceWeekHistory : walletBalanceMonthHistory;
-
-  await db.insert(balanceTable).values(insertValues).onConflictDoNothing();
-
-  return normalizeByDay(
-    insertValues.map((point) => ({
-      usdValue: point.usdValue,
-      timestampMs: point.timestampMs,
+  const fetchedAtMs = dayjs.utc().valueOf();
+  // Mobula period defines the baseline grid only. Balance-changing transfers
+  // are returned as extra points, so high-activity wallets can still produce
+  // very large responses. Keep the latest point per UTC day before storing.
+  const normalizedPoints = normalizeByDay(
+    res.data.balance_history.map((point) => ({
+      timestampMs: point[0],
+      usdValue: point[1],
     })),
   );
+  const insertValues = normalizedPoints.map((point) => ({
+    address: address,
+    timestampMs: point.timestampMs,
+    usdValue: point.usdValue,
+    updatedAtMs: fetchedAtMs,
+  }));
+
+  if (insertValues.length == 0) {
+    return [];
+  }
+
+  await db.insert(walletBalanceHistory).values(insertValues).onConflictDoUpdate({
+    target: [walletBalanceHistory.address, walletBalanceHistory.timestampMs],
+    set: {
+      usdValue: excluded(walletBalanceHistory.usdValue),
+      updatedAtMs: excluded(walletBalanceHistory.updatedAtMs),
+    },
+  });
+
+  return normalizedPoints;
 }
 
 // Group data points by UTC day, keeping only the latest point per day.
@@ -242,14 +296,16 @@ function normalizeByDay(
 export async function getCumulativePnL(
   address: string,
   timePeriod: WalletTimePeriod = "30D",
+  fromMs?: number,
+  toMs?: number,
 ): Promise<WalletCumulativePnLResult> {
-  const rangeSec = resolveWalletTimeRangeSec(timePeriod);
-  const fromMs = rangeSec.fromSec * 1000;
-  const toMs = rangeSec.toSec * 1000;
+  const nowMs = Date.now();
+  const effectiveFromMs = fromMs ?? getRangeStartMs(toMs ?? nowMs, timePeriod);
+  const effectiveToMs = toMs ?? nowMs;
 
   try {
     // Get balance history and build daily anchors
-    const balanceHistory = await getWalletBalanceHistory(address, timePeriod);
+    const balanceHistory = await getWalletBalanceHistory(address, timePeriod, effectiveFromMs, effectiveToMs);
 
     // get Current balance
     const currentBalance = (await getWalletOverview(address)).holdings
@@ -276,8 +332,8 @@ export async function getCumulativePnL(
     // Compute daily net inflow
     const dailyNetInflowMap = await computeDailyNetInflow(
       address,
-      fromMs,
-      toMs,
+      effectiveFromMs,
+      effectiveToMs,
     );
     // console.log("[getCumulativePnL] dailyNetInflowMap")
     // console.info(dailyNetInflowMap)

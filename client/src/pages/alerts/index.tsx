@@ -4,20 +4,20 @@ import { useAuth } from "@/contexts/AuthContext.tsx";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { TrashCan } from "@carbon/icons-react";
 import {
-  Button,
-  Column,
-  Grid,
-  InlineLoading,
-  InlineNotification,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TextInput,
-  Tile,
-  Toggle,
+    Button,
+    Column,
+    Grid,
+    InlineLoading,
+    InlineNotification,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+    TextInput,
+    Tile,
+    Toggle,
 } from "@carbon/react";
 import { PublicKey } from "@solana/web3.js";
 import { useCallback, useEffect, useState } from "react";
@@ -225,7 +225,7 @@ export default function AlertsPage() {
     setListLoading(true);
     setListError(null);
     try {
-      const res = await client.api.alerts.index.$get();
+      const res = await client.api.alerts.$get();
       if (!res.ok) throw new Error("list_failed");
       const data = (await res.json()) as FollowedWalletRow[];
       setRows(Array.isArray(data) ? data : []);
@@ -293,7 +293,7 @@ export default function AlertsPage() {
     }
     setSubmitting(true);
     try {
-      const res = await client.api.alerts.index.$post({
+      const res = await client.api.alerts.$post({
         json: { address: trimmed, label: label.trim() || undefined },
       });
       const body = (await res.json()) as

@@ -4,6 +4,7 @@ import {
     decimal as dec,
     index,
     integer,
+    jsonb,
     pgEnum,
     pgTable,
     primaryKey,
@@ -46,49 +47,8 @@ export type WalletTokenBalanceHistorySelect =
 export type WalletTokenBalanceHistoryInsert =
   typeof walletTokenBalanceHistory.$inferInsert;
 
-// Currently in migration to Zerion API, this
-// table now store at max a month (can store previous
-// months but gaps won't be resolved)
 export const walletBalanceHistory = pgTable(
   "wallet_balance_history",
-  {
-    address: varchar("address", { length: 66 }).notNull(),
-    timestampMs: bigint("timestamp_ms", {
-      mode: "number",
-    }).notNull(),
-    usdValue: decimal("usd_value").notNull(),
-    updatedAtMs: bigint("updated_at_ms", {
-      mode: "number",
-    }).$onUpdate(() => dayjs.utc().valueOf()),
-  },
-  (t) => [
-    primaryKey({
-      columns: [t.address, t.timestampMs],
-    }),
-  ],
-);
-
-export const walletBalanceWeekHistory = pgTable(
-  "wallet_balance_week_history",
-  {
-    address: varchar("address", { length: 66 }).notNull(),
-    timestampMs: bigint("timestamp_ms", {
-      mode: "number",
-    }).notNull(),
-    usdValue: decimal("usd_value").notNull(),
-    updatedAtMs: bigint("updated_at_ms", {
-      mode: "number",
-    }).$onUpdate(() => dayjs.utc().valueOf()),
-  },
-  (t) => [
-    primaryKey({
-      columns: [t.address, t.timestampMs],
-    }),
-  ],
-);
-
-export const walletBalanceMonthHistory = pgTable(
-  "wallet_balance_month_history",
   {
     address: varchar("address", { length: 66 }).notNull(),
     timestampMs: bigint("timestamp_ms", {
@@ -225,6 +185,21 @@ export type WalletRecentTransfersSelect =
 export type WalletRecentTransfersInsert =
   typeof walletRecentTransfers.$inferInsert;
 
+export type WalletAnalysisPeriodTimeframe = {
+  date: string;
+  realized: number;
+};
+
+export type WalletAnalysisCalendarDay = {
+  date: string;
+  volumeBuy: number;
+  volumeSell: number;
+  totalVolume: number;
+  buys: number;
+  sells: number;
+  realizedPnlUSD: number;
+};
+
 export const walletAnalyses = pgTable(
   "wallet_analyses",
   {
@@ -251,6 +226,14 @@ export const walletAnalyses = pgTable(
     pnlTotalUsd: decimal("pnl_total_usd").notNull(),
     pnlRealizedUsd: decimal("pnl_realized_usd").notNull(),
     pnlUnrealizedUsd: decimal("pnl_unrealized_usd").notNull(),
+    periodTimeframes: jsonb("period_timeframes")
+      .$type<WalletAnalysisPeriodTimeframe[]>()
+      .notNull()
+      .default([]),
+    calendarBreakdown: jsonb("calendar_breakdown")
+      .$type<WalletAnalysisCalendarDay[]>()
+      .notNull()
+      .default([]),
     fetchedAtMs: bigint("fetched_at_ms", { mode: "number" }).notNull(),
   },
   (t) => [primaryKey({ columns: [t.walletAddress, t.period] })],

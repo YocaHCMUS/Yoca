@@ -9,7 +9,10 @@
  */
 
 import client from "@/api/main";
-import type { RollingProfitAndLossResponse } from "@/types/chart-api.types";
+import type {
+  PnLRequestParams,
+  RollingProfitAndLossResponse,
+} from "@/types/chart-api.types";
 import { InferRequestType } from "hono";
 
 /**
@@ -81,14 +84,15 @@ export async function fetchAssetDistribution(
 
 /**
  * Fetch P&L chart data
- * GET /api/charts/pnl
- * Type automatically inferred from server route via Hono RPC
+ * Fetches period-bounded realized PnL from Mobula wallet analysis.
  */
-export async function fetchPnLChart(
-  params?: Parameters<typeof client.api.charts.pnl.$get>[0],
-) {
-  const honoParams = params ? { query: params } : undefined;
-  const response = await client.api.charts.pnl.$get(honoParams);
+export async function fetchPnLChart(params?: PnLRequestParams) {
+  const response = await client.api.wallets.analysis.pnl.$get({
+    query: {
+      period: params?.period ?? "30D",
+      wallets: params?.wallets ?? "",
+    },
+  });
   await handleResponse(response);
   const data = await response.json();
   return data;

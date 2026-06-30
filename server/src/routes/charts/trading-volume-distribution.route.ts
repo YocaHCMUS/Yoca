@@ -16,7 +16,7 @@ import { getTradingVolumeDistribution } from '@sv/services/wallet/walletComparis
  * Request parameter schema for trading volume distribution endpoint
  */
 const tradingVolumeDistributionRequestSchema = z.object({
-  period: z.enum(['24H', '7D', '30D', '90D', 'All']).optional().default('30D'),
+  period: z.enum(['24H', '7D', '30D', '90D']).optional().default('30D'),
   wallets: z.string().optional(),
 });
 

@@ -1,8 +1,8 @@
 import Parser from "rss-parser";
 import {
-  fetchBraveTokenNews,
-  fetchBraveTokenWebMentions,
-  getBraveSearchUnavailableReason,
+    fetchBraveTokenNews,
+    fetchBraveTokenWebMentions,
+    getBraveSearchUnavailableReason,
 } from "./brave-news.service.js";
 
 export type TokenNewsSourceType = "news" | "web_mention" | "project_update";
@@ -20,9 +20,11 @@ export interface TokenNewsArticle {
   favicon?: string | null;
 }
 
+
 export type RelatedNewsConfidence = "high" | "medium" | "low";
 
 export interface RelatedTokenNewsArticle extends TokenNewsArticle {
+  type: "related_news";
   timeDistanceHours: number | null;
   confidence: RelatedNewsConfidence;
 }
@@ -1003,7 +1005,7 @@ function getRelatedNewsConfidence(
 function applyEventContext(
   articles: TokenNewsArticle[],
   options: TokenNewsOptions,
-) {
+) : (TokenNewsArticle | RelatedTokenNewsArticle)[] {
   if (!options.eventAt) return articles;
 
   const windowHours = options.windowHours ?? 72;
@@ -1014,6 +1016,7 @@ function applyEventContext(
 
       return {
         ...article,
+        type: "related_news",
         timeDistanceHours:
           timeDistanceHours == null
             ? null
@@ -1048,7 +1051,7 @@ function limitArticles<T>(articles: T[], maxArticles?: number) {
 function scoreAndFilterArticles(
   articles: RawNewsArticle[],
   identity: TokenNewsIdentity,
-) {
+)  {
   const scoredArticles = articles.map((article) => {
     const relevance = scoreArticle(article, identity);
     return {
@@ -1058,12 +1061,13 @@ function scoreAndFilterArticles(
     };
   });
 
-  const matchedArticles = scoredArticles
+  const matchedArticles: TokenNewsArticle[] = scoredArticles
     .filter(
       ({ relevance }) =>
         relevance.hasStrongMatch && relevance.score >= MIN_RELEVANCE_SCORE,
     )
     .map(({ article, relevance }) => ({
+      type: "default_news",
       title: article.title,
       url: article.url,
       source: article.source,
@@ -1149,7 +1153,7 @@ function scoreAndFilterWebMentionArticles(
       ({ relevance }) =>
         relevance.hasStrongMatch && relevance.score >= MIN_RELEVANCE_SCORE,
     )
-    .map(({ article, relevance, sourceType }) => ({
+    .map(({ article, relevance, sourceType }) : TokenNewsArticle => ({
       title: article.title,
       url: article.url,
       source: article.source,

@@ -2,9 +2,14 @@ import client from "@/api/main";
 import { GeckoTerminalChart } from "@/components/charts/GeckoTerminalChart";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
-import { getTokenChartNewsEvents } from "@/services/tokenChartNewsEvents";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  getTokenChartNewsEvents,
+  TokenChartNewsEventsApiError,
+} from "@/services/tokenChartNewsEvents";
 import type {
   TokenChartNewsEvent,
+  TokenChartNewsEventsData,
   TokenChartNewsTimeframe,
 } from "@/types/chartNewsEvents";
 import type { EChartsOption } from "echarts";
@@ -67,6 +72,7 @@ export function TokenOverviewChart({
   onPriceChangeUpdate,
 }: TokenOverviewChartProps) {
   const { tr, fmt, lang } = useLocalization();
+  const { openAuthModal } = useAuth();
   const dateLocale = lang === "vi" ? "vi-VN" : "en-US";
   const TIME_RANGES: TimeRange[] = useMemo(
     () => [
@@ -128,6 +134,11 @@ export function TokenOverviewChart({
   const [selectedNewsEvent, setSelectedNewsEvent] =
     useState<TokenChartNewsEvent | null>(null);
   const [newsSummaryLoading, setNewsSummaryLoading] = useState(false);
+  const [newsSummaryError, setNewsSummaryError] = useState<string | null>(null);
+  const [newsSummaryUsage, setNewsSummaryUsage] =
+    useState<TokenChartNewsEventsData["usage"] | null>(null);
+  const [newsSummaryUpgradePath, setNewsSummaryUpgradePath] =
+    useState<string | null>(null);
   const chartRef = useRef<ReactECharts>(null);
   const newsTimeframe = useMemo(() => getNewsTimeframe(range.days), [range]);
 
@@ -275,6 +286,8 @@ export function TokenOverviewChart({
       if (event.summary || newsSummaryLoading) return;
 
       setNewsSummaryLoading(true);
+      setNewsSummaryError(null);
+      setNewsSummaryUpgradePath(null);
       try {
         const data = await getTokenChartNewsEvents({
           address,
@@ -292,13 +305,26 @@ export function TokenOverviewChart({
           ),
         );
         setSelectedNewsEvent(summarizedEvent);
+        setNewsSummaryUsage(data.usage ?? null);
       } catch (err) {
+        if (err instanceof TokenChartNewsEventsApiError) {
+          if (err.status === 401) openAuthModal("login");
+          if (
+            err.errorCode === "AI_DAILY_LIMIT_EXCEEDED" ||
+            err.errorCode === "AI_FEATURE_LOCKED"
+          ) {
+            setNewsSummaryUpgradePath(err.upgradePath ?? "/pricing");
+          }
+          setNewsSummaryError(err.message);
+        } else {
+          setNewsSummaryError("Unable to generate news summary right now.");
+        }
         console.error("[TokenOverviewChart] failed to load marker summary", err);
       } finally {
         setNewsSummaryLoading(false);
       }
     },
-    [address, symbol, name, newsTimeframe, newsSummaryLoading],
+    [address, symbol, name, newsTimeframe, newsSummaryLoading, openAuthModal],
   );
 
   const chartEvents = useMemo(
@@ -664,6 +690,16 @@ export function TokenOverviewChart({
                 <div className={styles.newsSummaryLoading}>
                   Loading summary...
                 </div>
+              ) : newsSummaryError ? (
+                <div className={styles.newsSummaryLoading}>
+                  {newsSummaryError}
+                  {newsSummaryUpgradePath && (
+                    <>
+                      {" "}
+                      <a href={newsSummaryUpgradePath}>Upgrade plan</a>
+                    </>
+                  )}
+                </div>
               ) : selectedNewsEvent.summary ? (
                 <>
                   <div className={styles.newsSummaryTitle}>
@@ -677,6 +713,11 @@ export function TokenOverviewChart({
                   {selectedNewsEvent.summary.provider && (
                     <div className={styles.newsSummaryProvider}>
                       Summary: {selectedNewsEvent.summary.provider}
+                    </div>
+                  )}
+                  {newsSummaryUsage && !newsSummaryUsage.disabled && (
+                    <div className={styles.newsSummaryProvider}>
+                      {newsSummaryUsage.remaining}/{newsSummaryUsage.limit} summaries left today
                     </div>
                   )}
                 </>
