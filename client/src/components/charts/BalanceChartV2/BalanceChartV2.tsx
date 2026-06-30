@@ -1,21 +1,22 @@
 import client from "@/api/main.ts";
-import { FilterSwitch } from "@/components/FilterSwitch";
+import {
+  ChartSelect,
+  ChartTag,
+  SegmentedControl,
+  chartControlStyles,
+} from "@/components/charts/shared/ChartControls";
 import { Flex } from "@/components/Flex";
 import { TrendNum } from "@/components/TrendNum";
 import { Txt } from "@/components/Txt";
 import { ONE_DAY_MS } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet, UseGetResp } from "@/hooks/useGet";
-import { Button } from "@carbon/react";
 import { useMemo, useState } from "react";
 import { MultiTimeSeriesLineChart } from "../MultiTimeSeriesLineChart";
 import { ChartWrapper } from "../shared";
-import { DismissibleContentTag } from "@/components/DismissibleContentTag/DismissibleContentTag";
-import DropdownPanelField from "@/components/DropdownPanelField/DropdownPanelField";
 import { TknImg } from "@/components/TknImg";
-import SearchableListPanel from "@/components/SearchableListPanel/SearchableListPanel";
 import styles from "./BalanceChartV2.module.scss";
-import { Add } from "@carbon/react/icons";
+import { Plus } from "lucide-react";
 
 type TimeSeriesDataPoint = {
   unixTimeMs: number;
@@ -189,19 +190,19 @@ export function BalanceChartV2({
 
   const totalBalanceLoadingState = totalBalance.error
     ? {
-        status: "error" as const,
-        retryCount: 0,
-        error: {
-          code: "BALANCE_HISTORY_UNAVAILABLE",
-          message:
-            "Balance history is temporarily unavailable. Please try again.",
-          retryable: true,
-        },
-      }
+      status: "error" as const,
+      retryCount: 0,
+      error: {
+        code: "BALANCE_HISTORY_UNAVAILABLE",
+        message:
+          "Balance history is temporarily unavailable. Please try again.",
+        retryable: true,
+      },
+    }
     : {
-        status: "success" as const,
-        retryCount: 0,
-      };
+      status: "success" as const,
+      retryCount: 0,
+    };
 
   const series24hChanges = useMemo(() => {
     return balanceSeries.reduce<Record<string, ChangeMetric | null>>(
@@ -215,6 +216,78 @@ export function BalanceChartV2({
 
   type PortfolioToken = NonNullable<typeof portfolio.data>[number] | null;
 
+  const timePeriodOptions = [
+    { value: "7D", label: tr("charts.balanceChart.window7d") },
+    { value: "30D", label: tr("charts.balanceChart.window30d") },
+  ] as const;
+
+  const chartActions = (
+    <div className={chartControlStyles.toolbar}>
+      <ChartSelect<NonNullable<PortfolioToken>>
+        id="balance-token-selector"
+        label="Select token"
+        placeholder="Search token"
+        value={pendingToken}
+        items={portfolio.data ?? []}
+        onChange={setPendingToken}
+        getKey={(token) => token.tokenAddress}
+        getSearchText={(token) =>
+          `${token.symbol} ${token.name ?? ""} ${token.tokenAddress}`
+        }
+        renderValue={(token) => (
+          <Flex align="center" gap={3}>
+            <TknImg size={18} src={token.logoUri} alt={token.symbol} />
+            <Txt size="sm" uppercase>
+              {token.symbol}
+            </Txt>
+          </Flex>
+        )}
+        renderOption={(token) => (
+          <Flex justify="between" align="center" gap={4}>
+            <Flex align="center" gap={3} className={styles.tokenOptionMain}>
+              <TknImg size={20} src={token.logoUri} alt={token.symbol} />
+              <Flex dir="column" rowGap={1} className={styles.tokenOptionText}>
+                <Txt size="md" weight="semibold" uppercase ellipsis>
+                  {token.symbol}
+                </Txt>
+                {token.name ? (
+                  <Txt size="sm" secondary ellipsis>
+                    {token.name}
+                  </Txt>
+                ) : null}
+              </Flex>
+            </Flex>
+            <Txt size="sm" secondary>
+              {fmt.num.compact.currency(token.valueUsd)}
+            </Txt>
+          </Flex>
+        )}
+        searchPlaceholder="Symbol or name"
+        emptyText="No matching tokens"
+        actionIcon={Plus}
+        actionLabel="Add token"
+        actionDisabled={!pendingToken}
+        onAction={() => {
+          if (!pendingToken) return;
+          setSelectedTokens((prev) => {
+            const next = new Set(prev ?? []);
+            next.add(pendingToken.tokenAddress);
+            return next;
+          });
+          setPendingToken(null);
+        }}
+        disabled={portfolio.isLoading}
+      />
+
+      <SegmentedControl
+        ariaLabel={tr("charts.timePeriod")}
+        options={timePeriodOptions}
+        value={timePeriod}
+        onChange={setTimePeriod}
+      />
+      {actions}
+    </div>
+  );
   return (
     <ChartWrapper
       title={tr("charts.balanceChart.title")}
@@ -223,106 +296,22 @@ export function BalanceChartV2({
       onRetry={
         totalBalance.error
           ? () => {
-              void totalBalance.mutate();
-            }
+            void totalBalance.mutate();
+          }
           : undefined
       }
       enableExport={false}
       enableFullscreen={false}
       enableMiniPlayer={false}
-      actions={actions}
+      actions={chartActions}
     >
       <Flex dir="column" gap={8}>
-        <Flex justify="between" align="end">
-          <Flex align="end">
-            <DropdownPanelField
-              style={{ inlineSize: "14rem" }}
-              id="token-selector"
-              titleText="Select token"
-              placeholder="Search"
-              initialValue={null as PortfolioToken}
-              value={pendingToken}
-              onValueChange={setPendingToken}
-              renderValue={(token) => (
-                <Flex align="center" gap={3}>
-                  <TknImg size={20} src={token.logoUri} alt={token.symbol} />
-                  <Txt uppercase>{token.symbol}</Txt>
-                </Flex>
-              )}
-              renderPanel={({ setValue, closePanel }) => (
-                <SearchableListPanel
-                  items={portfolio.data || []}
-                  getSearchableText={(token) =>
-                    `${token.symbol} ${token.name} ${token.tokenAddress}`
-                  }
-                  renderItem={(token, close) => (
-                    <button
-                      key={token.tokenAddress}
-                      className={styles.item}
-                      type="button"
-                      onClick={() => {
-                        setValue(token); // sets the dropdown's value and triggers onValueChange
-                        close(); // closes the panel
-                      }}
-                    >
-                      <Flex
-                        justify="between"
-                        align="center"
-                        pInline={8}
-                        pBlock={5}
-                      >
-                        <Flex align="center" gap={4}>
-                          <TknImg
-                            size={20}
-                            src={token.logoUri}
-                            alt={token.symbol}
-                          />
-                          <Txt uppercase>{token.symbol}</Txt>
-                          <Flex dir="column" rowGap={1}></Flex>
-                        </Flex>
-                      </Flex>
-                    </button>
-                  )}
-                  searchPlaceholder="Symbol/Name"
-                  hintText="Type to search tokens"
-                  emptyText="No matching tokens"
-                  closePanel={closePanel}
-                />
-              )}
-            />
-            <Button
-              renderIcon={Add}
-              kind="primary"
-              size="md"
-              onClick={() => {
-                if (pendingToken) {
-                  setSelectedTokens((prev) =>
-                    new Set(prev).add(pendingToken.tokenAddress),
-                  );
-                  setPendingToken(null); // clear selection
-                }
-              }}
-            >
-              Add
-            </Button>
-          </Flex>
 
-          <FilterSwitch
-            options={[
-              { value: "7D", label: tr("charts.balanceChart.window7d") },
-              { value: "30D", label: tr("charts.balanceChart.window30d") },
-            ]}
-            value={timePeriod}
-            onChange={(v) => setTimePeriod(v)}
-            width="sm"
-          />
-        </Flex>
-
-        <Flex dir="row" gap={4} align="center">
+        <Flex dir="row" gap={4} align="center" wrap="wrap">
           <Txt size="md" secondary>
             {tr("charts.balanceChart.change24h")}:
           </Txt>
-          <Flex dir="row" gap={2}>
+          <div className={chartControlStyles.tagRow}>
             {balanceSeries.map((series) => {
               const change = series24hChanges[series.label];
               if (!change) return null;
@@ -332,7 +321,7 @@ export function BalanceChartV2({
               // Determine what to display
               let displayValue: number;
               let displayFormatter: (value: number | null) => string;
-              let prefixMode: "plus-minus" = "plus-minus";
+              const prefixMode = "plus-minus" as const;
 
               if (baselineValue == 0 && currentValue == 0) {
                 // Special case: zero to zero -> show 0%
@@ -349,33 +338,33 @@ export function BalanceChartV2({
               }
 
               return (
-                <DismissibleContentTag
+                <ChartTag
                   key={series.key}
-                  size="lg"
-                  disabled={series.key == "_total"}
-                  onClose={() => {
-                    if (selectedTokens) {
-                      const newSet = new Set(selectedTokens);
-                      newSet.delete(series.key);
-                      setSelectedTokens(newSet);
-                    }
-                  }}
-                >
-                  <Flex align="center" justify="start" gap={2}>
-                    <Txt size="sm" secondary>
-                      {series.label}
-                    </Txt>
+                  label={series.label}
+                  onDismiss={
+                    series.key == "_total"
+                      ? undefined
+                      : () => {
+                        if (selectedTokens) {
+                          const newSet = new Set(selectedTokens);
+                          newSet.delete(series.key);
+                          setSelectedTokens(newSet);
+                        }
+                      }
+                  }
+                  dismissLabel={`Remove ${series.label}`}
+                  value={
                     <TrendNum
                       value={displayValue}
                       prefixes={prefixMode}
                       size="sm"
                       formatter={displayFormatter}
                     />
-                  </Flex>
-                </DismissibleContentTag>
+                  }
+                />
               );
             })}
-          </Flex>
+          </div>
         </Flex>
 
         <MultiTimeSeriesLineChart

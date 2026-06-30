@@ -11,17 +11,18 @@ import {
 } from "@/util/chart-helpers";
 import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
 import { attachChartDayClick } from "@/util/chart-click";
-import type { EChartsOption } from "echarts";
+import type { EChartsOption, SeriesOption, YAXisComponentOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ContentSwitcher, IconSwitch } from "@carbon/react";
-import { ChartBar, ChartCombo, ChartLine } from "@carbon/icons-react";
-import { Flex } from "@/components/Flex";
-import { FilterSwitch } from "@/components/FilterSwitch";
-import overwriteStyles from "@/styles/_overwrite.module.scss";
 import client from "@/api/main";
 import { useGet, type UseGetResp } from "@/hooks/useGet";
 import type { ChartLoadingState } from "@/types/chart.types";
+import {
+  SegmentedControl,
+  type SegmentedControlOption,
+  chartControlStyles,
+} from "@/components/charts/shared/ChartControls";
+import { BarChart3, LineChart } from "lucide-react";
 
 type PnLPoint = {
   timestamp: number;
@@ -193,7 +194,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
       const showDaily = displayMode == "daily" || displayMode == "both";
       const showCumulative = displayMode == "cumulative" || displayMode == "both";
 
-      const series: any[] = [];
+      const series: SeriesOption[] = [];
 
       if (showDaily) {
         series.push({
@@ -202,8 +203,8 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           yAxisIndex: displayMode == "both" ? 0 : undefined,
           data: dailyValues,
           itemStyle: {
-            color: (params: any) =>
-              params.value >= 0 ? profitColor : lossColor,
+            color: (params) =>
+              Number(params.value) >= 0 ? profitColor : lossColor,
           },
         });
       }
@@ -229,7 +230,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         return fmt.num.compact.currency(value);
       };
 
-      const yAxis: any[] = [];
+      const yAxis: YAXisComponentOption[] = [];
       if (displayMode == "both") {
         yAxis.push({
           ...baseOption.yAxis,
@@ -297,17 +298,18 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         tooltip: {
           ...baseOption.tooltip,
           trigger: "axis",
-          formatter: (params: any) => {
+          formatter: (params: unknown) => {
             if (!Array.isArray(params) || params.length == 0) return "";
 
-            const timestamp = timestamps[params[0].dataIndex];
+            const tooltipParams = params as Array<{ dataIndex: number }>;
+            const timestamp = timestamps[tooltipParams[0].dataIndex];
             const date = formatTimestampWithTimezone(
               timestamp,
               timezone,
               "PPP",
             );
-            const dailyValue = dailyValues[params[0].dataIndex];
-            const cumulativeValue = cumulativeValues[params[0].dataIndex];
+            const dailyValue = dailyValues[tooltipParams[0].dataIndex];
+            const cumulativeValue = cumulativeValues[tooltipParams[0].dataIndex];
 
             let tooltipContent = createTooltipHeader(date);
 
@@ -390,14 +392,10 @@ export const PnLChart: React.FC<PnLChartProps> = ({
     displayData.wallets.length == 0 ||
     displayData.wallets.every((wallet) => wallet.dailyPnL.length == 0);
 
-  const displayModeIcons: Array<{
-    value: PnLDisplayMode;
-    icon: React.ElementType<{ size: number }>;
-    label: string;
-  }> = [
-    { value: "daily", icon: ChartBar, label: tr("charts.pnlChart.dailyPnL") },
-    { value: "cumulative", icon: ChartLine, label: tr("charts.pnlChart.cumulativePnL") },
-    { value: "both", icon: ChartCombo, label: tr("charts.pnlChart.both") },
+  const displayModeOptions: SegmentedControlOption<PnLDisplayMode>[] = [
+    { value: "daily", icon: BarChart3, label: tr("charts.pnlChart.dailyPnL") },
+    { value: "cumulative", icon: LineChart, label: tr("charts.pnlChart.cumulativePnL") },
+    { value: "both", icon: BarChart3, label: tr("charts.pnlChart.both") },
   ];
 
   const periodOptions: Array<{ value: PnLTimePeriod; label: string }> = [
@@ -416,41 +414,26 @@ export const PnLChart: React.FC<PnLChartProps> = ({
         }
       }}
       className={className}
-      toolbarLayout="stacked"
       wrapperMinHeight={chartMinHeight}
       enableFullscreen={false}
       enableMiniPlayer={false}
       actions={
-        <Flex gap={8} align="center">
-          <ContentSwitcher
-            className={overwriteStyles.fltrOpt}
-            style={{ minWidth: 'auto' }}
-            selectedIndex={displayModeIcons.findIndex(o => o.value == displayMode)}
-            onChange={({ name }) => {
-              if (name == "daily" || name == "cumulative" || name == "both") {
-                handleDisplayModeChange(name);
-              }
-            }}
-            size="md"
-          >
-            {displayModeIcons.map(opt => (
-              <IconSwitch key={opt.value} name={opt.value} text={opt.label}>
-                <opt.icon size={16} />
-              </IconSwitch>
-            ))}
-          </ContentSwitcher>
-          <FilterSwitch
+        <div className={chartControlStyles.toolbar}>
+          <SegmentedControl
+            ariaLabel={tr("charts.pnlChart.title")}
+            options={displayModeOptions}
+            value={displayMode}
+            onChange={handleDisplayModeChange}
+            iconOnly
+          />
+          <SegmentedControl
+            ariaLabel={tr("charts.timePeriod")}
             options={periodOptions}
             value={chartTimePeriod}
-            onChange={(v) => {
-              if (v == "7D" || v == "30D") {
-                handleChartPeriodChange(v);
-              }
-            }}
-            width={120}
+            onChange={handleChartPeriodChange}
           />
           {externalActions}
-        </Flex>
+        </div>
       }
     >
       {chartOptions.length > 0 && (

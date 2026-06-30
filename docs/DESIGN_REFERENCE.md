@@ -441,7 +441,20 @@ UTC±offset selector for charts.
 - `ChartEmptyState` — SVG icon + title + message + optional action button
 - `ChartErrorState` — error icon + message + retry button + optional technical details <details>
 
-### 5.9 Chart Types (`types/chart.types.ts`)
+
+### 5.9 ChartControls (`charts/shared/ChartControls/`) — Preferred for chart/table-local controls
+Use these non-Carbon controls for compact chart headers, table tabs, token selectors, and inline chart chips.
+```tsx
+<SegmentedControl options={options} value={value} onChange={setValue} ariaLabel="Mode" />
+<ChartSelect items={items} value={value} onChange={setValue} renderOption={...} actionIcon={Plus} onAction={addItem} />
+<ChartTag label="SOL" value={<TrendNum ... />} onDismiss={removeToken} />
+<IconActionButton label="Open" icon={ExternalLink} href={url} />
+```
+- Preferred replacements for `FilterSwitch`, Carbon `ContentSwitcher`/`IconSwitch`, Carbon chart-local `Button`, Carbon `Tag`, and Carbon `IconButton`.
+- Header controls should be passed through `ChartWrapper.actions` and right-aligned in the chart header, not placed in the chart body.
+- Styling uses `--yoca-*` theme variables and native buttons/links.
+
+### 5.10 Chart Types (`types/chart.types.ts`)
 | Type | Description |
 |---|---|
 | `ChartType` | `line`, `area`, `bar`, `stackedBar`, `pie`, `donut`, `dualAxis` |
@@ -450,7 +463,7 @@ UTC±offset selector for charts.
 
 Default config: height=400, showLegend, legendPosition=bottom, sampling enabled at 2000 points.
 
-### 5.10 Chart Props (`charts/shared/ChartProp.tsx`)
+### 5.11 Chart Props (`charts/shared/ChartProp.tsx`)
 ```tsx
 interface ChartProps {
   title?, minHeight?, initialFilters?, tokenSelectorOptions?,
@@ -459,7 +472,7 @@ interface ChartProps {
 }
 ```
 
-### 5.11 Concrete Chart Implementations
+### 5.12 Concrete Chart Implementations
 
 | Component | Location | Purpose |
 |---|---|---|
