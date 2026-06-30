@@ -191,41 +191,37 @@ export function WalletHoldingsPanel({
 
   return (
     <div className={styles.holdingsPanel}>
-      <div className={styles.chartSection}>
-        <AssetDistribution
-          initialFilters={{
-            wallets: walletAddress ? [walletAddress] : [],
-            timePeriod: "30D",
-          }}
-          autoRefresh
-          minHeight={340}
-        />
-      </div>
+      <AssetDistribution
+        initialFilters={{
+          wallets: walletAddress ? [walletAddress] : [],
+          timePeriod: "30D",
+        }}
+        autoRefresh
+        minHeight={340}
+      />
 
-      <div className={styles.tableSection}>
-        <Table
-          title={tr("walletPage.portfolio")}
-          headers={portfolioHeaders}
-          initialFilters={{}}
-          fetcher={Promise.resolve(portfolioTableData)}
-          filterSchema={portfolioFilterSchema}
-          cellRenderers={portfolioCellRenderers}
-          dataEntries={portfolioTableData}
-          isSortable={isSortablePortfolio}
-          sortConfigs={portfolioSortConfig}
-          onRowClick={(_row: (string | number)[], rowIndex: number) => {
-            const tokenAddress =
-              rowIndex >= 0
-                ? portfolioMeta.get(rowIndex)?.tokenAddress
-                : undefined;
-            if (tokenAddress && !isNativeSolToken(tokenAddress)) {
-              navigate(`/tokens/${tokenAddress}`);
-            }
-          }}
-          enableExport={false}
-          loading={loading && portfolioTableData.length === 0}
-        />
-      </div>
+      <Table
+        title={tr("walletPage.portfolio")}
+        headers={portfolioHeaders}
+        initialFilters={{}}
+        fetcher={Promise.resolve(portfolioTableData)}
+        filterSchema={portfolioFilterSchema}
+        cellRenderers={portfolioCellRenderers}
+        dataEntries={portfolioTableData}
+        isSortable={isSortablePortfolio}
+        sortConfigs={portfolioSortConfig}
+        onRowClick={(_row: (string | number)[], rowIndex: number) => {
+          const tokenAddress =
+            rowIndex >= 0
+              ? portfolioMeta.get(rowIndex)?.tokenAddress
+              : undefined;
+          if (tokenAddress && !isNativeSolToken(tokenAddress)) {
+            navigate(`/tokens/${tokenAddress}`);
+          }
+        }}
+        enableExport={false}
+        loading={loading && portfolioTableData.length === 0}
+      />
     </div>
   );
 }

@@ -528,7 +528,23 @@ Wraps protected routes. Shows Loading while checking auth, redirects to `/unauth
 | `QuickAiPopup` | `QuickAiPopup/` | Quick AI insight popup |
 | `WalletTransactionActivity` | `WalletTransactionActivity/` | Swap + Transfer activity tables section |
 
+#### Chat Panel Positioning
+
+The wallet page uses CSS custom properties on `.pageLayout` for chat overlay positioning:
+
+| Variable | Default | `.rightSidebarExpanded` |
+|---|---|---|
+| `--chat-panel-right-offset` | `96px` | `400px` |
+| `--chat-launcher-offset` | `56px` | `400px` |
+| `--chat-panel-bottom-offset` | `16px` | `16px` |
+| `--chat-panel-top-offset` | `calc(3.5rem + 16px)` | unchanged |
+| `--chat-panel-left-offset` | `16px` | unchanged |
+
+Both share the same `400px` offset when expanded so the chat panel and launcher read as part of the main content area, with breathing room from the right sidebar.
+
 ---
+
+
 
 ## 8. Market Components — `components/market/`
 

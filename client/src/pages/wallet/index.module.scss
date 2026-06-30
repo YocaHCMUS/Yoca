@@ -6,10 +6,10 @@
 
 .pageLayout {
   --chat-panel-top-offset: calc(3.5rem + 16px);
-  --chat-panel-right-offset: 96px;
+  --chat-panel-right-offset: 100px;
   --chat-panel-left-offset: 16px;
   --chat-panel-bottom-offset: 16px;
-  --chat-launcher-offset: 56px;
+  --chat-launcher-offset: 100px;
   display: flex;
   width: 100%;
   height: calc(100vh - 3.5rem);
@@ -22,8 +22,8 @@
     linear-gradient(180deg, var(--yoca-bg, #070a13) 0%, var(--yoca-bg-soft, #0b1020) 100%);
 
   &.rightSidebarExpanded {
-    --chat-panel-right-offset: 356px;
-    --chat-launcher-offset: 316px;
+    --chat-panel-right-offset: 400px;
+    --chat-launcher-offset: 400px;
   }
 }
 
@@ -286,6 +286,12 @@
   right: var(--chat-panel-right-offset);
   bottom: var(--chat-panel-bottom-offset);
   width: min(460px, calc(100% - var(--chat-panel-right-offset) - 32px));
+  border: 2px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  background:
+    linear-gradient(180deg, rgba(124, 58, 237, 0.06), rgba(255, 255, 255, 0.02)),
+    var(--yoca-surface-elevated);
+  box-shadow: var(--yoca-shadow-card);
 }
 
 .chatOverlay[data-position="left"] .chatPanel {
@@ -293,6 +299,12 @@
   bottom: var(--chat-panel-bottom-offset);
   left: var(--chat-panel-left-offset);
   width: min(460px, calc(100% - 48px));
+  border: 2px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  background:
+    linear-gradient(180deg, rgba(124, 58, 237, 0.06), rgba(255, 255, 255, 0.02)),
+    var(--yoca-surface-elevated);
+  box-shadow: var(--yoca-shadow-card);
 }
 
 .chatOverlay[data-position="fullscreen"] .chatPanel {
@@ -500,5 +512,3 @@
     width: 100%;
   }
 }
-
-
