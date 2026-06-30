@@ -11,7 +11,9 @@ import {
   TopHolders,
 } from "@/components/token";
 import { PageWrapper } from "@/components/wrapper/PageWrapper";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
+import { dexLabel } from "@/util/format";
 import { InlineLoading } from "@carbon/react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -137,6 +139,7 @@ function useTokenPageData(address: string, poolAddress: string) {
 
 export default function TokenPage() {
   const navigate = useNavigate();
+  const { fmt } = useLocalization();
 
   const { address, poolAddress } = useParams<{
     address: string;
@@ -242,114 +245,194 @@ export default function TokenPage() {
 
   return (
     <PageWrapper>
-      <div className={styles.tokenPageGrid}>
-        <div className={styles.leftColumn}>
-          <div className={styles.sidebarGroup}>
-            <TokenHeader
-              name={meta.name}
-              symbol={meta.symbol}
-              address={meta.address}
-              imageUrl={meta.imageUrl ?? undefined}
-              coinGeckoId={meta.coingeckoId ?? null}
-              discordInvite={meta.linkDiscord}
-              websiteUrl={meta.linkHomepage}
-              twitterHandle={meta.twitterScreenName}
-              sidebar
-            />
-
-            <PoolSelector
-              pools={topPools.map((p) => ({
-                dexId: p.data.dexId,
-                poolAddress: p.data.poolAddress,
-                poolName: p.data.poolName,
-                liquidityUsd: p.data.liquidityUsd,
-                volumeUsd24h: p.data.volumeUsd24h,
-              }))}
-              selectedPool={{
-                poolAddress: pool?.poolAddress ?? "",
-                dexId: pool?.dexId ?? "unknown",
-                liquidityUsd: pool?.liquidityUsd ?? 0,
-                poolName: pool?.poolName ?? "-",
-                volumeUsd24h: pool?.volumeUsd24h ?? 0,
-              }}
-              onPoolChange={(newPoolAddress) =>
-                navigate(`/tokens/${address}/${newPoolAddress}`)
-              }
-            />
-
-            <MarketStats
-              data={market}
-              pool={pool}
-              topHolders={holders}
-              holdersInfo={holdersInfo}
-              marketsCount={topPools.length}
-            />
-
-            <TopHolders holders={holders} />
-
-            <NewsTab address={address} symbol={meta.symbol} name={meta.name} />
+      <div className={styles.tokenPoolPage}>
+        <section className={styles.pageHero}>
+          <div className={styles.pageHeroEyebrow}>Pool Intelligence</div>
+          <div className={styles.pageHeroBody}>
+            <div className={styles.pageHeroTitleRow}>
+              <h1 className={styles.pageHeroTitle}>
+                {pool.poolName || `${meta.symbol} Pool`}
+              </h1>
+              {pool.dexId && (
+                <span className={styles.heroBadge}>{dexLabel(pool.dexId)}</span>
+              )}
+            </div>
+            <p className={styles.pageHeroDescription}>
+              Monitor the selected pool&apos;s live market structure, liquidity,
+              holder concentration, trading flow, and event-driven signals
+              without changing any existing token analytics behavior.
+            </p>
           </div>
-        </div>
 
-        <div className={styles.rightColumn}>
-          <TokenChart pool={pool} />
+          <div className={styles.heroStats}>
+            <div className={styles.heroStat}>
+              <span className={styles.heroStatLabel}>Price</span>
+              <span className={styles.heroStatValue}>
+                {fmt.num.currency(
+                  pool.baseTokenPriceUsd != null
+                    ? Number(pool.baseTokenPriceUsd)
+                    : null,
+                )}
+              </span>
+            </div>
+            <div className={styles.heroStat}>
+              <span className={styles.heroStatLabel}>Liquidity</span>
+              <span className={styles.heroStatValue}>
+                {fmt.num.compact.currency(
+                  pool.liquidityUsd != null ? Number(pool.liquidityUsd) : null,
+                )}
+              </span>
+            </div>
+            <div className={styles.heroStat}>
+              <span className={styles.heroStatLabel}>24h Volume</span>
+              <span className={styles.heroStatValue}>
+                {fmt.num.compact.currency(
+                  pool.volumeUsd24h != null ? Number(pool.volumeUsd24h) : null,
+                )}
+              </span>
+            </div>
+            <div className={styles.heroStat}>
+              <span className={styles.heroStatLabel}>24h Change</span>
+              <span
+                className={`${styles.heroStatValue} ${
+                  (pool.priceChangePercentage24h ?? 0) >= 0
+                    ? styles.heroStatPositive
+                    : styles.heroStatNegative
+                }`}
+              >
+                {fmt.num.percent(
+                  pool.priceChangePercentage24h != null
+                    ? Number(pool.priceChangePercentage24h)
+                    : null,
+                )}
+              </span>
+            </div>
+          </div>
+        </section>
 
-          <VolatilitySignals
-            address={address}
-            symbol={meta.symbol}
-            name={meta.name}
-          />
+        <div className={styles.tokenPageGrid}>
+          <div className={styles.leftColumn}>
+          <div className={styles.sidebarGroup}>
+            <section className={styles.sidebarHeroCard}>
+              <TokenHeader
+                name={meta.name}
+                symbol={meta.symbol}
+                address={meta.address}
+                imageUrl={meta.imageUrl ?? undefined}
+                coinGeckoId={meta.coingeckoId ?? null}
+                discordInvite={meta.linkDiscord}
+                websiteUrl={meta.linkHomepage}
+                twitterHandle={meta.twitterScreenName}
+                sidebar
+              />
+            </section>
 
-          <TokenAIChat
-            address={address}
-            symbol={meta.symbol}
-            name={meta.name}
-            timeframe="24h"
-          />
+            <section className={styles.sidebarSection}>
+              <PoolSelector
+                pools={topPools.map((p) => ({
+                  dexId: p.data.dexId,
+                  poolAddress: p.data.poolAddress,
+                  poolName: p.data.poolName,
+                  liquidityUsd: p.data.liquidityUsd,
+                  volumeUsd24h: p.data.volumeUsd24h,
+                }))}
+                selectedPool={{
+                  poolAddress: pool?.poolAddress ?? "",
+                  dexId: pool?.dexId ?? "unknown",
+                  liquidityUsd: pool?.liquidityUsd ?? 0,
+                  poolName: pool?.poolName ?? "-",
+                  volumeUsd24h: pool?.volumeUsd24h ?? 0,
+                }}
+                onPoolChange={(newPoolAddress) =>
+                  navigate(`/tokens/${address}/${newPoolAddress}`)
+                }
+              />
+            </section>
 
-          <RecentTransactions
-            trades={trades.map((trade) => {
-              const kind = trade.buyTokenAddress == address ? "buy" : "sell";
+            <section className={styles.sidebarSection}>
+              <MarketStats
+                data={market}
+                pool={pool}
+                topHolders={holders}
+                holdersInfo={holdersInfo}
+                marketsCount={topPools.length}
+              />
+            </section>
 
-              const amount =
-                kind == "buy" ? trade.buyTokenAmount : trade.sellTokenAmount;
+            <section className={styles.sidebarSection}>
+              <TopHolders holders={holders} />
+            </section>
 
-              const priceUsd =
-                kind == "buy"
-                  ? trade.buyTokenPriceUsd
-                  : trade.sellTokenPriceUsd;
+            <section className={styles.sidebarSection}>
+              <NewsTab
+                address={address}
+                symbol={meta.symbol}
+                name={meta.name}
+              />
+            </section>
+          </div>
+          </div>
 
-              // Price in quote token (e.g. SOL per base token)
-              const priceQuote =
-                kind == "buy"
-                  ? trade.sellTokenAmount / trade.buyTokenAmount
-                  : trade.buyTokenAmount / trade.sellTokenAmount;
+          <div className={styles.rightColumn}>
+            <TokenChart pool={pool} />
 
-              return {
-                kind,
-                amount,
-                fromAddress: trade.signerAddress,
-                id: trade.id,
-                timestamp: trade.blockTimestamp,
-                txHash: trade.transactionHash,
-                volumeUsd: trade.volumeInUsd,
-                priceUsd,
-                priceQuote,
-              };
-            })}
-            baseMeta={{
-              address,
-              symbol: meta.symbol,
-              imageUrl: meta.imageUrl ?? null,
-            }}
-            tokenAddress={""}
-            tokenSymbol={""}
-            quoteMeta={{
-              address: "",
-              symbol: "",
-              imageUrl: null,
-            }}
-          />
+            <VolatilitySignals
+              address={address}
+              symbol={meta.symbol}
+              name={meta.name}
+            />
+
+            <TokenAIChat
+              address={address}
+              symbol={meta.symbol}
+              name={meta.name}
+              timeframe="24h"
+            />
+
+            <RecentTransactions
+              trades={trades.map((trade) => {
+                const kind = trade.buyTokenAddress == address ? "buy" : "sell";
+
+                const amount =
+                  kind == "buy" ? trade.buyTokenAmount : trade.sellTokenAmount;
+
+                const priceUsd =
+                  kind == "buy"
+                    ? trade.buyTokenPriceUsd
+                    : trade.sellTokenPriceUsd;
+
+                // Price in quote token (e.g. SOL per base token)
+                const priceQuote =
+                  kind == "buy"
+                    ? trade.sellTokenAmount / trade.buyTokenAmount
+                    : trade.buyTokenAmount / trade.sellTokenAmount;
+
+                return {
+                  kind,
+                  amount,
+                  fromAddress: trade.signerAddress,
+                  id: trade.id,
+                  timestamp: trade.blockTimestamp,
+                  txHash: trade.transactionHash,
+                  volumeUsd: trade.volumeInUsd,
+                  priceUsd,
+                  priceQuote,
+                };
+              })}
+              baseMeta={{
+                address,
+                symbol: meta.symbol,
+                imageUrl: meta.imageUrl ?? null,
+              }}
+              tokenAddress={""}
+              tokenSymbol={""}
+              quoteMeta={{
+                address: "",
+                symbol: "",
+                imageUrl: null,
+              }}
+            />
+          </div>
         </div>
       </div>
     </PageWrapper>
