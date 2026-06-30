@@ -1,4 +1,6 @@
 import client from "@/api/main";
+import { Card } from "@/components/common/Card/Card";
+import { PageHeader } from "@/components/common/PageHeader/PageHeader";
 import { PnLChart } from "@/components/charts/PnLChart/index.ts";
 import { WalletTopbar } from "@/components/wallet/WalletTopbar/WalletTopbar.tsx";
 import { WalletHero } from "@/components/wallet/WalletHero/WalletHero.tsx";
@@ -11,8 +13,8 @@ import {
 import { AiAnalysisModal } from "@/components/wallet/AiAnalysisModal/AiAnalysisModal.tsx";
 import { useWalletWinrate } from "@/hooks/useWalletWinrate";
 import {
-    WalletReportTemplate,
-    type WalletReportSection,
+  WalletReportTemplate,
+  type WalletReportSection,
 } from "@/components/WalletReportTemplate";
 import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
@@ -21,41 +23,41 @@ import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { useExportReport } from "@/hooks/useExportReport.ts";
 import { useGet } from "@/hooks/useGet";
 import {
-    fetchWalletSwaps,
-    fetchWalletTransfers,
-    fetchWalletPortfolio,
-    fetchWalletOverview,
-    fetchWalletIntelligence,
-    type WalletSwap,
-    type WalletTransfer,
-    type WalletPortfolioItem,
-    type WalletIntelligenceResponse,
-    type WalletOverviewMultiPeriodResponse,
-    type WalletPageInfo,
+  fetchWalletSwaps,
+  fetchWalletTransfers,
+  fetchWalletPortfolio,
+  fetchWalletOverview,
+  fetchWalletIntelligence,
+  type WalletSwap,
+  type WalletTransfer,
+  type WalletPortfolioItem,
+  type WalletIntelligenceResponse,
+  type WalletOverviewMultiPeriodResponse,
+  type WalletPageInfo,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import { AiGenerate, Close } from "@carbon/icons-react";
 import { Button } from "@carbon/react";
 import JSZip from "jszip";
 import {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
 import { useParams } from "react-router";
 import * as XLSX from "xlsx";
 import {
-    buildPortfolioMetaMap,
-    mapPortfolioItems,
+  buildPortfolioMetaMap,
+  mapPortfolioItems,
 } from "../../util/wallet-portfolio-mapper.ts";
 import styles from "./index.module.scss";
 import {
-    TokenAverageTradePrice,
-    TokenDetailsDemo,
+  TokenAverageTradePrice,
+  TokenDetailsDemo,
 } from "./TokenDetailsDemo.tsx";
 // import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
@@ -623,11 +625,10 @@ export default function WalletPage() {
         fmt.datetime.relativeShort(transfer.timestamp, true),
         transfer.from,
         transfer.to,
-        `${
-          typeof transfer.tokenSymbol === "string" &&
+        `${typeof transfer.tokenSymbol === "string" &&
           transfer.tokenSymbol.trim().length > 0
-            ? transfer.tokenSymbol
-            : "Unknown"
+          ? transfer.tokenSymbol
+          : "Unknown"
         } (${fmt.num.decimal(transfer.amount)})`,
         transfer.amountUsd != null ? fmt.num.currency(transfer.amountUsd) : "—",
       ]);
@@ -961,11 +962,10 @@ export default function WalletPage() {
           fmt.datetime.relativeShort(transfer.timestamp, true),
           transfer.from,
           transfer.to,
-          `${
-            typeof transfer.tokenSymbol === "string" &&
+          `${typeof transfer.tokenSymbol === "string" &&
             transfer.tokenSymbol.trim().length > 0
-              ? transfer.tokenSymbol
-              : "Unknown"
+            ? transfer.tokenSymbol
+            : "Unknown"
           } (${fmt.num.decimal(transfer.amount)})`,
         ])}
         chunkSize={PDF_TABLE_ROWS_PER_PAGE}
@@ -1032,16 +1032,11 @@ export default function WalletPage() {
     >
       <div className={`${styles.pageLayout}${isRightSidebarOpen ? ` ${styles.rightSidebarExpanded}` : ''}`}>
         <div className={styles.shell}>
-          <section className={styles.pageIntro}>
-            <div className={styles.pageEyebrow}>Wallet Intelligence</div>
-            <div className={styles.pageIntroBody}>
-              <h1 className={styles.pageTitle}>Wallet Detail</h1>
-              <p className={styles.pageSubtitle}>
-                Track holdings, capital flow, trading performance, and recent
-                on-chain activity for this address.
-              </p>
-            </div>
-          </section>
+          {/* <PageHeader
+            eyebrow="Wallet Intelligence"
+            title="Wallet Detail"
+            subtitle="Track holdings, capital flow, trading performance, and recent on-chain activity for this address."
+          /> */}
 
           <WalletTopbar
             address={walletAddress}
@@ -1068,7 +1063,7 @@ export default function WalletPage() {
           <div className={styles.body}>
             <main className={styles.mainCol}>
               {/* Balance History */}
-              <div className={styles.section}>
+              <Card>
                 <BalanceChartV2
                   minHeight={324}
                   address={walletAddress}
@@ -1077,10 +1072,10 @@ export default function WalletPage() {
                     setDayPopupOpen(true);
                   }}
                 />
-              </div>
+              </Card>
 
               {/* Profit & Loss */}
-              <div className={styles.section}>
+              <Card>
                 <PnLChart
                   minHeight={324}
                   initialFilters={{ wallets: [walletAddress] }}
@@ -1089,21 +1084,23 @@ export default function WalletPage() {
                     setDayPopupOpen(true);
                   }}
                 />
-              </div>
+              </Card>
 
               {/* Activity Tables */}
-              <div className={styles.section}>
+              <Card>
                 <WalletTransactionActivity address={walletAddress} />
-              </div>
+              </Card>
             </main>
 
             <aside className={styles.sideCol}>
-              <WalletHoldingsPanel
-                walletAddress={walletAddress}
-                portfolio={portfolio}
-                portfolioMeta={portfolioMetaAsMap}
-                loading={portfolioLoading}
-              />
+              <Card>
+                <WalletHoldingsPanel
+                  walletAddress={walletAddress}
+                  portfolio={portfolio}
+                  portfolioMeta={portfolioMetaAsMap}
+                  loading={portfolioLoading}
+                />
+              </Card>
             </aside>
           </div>
 

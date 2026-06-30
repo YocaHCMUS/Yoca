@@ -1,29 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-    Bookmark,
-    BookmarkFilled,
-    Notification,
-    NotificationFilled,
-    Repeat,
-    Share,
-    AiGenerate,
-    Edit,
-    Tag as TagIcon,
-    Copy
+  Bookmark,
+  BookmarkFilled,
+  Notification,
+  NotificationFilled,
+  Repeat,
+  Share,
+  AiGenerate,
+  Edit,
+  Tag as TagIcon,
 } from "@carbon/icons-react";
 import { InlineNotification, Tag, Tooltip } from "@carbon/react";
 import client from "@/api/main";
-import { PeriodSelector } from "@/components/common/PeriodSelector/PeriodSelector";
+import { PillTabs } from "@/components/common/PillTabs/PillTabs";
+import { AddressPill } from "@/components/common/AddressPill/AddressPill";
+import { StatusBadge } from "@/components/common/StatusBadge/StatusBadge";
 import { WalletLabelModal } from "@/components/wallet/WalletLabelModal/WalletLabelModal";
 import { WalletTagsModal } from "@/components/wallet/WalletTagsModal/WalletTagsModal";
 import {
-    fetchWalletIntelligence,
-    type WalletIntelligenceResponse,
-    type WalletOverviewPeriodKey
+  fetchWalletIntelligence,
+  type WalletIntelligenceResponse,
+  type WalletOverviewPeriodKey
 } from "@/services/wallet/walletApi";
 import {
-    fetchWalletTags,
-    saveWalletTags,
+  fetchWalletTags,
+  saveWalletTags,
 } from "@/services/wallet/walletTagsApi";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -191,10 +192,10 @@ export function WalletTopbar({
   const walletAgeLabel =
     walletAgeDays != null
       ? formatLocalizedWalletAge(walletAgeDays, {
-          day: String(tr("walletPage.walletAgeUnitDay")),
-          month: String(tr("walletPage.walletAgeUnitMonth")),
-          year: String(tr("walletPage.walletAgeUnitYear")),
-        })
+        day: String(tr("walletPage.walletAgeUnitDay")),
+        month: String(tr("walletPage.walletAgeUnitMonth")),
+        year: String(tr("walletPage.walletAgeUnitYear")),
+      })
       : null;
 
   const displayName =
@@ -202,11 +203,12 @@ export function WalletTopbar({
     (identityStatus === "known" && identityName
       ? identityName
       : shortenWalletAddress(address));
+
   useEffect(() => {
     if (!address || address === "null") return;
     fetchWalletIntelligence(address, "solana")
       .then(setIntelligence)
-      .catch(() => {});
+      .catch(() => { });
   }, [address]);
 
   const loadFollowedWallets = useCallback(async () => {
@@ -401,57 +403,49 @@ export function WalletTopbar({
             alt=""
           />
           <div className={styles.topbarIdentity}>
-            <div className={styles.topbarAddress}>
-              <span className={styles.topbarAddressText}>{displayName}</span>
+            <div className={styles.topbarNameRow}>
+              <span className={styles.topbarName}>{displayName}</span>
               {displayName !== shortenWalletAddress(address) &&
                 displayName !== address && (
-                  <span
-                    style={{
-                      fontSize: "12px",
-                      color: "var(--cds-text-secondary)",
-                      marginLeft: "4px",
-                      marginRight: "4px",
-                      fontFamily: "monospace",
-                    }}
-                  >
-                    {shortenWalletAddress(address)}
-                  </span>
+                  <AddressPill
+                    address={address}
+                    size="sm"
+                  />
                 )}
               <button
                 type="button"
-                className={styles.copyBtn}
+                className={styles.iconBtnSmall}
                 onClick={handleCopyAddress}
                 aria-label="Copy address"
               >
-                <Copy size={13} />
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="2" width="10" height="10" rx="1.5" />
+                  <path d="M4 4V2.5A1.5 1.5 0 0 1 5.5 1h8A1.5 1.5 0 0 1 15 2.5v8a1.5 1.5 0 0 1-1.5 1.5H12" />
+                </svg>
               </button>
               <button
-                className={styles.editLabelBtn}
+                className={styles.iconBtnSmall}
                 onClick={() => setIsLabelModalOpen(true)}
                 aria-label="Edit wallet label"
                 title="Assign custom label"
               >
-                <Edit size={16} />
+                <Edit size={14} />
               </button>
             </div>
-            <div className={styles.topbarSub}>
+            <div className={styles.topbarTags}>
               {walletAgeLabel && (
-                <span className={styles.chipGreen}>{walletAgeLabel}</span>
+                <StatusBadge label={walletAgeLabel} variant="success" size="sm" />
               )}
               {identityStatus === "unknown" && (
-                <span className={styles.chipGray}>
-                  {tr("walletPage.unknownEntity")}
-                </span>
+                <StatusBadge label={tr("walletPage.unknownEntity")} variant="neutral" size="sm" />
               )}
               {identityStatus === "known" && identityCategory && (
-                <Tag size="sm" type="teal">
-                  {identityCategory}
-                </Tag>
+                <StatusBadge label={identityCategory} variant="info" size="sm" />
               )}
               {firstFundLabel && (
                 <button
                   type="button"
-                  className={styles.inlineTagBtn}
+                  className={styles.tagBtn}
                   onClick={() =>
                     firstFund?.funderAddress &&
                     handleOpenFirstFunder(firstFund.funderAddress)
@@ -469,7 +463,7 @@ export function WalletTopbar({
               ))}
               <button
                 type="button"
-                className={styles.inlineTagBtn}
+                className={styles.tagBtn}
                 onClick={() => user && setIsTagsModalOpen(true)}
                 disabled={!user}
               >
@@ -479,22 +473,21 @@ export function WalletTopbar({
           </div>
         </div>
 
+
         <div className={styles.topbarRight}>
-          <div className={styles.topbarRow}>
-            <PeriodSelector
-              value={currentPeriod}
-              onChange={(key) => onPeriodChange(key as WalletOverviewPeriodKey)}
-              options={PERIOD_OPTIONS}
-              compact
-            />
-          </div>
-          <div className={styles.topbarRow}>
+          <PillTabs
+            options={PERIOD_OPTIONS.map((opt) => ({
+              label: tr(opt.labelKey),
+              value: opt.key,
+            }))}
+            value={currentPeriod}
+            onChange={(key) => onPeriodChange(key as WalletOverviewPeriodKey)}
+            size="sm"
+          />
+
+          <div className={styles.topbarActions}>
             <Tooltip
-              label={
-                isBookmarked
-                  ? tr("wallet.bookmarked")
-                  : tr("wallet.bookmarkWallet")
-              }
+              label={isBookmarked ? tr("wallet.bookmarked") : tr("wallet.bookmarkWallet")}
               align="bottom-left"
             >
               <button
@@ -503,17 +496,13 @@ export function WalletTopbar({
                 onClick={handleBookmark}
                 disabled={!user || isBookmarkPending}
               >
-                {isBookmarked ? (
-                  <BookmarkFilled size={16} />
-                ) : (
-                  <Bookmark size={16} />
-                )}
+                {isBookmarked ? <BookmarkFilled size={16} /> : <Bookmark size={16} />}
               </button>
             </Tooltip>
             <Tooltip label={followButtonLabel} align="bottom-left">
               <button
                 type="button"
-                className={`${styles.iconBtn} ${isFollowed ? styles.iconBtnActive : ""}`.trim()}
+                className={`${styles.iconBtn} ${isFollowed ? styles.iconBtnActive : ""}`}
                 onClick={handleFollowWallet}
                 disabled={followButtonDisabled}
                 aria-label={followButtonLabel}
@@ -550,39 +539,6 @@ export function WalletTopbar({
                 <AiGenerate size={16} />
               </button>
             </Tooltip>
-            {/* <Tooltip label="Forensic Audit" align="bottom-left">
-              <button type="button" className={styles.iconBtn} onClick={onAuditOpen}>
-                <Report size={16} />
-              </button>
-            </Tooltip>
-            <div className={styles.exportMenuWrapper} ref={exportMenuRef}>
-              <button
-                type="button"
-                className={styles.ibtn}
-                onClick={() => setIsExportMenuOpen((prev) => !prev)}
-                disabled={isExporting}
-              >
-                <Download size={13} />
-                {tr("charts.export")}
-                <ChevronDown size={13} />
-              </button>
-              {isExportMenuOpen && (
-                <div className={styles.exportMenu}>
-                  <button type="button" className={styles.exportMenuItem} onClick={onExportData} disabled={isExporting}>
-                    <Download size={16} />
-                    Export XLSX
-                  </button>
-                  <button type="button" className={styles.exportMenuItem} onClick={onExportCharts} disabled={isExporting}>
-                    <Download size={16} />
-                    Export Charts ZIP
-                  </button>
-                  <button type="button" className={styles.exportMenuItem} onClick={onExportPdf} disabled={isExporting}>
-                    <Download size={16} />
-                    Export PDF Report
-                  </button>
-                </div>
-              )}
-            </div> */}
           </div>
         </div>
       </div>

@@ -236,14 +236,91 @@ Copy-to-clipboard icon button with checkmark feedback (2s).
 <CpyBtn size="sm" copyWhat="text" align="right" />
 ```
 
-#### FilterSwitch — `components/FilterSwitch.tsx`
-Carbon ContentSwitcher wrapper for filter toggles.
+#### FilterSwitch — `components/FilterSwitch.tsx` ⚠️ DEPRECATED (replaced by `PillTabs`)
+Carbon ContentSwitcher wrapper for filter toggles. New code should use `PillTabs` instead.
 ```tsx
 <FilterSwitch
   options={[{ value: "24H", label: "24H" }]}
   value="24H"
   onChange={(v) => setPeriod(v)}
   width="md"    // "sm"(8rem) | "md"(12.5) | "lg"(16) | "xl"(25) | "2xl"(32) | number
+/>
+```
+
+#### Card — `components/common/Card/` (NEW)
+Subtle border + shadow container with optional header bar. Used as primary section wrapper across wallet page.
+```tsx
+<Card
+  title="Section Title"
+  subtitle="Optional description"
+  actions={<Button />}      // top-right action slot
+  hoverable                 // elevates on hover
+  padding="1rem"            // custom padding override
+>
+  {children}
+</Card>
+```
+
+#### MetricCard — `components/common/MetricCard/` (NEW)
+Compact KPI display with label, large value, optional trend indicator and icon. Used in WalletHero grid.
+```tsx
+<MetricCard
+  label="Total PnL"
+  value={fmt.num.compact.currency(12345)}
+  trend={{ value: 12.5, direction: "up" | "down" | "neutral" }}
+  subtitle="Realized + Unrealized"
+  icon={<Icon />}
+  size="sm" | "md" | "lg"
+/>
+```
+
+#### PageHeader — `components/common/PageHeader/` (NEW)
+Consistent page heading hierarchy: eyebrow → title → subtitle, with optional pill tab strip and actions slot.
+```tsx
+<PageHeader
+  eyebrow="Wallet Intelligence"    // small uppercase label
+  title="Wallet Detail"
+  subtitle="Track holdings, capital flow..."
+  actions={<Button />}
+  tabs={[{ label: "7d", value: "7" }]}
+  activeTab="7"
+  onTabChange={(v) => void}
+/>
+```
+
+#### PillTabs — `components/common/PillTabs/` (NEW)
+Rounded `999px` pill tabs — replaces `FilterSwitch`/`ContentSwitcher` for period and filter toggles.
+```tsx
+<PillTabs
+  options={[{ label: "7d", value: "7" }]}
+  value="7"
+  onChange={(v) => void}
+  size="sm" | "md"
+/>
+```
+
+#### StatusBadge — `components/common/StatusBadge/` (NEW)
+Compact colored pill for status indicators (identity, risk level, alert severity).
+```tsx
+<StatusBadge
+  label="Known"
+  variant="success" | "warning" | "error" | "info" | "neutral"
+  icon={<Icon />}
+  size="sm" | "md"
+/>
+```
+
+#### AddressPill — `components/common/AddressPill/` (NEW)
+Truncated address display with optional copy button and label. Used for wallet addresses across the app.
+```tsx
+<AddressPill
+  address="AbcDef...1234"
+  label="Display Name"
+  copyable
+  truncate                    // 6...4 format
+  icon={<Icon />}
+  onClick={() => void}
+  size="sm" | "md"
 />
 ```
 
@@ -432,8 +509,8 @@ Wraps protected routes. Shows Loading while checking auth, redirects to `/unauth
 | Component | File | Role |
 |---|---|---|
 | `WalletOverview` | `WalletOverview/` | Full wallet header: name, address, tags, identity, age, stats sections, period selector, bookmark/follow/share/compare, sub-sections (Value, PnL, Trading, WinRate banner). ~600 lines. |
-| `WalletTopbar` | `WalletTopbar/` | Sub-header with wallet identity, win rate mini-card, period selector, bookmark/follow/compare/share/AI buttons, tag/label modals |
-| `WalletHero` | `WalletHero/` | 3-column KPI hero: Total Asset Value, Total PnL, Trading Volume with sub-metrics |
+| `WalletTopbar` | `WalletTopbar/` | Sub-header with wallet identity (`AddressPill`, `StatusBadge`), `PillTabs` period selector, bookmark/follow/compare/share/AI buttons, tag/label modals |
+| `WalletHero` | `WalletHero/` | 4-column CSS grid of `MetricCard`s: Total Asset Value, Total PnL, Trading Volume, Win rate with sub-metrics |
 | `WalletHoldingsPanel` | `WalletHoldingsPanel/` | Sidebar portfolio holdings list |
 | `WalletChat` | `WalletChat/` | AI chat sidebar/overlay with context |
 | `AiAnalysisModal` | `AiAnalysisModal/` | Full AI analysis modal |
@@ -584,12 +661,13 @@ API calls follow `services/{domain}/` structure:
 ## 16. Style Architecture Summary
 
 | File | Purpose |
-|---|---|
+|---|---|---|
 | `styles/theme.scss` | `--yoca-*` CSS vars, light/dark themes, global transitions |
 | `styles/carbon.scss` | Carbon import with `@use "@carbon/styles"` |
 | `styles/_variables.scss` | SCSS variables (layout, spacing, z-index, breakpoints) |
+| `styles/_tokens.module.scss` | Design token SCSS variables (card, metric, pill, badge, address, button tokens) |
 | `styles/_semantic.module.scss` | `.positive`/`.negative` utility classes |
-| `styles/_overwrite.module.scss` | Carbon component overrides (tables, filters, grid, etc.) |
+| `styles/_overwrite.module.scss` | Carbon component overrides + shared utility classes (`.card`, `.metricValue`, `.pageTitle`, `.pillTab`, `.statusBadge`, `.emptyState`, `.addressPill`) |
 | `styles/landing-tailwind.css` | Tailwind v4 for landing page with scoped reset |
 | `**/*.module.scss` | Co-located component styles |
 
@@ -619,6 +697,12 @@ API calls follow `services/{domain}/` structure:
 | Carbon theme tool | `util/carbon-theme.ts` |
 | Auth modal | `components/auth/SignInModal.tsx` (also SignInModal/SignUpModal exports) |
 | Tab container | `components/tabContainer/tabContainer.tsx` |
+| Card (shared) | `components/common/Card/Card.tsx` |
+| MetricCard (shared) | `components/common/MetricCard/MetricCard.tsx` |
+| PageHeader (shared) | `components/common/PageHeader/PageHeader.tsx` |
+| PillTabs (shared) | `components/common/PillTabs/PillTabs.tsx` |
+| StatusBadge (shared) | `components/common/StatusBadge/StatusBadge.tsx` |
+| AddressPill (shared) | `components/common/AddressPill/AddressPill.tsx` |
 | Period selector | `components/common/PeriodSelector/PeriodSelector.tsx` |
 | Wallet page | `pages/wallet/index.tsx` |
 | Wallet overview | `components/wallet/WalletOverview/WalletOverview.tsx` |
@@ -806,28 +890,28 @@ interface EmptyStateProps {
 
 ### 18.3 Page-Specific Refactoring
 
-#### 18.3.1 Wallet Page (`pages/wallet/index.tsx`)
+#### 18.3.1 Wallet Page (`pages/wallet/index.tsx`) ✅ COMPLETED
 **Goal:** Improve visual hierarchy of summary metrics and card consistency.
 
-| Change | Detail |
-|---|---|
-| **WalletHero → MetricCards** | Replace 3-column `<div>` layout with CSS grid of `MetricCard` components: Total Asset Value (with unrealized PnL %), Total PnL (realized/unrealized split), Trading Volume (buy/sell split) |
-| **WalletTopbar identity** | Use `AddressPill` for address display, `StatusBadge` for identity/risk tags |
-| **BalanceChartV2 / PnLChart** | Wrap in `Card` component with consistent title + actions |
-| **WalletTransactionActivity** | Wrap swap + transfer tables in `Card` components |
-| **WalletHoldingsPanel** | Wrap portfolio in `Card` with `MetricCard` for total value header |
-| **Page title area** | Use `PageHeader` with "Wallet Intelligence" eyebrow + "Wallet Detail" title |
-| **Period selector** | Replace `Select` dropdown with `PillTabs` |
-| **Win rate banner** | Use `StatusBadge` for win/loss indicators |
+| Change | Detail | Status |
+|---|---|---|
+| **WalletHero → MetricCards** | CSS grid (4-col→2-col→1-col responsive) with `MetricCard` components: Total PnL (realized/unrealized split), Trading Volume (buy/sell split), Total Trades, Win rate (4th column) | ✅ Done |
+| **WalletTopbar identity** | `AddressPill` for address display, `StatusBadge` for identity/risk badges, removed win rate mini-card | ✅ Done |
+| **BalanceChartV2 / PnLChart** | Wrapped in `Card` component | ✅ Done |
+| **WalletTransactionActivity** | Wrapped in `Card` component | ✅ Done |
+| **WalletHoldingsPanel** | Wrapped in `Card` component | ✅ Done |
+| **Page title area** | `PageHeader` with "Wallet Intelligence" eyebrow + "Wallet Detail" title | ✅ Done |
+| **Period selector** | Replaced `Select` dropdown with `PillTabs` | ✅ Done |
+| **Win rate** | Moved as 4th column in `WalletHero` (`MetricCard`) instead of `StatusBadge` or mini-card | ✅ Done |
+| **TokenDetailsDemo FilterSwitch** | Replaced Carbon `FilterSwitch` with `PillTabs` in `TokenAverageTradePrice` | ✅ Done |
+| **index.module.scss cleanup** | Removed `.pageIntro`, `.pageEyebrow`, `.pageTitle`, `.pageSubtitle`, `.section` + Carbon overrides (~150 lines) | ✅ Done |
 
 **Layout structure after refactor:**
 ```
 PageHeader (eyebrow="Wallet Intelligence", title="Wallet Detail")
-WalletTopbar (identity, win rate mini-card, actions)
-├── PeriodSelector (PillTabs)
-├── Bookmark / Follow / Compare / Share / AI buttons
-MetricCard grid (3 columns)
-├── Total Asset Value | Total PnL | Trading Volume
+WalletTopbar (AddressPill, StatusBadge, PillTabs period, action buttons)
+MetricCard grid (4 columns)
+├── Total PnL | Trading Volume | Total Trades | Win Rate
 Card: Balance History
 Card: Profit & Loss
 Card: Swaps / Transfers (tables)
@@ -1008,16 +1092,18 @@ Add new shared classes:
 
 ### 18.6 Implementation Order
 
-1. **Design tokens** — Create `_tokens.module.scss` with shared CSS classes
-2. **Card + MetricCard** — Build reusable components, integrate into WalletHero
-3. **PageHeader** — Build and use on wallet, alerts, profile pages
-4. **PillTabs** — Build and replace period selector
-5. **StatusBadge + AddressPill** — Build and replace ad-hoc tags/pills
-6. **EmptyState** — Build and replace empty state text across profile/alerts
-7. **Button variants** — Add danger/ghost-danger support
-8. **Alerts page** — Card-based layout with EmptyState
-9. **Profile/Activity page** — EmptyState + Card cleanup
-10. **Wallet page** — Full Card/MetricCard/PageHeader integration
+| Step | Item | Status |
+|---|---|---|
+| 1 | **Design tokens** — Create `_tokens.module.scss` with shared CSS classes | ✅ Done |
+| 2 | **Card + MetricCard** — Build reusable components | ✅ Done |
+| 3 | **PageHeader** — Build component | ✅ Done |
+| 4 | **PillTabs** — Build and replace Carbon `FilterSwitch`/`ContentSwitcher` | ✅ Done |
+| 5 | **StatusBadge + AddressPill** — Build and replace ad-hoc tags/pills | ✅ Done |
+| 6 | **EmptyState** — Build and replace empty state text across profile/alerts | ❌ Pending |
+| 7 | **Button variants** — Add danger/ghost-danger support | ❌ Pending |
+| 8 | **Alerts page** — Card-based layout with EmptyState | ❌ Pending |
+| 9 | **Profile/Activity page** — EmptyState + Card cleanup | ❌ Pending |
+| 10 | **Wallet page** — Full Card/MetricCard/PageHeader integration | ✅ Done |
 
 ### 18.7 Constraints Recap
 
@@ -1038,7 +1124,7 @@ After each step, manually verify:
 
 | Page | Test |
 |---|---|
-| **Wallet page** | Metric cards show all 3 columns at 1440px; collapse to 2 at 900px, 1 at 600px. Win rate badge colors correct. Period selector works. |
+| **Wallet page** | Metric cards show all 4 columns at 1440px; collapse to 2 at 900px, 1 at 600px. Win rate color correct. `PillTabs` period filter works. Charts/tables wrapped in `Card`. |
 | **Alerts page** | Each section is a distinct card. Empty state renders when no alert rules. Delete action visible and works. |
 | **Profile pages** | Each tab has proper empty states instead of blank/stub. Tables match other pages. |
 | **Global** | `npm run typecheck` passes. No visual regressions on existing charts/tables. |

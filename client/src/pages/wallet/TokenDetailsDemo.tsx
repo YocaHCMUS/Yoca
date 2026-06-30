@@ -7,7 +7,7 @@ import {
     type TradePoint,
 } from "@/components/charts/TimeSeriesTradesScatterChart";
 import { CpyBtn } from "@/components/CpyBtn";
-import { FilterSwitch } from "@/components/FilterSwitch";
+import { PillTabs } from "@/components/common/PillTabs/PillTabs";
 import Tble from "@/components/Tble";
 import { TknImg } from "@/components/TknImg";
 import { TrendNum } from "@/components/TrendNum";
@@ -34,7 +34,7 @@ type TokenAverageTradePriceProps = {
   avgSellPrice: number;
 };
 
-type TokenPriceDayRange = 7 | 30 | 90;
+type TokenPriceDayRange = "7" | "30" | "90";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -114,7 +114,7 @@ export function isTradeWithinSelectedRange(
     return false;
   }
 
-  const rangeStartMs = nowMs - selectedTimeRange * DAY_MS;
+  const rangeStartMs = nowMs - Number(selectedTimeRange) * DAY_MS;
   return tradeUnixTimeMs >= rangeStartMs && tradeUnixTimeMs <= nowMs;
 }
 
@@ -144,7 +144,7 @@ export function TokenAverageTradePrice({
   });
   const { fmt, tr } = useLocalization();
   const [selectedTimeRange, setSelectedTimeRange] =
-    useState<TokenPriceDayRange>(7);
+    useState<TokenPriceDayRange>("7");
 
   const priceData = useGet(
     client.api.tokens.markets.chart[":address"].daily,
@@ -299,23 +299,15 @@ export function TokenAverageTradePrice({
               alignItems: "center",
             }}
           >
-            <FilterSwitch
+            <PillTabs
               options={[
-                {
-                  label: "7d",
-                  value: 7,
-                },
-                {
-                  label: "30d",
-                  value: 30,
-                },
-                {
-                  label: "90d",
-                  value: 90,
-                },
+                { label: "7d", value: "7" },
+                { label: "30d", value: "30" },
+                { label: "90d", value: "90" },
               ]}
               value={selectedTimeRange}
-              onChange={(v) => setSelectedTimeRange(v)}
+              onChange={(v) => setSelectedTimeRange(v as TokenPriceDayRange)}
+              size="sm"
             />
           </div>
         </Column>
