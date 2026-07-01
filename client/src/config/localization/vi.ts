@@ -112,8 +112,13 @@ export const translation = defineTranslation({
     selectAll: "Chọn tất cả",
     from: "Từ",
     to: "Đến",
-    page: "Trang {{count}}"
-  },
+    page: "Trang {{count}}",
+      clear: "Xóa",
+      noResults: "Không có kết quả",
+      clearFilter: "Xóa bộ lọc",
+      filterSearchPlaceholder: "Tìm kiếm {{column}}...",
+      searchAriaLabel: "Tìm kiếm bảng",
+    },
   // Authentication
   auth: {
     authenticating: "Đang xác thực...",
@@ -1728,6 +1733,12 @@ export const translation = defineTranslation({
       noDataDelta: "--",
       removeTag: "Xóa nhãn",
       atLeastOneTagRequired: "Cần chọn ít nhất một nhãn",
+      searchTokenPlaceholder: "Tìm kiếm token",
+      symbolOrNamePlaceholder: "Ký hiệu hoặc tên",
+      noMatchingTokens: "Không tìm thấy token",
+      errors: {
+        balanceUnavailable: "Lịch sử số dư tạm thời không khả dụng. Vui lòng thử lại.",
+      },
     },
     walletSingleBalanceChart: {
       title: "Xu hướng số dư theo ví",
@@ -1749,6 +1760,7 @@ export const translation = defineTranslation({
     },
     assetDistributionChart: {
       title: "Phân bổ tài sản",
+      total: "Tổng",
       totalValue: "Tổng giá trị",
       asset: "Tài sản",
       value: "Giá trị",
@@ -1989,6 +2001,15 @@ export const translation = defineTranslation({
     confidenceLow: "Thấp",
     showAll: "Hiển thị tất cả ({{count}})",
     showLess: "Thu gọn",
+    aiDisclaimer:
+      "Phản hồi AI có thể chưa đầy đủ hoặc chưa chính xác và không phải lời khuyên tài chính. Hãy xác minh thông tin quan trọng trước khi hành động.",
+    limitReachedTitle: "Đã hết hạn mức AI chat trong ngày",
+    limitReachedText:
+      "Bạn đã dùng hết số tin nhắn ví AI chat trong ngày theo gói hiện tại. Các lựa chọn nâng cấp có thể tăng dung lượng AI cho nghiên cứu chuyên sâu hơn.",
+    limitReachedReset: "Hạn mức hằng ngày đặt lại lúc 00:00 UTC.",
+    upgradeOptions: "Xem lựa chọn nâng cấp",
+    goToPricing: "Đến bảng giá",
+    notNow: "Để sau",
     inputCounter: "{{current}}/{{max}}",
     inputOverLimit: "Câu hỏi phải dưới {{max}} ký tự.",
     clickToAsk: "Nhấp để hỏi: {{query}}",

@@ -1,4 +1,4 @@
-import { ChevronDown, Search, type LucideIcon } from "lucide-react";
+import { ChevronDown, type LucideIcon } from "lucide-react";
 import {
   useEffect,
   useMemo,
@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { SearchBox } from "./SearchBox";
 import styles from "./ChartControls.module.scss";
 
 interface ChartSelectProps<TItem> {
@@ -141,14 +142,12 @@ export function ChartSelect<TItem>({
       {isOpen && (
         <div className={styles.panel}>
           <div className={styles.searchRow}>
-            <Search size={15} />
-            <input
-              ref={searchRef}
-              className={styles.searchInput}
+            <SearchBox
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={setQuery}
               placeholder={searchPlaceholder}
-              aria-label={searchPlaceholder}
+              ariaLabel={searchPlaceholder}
+              inputRef={searchRef}
             />
           </div>
           <div className={styles.list} role="listbox" aria-label={label}>

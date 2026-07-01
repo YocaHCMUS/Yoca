@@ -153,8 +153,13 @@ export const translation = {
     selectAll: "Select All",
     from: "From",
     to: "To",
-    page: "Page {{count}}"
-  },
+    page: "Page {{count}}",
+      clear: "Clear",
+      noResults: "No results",
+      clearFilter: "Clear filter",
+      filterSearchPlaceholder: "Search {{column}}...",
+      searchAriaLabel: "Search table",
+    },
   // Authentication
   auth: {
     authenticating: "Authenticating...",
@@ -1767,6 +1772,13 @@ export const translation = {
       noDataDelta: "--",
       removeTag: "Remove tag",
       atLeastOneTagRequired: "At least one tag is required",
+      searchTokenPlaceholder: "Search token",
+      symbolOrNamePlaceholder: "Symbol or name",
+      noMatchingTokens: "No matching tokens",
+      errors: {
+        balanceUnavailable:
+          "Balance history is temporarily unavailable. Please try again.",
+      },
     },
     walletSingleBalanceChart: {
       title: "Wallet Balance Trend",
@@ -1788,6 +1800,7 @@ export const translation = {
     },
     assetDistributionChart: {
       title: "Assets Distribution",
+      total: "Total",
       totalValue: "Total Value",
       asset: "Assets",
       value: "Value",
@@ -2029,6 +2042,15 @@ export const translation = {
     confidenceLow: "Low",
     showAll: "Show all ({{count}})",
     showLess: "Show less",
+    aiDisclaimer:
+      "AI responses may be incomplete or incorrect and are not financial advice. Verify important details before acting.",
+    limitReachedTitle: "Daily AI chat limit reached",
+    limitReachedText:
+      "You have used all wallet chat messages available on your current plan today. Upgrade options can add more AI capacity for deeper research.",
+    limitReachedReset: "Daily limits reset at 00:00 UTC.",
+    upgradeOptions: "View upgrade options",
+    goToPricing: "Go to pricing",
+    notNow: "Not now",
     inputCounter: "{{current}}/{{max}}",
     inputOverLimit: "Question must be {{max}} characters or fewer.",
     clickToAsk: "Click to ask: {{query}}",

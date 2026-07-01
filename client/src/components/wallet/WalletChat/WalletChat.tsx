@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
-import { Add, ChevronDown, Close, Maximize, OpenPanelLeft, OpenPanelRight, Playlist, Send, TrashCan } from "@carbon/icons-react";
+import { ChevronDown, List, Maximize2, Minus, PanelLeftOpen, PanelRightOpen, Plus, Send, Trash2, X } from "lucide-react";
 import { WalletChatMessage } from "./WalletChatMessage";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
 import { ChatPromptMenu } from "./ChatPromptMenu";
@@ -12,6 +12,9 @@ import type { ChatSessionContextType } from "./useChatSessions";
 import type { ChatMessageItem } from "./types";
 import styles from "./WalletChat.module.scss";
 import { useAuth } from "@/contexts/AuthContext";
+import { AddressPill } from "@/components/common/AddressPill/AddressPill";
+import { IconButton } from "@/components/common/IconButton/IconButton";
+import { UpgradePromptModal } from "@/components/common/UpgradePromptModal/UpgradePromptModal";
 import { ChatContext, ChatContextProvider, MAX_INPUT_LENGTH, useChatContext } from "./ChatContext";
 
 const MAX_QUICK_QUESTIONS = 5;
@@ -50,6 +53,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
   const sessionToggleRef = useRef<HTMLButtonElement>(null);
   const sessionMenuRef = useRef<HTMLDivElement>(null);
   const [activeMessageContext, setActiveMessageContext] = useState<ChatMessageItem["context"] | null>(null);
+  const [isUpgradePromptOpen, setIsUpgradePromptOpen] = useState(false);
 
   const {
     messages,
@@ -228,15 +232,15 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
       <div className={styles.subheader} aria-label="Wallet context">
         <span className={styles.contextLabel}>{tr("chat.context")}:</span>
         {ctx.walletAddresses.map((addr) => (
-          <button
+          <AddressPill
             key={addr}
-            type="button"
-            className={styles.contextTag}
-            onClick={() => navigate(`/wallets/${encodeURIComponent(addr)}`)}
-            title={addr}
-          >
-            {fmt.text.address(addr)}
-          </button>
+            address={addr}
+            label={fmt.text.address(addr)}
+            truncate={false}
+            size="sm"
+            className={styles.contextAddress}
+            onClick={() => navigate("/wallets/" + encodeURIComponent(addr))}
+          />
         ))}
       </div>
     );
@@ -313,14 +317,12 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
           <span className={styles.headerTitle}>{tr("chat.headerTitle")}</span>
           <div className={styles.headerActions}>
             {variant === "widget" && (
-              <button
-                type="button"
+              <IconButton
+                icon={X}
+                label={tr("chat.close")}
                 onClick={handleToggle}
-                className={styles.headerBtn}
-                aria-label={tr("chat.close")}
-              >
-                ✕
-              </button>
+                size="sm"
+              />
             )}
           </div>
         </div>
@@ -363,6 +365,11 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
   if (variant === "sidebar" && !isOpen) {
     return null;
   }
+
+  const handleConfirmUpgrade = () => {
+    setIsUpgradePromptOpen(false);
+    navigate("/pricing");
+  };
 
   const renderPromptMenu = () => (
     <ChatPromptMenu
@@ -430,7 +437,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
             onClick={(e) => handleDeleteSession(e, s.id)}
             title={tr("chat.deleteSession")}
           >
-            <TrashCan size={12} />
+            <Trash2 size={12} />
           </button>
         </div>
       ))}
@@ -463,67 +470,55 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
             </button>
             {sessionMenu}
           </div>
-          <button
-            className={styles.headerBtn}
-            data-active={chatPosition === "left"}
+          <IconButton
+            icon={PanelLeftOpen}
+            label={tr("chat.leftSidebar")}
+            active={chatPosition === "left"}
             onClick={() => onChatPositionChange("left")}
-            title={tr("chat.leftSidebar")}
-          >
-            <OpenPanelLeft size={16} />
-          </button>
-          <button
-            className={styles.headerBtn}
-            data-active={chatPosition === "right"}
+            size="sm"
+          />
+          <IconButton
+            icon={PanelRightOpen}
+            label={tr("chat.rightSidebar")}
+            active={chatPosition === "right"}
             onClick={() => onChatPositionChange("right")}
-            title={tr("chat.rightSidebar")}
-          >
-            <OpenPanelRight size={16} />
-          </button>
-          <button
-            className={styles.headerBtn}
-            data-active={chatPosition === "fullscreen"}
+            size="sm"
+          />
+          <IconButton
+            icon={Maximize2}
+            label={tr("chat.fullscreenMode")}
+            active={chatPosition === "fullscreen"}
             onClick={() => onChatPositionChange("fullscreen")}
-            title={tr("chat.fullscreenMode")}
-          >
-            <Maximize size={16} />
-          </button>
-          <button
-            type="button"
+            size="sm"
+          />
+          <IconButton
+            icon={Plus}
+            label={tr("chat.newChat")}
             onClick={handleNewChat}
-            className={styles.headerBtn}
-            title={tr("chat.newChat")}
-          >
-            <Add size={16} />
-          </button>
+            size="sm"
+          />
           {onRequestClose && (
-            <button
-              type="button"
+            <IconButton
+              icon={X}
+              label={tr("chat.close")}
               onClick={onRequestClose}
-              className={styles.headerBtn}
-              aria-label={tr("chat.close")}
-              title={tr("chat.close")}
-            >
-              <Close size={16} />
-            </button>
+              size="sm"
+            />
           )}
           {variant === "widget" && (
             <>
-              <button
-                type="button"
+              <IconButton
+                icon={Minus}
+                label={tr("chat.minimize")}
                 onClick={() => setIsMinimized(true)}
-                className={styles.headerBtn}
-                aria-label={tr("chat.minimize")}
-              >
-                ⟱
-              </button>
-              <button
-                type="button"
+                size="sm"
+              />
+              <IconButton
+                icon={X}
+                label={tr("chat.close")}
                 onClick={handleToggle}
-                className={styles.headerBtn}
-                aria-label={tr("chat.close")}
-              >
-                ✕
-              </button>
+                size="sm"
+              />
             </>
           )}
         </div>
@@ -533,6 +528,10 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
       {showPromptMenu ? renderPromptMenu()
         : messages.length === 0 && !isLoading ? renderGreeting()
           : renderMessages()}
+
+      {messages.length > 0 && !showPromptMenu && (
+        <div className={styles.aiDisclaimer}>{tr("chat.aiDisclaimer")}</div>
+      )}
 
       <div className={styles.inputBar}>
         <div className={styles.inputContainer}>
@@ -553,23 +552,21 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
                 : tr("chat.inputCounter", { current: String(inputText.length), max: MAX_INPUT_LENGTH })}
             </span>
             <div className={styles.inputActions}>
-              <button
-                type="button"
+              <IconButton
+                icon={List}
+                label={tr("chat.promptMenuBtn")}
                 onClick={() => setShowPromptMenu((v) => !v)}
                 disabled={isLoading}
-                className={styles.iconBtn}
-                title={tr("chat.promptMenuBtn")}
-              >
-                <Playlist size={16} />
-              </button>
-              <button
-                type="button"
+                active={showPromptMenu}
+                size="sm"
+              />
+              <IconButton
+                icon={Send}
+                label={tr("chat.sendButtonTitle")}
                 onClick={() => sendQuery(inputText)}
                 disabled={isLoading || quotaExhausted || !inputText.trim() || inputText.length > MAX_INPUT_LENGTH}
-                className={styles.iconBtn}
-              >
-                <Send size={16} />
-              </button>
+                size="sm"
+              />
             </div>
           </div>
         </div>
@@ -577,11 +574,25 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
           <div className={styles.validationError}>{inputValidationError}</div>
         )}
         {quotaExhausted && (
-          <div className={styles.validationError}>
-            Daily AI chat limit reached. <a href="/pricing">Upgrade plan</a>
+          <div className={styles.limitNotice}>
+            <span>{tr("chat.limitReachedTitle")}</span>
+            <button type="button" className={styles.limitAction} onClick={() => setIsUpgradePromptOpen(true)}>
+              {tr("chat.upgradeOptions")}
+            </button>
           </div>
         )}
       </div>
+      <UpgradePromptModal
+        open={isUpgradePromptOpen}
+        title={tr("chat.limitReachedTitle")}
+        description={tr("chat.limitReachedText")}
+        confirmLabel={tr("chat.goToPricing")}
+        cancelLabel={tr("chat.notNow")}
+        onConfirm={handleConfirmUpgrade}
+        onClose={() => setIsUpgradePromptOpen(false)}
+      >
+        {tr("chat.limitReachedReset")}
+      </UpgradePromptModal>
     </div>
   );
 }

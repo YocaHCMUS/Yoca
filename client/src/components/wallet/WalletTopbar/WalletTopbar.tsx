@@ -10,7 +10,9 @@ import {
   Edit,
   Tag as TagIcon,
 } from "@carbon/icons-react";
-import { InlineNotification, Tag, Tooltip } from "@carbon/react";
+import { Tag } from "@carbon/react";
+import { Tooltip } from "@/components/common/Tooltip";
+import { useToast } from "@/components/common/Toast";
 import client from "@/api/main";
 import { SegmentedControl } from "@/components/charts/shared/ChartControls";
 import { AddressPill } from "@/components/common/AddressPill/AddressPill";
@@ -50,11 +52,10 @@ type FollowWalletResponse = {
   heliusSync: HeliusSyncResult;
 };
 
-type FollowNotice = {
-  kind: "success" | "error" | "warning";
-  title: string;
-  subtitle?: string;
-  showManageAlerts?: boolean;
+type DeleteFollowedWalletEndpoint = {
+  ":id": {
+    $delete: (args: { param: { id: string } }) => Promise<Response>;
+  };
 };
 
 function shortenWalletAddress(address: string): string {
@@ -134,11 +135,6 @@ export interface WalletTopbarProps {
 export function WalletTopbar({
   address,
   onAiAnalysisOpen,
-  onAuditOpen,
-  onExportData,
-  onExportCharts,
-  onExportPdf,
-  isExporting,
   currentPeriod = "24H",
   onPeriodChange,
 }: WalletTopbarProps) {
@@ -146,6 +142,7 @@ export function WalletTopbar({
   const { tr } = useLocalization();
   const { walletWatchlist, walletPending, toggleWallet } = useWatchlist();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const [intelligence, setIntelligence] =
     useState<WalletIntelligenceResponse | null>(null);
@@ -160,7 +157,6 @@ export function WalletTopbar({
   );
   const [followLoading, setFollowLoading] = useState(false);
   const [followPending, setFollowPending] = useState(false);
-  const [followNotice, setFollowNotice] = useState<FollowNotice | null>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
   const isBookmarked = walletWatchlist.some(
@@ -299,20 +295,18 @@ export function WalletTopbar({
   const handleFollowWallet = useCallback(async () => {
     if (!user || !address || address === "null" || followPending) return;
 
-    setFollowNotice(null);
     setFollowPending(true);
 
     try {
       if (followedWallet) {
-        const res = await (client.api.alerts as any)[":id"].$delete({
+        const alertsApi = client.api.alerts as typeof client.api.alerts &
+          DeleteFollowedWalletEndpoint;
+        const res = await alertsApi[":id"].$delete({
           param: { id: String(followedWallet.id) },
         });
         if (res.status === 404) {
           await loadFollowedWallets();
-          setFollowNotice({
-            kind: "warning",
-            title: tr("wallet.followWalletNotFound"),
-          });
+          toast("warning", tr("wallet.followWalletNotFound"));
           return;
         }
         if (!res.ok) {
@@ -322,10 +316,7 @@ export function WalletTopbar({
         setFollowedWallets((prev) =>
           prev.filter((row) => row.id !== followedWallet.id),
         );
-        setFollowNotice({
-          kind: "success",
-          title: tr("wallet.walletUnfollowed"),
-        });
+        toast("success", tr("wallet.walletUnfollowed"));
         return;
       }
 
@@ -339,11 +330,12 @@ export function WalletTopbar({
 
       if (res.status === 409) {
         await loadFollowedWallets();
-        setFollowNotice({
-          kind: "warning",
-          title: tr("wallet.walletAlreadyFollowed"),
+        toast("warning", tr("wallet.walletAlreadyFollowed"), {
           subtitle: tr("wallet.followWalletSuccessHint"),
-          showManageAlerts: true,
+          action: {
+            label: tr("wallet.manageAlerts"),
+            onClick: () => window.location.assign("/alerts"),
+          },
         });
         return;
       }
@@ -356,22 +348,27 @@ export function WalletTopbar({
       }
 
       setFollowedWallets((prev) => mergeFollowedWalletRows(prev, body.wallet));
-      setFollowNotice({
-        kind: body.heliusSync.ok ? "success" : "warning",
-        title: tr("wallet.walletFollowed"),
-        subtitle: body.heliusSync.ok
-          ? tr("wallet.followWalletSuccessHint")
-          : body.heliusSync.error || tr("wallet.followWalletSuccessHint"),
-        showManageAlerts: true,
-      });
+      toast(
+        body.heliusSync.ok ? "success" : "warning",
+        tr("wallet.walletFollowed"),
+        {
+          subtitle: body.heliusSync.ok
+            ? tr("wallet.followWalletSuccessHint")
+            : body.heliusSync.error || tr("wallet.followWalletSuccessHint"),
+          action: {
+            label: tr("wallet.manageAlerts"),
+            onClick: () => window.location.assign("/alerts"),
+          },
+        },
+      );
     } catch (error) {
       console.error("[WalletTopbar] Failed to toggle followed wallet", error);
-      setFollowNotice({
-        kind: "error",
-        title: isFollowed
+      toast(
+        "error",
+        isFollowed
           ? tr("wallet.unfollowWalletFailed")
           : tr("wallet.followWalletFailed"),
-      });
+      );
       void loadFollowedWallets();
     } finally {
       setFollowPending(false);
@@ -382,6 +379,7 @@ export function WalletTopbar({
     followedWallet,
     isFollowed,
     loadFollowedWallets,
+    toast,
     tr,
     user,
   ]);
@@ -545,23 +543,6 @@ export function WalletTopbar({
           </div>
         </div>
       </div>
-
-      {followNotice && (
-        <div className={styles.followNotice}>
-          <InlineNotification
-            kind={followNotice.kind}
-            title={followNotice.title}
-            subtitle={followNotice.subtitle}
-            onClose={() => setFollowNotice(null)}
-            lowContrast
-          />
-          {followNotice.showManageAlerts && (
-            <a className={styles.noticeLink} href="/alerts">
-              {tr("wallet.manageAlerts")}
-            </a>
-          )}
-        </div>
-      )}
 
       <WalletLabelModal
         isOpen={isLabelModalOpen}

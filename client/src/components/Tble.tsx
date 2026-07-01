@@ -1,4 +1,4 @@
-﻿import { ChartTag } from "@/components/charts/shared/ChartControls";
+﻿import { ChartTag, SearchBox } from "@/components/charts/shared/ChartControls";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import {
   ChevronDown,
@@ -6,7 +6,6 @@ import {
   ChevronRight,
   ChevronUp,
   Filter,
-  Search,
   X,
 } from "lucide-react";
 import {
@@ -546,7 +545,7 @@ export default function Tble({
               max={maxLimit}
               step={step}
               value={minValue}
-              aria-label="Min"
+              aria-label={tr("table.from")}
               onChange={(event) => updateMin(Number(event.target.value))}
             />
             <input
@@ -556,7 +555,7 @@ export default function Tble({
               max={maxLimit}
               step={step}
               value={maxValue}
-              aria-label="Max"
+              aria-label={tr("table.to")}
               onChange={(event) => updateMax(Number(event.target.value))}
             />
           </div>
@@ -596,16 +595,16 @@ export default function Tble({
     const query = filterSearches[pathKey] ?? "";
     const candidates = (filterCandidateValues[pathKey] ?? [])
       .filter((candidate) => candidate.toLowerCase().includes(query.trim().toLowerCase()));
+    const filterColumnLabel = headers.find((h) => h.key === fallbackKey)?.header ?? fallbackKey;
 
     return (
       <div className={styles.selectFilter}>
         <label className={styles.filterSearchRow}>
-          <Search size={15} />
-          <input
+          <SearchBox
             value={query}
-            onChange={(event) => setFilterSearches((prev) => ({ ...prev, [pathKey]: event.target.value }))}
-            placeholder={tr("table.searchPlaceholder")}
-            aria-label={tr("table.searchPlaceholder")}
+            onChange={(next) => setFilterSearches((prev) => ({ ...prev, [pathKey]: next }))}
+            placeholder={tr("table.filterSearchPlaceholder", { column: filterColumnLabel })}
+            ariaLabel={tr("table.filterSearchPlaceholder", { column: filterColumnLabel })}
           />
         </label>
         <div className={styles.checkboxList}>
@@ -625,7 +624,7 @@ export default function Tble({
               <span>{candidate}</span>
             </label>
           ))}
-          {candidates.length === 0 && <div className={styles.emptyFilter}>No results</div>}
+          {candidates.length === 0 && <div className={styles.emptyFilter}>{tr("table.noResults")}</div>}
         </div>
       </div>
     );
@@ -654,7 +653,7 @@ export default function Tble({
         )}
         <div className={styles.filterActions}>
           <button type="button" className={styles.secondaryButton} onClick={() => setDraftFilterValue(getDefaultFilterState(schema))}>
-            Clear
+            {tr("table.clear")}
           </button>
           <button type="button" className={styles.primaryButton} onClick={applyFilter}>
             {tr("table.apply")}
@@ -876,6 +875,7 @@ function TbleHeader({
   activeFilters: Array<{ key: string; label: string; schema: TbleFilterConfig | null | undefined; value: FilterValue }>;
   removeFilter: (key: string) => void;
 }) {
+  const { tr } = useLocalization();
   const hasHeaderTitle = Boolean(title || description);
   return (
     <>
@@ -888,15 +888,14 @@ function TbleHeader({
         )}
         <div className={styles.toolbar}>
           {enableSearch && (
-            <label className={styles.searchBox}>
-              <Search size={15} />
-              <input
+            <div className={styles.tableSearchWrap}>
+              <SearchBox
                 value={searchValue}
-                onChange={(event) => onSearchChange(event.target.value)}
+                onChange={onSearchChange}
                 placeholder={searchPlaceholder}
-                aria-label="Search table"
+                ariaLabel={tr("table.searchAriaLabel")}
               />
-            </label>
+            </div>
           )}
           {toolBar}
         </div>
@@ -908,7 +907,7 @@ function TbleHeader({
               key={filter.key}
               label={`${filter.label}: ${formatFilterValue(filter.schema, filter.value)}`}
               onDismiss={() => removeFilter(filter.key)}
-              dismissLabel="Clear filter"
+              dismissLabel={tr("table.clearFilter")}
             />
           ))}
         </div>

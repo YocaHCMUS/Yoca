@@ -64,7 +64,6 @@
 .trigger:focus-visible,
 .iconButton:focus-visible,
 .tagDismiss:focus-visible,
-.searchInput:focus-visible,
 .option:focus-visible {
   outline: 2px solid var(--yoca-primary);
   outline-offset: 2px;
@@ -167,6 +166,34 @@
 
 .searchInput::placeholder {
   color: var(--yoca-text-muted);
+}
+
+.searchBox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2rem;
+  width: 100%;
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.18));
+  border-radius: 999px;
+  background: var(--yoca-surface-raised, rgba(255, 255, 255, 0.04));
+  color: var(--yoca-text-muted, #94a3b8);
+  padding: 0 0.7rem;
+}
+
+.searchBox input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--yoca-text-main, #f8fafc);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.searchBox input::placeholder {
+  color: var(--yoca-text-muted, #94a3b8);
 }
 
 .list {

@@ -25,7 +25,7 @@ import { runChartExport } from "@/services/chart/chartExportService";
 import { IconActionButton, SegmentedControl } from "@/components/charts/shared/ChartControls";
 import styles from "./AssetDistribution.module.scss";
 
-type TopNOption = 5 | 10 | 0;
+type TopNOption = 5 | 10;
 type MinPctOption = 0 | 1 | 5 | 10;
 const MAX_VISIBLE_OTHERS = 10;
 const OTHERS_COLOR = "#8a8a8a";
@@ -234,9 +234,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           csvData: csv,
           csvFilters: { ...filters, wallets: [] },
           extraFilters: {
-            [tr("charts.assetDistributionChart.filters.topN")]: topN === 0
-              ? tr("charts.assetDistributionChart.filters.all")
-              : `${tr("charts.assetDistributionChart.filters.top")} ${topN}`,
+            [tr("charts.assetDistributionChart.filters.topN")]: `${tr("charts.assetDistributionChart.filters.top")} ${topN}`,
             [tr("charts.assetDistributionChart.filters.minPct")]: minPct === 0
               ? tr("charts.assetDistributionChart.filters.all")
               : `>${minPct}%`,
@@ -261,15 +259,15 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       yAxis: undefined,
       title: walletLabel
         ? {
-            text: walletLabel,
-            left: 8,
-            top: 8,
-            textStyle: {
-              color: baseOption.textStyle.color,
-              fontSize: 16,
-              fontWeight: "bold",
-            },
-          }
+          text: walletLabel,
+          left: 8,
+          top: 8,
+          textStyle: {
+            color: baseOption.textStyle.color,
+            fontSize: 16,
+            fontWeight: "bold",
+          },
+        }
         : undefined,
       tooltip: {
         ...baseOption.tooltip,
@@ -355,7 +353,7 @@ export const AssetDistribution: React.FC<ChartProps> = ({
           left: "center",
           top: "53%",
           style: {
-            text: "total",
+            text: tr("charts.assetDistributionChart.total"),
             fill: tokens.textSecondary || cds.textSecondary,
             fontSize: 11,
             fontWeight: 600,
@@ -430,12 +428,10 @@ export const AssetDistribution: React.FC<ChartProps> = ({
 
   const topNOptions: Array<{ value: TopNOption; label: string }> = [
     { value: 5, label: tr("charts.assetDistributionChart.filters.top5") },
-    { value: 10, label: tr("charts.assetDistributionChart.filters.top10") },
-    { value: 0, label: tr("charts.assetDistributionChart.filters.all") },
+    { value: 10, label: tr("charts.assetDistributionChart.filters.top10") }
   ];
 
   const minPctOptions: Array<{ value: MinPctOption; label: string }> = [
-    { value: 0, label: tr("charts.assetDistributionChart.filters.allPercent") },
     { value: 1, label: tr("charts.assetDistributionChart.filters.minPct1") },
     { value: 5, label: tr("charts.assetDistributionChart.filters.minPct5") },
     { value: 10, label: tr("charts.assetDistributionChart.filters.minPct10") },
@@ -463,9 +459,9 @@ export const AssetDistribution: React.FC<ChartProps> = ({
       isEmpty={isEmpty}
       emptyState={filters.wallets && filters.wallets.length === 0
         ? {
-            title: tr("charts.noWalletsTitle"),
-            message: tr("charts.assetDistributionChart.noWalletsMessage"),
-          }
+          title: tr("charts.noWalletsTitle"),
+          message: tr("charts.assetDistributionChart.noWalletsMessage"),
+        }
         : undefined}
       onRetry={() => refetch(false)}
       onExport={handleExport}

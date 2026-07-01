@@ -4,6 +4,7 @@ import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
 import { ChatPromptDialog } from "./ChatPromptDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { PillTabs } from "@/components/common/PillTabs/PillTabs";
 import styles from "./WalletChat.module.scss";
 
 type TabId = "mine" | "explore";
@@ -172,24 +173,6 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
     setViewingPrompt(null);
   };
 
-  const renderTab = (tab: TabId, label: string) => (
-    <button
-      className={`${styles.promptTab} ${activeTab === tab ? styles.promptTabActive : ""}`}
-      onClick={() => handleTabChange(tab)}
-    >
-      {label}
-    </button>
-  );
-
-  const renderPillTab = (sub: ExploreSubTab, label: string) => (
-    <button
-      className={`${styles.promptPillTab} ${exploreSubTab === sub ? styles.promptPillTabActive : ""}`}
-      onClick={() => handleExploreSubTabChange(sub)}
-    >
-      {label}
-    </button>
-  );
-
   const renderPromptItem = (prompt: ChatPromptData) => {
     const isOwner = user?.userId === prompt.userId;
 
@@ -309,11 +292,17 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
 
       {renderSearchInput()}
 
-      <div className={styles.promptPillTabs}>
-        {renderPillTab("popular", tr("chat.prompt.exploreSubtabPopular"))}
-        {renderPillTab("new", tr("chat.prompt.exploreSubtabNew"))}
-        {renderPillTab("system", tr("chat.prompt.exploreSubtabSystem"))}
-      </div>
+      <PillTabs
+        className={styles.promptPillTabs}
+        size="sm"
+        value={exploreSubTab}
+        onChange={(value) => handleExploreSubTabChange(value as ExploreSubTab)}
+        options={[
+          { value: "popular", label: tr("chat.prompt.exploreSubtabPopular") },
+          { value: "new", label: tr("chat.prompt.exploreSubtabNew") },
+          { value: "system", label: tr("chat.prompt.exploreSubtabSystem") },
+        ]}
+      />
 
       {exploreSubTab === "system" ? (
         <div className={styles.promptMenuList}>
@@ -325,10 +314,16 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
 
   return (
     <div className={styles.promptMenuOverlay} onScroll={handlePromptMenuScroll}>
-      <div className={styles.promptTabs}>
-        {user && renderTab("mine", tr("chat.prompt.tabMine"))}
-        {renderTab("explore", tr("chat.prompt.tabExplore"))}
-      </div>
+      <PillTabs
+        className={styles.promptTabs}
+        size="sm"
+        value={activeTab}
+        onChange={(value) => handleTabChange(value as TabId)}
+        options={[
+          ...(user ? [{ value: "mine", label: tr("chat.prompt.tabMine") }] : []),
+          { value: "explore", label: tr("chat.prompt.tabExplore") },
+        ]}
+      />
 
       {activeTab === "mine" && renderMineContent()}
       {activeTab === "explore" && renderExploreContent()}

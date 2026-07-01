@@ -141,8 +141,7 @@ export function BalanceChartV2({
     {
       select: (data) => ({
         key: "_total",
-        label: "Total Balance",
-        // Todo: tokenize me
+        label: tr("charts.balanceChart.totalBalance"),
         color: "#0f62fe",
         data:
           data?.[address]?.map((point) => ({
@@ -194,8 +193,7 @@ export function BalanceChartV2({
       retryCount: 0,
       error: {
         code: "BALANCE_HISTORY_UNAVAILABLE",
-        message:
-          "Balance history is temporarily unavailable. Please try again.",
+        message: tr("charts.balanceChart.errors.balanceUnavailable"),
         retryable: true,
       },
     }
@@ -225,8 +223,8 @@ export function BalanceChartV2({
     <div className={chartControlStyles.toolbar}>
       <ChartSelect<NonNullable<PortfolioToken>>
         id="balance-token-selector"
-        label="Select token"
-        placeholder="Search token"
+        label={tr("charts.balanceChart.selectTokenLabel")}
+        placeholder={tr("charts.balanceChart.searchTokenPlaceholder")}
         value={pendingToken}
         items={portfolio.data ?? []}
         onChange={setPendingToken}
@@ -262,10 +260,10 @@ export function BalanceChartV2({
             </Txt>
           </Flex>
         )}
-        searchPlaceholder="Symbol or name"
-        emptyText="No matching tokens"
+        searchPlaceholder={tr("charts.balanceChart.symbolOrNamePlaceholder")}
+        emptyText={tr("charts.balanceChart.noMatchingTokens")}
         actionIcon={Plus}
-        actionLabel="Add token"
+        actionLabel={tr("charts.balanceChart.add")}
         actionDisabled={!pendingToken}
         onAction={() => {
           if (!pendingToken) return;
@@ -352,7 +350,7 @@ export function BalanceChartV2({
                         }
                       }
                   }
-                  dismissLabel={`Remove ${series.label}`}
+                  dismissLabel={tr("charts.balanceChart.removeTag")}
                   value={
                     <TrendNum
                       value={displayValue}

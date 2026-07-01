@@ -1,4 +1,4 @@
-# Yoca Frontend — Design Reference & Component API
+﻿# Yoca Frontend — Design Reference & Component API
 
 ## 1. Tech Stack & Tooling
 
@@ -344,7 +344,7 @@ Carbon Tag with custom close button and Flex layout.
 
 ### 4.3 Tab / Accordion Components
 
-#### TabContainer — `components/tabContainer/tabContainer.tsx`
+#### TabContainer — `components/tabContainer/tabContainer.tsx` (deprecated, use PillTab or SegmentedControl)
 ```tsx
 <TabContainer
   activeTab={0}
@@ -453,9 +453,10 @@ UTC±offset selector for charts.
 
 
 ### 5.9 ChartControls (`charts/shared/ChartControls/`) — Preferred for chart/table-local controls
-Use these non-Carbon controls for compact chart headers, table tabs, token selectors, and inline chart chips.
+Use these non-Carbon controls for compact chart headers, table tabs, token selectors, search inputs, and inline chart chips.
 ```tsx
 <SegmentedControl options={options} value={value} onChange={setValue} ariaLabel="Mode" />
+<SearchBox value={query} onChange={setQuery} placeholder="Search tokens..." />
 <ChartSelect items={items} value={value} onChange={setValue} renderOption={...} actionIcon={Plus} onAction={addItem} />
 <ChartTag label="SOL" value={<TrendNum ... />} onDismiss={removeToken} />
 <IconActionButton label="Open" icon={ExternalLink} href={url} />

@@ -9,6 +9,7 @@ import { LocalizationProvider } from "./contexts/LocalizationContext.tsx";
 import { SolanaProvider } from "./contexts/SolanaWalletContext.tsx";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { WatchlistProvider } from "./contexts/WatchlistContext";
+import { ToastProvider } from "@/components/common/Toast";
 import "./index.scss";
 import "./styles/carbon.scss";
 import "./styles/theme.scss";
@@ -28,7 +29,9 @@ function Root() {
             <LocalizationProvider>
               <WatchlistProvider>
                 <ChartProvider>
-                  <App />
+                  <ToastProvider>
+                    <App />
+                  </ToastProvider>
                 </ChartProvider>
               </WatchlistProvider>
             </LocalizationProvider>
