@@ -44,6 +44,6 @@ export function ToastContainer({ toasts, onClose }: ToastContainerProps) {
         ))}
       </AnimatePresence>
     </div>,
-    themeRef.current!!,
+    themeRef.current || document.body,
   );
 }
