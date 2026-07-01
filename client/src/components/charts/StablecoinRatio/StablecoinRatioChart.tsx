@@ -1,23 +1,11 @@
-/**
- * Stablecoin Ratio Chart Component
- *
- * Displays time series of stablecoin percentage in wallet portfolios
- *
- * Features:
- * - Line chart showing stablecoin ratio over time
- * - Multiple wallet support (separate lines per wallet)
- * - Statistics showing current and average ratios
- * - Auto-refresh on wallet changes
- * - Timezone-aware date formatting
- *
- * @module components/charts/StablecoinRatio
- */
-
 import { useChartContext } from "@/contexts/ChartContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useStandardChartController } from "@/hooks/useChartController";
 import { useChartFiltersSync } from "@/hooks/useChartFiltersSync";
-import { getChartGridConfig, getThemedChartBaseOption, useChartTheme } from "@/hooks/useChartTheme";
+import {
+  CHART_COLOR_PALETTE,
+  useCarbonChartBaseOption,
+} from "@/util/carbon-chart-base";
 import {
   fetchStablecoinRatio,
   type InferFetcherData,
@@ -27,18 +15,11 @@ import {
   formatTimestampWithTimezone,
   isChartSuccess,
 } from "@/util/chart-helpers";
-import { getConditionalLegend } from "@/util/chart-legend-config";
 import { formatAxisTooltip } from "@/util/tooltip-helpers";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useMemo, useRef } from "react";
-import { BaseChart } from "../Base/BaseChart";
-import {
-  ChartContainer,
-  ChartGridItem,
-  ChartSection,
-  ChartStatsHeader,
-} from "../shared";
+import { ChartWrapper, ChartContainer, ChartGridItem, ChartSection, ChartStatsHeader } from "../shared";
 import type { ChartProps } from "../shared/ChartProp";
 import type { StatCard } from "../shared/ChartStatsHeader";
 
@@ -53,24 +34,22 @@ export function StablecoinRatioChart({
   },
   autoRefresh = true,
   refreshInterval = 30000,
+  fetchEnabled = true,
   className,
+  actions,
 }: ChartProps) {
   const { tr } = useLocalization();
   const chartTitle = title || tr("charts.stablecoinRatioChart.title");
 
   const chartRef = useRef<ReactECharts>(null);
-  const chartTheme = useChartTheme();
+  const baseOption = useCarbonChartBaseOption();
   const { selectedTimezone: timezone } = useChartContext();
 
-  // Use centralized filter sync hook
   const { filters, walletsString } = useChartFiltersSync({
     initialFilters,
     debounceDelay: 300,
   });
 
-  /**
-   * Memoize query
-   */
   const query = useMemo<StablecoinRatioRequestParams>(
     () => ({
       period: filters.timePeriod,
@@ -79,9 +58,6 @@ export function StablecoinRatioChart({
     [filters.timePeriod, walletsString],
   );
 
-  /**
-   * Lifecycle controller
-   */
   const { data, loadingState, refetch } = useStandardChartController<
     StablecoinRatioData,
     StablecoinRatioRequestParams
@@ -90,22 +66,17 @@ export function StablecoinRatioChart({
     query,
     autoRefresh,
     refreshInterval,
+    enabled: fetchEnabled,
   });
 
-  /**
-   * Generate chart option
-   */
   const chartOption = useMemo((): EChartsOption | null => {
-    // if (!data || !data.wallets || data.wallets.length === 0) return null;
+    const base = baseOption;
 
-    const baseOption = getThemedChartBaseOption(chartTheme);
-
-    // Prepare series data (one per wallet)
     if (!isChartSuccess(data, "wallets")) return null;
 
     const series = data.wallets.map((wallet, index) => {
       const color =
-        chartTheme.colorPalette[index % chartTheme.colorPalette.length];
+        CHART_COLOR_PALETTE[index % CHART_COLOR_PALETTE.length];
 
       return {
         name: wallet.walletName || wallet.walletAddress,
@@ -130,44 +101,35 @@ export function StablecoinRatioChart({
     });
 
     return {
-      ...baseOption,
-      ...getChartGridConfig,
+      ...base,
       xAxis: {
-        ...baseOption.xAxis,
+        ...base.xAxis,
         type: "time",
         axisLabel: {
-          ...baseOption.xAxis.axisLabel,
+          ...base.xAxis.axisLabel,
           formatter: (value: number) =>
             formatTimestampWithTimezone(value, timezone, "MM/dd"),
         },
       },
       yAxis: {
-        ...baseOption.yAxis,
+        ...base.yAxis,
         type: "value",
         name: "Stablecoin Ratio (%)",
         min: 0,
         max: 100,
         axisLabel: {
-          ...baseOption.yAxis.axisLabel,
+          ...base.yAxis.axisLabel,
           formatter: "{value}%",
-        },
-        splitLine: {
-          show: true,
-          lineStyle: {
-            color: chartTheme.splitLineColor,
-            type: "dashed",
-          },
         },
       },
       series: series,
-      legend: getConditionalLegend(
-        chartTheme,
-        data.wallets.map((w) => w.walletAddress),
-        2,
-        false,
-      ),
+      legend: {
+        show: true,
+        data: data.wallets.map((w) => w.walletAddress),
+        textStyle: { color: base.textStyle.color },
+      },
       tooltip: {
-        ...baseOption.tooltip,
+        ...base.tooltip,
         trigger: "axis",
         axisPointer: {
           type: "cross",
@@ -185,16 +147,13 @@ export function StablecoinRatioChart({
           ),
       },
     };
-  }, [data, chartTheme, timezone, tr]);
+  }, [data, baseOption, timezone]);
 
-  /**
-   * Generate statistics header
-   */
   const statsCards = useMemo<StatCard[]>(() => {
     if (!isChartSuccess(data, "wallets") || data.wallets.length === 0)
       return [];
 
-    return data.wallets.map((wallet, _index) => ({
+    return data.wallets.map((wallet) => ({
       title: wallet.walletName || wallet.walletAddress,
       stats: [
         {
@@ -212,11 +171,12 @@ export function StablecoinRatioChart({
   }, [data]);
 
   return (
-    <BaseChart
+    <ChartWrapper
       title={chartTitle}
       loadingState={loadingState}
       isEmpty={!isChartSuccess(data, "wallets") || data.wallets.length === 0}
       onRetry={() => refetch(false)}
+      actions={actions}
     >
       <ChartContainer>
         <ChartStatsHeader cards={statsCards} minColumnWidth="200px" />
@@ -238,6 +198,6 @@ export function StablecoinRatioChart({
           )}
         </ChartSection>
       </ChartContainer>
-    </BaseChart>
+    </ChartWrapper>
   );
 }

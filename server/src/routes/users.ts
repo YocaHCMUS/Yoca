@@ -3,35 +3,28 @@ import {
   AUTH_COOKIE_NAME,
   AUTHEN_COOKIE_TTL_MS,
 } from "@sv/config/constants.js";
-import { setErr } from "@sv/config/errors.js";
 import {
   googleTokenSchema,
   solanaNounceRequestSchema,
   solanaVerificationRequestSchema,
   userCreationSchema,
+  UserPayload,
   userPayloadSchema,
   userVerificationSchema,
   validate,
 } from "@sv/middlewares/validation.js";
 import * as userService from "@sv/services/users.js";
+import { serverErr, setErr } from "@sv/util/errors.js";
+import env from "@sv/util/load-env";
 import { messageText, statusCode } from "@sv/util/responses.js";
 import { OAuth2Client } from "google-auth-library";
 import { Hono, type Context } from "hono";
-import { deleteCookie, setCookie } from "hono/cookie";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { jwt, sign } from "hono/jwt";
-import type z from "zod";
 
-const jwtSecret = process.env.JWT_SECRET!;
-const googleClientId = process.env.GOOGLE_CLIENT_ID!;
+const jwtSecret = env.JWT_SECRET;
+const googleClientId = env.GOOGLE_CLIENT_ID;
 const googleClient = new OAuth2Client(googleClientId);
-
-type UserPayload = z.infer<typeof userPayloadSchema>;
-
-const honoJwt = jwt({
-  alg: "HS256",
-  secret: jwtSecret,
-  cookie: AUTH_COOKIE_NAME,
-});
 
 async function verifyGoogleToken(idToken: string) {
   const ticket = await googleClient.verifyIdToken({
@@ -52,11 +45,13 @@ async function setAuthToken(
   c: Context,
   userId: string,
   displayName?: string | null,
+  avatarUrl?: string | null,
 ) {
   const token = await sign(
     {
       id: userId,
       displayName: displayName || null,
+      avatarUrl: avatarUrl || null,
       exp: Math.floor(Date.now() + AUTHEN_COOKIE_TTL_MS) / 1000,
     } satisfies UserPayload,
     jwtSecret,
@@ -95,12 +90,8 @@ const app = new Hono()
           },
           statusCode.Created,
         );
-      } catch (error) {
-        console.error(error);
-        return c.json(
-          setErr("INTERNAL_SERVER_ERR"),
-          statusCode.InternalServerError,
-        );
+      } catch (e) {
+        return serverErr(c, e);
       }
     },
   )
@@ -108,26 +99,35 @@ const app = new Hono()
     "/auth/password/login",
     validate("json", userVerificationSchema),
     async (c) => {
-      const { email, password } = c.req.valid("json");
-      const passwordUser = await userService.verifyUserPassword(
-        email,
-        password,
-      );
-      if (!passwordUser) {
-        return c.json(
-          setErr("EMAIL_OR_PASSWORD_WAS_INCORRECT"),
-          statusCode.Unauthorized,
+      try {
+        const { email, password } = c.req.valid("json");
+        const passwordUser = await userService.verifyUserPassword(
+          email,
+          password,
         );
+        if (!passwordUser) {
+          return c.json(
+            setErr("EMAIL_OR_PASSWORD_WAS_INCORRECT"),
+            statusCode.Unauthorized,
+          );
+        }
+        const user = await userService.getUserById(passwordUser.userId);
+        const token = await setAuthToken(
+          c,
+          passwordUser.userId,
+          user?.displayName,
+        );
+        return c.json(
+          {
+            message: messageText.LoggedInSuccessfully,
+            userId: passwordUser.userId,
+            token,
+          },
+          statusCode.Ok,
+        );
+      } catch (e) {
+        return serverErr(c, e);
       }
-      const token = await setAuthToken(c, passwordUser.userId);
-      return c.json(
-        {
-          message: messageText.LoggedInSuccessfully,
-          userId: passwordUser.userId,
-          token,
-        },
-        statusCode.Ok,
-      );
     },
   )
   .post("/auth/google", validate("json", googleTokenSchema), async (c) => {
@@ -149,14 +149,26 @@ const app = new Hono()
       const googleUser = await userService.findUserByGoogleId(googleId);
       let userId: string = "";
       let displayName: string | null = null;
+      let avatarUrl: string | null = payload.picture || null;
+      
       if (googleUser) {
         userId = googleUser.account.userId;
         displayName = googleUser.user.displayName;
+        if (!displayName) {
+          displayName = payload.name || "Guest";
+          await userService.updateUserDisplayName(userId, displayName);
+        }
+        if (avatarUrl && !googleUser.user.avatarUrl) {
+          await userService.updateUserAvatarUrl(userId, avatarUrl);
+        } else if (!avatarUrl && googleUser.user.avatarUrl) {
+          avatarUrl = googleUser.user.avatarUrl;
+        }
       } else {
-        userId = await userService.createUserWithGoogle(googleId);
+        displayName = payload.name || "Guest";
+        userId = await userService.createUserWithGoogle(googleId, displayName, avatarUrl);
       }
 
-      const token = await setAuthToken(c, userId, displayName);
+      const token = await setAuthToken(c, userId, displayName, avatarUrl);
       return c.json(
         {
           message: messageText.GoogleLoggedInSuccessfully,
@@ -165,95 +177,137 @@ const app = new Hono()
         },
         statusCode.Ok,
       );
-    } catch (err) {
-      console.error(err);
-      return c.json(
-        setErr("INTERNAL_SERVER_ERR"),
-        statusCode.InternalServerError,
-      );
+    } catch (e) {
+      return serverErr(c, e);
     }
   })
   .post(
     "/auth/solana/nounce",
     validate("json", solanaNounceRequestSchema),
     async (c) => {
-      const { pubKey } = c.req.valid("json");
+      try {
+        const { pubKey } = c.req.valid("json");
 
-      const existingWalletUser =
-        await userService.findUserByWalletAddress(pubKey);
+        const existingWalletUser =
+          await userService.findUserByWalletAddress(pubKey);
 
-      if (existingWalletUser) {
-        const nounce = await userService.updateWalletLoginNounce(
-          existingWalletUser.user.id,
-        );
+        if (existingWalletUser) {
+          const nounce = await userService.updateWalletLoginNounce(
+            existingWalletUser.user.id,
+          );
+          return c.json(
+            {
+              signMessage: userService.getSolanaLoginMessage(nounce, pubKey),
+              nounce,
+            },
+            statusCode.Ok,
+          );
+        }
+
+        const { nounce } = await userService.createUserWithWallet(pubKey);
         return c.json(
           {
             signMessage: userService.getSolanaLoginMessage(nounce, pubKey),
             nounce,
           },
-          statusCode.Ok,
+          statusCode.Created,
         );
-      }
+      } catch (e) {
+        if (e instanceof Error && e.message == "WALLET_ALREADY_LINKED") {
+          return c.json(setErr("WALLET_ALREADY_LINKED"), statusCode.Conflict);
+        }
 
-      const { nounce } = await userService.createUserWithWallet(pubKey);
-      return c.json(
-        {
-          signMessage: userService.getSolanaLoginMessage(nounce, pubKey),
-          nounce,
-        },
-        statusCode.Created,
-      );
+        return serverErr(c, e);
+      }
     },
   )
   .post(
     "/auth/solana/verify",
     validate("json", solanaVerificationRequestSchema),
     async (c) => {
-      const { pubKey, signature } = c.req.valid("json");
+      try {
+        const { pubKey, signature } = c.req.valid("json");
 
-      const account = await userService.verifyWalletLoginNounce(
-        pubKey,
-        signature,
-      );
+        const account = await userService.verifyWalletLoginNounce(
+          pubKey,
+          signature,
+        );
 
-      if (!account) {
-        return c.json(setErr("EMAIL_ALREADY_EXISTED"), statusCode.BadRequest);
+        if (!account) {
+          return c.json(setErr("EMAIL_ALREADY_EXISTED"), statusCode.BadRequest);
+        }
+
+        const token = await setAuthToken(
+          c,
+          account.user.id,
+          account.user.displayName,
+        );
+
+        return c.json(
+          {
+            message: messageText.WalletVerifiedSuccessfully,
+            userId: account.user.id,
+            token,
+          },
+          statusCode.Created,
+        );
+      } catch (e) {
+        return serverErr(c, e);
       }
-
-      const token = await setAuthToken(c, account.user.id);
-
-      return c.json(
-        {
-          message: messageText.WalletVerifiedSuccessfully,
-          userId: account.user.id,
-          token,
-        },
-        201,
-      );
     },
   )
   .delete("/auth/logout", async (c) => {
-    deleteCookie(c, AUTH_COOKIE_NAME);
-    return c.json(messageText.LoggedOutSuccessfully, statusCode.Ok);
-  })
-  .get("/auth/me", honoJwt, async (c) => {
     try {
+      deleteCookie(c, AUTH_COOKIE_NAME);
+      return c.json(messageText.LoggedOutSuccessfully, statusCode.Ok);
+    } catch (e) {
+      return serverErr(c, e);
+    }
+  })
+  .get("/auth/me", async (c) => {
+    try {
+      const authCookie = getCookie(c, AUTH_COOKIE_NAME);
+      if (!authCookie) {
+        return c.json(null, statusCode.Ok);
+      }
+
+      const optionalJwt = jwt({
+        secret: jwtSecret,
+        alg: "HS256",
+        cookie: AUTH_COOKIE_NAME,
+      });
+      const jwtResult = await optionalJwt(c, async () => undefined);
+      if (jwtResult instanceof Response) {
+        return c.json(null, statusCode.Ok);
+      }
+
       // payload is typed as any, currently there is no typesafety for this yet
       const rawPayload = c.get("jwtPayload");
 
       const parsedPayload = userPayloadSchema.safeParse(rawPayload);
       if (!parsedPayload.success) {
+        return c.json(null, statusCode.Ok);
+      }
+
+      const user = await userService.getUserById(parsedPayload.data.id);
+      if (!user) {
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
       }
 
-      return c.json(parsedPayload.data, statusCode.Ok);
-    } catch (err) {
-      console.error(err);
       return c.json(
-        setErr("INTERNAL_SERVER_ERR"),
-        statusCode.InternalServerError,
+        {
+          id: parsedPayload.data.id,
+          exp: parsedPayload.data.exp,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl,
+        } satisfies UserPayload,
+        statusCode.Ok,
       );
+    } catch (e) {
+      return serverErr(c, e);
     }
   });
 
 export default app;
+
+export type UsersAppType = typeof app;

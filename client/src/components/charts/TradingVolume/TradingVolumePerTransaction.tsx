@@ -1,26 +1,20 @@
-import sharedStyles from "@/components/charts/shared/ChartStyle.module.scss";
 import { PeriodSelector } from "@/components/common/PeriodSelector/PeriodSelector";
-import { useChartContext } from "@/contexts/ChartContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useStandardChartController } from "@/hooks/useChartController";
 import { useChartFiltersSync } from "@/hooks/useChartFiltersSync";
 import {
-  getChartGridConfig,
-  getThemedChartBaseOption,
-  useChartTheme,
-} from "@/hooks/useChartTheme";
+  CHART_COLOR_PALETTE,
+  useCarbonChartBaseOption,
+} from "@/util/carbon-chart-base";
 import {
   fetchTradingVolumePerTransaction,
   type InferFetcherData,
 } from "@/services/chart/chartApi";
 import type { TradingVolumePerTransactionRequestParams } from "@/types/chart-api.types";
-import { formatCurrency } from "@/util/chart-helpers";
-import { getMultiSeriesLegend } from "@/util/chart-legend-config";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useMemo, useRef } from "react";
-import { BaseChart } from "../Base/BaseChart";
-import { ChartGridItem } from "../shared";
+import { ChartWrapper, ChartGridItem } from "../shared";
 import type { ChartProps } from "../shared/ChartProp";
 
 type TradingVolumePerTransactionData = InferFetcherData<
@@ -37,26 +31,21 @@ export function TradingVolumePerTransaction({
   },
   autoRefresh = true,
   refreshInterval = 30000,
-  // onDataLoaded,
+  fetchEnabled = true,
   className,
 }: ChartProps) {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const chartTitle =
     title || tr("charts.tradingVolumePerTransactionChart.title");
 
   const chartRef = useRef<ReactECharts>(null);
-  const chartTheme = useChartTheme();
-  const { selectedTimezone: timezone } = useChartContext();
+  const baseOption = useCarbonChartBaseOption();
 
-  // Use centralized filter sync hook
   const { filters, walletsString, setTimePeriod } = useChartFiltersSync({
     initialFilters,
     debounceDelay: 300,
   });
 
-  /**
-   * Memoize query to prevent unnecessary re-fetches
-   */
   const query = useMemo<TradingVolumePerTransactionRequestParams>(
     () => ({
       period: filters.timePeriod,
@@ -66,9 +55,6 @@ export function TradingVolumePerTransaction({
     [filters.timePeriod, walletsString],
   );
 
-  /**
-   * Unified lifecycle controller
-   */
   const { data, loadingState, refetch } = useStandardChartController<
     TradingVolumePerTransactionData,
     TradingVolumePerTransactionRequestParams
@@ -77,14 +63,10 @@ export function TradingVolumePerTransaction({
     query,
     autoRefresh,
     refreshInterval,
-    // onDataLoaded,
+    enabled: fetchEnabled,
   });
 
-  /**
-   * Generate eCharts option configuration for box plot
-   */
   const chartOption = useMemo((): EChartsOption | null => {
-    //if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) return null;
     if (
       !data ||
       !data.wallets ||
@@ -94,40 +76,13 @@ export function TradingVolumePerTransaction({
       return null;
     }
 
-    // Get base theme configuration
-    const baseOption = getThemedChartBaseOption(chartTheme);
-
-    // Prepare categories (wallet names)
     const categories = data.wallets.map((w) => w.wallet);
-    const tradingVolumePerTransactionData = data.wallets.map(
+    const values = data.wallets.map(
       (w) => w.tradingVolumePerTransaction,
     );
 
-    // Prepare box plot data
-    // Each wallet will have two box plots: deposits and withdrawals
-    // const depositData = data.wallets.map(w => [
-    //   w.tradingVolumePerTransaction
-    // ]);
-
-    // const withdrawData = data.wallets.map(w => [
-    //   w.withdraw.min,
-    //   w.withdraw.q1,
-    //   w.withdraw.median,
-    //   w.withdraw.q3,
-    //   w.withdraw.max,
-    // ]);
-
     return {
       ...baseOption,
-      color: ["#5470C6", "#91CC75"], // Blue for deposits, Green for withdrawals
-      ...getChartGridConfig,
-      //   barGap: '0%', // Reduce gap between deposit and withdrawal boxes
-      //   barCategoryGap: '60%', // Gap between wallet categories
-      legend: getMultiSeriesLegend(
-        chartTheme,
-        ["Deposits", "Withdrawals"],
-        false,
-      ),
       xAxis: {
         ...baseOption.xAxis,
         type: "category",
@@ -147,89 +102,38 @@ export function TradingVolumePerTransaction({
         name: tr("charts.tradingVolumePerTransactionChart.volume"),
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
-          formatter: (value: number) => formatCurrency(value),
-        },
-        splitLine: {
-          show: true,
-          lineStyle: {
-            color: chartTheme.splitLineColor,
-            type: "dashed",
-          },
+          formatter: (value: number) => fmt.num.compact.currency(value),
         },
       },
       series: [
         {
           name: "Trading Volume per Transaction",
           type: "bar",
-          data: tradingVolumePerTransactionData,
+          data: values,
           itemStyle: {
-            color: chartTheme.colorPalette[0],
+            color: CHART_COLOR_PALETTE[0],
           },
           label: {
             show: true,
             position: "top",
-            formatter: (params: any) => formatCurrency(params.value),
-            color: chartTheme.textColor,
+            formatter: (params: any) => fmt.num.compact.currency(params.value),
+            color: baseOption.textStyle.color,
           },
         },
-        // {
-        //   name: 'Deposits',
-        //   type: 'boxplot',
-        //   data: depositData,
-        //   itemStyle: {
-        //     color: '#5470C6',
-        //     borderColor: '#5470C6',
-        //   },
-        //   tooltip: {
-        //     ...baseOption.tooltip,
-        //     formatter: (param: any) => {
-        //       const [min, q1, median, q3, max] = param.data;
-        //       return formatItemTooltip(`${param.name} - Deposits`, [
-        //         { label: 'Max', value: formatCurrency(max) },
-        //         { label: 'Q3', value: formatCurrency(q3) },
-        //         { label: 'Median', value: formatCurrency(median) },
-        //         { label: 'Q1', value: formatCurrency(q1) },
-        //         { label: 'Min', value: formatCurrency(min) },
-        //       ]);
-        //     },
-        //   },
-        // },
-        // {
-        //   name: 'Withdrawals',
-        //   type: 'boxplot',
-        //   data: withdrawData,
-        //   itemStyle: {
-        //     color: '#91CC75',
-        //     borderColor: '#91CC75',
-        //   },
-        //   tooltip: {
-        //     ...baseOption.tooltip,
-        //     formatter: (param: any) => {
-        //       const [min, q1, median, q3, max] = param.data;
-        //       return formatItemTooltip(`${param.name} - Withdrawals`, [
-        //         { label: 'Max', value: formatCurrency(max) },
-        //         { label: 'Q3', value: formatCurrency(q3) },
-        //         { label: 'Median', value: formatCurrency(median) },
-        //         { label: 'Q1', value: formatCurrency(q1) },
-        //         { label: 'Min', value: formatCurrency(min) },
-        //       ]);
-        //     },
-        //   },
-        // },
       ],
       tooltip: {
+        ...baseOption.tooltip,
         trigger: "item",
         axisPointer: {
           type: "shadow",
         },
       },
     };
-  }, [data, chartTheme, tr]);
+  }, [data, baseOption, tr, fmt]);
 
   return (
-    <BaseChart
+    <ChartWrapper
       title={chartTitle}
-      // height="100%"
       loadingState={loadingState}
       isEmpty={
         !data ||
@@ -239,14 +143,15 @@ export function TradingVolumePerTransaction({
         (data.wallets as any).error
       }
       onRetry={() => refetch(false)}
-    >
-      <div className={sharedStyles.chartControls}>
+      toolbarLayout="stacked"
+      actions={
         <PeriodSelector
           value={filters.timePeriod}
           onChange={(k) => setTimePeriod(k)}
           compact
         />
-      </div>
+      }
+    >
       {chartOption && (
         <ChartGridItem minHeight={minHeight}>
           <ReactECharts
@@ -262,6 +167,6 @@ export function TradingVolumePerTransaction({
           />
         </ChartGridItem>
       )}
-    </BaseChart>
+    </ChartWrapper>
   );
 }

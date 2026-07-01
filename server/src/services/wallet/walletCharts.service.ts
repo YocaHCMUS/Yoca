@@ -1,168 +1,413 @@
 import type {
     BalanceDataPoint,
     WalletTimePeriod,
-    PnLAggregation,
     WalletCumulativePnLResult,
     PnLDataPoint,
 } from "./dtos/walletDataObjects.js";
-import {
-    getAggregationIntervalMs,
-    getRangeStartMs,
-    resolvePnLAggregationByGap,
-} from "@sv/services/wallet/walletData.core.js";
+import { getRangeStartMs } from "@sv/services/wallet/walletData.core.js";
 import { roundUsd } from "./walletNormalization.utils.js";
-import { getHistoricalPortfolioValueSeries } from "./walletPortfolio.service.js";
-import { fetchBirdeyeNetworthHistory } from "./fetchers/walletDataFetcher.service.js";
-import { getCachedWalletBalanceHistory } from "./db/walletDataRetriever.js";
-import { saveBalanceHistoryCache } from "./db/walletDataCacher.js";
+import { getWalletTransfers } from "./walletTransfersSwaps.service.js";
+import { getWalletOverview } from "./walletOverview.service.js";
+import { db } from "@sv/db/index.js";
+import { walletBalanceHistory } from "@sv/db/schema.js";
+import { and, between, eq } from "drizzle-orm";
+import * as mobula from "@sv/util/util-mobula.js";
+import { mbl_WalletHistorySchema } from "../_types/wallet-raw-responses.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import dayjs from "dayjs";
+import {
+    DAY_MS,
+    WALLET_BALANCE_HISTORY_FETCH_TIMEOUT_MS,
+    WALLET_BALANCE_HISTORY_STORED_TTL_MS,
+    MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS,
+} from "@sv/config/constants.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
+import { excluded } from "@sv/util/orm-sql.js";
 
-function startOfUtcTodayMs(): number {
-    const d = new Date();
-    return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+/**
+ * Get UTC start-of-day timestamp (ms) for a given timestamp.
+ */
+function getUtcStartOfDayMs(tsMs: number): number {
+  const d = new Date(tsMs);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
 
-export async function getWalletBalanceHistory(
-    address: string,
-    timePeriod: WalletTimePeriod = "30D",
-): Promise<BalanceDataPoint[]> {
-    const rangeSec = resolveWalletTimeRangeSec(timePeriod);
-    const fromMs = rangeSec.fromSec * 1000;
-    const toMs = rangeSec.toSec * 1000;
+/**
+ * Build daily balance anchors for PnL computation.
+ * Returns array of {dayStartMs, balanceAtStart, balanceAtEnd} for each day.
+ * Uses linear interpolation if no data point exists at exact day boundary.
+ * For the current/last day, uses the final balance point as end-of-day.
+ */
+function buildDailyBalanceAnchors(balanceHistory: BalanceDataPoint[]): Array<{
+  dayStartMs: number;
+  balanceAtStart: number;
+  balanceAtEnd: number;
+}> {
+  if (balanceHistory.length == 0) {
+    return [];
+  }
 
-    try {
-        const cached = await getCachedWalletBalanceHistory(address, timePeriod);
-        if (cached && cached.points.length > 0) {
-            const filtered = cached.points.filter(
-                (p) => p.timestamp >= fromMs && p.timestamp <= toMs,
-            );
-            if (filtered.length > 0) {
-                return [...filtered].sort((a, b) => a.timestamp - b.timestamp);
-            }
-        }
+  const anchors: Array<{
+    dayStartMs: number;
+    balanceAtStart: number;
+    balanceAtEnd: number;
+  }> = [];
+  const sortedHistory = [...balanceHistory].sort(
+    (a, b) => a.timestamp - b.timestamp,
+  );
+  for (let index = 0; index < sortedHistory.length - 1; index++) {
+    const point = sortedHistory[index];
+    const nextPoint = sortedHistory[index + 1];
 
-        const response = await fetchBirdeyeNetworthHistory(address, {
-            type: "1d",
-            count: 30,
-            direction: "back",
-            sortType: "asc",
-        });
+    anchors.push({
+      dayStartMs: point.timestamp,
+      balanceAtStart: point.value,
+      balanceAtEnd: nextPoint.value,
+    });
+  }
 
-        const pointsByTimestamp = new Map<number, number>();
-        for (const point of response.history) {
-            const timestamp = Date.parse(point.timestamp);
-            if (!Number.isFinite(timestamp)) {
-                continue;
-            }
+  return anchors;
+}
 
-            if (timestamp < fromMs || timestamp > toMs) {
-                continue;
-            }
+/**
+ * Compute daily net inflow (inflow - outflow) per UTC day.
+ * Returns map of dayStartMs -> netInflowUsd.
+ *
+ * Direction is inferred from transfer.from vs address:
+ * - transfer.from == address: outflow (negative)
+ * - transfer.to == address: inflow (positive)
+ */
+async function computeDailyNetInflow(
+  address: string,
+  fromMs: number,
+  toMs: number,
+): Promise<Map<number, number>> {
+  const dailyNetInflow = new Map<number, number>();
 
-            pointsByTimestamp.set(timestamp, roundUsd(point.netWorthUsd));
-        }
+  try {
+    const transfersResponse = await getWalletTransfers(address, fromMs, toMs);
+    const transfers = transfersResponse?.transfers ?? [];
 
-        const series = Array.from(pointsByTimestamp.entries())
-            .map(([timestamp, value]) => ({
-                timestamp,
-                value,
-                date: new Date(timestamp).toISOString(),
-            }))
-            .sort((a, b) => a.timestamp - b.timestamp);
+    // console.log("[computeDailyNetInflow] transfers: ")
+    // console.info(transfers)
 
-        const todayStart = startOfUtcTodayMs();
-        const forCache = series.filter((p) => p.timestamp < todayStart);
-        if (forCache.length > 0) {
-            await saveBalanceHistoryCache(
-                address,
-                timePeriod,
-                forCache,
-                forCache[0]!.timestamp,
-                forCache[forCache.length - 1]!.timestamp,
-            );
-        }
+    for (const transfer of transfers) {
+      if (!transfer.amountUsd) {
+        continue; // Skip transfers without USD value
+      }
 
-        return series;
-    } catch (error) {
-        console.error("[WalletBalanceHistory] failed to build historical series", {
-            address,
-            timePeriod,
-            error,
-        });
-        return [];
+      const tsMs = Date.parse(transfer.timestamp);
+      if (!Number.isFinite(tsMs)) {
+        continue;
+      }
+
+      // Only include transfers within the requested range
+      if (tsMs < fromMs || tsMs > toMs) {
+        continue;
+      }
+
+      const dayStartMs = getUtcStartOfDayMs(tsMs);
+
+      // Determine direction: inflow (+) or outflow (-)
+      const isInflow = transfer.to == address;
+      const isOutflow = transfer.from == address;
+
+      let flowAmount = 0;
+      if (isInflow) {
+        flowAmount = transfer.amountUsd; // positive
+      } else if (isOutflow) {
+        flowAmount = -transfer.amountUsd; // negative
+      }
+
+      // Accumulate into daily total
+      const current = dailyNetInflow.get(dayStartMs) ?? 0;
+      dailyNetInflow.set(dayStartMs, current + flowAmount);
     }
+  } catch (error) {
+    console.error("[computeDailyNetInflow] failed to fetch/compute transfers", {
+      address,
+      error,
+    });
+  }
+
+  return dailyNetInflow;
+}
+
+type WalletBalanceHistory =
+  | {
+      usdValue: number;
+      timestampMs: number;
+    }[]
+  | null;
+
+export async function getWalletBalanceHistory(
+  address: string,
+  timePeriod: WalletTimePeriod = "30D",
+  _fromMs?: number,
+  _toMs?: number,
+): Promise<WalletBalanceHistory> {
+  // TODO: enforce this
+  const toBalanceChartPeriod: Record<string, "week" | "month"> = {
+    "7D": "week",
+    "30D": "month",
+  };
+  const balanceChartPeriod = toBalanceChartPeriod[timePeriod] ?? "month";
+
+  const end = dayjs.utc().valueOf() - MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS;
+  const start = dayjs.utc(end).subtract(1, balanceChartPeriod).valueOf();
+  const storedThresholdMs = end - WALLET_BALANCE_HISTORY_STORED_TTL_MS;
+  const expectedDailyPoints = balanceChartPeriod == "week" ? 7 : 30;
+  const minCoveragePoints = Math.max(1, expectedDailyPoints - 2);
+
+  const res = await db
+    .select()
+    .from(walletBalanceHistory)
+    .where(
+      and(
+        eq(walletBalanceHistory.address, address),
+        between(walletBalanceHistory.timestampMs, start, end),
+      ),
+    )
+    .orderBy(walletBalanceHistory.timestampMs);
+
+  if (res.length == 0) {
+    return fetchWalletBalanceHistory(address, start, end);
+  }
+
+  const storedPoints = normalizeByDay(
+    res.map((point) => ({
+      timestampMs: point.timestampMs,
+      usdValue: point.usdValue,
+    })),
+  );
+  const firstStoredPoint = storedPoints[0];
+  const lastStoredPoint = storedPoints[storedPoints.length - 1];
+  const newestStoredUpdateMs = res.reduce((latest, point) => {
+    const updatedAtMs = point.updatedAtMs ?? 0;
+    return updatedAtMs > latest ? updatedAtMs : latest;
+  }, 0);
+  const hasRangeCoverage =
+    firstStoredPoint != null &&
+    lastStoredPoint != null &&
+    firstStoredPoint.timestampMs <= start + DAY_MS &&
+    storedPoints.length >= minCoveragePoints;
+  const hasFreshTail =
+    lastStoredPoint != null && lastStoredPoint.timestampMs >= end - DAY_MS;
+  const storedUpdatedRecently = newestStoredUpdateMs >= storedThresholdMs;
+
+  if (hasRangeCoverage && hasFreshTail && storedUpdatedRecently) {
+    return storedPoints;
+  }
+
+  if (hasRangeCoverage && lastStoredPoint != null) {
+    const partialStart = Math.max(start, lastStoredPoint.timestampMs - DAY_MS);
+    const fetched = await fetchWalletBalanceHistory(
+      address,
+      partialStart,
+      end,
+    );
+    if (!fetched) {
+      return storedPoints;
+    }
+
+    return normalizeByDay([...storedPoints, ...fetched]);
+  }
+
+  return fetchWalletBalanceHistory(address, start, end);
+}
+
+async function fetchWalletBalanceHistory(
+  address: string,
+  startMs: number,
+  endMs: number,
+): Promise<WalletBalanceHistory> {
+  const endpoint = mobula.getEndpoint("/1/wallet/history");
+  endpoint.search = new URLSearchParams({
+    wallet: address,
+    blockchains: "solana:solana",
+    from: String(startMs),
+    to: String(endMs),
+    period: "1d",
+    filterSpam: "true",
+    unlistedAssets: "false",
+  }).toString();
+
+  const resp = await rlFetch(endpoint, {
+    method: "GET",
+    headers: mobula.getRequiredHeaders(),
+    rlLimiter: mobula.limiter,
+    rlTimeoutMs: WALLET_BALANCE_HISTORY_FETCH_TIMEOUT_MS,
+  });
+
+  const res = await getTrackedApiResult(mbl_WalletHistorySchema, resp);
+  if (!res) {
+    return null;
+  }
+
+  const fetchedAtMs = dayjs.utc().valueOf();
+  // Mobula period defines the baseline grid only. Balance-changing transfers
+  // are returned as extra points, so high-activity wallets can still produce
+  // very large responses. Keep the latest point per UTC day before storing.
+  const normalizedPoints = normalizeByDay(
+    res.data.balance_history.map((point) => ({
+      timestampMs: point[0],
+      usdValue: point[1],
+    })),
+  );
+  const insertValues = normalizedPoints.map((point) => ({
+    address: address,
+    timestampMs: point.timestampMs,
+    usdValue: point.usdValue,
+    updatedAtMs: fetchedAtMs,
+  }));
+
+  if (insertValues.length == 0) {
+    return [];
+  }
+
+  await db.insert(walletBalanceHistory).values(insertValues).onConflictDoUpdate({
+    target: [walletBalanceHistory.address, walletBalanceHistory.timestampMs],
+    set: {
+      usdValue: excluded(walletBalanceHistory.usdValue),
+      updatedAtMs: excluded(walletBalanceHistory.updatedAtMs),
+    },
+  });
+
+  return normalizedPoints;
+}
+
+// Group data points by UTC day, keeping only the latest point per day.
+function normalizeByDay(
+  dataPoints: NonNullable<WalletBalanceHistory>,
+): NonNullable<WalletBalanceHistory> {
+  const normalized = dataPoints
+    .reduce((acc, point) => {
+      const dayMs = dayjs.utc(point.timestampMs).startOf("day").valueOf();
+      if (!acc.has(dayMs) || acc.get(dayMs)!.timestampMs < point.timestampMs) {
+        acc.set(dayMs, point);
+      }
+      return acc;
+    }, new Map<number, NonNullable<WalletBalanceHistory>[number]>())
+    .values();
+
+  return [...normalized];
 }
 
 export async function getCumulativePnL(
-    address: string,
-    timePeriod: WalletTimePeriod = "30D",
-    aggregation: PnLAggregation = "daily",
+  address: string,
+  timePeriod: WalletTimePeriod = "30D",
+  fromMs?: number,
+  toMs?: number,
 ): Promise<WalletCumulativePnLResult> {
-    const rangeSec = resolveWalletTimeRangeSec(timePeriod);
-    const fromMs = rangeSec.fromSec * 1000;
-    const toMs = rangeSec.toSec * 1000;
-    const requestedGapSec = Math.max(0, rangeSec.toSec - rangeSec.fromSec);
-    const effectiveAggregation = resolvePnLAggregationByGap(aggregation, requestedGapSec);
-    const intervalMs = getAggregationIntervalMs(effectiveAggregation);
+  const nowMs = Date.now();
+  const effectiveFromMs = fromMs ?? getRangeStartMs(toMs ?? nowMs, timePeriod);
+  const effectiveToMs = toMs ?? nowMs;
 
-    try {
-        const snapshots = await getHistoricalPortfolioValueSeries(address, fromMs, toMs, intervalMs);
+  try {
+    // Get balance history and build daily anchors
+    const balanceHistory = await getWalletBalanceHistory(address, timePeriod, effectiveFromMs, effectiveToMs);
 
-        if (snapshots.length === 0) {
-            return emptyPnL();
-        }
+    // get Current balance
+    const currentBalance = (await getWalletOverview(address)).holdings
+      .totalAssetValueUsd;
+    const historyPoint: BalanceDataPoint = {
+      timestamp: Date.now(),
+      value: currentBalance,
+      date: "", // this value is not used to calculate so can be left as ''
+    };
+    const fullBalanceHistory = [
+      ...(balanceHistory?.map((point) => ({
+        timestamp: point.timestampMs,
+        value: point.usdValue,
+        date: dayjs.utc(point.timestampMs).toISOString(),
+      })) || []),
+      historyPoint,
+    ];
 
-        const startingValue = snapshots[0]?.value ?? 0;
-        let previousValue = startingValue;
-
-        const dailyPnL: PnLDataPoint[] = snapshots.map((point, index) => {
-            const delta = index === 0 ? 0 : point.value - previousValue;
-            previousValue = point.value;
-            return {
-                timestamp: point.timestamp,
-                value: roundUsd(delta),
-            };
-        });
-
-        const cumulativePnL: PnLDataPoint[] = snapshots.map((point) => ({
-            timestamp: point.timestamp,
-            value: roundUsd(point.value - startingValue),
-        }));
-
-        return {
-            dailyPnL,
-            cumulativePnL,
-            startBalance: roundUsd(startingValue),
-            endBalance: roundUsd(snapshots[snapshots.length - 1]?.value ?? 0),
-        };
-    } catch (error) {
-        console.error("[WalletCumulativePnL] failed to compute series", {
-            address,
-            timePeriod,
-            aggregation,
-            error,
-        });
-        return emptyPnL();
+    const dailyAnchors = buildDailyBalanceAnchors(fullBalanceHistory);
+    if (dailyAnchors.length == 0) {
+      return emptyPnL();
     }
+
+    // Compute daily net inflow
+    const dailyNetInflowMap = await computeDailyNetInflow(
+      address,
+      effectiveFromMs,
+      effectiveToMs,
+    );
+    // console.log("[getCumulativePnL] dailyNetInflowMap")
+    // console.info(dailyNetInflowMap)
+
+    // Apply formula: dailyPnL[i] = (balanceEnd - balanceStart) - netInflow[i]
+    const dailyPnLArray: PnLDataPoint[] = [];
+    let cumulativePnL = 0;
+    const cumulativePnLArray: PnLDataPoint[] = [];
+
+    for (const anchor of dailyAnchors) {
+      const dayStartMs = anchor.dayStartMs;
+      const balanceDelta = anchor.balanceAtEnd - anchor.balanceAtStart;
+      const netInflow = dailyNetInflowMap.get(dayStartMs) ?? 0;
+
+      // Formula: dailyPnL = dayDelta - netInflow
+      const dayPnL = roundUsd(balanceDelta - netInflow);
+      // const dayPnL = roundUsd(balanceDelta);
+      // const dayPnL = roundUsd(netInflow);
+
+      dailyPnLArray.push({
+        timestamp: dayStartMs,
+        value: dayPnL,
+      });
+
+      // Cumulative as prefix sum
+      cumulativePnL += dayPnL;
+      cumulativePnLArray.push({
+        timestamp: dayStartMs,
+        value: roundUsd(cumulativePnL),
+      });
+    }
+
+    // startBalance and endBalance from day-anchor balances
+    const startBalance =
+      dailyAnchors.length > 0 ? roundUsd(dailyAnchors[0]!.balanceAtStart) : 0;
+    const endBalance =
+      dailyAnchors.length > 0
+        ? roundUsd(dailyAnchors[dailyAnchors.length - 1]!.balanceAtEnd)
+        : 0;
+
+    return {
+      dailyPnL: dailyPnLArray,
+      cumulativePnL: cumulativePnLArray,
+      startBalance,
+      endBalance,
+    };
+  } catch (error) {
+    console.error("[WalletCumulativePnL] failed to compute series", {
+      address,
+      timePeriod,
+      // aggregation,
+      error,
+    });
+    return emptyPnL();
+  }
 }
 
 export function resolveWalletTimeRangeSec(
-    timePeriod: WalletTimePeriod,
-    nowSec = Math.floor(Date.now() / 1000),
+  timePeriod: WalletTimePeriod,
+  nowSec = Math.floor(Date.now() / 1000),
 ): { fromSec: number; toSec: number } {
-    const nowMs = nowSec * 1000;
-    const fromMs = getRangeStartMs(nowMs, timePeriod);
-    return {
-        fromSec: Math.max(0, Math.floor(fromMs / 1000)),
-        toSec: nowSec,
-    };
+  const nowMs = nowSec * 1000;
+  const fromMs = getRangeStartMs(nowMs, timePeriod);
+  return {
+    fromSec: Math.max(0, Math.floor(fromMs / 1000)),
+    toSec: nowSec,
+  };
 }
 
 function emptyPnL(): WalletCumulativePnLResult {
-    return {
-        dailyPnL: [],
-        cumulativePnL: [],
-        startBalance: 0,
-        endBalance: 0,
-    };
+  return {
+    dailyPnL: [],
+    cumulativePnL: [],
+    startBalance: 0,
+    endBalance: 0,
+  };
 }
-

@@ -1,137 +1,187 @@
-@use '@carbon/react/scss/theme' as *;
+@use "@carbon/react/scss/theme" as *;
 
 .container {
-    width: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-// Eliminated .tabList since we use TabContainer now
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  background: rgba(255, 255, 255, 0.03);
+}
 
-// ── Tab Content ───────────────────────────────────
+.tabBtn {
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--yoca-text-muted);
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+
+  &.active {
+    background:
+      linear-gradient(135deg, rgba(124, 58, 237, 0.18), rgba(37, 99, 235, 0.12)),
+      rgba(255, 255, 255, 0.04);
+    color: var(--yoca-text-main);
+    border-color: rgba(124, 58, 237, 0.24);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.16);
+  }
+
+  &:hover:not(.active) {
+    color: var(--yoca-text-main);
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-1px);
+  }
+}
+
 .tabContent {
-    padding: 20px 0 0;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
-// ── About Tab ─────────────────────────────────────
 .description {
-    font-size: 14px;
-    line-height: 1.7;
-    color: $text-secondary;
-    margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--yoca-text-muted);
+  margin: 0;
 }
 
 .noData {
-    font-size: 14px;
-    color: $text-placeholder;
-    margin: 0;
+  font-size: 14px;
+  color: var(--yoca-text-muted);
+  margin: 0;
 }
 
 .insightGrid {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    border: 1px solid $border-subtle;
-    border-radius: 8px;
-    overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .insightCard {
-    padding: 16px 20px;
-    border-bottom: 1px solid $border-subtle;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--yoca-border);
 
-    &:last-child {
-        border-bottom: none;
-    }
+  &:last-child {
+    border-bottom: none;
+  }
 }
 
 .insightQuestion {
-    font-size: 14px;
-    font-weight: 600;
-    color: $text-primary;
-    margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--yoca-text-main);
+  margin: 0 0 6px;
 }
 
 .insightAnswer {
-    font-size: 14px;
-    line-height: 1.65;
-    color: $text-secondary;
-    margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--yoca-text-soft);
+  margin: 0;
 }
 
 .highlightValue {
-    color: $text-primary;
-    font-weight: 600;
+  color: var(--yoca-text-main);
+  font-weight: 700;
 }
 
 .positive {
-    color: #16c784;
-    font-weight: 600;
+  color: var(--yoca-success);
+  font-weight: 700;
 }
 
 .negative {
-    color: #ea3943;
-    font-weight: 600;
+  color: var(--yoca-danger);
+  font-weight: 700;
 }
 
-// ── Holders Tab ───────────────────────────────────
 .holdersLayout {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 24px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
 
-    @media (min-width: 900px) {
-        grid-template-columns: 2fr 3fr;
-        align-items: stretch;
-    }
+  @media (min-width: 900px) {
+    grid-template-columns: 2fr 3fr;
+    align-items: stretch;
+  }
 }
 
 .holdersTable {
-    min-width: 0;
+  min-width: 0;
 }
 
 .holdersChart {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    border: 1px solid $border-subtle-01;
-    border-radius: 8px;
-    overflow: hidden;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .chartHeader {
-    padding: 16px 16px 0;
+  padding: 16px 16px 0;
 }
 
 .chartTitle {
-    font-size: 16px;
-    font-weight: 700;
-    color: $text-primary;
-    margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--yoca-text-main);
+  margin: 0 0 4px;
 }
 
 .chartDescription {
-    font-size: 13px;
-    color: $text-secondary;
-    margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--yoca-text-muted);
+  margin: 0 0 8px;
 }
 
 .chartBody {
-    flex: 1;
-    min-height: 300px;
-    max-height: 360px;
+  flex: 1;
+  min-height: 300px;
+  max-height: 360px;
 }
 
 .chartPlaceholder {
-    height: 340px;
-    border-radius: 8px;
-    background: $layer-01;
-    animation: pulse 1.6s ease-in-out infinite;
+  height: 340px;
+  border-radius: 0;
+  background:
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08), rgba(148, 163, 184, 0.16), rgba(148, 163, 184, 0.08));
+  animation: pulse 1.6s ease-in-out infinite;
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.45; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
 }

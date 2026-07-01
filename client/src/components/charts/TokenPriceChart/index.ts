@@ -1,2 +1,1 @@
-export { TokenPriceChart, type TokenPriceDataPoint } from './TokenPriceChart';
-
+export { TokenPriceChart, type TradeIndicator } from './TokenPriceChart';

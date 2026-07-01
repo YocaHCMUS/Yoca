@@ -1,5 +1,4 @@
 import { GoogleOAuthProvider } from "@react-oauth/google";
-import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./App.css";
 import App from "./App.tsx";
@@ -9,6 +8,8 @@ import { ChartProvider } from "./contexts/ChartContext";
 import { LocalizationProvider } from "./contexts/LocalizationContext.tsx";
 import { SolanaProvider } from "./contexts/SolanaWalletContext.tsx";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { WatchlistProvider } from "./contexts/WatchlistContext";
+import { ToastProvider } from "@/components/common/Toast";
 import "./index.scss";
 import "./styles/carbon.scss";
 import "./styles/theme.scss";
@@ -21,22 +22,24 @@ function ModalRoot() {
 
 function Root() {
   return (
-    <StrictMode>
-      <ThemeProvider>
-        <AuthProvider>
-          <GoogleOAuthProvider clientId={googleClientId}>
-            <SolanaProvider>
-              <LocalizationProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <GoogleOAuthProvider clientId={googleClientId}>
+          <SolanaProvider>
+            <LocalizationProvider>
+              <WatchlistProvider>
                 <ChartProvider>
-                  <App />
+                  <ToastProvider>
+                    <App />
+                  </ToastProvider>
                 </ChartProvider>
-              </LocalizationProvider>
-            </SolanaProvider>
-          </GoogleOAuthProvider>
-          <ModalRoot />
-        </AuthProvider>
-      </ThemeProvider>
-    </StrictMode>
+              </WatchlistProvider>
+            </LocalizationProvider>
+          </SolanaProvider>
+        </GoogleOAuthProvider>
+        <ModalRoot />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

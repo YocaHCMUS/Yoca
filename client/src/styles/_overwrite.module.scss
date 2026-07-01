@@ -16,6 +16,12 @@
     :global(.cds--data-table-content) {
       height: 100%;
     }
+
+    :global(.cds--data-table) {
+      width: max-content;
+      min-width: 100%;
+      table-layout: auto;
+    }
   }
 
   :global(.cds--table-header-label) {
@@ -67,6 +73,10 @@
 
   /* Sticky headers: show full titles (wrap at word boundaries; no ellipsis). */
   .stickyHeaderCell {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: var(--cds-layer-accent-01);
     white-space: normal;
     overflow: visible;
     vertical-align: bottom;
@@ -83,6 +93,12 @@
       word-break: normal;
       overflow-wrap: break-word;
     }
+  }
+
+  .stickyHeaderRow {
+    position: sticky;
+    top: 0;
+    z-index: 3;
   }
 
   .alignStart {
@@ -151,8 +167,10 @@
 }
 
 .tbl.tblBoxed {
-  border-radius: 4px;
+  // border radius is useless since the inner content didn't have roubd border yet
+  // border-radius: 4px;
   border: solid 1px var(--cds-border-subtle-03);
+  overflow: hidden;
 }
 
 .tbl:global(.cds--data-table-container) {
@@ -206,6 +224,27 @@
   inline-size: 100% !important;
 }
 
+.alertTypeTile:global(.cds--link:active:not(.cds--link--disabled)) {
+  text-decoration: none !important;
+}
+
+.dateTimePicker {
+  :global(.cds--time-picker__input-field.cds--text-input) {
+    padding: 0;
+    padding-inline-start: 0.5rem;
+  }
+
+  :global(.cds--date-picker__input) {
+    padding: 0;
+    padding-inline-start: 0.5rem;
+  }
+
+  :global(.cds--date-picker),
+  :global(.cds--date-picker-container) {
+    width: 100%;
+  }
+}
+
 .grdNarrowCustom {
   width: 100%;
   padding-inline: 0 !important;
@@ -217,4 +256,168 @@
   :global(.cds--css-grid-column:not(:last-child)) {
     border-inline-end: 1px solid var(--cds-border-subtle-03);
   }
+}
+
+.filledTextArea {
+  :global(.cds--text-area) {
+    border: solid;
+    border-width: 1px;
+    border-color: var(--cds-border-subtle-01);
+    background-color: var(--cds-field) !important;
+  }
+}
+
+.smallPaddingMenuItem {
+  :global(.cds--list-box__menu-item__option) {
+    padding-block: 0.6rem 0.5rem !important;
+    padding: 0;
+  }
+}
+
+// ========================================
+// Shared Yoca UI utility classes
+// ========================================
+
+.card {
+  background: var(--yoca-surface);
+  border: 1px solid var(--yoca-border);
+  border-radius: 12px;
+  padding: 1rem;
+  transition: box-shadow 0.2s, border-color 0.2s;
+
+  &.cardHoverable:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: var(--yoca-primary);
+  }
+}
+
+.metricValue {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.metricLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--yoca-text-muted);
+}
+
+.pageEyebrow {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--yoca-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.pageTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.pillTab {
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid var(--yoca-border);
+  background: transparent;
+  color: var(--yoca-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &.pillTabActive {
+    background: var(--yoca-primary);
+    border-color: var(--yoca-primary);
+    color: #fff;
+  }
+
+  &:hover:not(.pillTabActive) {
+    background: var(--yoca-surface-hover);
+    border-color: var(--yoca-text-muted);
+  }
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+
+  &.success {
+    background: rgba(22, 163, 74, 0.12);
+    color: var(--yoca-success);
+  }
+
+  &.warning {
+    background: rgba(217, 119, 6, 0.12);
+    color: var(--yoca-warning);
+  }
+
+  &.error {
+    background: rgba(220, 38, 38, 0.12);
+    color: var(--yoca-danger);
+  }
+
+  &.info {
+    background: rgba(124, 58, 237, 0.12);
+    color: var(--yoca-primary);
+  }
+
+  &.neutral {
+    background: var(--yoca-surface-hover);
+    color: var(--yoca-text-muted);
+  }
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--yoca-text-muted);
+
+  .emptyStateTitle {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .emptyStateMessage {
+    font-size: 0.875rem;
+    max-width: 24rem;
+  }
+
+  .emptyStateAction {
+    margin-top: 1rem;
+  }
+}
+
+.addressPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--yoca-surface-hover);
+  font-family: monospace;
+  font-size: 0.75rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

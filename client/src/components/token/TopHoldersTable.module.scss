@@ -1,100 +1,103 @@
-@use '@carbon/react/scss/theme' as *;
+@use "@carbon/react/scss/theme" as *;
 
 .tableContainer {
+  width: 100%;
+  background: transparent;
+  border-radius: var(--yoca-radius-lg);
+  overflow: hidden;
+
+  :global(.cds--data-table-container) {
+    background: transparent;
+  }
+
+  :global(.cds--data-table) {
+    background: transparent;
+    table-layout: fixed;
     width: 100%;
-    background: $background;
-    border-radius: 8px;
-    overflow: hidden;
+  }
 
-    :global(.cds--data-table-container) {
-        background: transparent;
-    }
+  :global(.cds--data-table thead tr th),
+  :global(.cds--data-table thead tr) {
+    background: rgba(255, 255, 255, 0.02);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--yoca-text-muted);
+    text-transform: none;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--yoca-border);
+  }
 
-    :global(.cds--data-table) {
-        background: transparent;
-    }
+  :global(.cds--data-table tbody tr td),
+  :global(.cds--data-table tbody tr) {
+    background: transparent;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--yoca-text-main);
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--yoca-border);
+    vertical-align: middle;
+  }
 
-    // Header row
-    :global(.cds--data-table thead tr th),
-    :global(.cds--data-table thead tr) {
-        background: $background;
-        font-size: 14px;
-        font-weight: 700;
-        color: $text-primary;
-        text-transform: none;
-        padding: 14px 16px;
-        border-bottom: 1px solid $border-subtle;
-    }
+  :global(.cds--data-table tbody tr:hover td),
+  :global(.cds--data-table tbody tr:hover) {
+    background: rgba(255, 255, 255, 0.04);
+  }
 
-    // Data rows
-    :global(.cds--data-table tbody tr td),
-    :global(.cds--data-table tbody tr) {
-        background: $background;
-        font-size: 14px;
-        font-weight: 400;
-        color: $text-primary;
-        padding: 14px 16px;
-        border-bottom: 1px solid $border-subtle;
-        vertical-align: middle;
-    }
+  :global(.cds--data-table tbody tr:last-child td) {
+    border-bottom: none;
+  }
 
-    // Row hover
-    :global(.cds--data-table tbody tr:hover td),
-    :global(.cds--data-table tbody tr:hover) {
-        background: $layer-hover-01;
-    }
+  :global(.cds--data-table thead tr th:first-child),
+  :global(.cds--data-table tbody tr td:first-child) {
+    width: 56px;
+  }
 
-    // Last row no bottom border
-    :global(.cds--data-table tbody tr:last-child td) {
-        border-bottom: none;
-    }
+  :global(.cds--data-table thead tr th:nth-child(2)),
+  :global(.cds--data-table tbody tr td:nth-child(2)) {
+    width: 48%;
+  }
 
-    // Table uses 1fr 2fr 1fr column layout
-    :global(.cds--data-table) {
-        table-layout: fixed;
-        width: 100%;
-    }
+  :global(.cds--data-table thead tr th:last-child),
+  :global(.cds--data-table tbody tr td:last-child) {
+    text-align: right;
+    padding-right: 16px;
+  }
 
-    // Rank column: 2fr
-    :global(.cds--data-table thead tr th:first-child),
-    :global(.cds--data-table tbody tr td:first-child) {
-        width: 25%; // 2/7
-    }
-
-    // Address column: 3fr
-    :global(.cds--data-table thead tr th:nth-child(2)),
-    :global(.cds--data-table tbody tr td:nth-child(2)) {
-        width: 50%; // 3/7
-    }
-
-    // % column: 2fr, right-align
-    :global(.cds--data-table thead tr th:last-child),
-    :global(.cds--data-table tbody tr td:last-child) {
-        width: 25%; // 2/7
-        text-align: right;
-        padding-right: 16px;
-    }
-
-    // Right align the nested header label for Carbon Table
-    :global(.cds--data-table thead tr th:last-child .cds--table-header-label) {
-        display: flex;
-        justify-content: flex-end;
-        width: 100%;
-    }
+  :global(.cds--data-table thead tr th:last-child .cds--table-header-label) {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+  }
 }
 
 .table {
-    background: transparent;
+  background: transparent;
+}
+
+.rankBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.08);
+  border: 1px solid rgba(45, 212, 191, 0.22);
+  color: var(--yoca-accent);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .addressLink {
-    color: #1a73e8;
-    text-decoration: none;
-    font-family: monospace;
-    font-size: 13px;
+  color: var(--yoca-primary-2);
+  text-decoration: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
 
-    &:hover {
-        text-decoration: underline;
-        opacity: 0.85;
-    }
+  &:hover {
+    text-decoration: underline;
+    opacity: 0.9;
+  }
 }

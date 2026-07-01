@@ -1,107 +1,189 @@
-/**
- * Token Page Styles
- * BirdEye-inspired layout: Left Sidebar + Right Main Area
- * Uses Carbon theme tokens for dark/light mode support
- */
-
-@use '@carbon/react/scss/theme' as *;
-
-// ===== Layout =====
-.tokenPage {
-    min-height: 100vh;
-    background: $background;
-
-    * {
-        font-family: 'Inter', sans-serif !important;
-    }
+.tokenPoolPage {
+  min-height: 100vh;
+  padding: 16px 20px 24px;
+  background:
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.12), transparent 34%),
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(7, 10, 19, 0.02), transparent 12%);
 }
 
-// ===== Grid Layout =====
-.tokenPageContainer {
-    max-width: 100%;
-    height: 100%;
-    padding: 0;
+.pageHero {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 18px 20px;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  background:
+    linear-gradient(135deg, rgba(124, 58, 237, 0.16), rgba(37, 99, 235, 0.08)),
+    var(--yoca-surface);
+  box-shadow: var(--yoca-shadow-card);
+  backdrop-filter: blur(18px);
+}
+
+.pageHeroEyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--yoca-accent);
+}
+
+.pageHeroBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pageHeroTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.pageHeroTitle {
+  margin: 0;
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  color: var(--yoca-text-main);
+}
+
+.heroBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border: 1px solid rgba(45, 212, 191, 0.3);
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.12);
+  color: var(--yoca-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pageHeroDescription {
+  max-width: 74ch;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--yoca-text-muted);
+}
+
+.heroStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.heroStat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--yoca-border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.heroStatLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--yoca-text-muted);
+}
+
+.heroStatValue {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--yoca-text-main);
+  line-height: 1.2;
+}
+
+.heroStatPositive {
+  color: var(--yoca-success);
+}
+
+.heroStatNegative {
+  color: var(--yoca-danger);
 }
 
 .tokenPageGrid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 0;
-    min-height: calc(100vh - 48px);
-
-
-    @media (min-width: 1024px) {
-        grid-template-columns: 2fr 7fr;
-        gap: 0;
-    }
+  display: grid;
+  grid-template-columns: minmax(320px, 392px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
 }
 
-// ===== Left Column (Sidebar) =====
-.leftColumn {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    order: 1;
-    min-width: 0;
-    border-right: 1px solid $border-subtle;
-
-    // Hide scrollbar for Chrome, Safari and Opera
-    &::-webkit-scrollbar {
-        display: none;
-    }
-
-    // Hide scrollbar for IE, Edge and Firefox
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-
-// Unified container for all sidebar items
-.sidebarGroup {
-    background: $background;
-    border-radius: 0;
-    display: flex;
-    flex-direction: column;
-    padding: 0;
-    gap: 0;
-    overflow: visible;
-    box-shadow: none;
-
-    >* {
-        border-bottom: 1px solid $border-subtle;
-
-        &:last-child {
-            border-bottom: none;
-        }
-    }
-}
-
-// Moved Utility class down
-
-// ===== Right Column (Main) =====
+.leftColumn,
 .rightColumn {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    order: 2;
-    min-width: 0;
-
-    // Hide scrollbar for Chrome, Safari and Opera
-    &::-webkit-scrollbar {
-        display: none;
-    }
-
-    // Hide scrollbar for IE, Edge and Firefox
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  min-width: 0;
 }
 
-// Utility
-.loadingContainer {
-    background: $background;
-    padding: 32px;
-    text-align: center;
-    border-radius: 8px;
-    color: $text-secondary;
-    font-size: 14px;
+.sidebarGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sidebarHeroCard,
+.sidebarSection {
+  overflow: visible;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 32%),
+    var(--yoca-surface);
+  box-shadow: var(--yoca-shadow-card);
+  backdrop-filter: blur(18px);
+}
+
+.sidebarHeroCard {
+  padding: 20px;
+}
+
+.sidebarSection {
+  padding: 18px;
+}
+
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+@media (max-width: 1180px) {
+  .heroStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tokenPageGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .tokenPoolPage {
+    padding: 12px 12px 20px;
+  }
+
+  .pageHero,
+  .sidebarHeroCard,
+  .sidebarSection {
+    padding: 16px;
+  }
+
+  .heroStats {
+    grid-template-columns: 1fr;
+  }
+
+  .tokenPageGrid {
+    gap: 16px;
+  }
 }

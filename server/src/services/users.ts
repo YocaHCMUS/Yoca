@@ -9,9 +9,29 @@ import {
 
 import { SOLANA_LOGIN_NOUNCE_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
-import { authAccounts, users } from "@sv/db/schema.js";
+import {
+  authAccounts,
+  passwordResetCodes,
+  userLinkedWallets,
+  users,
+} from "@sv/db/schema.js";
+import { PasswordResetError } from "@sv/services/password-reset-errors.js";
+import { sendPasswordResetCodeEmail } from "@sv/services/password-reset-email.service.js";
+import { doesWalletLinked } from "@sv/services/profile/linkedWallet.service.js";
 import bcrypt from "bcryptjs";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, ne } from "drizzle-orm";
+import { randomInt } from "node:crypto";
+
+const PASSWORD_RESET_CODE_TTL_MS = 10 * 60 * 1000;
+const PASSWORD_RESET_MAX_ATTEMPTS = 5;
+
+function normalizePasswordResetEmail(email: string) {
+  return email.trim();
+}
+
+function generateResetCode() {
+  return randomInt(0, 1_000_000).toString().padStart(6, "0");
+}
 
 export async function findUserByEmail(email: string) {
   const [user] = await db
@@ -77,6 +97,119 @@ export async function verifyUserPassword(email: string, password: string) {
   return user;
 }
 
+export async function requestPasswordReset(email: string) {
+  const resetEmail = normalizePasswordResetEmail(email);
+  const passwordUser = await findUserByEmail(resetEmail);
+
+  if (!passwordUser) {
+    return;
+  }
+
+  const code = generateResetCode();
+  const codeHash = await bcrypt.hash(code, 10);
+  const expiresAt = new Date(Date.now() + PASSWORD_RESET_CODE_TTL_MS);
+
+  const [resetCode] = await db
+    .insert(passwordResetCodes)
+    .values({
+      userId: passwordUser.account.userId,
+      email: resetEmail,
+      codeHash,
+      expiresAt,
+    })
+    .returning();
+
+  const sent = await sendPasswordResetCodeEmail({
+    to: resetEmail,
+    code,
+  });
+
+  if (!sent && resetCode) {
+    await db
+      .update(passwordResetCodes)
+      .set({ usedAt: new Date() })
+      .where(eq(passwordResetCodes.id, resetCode.id));
+  } else if (sent && resetCode) {
+    await db
+      .update(passwordResetCodes)
+      .set({ usedAt: new Date() })
+      .where(
+        and(
+          eq(passwordResetCodes.email, resetEmail),
+          isNull(passwordResetCodes.usedAt),
+          ne(passwordResetCodes.id, resetCode.id),
+        ),
+      );
+  }
+}
+
+export async function resetPasswordWithCode(input: {
+  email: string;
+  code: string;
+  newPassword: string;
+}) {
+  const resetEmail = normalizePasswordResetEmail(input.email);
+  const [resetCode] = await db
+    .select()
+    .from(passwordResetCodes)
+    .where(
+      and(
+        eq(passwordResetCodes.email, resetEmail),
+        isNull(passwordResetCodes.usedAt),
+      ),
+    )
+    .orderBy(desc(passwordResetCodes.createdAt))
+    .limit(1);
+
+  if (!resetCode) {
+    throw new PasswordResetError("INVALID_CODE");
+  }
+
+  const now = new Date();
+
+  if (resetCode.expiresAt <= now) {
+    throw new PasswordResetError("EXPIRED_CODE");
+  }
+
+  if (resetCode.attempts >= PASSWORD_RESET_MAX_ATTEMPTS) {
+    throw new PasswordResetError("TOO_MANY_ATTEMPTS");
+  }
+
+  const codeMatched = await bcrypt.compare(input.code, resetCode.codeHash);
+
+  if (!codeMatched) {
+    await db
+      .update(passwordResetCodes)
+      .set({ attempts: resetCode.attempts + 1 })
+      .where(eq(passwordResetCodes.id, resetCode.id));
+    throw new PasswordResetError("INVALID_CODE");
+  }
+
+  const hashedPassword = await bcrypt.hash(input.newPassword, 10);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(authAccounts)
+      .set({ hashedPassword })
+      .where(
+        and(
+          eq(authAccounts.provider, "password"),
+          eq(authAccounts.userId, resetCode.userId),
+        ),
+      );
+
+    await tx
+      .update(passwordResetCodes)
+      .set({ usedAt: now })
+      .where(
+        and(
+          eq(passwordResetCodes.email, resetEmail),
+          isNull(passwordResetCodes.usedAt),
+        ),
+      );
+  });
+}
+
 export async function findUserByGoogleId(googleId: string) {
   const [user] = await db
     .select({
@@ -95,10 +228,10 @@ export async function findUserByGoogleId(googleId: string) {
   return user;
 }
 
-export async function createUserWithGoogle(googleId: string) {
+export async function createUserWithGoogle(googleId: string, displayName: string = "Guest", avatarUrl: string | null = null) {
   let userId = "";
   await db.transaction(async (tx) => {
-    const [newUser] = await tx.insert(users).values({}).returning();
+    const [newUser] = await tx.insert(users).values({ displayName, avatarUrl }).returning();
     await tx.insert(authAccounts).values({
       provider: "google",
       userId: newUser.id,
@@ -107,6 +240,13 @@ export async function createUserWithGoogle(googleId: string) {
     userId = newUser.id;
   });
   return userId;
+}
+
+export async function updateUserAvatarUrl(userId: string, avatarUrl: string) {
+  await db
+    .update(users)
+    .set({ avatarUrl })
+    .where(eq(users.id, userId));
 }
 
 export async function findUserByWalletAddress(pubKey: string) {
@@ -128,6 +268,11 @@ export async function findUserByWalletAddress(pubKey: string) {
 }
 
 export async function createUserWithWallet(pubKey: string) {
+  const linked = await doesWalletLinked(pubKey);
+  if (linked) {
+    throw new Error("WALLET_ALREADY_LINKED");
+  }
+
   let userId = "";
   const nounce = crypto.randomUUID();
   await db.transaction(async (tx) => {
@@ -140,7 +285,15 @@ export async function createUserWithWallet(pubKey: string) {
       nounceExpiredAt: new Date(Date.now() + SOLANA_LOGIN_NOUNCE_TTL_MS),
     });
     userId = newUser.id;
+
+    await tx.insert(userLinkedWallets).values({
+      userId: newUser.id,
+      walletAddress: pubKey,
+      isAuthWallet: true,
+    });
   });
+
+
   return { userId, nounce };
 }
 
@@ -217,4 +370,220 @@ export async function verifyWalletLoginNounce(
 
 export function getSolanaLoginMessage(nonce: string, address: string) {
   return `Login to Yoca\nWallet: ${address}\nNonce: ${nonce}`;
+}
+
+export async function getUserById(userId: string) {
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return user ?? null;
+}
+
+export async function updateUserDisplayName(userId: string, displayName: string) {
+  await db
+    .update(users)
+    .set({ displayName })
+    .where(eq(users.id, userId));
+}
+
+export async function getUserAuthMethods(userId: string) {
+  const rows = await db
+    .selectDistinct({
+      provider: authAccounts.provider,
+    })
+    .from(authAccounts)
+    .where(eq(authAccounts.userId, userId));
+
+  return [...new Set(rows.map((row) => row.provider))];
+}
+
+export async function getUserSettingsSnapshot(userId: string) {
+  const user = await getUserById(userId);
+  if (!user) {
+    throw new Error("ACCOUNT_DELETE_FORBIDDEN");
+  }
+
+  const authMethods = await getUserAuthMethods(userId);
+  const linkedWallets = await db
+    .select({
+      walletAddress: userLinkedWallets.walletAddress,
+      isAuthWallet: userLinkedWallets.isAuthWallet,
+    })
+    .from(userLinkedWallets)
+    .where(eq(userLinkedWallets.userId, userId));
+
+  return {
+    userId: user.id,
+    displayName: user.displayName,
+    avatarUrl: user.avatarUrl,
+    email: user.email ? user.email : null,
+    authMethods,
+    hasPassword: authMethods.includes("password"),
+    linkedWallets,
+  };
+}
+
+export async function updateUserIdentity(
+  userId: string,
+  input: { displayName?: string | null; email?: string | null },
+) {
+  const existingUser = await getUserById(userId);
+  if (!existingUser) {
+    throw new Error("ACCOUNT_DELETE_FORBIDDEN");
+  }
+
+  const nextDisplayName = input.displayName;
+  const nextEmail = input.email;
+
+  if (nextEmail !== undefined && nextEmail !== null) {
+    const [emailOwner] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.email, nextEmail), ne(users.id, userId)))
+      .limit(1);
+
+    if (emailOwner) {
+      throw new Error("EMAIL_ALREADY_IN_USE");
+    }
+  }
+
+  await db.transaction(async (tx) => {
+    const updateData: Partial<typeof users.$inferInsert> = {};
+    if (nextDisplayName !== undefined) {
+      updateData.displayName = nextDisplayName;
+    }
+    if (nextEmail !== undefined) {
+      updateData.email = nextEmail;
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await tx.update(users).set(updateData).where(eq(users.id, userId));
+    }
+
+    const emailChanged =
+      nextEmail !== undefined &&
+      nextEmail !== null &&
+      nextEmail !== existingUser.email;
+
+    if (!emailChanged) {
+      return;
+    }
+
+    const [passwordAuth] = await tx
+      .select({ providerUserId: authAccounts.providerUserId })
+      .from(authAccounts)
+      .where(
+        and(
+          eq(authAccounts.userId, userId),
+          eq(authAccounts.provider, "password"),
+        ),
+      )
+      .limit(1);
+
+    if (!passwordAuth) {
+      return;
+    }
+
+    await tx
+      .update(authAccounts)
+      .set({ providerUserId: nextEmail })
+      .where(
+        and(
+          eq(authAccounts.userId, userId),
+          eq(authAccounts.provider, "password"),
+        ),
+      );
+  });
+
+  return getUserSettingsSnapshot(userId);
+}
+
+export async function addPasswordAuthMethod(
+  userId: string,
+  email: string,
+  newPassword: string,
+) {
+  const [existingPassword] = await db
+    .select({ provider: authAccounts.provider })
+    .from(authAccounts)
+    .where(
+      and(eq(authAccounts.userId, userId), eq(authAccounts.provider, "password")),
+    )
+    .limit(1);
+
+  if (existingPassword) {
+    throw new Error("PASSWORD_ALREADY_SET");
+  }
+
+  const [emailOwner] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.email, email), ne(users.id, userId)))
+    .limit(1);
+
+  if (emailOwner) {
+    throw new Error("EMAIL_ALREADY_IN_USE");
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(users)
+      .set({ email })
+      .where(eq(users.id, userId));
+
+    await tx.insert(authAccounts).values({
+      userId,
+      provider: "password",
+      providerUserId: email,
+      hashedPassword,
+    });
+  });
+}
+
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+) {
+  const [passwordAuth] = await db
+    .select({
+      hashedPassword: authAccounts.hashedPassword,
+    })
+    .from(authAccounts)
+    .where(
+      and(eq(authAccounts.userId, userId), eq(authAccounts.provider, "password")),
+    )
+    .limit(1);
+
+  if (!passwordAuth || !passwordAuth.hashedPassword) {
+    throw new Error("PASSWORD_AUTH_NOT_FOUND");
+  }
+
+  const matched = await bcrypt.compare(currentPassword, passwordAuth.hashedPassword);
+  if (!matched) {
+    throw new Error("CURRENT_PASSWORD_INVALID");
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  await db
+    .update(authAccounts)
+    .set({ hashedPassword })
+    .where(
+      and(eq(authAccounts.userId, userId), eq(authAccounts.provider, "password")),
+    );
+}
+
+export async function deleteUserAccount(userId: string) {
+  const user = await getUserById(userId);
+  if (!user) {
+    throw new Error("ACCOUNT_DELETE_FORBIDDEN");
+  }
+
+  await db.delete(users).where(eq(users.id, userId));
 }

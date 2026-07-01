@@ -7,14 +7,25 @@ export interface CG_Token {
   platforms: { solana?: string };
 }
 
-export interface CG_TokenMarketChart {
-  prices: [number, number][];
-  market_caps: [number, number][];
-  total_volumes: [number, number][];
-}
+export const cg_TokenMarketChartSchema = z.object({
+  prices: z.array(z.tuple([z.number(), z.number()])),
+  market_caps: z.array(z.tuple([z.number(), z.number()])),
+  total_volumes: z.array(z.tuple([z.number(), z.number()])),
+});
+export type CG_TokenMarketChart = z.infer<typeof cg_TokenMarketChartSchema>;
+
+export const mrl_tokenMetadataSchema = z.object({
+  symbol: z.string().trim().nullish(),
+  name: z.string().trim().nullish(),
+  logo: z.string().trim().nullish(),
+});
+export type MRL_TokenMetadata = z.infer<
+  typeof mrl_tokenMetadataSchema
+>;
 
 // https://docs.coingecko.com/v3.0.1/reference/coins-markets
 type MarketItem = MarketGetResponse[number];
+
 // The coingecko library does not return results for optional parameters
 export interface MarketGet extends MarketItem {
   // When: price_change_percentage = "1h,24h,7d,14d,30d,200d,1y"
@@ -376,3 +387,40 @@ export const bds_RecentTradesSchema = z.object({
 });
 
 export type BDS_RecentTrades = z.infer<typeof bds_RecentTradesSchema>;
+
+export const bds_HistoryPriceSchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    items: z.array(
+      z.object({
+        unixTime: z.number(),
+        value: z.number(),
+      }),
+    ),
+  }),
+});
+
+export type BDS_HistoryPrice = z.infer<typeof bds_HistoryPriceSchema>;
+
+export const zrn_FungiblesResponseSchema = z.object({
+  links: z.object({ self: z.string() }).optional(),
+  data: z.array(
+    z.object({
+      type: z.literal("fungibles"),
+      id: z.string(), // Zerion fungible_id (UUID)
+      attributes: z.object({
+        name: z.string(),
+        symbol: z.string(),
+        implementations: z.array(
+          z.object({
+            chain_id: z.string(),
+            address: z.string().nullable(),
+            decimals: z.number(),
+          }),
+        ),
+      }),
+    }),
+  ),
+});
+
+export type ZRN_FungiblesResponse = z.infer<typeof zrn_FungiblesResponseSchema>;

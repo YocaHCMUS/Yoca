@@ -25,7 +25,7 @@ function isWrappedSolToken(tokenAddress: string | undefined): boolean {
     return normalizeAddress(tokenAddress) === WSOL_MINT.toLowerCase();
 }
 
-function isNativeSolToken(tokenAddress: string | undefined): boolean {
+export function isNativeSolToken(tokenAddress: string | undefined): boolean {
     const normalized = normalizeAddress(tokenAddress);
     return normalized === 'native'
         || normalized === 'sol'

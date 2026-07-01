@@ -1,9 +1,10 @@
 const DEFAULT_HELIUS_API_BASE_URL = "https://api.helius.xyz";
-import { createHelius } from "helius-sdk";
 import { trackApiCallResponse } from "@sv/services/tracking/apiCallTracker.service.js";
-import { mergeOutboundFetchTimeout } from "@sv/util/outbound-fetch.js";
 import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.js";
+import { mergeOutboundFetchTimeout } from "@sv/util/outbound-fetch.js";
+import { createHelius } from "helius-sdk";
 import { apiKeyManager, buildApiKeyMetadata } from "./api-key-manager.js";
+import env from "./load-env.js";
 
 const HELIUS_SERVICE_NAME = "helius";
 let heliusKeysInitialized = false;
@@ -63,12 +64,7 @@ export async function heliusFetch(
 }
 
 export function getEndpoint(path: string): URL {
-  const base =
-    process.env.HELIUS_API_BASE_URL &&
-      process.env.HELIUS_API_BASE_URL.length > 0
-      ? process.env.HELIUS_API_BASE_URL
-      : DEFAULT_HELIUS_API_BASE_URL;
-
+  const base = env.HELIUS_API_BASE_URL;
   return new URL(`${base}${path}`);
 }
 
@@ -76,7 +72,7 @@ export function getRequiredHeaders() {
   if (!heliusKeysInitialized) {
     apiKeyManager.initializeKeys(
       HELIUS_SERVICE_NAME,
-      process.env.HELIUS_API_KEY,
+      env.HELIUS_API_KEY,
     );
     heliusKeysInitialized = true;
   }
@@ -93,6 +89,23 @@ export function getRequiredHeaders() {
   };
 }
 
+export function getNextkey() {
+  if (!heliusKeysInitialized) {
+    apiKeyManager.initializeKeys(
+      HELIUS_SERVICE_NAME,
+      env.HELIUS_API_KEY,
+    );
+    heliusKeysInitialized = true;
+  }
+
+  const apiKey = apiKeyManager.getNextKey(HELIUS_SERVICE_NAME);
+  if (!apiKey) {
+    throw new Error("HELIUS_API_KEY is not set");
+  }
+
+  return apiKey
+}
+
 export function getRequiredHeadersWithMetadata(): {
   headers: Record<string, string>;
   apiKey: ApiKeyMetadata | null;
@@ -100,7 +113,7 @@ export function getRequiredHeadersWithMetadata(): {
   if (!heliusKeysInitialized) {
     apiKeyManager.initializeKeys(
       HELIUS_SERVICE_NAME,
-      process.env.HELIUS_API_KEY,
+      env.HELIUS_API_KEY,
     );
     heliusKeysInitialized = true;
   }
@@ -120,7 +133,9 @@ export function getRequiredHeadersWithMetadata(): {
   };
 }
 
-function getApiKeyMetadataFromHeaders(headers: RequestInit["headers"] | undefined): ApiKeyMetadata | null {
+function getApiKeyMetadataFromHeaders(
+  headers: RequestInit["headers"] | undefined,
+): ApiKeyMetadata | null {
   if (!headers) {
     return null;
   }
@@ -130,7 +145,7 @@ function getApiKeyMetadataFromHeaders(headers: RequestInit["headers"] | undefine
 }
 
 const client = createHelius({
-  apiKey: process.env.HELIUS_API_KEY!,
+  apiKey: env.HELIUS_API_KEY!,
 });
 
 export { client };

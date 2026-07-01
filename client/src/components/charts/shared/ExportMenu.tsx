@@ -118,7 +118,10 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
   const showLoading = isExporting || exportingFormat !== null;
   
   return (
-    <div className={`${styles.exportMenu} ${className || ''}`}>
+    <div
+      className={`${styles.exportMenu} ${className || ''}`}
+      data-html2canvas-ignore="true"
+    >
       <button
         ref={buttonRef}
         className={styles.triggerButton}

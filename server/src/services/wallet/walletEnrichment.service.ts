@@ -1,5 +1,6 @@
 import { getTokenMeta } from "../tokens/token-info.js";
 import { getTokenMarketData } from "../tokens/token-market-data.js";
+import { resolveTokenPriceAtTimestamp, resolveTokenPricesAtTimestamp } from "@sv/services/wallet/providers/resolve-token-price.js";
 import type { WalletTransaction, WalletTransfer, WalletSwap } from "./dtos/walletDataObjects.js";
 import { SOL_MINT } from "./wallet.constants.js";
 import { isMissingPortfolioLogoUri, isValidPortfolioTokenAddress, normalizePortfolioAddressKey, normalizePortfolioLookupAddress, normalizePortfolioText, shouldFillPortfolioText } from "./walletData.core.js";
@@ -8,13 +9,6 @@ export async function enrichWithSolanaTokenPrices(
     transactions: WalletTransaction[] | WalletTransfer[] | WalletSwap[],
 ): Promise<void> {
     type RecordLike = Record<string, unknown>;
-    type TokenMetaRow = {
-        address?: unknown;
-        symbol?: unknown;
-        name?: unknown;
-        imageUrl?: unknown;
-    };
-
     const counters = {
         candidatesCollected: 0,
         invalidCandidatesDropped: 0,
@@ -176,14 +170,6 @@ export async function enrichWithSolanaTokenPrices(
         counters.invalidEntriesSkipped += 1;
     }
 
-    console.log("[enrichWithSolanaTokenPrices] Candidate collection summary", {
-        processed: transactions.length,
-        uniqueCandidates: candidateAddressesByKey.size,
-        candidatesCollected: counters.candidatesCollected,
-        invalidCandidatesDropped: counters.invalidCandidatesDropped,
-        invalidEntriesSkipped: counters.invalidEntriesSkipped,
-    });
-
     if (candidateAddressesByKey.size === 0) {
         return;
     }
@@ -194,7 +180,7 @@ export async function enrichWithSolanaTokenPrices(
         const marketPriceByKey = new Map<string, number>();
 
         try {
-            const tokenMeta = await getTokenMeta(candidateAddresses) as TokenMetaRow[];
+            const tokenMeta = await getTokenMeta(candidateAddresses);
             for (const meta of tokenMeta) {
                 const resolved = resolveLookupAndKey(meta.address);
                 if (!resolved) {
@@ -293,28 +279,9 @@ export async function enrichWithSolanaTokenPrices(
                     }
                 } else {
                     counters.tokenMetaMisses += 1;
-                }
-
-                const priceUsd = resolvePriceUsd(addressKey);
-                if (priceUsd != null) {
-                    counters.marketDataHits += 1;
-                    const hasPriceUsd = toOptionalFiniteNumber(transfer.priceUsd) != null;
-                    if (!hasPriceUsd) {
-                        transfer.priceUsd = priceUsd;
-                        changed = true;
+                    if (shouldFillPortfolioText(transfer.tokenSymbol)) {
+                        transfer.tokenSymbol = transfer.tokenAddress;
                     }
-
-                    const hasAmountUsd = toOptionalFiniteNumber(transfer.amountUsd) != null;
-                    const amount = toOptionalFiniteNumber(transfer.amount);
-                    const basePrice = toOptionalFiniteNumber(transfer.priceUsd) ?? priceUsd;
-                    const amountUsd = amount != null ? amount * basePrice : undefined;
-
-                    if (!hasAmountUsd && amountUsd != null && Number.isFinite(amountUsd)) {
-                        transfer.amountUsd = amountUsd;
-                        changed = true;
-                    }
-                } else {
-                    counters.marketDataMisses += 1;
                 }
 
                 if (changed) {
@@ -362,45 +329,15 @@ export async function enrichWithSolanaTokenPrices(
                     }
                 } else {
                     counters.tokenMetaMisses += 1;
-                }
-
-                const priceUsd = resolvePriceUsd(addressKey);
-                if (priceUsd != null) {
-                    counters.marketDataHits += 1;
-                    const hasPriceUsd = toOptionalFiniteNumber(leg.priceUsd) != null;
-                    if (!hasPriceUsd) {
-                        leg.priceUsd = priceUsd;
-                        changed = true;
+                    if (shouldFillPortfolioText(toOptionalString(leg.symbol))) {
+                        leg.symbol =
+                            toOptionalString(leg.address ?? leg.mint) ?? "Unknown";
                     }
-
-                    const hasValueUsd = toOptionalFiniteNumber(leg.valueUsd) != null;
-                    const amount = toOptionalFiniteNumber(leg.amount);
-                    const basePrice = toOptionalFiniteNumber(leg.priceUsd) ?? priceUsd;
-                    const computedValueUsd = amount != null ? Math.abs(amount) * basePrice : undefined;
-
-                    if (!hasValueUsd && computedValueUsd != null && Number.isFinite(computedValueUsd)) {
-                        leg.valueUsd = computedValueUsd;
-                        changed = true;
-                    }
-                } else {
-                    counters.marketDataMisses += 1;
                 }
             };
 
             enrichSwapLeg(rawSwap.bought);
             enrichSwapLeg(rawSwap.sold);
-
-            const hasTotalValueUsd = toOptionalFiniteNumber(rawSwap.totalValueUsd) != null;
-            if (!hasTotalValueUsd) {
-                const boughtValue = toOptionalFiniteNumber(rawSwap.bought && (rawSwap.bought as RecordLike).valueUsd);
-                const soldValue = toOptionalFiniteNumber(rawSwap.sold && (rawSwap.sold as RecordLike).valueUsd);
-                const derivedTotalValueUsd = [boughtValue, soldValue].find((value) => value != null && value > 0);
-
-                if (derivedTotalValueUsd != null) {
-                    rawSwap.totalValueUsd = derivedTotalValueUsd;
-                    changed = true;
-                }
-            }
 
             if (changed) {
                 counters.swapFieldFills += 1;
@@ -422,4 +359,81 @@ export async function enrichWithSolanaTokenPrices(
             }
         }
     }
+}
+
+export async function postEnrichTransfers(transfers: WalletTransfer[]): Promise<void> {
+    const pending = transfers.filter(t => (t.priceUsd == null || t.amountUsd == null || t.amountUsd == 0) && t.timestamp);
+    if (pending.length === 0) return;
+
+    const lookupMap = new Map<string, { mint: string; bucket: number }>();
+    for (const t of pending) {
+        const tsSec = Math.floor(new Date(t.timestamp).getTime() / 1000);
+        const bucket = Math.floor(tsSec / 300) * 300;
+        const key = `${t.tokenAddress}:${bucket}`;
+        if (!lookupMap.has(key)) {
+            lookupMap.set(key, { mint: t.tokenAddress, bucket });
+        }
+    }
+
+    const lookups = Array.from(lookupMap.values());
+    const results = await Promise.all(
+        lookups.map(({ mint, bucket }) =>
+            resolveTokenPriceAtTimestamp(mint, bucket).then(price => ({ mint, bucket, price })),
+        ),
+    );
+
+    const priceMap = new Map<string, number>();
+    for (const { mint, bucket, price } of results) {
+        if (price != null && Number.isFinite(price) && price > 0) {
+            priceMap.set(`${mint}:${bucket}`, price);
+        }
+    }
+
+    for (const t of pending) {
+        const tsSec = Math.floor(new Date(t.timestamp).getTime() / 1000);
+        const bucket = Math.floor(tsSec / 300) * 300;
+        const price = priceMap.get(`${t.tokenAddress}:${bucket}`);
+        if (price != null) {
+            t.priceUsd ??= price;
+            t.amountUsd ??= t.amount * price;
+        }
+    }
+}
+
+export async function postEnrichSwaps(swaps: WalletSwap[]): Promise<void> {
+    for (const swap of swaps) {
+        const boughtSym = swap.bought?.symbol ?? swap.bought?.address ?? "?";
+        const soldSym = swap.sold?.symbol ?? swap.sold?.address ?? "?";
+        const uniqueSyms = [...new Set([soldSym, boughtSym])];
+        swap.tokensInvolved = uniqueSyms.join("/");
+    }
+
+    const pending = swaps.filter(s => (s.totalValueUsd == null || s.totalValueUsd == 0) && s.blockTimestampIso);
+    if (pending.length === 0) return;
+
+    await Promise.all(pending.map(async (swap) => {
+        const tsSec = Math.floor(new Date(swap.blockTimestampIso!).getTime() / 1000);
+        const mints = [swap.sold?.address, swap.bought?.address].filter(Boolean) as string[];
+        if (mints.length === 0) return;
+        const prices = await resolveTokenPricesAtTimestamp(mints, tsSec);
+
+        if (swap.sold?.address) {
+            const p = prices.get(swap.sold.address);
+            if (p != null && Number.isFinite(p) && p > 0) {
+                swap.sold.priceUsd = p;
+                swap.sold.valueUsd = swap.sold.amount * p;
+            }
+        }
+        if (swap.bought?.address) {
+            const p = prices.get(swap.bought.address);
+            if (p != null && Number.isFinite(p) && p > 0) {
+                swap.bought.priceUsd = p;
+                swap.bought.valueUsd = swap.bought.amount * p;
+            }
+        }
+
+        const values = [swap.bought?.valueUsd, swap.sold?.valueUsd]
+            .filter((v): v is number => Number.isFinite(v) && v > 0);
+        if (values.length > 0) swap.totalValueUsd = Math.max(...values);
+    }));
 }

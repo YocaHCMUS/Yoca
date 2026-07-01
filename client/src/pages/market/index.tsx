@@ -1,531 +1,613 @@
 import client from "@/api/main";
-import SparklineChart from "@/components/charts/SparklineChart";
-import TokenTreeMap, {
-  type TokenTreeMapNode,
-} from "@/components/charts/TokenTreeMap";
-import { CpyBtn } from "@/components/CpyBtn";
-import { FilterSwitch } from "@/components/FilterSwitch";
-import { ModalStateManager } from "@/components/ModelStateManager";
-import Tble from "@/components/Tble";
-import { TknImg } from "@/components/TknImg";
-import { TrendNum } from "@/components/TrendNum";
+import { ProfitableTradersView } from "@/components/market/ProfitableTradersView";
+import {
+    DexTable,
+    INITIAL_FILTERS,
+    SortKey,
+    TableFilters,
+} from "@/components/market/DexTable";
 import { Txt } from "@/components/Txt";
 import { PageWrapper } from "@/components/wrapper";
-import { SOLSCAN_TX_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import overwriteStyles from "@/styles/_overwrite.module.scss";
-import { cds } from "@/util/carbon-theme";
 import {
-  Button,
-  Column,
-  Grid,
-  IconButton,
-  Link,
-  Modal,
-  Section,
-  Stack,
-  Tab,
-  TabList,
-  TabPanel,
-  TabPanels,
-  Tabs,
-  Tooltip,
-} from "@carbon/react";
-import { ChartTreemap, Launch, Star, StarFilled } from "@carbon/react/icons";
-import { useEffect, useMemo, useState } from "react";
+    ArrowUp,
+    ChartBar,
+    Checkmark,
+    ChevronDown,
+    Close,
+    Growth,
+    SettingsAdjust,
+    Star,
+    Trophy,
+} from "@carbon/icons-react";
+import { Column, Grid, Section, Stack } from "@carbon/react";
+import classNames from "classnames";
+import { useEffect, useMemo, useRef, useState } from "react";
+import styles from "./index.module.scss";
 
-type TradeVolumeOption = 0 | 1 | 100 | 500;
-type TradeTimeOption = "6h" | "12h" | "24h";
-type TradesSortOption = "volume" | "time";
+type PoolMainTab =
+  | "trending"
+  | "top"
+  | "gainers"
+  | "newPairs"
+  | "profitableTraders";
+type PoolDuration = "5m" | "1h" | "6h" | "24h";
+type TopSort = "volume" | "txns";
+type TraderType = "today" | "1W" | "30d" | "90d";
+
+const MAIN_TABS: Array<{ key: PoolMainTab }> = [
+  { key: "trending" },
+  { key: "top" },
+  { key: "gainers" },
+  { key: "newPairs" },
+  { key: "profitableTraders" },
+];
+
+const TRADER_PERIODS: TraderType[] = ["today", "1W", "30d", "90d"];
+const POOL_DURATIONS: PoolDuration[] = ["5m", "1h", "6h", "24h"];
+const TOP_SORTS: TopSort[] = ["volume", "txns"];
+
+function traderPeriodLabel(period: TraderType) {
+  switch (period) {
+    case "today":
+      return "1D";
+    case "1W":
+      return "7D";
+    case "30d":
+      return "30D";
+    case "90d":
+      return "90D";
+  }
+}
 
 export default function MarketPage() {
-  const { fmt, tr } = useLocalization();
-  const [tradeVolume, setTradeVolume] = useState<TradeVolumeOption>(1);
-  const [tradeTime, setTradeTime] = useState<TradeTimeOption>("24h");
-  const [tradesSort, setTradesSort] = useState<TradesSortOption>("volume");
+  const { tr } = useLocalization();
   const [activeTabIndex, setActiveTabIndex] = useState(0);
+  const [trendingDuration, setTrendingDuration] =
+    useState<PoolDuration>("5m");
+  const [topSort, setTopSort] = useState<TopSort>("volume");
+  const [traderType, setTraderType] = useState<TraderType>("1W");
 
-  const [watchlist, setWatchlist] = useState<string[]>(() => {
-    const saved = localStorage.getItem("yoca_watchlist");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [sortKey, setSortKey] = useState<SortKey>("5m");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [filters, setFilters] = useState<TableFilters>(INITIAL_FILTERS);
+  const [tempFilters, setTempFilters] =
+    useState<TableFilters>(INITIAL_FILTERS);
+
+  const [isRankOpen, setIsRankOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  const activeTab = MAIN_TABS[activeTabIndex]?.key ?? "trending";
+
+  const rankRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    localStorage.setItem("yoca_watchlist", JSON.stringify(watchlist));
-  }, [watchlist]);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (rankRef.current && !rankRef.current.contains(event.target as Node)) {
+        setIsRankOpen(false);
+      }
+      if (
+        filterRef.current &&
+        !filterRef.current.contains(event.target as Node)
+      ) {
+        setIsFilterOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-  const toggleWatchlist = (address: string) => {
-    setWatchlist((prev) =>
-      prev.includes(address)
-        ? prev.filter((a) => a !== address)
-        : [...prev, address],
-    );
+  useEffect(() => {
+    if (activeTab === "gainers" || activeTab === "trending") {
+      setSortKey(trendingDuration as SortKey);
+      setSortDirection("desc");
+    }
+  }, [trendingDuration, activeTab]);
+
+  const getTabLabel = (tab: PoolMainTab) => {
+    switch (tab) {
+      case "trending":
+        return tr("marketPage.trending");
+      case "top":
+        return tr("marketPage.top");
+      case "gainers":
+        return tr("marketPage.topGainers");
+      case "newPairs":
+        return tr("marketPage.newPairs");
+      case "profitableTraders":
+        return tr("marketPage.profitableTraders");
+    }
   };
 
-  const headings = useMemo(() => {
-    const map = {
-      0: {
-        title: tr("marketPage.allTokensTitle"),
-        subtitle: tr("marketPage.allTokensSubtitle"),
-      },
-      1: {
-        title: tr("marketPage.watchlistTitle"),
-        subtitle: tr("marketPage.watchlistSubtitle"),
-      },
-      2: {
-        title: tr("marketPage.tradesTitle"),
-        subtitle: tr("marketPage.tradesSubtitle"),
-      },
-    };
-    return map[activeTabIndex as keyof typeof map] || map[0];
-  }, [activeTabIndex, tr]);
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection((prev) => (prev === "desc" ? "asc" : "desc"));
+    } else {
+      setSortKey(key);
+      setSortDirection("desc");
+    }
 
-  const topTokens = useGet(client.api.tokens["top-marketcap"], 200);
-  const addresses = useMemo(
-    () => topTokens.data?.map((t) => t.address).join(","),
-    [topTokens.data],
-  );
-  const tokenMeta = useGet(
-    client.api.tokens.meta[":addresses"],
+    if (["5m", "1h", "6h", "24h"].includes(key)) {
+      setTrendingDuration(key as PoolDuration);
+    }
+    if (["volume", "txns"].includes(key)) {
+      setTopSort(key as TopSort);
+    }
+  };
+
+  const handleApplyFilters = () => {
+    setFilters(tempFilters);
+    setIsFilterOpen(false);
+  };
+
+  const handleResetFilters = () => {
+    setFilters(INITIAL_FILTERS);
+    setTempFilters(INITIAL_FILTERS);
+  };
+
+  const updateTempFilter = (
+    key: keyof TableFilters,
+    field: "min" | "max",
+    val: string,
+  ) => {
+    setTempFilters((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], [field]: val },
+    }));
+  };
+
+  const sortOptions: Array<{ key: SortKey; label: string }> = [
+    { key: "5m", label: tr("marketPage.trending5m") },
+    { key: "1h", label: tr("marketPage.trending1h") },
+    { key: "6h", label: tr("marketPage.trending6h") },
+    { key: "24h", label: tr("marketPage.trending24h") },
+    { key: "txns", label: tr("marketPage.txns") },
+    { key: "volume", label: tr("marketPage.volume") },
+    { key: "marketCap", label: tr("marketPage.marketCap") },
+    { key: "price", label: tr("marketPage.price") },
+    { key: "liquidity", label: tr("marketPage.liquidity") },
+    { key: "age", label: tr("marketPage.pairAge") },
+  ];
+
+  const filterOptions: Array<{
+    label: string;
+    key: keyof TableFilters;
+    unit: string;
+  }> = [
+    { label: tr("marketPage.liquidity"), key: "liquidity", unit: "$" },
+    { label: tr("marketPage.marketCap"), key: "mcap", unit: "$" },
+    { label: tr("marketPage.volume24h"), key: "volume", unit: "$" },
+    { label: tr("marketPage.txns24h"), key: "txns", unit: "" },
+    { label: tr("marketPage.pairAgeHours"), key: "age", unit: "" },
+    { label: tr("marketPage.change24h"), key: "change24h", unit: "%" },
+  ];
+
+  const SYNC_OPTIONS = [
+    { key: "trending-5m", label: "Trending 5m", tab: "trending", sub: "5m" },
+    { key: "trending-1h", label: "Trending 1h", tab: "trending", sub: "1h" },
+    { key: "trending-6h", label: "Trending 6h", tab: "trending", sub: "6h" },
+    { key: "trending-24h", label: "Trending 24h", tab: "trending", sub: "24h" },
+    { key: "top-volume", label: "Top Volume", tab: "top", sub: "volume" },
+    { key: "top-txns", label: "Top Txns", tab: "top", sub: "txns" },
+    { key: "gainers-5m", label: "Top Gainers 5m", tab: "gainers", sub: "5m" },
+    { key: "gainers-1h", label: "Top Gainers 1h", tab: "gainers", sub: "1h" },
+    { key: "gainers-6h", label: "Top Gainers 6h", tab: "gainers", sub: "6h" },
+    { key: "gainers-24h", label: "Top Gainers 24h", tab: "gainers", sub: "24h" },
+    { key: "new-pairs", label: "New Pairs", tab: "newPairs", sub: "age" },
+  ];
+
+  const currentDropdownLabel = useMemo(() => {
+    if (activeTab === "trending") return `Trending ${trendingDuration}`;
+    if (activeTab === "gainers") return `Top Gainers ${trendingDuration}`;
+    if (activeTab === "top") return `Top ${topSort === "volume" ? "Volume" : "Txns"}`;
+    if (activeTab === "newPairs") return "New Pairs";
+    return "";
+  }, [activeTab, trendingDuration, topSort]);
+
+  const trendingPools = useGet(
+    client.api.tokens["market-pools"].trending,
     200,
-    { param: { addresses: addresses || "" } },
-    {
-      enabled: !!addresses,
-      select: (data) => Object.fromEntries(data.map((m) => [m.address, m])),
-    },
+    { query: { duration: trendingDuration } },
   );
-  const marketData = useGet(
-    client.api.tokens.markets[":addresses"],
-    200,
-    { param: { addresses: addresses || "" } },
-    { enabled: !!addresses },
-  );
-  const topGainers = useGet(client.api.trades.traders.gainers, 200);
-  const topLosers = useGet(client.api.trades.traders.losers, 200);
-  const recentTradesData = useGet(client.api.trades.recent, 200, {
-    query: {
-      timeWindow: tradeTime,
-      usdThreshold: Number(tradeVolume),
-      sortBy: tradesSort,
-    },
+
+  const topPools = useGet(client.api.tokens["market-pools"].top, 200, {
+    query: { sortBy: topSort },
   });
 
-  const loading =
-    topTokens.isLoading || tokenMeta.isLoading || marketData.isLoading;
+  const topGainerPools = useGet(client.api.tokens["market-pools"].gainers, 200);
+  const newPairs = useGet(client.api.tokens["market-pools"]["new-pairs"], 200);
 
-  const tokenHeaders = [
-    { key: "favorite", header: "", width: 56, align: "center" as const },
-    { key: "token", header: tr("marketPage.token"), align: "start" as const },
-    { key: "price", header: tr("marketPage.price"), align: "end" as const },
-    { key: "change1h", header: "1h", align: "end" as const },
-    { key: "change24h", header: "24h", align: "end" as const },
-    { key: "change7d", header: "7d", align: "end" as const },
-    {
-      key: "volume24h",
-      header: tr("marketPage.volume24h"),
-      align: "end" as const,
-    },
-    {
-      key: "marketCap",
-      header: tr("marketPage.marketCap"),
-      align: "end" as const,
-    },
-    { key: "fdv", header: tr("token.marketStats.fdv"), align: "end" as const },
-    {
-      key: "sparkline",
-      header: tr("nav.searchLast7Days"),
-      align: "end" as const,
-      width: "15%",
-    },
-  ];
+  const headings = useMemo(() => {
+    switch (activeTab) {
+      case "trending":
+        return {
+          title: tr("marketPage.trendingPools"),
+          subtitle: tr("marketPage.trendingPoolsSubtitle"),
+        };
+      case "top":
+        return {
+          title: tr("marketPage.topPools"),
+          subtitle: tr("marketPage.topPoolsSubtitle"),
+        };
+      case "gainers":
+        return {
+          title: tr("marketPage.topGainerPools"),
+          subtitle: tr("marketPage.topGainerPoolsSubtitle"),
+        };
+      case "newPairs":
+        return {
+          title: tr("marketPage.newPairs"),
+          subtitle: tr("marketPage.newPairsSubtitle"),
+        };
+      case "profitableTraders":
+        return {
+          title: tr("marketPage.profitableTraders"),
+          subtitle: tr("marketPage.profitableTradersPoolsSubtitle"),
+        };
+      default:
+        return {
+          title: tr("marketPage.marketPools"),
+          subtitle: tr("marketPage.marketPoolsSubtitle"),
+        };
+    }
+  }, [activeTab, tr]);
 
-  const traderHeaders = [
-    { key: "trader", header: tr("marketPage.trader"), align: "start" as const },
-    { key: "pnl", header: tr("marketPage.profits"), align: "end" as const },
-    { key: "volume", header: tr("marketPage.volume"), align: "end" as const },
-    {
-      key: "trades",
-      header: tr("marketPage.trades"),
-      align: "center" as const,
-    },
-  ];
+  const dataToRender = useMemo(() => {
+    switch (activeTab) {
+      case "trending":
+        return trendingPools.data;
+      case "top":
+        return topPools.data;
+      case "gainers":
+        return topGainerPools.data;
+      case "newPairs":
+        return newPairs.data;
+      default:
+        return [];
+    }
+  }, [
+    activeTab,
+    trendingPools.data,
+    topPools.data,
+    topGainerPools.data,
+    newPairs.data,
+  ]);
 
-  const recentTradesHeaders = [
-    { key: "time", header: tr("marketPage.time"), align: "start" as const },
-    { key: "volume", header: tr("marketPage.value"), align: "end" as const },
-    { key: "amount", header: tr("marketPage.amount"), align: "end" as const },
-    { key: "trader", header: tr("marketPage.trader"), align: "end" as const },
-    {
-      key: "solscan",
-      header: tr("marketPage.transaction"),
-      align: "center" as const,
-    },
-  ];
-
-  const treeMapData = useMemo<TokenTreeMapNode[]>(() => {
-    if (!topTokens.data || !tokenMeta.data || !marketData.data) return [];
-
-    return topTokens.data.map((token) => {
-      const m = tokenMeta.data![token.address];
-      const mk = marketData.data![token.address];
-      return {
-        imgUrl: m.imageUrl || "",
-        symbol: m.symbol.toUpperCase(),
-        value: mk.marketCap,
-        tooltips: [
-          {
-            label: tr("marketPage.price"),
-            value: mk.priceUsd,
-            valueFmtr: fmt.num.currency,
-          },
-          {
-            label: tr("marketPage.change24h"),
-            value: mk.priceChange24h,
-            valueFmtr: fmt.num.percent,
-          },
-        ],
-        trendValue: mk.priceChange24h,
-        trendValueFmtr: fmt.num.percent,
-        link: `/tokens/${token.address}`,
-      };
-    });
-  }, [topTokens.data, tokenMeta.data, marketData.data, fmt, tr]);
-
-  const topTokenRows = useMemo(() => {
-    if (!topTokens.data || !tokenMeta.data || !marketData.data) return [];
-
-    return topTokens.data.map((token) => {
-      const m = tokenMeta.data![token.address];
-      const mk = marketData.data![token.address];
-      const isFav = watchlist.includes(token.address);
-      return {
-        id: token.address,
-        favorite: (
-          <IconButton
-            label={
-              isFav
-                ? tr("marketPage.removeFromWatchlist")
-                : tr("marketPage.addToWatchlist")
-            }
-            kind="ghost"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleWatchlist(token.address);
-            }}
-          >
-            {isFav ? (
-              <StarFilled size={18} fill={cds.backgroundBrand} />
-            ) : (
-              <Star size={18} />
-            )}
-          </IconButton>
-        ),
-        token: (
-          <Stack
-            orientation="horizontal"
-            gap={2}
-            style={{ alignItems: "center" }}
-          >
-            <TknImg src={m.imageUrl} alt={m.symbol} size={28} />
-            <Stack gap={1} style={{ justifyContent: "center" }}>
-              <Stack
-                orientation="horizontal"
-                gap={2}
-                style={{ alignItems: "center" }}
-              >
-                <Link
-                  href={`/tokens/${token.address}`}
-                  style={{ fontFamily: "monospace" }}
-                >
-                  {m.symbol.toUpperCase()}
-                </Link>
-                <CpyBtn size="xs" copyWhat={token.address} />
-              </Stack>
-              <Tooltip label={m.name}>
-                <Txt secondary ellipsis>
-                  {(m.name ?? "").length > 10
-                    ? `${m.name.slice(0, 10)}…`
-                    : m.name}
-                </Txt>
-              </Tooltip>
-            </Stack>
-          </Stack>
-        ),
-        price: fmt.num.currency(mk.priceUsd),
-        change1h: (
-          <TrendNum
-            value={mk.priceChangePercentage1h}
-            formatter={fmt.num.percent}
-          />
-        ),
-        change24h: (
-          <TrendNum
-            value={mk.priceChangePercentage24h}
-            formatter={fmt.num.percent}
-          />
-        ),
-        change7d: (
-          <TrendNum
-            value={mk.priceChangePercentage7d}
-            formatter={fmt.num.percent}
-          />
-        ),
-        volume24h: fmt.num.compact.currency(mk.volume24h),
-        marketCap: fmt.num.compact.currency(mk.marketCap),
-        fdv: fmt.num.compact.currency(mk.fullyDilutedValuation),
-        sparkline: (
-          <div style={{ width: "100%", height: 40, paddingLeft: 24 }}>
-            <SparklineChart
-              data={mk.sparkline7d ?? []}
-              positive={(mk.priceChangePercentage7d ?? 0) >= 0}
-            />
-          </div>
-        ),
-      };
-    });
-  }, [topTokens.data, tokenMeta.data, marketData.data, fmt, watchlist, tr]);
-
-  const traderRows = (data: NonNullable<typeof topGainers.data>) =>
-    data.map((t) => ({
-      id: t.address,
-      trader: (
-        <Stack
-          orientation="horizontal"
-          gap={1}
-          style={{ alignItems: "center" }}
-        >
-          <Link href={`/wallet/${t.address}`}>
-            {fmt.text.address(t.address)}
-          </Link>
-          <CpyBtn size="xs" copyWhat={t.address} />
-        </Stack>
-      ),
-      pnl: (
-        <TrendNum
-          value={t.pnl}
-          formatter={fmt.num.compact.currency}
-          prefixes="plus-minus"
-        />
-      ),
-      volume: fmt.num.compact.currency(t.volume),
-      trades: t.tradeCount,
-    }));
-
-  const mapRecentTrades = useMemo(() => {
-    if (!recentTradesData.data) return [];
-    return recentTradesData.data.map((trade, index) => {
-      const isBuy = trade.tradeAction == "buy";
-      const baseSymbol = tokenMeta.data?.[trade.baseAddress]?.symbol || null;
-      const quoteSymbol = tokenMeta.data?.[trade.quoteAddress]?.symbol || null;
-
-      const buyAmount = isBuy ? trade.baseAmount : trade.quoteAmount;
-      const buySymbol = isBuy ? baseSymbol : quoteSymbol;
-      const sellAmount = isBuy ? trade.quoteAmount : trade.baseAmount;
-      const sellSymbol = isBuy ? quoteSymbol : baseSymbol;
-
-      return {
-        id: index.toString(),
-        solscan: (
-          <IconButton
-            href={`${SOLSCAN_TX_URL}/${trade.transactionHash}`}
-            label={tr("marketPage.openInSolscan")}
-            kind="ghost"
-            size="sm"
-          >
-            <Launch size={18} />
-          </IconButton>
-        ),
-        amount: (
-          <Stack gap={1}>
-            <span
-              style={{ color: isBuy ? cds.supportSuccess : cds.supportError }}
-            >
-              {fmt.num.compact.decimal(buyAmount)} {buySymbol}
-            </span>
-            <Txt secondary>
-              {fmt.num.compact.decimal(sellAmount)} {sellSymbol}
-            </Txt>
-          </Stack>
-        ),
-        volume: fmt.num.compact.currency(trade.volumeUsd),
-        trader: (
-          <Link href={`/wallet/${trade.owner}`}>
-            {fmt.text.address(trade.owner)}
-          </Link>
-        ),
-        time: fmt.datetime.relative(trade.blockUnixTime * 1000.0),
-      };
-    });
-  }, [recentTradesData.data, fmt, tr]);
+  const currentSortLabel =
+    sortOptions.find((option) => option.key === sortKey)?.label ?? "";
 
   return (
     <PageWrapper>
-      <Section>
+      <Section className={styles.marketPage}>
         <Grid className={overwriteStyles.wdGrd}>
           <Column sm={2} md={8} lg={16}>
-            <Stack gap={4}>
-              <Stack gap={1}>
-                <Txt bold size="lg">
+            <Stack className={styles.marketStack} gap={4}>
+              <header className={styles.marketHero}>
+                <div className={styles.radarEyebrow}>
+                  <span className={styles.radarPulse} aria-hidden="true" />
+                  Market Radar
+                </div>
+                <Txt block bold className={styles.marketTitle} size="lg">
                   {headings.title}
                 </Txt>
-                <Txt secondary>{headings.subtitle}</Txt>
-              </Stack>
-              <Tabs
-                onChange={({ selectedIndex }) =>
-                  setActiveTabIndex(selectedIndex)
-                }
-              >
-                <TabList aria-label="Market Navigation">
-                  <Tab>All</Tab>
-                  <Tab>Watchlist</Tab>
-                  <Tab>Trades</Tab>
-                </TabList>
-                <TabPanels>
-                  <TabPanel>
-                    <Tble
-                      loading={loading}
-                      headers={tokenHeaders}
-                      rows={topTokenRows}
-                      toolBar={
-                        <ModalStateManager
-                          renderLauncher={({ setOpen }) => (
-                            <Button
-                              kind="ghost"
-                              onClick={() => setOpen(true)}
-                              renderIcon={ChartTreemap}
-                            >
-                              {tr("marketPage.marketMap")}
-                            </Button>
+                <Txt block className={styles.marketSubtitle}>
+                  {headings.subtitle}
+                </Txt>
+              </header>
+
+              <div className={styles.dexBar}>
+                {MAIN_TABS.map((tab) => {
+                  const isActive = activeTab === tab.key;
+
+                  if (isActive) {
+                    const hasSubfilters =
+                      tab.key === "trending" ||
+                      tab.key === "top" ||
+                      tab.key === "gainers" ||
+                      tab.key === "profitableTraders";
+
+                    return (
+                      <div
+                        key={tab.key}
+                        className={`${styles.activeTabContainer} ${
+                          !hasSubfilters ? styles.noSubfilters : ""
+                        }`}
+                      >
+                        <span className={styles.activeTabText}>
+                          {tab.key === "trending" && <Growth size={16} />}
+                          {tab.key === "top" && <ChartBar size={16} />}
+                          {tab.key === "gainers" && <ArrowUp size={16} />}
+                          {tab.key === "newPairs" && <Star size={16} />}
+                          {tab.key === "profitableTraders" && (
+                            <Trophy size={16} />
                           )}
+                          {getTabLabel(tab.key)}
+                        </span>
+
+                        {tab.key === "profitableTraders" && (
+                          <div className={styles.inlineFilters}>
+                            {TRADER_PERIODS.map((period) => (
+                              <button
+                                key={period}
+                                className={`${styles.inlineFilterBtn} ${
+                                  traderType === period ? styles.active : ""
+                                }`}
+                                onClick={() => setTraderType(period)}
+                              >
+                                {traderPeriodLabel(period)}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {(tab.key === "trending" || tab.key === "gainers") && (
+                          <div className={styles.inlineFilters}>
+                            {POOL_DURATIONS.map((duration) => (
+                              <button
+                                key={duration}
+                                className={`${styles.inlineFilterBtn} ${
+                                  trendingDuration === duration
+                                    ? styles.active
+                                    : ""
+                                }`}
+                                onClick={() => {
+                                  setTrendingDuration(duration);
+                                  setSortKey(duration);
+                                  setSortDirection("desc");
+                                }}
+                              >
+                                {duration}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {tab.key === "top" && (
+                          <div className={styles.inlineFilters}>
+                            {TOP_SORTS.map((sort) => (
+                              <button
+                                key={sort}
+                                className={`${styles.inlineFilterBtn} ${
+                                  topSort === sort ? styles.active : ""
+                                }`}
+                                onClick={() => {
+                                  setTopSort(sort);
+                                  setSortKey(sort);
+                                  setSortDirection("desc");
+                                }}
+                              >
+                                {sort === "volume"
+                                  ? tr("marketPage.volume")
+                                  : tr("marketPage.txns")}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={tab.key}
+                      className={styles.tabBtn}
+                      onClick={() => {
+                        const newIndex = MAIN_TABS.findIndex(
+                          (candidate) => candidate.key === tab.key,
+                        );
+                        setActiveTabIndex(newIndex);
+
+                        if (tab.key === "gainers" || tab.key === "trending") {
+                          setSortKey(trendingDuration as SortKey);
+                          setSortDirection("desc");
+                        } else if (tab.key === "top") {
+                          setSortKey(topSort as SortKey);
+                          setSortDirection("desc");
+                        } else if (tab.key === "newPairs") {
+                          setSortKey("age");
+                          setSortDirection("desc");
+                        }
+                      }}
+                    >
+                      {getTabLabel(tab.key)}
+                    </button>
+                  );
+                })}
+
+                <div className={styles.toolbarWrapper}>
+                  {activeTab !== "profitableTraders" && (
+                    <>
+                      <div className={styles.rankContainer} ref={rankRef}>
+                        <button
+                          className={classNames(styles.toolbarBtn, {
+                            [styles.active]: isRankOpen,
+                          })}
+                          onClick={() => setIsRankOpen(!isRankOpen)}
                         >
-                          {({ open, setOpen }) => (
-                            <Modal
-                              open={open}
-                              onRequestClose={() => setOpen(false)}
-                              modalHeading={tr("marketPage.marketMap")}
-                              passiveModal
-                              size="md"
-                            >
-                              <TokenTreeMap
-                                loading={loading}
-                                data={treeMapData}
-                                height={400}
-                                maxTrendValue={20}
+                          <Trophy size={16} />
+                          <span>
+                            {tr("marketPage.rankBy")}:{" "}
+                            {`${
+                              sortDirection === "desc" ? "↓" : "↑"
+                            } ${currentSortLabel}`}
+                          </span>
+                          <ChevronDown size={16} />
+                        </button>
+
+                        {isRankOpen && (
+                          <div className={styles.dropdown}>
+                            <div className={styles.dropdownSection}>
+                              <div className={styles.sectionTitle}>
+                                {tr("marketPage.order")}
+                              </div>
+                              <div
+                                className={styles.option}
+                                onClick={() => {
+                                  setSortDirection("desc");
+                                  setIsRankOpen(false);
+                                }}
+                              >
+                                {sortDirection === "desc" && (
+                                  <Checkmark size={14} />
+                                )}
+                                <span>{tr("marketPage.descending")}</span>
+                              </div>
+                              <div
+                                className={styles.option}
+                                onClick={() => {
+                                  setSortDirection("asc");
+                                  setIsRankOpen(false);
+                                }}
+                              >
+                                {sortDirection === "asc" && (
+                                  <Checkmark size={14} />
+                                )}
+                                <span>{tr("marketPage.ascending")}</span>
+                              </div>
+                            </div>
+                            <div className={styles.dropdownSection}>
+                              <div className={styles.sectionTitle}>
+                                {tr("marketPage.rankBy")}
+                              </div>
+                              {sortOptions.map((option) => (
+                                <div
+                                  key={option.key}
+                                  className={styles.option}
+                                  onClick={() => {
+                                    handleSort(option.key);
+                                    setIsRankOpen(false);
+                                  }}
+                                >
+                                  {sortKey === option.key && (
+                                    <Checkmark size={14} />
+                                  )}
+                                  <span>{option.label}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className={styles.filterContainer} ref={filterRef}>
+                        <button
+                          className={classNames(styles.toolbarBtn, {
+                            [styles.active]: isFilterOpen,
+                          })}
+                          onClick={() => {
+                            setIsFilterOpen(!isFilterOpen);
+                            setTempFilters(filters);
+                          }}
+                        >
+                          <SettingsAdjust size={16} />
+                          <span>{tr("marketPage.filters")}</span>
+                        </button>
+
+                        {isFilterOpen && (
+                          <div className={styles.filterPopup}>
+                            <div className={styles.popupHeader}>
+                              <span>{tr("marketPage.customizeFilters")}</span>
+                              <Close
+                                size={20}
+                                className={styles.closeIcon}
+                                onClick={() => setIsFilterOpen(false)}
                               />
-                            </Modal>
-                          )}
-                        </ModalStateManager>
-                      }
-                    />
-                  </TabPanel>
-                  <TabPanel>
-                    <Tble
-                      loading={loading}
-                      headers={tokenHeaders}
-                      rows={topTokenRows.filter((r) =>
-                        watchlist.includes(r.id),
-                      )}
-                    />
-                  </TabPanel>
-                  <TabPanel>
-                    <Grid narrow>
-                      <Column lg={8} md={8} sm={4}>
-                        <Tble
-                          boxed
-                          stickyHeader
-                          title={tr("marketPage.topGainers")}
-                          height={500}
-                          loading={topGainers.isLoading}
-                          headers={traderHeaders}
-                          rows={traderRows(topGainers.data || [])}
-                        />
-                      </Column>
-                      <Column lg={8} md={8} sm={4}>
-                        <Tble
-                          boxed
-                          stickyHeader
-                          title={tr("marketPage.topLosers")}
-                          height={500}
-                          loading={topLosers.isLoading}
-                          headers={traderHeaders}
-                          rows={traderRows(topLosers.data || [])}
-                        />
-                      </Column>
-                      <Column lg={16} md={8} sm={4}>
-                        <Tble
-                          boxed
-                          stickyHeader
-                          enablePagination
-                          title={tr("marketPage.recentTrades")}
-                          height={500}
-                          loading={recentTradesData.isLoading}
-                          rows={mapRecentTrades}
-                          headers={recentTradesHeaders}
-                          marginTop={16}
-                          toolBar={
-                            <>
-                              <FilterSwitch
-                                width="lg"
-                                options={[
-                                  {
-                                    value: 0,
-                                    label: tr("marketPage.filterAll"),
-                                  },
-                                  {
-                                    value: 1,
-                                    label: tr("marketPage.filterGreaterThan", {
-                                      val: "1",
-                                    }),
-                                  },
-                                  {
-                                    value: 100,
-                                    label: tr("marketPage.filterGreaterThan", {
-                                      val: "100",
-                                    }),
-                                  },
-                                  {
-                                    value: 500,
-                                    label: tr("marketPage.filterGreaterThan", {
-                                      val: "500",
-                                    }),
-                                  },
-                                ]}
-                                value={tradeVolume}
-                                onChange={(v) => setTradeVolume(v)}
-                              />
-                              <FilterSwitch
-                                options={[
-                                  { value: "6h", label: "6h" },
-                                  { value: "12h", label: "12h" },
-                                  { value: "24h", label: "24h" },
-                                ]}
-                                value={tradeTime}
-                                onChange={(v) => setTradeTime(v)}
-                              />
-                              <FilterSwitch
-                                options={[
-                                  {
-                                    value: "volume",
-                                    label: tr("marketPage.volume"),
-                                  },
-                                  {
-                                    value: "time",
-                                    label: tr("marketPage.time"),
-                                  },
-                                ]}
-                                value={tradesSort}
-                                onChange={(v) => setTradesSort(v)}
-                              />
-                            </>
-                          }
-                        />
-                      </Column>
-                    </Grid>
-                  </TabPanel>
-                </TabPanels>
-              </Tabs>
+                            </div>
+                            <div className={styles.popupContent}>
+                              {filterOptions.map((filter) => (
+                                <div
+                                  key={filter.key}
+                                  className={styles.filterRow}
+                                >
+                                  <label>{filter.label}:</label>
+                                  <div className={styles.inputGroup}>
+                                    <div className={styles.inputWithUnit}>
+                                      {filter.unit && (
+                                        <span className={styles.unit}>
+                                          {filter.unit}
+                                        </span>
+                                      )}
+                                      <input
+                                        type="number"
+                                        placeholder={tr("marketPage.min")}
+                                        value={tempFilters[filter.key].min || ""}
+                                        onChange={(event) =>
+                                          updateTempFilter(
+                                            filter.key,
+                                            "min",
+                                            event.target.value,
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                    <div className={styles.inputWithUnit}>
+                                      {filter.unit && (
+                                        <span className={styles.unit}>
+                                          {filter.unit}
+                                        </span>
+                                      )}
+                                      <input
+                                        type="number"
+                                        placeholder={tr("marketPage.max")}
+                                        value={tempFilters[filter.key].max || ""}
+                                        onChange={(event) =>
+                                          updateTempFilter(
+                                            filter.key,
+                                            "max",
+                                            event.target.value,
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className={styles.popupFooter}>
+                              <button
+                                className={styles.resetBtn}
+                                onClick={handleResetFilters}
+                              >
+                                {tr("marketPage.reset")}
+                              </button>
+                              <button
+                                className={styles.applyBtn}
+                                onClick={handleApplyFilters}
+                              >
+                                {tr("marketPage.apply")}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <Section className={styles.tableSection}>
+                {activeTab === "profitableTraders" ? (
+                  <ProfitableTradersView traderType={traderType} />
+                ) : (
+                  <DexTable
+                    loading={
+                      trendingPools.isLoading ||
+                      trendingPools.isValidating ||
+                      topPools.isLoading ||
+                      topPools.isValidating ||
+                      newPairs.isLoading
+                    }
+                    data={dataToRender as any}
+                    sortKey={sortKey}
+                    sortDirection={sortDirection}
+                    filters={filters}
+                    onSort={handleSort}
+                  />
+                )}
+              </Section>
             </Stack>
           </Column>
         </Grid>

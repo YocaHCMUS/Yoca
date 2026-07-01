@@ -1,8 +1,8 @@
 import type { ApiErrCode } from "@/api/main";
 import {
-  defineDateTimeFormat,
-  defineNumberFormat,
-  defineTextFormat,
+    defineDateTimeFormat,
+    defineNumberFormat,
+    defineTextFormat,
 } from "./util/util-format";
 import { defineTranslationWithBase } from "./util/util-translation";
 
@@ -89,6 +89,7 @@ const ERROR = {
   EMAIL_OR_PASSWORD_WAS_INCORRECT: "Email or password was incorrect",
   FAILED_TO_FETCH_REQUESTED_DATA: "Failed to fetch requested data",
   GOOGLE_VERIFICATION_FAILED: "Google authentication failed. Please try again.",
+  WALLET_ALREADY_LINKED: "This wallet is already linked to an existing user.",
   WALLET_VERIFICATION_FAILED: "Wallet verification failed. Please try again.",
   WALLET_NONCE_FAILED:
     "Failed to initiate wallet authentication. Please try again.",
@@ -96,10 +97,31 @@ const ERROR = {
   NETWORK_ERR: "Network error. Please check your connection and try again.",
   VALIDATION_ERR: "Invalid input. Please check your data.",
   INVALID_TOKEN_PAYLOAD: "Invalid token payload.",
+  PASSWORD_AUTH_NOT_FOUND:
+    "Password auth method is not configured for this account.",
+  PASSWORD_ALREADY_SET:
+    "Password login is already configured for this account.",
+  CURRENT_PASSWORD_INVALID: "Current password is invalid.",
+  PASSWORD_RESET_CODE_INVALID: "Reset code is invalid.",
+  PASSWORD_RESET_CODE_EXPIRED:
+    "Reset code has expired. Please request a new code.",
+  PASSWORD_RESET_ATTEMPTS_EXCEEDED:
+    "Too many reset attempts. Please request a new code.",
+  EMAIL_ALREADY_IN_USE: "Email is already in use by another account.",
+  ACCOUNT_DELETE_CONFIRM_MISMATCH:
+    "Account deletion confirmation text does not match.",
+  ACCOUNT_DELETE_FORBIDDEN:
+    "Account deletion request is not authorized. Please try again.",
   HOURLY_CHART_HOURLY_EXCEEDED_90_DAYS:
     "Hourly chart data cannot exceed 90 days. Please select a shorter date range.",
   DAILY_CHART_DAILY_EXCEEDED_365_DAYS:
     "Daily chart data cannot exceed 365 days. Please select a shorter date range.",
+  NOT_FOUND: "Not found.",
+  UNAUTHORIZED: "Unauthorized",
+  RATE_LIMIT_EXCEEDED: "Too many requests. Please try again later.",
+  AI_DAILY_LIMIT_EXCEEDED:
+    "You have reached today's AI usage limit. Upgrade your plan for more requests.",
+  BAD_GATEWAY: "Bad gateway. Please try again later.",
 } as const satisfies Record<ApiErrCode, string>;
 
 export const translation = {
@@ -125,9 +147,22 @@ export const translation = {
     itemRangeText: "{{min}}-{{max}} of {{count}} {{item | items}}",
     nextPage: "Next Page",
     previousPage: "Previous Page",
-  },
+    searchPlaceholder: "Search table...",
+    filterLabel: "Filter: {{column}}",
+    apply: "Apply",
+    selectAll: "Select All",
+    from: "From",
+    to: "To",
+    page: "Page {{count}}",
+      clear: "Clear",
+      noResults: "No results",
+      clearFilter: "Clear filter",
+      filterSearchPlaceholder: "Search {{column}}...",
+      searchAriaLabel: "Search table",
+    },
   // Authentication
   auth: {
+    authenticating: "Authenticating...",
     or: "Or continue with",
     signIn: "Sign In",
     signUp: "Sign Up",
@@ -160,6 +195,310 @@ export const translation = {
     privacy: "Privacy Policy",
     googleAuthFailed: "Google authentication failed. Please try again.",
     googleAuthCancelled: "Google authentication was cancelled.",
+  },
+  landing: {
+    nav: {
+      primary: "Primary navigation",
+      products: "Products",
+      useCases: "Use Cases",
+      docs: "Docs",
+      pricing: "Pricing",
+      login: "Log In",
+      signUp: "Sign Up",
+      profile: "Profile",
+      account: "Account",
+      language: "Language",
+      languageMenu: "Language menu",
+      currentLanguage: "Current language",
+      english: "English",
+      vietnamese: "Tiếng Việt",
+      toggleMenu: "Toggle menu",
+      switchToLightMode: "Switch to Light Mode",
+      switchToDarkMode: "Switch to Dark Mode",
+    },
+    hero: {
+      eyebrow: "AI-driven Solana analytics",
+      title: "Make onchain data work for you.",
+      subtitle:
+        "The all-in-one suite for Solana traders. Track token trends, visualize whale movements, and stay ahead of the market with real-time on-chain alerts.",
+      primaryCta: "Launch Market Radar",
+      secondaryCta: "View Live Wallets",
+    },
+    stats: {
+      uiLatency: "UI Latency",
+      dataStreaming: "Data Streaming",
+      walletLabels: "Wallet Labels",
+      transactionGraphs: "Transaction Graphs",
+    },
+    products: {
+      eyebrow: "Core Features",
+      title: "Everything you need to stay ahead of the market.",
+      learnMore: "Learn more",
+      items: {
+        marketExplorer: {
+          tag: "Explore",
+          title: "Market Explorer",
+          description:
+            "Real-time tracking of Solana's top-performing tokens and liquidity pools.",
+        },
+        portfolioIntelligence: {
+          tag: "Analyze",
+          title: "Portfolio Intelligence",
+          description:
+            "Deep-dive into any wallet's history and behavior with our AI-powered behavioral tagging.",
+        },
+        smartAlerts: {
+          tag: "Monitor",
+          title: "Smart Alerts",
+          description:
+            "Never miss a move. Set custom alerts for large swaps and whale activity delivered straight to your Discord.",
+        },
+      },
+    },
+    marketIntelligence: {
+      eyebrow: "Market Intelligence",
+      title: "See the market the way professionals do.",
+      marketStats: "Market Stats",
+      stats: {
+        marketCap: "Market Cap",
+        volume24h: "24h Volume",
+        circulatingSupply: "Circulating Supply",
+      },
+    },
+    customerStories: {
+      title: "Customer stories",
+      subtitle:
+        "Read how teams use Yoca to turn raw chain activity into decisions their whole org can trust.",
+      seeMore: "See more",
+      readStory: "Read story",
+      items: {
+        base: {
+          title:
+            "How teams run onchain data transformations at scale with Yoca",
+        },
+        blockworks: {
+          title: "Powering institutional crypto research with unified metrics",
+        },
+        opLabs: {
+          title: "Ecosystem growth and transparency backed by live dashboards",
+        },
+        oneInch: {
+          title:
+            "Making execution and liquidity data transparent and accessible",
+        },
+      },
+    },
+    testimonials: {
+      items: {
+        multicoin: {
+          text: "If it's not in your dashboards, it's not real. Yoca gave us one source of truth for wallet and token flows.",
+        },
+        blockworks: {
+          text: "The most practical onchain dataset we've plugged into research workflows: fast queries, fewer surprises.",
+        },
+        oneInch: {
+          text: "Without a clear view of chain activity, your product is blind. Yoca fixed that for our team in days.",
+        },
+      },
+    },
+    news: {
+      eyebrow: "Latest news",
+      title: "Hear the latest",
+      label: "News",
+      readPost: "Read post",
+      items: {
+        walletReports: {
+          title: "Ship wallet reports without maintaining brittle pipelines",
+          excerpt:
+            "Export snapshots your analysts can trust, with the same definitions as the live app and fewer spreadsheet forks.",
+        },
+        tempo: {
+          title: "Tempo is live: instant settlement metrics in Yoca",
+          excerpt:
+            "Track payments-first chain activity alongside Solana and EVM metrics from one navigation model.",
+        },
+        cardano: {
+          title: "Cardano joins the catalog",
+          excerpt:
+            "Research-grade staking and delegation signals now sit next to the wallets you already watch.",
+        },
+      },
+    },
+    finalCta: {
+      title: "Create off-the-chart growth",
+      subtitle:
+        "Join teams who use Yoca to see wallets, tokens, and markets in one coherent story.",
+      cta: "Get started",
+    },
+    footer: {
+      description:
+        "Onchain analytics for teams who ship with data, not guesswork.",
+      companyPrompt: "Looking to use Yoca for your company?",
+      contactSales: "Contact sales",
+      columns: {
+        products: { title: "Products" },
+        resources: { title: "Resources" },
+        company: { title: "Company" },
+        legal: { title: "Legal" },
+      },
+      links: {
+        dataHub: "Data Hub",
+        tokenExplorer: "Token Explorer",
+        datashare: "Datashare",
+        chains: "Chains",
+        pricing: "Pricing",
+        documentation: "Documentation",
+        caseStudies: "Case studies",
+        blog: "Blog",
+        support: "Support",
+        about: "About",
+        careers: "Careers",
+        press: "Press",
+        contact: "Contact",
+        termsOfService: "Terms of service",
+        privacyPolicy: "Privacy policy",
+        systemStatus: "System status",
+      },
+    },
+  },
+  pricing: {
+    title: "Pricing",
+    subtitle:
+      "Choose the daily AI capacity that fits how deeply you research the market.",
+    placeholder: "To be updated",
+    free: "FREE",
+    period: {
+      month: "/ month",
+    },
+    tiers: {
+      standard: { name: "STANDARD" },
+    },
+    features: {
+      label: "AI usage included",
+      askYoca: "Ask Yoca AI: {{$count}} questions per day",
+      generalAiChat: "General AI Chat: {{$count}} messages per day",
+      tokenChartNewsSummary:
+        "Token Chart News Summary: {{$count}} summaries per day",
+      volatilitySummary:
+        "Volatility Signal Summary: {{$count}} generations per day",
+      walletAiAnalysis:
+        "Wallet AI Analysis: {{$count}} analyses per day",
+      washTradingAiAnalysis:
+        "Wash Trading AI Analysis: {{$count}} analyses per day",
+      walletAiAnalysisLocked: "Wallet AI Analysis: Plus required",
+      washTradingAiAnalysisLocked:
+        "Wash Trading AI Analysis: Plus required",
+      dailyReset: "Daily limits reset at 00:00 UTC",
+    },
+    cta: {
+      buyNow: "Buy Now",
+      tryForFree: "Try For Free",
+    },
+  },
+  payment: {
+    shared: {
+      cancel: "Cancel",
+      close: "Close",
+      maybeLater: "Maybe Later",
+    },
+    success: {
+      title: "Payment Successful!",
+      description:
+        "Your subscription to the {{$tierName}} plan is now active. Enjoy full access to all premium features.",
+      goToProfile: "Go to Profile",
+      receipt: "A receipt has been sent to your email",
+    },
+    authReminder: {
+      eyebrow: "Authentication Required",
+      title: "Sign in to Continue",
+      description:
+        "You need to be signed in before purchasing a plan. Create a free account or log in to get started.",
+    },
+    modal: {
+      eyebrow: "Secure Payment",
+      title: "Subscribe to {{tierName}}",
+      close: "Close payment modal",
+    },
+    checkout: {
+      plan: "Plan",
+      total: "Total",
+      processing: "Processing…",
+      subscribeNow: "Subscribe Now",
+      methods: {
+        card: "Card",
+        bank: "Bank",
+        bankDescription: "US Bank Transfer",
+        wallet: "Wallet",
+      },
+    },
+    solana: {
+      connectTitle: "Connect Your Solana Wallet",
+      connectDescription: "Select a wallet to pay with SOL on {{networkName}}",
+      noWallets: "No Solana wallets detected.",
+      installPrefix: "Install",
+      installSuffix: "to continue.",
+      connecting: "Connecting...",
+      installed: "Installed",
+      notDetected: "Not detected",
+      transactionSubmitted: "Transaction Submitted",
+      verifyingBackend:
+        "Your transaction has been submitted. Verifying with backend...",
+      verifyingTransaction: "Verifying transaction...",
+      walletNotConnected: "Wallet not connected",
+      networkMismatch:
+        "Network mismatch: your wallet is connected to the wrong network. This app uses {{networkName}}. Please change your wallet network in Settings.",
+      transactionFailed: "Transaction failed. Please try again.",
+      disconnect: "Disconnect",
+      amount: "Amount",
+      network: "Network",
+      usdEquivalent: "USD Equiv.",
+      transferNotice:
+        "You will be prompted to sign a transaction to send {{amount}} from your wallet to our merchant address on Solana {{networkName}}.",
+      testnetWarning:
+        "Phantom must be on Testnet. If the popup shows reverted during simulation, open Phantom Settings > Developer Settings > Testnet Mode, then retry.",
+      sending: "Sending...",
+      verifying: "Verifying...",
+      confirmPayment: "Confirm Payment with SOL",
+      tryAgain: "Try Again",
+      connectedAddress: "Connected Wallet Address",
+      copyAddress: "Copy Full Address",
+      copied: "Copied!",
+      balanceConfigured: "Balance on {{networkName}} (Configured)",
+      balanceAlternate: "Balance on {{alternateNetwork}} (Alternate)",
+      balanceLoading: "Loading balances...",
+      balanceUnreachable: "Unreachable",
+      mismatchDetected: "Network Mismatch Detected!",
+      mismatchExplanation:
+        "Your wallet has {{balance}} SOL on {{alternateNetwork}}, but the app is configured for {{networkName}}. Please open your wallet's Settings -> Developer Settings -> Solana network and switch it to {{networkName}} (or fund your {{networkName}} account).",
+      insufficientBalanceDetected: "Insufficient Balance Detected!",
+      insufficientBalanceExplanation:
+        "Your account has {{balance}} SOL on {{networkName}}, but needs at least {{required}} SOL to pay for this plan. Please request free SOL from the official {{networkName}} faucet.",
+      faucetButton: "Request Free SOL (Faucet)",
+    },
+    transactionId: {
+      label: "Transaction ID",
+      revealHint: "Click the eye icon to reveal",
+      visibleAria: "Transaction ID: {{transactionId}}",
+      hiddenAria: "Transaction ID hidden",
+      hideAria: "Hide transaction ID",
+      showAria: "Show transaction ID",
+      hide: "Hide",
+      reveal: "Reveal",
+      copyAria: "Copy full transaction ID to clipboard",
+      copyTitle: "Copy full ID",
+      copied: "Copied!",
+    },
+    errors: {
+      loadStripe: "Failed to load Stripe. Please try again.",
+      createIntent: "Failed to create payment intent. Please try again.",
+      setupFailed: "Payment setup failed. Please try again.",
+      cardSetupFailed: "Card setup failed. Please try again.",
+      cardSetupIncomplete: "Card setup did not complete. Please try again.",
+      missingPaymentMethod:
+        "Could not retrieve payment method. Please try again.",
+      activateSubscription: "Subscription activation failed. Please try again.",
+      network: "A network error occurred. Please try again.",
+    },
   },
   // Wallet
   wallet: {
@@ -197,6 +536,16 @@ export const translation = {
     shareWallet: "Share this wallet",
     compareWallet: "Compare this wallet",
     createAlert: "Create alert for this wallet",
+    followWallet: "Follow wallet",
+    unfollowWallet: "Unfollow wallet",
+    walletFollowed: "Wallet followed",
+    walletUnfollowed: "Wallet unfollowed",
+    walletAlreadyFollowed: "Wallet already followed",
+    followWalletNotFound: "Wallet was not followed",
+    followWalletFailed: "Failed to follow wallet",
+    unfollowWalletFailed: "Failed to unfollow wallet",
+    followWalletSuccessHint: "Manage alerts and delivery settings from Alerts.",
+    manageAlerts: "Manage alerts",
     bookmarked: "Bookmarked",
     bookmarkWallet: "Bookmark this wallet",
     totalAssetValue: "Total Asset Value",
@@ -219,6 +568,376 @@ export const translation = {
     realizedPnL: "Realized PnL",
     unrealizedPnL: "Unrealized PnL",
     change24hPercent: "24H change",
+  },
+  aiAnalysisDashboard: {
+    header: {
+      eyebrow: "AI analysis",
+      title: "AI Wallet Behavior Analysis",
+      subtitle:
+        "Evidence-aware wallet analysis with persona, risk, and signature-backed findings.",
+      refresh: "Refresh analysis",
+      notGenerated: "Not generated yet",
+      generatedUnavailable: "Generated time unavailable",
+      generated: "Generated {{time}}",
+    },
+    loading: {
+      title: "Analyzing wallet behavior...",
+      description:
+        "Building evidence-backed persona, risk, and activity summaries.",
+    },
+    metrics: {
+      ariaLabel: "AI analysis metrics",
+      trustScore: "Trust Score",
+      trustScoreHelper: "Higher means cleaner observed behavior",
+      trustScoreTooltip:
+        "Trust Score is calculated as 100 minus Risk Score. Higher means fewer risk signals were observed in the analyzed transaction window.",
+      riskLevel: "Risk Level",
+      riskLevelHelper: "Based on computed behavioral signals",
+      riskLevelTooltip:
+        "Risk Level is assigned from the total Risk Score: LOW 0-19, MEDIUM 20-44, HIGH 45-74, CRITICAL 75-100. UNKNOWN is used when there are too few transactions.",
+      persona: "Persona",
+      personaHelper: "Primary behavior pattern",
+      personaTooltip:
+        "Persona is the wallet's primary observed behavior pattern. It describes behavior in the analyzed window, not the identity or intent of the wallet owner.",
+      personaConfidence: "Persona Confidence",
+      personaConfidenceHelper: "Confidence in the persona classification",
+      personaConfidenceTooltip:
+        "Persona Confidence estimates how strongly the available metrics support the selected persona compared with alternatives. It is not legal or identity certainty.",
+      dataCompleteness: "Data Completeness",
+      dataCompletenessHelper: "Quality of available analysis inputs",
+      dataCompletenessTooltip:
+        "Data Completeness estimates how usable the analyzed data is. It is reduced by missing prices, unsupported transactions, parsing warnings, and failed transactions.",
+      analyzedTransactions: "Analyzed Transactions",
+      analyzedTransactionsHelper: "Transactions in the analysis window",
+      analyzedTransactionsTooltip:
+        "This is the number of transactions included in the AI analysis window. Results may not represent the wallet's full history.",
+      unsupported: "{{count}} unsupported",
+      missingPrices: "{{count}} missing prices",
+      outOfAnalyzed: "{{items}} out of {{txCount}} analyzed transactions",
+      unsupportedOutOfAnalyzed:
+        "{{unsupported}} unsupported out of {{txCount}} analyzed transactions.",
+    },
+    summary: {
+      title: "AI Wallet Behavior Summary",
+      description:
+        "Plain-language interpretation of the computed wallet profile.",
+      noSummary: "No summary was generated for this wallet.",
+      walletPersona: "Wallet Persona",
+      walletPersonaTooltip:
+        "Persona explains what behavior the wallet most resembles. It is separate from Risk Level.",
+      riskSummary: "Risk Summary",
+      pnlSummary: "PnL Summary",
+      pnlSummaryTooltip:
+        "PnL summary is based on closed positions and available price data in the analyzed window. It may not include all wallet value changes.",
+      whyPersona: "Why this persona?",
+      personaVsRisk:
+        "Persona explains what behavior the wallet most resembles. Risk Level explains how strong the overall risk signals are.",
+      selectedPersona: "Selected Persona",
+      selectedPersonaFallbackTooltip:
+        "This is a behavioral classification, not an identity claim.",
+      commonSignals: "Common Signals",
+      observedSupport: "Observed Support",
+      personaConfidenceSentence:
+        "Persona confidence is {{confidence}} based on how strongly available metrics support this persona compared with alternatives.",
+      more: "+{{count}} more",
+    },
+    findings: {
+      title: "Key Findings",
+      description:
+        "Evidence-backed observations generated from the wallet profile.",
+      empty:
+        "No major evidence-backed findings were generated for this wallet.",
+      fallbackTitle: "Finding",
+      fallbackExplanation: "No explanation was provided.",
+      whyItMatters: "Why it matters:",
+      evidence: "Evidence",
+      evidenceTooltip:
+        "Evidence IDs connect this finding to supporting evidence cards and risk factors.",
+      signatures: "Signatures",
+      signaturesTooltip:
+        "Signature chips are representative transactions that support this finding and open in Solscan.",
+    },
+    riskBreakdown: {
+      title: "Risk Breakdown",
+      description: "Computed risk factors contributing to the wallet score.",
+      empty: "No risk factors were generated for this wallet.",
+      fallbackDescription: "No description was provided.",
+      whyItMatters: "Why it matters:",
+      pointsAdded: "{{points}} added to Risk Score",
+      pointsTooltip:
+        "This is how many points this factor adds to the total Risk Score. Higher point impact means the factor contributes more strongly to the risk level.",
+      unsupportedOutOfTotal:
+        "Unsupported transactions: {{unsupported}} out of {{txTotal}} analyzed transactions. Missing Data is a reliability adjustment, not suspicious wallet behavior.",
+      evidence: "Evidence",
+      evidenceTooltip:
+        "Evidence IDs connect this risk factor to supporting evidence cards and key findings.",
+    },
+    evidence: {
+      sectionTitle: "Evidence Highlights",
+      sectionDescription:
+        "Signals and representative signatures used to support the analysis.",
+      howToRead: "How to read evidence cards",
+      valueAndThreshold: "Value and Threshold",
+      valueAndThresholdDescription:
+        "Value is the measured result for this wallet. Threshold is the rule level that triggered the signal.",
+      traceability: "Traceability",
+      traceabilityDescription:
+        "Evidence IDs connect findings, risk factors, and evidence. Signatures are representative transactions users can verify on Solscan.",
+      empty: "No evidence highlights are available for this wallet.",
+      fallbackTitle: "Evidence",
+      evidenceId: "Evidence ID",
+      evidenceIdTooltip:
+        "Internal reference used to connect findings, risk factors, and evidence.",
+      fallbackDescription: "No evidence description was provided.",
+      value: "Value",
+      valueTooltip:
+        "The measured value from this wallet's analyzed transaction window.",
+      threshold: "Threshold",
+      thresholdTooltip:
+        "The rule threshold used to decide whether this signal should be shown.",
+      relatedSignatures: "Related Signatures",
+      relatedSignaturesTooltip:
+        "Representative transactions used as supporting evidence. Opens in Solscan.",
+      relatedTokenMints: "Related Token Mints",
+      relatedTokenMintsTooltip: "Token addresses involved in this signal.",
+      signatureTooltip:
+        "Representative transaction used as supporting evidence. Opens in Solscan.",
+      tokenMintTooltip: "Token address involved in this signal.",
+    },
+    howToRead: {
+      title: "How to Read This Analysis",
+      description: "A compact guide to the labels, scores, and evidence.",
+      open: "Open explanation",
+      personaVsRiskTitle: "Persona vs Risk",
+      personaVsRiskText:
+        "Persona describes observed behavior. Risk Level describes the total strength of risk signals.",
+      scoresTitle: "Scores",
+      scoresText:
+        "Trust Score is 100 minus Risk Score. Scores are based only on the analyzed transaction window.",
+      evidenceTitle: "Evidence",
+      evidenceText:
+        "Evidence signatures are representative examples users can verify on Solscan.",
+      limitationsTitle: "Limitations",
+      limitationsText:
+        "This is not financial advice or proof of suspicious behavior. Missing or unsupported transactions can reduce reliability.",
+    },
+    caution: {
+      title: "Caution Notes",
+      description: "How to interpret this analysis responsibly.",
+      defaultDisclaimer:
+        "Risk score reflects observed behavior in the analyzed transaction window. It is not financial advice, a legal judgment, or proof of fraud.",
+      labelDisclaimer:
+        "Labels such as Bot-like Trader, High Risk Speculator, or Wash Trading Suspect are behavioral classifications, not accusations.",
+      backendRiskVerdict:
+        "Risk score reflects observed behavior in the analyzed transaction window. It is not a legal, financial, or suspicious behavior verdict.",
+      backendFullHistory:
+        "Do not claim this analysis represents the wallet's full history unless the analysis window is FULL_HISTORY.",
+      backendNoConfirmedSuspicious:
+        "Do not claim confirmed suspicious behavior or wash trading.",
+      backendNoIntent: "Do not infer intent beyond the computed metrics.",
+    },
+    empty: {
+      title: "No analyzable activity found for this wallet.",
+      description:
+        "Transaction data loaded successfully, but there were no wallet events available for evidence-backed analysis.",
+    },
+    error: {
+      title: "AI analysis could not be loaded",
+      fallback: "Please retry the analysis.",
+      retry: "Retry AI analysis",
+    },
+    labels: {
+      unknown: "Unknown",
+      low: "LOW",
+      medium: "MEDIUM",
+      high: "HIGH",
+      critical: "CRITICAL",
+      neutral: "NEUTRAL",
+      highRiskSpeculator: "High Risk Speculator",
+      botLikeTrader: "Bot-like Trader",
+      defiTrader: "DeFi Trader",
+      memecoinTrader: "Memecoin Trader",
+      smartMoneyLike: "Smart Money-like",
+      washTradingSuspect: "Wash Trading Suspect",
+      longTermHolder: "Long-term Holder",
+      casualUser: "Casual User",
+      airdropFarmer: "Airdrop Farmer",
+      nftCollector: "NFT Collector",
+      highFrequencyActivity: "High Frequency Activity",
+      shortHoldingPeriod: "Short Holding Period",
+      negativePnl: "Negative PnL",
+      lowWinRate: "Low Win Rate",
+      highTokenDiversity: "High Token Diversity",
+      highPortfolioConcentration: "High Portfolio Concentration",
+      washTradingSuspected: "Wash Trading Suspected",
+      missingData: "Missing Data",
+    },
+    severityTooltips: {
+      findingHigh:
+        "Strong signal. Review this first. It is not proof of wrongdoing.",
+      findingMedium:
+        "Meaningful signal that contributes to the interpretation.",
+      findingLow: "Contextual signal that is useful but not decisive alone.",
+      findingNeutral:
+        "Severity indicates how important this signal is in the current analysis.",
+      riskHigh:
+        "High severity means this factor adds 15 or more points to the Risk Score.",
+      riskMedium:
+        "Medium severity means this factor adds 8 to 14 points to the Risk Score.",
+      riskLow:
+        "Low severity means this factor adds 1 to 7 points to the Risk Score.",
+      riskNeutral:
+        "Severity is based on how many risk points this factor adds.",
+    },
+    personaExplanations: {
+      unknown: {
+        meaning:
+          "There is not enough clear behavior to assign a specific persona.",
+        commonSignals:
+          "Low transaction count, incomplete data, or mixed signals.",
+        caution:
+          "Unknown should not be interpreted as safe or risky by itself.",
+      },
+      longTermHolder: {
+        meaning: "Wallet behavior resembles holding assets for longer periods.",
+        commonSignals:
+          "Low swap count, longer holding periods, low short-term trade ratio, concentrated holdings.",
+        caution:
+          "This describes observed behavior in the analyzed window only.",
+      },
+      casualUser: {
+        meaning: "Wallet behavior resembles occasional, lower-intensity usage.",
+        commonSignals:
+          "Low or medium activity, fewer swaps, limited token diversity, few closed positions.",
+        caution:
+          "A casual label does not guarantee low risk outside the analyzed window.",
+      },
+      defiTrader: {
+        meaning:
+          "Wallet frequently interacts with decentralized trading protocols.",
+        commonSignals:
+          "Many swaps, high DEX usage, multiple traded tokens, meaningful trading volume.",
+        caution:
+          "This label describes protocol usage and trading behavior, not trading skill.",
+      },
+      memecoinTrader: {
+        meaning:
+          "Wallet behavior resembles speculative trading across volatile or narrative-driven tokens.",
+        commonSignals:
+          "High token diversity, short-term trades, heavy DEX usage, smaller average trade sizes.",
+        caution:
+          "Token category metadata may be incomplete, so this can rely on behavior proxies.",
+      },
+      nftCollector: {
+        meaning: "Wallet behavior includes meaningful NFT-related activity.",
+        commonSignals:
+          "NFT holdings, NFT marketplace usage, repeated NFT transfer, purchase, or sale events.",
+        caution:
+          "NFT activity can be incomplete if marketplace or collection metadata is missing.",
+      },
+      airdropFarmer: {
+        meaning:
+          "Wallet behavior resembles activity aimed at receiving or claiming token distributions.",
+        commonSignals:
+          "Repeated airdrop claims, many inbound token transfers, broad token coverage, burst activity.",
+        caution:
+          "This does not prove intent; it describes claim-like behavior.",
+      },
+      botLikeTrader: {
+        meaning:
+          "Wallet activity resembles automated or high-intensity trading behavior.",
+        commonSignals:
+          "Dense transaction bursts, short transaction gaps, high swap count, extreme activity level.",
+        caution: "This does not prove the wallet is operated by a bot.",
+      },
+      highRiskSpeculator: {
+        meaning: "Wallet behavior resembles aggressive speculative trading.",
+        commonSignals:
+          "Short holding periods, high token diversity, low win rate, negative PnL, heavy DEX usage.",
+        caution: "This describes behavior, not identity or intent.",
+      },
+      smartMoneyLike: {
+        meaning:
+          "Wallet shows stronger trading outcomes in the analyzed window.",
+        commonSignals:
+          "Positive realized PnL, higher win rate, profit factor above threshold, enough closed positions.",
+        caution: "This does not guarantee future performance.",
+      },
+      washTradingSuspect: {
+        meaning:
+          "Wallet shows patterns that can be associated with potentially suspicious market behavior.",
+        commonSignals:
+          "High suspicion score, repeated counterparties, circular or reciprocal flow signals.",
+        caution: "This is not proof of wash trading or suspicious behavior.",
+      },
+    },
+    riskFactorExplanations: {
+      highFrequencyActivity: {
+        meaning:
+          "Activity is concentrated into dense or unusually fast transaction bursts.",
+        whyItMatters:
+          "Dense transaction bursts can indicate automated or high-intensity trading.",
+      },
+      shortHoldingPeriod: {
+        meaning: "Many positions appear to be opened and closed quickly.",
+        whyItMatters:
+          "Short holding can indicate speculative or rapid trading behavior.",
+      },
+      negativePnl: {
+        meaning:
+          "Closed positions in the analyzed window produced negative realized PnL.",
+        whyItMatters:
+          "Negative realized PnL means closed positions lost value in this analysis window.",
+      },
+      lowWinRate: {
+        meaning:
+          "The wallet has enough closed positions to estimate win rate, and that rate is low.",
+        whyItMatters:
+          "Low win rate matters only when there are enough closed positions.",
+      },
+      highTokenDiversity: {
+        meaning:
+          "The wallet traded many different tokens in the analyzed window.",
+        whyItMatters:
+          "Trading many different tokens can indicate broad speculative behavior.",
+      },
+      highPortfolioConcentration: {
+        meaning:
+          "A large share of portfolio value appears concentrated in one or a few holdings.",
+        whyItMatters:
+          "Concentration can increase exposure to one asset or theme.",
+      },
+      washTradingSuspected: {
+        meaning:
+          "The wallet shows patterns that can be associated with potentially suspicious market behavior.",
+        whyItMatters:
+          "This can be a review-priority signal, but it is not proof of wash trading.",
+      },
+      missingData: {
+        meaning: "Some data could not be fully parsed or valued.",
+        whyItMatters: "This affects reliability, not wallet behavior itself.",
+      },
+      fallbackMeaning:
+        "This risk factor was generated from the wallet's analyzed behavior.",
+      fallbackWhy:
+        "It contributes to the total Risk Score based on the rule that produced it.",
+    },
+    dataCompleteness: {
+      summary:
+        "Data completeness is {{completeness}}. This means {{usability}} of the analyzed data was usable.",
+      most: "most",
+      some: "some",
+      unsupported:
+        "{{unsupported}} unsupported out of {{txTotal}} analyzed transactions.",
+      missingPrices: "{{count}} transactions were missing price data.",
+      none: "No missing prices or unsupported transactions were detected in this analysis window.",
+    },
+    riskLevelExplanation: {
+      unknown:
+        "Risk Level is UNKNOWN because fewer than 10 transactions were analyzed.",
+      known:
+        "Risk Level is assigned from total Risk Score. Current Risk Score is {{score}} / 100: LOW 0-19, MEDIUM 20-44, HIGH 45-74, CRITICAL 75-100.",
+    },
   },
   // Wallet Page
   walletPage: {
@@ -244,6 +963,7 @@ export const translation = {
     seller: "Sender",
     sender: "Sender",
     receiver: "Receiver",
+    currentWallet: "Current wallet",
     type: "Type",
     token: "Token",
     amount: "Amount",
@@ -254,6 +974,7 @@ export const translation = {
     holding: "Holding",
     value: "Value",
     change24h: "Change (24h)",
+    hideLowValue: "Hide Low Value",
     // Token Details Demo
     tokensLastTraded: "Last traded tokens",
     tokensLastTradedDescription: "Tokens with recent trading activity",
@@ -282,13 +1003,24 @@ export const translation = {
     filter30d: "30d",
     filter90d: "90d",
     pair: "Pair",
-    tokenSold: "Token Sold",
-    tokenBought: "Token Bought",
+    tokenSold: "Sold",
+    tokenBought: "Bought",
     totalValueUSD: "Total Value (USD)",
     feeInLamports: "Fee (lamport)",
     identity: "Identity",
     uniqueTokensTraded: "Unique tokens traded",
     tokenList: "Token list",
+    trade: "{{count}} Transactions(s)",
+    instructions: "Instructions",
+    view: "View",
+    hide: "Hide",
+    feePaid: "Paid",
+    feePayer: "Payer",
+    feeReceivers: "Receivers",
+    baseFee: "Base fee",
+    priorityFee: "Priority fee",
+    perToken: "/token",
+    account: "Account",
     totalVolume: "Total volume",
     unknown: "Unknown",
     unknownEntity: "Unknown Entity",
@@ -313,6 +1045,274 @@ export const translation = {
     exportChartsZip: "Export Charts (.zip images)",
     exportingReport: "Exporting report...",
     exportReportPdf: "Export Report (.pdf)",
+    aiAnalysis: "AI Analysis",
+    aiAnalysisLoading: "Analyzing wallet with AI...",
+    aiAnalysisFailed: "Failed to load AI analysis",
+    aiAnalysisRetry: "Retry AI analysis",
+    aiNoData: "No AI analysis data",
+    aiSummary: "Summary",
+    tokenWinRate: {
+      title: "Token Win Rate",
+      win: "profitable token",
+      traded: "traded token",
+      summaryShort: "{{win}} profitable / {{tradedCount}} traded",
+      summaryBreakdown:
+        "{{profit}} profit · {{loss}} loss · {{neutral}} neutral",
+      avgWin: "Avg Win",
+      avgLoss: "Avg Realized Loss",
+      explanationAria: "Token win rate explanation",
+      tooltipWinRateLabel: "Token Win Rate",
+      tooltipWinRateDescription:
+        "is calculated from realized PnL in {{period}}. A token is counted as profitable only when its realized PnL is greater than 0.",
+      tooltipTotalTradedTokens: "Tokens traded in period",
+      tooltipRealizedProfitTokens: "Realized profit tokens",
+      tooltipRealizedLossTokens: "Realized loss tokens",
+      tooltipBreakEvenTokens: "Break-even / no realized PnL",
+      tooltipUnrealizedLossTokens: "Unrealized loss tokens",
+      tooltipTokenValue: "{{value}} token(s)",
+      tooltipClosedAvgLoss: "Avg realized loss",
+      tooltipClassifiedRealizedPnl: "Classified realized PnL",
+      tooltipWalletRealizedPnl: "Wallet realized PnL",
+      tooltipUnclassifiedRealizedPnl: "Unclassified / fees / missing rows",
+      tooltipAverageLabel: "How to read this",
+      tooltipAverageDescription:
+        "Avg Win and Avg Realized Loss use {{closed}} closed-PnL tokens out of {{traded}} traded tokens. Classified token PnL is {{classifiedPnl}}. Wallet realized PnL is {{walletPnl}}. The difference {{difference}} is shown separately so the buckets reconcile with the wallet total.",
+    },
+    aiSwapSummary: {
+      button: "View swap analysis",
+      title: "AI Swap Summary",
+      realizedPnl: "Realized PnL",
+      winRate: "Win Rate",
+      trades: "Trades",
+      volume: "Volume",
+      summary: "Summary",
+      riskAnalysis: "Risk Analysis",
+      cachedResult: "Cached result",
+      signInRequired: "Sign in to use Wallet AI Swap Summary.",
+      allTokens: "All Tokens",
+      entry: "Entry",
+      exit: "Exit",
+      hold: "Hold",
+      maxLoss: "Max Loss",
+      bought: "Bought",
+      sold: "Sold",
+      buyVolume: "Buy Vol",
+      sellVolume: "Sell Vol",
+      retry: "Retry",
+      sortedBest: "Sorted: best PnL first",
+      sortedWorst: "Sorted: worst PnL first",
+      pagePrev: "← Prev",
+      pageNext: "Next →",
+      analyze: "AI Analysis",
+      tokenAnalysis: "Token Analysis",
+      riskNotes: "Risk Notes",
+      tradeTimeline: "Trade Timeline",
+      cumulativePnl: "Cumulative PnL",
+      pnlDistribution: "PnL Distribution",
+      extremeProfit: ">500%",
+      highProfit: ">100%",
+      profit: ">0%",
+      lowLoss: ">-50%",
+      highLoss: "≤-50%",
+    },
+    aiStatusOk: "ok",
+    aiStatusInsufficientData: "insufficient_data",
+    aiDataReadiness: "Data Readiness",
+    aiDataAllAvailable: "All data available",
+    aiDataWaiting: "Waiting for required data",
+    aiDataSwaps: "Swaps",
+    aiDataPortfolio: "Portfolio",
+    aiDataFirstFunder: "First funder",
+    aiDataIdentity: "Identity",
+    aiDataIntelligence: "Intelligence",
+    aiDepStatusAvailable: "available",
+    aiDepStatusNoData: "no data",
+    aiDepStatusFetching: "fetching",
+    aiGenerateAnalysis: "Generate analysis",
+    aiGenerating: "Generating...",
+    aiLastUpdated: "Last updated",
+    aiActivityProfile: "Activity Profile",
+    aiArchetype: "Archetype",
+    aiActivityLevel: "Activity level",
+    aiLastActive: "Last active",
+    aiInteractionFingerprint: "Interaction Fingerprint",
+    aiPreferredProtocols: "Preferred protocols",
+    aiTransactionTiming: "Transaction timing",
+    aiPreferredTradingTokens: "Preferred trading tokens",
+    aiPreferredHoldingTokens: "Preferred holding tokens",
+    aiTradingVolumeRange: "Trading volume range",
+    aiFunder: "Funder",
+    aiFunderType: "Funder type",
+    aiNotes: "Notes",
+    aiWalletAge: "Wallet age",
+    aiAgeCategory: "Age category",
+    aiFirstSeen: "First seen",
+    aiConsistencyAssessment: "Consistency assessment",
+    aiSignals: "Signals",
+    from: "From",
+    to: "To",
+    swapDetails: "Swap Details",
+    transferDetails: "Transfer Details",
+    sold: "Sold",
+    bought: "Bought",
+    swappedFor: "Swapped {{$fromAmount}} for {{$toAmount}}",
+    totalValue: "Total Value",
+    transactionFee: "Transaction Fee",
+    sent: "Sent",
+    received: "Received",
+    transfersInTransaction: "Transfers in This Transaction ({{count}})",
+    internal: "Internal",
+    list: "List",
+    timeline: "Timeline",
+    mixed: "Mixed",
+  },
+  dictionary: {
+    tradingStrategy: {
+      scalper: {
+        name: "Scalper",
+        description:
+          "Executes many short-horizon trades and prioritizes fast position turnover.",
+        benefit: {
+          fastTurnover: "Quickly recycles capital into new opportunities.",
+          adaptsVolatility: "Can react fast when market volatility spikes.",
+        },
+        risk: {
+          feeHeavy: "Frequent trading can heavily increase fee drag.",
+          emotionalPressure: "Requires constant monitoring and fast decisions.",
+        },
+        rule: {
+          minTrades30d: "Minimum trades in last 30 days",
+          maxAvgHoldHours: "Maximum average holding hours",
+        },
+      },
+      swing: {
+        name: "Swing Trader",
+        description:
+          "Captures multi-day to multi-week moves and avoids overtrading noise.",
+        benefit: {
+          balancedPace:
+            "Balances opportunity capture with lower execution stress.",
+          trendCapture: "Works well in clear medium-term directional trends.",
+        },
+        risk: {
+          gapExposure: "Overnight or weekend gaps can bypass planned exits.",
+          lateReversal: "Delayed exits can erode gains after trend reversal.",
+        },
+        rule: {
+          minTrades30d: "Minimum trades in last 30 days",
+          minAvgHoldHours: "Minimum average holding hours",
+        },
+      },
+      momentum: {
+        name: "Momentum Chaser",
+        description:
+          "Follows strong directional breakouts with acceleration in price and volume.",
+        benefit: {
+          strongTrendUpside: "Can scale returns in sustained trend expansions.",
+          quickInvalidation:
+            "Clear invalidation levels help disciplined exits.",
+        },
+        risk: {
+          falseBreakout: "False breakouts can trigger repeated quick losses.",
+          whipsawLosses: "Choppy conditions can cause rapid entry-exit losses.",
+        },
+        rule: {
+          minBuySellRatio: "Minimum buy/sell pressure ratio",
+          minTrades30d: "Minimum trades in last 30 days",
+        },
+      },
+      meanRevert: {
+        name: "Mean Reverter",
+        description:
+          "Looks for overextended moves and trades back toward average pricing.",
+        benefit: {
+          definedEntries:
+            "Entry conditions are often measurable and repeatable.",
+          riskControlled: "Structured position sizing can limit downside.",
+        },
+        risk: {
+          trendAgainst:
+            "Strong trends can remain irrational longer than expected.",
+          patienceRequired: "Setups may be infrequent and require discipline.",
+        },
+        rule: {
+          maxTrades30d: "Maximum trades in last 30 days",
+          minWinRate: "Minimum required win rate",
+        },
+      },
+      conviction: {
+        name: "Conviction Holder",
+        description:
+          "Builds concentrated positions and holds through broader market cycles.",
+        benefit: {
+          longCycleUpside:
+            "Can capture compounding upside from long trend cycles.",
+          lowNoise: "Fewer trades reduce reaction to short-term market noise.",
+        },
+        risk: {
+          concentration: "High concentration can amplify drawdowns.",
+          slowExit: "Large positions may be harder to unwind quickly.",
+        },
+        rule: {
+          maxTokensHeld: "Maximum distinct tokens held",
+          minAvgHoldDays: "Minimum average holding days",
+        },
+      },
+    },
+    walletCategory: {
+      smartMoney: {
+        name: "Smart Money",
+        description:
+          "Historically profitable wallet with consistent risk-adjusted decisions.",
+      },
+      activeTrader: {
+        name: "Active Trader",
+        description:
+          "High activity wallet with frequent rotations and short response cycles.",
+      },
+      whale: {
+        name: "Whale",
+        description:
+          "Wallet with large capital base capable of moving thin-liquidity markets.",
+      },
+      newWallet: {
+        name: "New Wallet",
+        description:
+          "Recently active wallet with limited historical behavior footprint.",
+      },
+      riskWallet: {
+        name: "Risk Wallet",
+        description:
+          "Wallet that shows elevated volatility, adverse signals, or unstable patterns.",
+      },
+    },
+    firstFunderCategory: {
+      cex: {
+        name: "Centralized Exchange",
+        description:
+          "First inbound funding appears to come from a centralized exchange hot wallet.",
+      },
+      dexRouter: {
+        name: "DEX Router",
+        description:
+          "First inbound funding originates from decentralized swap router infrastructure.",
+      },
+      bridge: {
+        name: "Bridge",
+        description:
+          "First inbound funding indicates cross-chain bridge transfer behavior.",
+      },
+      otc: {
+        name: "OTC Desk",
+        description:
+          "First inbound funding likely from over-the-counter settlement wallet.",
+      },
+      unknown: {
+        name: "Unknown Source",
+        description:
+          "Funding source cannot be confidently classified from available on-chain signals.",
+      },
+    },
   },
   // Market Page
   marketPage: {
@@ -373,30 +1373,116 @@ export const translation = {
     selectToken: "Select a token to view details",
     allTimeHigh: "All-Time High",
     allTimeLow: "All-Time Low",
+    top: "Top",
+    newPairs: "New Pairs",
+    liquidity: "Liquidity",
+    pairAge: "Pair Age",
+    pairAgeHours: "Pair age (h)",
+    txns: "Txns",
+    txns24h: "Txns (24h)",
+    trending5m: "Trending 5m",
+    trending1h: "Trending 1h",
+    trending6h: "Trending 6h",
+    trending24h: "Trending 24h",
+    trendingPools: "Trending Pools",
+    trendingPoolsSubtitle:
+      "Pools trending on Solana across the 5M, 1H, 6H, and 24H timeframes.",
+    topPools: "Top Pools",
+    topPoolsSubtitle: "Top pools by Volume, Txns, or Market Cap.",
+    topGainerPools: "Top Gainer Pools",
+    topGainerPoolsSubtitle:
+      "Pools with the strongest price gains over the last 24 hours.",
+    newPairsSubtitle: "Recently created pools.",
+    profitableTradersPoolsSubtitle:
+      "Wallets with the highest and lowest trading profit (PnL).",
+    marketPools: "Market Pools",
+    marketPoolsSubtitle: "Track pools through the main market filters.",
+    rankBy: "Rank by",
+    order: "Order",
+    descending: "Descending",
+    ascending: "Ascending",
+    filters: "Filters",
+    customizeFilters: "Customize Filters",
+    min: "Min",
+    max: "Max",
+    reset: "Reset",
+    apply: "Apply",
+    mcap: "MCAP",
+    age: "Age",
+    loadingMarketData: "Loading market data...",
+    noPoolsFound: "No pools found.",
+    justNow: "just now",
+    loading: "Loading...",
+    noDataAvailable: "No data available",
+    copyAddress: "Copy address",
     na: "N/A",
   },
   // Wallet Comparison Page
   walletComparison: {
     selectedWallets: "Selected Wallets",
+    activeWallet: "Active Wallet",
     addWalletAddress: "Add Wallet Address",
     enterWalletAddress: "Enter wallet address...",
     noWalletsSelected: "No wallets selected. Add wallet addresses to compare.",
     general: "General",
     holdings: "Holdings",
     profitRiskManagement: "Profit & Risk Management",
+    exportPdf: "Export PDF",
+    generatingPdf: "Generating PDF...",
+    pdfReportTitle: "Wallet Comparison Report",
+    walletAnalysisReport: "Wallet Analysis Report",
+    pdfGeneratedDate: "Generated Date",
+    pdfWalletsCompared: "Wallets Compared",
+    pdfWalletAddresses: "Wallet Addresses",
+    viewDeepDive: "Deep Dive",
+    aiChat: "AI Chat",
+  },
+  // Wallet Report PDF Template
+  wallet_report: {
+    wallet_audit_report: "Wallet Audit Report",
+    export_date: "Export Date:",
+    first_funder: "First funder:",
+    wallet_age: "Wallet age:",
+    wallet_address: "WALLET ADDRESS",
+    executive_summary: "Executive Summary",
+    total_asset_value: "Total Asset Value",
+    total_pnl: "Total PnL",
+    total_trading_volume: "Total Trading Volume",
+    overview_details: "Overview Details",
+    metrics_period: "Metrics Period",
+    period_24h: "24H",
+    transaction_count: "Transaction Count",
+    buy_tx_count: "Buy Tx Count",
+    sell_tx_count: "Sell Tx Count",
+    buy_volume: "Buy Volume",
+    sell_volume: "Sell Volume",
+    realized_pnl: "Realized PnL",
+    unrealized_pnl: "Unrealized PnL",
+    tokens_holding: "Tokens Holding",
+    tokens_traded: "Tokens Traded",
+    overview: "Overview",
+    balance_trend: "Balance Trend",
+    profit_loss: "Profit & Loss",
+    daily_pnl: "Daily P&L",
+    cumulative_pnl: "Cumulative P&L",
+    holdings: "Holdings",
+    activity_risk: "Activity / Risk",
+    asset_change_24h: "Asset Change (24H)",
+    no_tags: "No Tags",
   },
   // Navigation
   nav: {
     market: "Market",
     alerts: "Alerts",
     dashboard: "Dashboard",
+    notification: "Notifications",
     profile: "Profile",
     settings: "Settings",
     theme: "Theme",
     account: "Account",
     language: "Language",
     search: "Search",
-    searchPlaceholder: "Search tokens or wallet addresses…",
+    searchPlaceholder: "Search",
     searchHint: "Type to search for tokens, pools, or wallets",
     searchLoading: "Searching…",
     searchNoResults: "No results found",
@@ -414,6 +1500,114 @@ export const translation = {
     searchLast7Days: "Last 7 Days",
     switchToLightTheme: "Switch to Light Theme",
     switchToDarkTheme: "Switch to Dark Theme",
+  },
+  alertsPage: {
+    title: "Wallet alerts",
+    subtitle:
+      "Follow Solana wallets and push the full list to your Helius enhanced webhook after each change.",
+    addressLabel: "Wallet address",
+    addressPlaceholder: "Solana address (Base58)",
+    labelOptional: "Label (optional)",
+    labelPlaceholder: "e.g. Whale tracker",
+    followButton: "Follow wallet",
+    loadingList: "Loading followed wallets…",
+    emptyList: "No wallets followed yet.",
+    tableAddress: "Address",
+    tableLabel: "Label",
+    tableAdded: "Added",
+    successSaved: "Wallet saved.",
+    successHelius: "Helius webhook synced with the updated address list.",
+    partialHelius:
+      "Wallet saved, but Helius sync failed. Set HELIUS_API_KEY and WEBHOOK_PUBLIC_URL on the server, then try again.",
+    errorInvalidAddress: "That does not look like a valid Solana address.",
+    errorDuplicate: "This address is already being followed.",
+    errorGeneric: "Something went wrong. Please try again.",
+    heliusOk: "Helius: OK",
+    heliusFailed: "Helius: failed",
+    tableActions: "Actions",
+    deleteSuccess: "Wallet removed and Helius synced.",
+    deletePartial:
+      "Wallet removed, but Helius re-sync failed. The old address may still receive events until the next successful sync.",
+    deleteFailed: "Failed to remove wallet. Please try again.",
+    deleteNotFound: "Wallet was already removed.",
+    signInRequired: "Please sign in to manage your followed wallets.",
+    discordSectionTitle: "Discord notifications",
+    discordLabel: "Discord Webhook URL",
+    discordPlaceholder: "https://discord.com/api/webhooks/...",
+    discordSaveButton: "Save",
+    discordSaved: "Discord webhook URL saved.",
+    discordSaveError: "Failed to save Discord URL. Please try again.",
+    emailSectionTitle: "Email notifications",
+    emailToggleLabel: "Email me alerts",
+    emailRegisteredHint: "Registered email: {{email}}",
+    emailNoRegistered:
+      "No registered email on file. Add an override email below.",
+    emailOverrideLabel: "Override email (optional)",
+    emailOverridePlaceholder: "Leave empty to use your registered email",
+    emailSaveButton: "Save",
+    emailSaved: "Email settings saved.",
+    emailSaveError: "Failed to save email settings. Please try again.",
+    emailNoDestination:
+      "Enable email alerts with either a registered email or an override address.",
+    ruleModalTitle: "Create new alert",
+    ruleModalLabel: "Alerts",
+    ruleStep1Indicator: "(1) Trading events — (2) Delivery",
+    ruleStep2Indicator: "(1) Trading events — (2) Delivery",
+    ruleTraderLabel: "Trader (wallet address)",
+    ruleActionLabel: "Action type",
+    ruleActionSwap: "Swap",
+    ruleActionTransfer: "Transfer",
+    ruleActionAll: "Any activity",
+    ruleVolFrom: "Volume from",
+    ruleVolTo: "Volume to",
+    ruleVolUnit: "Volume unit",
+    ruleUnitUsd: "USD (server converts SOL via WEBHOOK_SOL_PRICE_USD)",
+    ruleUnitSol: "SOL (on-chain)",
+    ruleTriggerLegend: "Trigger",
+    ruleTriggerOnce: "Only once",
+    ruleTriggerAlways: "Always",
+    ruleExpiry: "Expires",
+    ruleUseDefault: "Use default Discord & email settings",
+    ruleToggleOff: "Off",
+    ruleToggleOn: "On",
+    ruleDiscordOverride: "Discord webhook (override)",
+    ruleEmailOverride: "Email (override)",
+    ruleNameLabel: "Alert name",
+    rulePreviewLabel: "Message (auto)",
+    ruleBack: "Back",
+    ruleCancel: "Cancel",
+    ruleNext: "Next",
+    ruleSave: "Save",
+    ruleCreateOpen: "Create new alert",
+    ruleTableTitle: "Advanced alert rules",
+    ruleTableSubtitle:
+      "Helius streams events once; the server applies your predicates (observer + filter) before Discord or email.",
+    ruleTableEmpty: "No active alert rules.",
+    ruleTableName: "Name",
+    ruleTableWallet: "Wallet",
+    ruleTableAction: "Action",
+    ruleTableVolume: "Volume",
+    ruleTableTrigger: "Trigger",
+    ruleTableExpires: "Expires",
+    ruleDeleteSuccess: "Rule removed and Helius synced.",
+    rulePreviewBody: "Wallet {{wallet}} on Solana has {{verb}} with {{range}}.",
+    rulePreviewVerbSwap: "a swap",
+    rulePreviewVerbTransfer: "a transfer",
+    rulePreviewVerbAny: "activity",
+    rulePreviewRangeBoth:
+      "value greater than {{min}}{{sym}} and less than {{max}}{{sym}}",
+    rulePreviewRangeMin: "value greater than {{min}}{{sym}}",
+    rulePreviewWalletPlaceholder: "(wallet address)",
+    ruleErrorWallet: "Enter a valid Solana wallet address.",
+    ruleErrorMinVol: "Minimum volume must be a positive number.",
+    ruleErrorMaxVol:
+      "Maximum volume must be empty or greater than or equal to minimum.",
+    ruleErrorExpiry: "Choose a future expiry date.",
+    ruleErrorDelivery:
+      "Provide a Discord webhook URL and/or a valid email override.",
+    ruleSaveError: "Could not save this alert rule.",
+    ruleLoading: "Loading alert rules…",
+    ruleCreateSuccess: "Alert rule saved and address list sent to Helius.",
   },
   lang: {
     vi: "Vietnam - Tiếng Việt (Vietnamese)",
@@ -557,12 +1751,14 @@ export const translation = {
     volumeBenchmark: "Volume Benchmark",
     transactionDistribution: "Transaction Distribution",
     holdingDurations: "Holding Durations",
+    aggregatedAssetDistribution: "Aggregated Asset Distribution",
 
     // Chart specific
     balanceChart: {
-      title: "Balance Trend",
+      title: "Balance History",
       totalBalance: "Total Balance",
       change: "Change",
+      change24h: "24h Change",
       date: "Date",
       balance: "Balance",
       selectTokenLabel: "Select token",
@@ -576,13 +1772,40 @@ export const translation = {
       noDataDelta: "--",
       removeTag: "Remove tag",
       atLeastOneTagRequired: "At least one tag is required",
+      searchTokenPlaceholder: "Search token",
+      symbolOrNamePlaceholder: "Symbol or name",
+      noMatchingTokens: "No matching tokens",
+      errors: {
+        balanceUnavailable:
+          "Balance history is temporarily unavailable. Please try again.",
+      },
+    },
+    walletSingleBalanceChart: {
+      title: "Wallet Balance Trend",
+      notAvailable: "N/A",
+      window: {
+        label: "Window",
+        days7: "7D",
+        days30: "30D",
+      },
+      walletTable: {
+        title: "Wallet Selector",
+        wallet: "Wallet",
+        netWorth: "Net Worth",
+        balanceChange24h: "24h Change",
+      },
+      ariaLabels: {
+        windowToggle: "Balance chart window toggle",
+      },
     },
     assetDistributionChart: {
       title: "Assets Distribution",
+      total: "Total",
       totalValue: "Total Value",
       asset: "Assets",
       value: "Value",
       percentage: "Percentage",
+      assetPrice: "Current Price",
       noWalletsMessage:
         "Please select at least one wallet to view asset distribution.",
       others: "Others",
@@ -602,12 +1825,60 @@ export const translation = {
         topNFilter: "Top N filter",
         minPctFilter: "Min % filter",
       },
+      filtersMenu: "Filters",
       legend: {
         clickToHide: "Click to hide {name}",
         clickToShow: "Click to show {name}",
       },
       export: {
         name: "Assets Distribution",
+      },
+    },
+    aggregatedAssetDistributionChart: {
+      title: "Aggregated Asset Distribution",
+      totalValue: "Total Value",
+      value: "Value",
+      percentage: "Percentage",
+      noWalletsMessage:
+        "Please select at least one wallet to view aggregated asset distribution.",
+      others: "Others",
+      mode: {
+        label: "Mode",
+        single: "Single Wallet",
+        aggregate: "Multiple Aggregated",
+      },
+      walletTable: {
+        title: "Wallet Selector",
+        wallet: "Wallet",
+        walletName: "Wallet Name",
+        walletAddress: "Wallet Address",
+        netWorth: "Net Worth",
+        uniqueTokenCount: "Unique Tokens",
+        isSelected: "Is Selected",
+        selectedCount: "{count} wallets selected",
+        selection: "Selection",
+        unknownWallet: "Unknown Wallet",
+      },
+      filters: {
+        top: "Top",
+        topN: "Top N",
+        minValue: "Min %",
+        all: "All",
+        allPercent: "All %",
+        top5: "Top 5",
+        top10: "Top 10",
+        minPct1: ">1%",
+        minPct5: ">5%",
+        minPct10: ">10%",
+      },
+      ariaLabels: {
+        modeToggle: "Asset distribution mode toggle",
+        topNFilter: "Top N filter",
+        minPctFilter: "Min % filter",
+        walletSelector: "Select wallet {wallet}",
+      },
+      export: {
+        name: "Aggregated Asset Distribution",
       },
     },
     pnlChart: {
@@ -624,7 +1895,7 @@ export const translation = {
       daily: "Daily",
       weekly: "Weekly",
       monthly: "Monthly",
-      both: "Both",
+      both: "Daily + Cumulative P&L",
     },
     exchangeComparisonChart: {
       title: "Exchange Activity Comparison",
@@ -726,6 +1997,17 @@ export const translation = {
     },
     drawdownChart: {
       title: "Drawdown Analysis",
+      visibility: {
+        active: "Active",
+        hidden: "Hidden",
+      },
+      stats: {
+        maxDrawdown: "Max Drawdown",
+        daysSinceMaxDD: "Days Since Max DD",
+        currentDrawdown: "Current Drawdown",
+        maxDDDate: "Max DD Date",
+        days: "days",
+      },
     },
     averageRollingAnnualReturn: {
       title: "Average Rolling Annual Return",
@@ -737,14 +2019,144 @@ export const translation = {
       days: "Days",
     },
   },
+  // Chat / AI Wallet Assistant
+  chat: {
+    headerTitle: "YOCA AI",
+    inputPlaceholder: "Ask about this wallet...",
+    loadingLabel: "Analyzing...",
+    errorMessage: "Sorry, I encountered an error: {{error}}. Please try again.",
+    promptMenuTitle: "Choose a prompt",
+    quickQuestionsTitle: "Quick Questions",
+    sendButtonTitle: "Send",
+    promptMenuBtn: "Prompt menu",
+    fabTitle: "Open AI Chat",
+    launcherLabel: "Ask YOCA AI",
+    seriesLabel: "Series {{count}}",
+    tldr: "TLDR",
+    warnings: "Warnings",
+    evidence: "Evidence",
+    confidence: "Confidence",
+    confidenceLabel: "{{level}} Confidence",
+    confidenceHigh: "High",
+    confidenceMedium: "Medium",
+    confidenceLow: "Low",
+    showAll: "Show all ({{count}})",
+    showLess: "Show less",
+    aiDisclaimer:
+      "AI responses may be incomplete or incorrect and are not financial advice. Verify important details before acting.",
+    limitReachedTitle: "Daily AI chat limit reached",
+    limitReachedText:
+      "You have used all wallet chat messages available on your current plan today. Upgrade options can add more AI capacity for deeper research.",
+    limitReachedReset: "Daily limits reset at 00:00 UTC.",
+    upgradeOptions: "View upgrade options",
+    goToPricing: "Go to pricing",
+    notNow: "Not now",
+    inputCounter: "{{current}}/{{max}}",
+    inputOverLimit: "Question must be {{max}} characters or fewer.",
+    clickToAsk: "Click to ask: {{query}}",
+    tableNullValue: "-",
+    newChat: "New session",
+    signInRequired: "Sign in Required",
+    signInRequiredDesc:
+      "Please sign in to use the AI chat assistant. Your chat history will be saved across sessions.",
+    sessions: "Sessions",
+    noSessions: "No sessions yet",
+    deleteSession: "Delete session",
+    copy: "Copy",
+    copied: "Copied!",
+    tellMeMore: "Tell me more about",
+    copySection: "Copy section",
+    sources: "Sources",
+    fabLabel: "AI",
+    greetingTitle: "👋Hi, I'm YOCA AI",
+    greetingDescription: "What would you like to know about this wallet?",
+    greetingDescriptionComparison: "What would you like to know about these wallets?",
+    greetingPrompt: "Try asking me:",
+    serverError: "Server error: {{status}}. Please try again.",
+    leftSidebar: "Left sidebar",
+    context: "Context",
+    contextTypeWallet: "Wallet",
+    contextTypeComparison: "Comparison",
+    contextChanged: "Context changed",
+    rightSidebar: "Right sidebar",
+    fullscreenMode: "Fullscreen",
+    minimize: "Minimize",
+    close: "Close",
+    redo: "Redo",
+    revert: "Revert",
+    revertedBanner: "Reverted to an earlier message",
+    undo: "Undo",
+    sourcePill: "sources",
+    openSource: "Open",
+    section: {
+      market_snapshot: "Market Snapshot",
+      key_findings: "Key Findings",
+      pnl_summary: "PnL Summary",
+      trading_activity: "Trading Activity",
+      top_holdings: "Top Holdings",
+      risk_factors: "Risk Factors",
+      what_to_watch: "What To Watch",
+      conclusion: "Conclusion",
+      custom: "Analysis",
+    },
+    prompt: {
+      overview: { label: "Overview", query: "Give a portfolio overview of this wallet including total balance, 24h change, and trading volume." },
+      pnl: { label: "PnL Summary", query: "What is the profit and loss for this wallet? Show per-token breakdown with realized PnL and win rate." },
+      trades: { label: "Recent Trades", query: "Show the recent swap transactions for this wallet with token details and USD values." },
+      tokens: { label: "Top Tokens", query: "What are the current token holdings of this wallet by USD value?" },
+      balance: { label: "Balance Trend", query: "Show the balance history chart for this wallet over the last 30 days." },
+      portfolioChange: { label: "Portfolio Change", query: "Compare this wallet's current portfolio to a 7 days ago. Have holdings changed significantly?" },
+      tokenPrices: { label: "Token Prices", query: "Check the current prices and market data for 5 most significant tokens held by this wallet." },
+      compareOverview: { label: "Compare Portfolios", query: "Compare the portfolios of these wallets — which has the best total value and 24h change?" },
+      comparePnl: { label: "PnL Comparison", query: "Compare PnL across these wallets — which has the highest realized profit and win rate?" },
+      commonHoldings: { label: "Common Holdings", query: "Which tokens are commonly held across these wallets and what are the overlaps?" },
+      topPerformer: { label: "Top Performer", query: "Which wallet has the best ROI and trading performance across all metrics?" },
+      riskComparison: { label: "Risk Comparison", query: "Compare diversification and risk profiles across these wallets." },
+      tabMine: "My Prompts",
+      tabExplore: "Explore",
+      exploreSubtabCommunity: "Community",
+      exploreSubtabPopular: "Popular",
+      exploreSubtabNew: "New",
+      exploreSubtabSystem: "System",
+      searchPlaceholder: "Search prompts...",
+      createBtn: "+ Create",
+      loading: "Loading prompts...",
+      loadingMore: "Loading more...",
+      emptyMine: "No prompts yet. Create one!",
+      empty: "No prompts found.",
+      uses: "{{count}} uses",
+      publicBadge: "Public",
+      scopedBadge: "Scoped",
+      fork: "Fork",
+      edit: "Edit",
+      del: "Del",
+      view: "View",
+      dialogViewTitle: "View Prompt",
+      loadMore: "Show all {{count}}",
+      dialogCreateTitle: "Create Prompt",
+      dialogEditTitle: "Edit Prompt",
+      dialogForkTitle: "Fork Prompt",
+      dialogLabel: "Label",
+      dialogQuery: "Query",
+      dialogPublic: "Make public (visible to all users)",
+      dialogCreate: "Create",
+      dialogSave: "Save",
+      dialogSaving: "Saving...",
+      dialogRequired: "Label and query are required.",
+      dialogSaveError: "Failed to save prompt. Please try again.",
+      forkedFrom: 'Forked from "{{label}}"',
+    },
+  },
   token: {
     overviewSectionTitle: "Overview",
     historicalPriceSectionTitle: "Historical Price",
     overviewChart: {
       price: "Price",
       marketCap: "Market Cap",
+      candle: "Candle",
       noData: "No chart data available",
       noCoingeckoId: "token may not have a CoinGecko ID",
+      noCandlePool: "No trading pool found for this token.",
     },
     range24h: "24h Range",
     marketCap: "Market Cap",
@@ -771,6 +2183,14 @@ export const translation = {
       searchX: "Search on X",
       discord: "Join Discord",
       coingecko: "View on CoinGecko",
+      aiWashTradingDetection: "Wash Trading Detection",
+      aiWashTradingDetectionShort: "Wash Trading Detection",
+      washGateTitle: "Plus plan required",
+      washGateDescription:
+        "AI Wash Trading Detection is available on Plus and Pro. Upgrade before opening this analysis.",
+      washGateSignIn: "Sign in",
+      washGateClose: "Not now",
+      washGateUpgrade: "Upgrade",
     },
     chart: {
       loadingPool: "Loading chart...",
@@ -781,8 +2201,42 @@ export const translation = {
     tabs: {
       overview: "Overview",
       markets: "Markets",
+      news: "News",
       trending: "Trending",
       historicalData: "Historical Data",
+    },
+    news: {
+      title: "News & Updates",
+      cached: "Cached",
+      cachedTooltip: "Cached from recent fetch",
+      fetch: "Fetch news",
+      fetchTooltip: "Fetch news for this token",
+      refresh: "Refresh news",
+      refreshTooltip: "Refresh the latest news for this token",
+      loading: "Loading news...",
+      error: "Unable to load news right now.",
+      errorPrefix: "Error loading news:",
+      empty: "No recent news found for {{name}}.",
+      tryRefresh: "Try Refreshing",
+      showing: "Showing",
+      of: "of",
+      loadMore: "Load More",
+      previousPage: "Previous news page",
+      nextPage: "Next news page",
+      expand: "Expand",
+      collapse: "Collapse",
+      snippetsTitle: "Extra snippets",
+      contextTitle: "Token context",
+      priceChartTitle: "Price",
+      marketCapChartTitle: "Market cap",
+      noSnippets: "No extra snippets available.",
+      noContext: "No cached token context available.",
+      loadingContext: "Loading context...",
+      tokenContextLabel: "Context for {{symbol}}",
+      posted: "Article posted",
+      sourceAlt: "News source favicon",
+      sourceFallback: "News",
+      openArticle: "Open article",
     },
     marketsTable: {
       rank: "Rank",
@@ -834,6 +2288,7 @@ export const translation = {
       tx: "TX",
       buy: "BUY",
       sell: "SELL",
+      all: "LATEST",
       loading: "Loading trades...",
       empty: "No recent transactions",
       noAddress: "No token address for bubblemaps",
@@ -902,6 +2357,358 @@ export const translation = {
       "The total number of coins or tokens that exist for a cryptocurrency, including those that are not yet circulating. It is used to calculate the maximum potential market capitalization of a cryptocurrency.",
     maxSupply:
       "The maximum number of coins or tokens that will ever exist for a cryptocurrency. It is used to calculate the fully diluted valuation of a cryptocurrency.",
+  },
+  profileSettings: {
+    identity: "Identity",
+    displayName: "Display name",
+    email: "Email",
+    saveIdentity: "Save identity",
+    savingIdentity: "Saving identity",
+    identityUpdateFailed: "Identity update failed",
+    identityUpdated: "Identity updated",
+    loginMethods: "Login methods",
+    loginMethodPasswordEmail: "Password / Email",
+    loginMethodPasswordNotSet: "Not set",
+    loginMethodGoogleOAuth: "Google Mail OAuth",
+    loginMethodSolanaWallet: "Solana Wallet",
+    statusConnected: "Connected",
+    statusNotConnected: "Not connected",
+    changePassword: "Change password",
+    addPassword: "Add password",
+    currentPassword: "Current password",
+    newPassword: "New password",
+    confirmPassword: "Confirm password",
+    passwordMatchError: "New password and confirmation do not match",
+    passwordValidationEmailRequired: "Email is required to set password login",
+    passwordValidationEmailInvalid: "Please enter a valid email address",
+    passwordValidationCurrentPasswordRequired:
+      "Current password is required to change password",
+    passwordValidationNewPasswordRequired: "New password is required",
+    passwordValidationMinLength: "Password must be at least 8 characters",
+    passwordValidationUppercase:
+      "Password must include at least one uppercase letter",
+    passwordValidationLowercase:
+      "Password must include at least one lowercase letter",
+    passwordValidationNumber: "Password must include at least one number",
+    passwordUpdateFailed: "Password update failed",
+    passwordChanged: "Password changed",
+    passwordAdded: "Password added",
+    updatingPassword: "Updating password",
+    savePassword: "Save password",
+    dangerZone: "Danger zone",
+    dangerZoneDescription:
+      "Delete account removes profile and all linked auth/wallet data.",
+    deleteAccount: "Delete account",
+    deleteAccountWarning:
+      "This action is permanent. Type DELETE MY ACCOUNT to confirm.",
+    deleteAccountConfirmationText: "Confirmation text",
+    deleteAccountConfirmButton: "Confirm delete",
+    accountDeleteConfirmError: "Confirmation text mismatch",
+    accountDeleteFailed: "Account deletion failed",
+  },
+  profileTabs: {
+    activity: {
+      title: "Activity",
+      unavailableTitle: "Activity unavailable",
+      unavailableDescription: "Unable to load activity data right now.",
+      swapsTableTitle: "Swaps",
+      transfersTableTitle: "Transfers",
+      tableHeaders: {
+        swaps: {
+          wallet: "Wallet",
+          time: "Time",
+          pair: "Pair",
+          exchange: "Exchange",
+          totalValue: "Total value",
+        },
+      },
+      unknownExchange: "Unknown",
+    },
+    alerts: {
+      title: "Alerts",
+      unavailableTitle: "Alerts unavailable",
+      unavailableDescription:
+        "No alert rules or notifications are available right now.",
+      tableTitle: "Alert list",
+      tableHeaders: {
+        token: "Token",
+        type: "Type",
+        condition: "Condition",
+        status: "Status",
+        updated: "Updated",
+        actions: "Actions",
+      },
+      createAlertTitle: "Create alert",
+      editAlertTitle: "Edit {{token}} alert",
+      createButton: "Create alert",
+      editButton: "Edit",
+      deleteButton: "Delete",
+    },
+    dashboard: {
+      title: "Dashboard",
+      unavailableTitle: "Dashboard unavailable",
+      unavailableDescription:
+        "No dashboard metrics are available for this account.",
+      kpiStripTitle: "KPI strip",
+      concentrationTableTitle: "Wallet concentration",
+      concentrationHeaders: {
+        wallet: "Wallet",
+        value: "Value",
+        share: "Share",
+      },
+      riskPanelTitle: "Risk panel",
+      anomaliesTitle: "Recent anomalies",
+    },
+    portfolio: {
+      title: "Portfolio",
+      unavailableTitle: "No linked wallets",
+      unavailableDescription:
+        "Link at least one wallet to view portfolio and charts.",
+      overviewCardTitle: "Overview",
+      accountTierLabel: "Account Tier",
+      linkWalletButton: "Link wallet",
+      linkedWalletsLabel: "Linked wallets",
+      linkedWalletsList: "Linked wallets list",
+      label: "Label",
+      address: "Address",
+      totalValue: "Total Value",
+      auth: "Auth",
+      actions: "Actions",
+      authWallet: "Auth wallet",
+      authWalletLabel: "Auth wallet",
+      linkedWalletLabel: "Linked wallet",
+      compare: "Compare",
+      authWalletCannotBeUnlinked: "Auth wallet cannot be unlinked",
+      unlinkWallet: "Unlink wallet",
+    },
+    wallet: {
+      title: "Wallets",
+      unavailableTitle: "Wallet data unavailable",
+      unavailableDescription: "Unable to load wallet data right now.",
+      noLinkedWalletsTitle: "No linked wallets",
+      noLinkedWalletsDescription:
+        "Link at least one wallet to view portfolio and charts.",
+      portfolioTableTitle: "Portfolio table",
+      balanceChartTitle: "Balance",
+      drawdownChartTitle: "Drawdown",
+      section: {
+        performance: "Wallet performance",
+        activity: "Flow and activity",
+        risk: "Risk mix",
+      },
+    },
+    watchlist: {
+      title: "Watchlist",
+      walletSubtab: "Wallet watchlist",
+      tokenSubtab: "Token watchlist",
+      walletTableTitle: "Watched wallets",
+      tokenTableTitle: "Watched tokens",
+      walletAddress: "Wallet address",
+      walletIdentity: "Identity",
+      emptyWalletTitle: "No wallets in watchlist",
+      emptyWalletDescription: "Add wallets to watchlist to track them here.",
+      emptyTokenTitle: "No tokens in watchlist",
+      emptyTokenDescription:
+        "Add tokens to watchlist to track market movement.",
+    },
+    unavailableState: {
+      defaultTitle: "Data unavailable",
+      defaultDescription: "No profile data is available right now.",
+    },
+  },
+  washTrading: {
+    breadcrumb: {
+      tokens: "Tokens",
+      manualToken: "Manual token",
+      page: "Wash Trading Detection",
+    },
+    title: "AI Wash Trading Detection",
+    subtitle: "GNN-inspired analysis for {{symbol}} · {{mint}}",
+    suspiciousBadge: "{{count}} Suspicious",
+    inputs: {
+      mintPlaceholder: "Token mint address",
+      symbolPlaceholder: "Symbol",
+      last24h: "Last 24h",
+      last7d: "Last 7d",
+      last30d: "Last 30d",
+      openToken: "Open token",
+      runAnalyze: "Run AI Analyze ↗",
+      analyzing: "Analyzing...",
+    },
+    errors: {
+      missingMint:
+        "Missing token mint address. Open this page from Token Detail or enter a mint address to analyze.",
+      manualMissingMint: "Please enter a token mint address.",
+      apiFailed: "Unable to call the AI Wash Trading API.",
+      analysisFailed: "AI analysis failed",
+    },
+    verdict: {
+      toggle: "AI Verdict",
+      hide: "Hide AI Verdict",
+      show: "Show AI Verdict",
+      waiting: "Waiting for analysis",
+      defaultSummary:
+        "Click Run AI Analyze to analyze circular trading, amount similarity, timing regularity, and graph features for this token.",
+      dataSource: "Data source:",
+      highRisk: "HIGH RISK",
+      mediumRisk: "MEDIUM RISK",
+      lowRisk: "LOW RISK",
+      clean: "CLEAN",
+    },
+    metrics: {
+      totalTransactions: "Total Transactions",
+      uniqueWallets: "{{wallets}} unique wallets",
+      washVolumeEstimate: "Wash Volume Estimate",
+      totalVolumePercent: "{{percent}} of {{volume}} total volume",
+      suspiciousWallets: "Suspicious Wallets",
+      circularClusters: "{{count}} circular clusters",
+      gnnConfidence: "GNN Confidence",
+      riskScore: "Risk score: {{score}}/100",
+    },
+    graph: {
+      title: "Transaction Graph — GNN Cluster View",
+      algorithmButtonAria:
+        "Select {{algorithm}} algorithm and view explanation",
+      algorithms: {
+        bestForLabel: "Best for",
+        gcn: {
+          title: "GCN — Graph Convolutional Network",
+          description:
+            "Aggregates signals from neighboring wallets and transfer links to estimate whether a wallet belongs to a suspicious trading cluster.",
+          bestFor: "overall cluster risk and circular-flow neighborhoods",
+        },
+        gat: {
+          title: "GAT — Graph Attention Network",
+          description:
+            "Learns attention weights for each neighboring wallet or transfer, so stronger suspicious links influence the score more than weak links.",
+          bestFor:
+            "dominant suspicious links, hub wallets, and high-impact flows",
+        },
+        graphsage: {
+          title: "GraphSAGE — Sample and Aggregate",
+          description:
+            "Samples nearby wallets and learns reusable wallet embeddings, which keeps analysis scalable when the token graph is large or changes quickly.",
+          bestFor: "large token graphs and fast wallet-risk generalization",
+        },
+      },
+      highRiskWallet: "High risk wallet",
+      bridgeWallet: "Bridge wallet",
+      normalWallet: "Normal wallet",
+      walletGraphName: "Wallet transaction graph",
+      suspiciousFlow: "Suspicious flow",
+      suspiciousTransfer: "Suspicious transfer flow",
+      circularClusterFlow: "Purple glow: circular cluster flow",
+      circularWallet: "Wallet in circular cluster",
+      flowLegendAria: "Transaction flow color legend",
+      yes: "Yes",
+      transferFlow: "Transfer flow",
+      type: "Type",
+      gnnScore: "GNN score",
+      address: "Address",
+      from: "From",
+      to: "To",
+      totalAmount: "Total token amount",
+      groupedTransfers: "Grouped transfers",
+      tokenUnit: "tokens",
+      nodes: "{{count}} nodes",
+      rawEdges: "{{count}} raw edges",
+      visibleFlows: "{{count}} visible flows",
+      suspiciousGroups: "{{count}} suspicious groups",
+      edgesGrouped: "{{count}} edges grouped",
+      hoverEdgeAmount: "Hover edge to view token amount",
+      footerReady:
+        "Live force-directed graph from backend graphData. Drag nodes, zoom, pan, and hover edges/wallets to inspect flow details.",
+      footerWaiting:
+        "Waiting for backend graphData. Click AI Analyze to build the wallet transaction graph.",
+      fullscreen: "Fullscreen",
+      fullscreenTitle: "Open graph in fullscreen",
+      fullscreenWaitingTitle: "Run AI Analyze to generate graph data",
+      modalAria: "Transaction graph fullscreen view",
+      modalSubtitle:
+        "{{symbol}} · {{mint}} · {{nodes}} nodes · {{edges}} edges",
+      close: "Close",
+      guideAria: "Graph fullscreen controls",
+      guideDrag: "🖱 Drag nodes to separate wallet clusters",
+      guideZoom: "🔍 Scroll to zoom",
+      guideClose: "⌨ Esc or Close to exit",
+    },
+    wallets: {
+      title: "Suspicious Wallets",
+      all: "All",
+      highRisk: "High risk",
+      new: "New",
+      graphRank: "Graph rank #{{rank}}",
+      gnn: "GNN: {{score}}",
+      empty: "No suspicious wallets yet. Run AI analysis for this token.",
+      insightTitle: "Wallet Risk Explanation",
+      insightEmpty:
+        "Select a wallet from Suspicious Wallets to view the detailed AI explanation.",
+      selectedWallet: "Selected wallet",
+      explanation:
+        "AI flagged this wallet because of pattern {{pattern}} on token {{symbol}}. Current GNN score is {{score}}/100.",
+      topFeature: "Top feature",
+      featureScore: "Feature score",
+      note: "How to read: high circularPattern usually means the wallet is involved in closed-loop trading; high timeRegularity suggests bot-like timing; high amountSimilarity suggests repeated token amounts; high volumeSignal means the wallet transfers a large share of token amount compared with the largest-volume wallet in this graph.",
+    },
+    patterns: {
+      circularTrade: "Circular Trade",
+      hubWallet: "Hub Wallet",
+      botLikeTiming: "Bot-like Timing",
+      amountMirror: "Amount Mirror",
+      anomalousActivity: "Anomalous Activity",
+    },
+    findings: {
+      title: "AI Detailed Findings",
+    },
+    risk: {
+      title: "Risk Score — {{target}}",
+      walletTitle: "Wallet GNN Score — {{target}}",
+      tokenRiskScore: "Token risk score",
+      scoreOutOf100: "{{score}}/100",
+      walletFeatureTitle: "Selected wallet behavior features",
+      high: "High Risk",
+      medium: "Medium Risk",
+      low: "Low Risk",
+      noSignal: "No Signal",
+      circularPattern: "Circular pattern",
+      timeRegularity: "Time regularity",
+      amountSimilarity: "Amount similarity",
+      selfLoopDegree: "Self-loop degree",
+      hubness: "Hubness",
+      volumeSignal: "Volume signal",
+    },
+    detectionLog: {
+      title: "Detection Log",
+      waiting: "Waiting for AI analysis request...",
+    },
+    context: {
+      title: "Token Context",
+      symbol: "Symbol",
+      mint: "Mint",
+      timeframe: "Timeframe",
+      algorithm: "Algorithm",
+      dataSource: "Data source",
+      sourceReason: "Source reason",
+      analyzedAt: "Analyzed at",
+    },
+  },
+  errorPages: {
+    unauthorized: {
+      error401: "401 Error",
+      accessDenied: "Access Denied",
+      description: "You need to log in before accessing this page.",
+      protectedPath: "Protected path: {{$path}}",
+      login: "Login",
+      backToHome: "Back to Home",
+    },
+    notFound: {
+      error404: "404 Error",
+      title: "We're sorry!",
+      description:
+        "The page you requested does not exist or may have moved to another location.",
+      backToHome: "Back to Home",
+      goToMarket: "Go to Market",
+    },
   },
   ERROR,
 } as const;

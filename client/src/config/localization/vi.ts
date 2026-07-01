@@ -3,9 +3,9 @@ import "dayjs/locale/vi";
 import { defineTranslation } from "./en";
 import { getUsdToVndRate } from "./util/exchange-service";
 import {
-  defineDateTimeFormat,
-  defineNumberFormat,
-  defineTextFormat,
+    defineDateTimeFormat,
+    defineNumberFormat,
+    defineTextFormat,
 } from "./util/util-format";
 
 export const langCode = "vi-VN";
@@ -106,9 +106,22 @@ export const translation = defineTranslation({
     itemRangeText: "{{min}}-{{max}} của {{count}} mục",
     nextPage: "Trang tiếp theo",
     previousPage: "Trang trước",
-  },
+    searchPlaceholder: "Tìm kiếm bảng...",
+    filterLabel: "Bộ lọc: {{column}}",
+    apply: "Áp dụng",
+    selectAll: "Chọn tất cả",
+    from: "Từ",
+    to: "Đến",
+    page: "Trang {{count}}",
+      clear: "Xóa",
+      noResults: "Không có kết quả",
+      clearFilter: "Xóa bộ lọc",
+      filterSearchPlaceholder: "Tìm kiếm {{column}}...",
+      searchAriaLabel: "Tìm kiếm bảng",
+    },
   // Authentication
   auth: {
+    authenticating: "Đang xác thực...",
     or: "Hoặc tiếp tục với",
     signIn: "Đăng nhập",
     signUp: "Đăng ký",
@@ -141,6 +154,311 @@ export const translation = defineTranslation({
     privacy: "Chính sách bảo mật",
     googleAuthFailed: "Xác thực Google thất bại. Vui lòng thử lại.",
     googleAuthCancelled: "Xác thực Google đã bị hủy.",
+  },
+  landing: {
+    nav: {
+      primary: "Điều hướng chính",
+      products: "Sản phẩm",
+      useCases: "Trường hợp sử dụng",
+      docs: "Tài liệu",
+      pricing: "Bảng giá",
+      login: "Đăng nhập",
+      signUp: "Đăng ký",
+      profile: "Hồ sơ",
+      account: "Tài khoản",
+      language: "Ngôn ngữ",
+      languageMenu: "Menu ngôn ngữ",
+      currentLanguage: "Ngôn ngữ hiện tại",
+      english: "English",
+      vietnamese: "Tiếng Việt",
+      toggleMenu: "Mở hoặc đóng menu",
+      switchToLightMode: "Chuyển sang giao diện sáng",
+      switchToDarkMode: "Chuyển sang giao diện tối",
+    },
+    hero: {
+      eyebrow: "Phân tích Solana bằng AI",
+      title: "Biến dữ liệu on-chain thành lợi thế của bạn.",
+      subtitle:
+        "Bộ công cụ toàn diện cho trader Solana. Theo dõi xu hướng token, trực quan hóa chuyển động của ví lớn và nắm bắt thị trường bằng cảnh báo on-chain thời gian thực.",
+      primaryCta: "Mở Market Radar",
+      secondaryCta: "Xem ví trực tiếp",
+    },
+    stats: {
+      uiLatency: "Độ trễ UI",
+      dataStreaming: "Dữ liệu thời gian thực",
+      walletLabels: "Nhãn ví bằng AI",
+      transactionGraphs: "Đồ thị giao dịch",
+    },
+    products: {
+      eyebrow: "Tính năng cốt lõi",
+      title: "Mọi thứ bạn cần để đi trước thị trường.",
+      learnMore: "Tìm hiểu thêm",
+      items: {
+        marketExplorer: {
+          tag: "Khám phá",
+          title: "Market Explorer",
+          description:
+            "Theo dõi thời gian thực các token và pool thanh khoản nổi bật nhất trên Solana.",
+        },
+        portfolioIntelligence: {
+          tag: "Phân tích",
+          title: "Portfolio Intelligence",
+          description:
+            "Đào sâu lịch sử và hành vi của bất kỳ ví nào bằng hệ thống gắn nhãn hành vi do AI hỗ trợ.",
+        },
+        smartAlerts: {
+          tag: "Giám sát",
+          title: "Smart Alerts",
+          description:
+            "Không bỏ lỡ biến động quan trọng. Thiết lập cảnh báo cho swap lớn và hoạt động ví lớn gửi thẳng đến Discord.",
+        },
+      },
+    },
+    marketIntelligence: {
+      eyebrow: "Market Intelligence",
+      title: "Nhìn thị trường theo cách của nhà giao dịch chuyên nghiệp.",
+      marketStats: "Thống kê thị trường",
+      stats: {
+        marketCap: "Vốn hóa",
+        volume24h: "Khối lượng 24h",
+        circulatingSupply: "Nguồn cung lưu hành",
+      },
+    },
+    customerStories: {
+      title: "Câu chuyện khách hàng",
+      subtitle:
+        "Xem cách các đội ngũ dùng Yoca để biến hoạt động thô trên blockchain thành quyết định đáng tin cậy cho toàn tổ chức.",
+      seeMore: "Xem thêm",
+      readStory: "Đọc câu chuyện",
+      items: {
+        base: {
+          title:
+            "Cách các đội ngũ vận hành chuyển đổi dữ liệu on-chain ở quy mô lớn với Yoca",
+        },
+        blockworks: {
+          title: "Hỗ trợ nghiên cứu crypto tổ chức bằng các chỉ số thống nhất",
+        },
+        opLabs: {
+          title:
+            "Tăng trưởng hệ sinh thái và tính minh bạch dựa trên dashboard trực tiếp",
+        },
+        oneInch: {
+          title:
+            "Làm cho dữ liệu thực thi và thanh khoản minh bạch, dễ tiếp cận hơn",
+        },
+      },
+    },
+    testimonials: {
+      items: {
+        multicoin: {
+          text: "Nếu dữ liệu không có trong dashboard, nó chưa đủ đáng tin. Yoca cho chúng tôi một nguồn dữ liệu thống nhất về dòng ví và token.",
+        },
+        blockworks: {
+          text: "Bộ dữ liệu on-chain thực dụng nhất mà chúng tôi từng đưa vào quy trình nghiên cứu: truy vấn nhanh, ít bất ngờ hơn.",
+        },
+        oneInch: {
+          text: "Nếu không nhìn rõ hoạt động on-chain, sản phẩm sẽ bị mù dữ liệu. Yoca giúp đội ngũ của chúng tôi giải quyết điều đó chỉ trong vài ngày.",
+        },
+      },
+    },
+    news: {
+      eyebrow: "Tin mới nhất",
+      title: "Cập nhật mới từ Yoca",
+      label: "Tin tức",
+      readPost: "Đọc bài viết",
+      items: {
+        walletReports: {
+          title: "Xuất báo cáo ví mà không cần duy trì pipeline dễ vỡ",
+          excerpt:
+            "Xuất snapshot đáng tin cậy cho analyst, dùng cùng định nghĩa với app trực tiếp và giảm các bản spreadsheet rời rạc.",
+        },
+        tempo: {
+          title: "Tempo đã có mặt: chỉ số settlement tức thì trong Yoca",
+          excerpt:
+            "Theo dõi hoạt động chain ưu tiên thanh toán cùng các chỉ số Solana và EVM trong một mô hình điều hướng thống nhất.",
+        },
+        cardano: {
+          title: "Cardano được thêm vào catalog",
+          excerpt:
+            "Tín hiệu staking và delegation cấp nghiên cứu nay nằm cạnh các ví bạn đang theo dõi.",
+        },
+      },
+    },
+    finalCta: {
+      title: "Tạo tăng trưởng vượt chuẩn",
+      subtitle:
+        "Tham gia cùng các đội ngũ dùng Yoca để nhìn ví, token và thị trường trong một câu chuyện mạch lạc.",
+      cta: "Bắt đầu",
+    },
+    footer: {
+      description:
+        "Phân tích on-chain cho các đội ngũ xây dựng dựa trên dữ liệu, không dựa vào phỏng đoán.",
+      companyPrompt: "Bạn muốn dùng Yoca cho công ty của mình?",
+      contactSales: "Liên hệ sales",
+      columns: {
+        products: { title: "Sản phẩm" },
+        resources: { title: "Tài nguyên" },
+        company: { title: "Công ty" },
+        legal: { title: "Pháp lý" },
+      },
+      links: {
+        dataHub: "Data Hub",
+        tokenExplorer: "Token Explorer",
+        datashare: "Datashare",
+        chains: "Chains",
+        pricing: "Bảng giá",
+        documentation: "Tài liệu",
+        caseStudies: "Case study",
+        blog: "Blog",
+        support: "Hỗ trợ",
+        about: "Giới thiệu",
+        careers: "Tuyển dụng",
+        press: "Báo chí",
+        contact: "Liên hệ",
+        termsOfService: "Điều khoản dịch vụ",
+        privacyPolicy: "Chính sách bảo mật",
+        systemStatus: "Trạng thái hệ thống",
+      },
+    },
+  },
+  pricing: {
+    title: "Bảng giá",
+    subtitle:
+      "Chọn dung lượng AI mỗi ngày phù hợp với mức độ nghiên cứu thị trường của bạn.",
+    placeholder: "Sẽ được cập nhật",
+    free: "MIỄN PHÍ",
+    period: {
+      month: "/ tháng",
+    },
+    tiers: {
+      standard: { name: "STANDARD" },
+    },
+    features: {
+      label: "Hạn mức AI bao gồm",
+      askYoca: "Ask Yoca AI: {{$count}} câu hỏi mỗi ngày",
+      generalAiChat: "General AI Chat: {{$count}} tin nhan moi ngay",
+      tokenChartNewsSummary:
+        "Tom tat tin tuc tren chart: {{$count}} luot moi ngay",
+      walletAiAnalysis:
+        "Wallet AI Analysis: {{$count}} luot phan tich moi ngay",
+      washTradingAiAnalysis:
+        "Wash Trading AI Analysis: {{$count}} luot phan tich moi ngay",
+      walletAiAnalysisLocked: "Wallet AI Analysis: can goi Plus",
+      washTradingAiAnalysisLocked:
+        "Wash Trading AI Analysis: can goi Plus",
+      volatilitySummary:
+        "Tóm tắt Volatility Signals: {{$count}} lượt tạo mỗi ngày",
+      dailyReset: "Hạn mức được làm mới lúc 00:00 UTC mỗi ngày",
+    },
+    cta: {
+      buyNow: "Mua ngay",
+      tryForFree: "Dùng thử miễn phí",
+    },
+  },
+  payment: {
+    shared: {
+      cancel: "Hủy",
+      close: "Đóng",
+      maybeLater: "Để sau",
+    },
+    success: {
+      title: "Thanh toán thành công!",
+      description:
+        "Gói {{$tierName}} của bạn hiện đã được kích hoạt. Bạn có toàn quyền truy cập vào các tính năng cao cấp.",
+      goToProfile: "Đi đến hồ sơ",
+      receipt: "Biên nhận đã được gửi đến email của bạn",
+    },
+    authReminder: {
+      eyebrow: "Cần đăng nhập",
+      title: "Đăng nhập để tiếp tục",
+      description:
+        "Bạn cần đăng nhập trước khi mua gói. Tạo tài khoản miễn phí hoặc đăng nhập để bắt đầu.",
+    },
+    modal: {
+      eyebrow: "Thanh toán an toàn",
+      title: "Đăng ký gói {{tierName}}",
+      close: "Đóng modal thanh toán",
+    },
+    checkout: {
+      plan: "Gói",
+      total: "Tổng",
+      processing: "Đang xử lý...",
+      subscribeNow: "Đăng ký ngay",
+      methods: {
+        card: "Thẻ",
+        bank: "Ngân hàng",
+        bankDescription: "Chuyển khoản ngân hàng Mỹ",
+        wallet: "Ví",
+      },
+    },
+    solana: {
+      connectTitle: "Kết nối ví Solana",
+      connectDescription: "Chọn ví để thanh toán bằng SOL trên {{networkName}}",
+      noWallets: "Không phát hiện ví Solana.",
+      installPrefix: "Cài đặt",
+      installSuffix: "để tiếp tục.",
+      connecting: "Đang kết nối...",
+      installed: "Đã cài đặt",
+      notDetected: "Không phát hiện",
+      transactionSubmitted: "Đã gửi giao dịch",
+      verifyingBackend:
+        "Giao dịch của bạn đã được gửi. Đang xác minh với backend...",
+      verifyingTransaction: "Đang xác minh giao dịch...",
+      walletNotConnected: "Ví chưa được kết nối",
+      networkMismatch:
+        "Sai mạng: ví của bạn đang kết nối nhầm mạng. Ứng dụng này dùng {{networkName}}. Vui lòng đổi mạng ví trong phần Settings.",
+      transactionFailed: "Giao dịch thất bại. Vui lòng thử lại.",
+      disconnect: "Ngắt kết nối",
+      amount: "Số tiền",
+      network: "Mạng",
+      usdEquivalent: "Tương đương USD",
+      transferNotice:
+        "Bạn sẽ được yêu cầu ký giao dịch gửi {{amount}} từ ví của bạn đến địa chỉ merchant của chúng tôi trên Solana {{networkName}}.",
+      testnetWarning:
+        "Phantom phải ở Testnet. Nếu popup hiển thị reverted during simulation, hãy mở Phantom Settings > Developer Settings > Testnet Mode, rồi thử lại.",
+      sending: "Đang gửi...",
+      verifying: "Đang xác minh...",
+      confirmPayment: "Xác nhận thanh toán bằng SOL",
+      tryAgain: "Thử lại",
+      connectedAddress: "Địa chỉ ví đã kết nối",
+      copyAddress: "Sao chép toàn bộ địa chỉ",
+      copied: "Đã sao chép!",
+      balanceConfigured: "Số dư trên {{networkName}} (Đang chọn)",
+      balanceAlternate: "Số dư trên {{alternateNetwork}} (Mạng khác)",
+      balanceLoading: "Đang tải số dư...",
+      balanceUnreachable: "Không thể kết nối",
+      mismatchDetected: "Phát hiện sai lệch mạng!",
+      mismatchExplanation:
+        "Ví của bạn đang có {{balance}} SOL ở mạng {{alternateNetwork}}, nhưng ứng dụng này được thiết lập dùng mạng {{networkName}}. Vui lòng mở Settings -> Developer Settings -> Solana network và đổi sang mạng {{networkName}} (hoặc nạp thêm SOL vào tài khoản mạng {{networkName}} của bạn).",
+      insufficientBalanceDetected: "Phát hiện không đủ số dư!",
+      insufficientBalanceExplanation:
+        "Tài khoản của bạn chỉ có {{balance}} SOL trên mạng {{networkName}}, nhưng cần tối thiểu {{required}} SOL để thanh toán gói này. Vui lòng nhận SOL miễn phí từ faucet chính thức của {{networkName}}.",
+      faucetButton: "Nhận SOL miễn phí (Faucet)",
+    },
+    transactionId: {
+      label: "ID giao dịch",
+      revealHint: "Bấm biểu tượng mắt để hiện",
+      visibleAria: "ID giao dịch: {{transactionId}}",
+      hiddenAria: "ID giao dịch đang được ẩn",
+      hideAria: "Ẩn ID giao dịch",
+      showAria: "Hiện ID giao dịch",
+      hide: "Ẩn",
+      reveal: "Hiện",
+      copyAria: "Sao chép đầy đủ ID giao dịch vào clipboard",
+      copyTitle: "Sao chép đầy đủ ID",
+      copied: "Đã sao chép!",
+    },
+    errors: {
+      loadStripe: "Không tải được Stripe. Vui lòng thử lại.",
+      createIntent: "Không tạo được payment intent. Vui lòng thử lại.",
+      setupFailed: "Thiết lập thanh toán thất bại. Vui lòng thử lại.",
+      cardSetupFailed: "Thiết lập thẻ thất bại. Vui lòng thử lại.",
+      cardSetupIncomplete: "Thiết lập thẻ chưa hoàn tất. Vui lòng thử lại.",
+      missingPaymentMethod:
+        "Không lấy được phương thức thanh toán. Vui lòng thử lại.",
+      activateSubscription: "Kích hoạt gói đăng ký thất bại. Vui lòng thử lại.",
+      network: "Đã xảy ra lỗi mạng. Vui lòng thử lại.",
+    },
   },
   // Wallet
   wallet: {
@@ -178,6 +496,16 @@ export const translation = defineTranslation({
     shareWallet: "Chia sẻ ví này",
     compareWallet: "So sánh ví này",
     createAlert: "Tạo cảnh báo cho ví này",
+    followWallet: "Theo dõi ví",
+    unfollowWallet: "Bỏ theo dõi ví",
+    walletFollowed: "Đã theo dõi ví",
+    walletUnfollowed: "Đã bỏ theo dõi ví",
+    walletAlreadyFollowed: "Ví đã được theo dõi",
+    followWalletNotFound: "Ví chưa được theo dõi",
+    followWalletFailed: "Không thể theo dõi ví",
+    unfollowWalletFailed: "Không thể bỏ theo dõi ví",
+    followWalletSuccessHint: "Quản lý cảnh báo và kênh gửi trong trang Cảnh báo.",
+    manageAlerts: "Quản lý cảnh báo",
     bookmarked: "Đã lưu",
     bookmarkWallet: "Lưu ví này",
     totalAssetValue: "Tổng giá trị tài sản",
@@ -201,6 +529,378 @@ export const translation = defineTranslation({
     unrealizedPnL: "PnL chưa chốt",
     change24hPercent: "Biến động 24H",
   },
+  aiAnalysisDashboard: {
+    header: {
+      eyebrow: "Phân tích AI",
+      title: "Phân tích hành vi ví bằng AI",
+      subtitle:
+        "Phân tích ví dựa trên bằng chứng, gồm kiểu hành vi, mức rủi ro và các phát hiện có chữ ký giao dịch hỗ trợ.",
+      refresh: "Làm mới phân tích",
+      notGenerated: "Chưa tạo phân tích",
+      generatedUnavailable: "Không có thời điểm tạo",
+      generated: "Đã tạo {{time}}",
+    },
+    loading: {
+      title: "Đang phân tích hành vi ví...",
+      description:
+        "Đang xây dựng kiểu hành vi, rủi ro và tóm tắt hoạt động dựa trên bằng chứng.",
+    },
+    metrics: {
+      ariaLabel: "Chỉ số phân tích AI",
+      trustScore: "Điểm tin cậy",
+      trustScoreHelper:
+        "Càng cao nghĩa là càng ít tín hiệu rủi ro quan sát được",
+      trustScoreTooltip:
+        "Điểm tin cậy được tính bằng 100 trừ Điểm rủi ro. Điểm cao hơn nghĩa là có ít tín hiệu rủi ro hơn trong khoảng giao dịch được phân tích.",
+      riskLevel: "Mức rủi ro",
+      riskLevelHelper: "Dựa trên các tín hiệu hành vi đã tính toán",
+      riskLevelTooltip:
+        "Mức rủi ro được gán từ tổng Điểm rủi ro: LOW 0-19, MEDIUM 20-44, HIGH 45-74, CRITICAL 75-100. UNKNOWN được dùng khi có quá ít giao dịch.",
+      persona: "Kiểu hành vi",
+      personaHelper: "Mẫu hành vi chính",
+      personaTooltip:
+        "Kiểu hành vi là mẫu hành vi chính quan sát được của ví. Nó mô tả hành vi trong khoảng phân tích, không phải danh tính hay ý định của chủ ví.",
+      personaConfidence: "Độ tin cậy kiểu hành vi",
+      personaConfidenceHelper: "Mức hỗ trợ cho phân loại kiểu hành vi",
+      personaConfidenceTooltip:
+        "Độ tin cậy kiểu hành vi ước tính các chỉ số hiện có hỗ trợ kiểu hành vi đã chọn mạnh đến đâu so với các lựa chọn khác. Đây không phải sự chắc chắn pháp lý hay danh tính.",
+      dataCompleteness: "Độ đầy đủ dữ liệu",
+      dataCompletenessHelper:
+        "Chất lượng dữ liệu đầu vào có thể dùng để phân tích",
+      dataCompletenessTooltip:
+        "Độ đầy đủ dữ liệu ước tính mức dữ liệu phân tích có thể sử dụng. Chỉ số này giảm khi thiếu giá, có giao dịch chưa hỗ trợ, cảnh báo phân tích cú pháp hoặc giao dịch thất bại.",
+      analyzedTransactions: "Giao dịch đã phân tích",
+      analyzedTransactionsHelper: "Số giao dịch trong khoảng phân tích",
+      analyzedTransactionsTooltip:
+        "Đây là số giao dịch được đưa vào khoảng phân tích AI. Kết quả có thể không đại diện cho toàn bộ lịch sử ví.",
+      unsupported: "{{count}} chưa hỗ trợ",
+      missingPrices: "{{count}} thiếu giá",
+      outOfAnalyzed: "{{items}} trên {{txCount}} giao dịch đã phân tích",
+      unsupportedOutOfAnalyzed:
+        "{{unsupported}} giao dịch chưa hỗ trợ trên {{txCount}} giao dịch đã phân tích.",
+    },
+    summary: {
+      title: "Tóm tắt hành vi ví bằng AI",
+      description: "Diễn giải dễ hiểu về hồ sơ ví đã tính toán.",
+      noSummary: "Không có tóm tắt nào được tạo cho ví này.",
+      walletPersona: "Kiểu hành vi ví",
+      walletPersonaTooltip:
+        "Kiểu hành vi giải thích ví giống mẫu hành vi nào nhất. Mục này tách biệt với Mức rủi ro.",
+      riskSummary: "Tóm tắt rủi ro",
+      pnlSummary: "Tóm tắt PnL",
+      pnlSummaryTooltip:
+        "Tóm tắt PnL dựa trên các vị thế đã đóng và dữ liệu giá có sẵn trong khoảng phân tích. Nó có thể không bao gồm mọi thay đổi giá trị của ví.",
+      whyPersona: "Vì sao là kiểu hành vi này?",
+      personaVsRisk:
+        "Kiểu hành vi giải thích ví giống mẫu hành vi nào nhất. Mức rủi ro giải thích các tín hiệu rủi ro tổng thể mạnh đến đâu.",
+      selectedPersona: "Kiểu hành vi được chọn",
+      selectedPersonaFallbackTooltip:
+        "Đây là phân loại hành vi, không phải khẳng định danh tính.",
+      commonSignals: "Tín hiệu thường gặp",
+      observedSupport: "Bằng chứng hỗ trợ quan sát được",
+      personaConfidenceSentence:
+        "Độ tin cậy kiểu hành vi là {{confidence}}, dựa trên mức các chỉ số hiện có hỗ trợ kiểu hành vi này so với các lựa chọn khác.",
+      more: "+{{count}} nữa",
+    },
+    findings: {
+      title: "Phát hiện chính",
+      description: "Các quan sát có bằng chứng hỗ trợ, được tạo từ hồ sơ ví.",
+      empty: "Không có phát hiện lớn có bằng chứng hỗ trợ cho ví này.",
+      fallbackTitle: "Phát hiện",
+      fallbackExplanation: "Không có giải thích được cung cấp.",
+      whyItMatters: "Vì sao quan trọng:",
+      evidence: "Bằng chứng",
+      evidenceTooltip:
+        "ID bằng chứng kết nối phát hiện này với các thẻ bằng chứng và yếu tố rủi ro hỗ trợ.",
+      signatures: "Chữ ký",
+      signaturesTooltip:
+        "Chip chữ ký là các giao dịch đại diện hỗ trợ phát hiện này và mở trên Solscan.",
+    },
+    riskBreakdown: {
+      title: "Phân rã rủi ro",
+      description: "Các yếu tố rủi ro đã tính toán đóng góp vào điểm ví.",
+      empty: "Không có yếu tố rủi ro nào được tạo cho ví này.",
+      fallbackDescription: "Không có mô tả được cung cấp.",
+      whyItMatters: "Vì sao quan trọng:",
+      pointsAdded: "{{points}} cộng vào Điểm rủi ro",
+      pointsTooltip:
+        "Đây là số điểm yếu tố này cộng vào tổng Điểm rủi ro. Điểm tác động càng cao thì yếu tố đó đóng góp càng mạnh vào mức rủi ro.",
+      unsupportedOutOfTotal:
+        "Giao dịch chưa hỗ trợ: {{unsupported}} trên {{txTotal}} giao dịch đã phân tích. Thiếu dữ liệu là điều chỉnh độ tin cậy, không phải hành vi đáng ngờ của ví.",
+      evidence: "Bằng chứng",
+      evidenceTooltip:
+        "ID bằng chứng kết nối yếu tố rủi ro này với các thẻ bằng chứng và phát hiện chính.",
+    },
+    evidence: {
+      sectionTitle: "Bằng chứng nổi bật",
+      sectionDescription:
+        "Các tín hiệu và chữ ký giao dịch đại diện dùng để hỗ trợ phân tích.",
+      howToRead: "Cách đọc thẻ bằng chứng",
+      valueAndThreshold: "Giá trị và ngưỡng",
+      valueAndThresholdDescription:
+        "Giá trị là kết quả đo được cho ví này. Ngưỡng là mức quy tắc khiến tín hiệu được hiển thị.",
+      traceability: "Khả năng truy vết",
+      traceabilityDescription:
+        "ID bằng chứng kết nối phát hiện, yếu tố rủi ro và bằng chứng. Chữ ký là các giao dịch đại diện người dùng có thể kiểm tra trên Solscan.",
+      empty: "Không có bằng chứng nổi bật cho ví này.",
+      fallbackTitle: "Bằng chứng",
+      evidenceId: "ID bằng chứng",
+      evidenceIdTooltip:
+        "Tham chiếu nội bộ dùng để kết nối phát hiện, yếu tố rủi ro và bằng chứng.",
+      fallbackDescription: "Không có mô tả bằng chứng được cung cấp.",
+      value: "Giá trị",
+      valueTooltip:
+        "Giá trị đo được từ khoảng giao dịch đã phân tích của ví này.",
+      threshold: "Ngưỡng",
+      thresholdTooltip:
+        "Ngưỡng quy tắc dùng để quyết định tín hiệu này có nên được hiển thị hay không.",
+      relatedSignatures: "Chữ ký liên quan",
+      relatedSignaturesTooltip:
+        "Các giao dịch đại diện dùng làm bằng chứng hỗ trợ. Mở trên Solscan.",
+      relatedTokenMints: "Token mint liên quan",
+      relatedTokenMintsTooltip: "Địa chỉ token liên quan đến tín hiệu này.",
+      signatureTooltip:
+        "Giao dịch đại diện dùng làm bằng chứng hỗ trợ. Mở trên Solscan.",
+      tokenMintTooltip: "Địa chỉ token liên quan đến tín hiệu này.",
+    },
+    howToRead: {
+      title: "Cách đọc phân tích này",
+      description: "Hướng dẫn ngắn về nhãn, điểm số và bằng chứng.",
+      open: "Mở giải thích",
+      personaVsRiskTitle: "Kiểu hành vi và rủi ro",
+      personaVsRiskText:
+        "Kiểu hành vi mô tả hành vi quan sát được. Mức rủi ro mô tả độ mạnh tổng thể của các tín hiệu rủi ro.",
+      scoresTitle: "Điểm số",
+      scoresText:
+        "Điểm tin cậy bằng 100 trừ Điểm rủi ro. Điểm số chỉ dựa trên khoảng giao dịch đã phân tích.",
+      evidenceTitle: "Bằng chứng",
+      evidenceText:
+        "Chữ ký bằng chứng là các ví dụ đại diện người dùng có thể kiểm tra trên Solscan.",
+      limitationsTitle: "Giới hạn",
+      limitationsText:
+        "Đây không phải lời khuyên tài chính hay bằng chứng về hành vi đáng ngờ. Giao dịch thiếu dữ liệu hoặc chưa hỗ trợ có thể làm giảm độ tin cậy.",
+    },
+    caution: {
+      title: "Lưu ý thận trọng",
+      description: "Cách diễn giải phân tích này một cách có trách nhiệm.",
+      defaultDisclaimer:
+        "Điểm rủi ro phản ánh hành vi quan sát được trong khoảng giao dịch đã phân tích. Đây không phải lời khuyên tài chính, kết luận pháp lý hay bằng chứng gian lận.",
+      labelDisclaimer:
+        "Các nhãn như Nhà giao dịch giống bot, Nhà đầu cơ rủi ro cao hoặc Nghi vấn wash trading là phân loại hành vi, không phải cáo buộc.",
+      backendRiskVerdict:
+        "Điểm rủi ro phản ánh hành vi quan sát được trong khoảng giao dịch đã phân tích. Đây không phải kết luận pháp lý, tài chính hay kết luận về hành vi đáng ngờ.",
+      backendFullHistory:
+        "Không nên xem phân tích này là đại diện cho toàn bộ lịch sử ví, trừ khi khoảng phân tích là FULL_HISTORY.",
+      backendNoConfirmedSuspicious:
+        "Không khẳng định có hành vi đáng ngờ đã được xác nhận hoặc wash trading.",
+      backendNoIntent:
+        "Không suy diễn ý định vượt quá các chỉ số đã tính toán.",
+    },
+    empty: {
+      title: "Không tìm thấy hoạt động có thể phân tích cho ví này.",
+      description:
+        "Dữ liệu giao dịch đã được tải thành công, nhưng không có sự kiện ví nào đủ điều kiện cho phân tích dựa trên bằng chứng.",
+    },
+    error: {
+      title: "Không thể tải phân tích AI",
+      fallback: "Vui lòng thử lại phân tích.",
+      retry: "Thử lại phân tích AI",
+    },
+    labels: {
+      unknown: "Không xác định",
+      low: "THẤP",
+      medium: "TRUNG BÌNH",
+      high: "CAO",
+      critical: "NGHIÊM TRỌNG",
+      neutral: "TRUNG LẬP",
+      highRiskSpeculator: "Nhà đầu cơ rủi ro cao",
+      botLikeTrader: "Nhà giao dịch giống bot",
+      defiTrader: "Nhà giao dịch DeFi",
+      memecoinTrader: "Nhà giao dịch memecoin",
+      smartMoneyLike: "Giống smart money",
+      washTradingSuspect: "Nghi vấn wash trading",
+      longTermHolder: "Người nắm giữ dài hạn",
+      casualUser: "Người dùng thông thường",
+      airdropFarmer: "Người săn airdrop",
+      nftCollector: "Người sưu tầm NFT",
+      highFrequencyActivity: "Hoạt động tần suất cao",
+      shortHoldingPeriod: "Thời gian nắm giữ ngắn",
+      negativePnl: "PnL âm",
+      lowWinRate: "Tỷ lệ thắng thấp",
+      highTokenDiversity: "Đa dạng token cao",
+      highPortfolioConcentration: "Tập trung danh mục cao",
+      washTradingSuspected: "Nghi vấn wash trading",
+      missingData: "Thiếu dữ liệu",
+    },
+    severityTooltips: {
+      findingHigh:
+        "Tín hiệu mạnh. Nên xem trước. Đây không phải bằng chứng về hành vi sai phạm.",
+      findingMedium: "Tín hiệu có ý nghĩa, đóng góp vào phần diễn giải.",
+      findingLow:
+        "Tín hiệu bối cảnh, hữu ích nhưng không quyết định nếu đứng riêng lẻ.",
+      findingNeutral:
+        "Mức độ cho biết tín hiệu này quan trọng thế nào trong phân tích hiện tại.",
+      riskHigh:
+        "Mức cao nghĩa là yếu tố này cộng từ 15 điểm trở lên vào Điểm rủi ro.",
+      riskMedium:
+        "Mức trung bình nghĩa là yếu tố này cộng từ 8 đến 14 điểm vào Điểm rủi ro.",
+      riskLow:
+        "Mức thấp nghĩa là yếu tố này cộng từ 1 đến 7 điểm vào Điểm rủi ro.",
+      riskNeutral: "Mức độ dựa trên số điểm rủi ro mà yếu tố này cộng thêm.",
+    },
+    personaExplanations: {
+      unknown: {
+        meaning: "Không có đủ hành vi rõ ràng để gán một kiểu hành vi cụ thể.",
+        commonSignals:
+          "Số giao dịch thấp, dữ liệu chưa đầy đủ hoặc tín hiệu lẫn lộn.",
+        caution:
+          "Không xác định không nên được hiểu riêng lẻ là an toàn hay rủi ro.",
+      },
+      longTermHolder: {
+        meaning:
+          "Hành vi ví giống việc nắm giữ tài sản trong thời gian dài hơn.",
+        commonSignals:
+          "Số swap thấp, thời gian nắm giữ dài hơn, tỷ lệ giao dịch ngắn hạn thấp, tài sản tập trung.",
+        caution:
+          "Mục này chỉ mô tả hành vi quan sát được trong khoảng phân tích.",
+      },
+      casualUser: {
+        meaning:
+          "Hành vi ví giống việc sử dụng không thường xuyên, cường độ thấp hơn.",
+        commonSignals:
+          "Hoạt động thấp hoặc trung bình, ít swap hơn, ít đa dạng token, ít vị thế đã đóng.",
+        caution:
+          "Nhãn người dùng thông thường không đảm bảo rủi ro thấp ngoài khoảng phân tích.",
+      },
+      defiTrader: {
+        meaning:
+          "Ví thường xuyên tương tác với các giao thức giao dịch phi tập trung.",
+        commonSignals:
+          "Nhiều swap, sử dụng DEX nhiều, giao dịch nhiều token, khối lượng giao dịch đáng kể.",
+        caution:
+          "Nhãn này mô tả việc dùng giao thức và hành vi giao dịch, không phải kỹ năng giao dịch.",
+      },
+      memecoinTrader: {
+        meaning:
+          "Hành vi ví giống giao dịch đầu cơ trên các token biến động mạnh hoặc theo câu chuyện thị trường.",
+        commonSignals:
+          "Đa dạng token cao, giao dịch ngắn hạn, dùng DEX nhiều, quy mô giao dịch trung bình nhỏ hơn.",
+        caution:
+          "Metadata danh mục token có thể chưa đầy đủ, nên nhãn này có thể dựa trên tín hiệu hành vi thay thế.",
+      },
+      nftCollector: {
+        meaning: "Hành vi ví có hoạt động NFT đáng kể.",
+        commonSignals:
+          "Nắm giữ NFT, dùng marketplace NFT, lặp lại các sự kiện chuyển, mua hoặc bán NFT.",
+        caution:
+          "Hoạt động NFT có thể chưa đầy đủ nếu thiếu metadata marketplace hoặc collection.",
+      },
+      airdropFarmer: {
+        meaning:
+          "Hành vi ví giống hoạt động nhằm nhận hoặc claim phân phối token.",
+        commonSignals:
+          "Claim airdrop lặp lại, nhiều chuyển khoản token vào, phạm vi token rộng, hoạt động theo cụm.",
+        caution:
+          "Điều này không chứng minh ý định; nó chỉ mô tả hành vi giống claim.",
+      },
+      botLikeTrader: {
+        meaning:
+          "Hoạt động ví giống hành vi giao dịch tự động hoặc cường độ cao.",
+        commonSignals:
+          "Cụm giao dịch dày, khoảng cách giao dịch ngắn, số swap cao, mức hoạt động cực lớn.",
+        caution: "Điều này không chứng minh ví được vận hành bởi bot.",
+      },
+      highRiskSpeculator: {
+        meaning: "Hành vi ví giống giao dịch đầu cơ mạnh và rủi ro cao.",
+        commonSignals:
+          "Thời gian nắm giữ ngắn, đa dạng token cao, tỷ lệ thắng thấp, PnL âm, dùng DEX nhiều.",
+        caution: "Mục này mô tả hành vi, không phải danh tính hay ý định.",
+      },
+      smartMoneyLike: {
+        meaning:
+          "Ví cho thấy kết quả giao dịch tốt hơn trong khoảng phân tích.",
+        commonSignals:
+          "PnL đã chốt dương, tỷ lệ thắng cao hơn, profit factor vượt ngưỡng, có đủ vị thế đã đóng.",
+        caution: "Điều này không đảm bảo hiệu suất trong tương lai.",
+      },
+      washTradingSuspect: {
+        meaning:
+          "Ví có các mẫu hành vi có thể liên quan đến hành vi thị trường đáng ngờ.",
+        commonSignals:
+          "Điểm nghi vấn cao, đối tác lặp lại, tín hiệu dòng tiền vòng tròn hoặc qua lại.",
+        caution: "Đây không phải bằng chứng wash trading hay hành vi đáng ngờ.",
+      },
+    },
+    riskFactorExplanations: {
+      highFrequencyActivity: {
+        meaning:
+          "Hoạt động tập trung thành các cụm giao dịch dày hoặc nhanh bất thường.",
+        whyItMatters:
+          "Cụm giao dịch dày có thể cho thấy giao dịch tự động hoặc cường độ cao.",
+      },
+      shortHoldingPeriod: {
+        meaning: "Nhiều vị thế dường như được mở và đóng nhanh.",
+        whyItMatters:
+          "Nắm giữ ngắn có thể cho thấy hành vi đầu cơ hoặc giao dịch nhanh.",
+      },
+      negativePnl: {
+        meaning:
+          "Các vị thế đã đóng trong khoảng phân tích tạo ra PnL đã chốt âm.",
+        whyItMatters:
+          "PnL đã chốt âm nghĩa là các vị thế đã đóng bị giảm giá trị trong khoảng phân tích này.",
+      },
+      lowWinRate: {
+        meaning:
+          "Ví có đủ vị thế đã đóng để ước tính tỷ lệ thắng, và tỷ lệ đó thấp.",
+        whyItMatters:
+          "Tỷ lệ thắng thấp chỉ có ý nghĩa khi có đủ vị thế đã đóng.",
+      },
+      highTokenDiversity: {
+        meaning:
+          "Ví đã giao dịch nhiều token khác nhau trong khoảng phân tích.",
+        whyItMatters:
+          "Giao dịch nhiều token khác nhau có thể cho thấy hành vi đầu cơ rộng.",
+      },
+      highPortfolioConcentration: {
+        meaning:
+          "Phần lớn giá trị danh mục có vẻ tập trung vào một hoặc vài tài sản.",
+        whyItMatters:
+          "Tập trung có thể làm tăng mức phơi nhiễm với một tài sản hoặc chủ đề.",
+      },
+      washTradingSuspected: {
+        meaning:
+          "Ví có các mẫu hành vi có thể liên quan đến hành vi thị trường đáng ngờ.",
+        whyItMatters:
+          "Đây có thể là tín hiệu ưu tiên xem xét, nhưng không phải bằng chứng wash trading.",
+      },
+      missingData: {
+        meaning:
+          "Một phần dữ liệu không thể được phân tích hoặc định giá đầy đủ.",
+        whyItMatters:
+          "Điều này ảnh hưởng đến độ tin cậy, không phải bản thân hành vi ví.",
+      },
+      fallbackMeaning:
+        "Yếu tố rủi ro này được tạo từ hành vi đã phân tích của ví.",
+      fallbackWhy:
+        "Nó đóng góp vào tổng Điểm rủi ro dựa trên quy tắc đã tạo ra yếu tố này.",
+    },
+    dataCompleteness: {
+      summary:
+        "Độ đầy đủ dữ liệu là {{completeness}}. Điều này nghĩa là {{usability}} dữ liệu đã phân tích có thể sử dụng.",
+      most: "phần lớn",
+      some: "một phần",
+      unsupported:
+        "{{unsupported}} giao dịch chưa hỗ trợ trên {{txTotal}} giao dịch đã phân tích.",
+      missingPrices: "{{count}} giao dịch bị thiếu dữ liệu giá.",
+      none: "Không phát hiện thiếu giá hoặc giao dịch chưa hỗ trợ trong khoảng phân tích này.",
+    },
+    riskLevelExplanation: {
+      unknown:
+        "Mức rủi ro là UNKNOWN vì có ít hơn 10 giao dịch được phân tích.",
+      known:
+        "Mức rủi ro được gán từ tổng Điểm rủi ro. Điểm rủi ro hiện tại là {{score}} / 100: LOW 0-19, MEDIUM 20-44, HIGH 45-74, CRITICAL 75-100.",
+    },
+  },
   // Wallet Page
   walletPage: {
     addressNotFound: "Không tìm thấy địa chỉ",
@@ -214,8 +914,8 @@ export const translation = defineTranslation({
     balanceHistory: "Lịch sử số dư",
     tokenBalanceHistory: "Lịch sử số dư Token",
     profitLoss: "Lãi & Lỗ",
-    transfer: "Chuyển khoản",
-    swap: "Hoán đổi",
+    transfer: "Giao dịch chuyển",
+    swap: "Giao dịch swap",
     inflow: "Tiền vào",
     outflow: "Tiền ra",
     counterparties: "Đối tác",
@@ -225,6 +925,7 @@ export const translation = defineTranslation({
     seller: "Người gửi",
     sender: "Người gửi",
     receiver: "Người nhận",
+    currentWallet: "Ví hiện tại",
     type: "Loại",
     token: "Token",
     amount: "Số lượng",
@@ -235,6 +936,7 @@ export const translation = defineTranslation({
     holding: "Đang nắm giữ",
     value: "Giá trị",
     change24h: "Thay đổi (24h)",
+    hideLowValue: "Ẩn giá trị thấp",
     // Token Details Demo
     tokensLastTraded: "Những token giao dịch gần nhất",
     tokensLastTradedDescription: "Token có hoạt động giao dịch gần đây",
@@ -263,13 +965,24 @@ export const translation = defineTranslation({
     filter90d: "90 ngày",
     exchange: "Sàn giao dịch",
     pair: "Cặp giao dịch",
-    tokenSold: "Token đã bán",
-    tokenBought: "Token đã mua",
+    tokenSold: "Bán",
+    tokenBought: "Mua",
     totalValueUSD: "Tổng giá trị (USD)",
     feeInLamports: "Phí (lamport)",
     identity: "Định danh",
     uniqueTokensTraded: "Token duy nhất đã giao dịch",
     tokenList: "Danh sách token",
+    trade: "{{count}} Giao dịch",
+    instructions: "Instructions",
+    view: "Xem",
+    hide: "Ẩn",
+    feePaid: "Đã trả",
+    feePayer: "Người trả",
+    feeReceivers: "Người nhận",
+    baseFee: "Phí cơ bản",
+    priorityFee: "Phí ưu tiên",
+    perToken: "/token",
+    account: "Tài khoản",
     totalVolume: "Tổng khối lượng",
     unknown: "Không xác định",
     unknownEntity: "Thực thể không xác định",
@@ -294,6 +1007,274 @@ export const translation = defineTranslation({
     exportChartsZip: "Xuất biểu đồ (.zip images)",
     exportingReport: "Đang xuất báo cáo...",
     exportReportPdf: "Xuất báo cáo (.pdf)",
+    aiAnalysis: "Phân tích AI",
+    aiAnalysisLoading: "AI đang phân tích ví...",
+    aiAnalysisFailed: "Không thể tải phân tích AI",
+    aiAnalysisRetry: "Thử lại phân tích AI",
+    aiNoData: "Không có dữ liệu phân tích AI",
+    aiSummary: "Tóm tắt",
+    tokenWinRate: {
+      title: "Tỷ lệ thắng token",
+      win: "token sinh lời",
+      traded: "token đã giao dịch",
+      summaryShort:
+        "{{win}} token sinh lời / {{tradedCount}} token đã giao dịch",
+      summaryBreakdown: "{{profit}} lời · {{loss}} lỗ · {{neutral}} hòa vốn",
+      avgWin: "Lãi TB",
+      avgLoss: "Lỗ TB đã chốt",
+      explanationAria: "Giải thích tỷ lệ thắng token",
+      tooltipWinRateLabel: "Tỷ lệ thắng token",
+      tooltipWinRateDescription:
+        "được tính theo PnL đã chốt trong khoảng {{period}}. Token chỉ được tính là sinh lời khi PnL đã chốt lớn hơn 0.",
+      tooltipTotalTradedTokens: "Token đã giao dịch trong kỳ",
+      tooltipRealizedProfitTokens: "Token sinh lời đã chốt",
+      tooltipRealizedLossTokens: "Token sinh lỗ đã chốt",
+      tooltipBreakEvenTokens: "Token hòa vốn / chưa có PnL đã chốt",
+      tooltipUnrealizedLossTokens: "Token đang lỗ chưa chốt",
+      tooltipTokenValue: "{{value}} token",
+      tooltipClosedAvgLoss: "Lỗ TB đã chốt",
+      tooltipClassifiedRealizedPnl: "PnL đã phân loại theo token",
+      tooltipWalletRealizedPnl: "PnL đã chốt của ví",
+      tooltipUnclassifiedRealizedPnl: "Chưa phân loại / phí / thiếu dòng",
+      tooltipAverageLabel: "Cách đọc chỉ số",
+      tooltipAverageDescription:
+        "Lãi TB và Lỗ TB đã chốt chỉ dùng {{closed}} token đã có PnL đóng trong tổng {{traded}} token đã giao dịch. PnL đã phân loại theo token là {{classifiedPnl}}. PnL đã chốt của ví là {{walletPnl}}. Phần chênh lệch {{difference}} được tách riêng để các nhóm khớp với tổng PnL của ví.",
+    },
+    aiSwapSummary: {
+      button: "Xem phân tích swap",
+      title: "AI phân tích tổng quan giao dịch swap",
+      realizedPnl: "PnL thực tế",
+      winRate: "Tỷ lệ thắng",
+      trades: "Giao dịch",
+      volume: "Khối lượng",
+      summary: "Tóm tắt",
+      riskAnalysis: "Phân tích rủi ro",
+      cachedResult: "Kết quả từ bộ nhớ đệm",
+      signInRequired: "Đăng nhập để sử dụng AI tóm tắt giao dịch swap.",
+      allTokens: "Tất cả token",
+      entry: "Vào",
+      exit: "Ra",
+      hold: "Giữ",
+      maxLoss: "Lỗ nhất",
+      bought: "Mua",
+      sold: "Bán",
+      buyVolume: "KL Mua",
+      sellVolume: "KL Bán",
+      retry: "Thử lại",
+      sortedBest: "Sắp xếp: PnL cao nhất",
+      sortedWorst: "Sắp xếp: PnL thấp nhất",
+      pagePrev: "← Trước",
+      pageNext: "Sau →",
+      analyze: "Phân tích AI",
+      tokenAnalysis: "Phân tích Token",
+      riskNotes: "Ghi chú rủi ro",
+      tradeTimeline: "Dòng thời gian giao dịch",
+      cumulativePnl: "PnL lũy kế",
+      pnlDistribution: "Phân phối PnL",
+      extremeProfit: ">500%",
+      highProfit: ">100%",
+      profit: ">0%",
+      lowLoss: ">-50%",
+      highLoss: "≤-50%",
+    },
+    aiStatusOk: "đủ dữ liệu",
+    aiStatusInsufficientData: "thiếu dữ liệu",
+    aiDataReadiness: "Mức sẵn sàng dữ liệu",
+    aiDataAllAvailable: "Đã đủ dữ liệu",
+    aiDataWaiting: "Đang chờ dữ liệu bắt buộc",
+    aiDataSwaps: "Giao dịch swap",
+    aiDataPortfolio: "Danh mục",
+    aiDataFirstFunder: "Nguồn tài trợ đầu",
+    aiDataIdentity: "Định danh",
+    aiDataIntelligence: "Phân tích",
+    aiDepStatusAvailable: "có dữ liệu",
+    aiDepStatusNoData: "không có dữ liệu",
+    aiDepStatusFetching: "đang tải",
+    aiGenerateAnalysis: "Tạo phân tích",
+    aiGenerating: "Đang tạo...",
+    aiLastUpdated: "Cập nhật",
+    aiActivityProfile: "Hồ sơ hoạt động",
+    aiArchetype: "Kiểu hành vi",
+    aiActivityLevel: "Mức độ hoạt động",
+    aiLastActive: "Hoạt động gần nhất",
+    aiInteractionFingerprint: "Dấu vân tay tương tác",
+    aiPreferredProtocols: "Giao thức ưu tiên",
+    aiTransactionTiming: "Nhịp thời gian giao dịch",
+    aiPreferredTradingTokens: "Token giao dịch ưu tiên",
+    aiPreferredHoldingTokens: "Token nắm giữ ưu tiên",
+    aiTradingVolumeRange: "Biên độ khối lượng giao dịch",
+    aiFunder: "Nguồn tài trợ",
+    aiFunderType: "Loại nguồn tài trợ",
+    aiNotes: "Ghi chú",
+    aiWalletAge: "Tuổi ví",
+    aiAgeCategory: "Phân loại tuổi",
+    aiFirstSeen: "Lần xuất hiện đầu",
+    aiConsistencyAssessment: "Đánh giá độ nhất quán",
+    aiSignals: "Tín hiệu",
+    from: "Từ ví",
+    to: "Đến ví",
+    swapDetails: "Chi tiết hoán đổi",
+    transferDetails: "Chi tiết chuyển",
+    sold: "Đã bán",
+    bought: "Đã mua",
+    swappedFor: "Đã hoán đổi {{$fromAmount}} sang {{$toAmount}}",
+    totalValue: "Tổng giá trị",
+    transactionFee: "Phí giao dịch",
+    sent: "Đã gửi",
+    received: "Đã nhận",
+    transfersInTransaction: "Các lệnh chuyển trong giao dịch này ({{count}})",
+    internal: "Nội bộ",
+    list: "Danh sách",
+    timeline: "Dòng thời gian",
+    mixed: "Hỗn hợp",
+  },
+  dictionary: {
+    tradingStrategy: {
+      scalper: {
+        name: "Lướt sóng nhanh",
+        description:
+          "Thực hiện nhiều giao dịch ngắn hạn và ưu tiên vòng quay vị thế nhanh.",
+        benefit: {
+          fastTurnover: "Xoay vòng vốn nhanh sang cơ hội mới.",
+          adaptsVolatility:
+            "Có thể phản ứng nhanh khi độ biến động thị trường tăng mạnh.",
+        },
+        risk: {
+          feeHeavy: "Giao dịch dày có thể làm chi phí phí giao dịch tăng cao.",
+          emotionalPressure:
+            "Cần theo dõi liên tục và ra quyết định rất nhanh.",
+        },
+        rule: {
+          minTrades30d: "Số lệnh tối thiểu trong 30 ngày",
+          maxAvgHoldHours: "Số giờ nắm giữ trung bình tối đa",
+        },
+      },
+      swing: {
+        name: "Swing Trader",
+        description:
+          "Nắm bắt nhịp tăng/giảm theo chu kỳ vài ngày đến vài tuần và tránh nhiễu giao dịch quá mức.",
+        benefit: {
+          balancedPace:
+            "Cân bằng giữa bắt cơ hội và giảm áp lực khớp lệnh liên tục.",
+          trendCapture: "Phù hợp khi xu hướng trung hạn rõ ràng.",
+        },
+        risk: {
+          gapExposure:
+            "Khoảng trống giá qua đêm/cuối tuần có thể vượt điểm thoát dự kiến.",
+          lateReversal:
+            "Thoát lệnh chậm khi đảo chiều có thể bào mòn lợi nhuận.",
+        },
+        rule: {
+          minTrades30d: "Số lệnh tối thiểu trong 30 ngày",
+          minAvgHoldHours: "Số giờ nắm giữ trung bình tối thiểu",
+        },
+      },
+      momentum: {
+        name: "Bám theo động lượng",
+        description:
+          "Theo các điểm bứt phá mạnh với gia tốc về giá và khối lượng.",
+        benefit: {
+          strongTrendUpside:
+            "Có thể mở rộng lợi nhuận khi xu hướng mạnh tiếp diễn.",
+          quickInvalidation: "Mức vô hiệu rõ ràng giúp thoát lệnh có kỷ luật.",
+        },
+        risk: {
+          falseBreakout: "Phá vỡ giả có thể gây chuỗi thua lỗ nhanh.",
+          whipsawLosses:
+            "Thị trường nhiễu có thể gây lỗ liên tục do vào/ra nhanh.",
+        },
+        rule: {
+          minBuySellRatio: "Tỷ lệ áp lực mua/bán tối thiểu",
+          minTrades30d: "Số lệnh tối thiểu trong 30 ngày",
+        },
+      },
+      meanRevert: {
+        name: "Hồi quy trung bình",
+        description:
+          "Tìm các nhịp đi quá xa và giao dịch theo hướng quay về vùng giá trung bình.",
+        benefit: {
+          definedEntries: "Điều kiện vào lệnh thường đo được và lặp lại được.",
+          riskControlled: "Quản trị quy mô vị thế giúp kiểm soát rủi ro.",
+        },
+        risk: {
+          trendAgainst: "Xu hướng mạnh có thể kéo dài lâu hơn kỳ vọng ban đầu.",
+          patienceRequired: "Tín hiệu có thể thưa, cần kiên nhẫn và kỷ luật.",
+        },
+        rule: {
+          maxTrades30d: "Số lệnh tối đa trong 30 ngày",
+          minWinRate: "Tỷ lệ thắng tối thiểu",
+        },
+      },
+      conviction: {
+        name: "Nắm giữ niềm tin cao",
+        description:
+          "Xây vị thế tập trung và nắm giữ xuyên qua các chu kỳ thị trường rộng hơn.",
+        benefit: {
+          longCycleUpside: "Có thể hưởng lợi kép trong xu hướng dài hạn.",
+          lowNoise: "Ít giao dịch hơn giúp giảm nhiễu ngắn hạn của thị trường.",
+        },
+        risk: {
+          concentration: "Mức tập trung cao có thể khuếch đại drawdown.",
+          slowExit: "Vị thế lớn có thể khó thoát nhanh khi cần thiết.",
+        },
+        rule: {
+          maxTokensHeld: "Số token phân biệt nắm giữ tối đa",
+          minAvgHoldDays: "Số ngày nắm giữ trung bình tối thiểu",
+        },
+      },
+    },
+    walletCategory: {
+      smartMoney: {
+        name: "Ví thông minh",
+        description:
+          "Ví có lịch sử lợi nhuận tốt và quyết định ổn định theo mức rủi ro.",
+      },
+      activeTrader: {
+        name: "Ví giao dịch tích cực",
+        description: "Ví có tần suất giao dịch cao, xoay vòng vị thế nhanh.",
+      },
+      whale: {
+        name: "Ví cá voi",
+        description:
+          "Ví có quy mô vốn lớn, có thể ảnh hưởng thị trường thanh khoản mỏng.",
+      },
+      newWallet: {
+        name: "Ví mới",
+        description: "Ví mới hoạt động, dữ liệu hành vi lịch sử còn hạn chế.",
+      },
+      riskWallet: {
+        name: "Ví rủi ro",
+        description:
+          "Ví có tín hiệu biến động cao, bất lợi, hoặc hành vi thiếu ổn định.",
+      },
+    },
+    firstFunderCategory: {
+      cex: {
+        name: "Sàn tập trung",
+        description:
+          "Nguồn tiền nạp đầu tiên có dấu hiệu đến từ ví nóng của sàn tập trung.",
+      },
+      dexRouter: {
+        name: "Router DEX",
+        description:
+          "Nguồn tiền nạp đầu tiên xuất phát từ hạ tầng router swap phi tập trung.",
+      },
+      bridge: {
+        name: "Cầu nối",
+        description:
+          "Nguồn tiền nạp đầu tiên cho thấy hành vi chuyển tài sản liên chuỗi.",
+      },
+      otc: {
+        name: "Bàn OTC",
+        description:
+          "Nguồn tiền nạp đầu tiên có khả năng từ ví thanh toán OTC.",
+      },
+      unknown: {
+        name: "Nguồn chưa xác định",
+        description:
+          "Không đủ tín hiệu on-chain để phân loại nguồn tài trợ một cách tin cậy.",
+      },
+    },
   },
   // Market Page
   marketPage: {
@@ -313,7 +1294,7 @@ export const translation = defineTranslation({
       "Danh sách các nhà giao dịch có lợi nhuận thấp nhất (lỗ nhiều nhất) trong khoảng thời gian này.",
     recentTrades: "Giao dịch gần đây",
     recentTradesDesc:
-      "Các giao dịch hoán đổi token gần nhất trên các sàn giao dịch.",
+      "Các giao dịch Giao dịch swap token gần nhất trên các sàn giao dịch.",
     marketHeatmapDescription: "Bản đồ nhiệt các token theo vốn hóa",
     marketCap: "Vốn hóa",
     volume24h: "Khối lượng 24h",
@@ -348,38 +1329,123 @@ export const translation = defineTranslation({
       "Theo dõi các token yêu thích của bạn và giám sát hiệu suất của chúng ở một nơi duy nhất.",
     tradesTitle: "Hoạt động thị trường & Điểm nổi bật",
     tradesSubtitle:
-      "Khám phá các nhà giao dịch có lợi nhuận cao nhất và các giao dịch hoán đổi mới nhất trên các sàn giao dịch phi tập trung.",
+      "Khám phá các nhà giao dịch có lợi nhuận cao nhất và các giao dịch Giao dịch swap mới nhất trên các sàn giao dịch phi tập trung.",
     filterAll: "Tất cả",
     filterGreaterThan: ">{{val}}",
     selectToken: "Chọn một token để xem chi tiết",
     allTimeHigh: "Cao nhất mọi thời đại (ATH)",
     allTimeLow: "Thấp nhất mọi thời đại (ATL)",
+    top: "Top",
+    newPairs: "Cặp mới",
+    liquidity: "Thanh khoản",
+    pairAge: "Tuổi cặp",
+    pairAgeHours: "Tuổi cặp (giờ)",
+    txns: "Giao dịch",
+    txns24h: "Giao dịch (24h)",
+    trending5m: "Xu hướng 5m",
+    trending1h: "Xu hướng 1h",
+    trending6h: "Xu hướng 6h",
+    trending24h: "Xu hướng 24h",
+    trendingPools: "Pool xu hướng",
+    trendingPoolsSubtitle:
+      "Các pool đang xu hướng trên Solana theo khung thời gian 5M, 1H, 6H và 24H.",
+    topPools: "Top pool",
+    topPoolsSubtitle: "Top pool theo Khối lượng, Giao dịch hoặc Vốn hóa.",
+    topGainerPools: "Pool tăng mạnh nhất",
+    topGainerPoolsSubtitle: "Các pool tăng giá mạnh nhất trong 24 giờ qua.",
+    newPairsSubtitle: "Các pool mới được tạo gần đây.",
+    profitableTradersPoolsSubtitle:
+      "Các ví có lợi nhuận giao dịch (PnL) cao nhất và thấp nhất.",
+    marketPools: "Pool thị trường",
+    marketPoolsSubtitle: "Theo dõi pool qua các bộ lọc thị trường chính.",
+    rankBy: "Xếp hạng theo",
+    order: "Thứ tự",
+    descending: "Giảm dần",
+    ascending: "Tăng dần",
+    filters: "Bộ lọc",
+    customizeFilters: "Tùy chỉnh bộ lọc",
+    min: "Tối thiểu",
+    max: "Tối đa",
+    reset: "Đặt lại",
+    apply: "Áp dụng",
+    mcap: "Vốn hóa",
+    age: "Tuổi",
+    loadingMarketData: "Đang tải dữ liệu thị trường...",
+    noPoolsFound: "Không tìm thấy pool.",
+    justNow: "vừa xong",
+    loading: "Đang tải...",
+    noDataAvailable: "Không có dữ liệu",
+    copyAddress: "Sao chép địa chỉ",
     na: "N/A",
   },
   // Wallet Comparison Page
   walletComparison: {
     selectedWallets: "Ví đã chọn",
+    activeWallet: "Ví đang xem",
     addWalletAddress: "Thêm địa chỉ ví",
     enterWalletAddress: "Nhập địa chỉ ví...",
     noWalletsSelected: "Chưa chọn ví nào. Thêm địa chỉ ví để so sánh.",
     general: "Tổng quan",
     holdings: "Tài sản nắm giữ",
     profitRiskManagement: "Quản lý lợi nhuận & rủi ro",
+    exportPdf: "Xuất PDF",
+    generatingPdf: "Đang tạo PDF...",
+    pdfReportTitle: "Báo cáo so sánh ví",
+    walletAnalysisReport: "Báo cáo phân tích ví",
+    pdfGeneratedDate: "Ngày tạo",
+    pdfWalletsCompared: "Số ví so sánh",
+    pdfWalletAddresses: "Địa chỉ ví",
+    viewDeepDive: "Xem chi tiết",
+    aiChat: "AI Chat",
+  },
+  // Wallet Report PDF Template
+  wallet_report: {
+    wallet_audit_report: "Báo Cáo Kiểm Toán Ví",
+    export_date: "Ngày xuất:",
+    first_funder: "Nguồn nạp đầu tiên:",
+    wallet_age: "Tuổi ví:",
+    wallet_address: "ĐỊA CHỈ VÍ",
+    executive_summary: "Tóm Tắt Tổng Quan",
+    total_asset_value: "Tổng Giá Trị Tài Sản",
+    total_pnl: "Tổng Lời/Lỗ",
+    total_trading_volume: "Tổng Khối Lượng Giao Dịch",
+    overview_details: "Chi Tiết Tổng Quan",
+    metrics_period: "Kỳ Báo Cáo",
+    period_24h: "24H",
+    transaction_count: "Số Lượng Giao Dịch",
+    buy_tx_count: "Số Giao Dịch Mua",
+    sell_tx_count: "Số Giao Dịch Bán",
+    buy_volume: "Khối Lượng Mua",
+    sell_volume: "Khối Lượng Bán",
+    realized_pnl: "Lời/Lỗ Đã Chốt",
+    unrealized_pnl: "Lời/Lỗ Tạm Tính",
+    tokens_holding: "Token Đang Giữ",
+    tokens_traded: "Token Đã Giao Dịch",
+    overview: "Tổng Quan",
+    balance_trend: "Xu Hướng Số Dư",
+    profit_loss: "Lời & Lỗ",
+    daily_pnl: "Lời/Lỗ Hằng Ngày",
+    cumulative_pnl: "Lời/Lỗ Lũy Kế",
+    holdings: "Tài Sản Nắm Giữ",
+    activity_risk: "Hoạt Động / Rủi Ro",
+    asset_change_24h: "Biến Động Tài Sản (24H)",
+    no_tags: "Không có nhãn",
   },
   // Navigation
   nav: {
     market: "Thị trường",
     alerts: "Cảnh báo",
     dashboard: "Bảng điều khiển",
+    notification: "Thông báo",
     profile: "Hồ sơ",
     settings: "Cài đặt",
     theme: "Giao diện",
     language: "Ngôn ngữ",
     account: "Tài khoản",
     search: "Tìm kiếm",
-    switchToLightTheme: "Chuyển sang Chủ đề Sáng",
-    switchToDarkTheme: "Chuyển sang Chủ đề Tối",
-    searchPlaceholder: "Tìm token hoặc địa chỉ ví…",
+    switchToLightTheme: "Chuyển sang tông màu sáng",
+    switchToDarkTheme: "Chuyển sang tông màu tối",
+    searchPlaceholder: "Tìm kiếm",
     searchHint: "Nhập để tìm token, pool hoặc ví",
     searchLoading: "Đang tìm kiếm…",
     searchNoResults: "Không tìm thấy kết quả nào",
@@ -396,8 +1462,116 @@ export const translation = defineTranslation({
     searchPrice: "Giá",
     searchLast7Days: "7 ngày qua",
   },
+  alertsPage: {
+    title: "Cảnh báo ví",
+    subtitle:
+      "Theo dõi ví Solana và đẩy toàn bộ danh sách lên webhook Helius (enhanced) sau mỗi thay đổi.",
+    addressLabel: "Địa chỉ ví",
+    addressPlaceholder: "Địa chỉ Solana (Base58)",
+    labelOptional: "Nhãn (tuỳ chọn)",
+    labelPlaceholder: "vd. Theo dõi cá voi",
+    followButton: "Theo dõi ví",
+    loadingList: "Đang tải danh sách ví…",
+    emptyList: "Chưa theo dõi ví nào.",
+    tableAddress: "Địa chỉ",
+    tableLabel: "Nhãn",
+    tableAdded: "Thêm lúc",
+    successSaved: "Đã lưu ví.",
+    successHelius: "Đã đồng bộ webhook Helius với danh sách địa chỉ mới.",
+    partialHelius:
+      "Đã lưu ví nhưng đồng bộ Helius thất bại. Kiểm tra HELIUS_API_KEY và WEBHOOK_PUBLIC_URL trên server rồi thử lại.",
+    errorInvalidAddress: "Địa chỉ Solana không hợp lệ.",
+    errorDuplicate: "Địa chỉ này đã được theo dõi.",
+    errorGeneric: "Có lỗi xảy ra. Vui lòng thử lại.",
+    heliusOk: "Helius: OK",
+    heliusFailed: "Helius: thất bại",
+    tableActions: "Hành động",
+    deleteSuccess: "Đã xoá ví và đồng bộ Helius.",
+    deletePartial:
+      "Đã xoá ví nhưng đồng bộ Helius thất bại. Địa chỉ cũ có thể vẫn nhận sự kiện cho đến lần đồng bộ kế tiếp.",
+    deleteFailed: "Không thể xoá ví. Vui lòng thử lại.",
+    deleteNotFound: "Ví đã được xoá trước đó.",
+    signInRequired: "Vui lòng đăng nhập để quản lý danh sách ví theo dõi.",
+    discordSectionTitle: "Thông báo Discord",
+    discordLabel: "Discord Webhook URL",
+    discordPlaceholder: "https://discord.com/api/webhooks/...",
+    discordSaveButton: "Lưu",
+    discordSaved: "Đã lưu Discord Webhook URL.",
+    discordSaveError: "Lưu URL Discord thất bại. Vui lòng thử lại.",
+    emailSectionTitle: "Thông báo qua email",
+    emailToggleLabel: "Gửi cảnh báo qua email",
+    emailRegisteredHint: "Email đã đăng ký: {{email}}",
+    emailNoRegistered: "Chưa có email đăng ký. Nhập email thay thế bên dưới.",
+    emailOverrideLabel: "Email thay thế (tuỳ chọn)",
+    emailOverridePlaceholder: "Để trống để dùng email đã đăng ký",
+    emailSaveButton: "Lưu",
+    emailSaved: "Đã lưu cài đặt email.",
+    emailSaveError: "Lưu cài đặt email thất bại. Vui lòng thử lại.",
+    emailNoDestination:
+      "Bật thông báo email với email đã đăng ký hoặc email thay thế.",
+    ruleModalTitle: "Tạo cảnh báo mới",
+    ruleModalLabel: "Cảnh báo",
+    ruleStep1Indicator: "(1) Sự kiện giao dịch — (2) Gửi thông báo",
+    ruleStep2Indicator: "(1) Sự kiện giao dịch — (2) Gửi thông báo",
+    ruleTraderLabel: "Trader (địa chỉ ví)",
+    ruleActionLabel: "Loại hành động",
+    ruleActionSwap: "Swap",
+    ruleActionTransfer: "Chuyển",
+    ruleActionAll: "Mọi hoạt động",
+    ruleVolFrom: "Khối lượng từ",
+    ruleVolTo: "Khối lượng đến",
+    ruleVolUnit: "Đơn vị khối lượng",
+    ruleUnitUsd: "USD (server quy đổi SOL qua WEBHOOK_SOL_PRICE_USD)",
+    ruleUnitSol: "SOL (on-chain)",
+    ruleTriggerLegend: "Kích hoạt",
+    ruleTriggerOnce: "Một lần",
+    ruleTriggerAlways: "Luôn luôn",
+    ruleExpiry: "Hết hạn",
+    ruleUseDefault: "Dùng cài đặt Discord & email mặc định",
+    ruleToggleOff: "Tắt",
+    ruleToggleOn: "Bật",
+    ruleDiscordOverride: "Discord webhook (ghi đè)",
+    ruleEmailOverride: "Email (ghi đè)",
+    ruleNameLabel: "Tên cảnh báo",
+    rulePreviewLabel: "Tin nhắn (tự động)",
+    ruleBack: "Quay lại",
+    ruleCancel: "Huỷ",
+    ruleNext: "Tiếp",
+    ruleSave: "Lưu",
+    ruleCreateOpen: "Tạo cảnh báo mới",
+    ruleTableTitle: "Quy tắc cảnh báo nâng cao",
+    ruleTableSubtitle:
+      "Helius gửi luồng sự kiện một lần; máy chủ áp điều kiện của bạn trước khi Discord hoặc email.",
+    ruleTableEmpty: "Chưa có quy tắc cảnh báo đang hiệu lực.",
+    ruleTableName: "Tên",
+    ruleTableWallet: "Ví",
+    ruleTableAction: "Hành động",
+    ruleTableVolume: "Khối lượng",
+    ruleTableTrigger: "Kích hoạt",
+    ruleTableExpires: "Hết hạn",
+    ruleDeleteSuccess: "Đã xoá quy tắc và đồng bộ Helius.",
+    rulePreviewBody: "Ví {{wallet}} trên Solana có {{verb}} với {{range}}.",
+    rulePreviewVerbSwap: "một giao dịch swap",
+    rulePreviewVerbTransfer: "một giao dịch chuyển",
+    rulePreviewVerbAny: "hoạt động",
+    rulePreviewRangeBoth:
+      "giá trị lớn hơn {{min}}{{sym}} và nhỏ hơn {{max}}{{sym}}",
+    rulePreviewRangeMin: "giá trị lớn hơn {{min}}{{sym}}",
+    rulePreviewWalletPlaceholder: "(địa chỉ ví)",
+    ruleErrorWallet: "Nhập địa chỉ ví Solana hợp lệ.",
+    ruleErrorMinVol: "Khối lượng tối thiểu phải là số dương.",
+    ruleErrorMaxVol:
+      "Khối lượng tối đa để trống hoặc lớn hơn hoặc bằng tối thiểu.",
+    ruleErrorExpiry: "Chọn thời điểm hết hạn trong tương lai.",
+    ruleErrorDelivery:
+      "Cung cấp URL Discord webhook và/hoặc email ghi đè hợp lệ.",
+    ruleSaveError: "Không thể lưu quy tắc cảnh báo.",
+    ruleLoading: "Đang tải quy tắc cảnh báo…",
+    ruleCreateSuccess:
+      "Đã lưu quy tắc cảnh báo và cập nhật danh sách địa chỉ tới Helius.",
+  },
   lang: {
-    vi: "Vietnam - Tiếng Việt (Vietnamese)",
+    vi: "Tiếng Việt - Tiếng Việt (Vietnamese)",
     en: "Mỹ - English (English)",
   },
   // Validation errors
@@ -524,7 +1698,7 @@ export const translation = defineTranslation({
     transactionType: "Loại giao dịch",
     allTypes: "Tất cả loại",
     trades: "Giao dịch",
-    transfers: "Chuyển khoản",
+    transfers: "Giao dịch chuyển",
     deposits: "Nạp tiền",
     withdrawals: "Rút tiền",
     wallets: "Ví",
@@ -538,12 +1712,14 @@ export const translation = defineTranslation({
     volumeBenchmark: "Đánh giá khối lượng",
     transactionDistribution: "Phân bổ giao dịch",
     holdingDurations: "Thời gian nắm giữ",
+    aggregatedAssetDistribution: "Phân bổ tài sản tổng hợp",
 
     // Chart specific
     balanceChart: {
-      title: "Xu hướng số dư",
+      title: "Lịch sử số dư",
       totalBalance: "Tổng số dư",
       change: "Thay đổi",
+      change24h: "Thay đổi 24 giờ",
       date: "Ngày",
       balance: "Số dư",
       selectTokenLabel: "Chọn token",
@@ -557,13 +1733,39 @@ export const translation = defineTranslation({
       noDataDelta: "--",
       removeTag: "Xóa nhãn",
       atLeastOneTagRequired: "Cần chọn ít nhất một nhãn",
+      searchTokenPlaceholder: "Tìm kiếm token",
+      symbolOrNamePlaceholder: "Ký hiệu hoặc tên",
+      noMatchingTokens: "Không tìm thấy token",
+      errors: {
+        balanceUnavailable: "Lịch sử số dư tạm thời không khả dụng. Vui lòng thử lại.",
+      },
+    },
+    walletSingleBalanceChart: {
+      title: "Xu hướng số dư theo ví",
+      notAvailable: "K.D",
+      window: {
+        label: "Khoảng",
+        days7: "7 Ngày",
+        days30: "30 Ngày",
+      },
+      walletTable: {
+        title: "Danh sách ví",
+        wallet: "Ví",
+        netWorth: "Giá trị ròng",
+        balanceChange24h: "Thay đổi 24h",
+      },
+      ariaLabels: {
+        windowToggle: "Chuyển khoảng thời gian biểu đồ số dư",
+      },
     },
     assetDistributionChart: {
       title: "Phân bổ tài sản",
+      total: "Tổng",
       totalValue: "Tổng giá trị",
       asset: "Tài sản",
       value: "Giá trị",
       percentage: "Phần trăm",
+      assetPrice: "Giá hiện tại",
       noWalletsMessage: "Vui lòng chọn ít nhất một ví để xem phân bổ tài sản.",
       others: "Khác",
       filters: {
@@ -582,12 +1784,60 @@ export const translation = defineTranslation({
         topNFilter: "Bộ lọc Top N",
         minPctFilter: "Bộ lọc Min %",
       },
+      filtersMenu: "Bộ lọc",
       legend: {
         clickToHide: "Nhấp để ẩn {name}",
         clickToShow: "Nhấp để hiển thị {name}",
       },
       export: {
         name: "Phân bổ tài sản",
+      },
+    },
+    aggregatedAssetDistributionChart: {
+      title: "Phân bổ tài sản tổng hợp",
+      totalValue: "Tổng giá trị",
+      value: "Giá trị",
+      percentage: "Phần trăm",
+      noWalletsMessage:
+        "Vui lòng chọn ít nhất một ví để xem phân bổ tài sản tổng hợp.",
+      others: "Khác",
+      mode: {
+        label: "Chế độ",
+        single: "Một ví",
+        aggregate: "Nhiều ví tổng hợp",
+      },
+      walletTable: {
+        title: "Danh sách ví",
+        wallet: "Ví",
+        walletName: "Tên ví",
+        walletAddress: "Địa chỉ ví",
+        netWorth: "Giá trị ròng",
+        uniqueTokenCount: "Số token",
+        isSelected: "Đã chọn",
+        selectedCount: "{count} ví đã chọn",
+        selection: "Lựa chọn",
+        unknownWallet: "Ví không xác định",
+      },
+      filters: {
+        top: "Top",
+        topN: "Top N",
+        minValue: "Min %",
+        all: "Tất cả",
+        allPercent: "Tất cả %",
+        top5: "Top 5",
+        top10: "Top 10",
+        minPct1: ">1%",
+        minPct5: ">5%",
+        minPct10: ">10%",
+      },
+      ariaLabels: {
+        modeToggle: "Chuyển chế độ phân bổ tài sản",
+        topNFilter: "Bộ lọc Top N",
+        minPctFilter: "Bộ lọc Min %",
+        walletSelector: "Chọn ví {wallet}",
+      },
+      export: {
+        name: "Phân bổ tài sản tổng hợp",
       },
     },
     pnlChart: {
@@ -604,7 +1854,7 @@ export const translation = defineTranslation({
       daily: "Hàng ngày",
       weekly: "Hàng tuần",
       monthly: "Hàng tháng",
-      both: "Cả hai",
+      both: "Lãi/Lỗ hàng ngày + tích lũy",
     },
     exchangeComparisonChart: {
       title: "So sánh hoạt động sàn giao dịch",
@@ -686,7 +1936,7 @@ export const translation = defineTranslation({
       title: "Tỷ lệ Stablecoin",
     },
     rollingAnnualReturn: {
-      title: "Lợi nhuận hàng năm lăn",
+      title: "Lợi nhuận trượt hàng năm",
       rollingReturn: "Lợi nhuận lăn",
       cumulativeReturn: "Lợi nhuận tích lũy",
       month: "Tháng",
@@ -706,6 +1956,17 @@ export const translation = defineTranslation({
     },
     drawdownChart: {
       title: "Phân tích sụt giảm",
+      visibility: {
+        active: "Đang hiển thị",
+        hidden: "Đã ẩn",
+      },
+      stats: {
+        maxDrawdown: "Sụt giảm tối đa",
+        daysSinceMaxDD: "Số ngày kể từ sụt giảm tối đa",
+        currentDrawdown: "Sụt giảm hiện tại",
+        maxDDDate: "Ngày sụt giảm tối đa",
+        days: "ngày",
+      },
     },
     averageRollingAnnualReturn: {
       title: "Lợi nhuận hàng năm lăn trung bình",
@@ -717,11 +1978,140 @@ export const translation = defineTranslation({
       days: "Ngày",
     },
   },
+  // Chat / AI Wallet Assistant
+  chat: {
+    headerTitle: "YOCA AI",
+    inputPlaceholder: "Hỏi về ví này...",
+    loadingLabel: "Đang phân tích...",
+    errorMessage: "Xin lỗi, đã xảy ra lỗi: {{error}}. Vui lòng thử lại.",
+    promptMenuTitle: "Chọn một câu hỏi",
+    quickQuestionsTitle: "Câu hỏi nhanh",
+    sendButtonTitle: "Gửi",
+    promptMenuBtn: "Menu câu hỏi",
+    fabTitle: "Mở AI Chat",
+    launcherLabel: "Hỏi YOCA AI",
+    seriesLabel: "Series thứ {{count}}",
+    tldr: "TLDR",
+    warnings: "Cảnh báo",
+    evidence: "Bằng chứng",
+    confidence: "Độ tin cậy",
+    confidenceLabel: "Độ tin cậy {{level}}",
+    confidenceHigh: "Cao",
+    confidenceMedium: "Trung bình",
+    confidenceLow: "Thấp",
+    showAll: "Hiển thị tất cả ({{count}})",
+    showLess: "Thu gọn",
+    aiDisclaimer:
+      "Phản hồi AI có thể chưa đầy đủ hoặc chưa chính xác và không phải lời khuyên tài chính. Hãy xác minh thông tin quan trọng trước khi hành động.",
+    limitReachedTitle: "Đã hết hạn mức AI chat trong ngày",
+    limitReachedText:
+      "Bạn đã dùng hết số tin nhắn ví AI chat trong ngày theo gói hiện tại. Các lựa chọn nâng cấp có thể tăng dung lượng AI cho nghiên cứu chuyên sâu hơn.",
+    limitReachedReset: "Hạn mức hằng ngày đặt lại lúc 00:00 UTC.",
+    upgradeOptions: "Xem lựa chọn nâng cấp",
+    goToPricing: "Đến bảng giá",
+    notNow: "Để sau",
+    inputCounter: "{{current}}/{{max}}",
+    inputOverLimit: "Câu hỏi phải dưới {{max}} ký tự.",
+    clickToAsk: "Nhấp để hỏi: {{query}}",
+    tableNullValue: "-",
+    newChat: "Hội thoại mới",
+    signInRequired: "Yêu cầu đăng nhập",
+    signInRequiredDesc:
+      "Vui lòng đăng nhập để sử dụng trợ lý AI Chat. Lịch sử trò chuyện sẽ được lưu lại.",
+    sessions: "Phiên trò chuyện",
+    noSessions: "Chưa có phiên nào",
+    deleteSession: "Xóa phiên",
+    copy: "Sao chép",
+    copied: "Đã sao chép!",
+    tellMeMore: "Tìm hiểu thêm về",
+    copySection: "Sao chép mục",
+    sources: "Nguồn",
+    greetingTitle: "👋Chào bạn, tôi là YOCA AI",
+    greetingDescription: "Bạn muốn biết gì về ví này?",
+    greetingDescriptionComparison: "Bạn muốn biết gì về các ví này?",
+    greetingPrompt: "Thử hỏi tôi:",
+    fabLabel: "AI",
+    serverError: "Lỗi máy chủ: {{status}}. Vui lòng thử lại.",
+    leftSidebar: "Thanh bên trái",
+    context: "Ngữ cảnh",
+    contextTypeWallet: "Ví",
+    contextTypeComparison: "So sánh",
+    contextChanged: "Ngữ cảnh thay đổi",
+    rightSidebar: "Thanh bên phải",
+    fullscreenMode: "Toàn màn hình",
+    minimize: "Thu nhỏ",
+    close: "Đóng",
+    redo: "Thử lại",
+    revert: "Hoàn tác",
+    revertedBanner: "Đã hoàn tác về tin nhắn trước",
+    undo: "Khôi phục",
+    sourcePill: "nguồn",
+    openSource: "Mở",
+    section: {
+      market_snapshot: "Tổng quan thị trường",
+      key_findings: "Phát hiện chính",
+      pnl_summary: "Tổng lãi/lỗ",
+      trading_activity: "Hoạt động giao dịch",
+      top_holdings: "Danh mục nắm giữ",
+      risk_factors: "Yếu tố rủi ro",
+      what_to_watch: "Cần theo dõi",
+      conclusion: "Kết luận",
+      custom: "Phân tích",
+    },
+    prompt: {
+      overview: { label: "Tổng quan", query: "Cung cấp tổng quan về danh mục đầu tư của ví này bao gồm tổng số dư, biến động 24h và khối lượng giao dịch." },
+      pnl: { label: "Tổng lãi/lỗ", query: "Lãi và lỗ của ví này là gì? Hiển thị phân tích theo token với PnL đã thực hiện và tỷ lệ thắng." },
+      trades: { label: "Giao dịch gần đây", query: "Hiển thị các giao dịch swap gần đây của ví này với chi tiết token và giá trị USD." },
+      tokens: { label: "Token hàng đầu", query: "Các token của ví này đang nắm giữ theo giá trị USD là gì?" },
+      balance: { label: "Xu hướng số dư", query: "Hiển thị biểu đồ lịch sử số dư của ví này trong 30 ngày qua." },
+      portfolioChange: { label: "Biến động danh mục", query: "So sánh danh mục hiện tại của ví này với ví trong 7 ngày trước. Có thay đổi đáng kể nào không?" },
+      tokenPrices: { label: "Giá token", query: "Kiểm tra giá hiện tại và dữ liệu thị trường của 5 token quan trọng nhất trong ví này." },
+      compareOverview: { label: "So sánh danh mục", query: "So sánh danh mục đầu tư của các ví — ví nào có tổng giá trị và biến động 24h tốt nhất?" },
+      comparePnl: { label: "So sánh lãi/lỗ", query: "So sánh PnL giữa các ví — ví nào có lợi nhuận thực tế và tỷ lệ thắng cao nhất?" },
+      commonHoldings: { label: "Token chung", query: "Token nào được nắm giữ phổ biến ở các ví này và có sự trùng lặp như thế nào?" },
+      topPerformer: { label: "Hiệu suất tốt nhất", query: "Ví nào có ROI và hiệu suất giao dịch tốt nhất trên tất cả các chỉ số?" },
+      riskComparison: { label: "So sánh rủi ro", query: "So sánh mức độ đa dạng hóa và hồ sơ rủi ro giữa các ví này." },
+      tabMine: "Prompt của tôi",
+      tabExplore: "Khám phá",
+      exploreSubtabCommunity: "Cộng đồng",
+      exploreSubtabPopular: "Phổ biến",
+      exploreSubtabNew: "Mới",
+      exploreSubtabSystem: "Hệ thống",
+      searchPlaceholder: "Tìm kiếm prompt...",
+      createBtn: "+ Tạo mới",
+      loading: "Đang tải prompt...",
+      loadingMore: "Đang tải thêm...",
+      emptyMine: "Chưa có prompt nào. Hãy tạo một cái!",
+      empty: "Không tìm thấy prompt nào.",
+      uses: "{{count}} lượt dùng",
+      publicBadge: "Công khai",
+      scopedBadge: "Theo ví",
+      fork: "Sao chép",
+      edit: "Sửa",
+      del: "Xóa",
+      view: "Xem",
+      dialogViewTitle: "Xem Prompt",
+      loadMore: "Hiện tất cả {{count}}",
+      dialogCreateTitle: "Tạo Prompt",
+      dialogEditTitle: "Sửa Prompt",
+      dialogForkTitle: "Sao chép Prompt",
+      dialogLabel: "Tiêu đề",
+      dialogQuery: "Câu hỏi",
+      dialogPublic: "Công khai (hiển thị với mọi người dùng)",
+      dialogCreate: "Tạo",
+      dialogSave: "Lưu",
+      dialogSaving: "Đang lưu...",
+      dialogRequired: "Tiêu đề và câu hỏi là bắt buộc.",
+      dialogSaveError: "Không thể lưu prompt. Vui lòng thử lại.",
+      forkedFrom: 'Sao chép từ "{{label}}"',
+    },
+  },
   ERROR: {
     EMAIL_ALREADY_EXISTED: "Email đã tồn tại",
     EMAIL_OR_PASSWORD_WAS_INCORRECT: "Email hoặc mật khẩu không đúng",
     FAILED_TO_FETCH_REQUESTED_DATA: "Không thể lấy dữ liệu yêu cầu",
     GOOGLE_VERIFICATION_FAILED: "Xác thực Google thất bại. Vui lòng thử lại.",
+    WALLET_ALREADY_LINKED: "Ví này đã được liên kết với một người dùng khác.",
     WALLET_VERIFICATION_FAILED: "Xác thực ví thất bại. Vui lòng thử lại.",
     WALLET_NONCE_FAILED: "Không thể khởi tạo xác thực ví. Vui lòng thử lại.",
     INTERNAL_SERVER_ERR: "Có sự cố với máy chủ. Vui lòng thử lại sau.",
@@ -730,10 +2120,31 @@ export const translation = defineTranslation({
     VALIDATION_ERR:
       "Dữ liệu gửi lên không hợp lệ. Vui lòng kiểm tra và thử lại.",
     INVALID_TOKEN_PAYLOAD: "Dữ liệu token không hợp lệ.",
+    PASSWORD_AUTH_NOT_FOUND:
+      "Tài khoản chưa cấu hình phương thức đăng nhập bằng mật khẩu.",
+    PASSWORD_ALREADY_SET:
+      "Tài khoản đã có phương thức đăng nhập bằng mật khẩu.",
+    CURRENT_PASSWORD_INVALID: "Mật khẩu hiện tại không đúng.",
+    PASSWORD_RESET_CODE_INVALID: "Reset code is invalid.",
+    PASSWORD_RESET_CODE_EXPIRED:
+      "Reset code has expired. Please request a new code.",
+    PASSWORD_RESET_ATTEMPTS_EXCEEDED:
+      "Too many reset attempts. Please request a new code.",
+    EMAIL_ALREADY_IN_USE: "Email này đang được sử dụng bởi tài khoản khác.",
+    ACCOUNT_DELETE_CONFIRM_MISMATCH:
+      "Nội dung xác nhận xóa tài khoản không khớp.",
+    ACCOUNT_DELETE_FORBIDDEN:
+      "Yêu cầu xóa tài khoản chưa được xác thực hợp lệ.",
     HOURLY_CHART_HOURLY_EXCEEDED_90_DAYS:
       "Dữ liệu biểu đồ hàng giờ không thể vượt quá 90 ngày. Vui lòng chọn khoảng thời gian ngắn hơn.",
     DAILY_CHART_DAILY_EXCEEDED_365_DAYS:
       "Dữ liệu biểu đồ hàng ngày không thể vượt quá 365 ngày. Vui lòng chọn khoảng thời gian ngắn hơn.",
+    NOT_FOUND: "Không tìm thấy",
+    UNAUTHORIZED: "Không được ủy quyền",
+    RATE_LIMIT_EXCEEDED: "Quá nhiều yêu cầu. Vui lòng thử lại sau.",
+    AI_DAILY_LIMIT_EXCEEDED:
+      "Bạn đã dùng hết lượt AI hôm nay. Hãy nâng cấp gói để có thêm lượt.",
+    BAD_GATEWAY: "Cổng trung gian không hợp lệ. Vui lòng thử lại sau.",
   },
   token: {
     overviewSectionTitle: "Tổng quan",
@@ -741,8 +2152,10 @@ export const translation = defineTranslation({
     overviewChart: {
       price: "Giá",
       marketCap: "Vốn hóa thị trường",
+      candle: "Nến",
       noData: "Không có dữ liệu biểu đồ",
       noCoingeckoId: "token có thể không có ID CoinGecko",
+      noCandlePool: "Không tìm thấy pool giao dịch cho token này.",
     },
     range24h: "Khoảng giá 24h",
     marketCap: "Vốn hóa thị trường",
@@ -769,6 +2182,14 @@ export const translation = defineTranslation({
       searchX: "Tìm trên X",
       discord: "Tham gia Discord",
       coingecko: "Xem trên CoinGecko",
+      aiWashTradingDetection: "Phát hiện giao dịch ảo",
+      aiWashTradingDetectionShort: "Phát hiện giao dịch ảo",
+      washGateTitle: "Cần gói Plus",
+      washGateDescription:
+        "AI Wash Trading Detection chỉ dành cho gói Plus và Pro. Hãy nâng cấp trước khi mở phân tích này.",
+      washGateSignIn: "Đăng nhập",
+      washGateClose: "Để sau",
+      washGateUpgrade: "Nâng cấp",
     },
     chart: {
       loadingPool: "Đang tải biểu đồ...",
@@ -779,8 +2200,42 @@ export const translation = defineTranslation({
     tabs: {
       overview: "Tổng quan",
       markets: "Thị trường",
+      news: "Tin tức",
       trending: "Thịnh hành",
       historicalData: "Dữ liệu lịch sử",
+    },
+    news: {
+      title: "Tin tức & Cập nhật",
+      cached: "Đã lưu tạm",
+      cachedTooltip: "Lấy từ lần truy vấn gần đây",
+      fetch: "Lấy tin tức",
+      fetchTooltip: "Lấy tin tức cho token này",
+      refresh: "Làm mới tin tức",
+      refreshTooltip: "Làm mới tin tức mới nhất cho token này",
+      loading: "Đang tải tin tức...",
+      error: "Hiện không thể tải tin tức.",
+      errorPrefix: "Lỗi khi tải tin tức:",
+      empty: "Không tìm thấy tin tức gần đây cho {{name}}.",
+      tryRefresh: "Thử làm mới",
+      showing: "Đang hiển thị",
+      of: "trên",
+      loadMore: "Tải thêm",
+      previousPage: "Trang tin trước",
+      nextPage: "Trang tin tiếp theo",
+      expand: "Mở rộng",
+      collapse: "Thu gọn",
+      snippetsTitle: "Đoạn trích thêm",
+      contextTitle: "Ngữ cảnh token",
+      priceChartTitle: "Giá",
+      marketCapChartTitle: "Vốn hóa thị trường",
+      noSnippets: "Không có đoạn trích thêm.",
+      noContext: "Không có dữ liệu ngữ cảnh token trong cache.",
+      loadingContext: "Đang tải ngữ cảnh...",
+      tokenContextLabel: "Ngữ cảnh cho {{symbol}}",
+      posted: "Bài viết được đăng",
+      sourceAlt: "Biểu tượng nguồn tin",
+      sourceFallback: "Tin tức",
+      openArticle: "Mở bài viết",
     },
     marketsTable: {
       rank: "Thứ hạng",
@@ -832,6 +2287,7 @@ export const translation = defineTranslation({
       tx: "TX",
       buy: "MUA",
       sell: "BÁN",
+      all: "MỚI NHẤT",
       loading: "Đang tải...",
       empty: "Không có giao dịch gần đây",
       noAddress: "Không có địa chỉ token",
@@ -860,10 +2316,10 @@ export const translation = defineTranslation({
       distributionDescription:
         "Phân bổ quyền sở hữu token {{symbol}} theo nhóm người nắm giữ hàng đầu.",
       top10: "Top 10",
-      rank1120: "11–20",
-      rank2140: "21–40",
-      rank1130: "11–30",
-      rank3150: "31–50",
+      rank1120: "11-20",
+      rank2140: "21-40",
+      rank1130: "11-30",
+      rank3150: "31-50",
       others: "Khác",
       volumeQ:
         "Khối lượng giao dịch hàng ngày của {{name}} ({{symbol}}) là bao nhiêu?",
@@ -901,5 +2357,357 @@ export const translation = defineTranslation({
       "Tổng số đồng tiền hoặc token tồn tại cho một loại tiền điện tử, bao gồm cả những đồng chưa lưu hành. Nó được sử dụng để tính toán vốn hóa thị trường tối đa tiềm năng của một loại tiền điện tử.",
     maxSupply:
       "Số lượng tối đa đồng tiền hoặc token sẽ tồn tại cho một loại tiền điện tử. Nó được sử dụng để tính toán giá trị định giá đầy đủ của một loại tiền điện tử.",
+  },
+  profileSettings: {
+    identity: "Thông tin cá nhân",
+    displayName: "Tên hiển thị",
+    email: "Email",
+    saveIdentity: "Lưu thông tin",
+    savingIdentity: "Đang lưu thông tin",
+    identityUpdateFailed: "Cập nhật thông tin thất bại",
+    identityUpdated: "Thông tin đã được cập nhật",
+    loginMethods: "Phương thức đăng nhập",
+    loginMethodPasswordEmail: "Mật khẩu / Email",
+    loginMethodPasswordNotSet: "Chưa được đặt",
+    loginMethodGoogleOAuth: "Google Mail OAuth",
+    loginMethodSolanaWallet: "Ví Solana",
+    statusConnected: "Đã kết nối",
+    statusNotConnected: "Chưa kết nối",
+    changePassword: "Đổi mật khẩu",
+    addPassword: "Thêm mật khẩu",
+    currentPassword: "Mật khẩu hiện tại",
+    newPassword: "Mật khẩu mới",
+    confirmPassword: "Xác nhận mật khẩu",
+    passwordMatchError: "Mật khẩu mới và xác nhận không khớp",
+    passwordValidationEmailRequired:
+      "Email là bắt buộc để thiết lập đăng nhập mật khẩu",
+    passwordValidationEmailInvalid: "Vui lòng nhập địa chỉ email hợp lệ",
+    passwordValidationCurrentPasswordRequired:
+      "Mật khẩu hiện tại là bắt buộc để đổi mật khẩu",
+    passwordValidationNewPasswordRequired: "Mật khẩu mới là bắt buộc",
+    passwordValidationMinLength: "Mật khẩu phải có ít nhất 8 ký tự",
+    passwordValidationUppercase:
+      "Mật khẩu phải chứa ít nhất một chữ cái viết hoa",
+    passwordValidationLowercase:
+      "Mật khẩu phải chứa ít nhất một chữ cái viết thường",
+    passwordValidationNumber: "Mật khẩu phải chứa ít nhất một chữ số",
+    passwordUpdateFailed: "Cập nhật mật khẩu thất bại",
+    passwordChanged: "Mật khẩu đã được thay đổi",
+    passwordAdded: "Mật khẩu đã được thêm",
+    updatingPassword: "Đang cập nhật mật khẩu",
+    savePassword: "Lưu mật khẩu",
+    dangerZone: "Vùng nguy hiểm",
+    dangerZoneDescription:
+      "Xóa tài khoản sẽ loại bỏ hồ sơ và tất cả dữ liệu xác thực/ví được liên kết.",
+    deleteAccount: "Xóa tài khoản",
+    deleteAccountWarning:
+      "Hành động này không thể hoàn tác. Vui lòng nhập DELETE MY ACCOUNT để xác nhận.",
+    deleteAccountConfirmationText: "Văn bản xác nhận",
+    deleteAccountConfirmButton: "Xác nhận xóa",
+    accountDeleteConfirmError: "Văn bản xác nhận không khớp",
+    accountDeleteFailed: "Xóa tài khoản thất bại",
+  },
+  profileTabs: {
+    activity: {
+      title: "Hoạt động",
+      unavailableTitle: "Hoạt động không có sẵn",
+      unavailableDescription: "Không thể tải dữ liệu hoạt động ngay bây giờ.",
+      swapsTableTitle: "Giao dịch swap",
+      transfersTableTitle: "Giao dịch chuyển",
+      tableHeaders: {
+        swaps: {
+          wallet: "Ví",
+          time: "Thời gian",
+          pair: "Cặp",
+          exchange: "Sàn giao dịch",
+          totalValue: "Giá trị tổng",
+        },
+      },
+      unknownExchange: "Không xác định",
+    },
+    alerts: {
+      title: "Cảnh báo",
+      unavailableTitle: "Cảnh báo không có sẵn",
+      unavailableDescription:
+        "Không có quy tắc cảnh báo hoặc thông báo nào có sẵn ngay bây giờ.",
+      tableTitle: "Danh sách cảnh báo",
+      tableHeaders: {
+        token: "Token",
+        type: "Loại",
+        condition: "Điều kiện",
+        status: "Trạng thái",
+        updated: "Cập nhật",
+        actions: "Hành động",
+      },
+      createAlertTitle: "Tạo cảnh báo",
+      editAlertTitle: "Chỉnh sửa cảnh báo {{token}}",
+      createButton: "Tạo cảnh báo",
+      editButton: "Chỉnh sửa",
+      deleteButton: "Xóa",
+    },
+    dashboard: {
+      title: "Bảng điều khiển",
+      unavailableTitle: "Bảng điều khiển không có sẵn",
+      unavailableDescription:
+        "Không có số liệu bảng điều khiển nào có sẵn cho tài khoản này.",
+      kpiStripTitle: "Dải KPI",
+      concentrationTableTitle: "Tập trung ví",
+      concentrationHeaders: {
+        wallet: "Ví",
+        value: "Giá trị",
+        share: "Chia sẻ",
+      },
+      riskPanelTitle: "Bảng rủi ro",
+      anomaliesTitle: "Các bất thường gần đây",
+    },
+    portfolio: {
+      title: "Danh mục đầu tư",
+      unavailableTitle: "Không có ví được liên kết",
+      unavailableDescription:
+        "Liên kết ít nhất một ví để xem danh mục đầu tư và biểu đồ.",
+      overviewCardTitle: "Tổng quan",
+      accountTierLabel: "Cấp tài khoản",
+      linkWalletButton: "Liên kết ví",
+      linkedWalletsLabel: "Ví được liên kết",
+      linkedWalletsList: "Danh sách ví liên kết",
+      label: "Nhãn",
+      address: "Địa chỉ",
+      totalValue: "Tổng giá trị",
+      auth: "Xác thực",
+      actions: "Hành động",
+      authWallet: "Ví xác thực",
+      authWalletLabel: "Ví xác thực",
+      linkedWalletLabel: "Ví được liên kết",
+      compare: "So sánh",
+      authWalletCannotBeUnlinked: "Không thể hủy liên kết ví xác thực",
+      unlinkWallet: "Hủy liên kết ví",
+    },
+    wallet: {
+      title: "Ví",
+      unavailableTitle: "Dữ liệu ví không có sẵn",
+      unavailableDescription: "Không thể tải dữ liệu ví ngay bây giờ.",
+      noLinkedWalletsTitle: "Không có ví được liên kết",
+      noLinkedWalletsDescription:
+        "Liên kết ít nhất một ví để xem danh mục đầu tư và biểu đồ.",
+      portfolioTableTitle: "Bảng danh mục đầu tư",
+      balanceChartTitle: "Cân bằng",
+      drawdownChartTitle: "Rút ngắn",
+      section: {
+        performance: "Hiệu suất ví",
+        activity: "Dòng tiền và hoạt động",
+        risk: "Cấu trúc rủi ro",
+      },
+    },
+    watchlist: {
+      title: "Danh sách theo dõi",
+      walletSubtab: "Theo dõi ví",
+      tokenSubtab: "Theo dõi token",
+      walletTableTitle: "Ví đang theo dõi",
+      tokenTableTitle: "Token đang theo dõi",
+      walletAddress: "Địa chỉ ví",
+      walletIdentity: "Danh tính",
+      emptyWalletTitle: "Chưa có ví trong danh sách theo dõi",
+      emptyWalletDescription:
+        "Hãy thêm ví vào danh sách theo dõi để xem tại đây.",
+      emptyTokenTitle: "Chưa có token trong danh sách theo dõi",
+      emptyTokenDescription:
+        "Hãy thêm token vào danh sách theo dõi để theo dõi biến động thị trường.",
+    },
+    unavailableState: {
+      defaultTitle: "Dữ liệu không có sẵn",
+      defaultDescription: "Không có dữ liệu hồ sơ nào có sẵn ngay bây giờ.",
+    },
+  },
+  washTrading: {
+    breadcrumb: {
+      tokens: "Token",
+      manualToken: "Token nhập thủ công",
+      page: "Phát hiện giao dịch ảo",
+    },
+    title: "AI phát hiện giao dịch ảo",
+    subtitle: "Phân tích theo mô hình GNN cho {{symbol}} · {{mint}}",
+    suspiciousBadge: "{{count}} ví đáng ngờ",
+    inputs: {
+      mintPlaceholder: "Địa chỉ token mint",
+      symbolPlaceholder: "Ký hiệu",
+      last24h: "24 giờ qua",
+      last7d: "7 ngày qua",
+      last30d: "30 ngày qua",
+      openToken: "Mở token",
+      runAnalyze: "Chạy phân tích AI ↗",
+      analyzing: "Đang phân tích...",
+    },
+    errors: {
+      missingMint:
+        "Thiếu địa chỉ token mint. Hãy mở trang từ Token Detail hoặc nhập mint để phân tích.",
+      manualMissingMint: "Vui lòng nhập địa chỉ token mint.",
+      apiFailed: "Không thể gọi AI Wash Trading API.",
+      analysisFailed: "Phân tích AI thất bại",
+    },
+    verdict: {
+      toggle: "Kết luận AI",
+      hide: "Ẩn kết luận AI",
+      show: "Hiện kết luận AI",
+      waiting: "Đang chờ phân tích",
+      defaultSummary:
+        "Nhấn Chạy phân tích AI để phân tích giao dịch vòng lặp, độ tương đồng khối lượng, nhịp giao dịch và đặc trưng graph của token này.",
+      dataSource: "Nguồn dữ liệu:",
+      highRisk: "RỦI RO CAO",
+      mediumRisk: "RỦI RO TRUNG BÌNH",
+      lowRisk: "RỦI RO THẤP",
+      clean: "AN TOÀN",
+    },
+    metrics: {
+      totalTransactions: "Tổng giao dịch",
+      uniqueWallets: "{{wallets}} ví duy nhất",
+      washVolumeEstimate: "Ước tính giá trị giao dịch ảo",
+      totalVolumePercent: "{{percent}} trên tổng volume {{volume}}",
+      suspiciousWallets: "Ví đáng ngờ",
+      circularClusters: "{{count}} cụm vòng lặp",
+      gnnConfidence: "Độ tin cậy GNN",
+      riskScore: "Điểm rủi ro: {{score}}/100",
+    },
+    graph: {
+      title: "Transaction Graph — Cụm ví theo GNN",
+      algorithmButtonAria: "Chọn thuật toán {{algorithm}} và xem giải thích",
+      algorithms: {
+        bestForLabel: "Phù hợp với",
+        gcn: {
+          title: "GCN — Mạng tích chập đồ thị",
+          description:
+            "Tổng hợp tín hiệu từ các ví lân cận và liên kết chuyển token để ước lượng ví có thuộc cụm giao dịch đáng ngờ hay không.",
+          bestFor: "đánh giá rủi ro cụm ví và các vùng giao dịch vòng lặp",
+        },
+        gat: {
+          title: "GAT — Mạng chú ý trên đồ thị",
+          description:
+            "Học trọng số chú ý cho từng ví hoặc luồng chuyển lân cận, nên các liên kết đáng ngờ mạnh sẽ ảnh hưởng đến điểm số nhiều hơn liên kết yếu.",
+          bestFor:
+            "liên kết đáng ngờ nổi bật, ví trung tâm và luồng giao dịch có tác động lớn",
+        },
+        graphsage: {
+          title: "GraphSAGE — Lấy mẫu và tổng hợp",
+          description:
+            "Lấy mẫu các ví lân cận và học biểu diễn ví có thể tái sử dụng, giúp phân tích tốt hơn khi graph token lớn hoặc thay đổi nhanh.",
+          bestFor: "graph token lớn và suy luận nhanh rủi ro ví mới",
+        },
+      },
+      highRiskWallet: "Ví rủi ro cao",
+      bridgeWallet: "Ví trung gian",
+      normalWallet: "Ví bình thường",
+      walletGraphName: "Graph giao dịch ví",
+      suspiciousFlow: "Luồng đáng ngờ",
+      suspiciousTransfer: "Luồng đáng ngờ",
+      circularClusterFlow: "Tím phát sáng: luồng thuộc cụm vòng lặp",
+      circularWallet: "Ví thuộc cụm vòng lặp",
+      flowLegendAria: "Chú thích màu luồng giao dịch",
+      yes: "Có",
+      transferFlow: "Luồng chuyển token",
+      type: "Loại",
+      gnnScore: "Điểm GNN",
+      address: "Địa chỉ",
+      from: "Từ",
+      to: "Đến",
+      totalAmount: "Tổng lượng token",
+      groupedTransfers: "Giao dịch đã gom",
+      tokenUnit: "token",
+      nodes: "{{count}} node",
+      rawEdges: "{{count}} cạnh gốc",
+      visibleFlows: "{{count}} luồng hiển thị",
+      suspiciousGroups: "{{count}} nhóm đáng ngờ",
+      edgesGrouped: "{{count}} cạnh đã gom",
+      hoverEdgeAmount: "Hover cạnh để xem lượng token",
+      footerReady:
+        "Graph force-directed lấy từ backend graphData. Kéo node, zoom, pan và hover cạnh/ví để xem chi tiết luồng giao dịch.",
+      footerWaiting:
+        "Đang chờ backend graphData. Nhấn Chạy phân tích AI để tạo graph giao dịch ví.",
+      fullscreen: "Toàn màn hình",
+      fullscreenTitle: "Mở graph toàn màn hình",
+      fullscreenWaitingTitle: "Chạy phân tích AI để có graph",
+      modalAria: "Chế độ toàn màn hình của transaction graph",
+      modalSubtitle: "{{symbol}} · {{mint}} · {{nodes}} node · {{edges}} cạnh",
+      close: "Đóng",
+      guideAria: "Điều khiển graph toàn màn hình",
+      guideDrag: "🖱 Kéo node để tách cụm ví",
+      guideZoom: "🔍 Cuộn chuột để zoom",
+      guideClose: "⌨ Esc hoặc Đóng để thoát",
+    },
+    wallets: {
+      title: "Ví đáng ngờ",
+      all: "Tất cả",
+      highRisk: "Rủi ro cao",
+      new: "Mới",
+      graphRank: "Hạng graph #{{rank}}",
+      gnn: "GNN: {{score}}",
+      empty: "Chưa có ví đáng ngờ. Hãy chạy phân tích AI cho token này.",
+      insightTitle: "Giải thích về rủi ro ví",
+      insightEmpty:
+        "Chọn một ví trong danh sách Ví đáng ngờ để xem giải thích AI chi tiết.",
+      selectedWallet: "Ví đã chọn",
+      explanation:
+        "AI đánh dấu ví này vì pattern {{pattern}} trên token {{symbol}}. Điểm GNN hiện tại là {{score}}/100.",
+      topFeature: "Đặc trưng nổi bật",
+      featureScore: "Điểm đặc trưng",
+      note: "Cách đọc: circularPattern cao thường cho thấy ví tham gia vòng giao dịch khép kín; timeRegularity cao cho thấy nhịp giao dịch giống bot; amountSimilarity cao cho thấy lượng token lặp lại bất thường; volumeSignal cao cho thấy ví chuyển lượng token lớn so với ví có volume lớn nhất trong graph.",
+    },
+    patterns: {
+      circularTrade: "Giao dịch vòng lặp",
+      hubWallet: "Ví trung tâm",
+      botLikeTiming: "Tấn suất giao dịch giống bot",
+      amountMirror: "Amount lặp lại",
+      anomalousActivity: "Hoạt động bất thường",
+    },
+    findings: {
+      title: "Phát hiện chi tiết từ AI",
+    },
+    risk: {
+      title: "Điểm rủi ro — {{target}}",
+      walletTitle: "Điểm GNN của ví — {{target}}",
+      tokenRiskScore: "Điểm rủi ro token",
+      scoreOutOf100: "{{score}}/100",
+      walletFeatureTitle: "Đặc trưng hành vi của ví đã chọn",
+      high: "Rủi ro cao",
+      medium: "Rủi ro trung bình",
+      low: "Rủi ro thấp",
+      noSignal: "Không có tín hiệu",
+      circularPattern: "Mẫu vòng lặp",
+      timeRegularity: "Độ đều thời gian",
+      amountSimilarity: "Độ giống amount",
+      selfLoopDegree: "Mức tự lặp",
+      hubness: "Độ trung tâm ví",
+      volumeSignal: "Tín hiệu volume",
+    },
+    detectionLog: {
+      title: "Nhật ký phát hiện",
+      waiting: "Đang chờ yêu cầu phân tích AI...",
+    },
+    context: {
+      title: "Ngữ cảnh token",
+      symbol: "Ký hiệu",
+      mint: "Mint",
+      timeframe: "Khung thời gian",
+      algorithm: "Thuật toán",
+      dataSource: "Nguồn dữ liệu",
+      sourceReason: "Lý do nguồn dữ liệu",
+      analyzedAt: "Thời điểm phân tích",
+    },
+  },
+  errorPages: {
+    unauthorized: {
+      error401: "Lỗi 401",
+      accessDenied: "Truy cập bị từ chối",
+      description: "Bạn cần đăng nhập trước khi truy cập trang này.",
+      protectedPath: "Đường dẫn được bảo vệ: {{$path}}",
+      login: "Đăng nhập",
+      backToHome: "Quay lại trang chủ",
+    },
+    notFound: {
+      error404: "Lỗi 404",
+      title: "Xin lỗi bạn!",
+      description:
+        "Trang bạn yêu cầu không tồn tại hoặc có thể đã được chuyển đến vị trí khác.",
+      backToHome: "Quay lại trang chủ",
+      goToMarket: "Đi đến thị trường",
+    },
   },
 });

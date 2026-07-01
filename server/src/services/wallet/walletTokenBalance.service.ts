@@ -1,293 +1,349 @@
-import { mapWithConcurrency } from "@sv/util/concurrency.js";
-import type { TokenBalanceSeriesResult, BalanceDataPoint } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import { toFiniteNumber } from "@sv/services/wallet/fetchers/walletProviderMappers.js";
-import { SOL_MINT, TOKEN_BALANCE_SNAPSHOT_CONCURRENCY, DAY_MS, DAY_SEC, TOKEN_BALANCE_SNAPSHOT_CACHE_HISTORICAL_TTL_MS, TOKEN_BALANCE_SNAPSHOT_CACHE_RECENT_TTL_MS } from "@sv/services/wallet/wallet.constants.js";
-import { normalizeMint, isSolSymbol, toIsoFromSec } from "@sv/services/wallet/walletData.core.js";
-import { getCachedWalletTokenBalanceHistory, saveWalletTokenBalanceHistoryCache } from "@sv/services/wallet/db/walletTokenBalanceHistoryCache.js";
-import { fetchBirdeyePortfolioSnapshot } from "./fetchers/walletDataFetcher.service.js";
-import { getWalletPortfolio } from "./walletPortfolio.service.js";
-import { resolveWalletTimeRangeSec } from "./walletCharts.service.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import type { WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import { zrn_WalletBalanceChartSchema } from "../_types/wallet-raw-responses.js";
+import { db } from "@sv/db/index.js";
+import {
+    walletTokenBalanceMonthHistory,
+    walletTokenBalanceWeekHistory,
+    zerionTokenList,
+} from "@sv/db/schema.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
+import dayjs from "dayjs";
+import { and, between, eq, inArray } from "drizzle-orm";
+import {
+    WALLET_BALANCE_HISTORY_STORED_TTL_MS,
+    ZRN_SOL_FUNGIBLE_ID,
+} from "@sv/config/constants.js";
+import * as zrn from "@sv/util/util-zerion.js";
+import { zrn_FungiblesResponseSchema } from "../_types/token-raw-responses.js";
+import { SOL_NATIVE_ALIAS_MINT } from "./wallet.constants.js";
 
-type CachedPortfolioSnapshot = {
-    expiresAtMs: number;
-    snapshot: Awaited<ReturnType<typeof fetchBirdeyePortfolioSnapshot>>;
-};
+type WalletTokenBalanceHistory = Record<
+  string,
+  {
+    usdValue: number;
+    timestampMs: number;
+  }[]
+> | null;
 
-const tokenBalanceSnapshotCache = new Map<string, CachedPortfolioSnapshot>();
-const TOKEN_LIVE_POINT_IN_MEMORY_TTL_MS = 60 * 1000;
+async function getZerionId(
+  tokenAddresses: string[],
+): Promise<Record<string, string>> {
+  const fungibleImplementationAddresses = tokenAddresses.filter(
+    (tokenAddress) => tokenAddress !== SOL_NATIVE_ALIAS_MINT,
+  );
+  const nativeSolId: Record<string, string> = {};
+  if (tokenAddresses.includes(SOL_NATIVE_ALIAS_MINT)) {
+    nativeSolId[SOL_NATIVE_ALIAS_MINT] = ZRN_SOL_FUNGIBLE_ID;
+  }
 
-type CachedTokenLivePoint = {
-    expiresAtMs: number;
-    dayStartMs: number;
-    tokenPoint: BalanceDataPoint;
-    usdPoint: BalanceDataPoint;
-};
+  if (fungibleImplementationAddresses.length == 0) {
+    return nativeSolId;
+  }
 
-const tokenBalanceLivePointCache = new Map<string, CachedTokenLivePoint>();
-
-export async function getWalletTokenBalanceHistory(
-    address: string,
-    tokenSelector: string,
-): Promise<TokenBalanceSeriesResult> {
-    const nowMs = Date.now();
-    const nowSec = Math.floor(nowMs / 1000);
-    const rangeSec = resolveWalletTimeRangeSec("30D", nowSec);
-    const todayDayStartMs = toUtcDayStartMs(nowMs);
-    const historicalDayStartMs = buildHistoricalDayStartMsList(rangeSec.fromSec, todayDayStartMs);
-    const historicalFromMs = historicalDayStartMs[0];
-    const historicalToMs = historicalDayStartMs[historicalDayStartMs.length - 1];
-    const selectorLower = tokenSelector.trim().toLowerCase();
-
-    try {
-        const portfolio = await getWalletPortfolio(address);
-        const resolvedItem = portfolio.find(
-            (item) =>
-                item.tokenAddress.toLowerCase() === selectorLower ||
-                item.symbol.toLowerCase() === selectorLower ||
-                (selectorLower === "sol" && item.tokenAddress === SOL_MINT),
-        );
-
-        const resolvedMint = resolvedItem
-            ? (isSolSymbol(resolvedItem.symbol) || selectorLower === "sol"
-                ? SOL_MINT
-                : normalizeMint(resolvedItem.tokenAddress))
-            : selectorLower === "sol"
-                ? SOL_MINT
-                : normalizeMint(tokenSelector);
-
-        if (!resolvedMint) {
-            throw new Error(`Unable to resolve token selector: ${tokenSelector}`);
-        }
-
-        const resolvedSymbol = resolvedItem?.symbol || tokenSelector;
-        const cachedHistory = await getCachedWalletTokenBalanceHistory(address, resolvedMint);
-        const historicalCacheCovered =
-            cachedHistory != null &&
-            cachedHistory.coveredFromMs <= historicalFromMs &&
-            cachedHistory.coveredToMs >= historicalToMs;
-
-        const historicalTokenByTs = new Map<number, BalanceDataPoint>();
-        const historicalUsdByTs = new Map<number, BalanceDataPoint>();
-
-        if (historicalCacheCovered) {
-            for (const point of cachedHistory.tokenSeries) {
-                historicalTokenByTs.set(point.timestamp, point);
-            }
-            for (const point of cachedHistory.usdSeries) {
-                historicalUsdByTs.set(point.timestamp, point);
-            }
-        }
-
-        const missingDaySec = historicalDayStartMs
-            .filter((dayStartMs) => {
-                return !historicalTokenByTs.has(dayStartMs) || !historicalUsdByTs.has(dayStartMs);
-            })
-            .map((dayStartMs) => Math.floor(dayStartMs / 1000));
-
-        if (missingDaySec.length > 0) {
-            const dailySnapshots = await mapWithConcurrency(
-                missingDaySec,
-                TOKEN_BALANCE_SNAPSHOT_CONCURRENCY,
-                async (daySec) => {
-                    try {
-                        const snapshot = await getBirdeyePortfolioSnapshotCached(address, daySec, nowSec);
-                        return { daySec, snapshot };
-                    } catch {
-                        return { daySec, snapshot: null };
-                    }
-                },
-            );
-
-            for (const entry of dailySnapshots) {
-                const timestamp = entry.daySec * 1000;
-                const [tokenPoint, usdPoint] = toSeriesPoints(entry.snapshot, resolvedMint, timestamp);
-                historicalTokenByTs.set(timestamp, tokenPoint);
-                historicalUsdByTs.set(timestamp, usdPoint);
-            }
-        }
-
-        const historicalTokenSeries = historicalDayStartMs.map((timestamp) => {
-            return historicalTokenByTs.get(timestamp) ?? toZeroPoint(timestamp);
-        });
-        const historicalUsdSeries = historicalDayStartMs.map((timestamp) => {
-            return historicalUsdByTs.get(timestamp) ?? toZeroPoint(timestamp);
-        });
-
-        await saveWalletTokenBalanceHistoryCache({
-            address,
-            tokenAddress: resolvedMint,
-            tokenSymbol: resolvedSymbol,
-            tokenSeries: historicalTokenSeries,
-            usdSeries: historicalUsdSeries,
-            coveredFromMs: historicalFromMs,
-            coveredToMs: historicalToMs,
-        });
-
-        const [liveTokenPoint, liveUsdPoint] = await getOrFetchLivePoint(
-            address,
-            resolvedMint,
-            nowMs,
-            todayDayStartMs,
-        );
-
-        return {
-            tokenSeries: [...historicalTokenSeries, liveTokenPoint],
-            usdSeries: [...historicalUsdSeries, liveUsdPoint],
-            tokenSymbol: resolvedSymbol,
-            tokenAddress: resolvedMint,
-        };
-    } catch (snapshotErr) {
-        console.warn("[getWalletTokenBalanceHistory] Snapshot path failed", {
-            address,
-            tokenSelector,
-            error: snapshotErr,
-        });
-    }
-
-    throw new Error(`Unable to retrieve balance history for token "${tokenSelector}"`);
-}
-
-
-export async function getBirdeyePortfolioSnapshotCached(
-    address: string,
-    daySec: number,
-    nowSec: number,
-): Promise<Awaited<ReturnType<typeof fetchBirdeyePortfolioSnapshot>>> {
-    const cacheKey = buildTokenSnapshotCacheKey(address, daySec);
-    const nowMs = Date.now();
-    const cached = tokenBalanceSnapshotCache.get(cacheKey);
-
-    if (cached && cached.expiresAtMs > nowMs) {
-        return cached.snapshot;
-    }
-
-    const snapshot = await fetchBirdeyePortfolioSnapshot(address, {
-        time: toIsoFromSec(daySec),
-    });
-
-    const ttlMs = getTokenSnapshotCacheTtlMs(daySec, nowSec);
-    tokenBalanceSnapshotCache.set(cacheKey, {
-        expiresAtMs: nowMs + ttlMs,
-        snapshot,
-    });
-
-    return snapshot;
-}
-
-function buildTokenSnapshotCacheKey(address: string, daySec: number): string {
-    return `${address.toLowerCase()}:${daySec}`;
-}
-
-function buildTokenLivePointCacheKey(address: string, tokenAddress: string): string {
-    return `${address.toLowerCase()}:${tokenAddress}`;
-}
-
-function getTokenSnapshotCacheTtlMs(daySec: number, nowSec: number): number {
-    const ageSec = Math.max(0, nowSec - daySec);
-    return ageSec <= DAY_SEC
-        ? TOKEN_BALANCE_SNAPSHOT_CACHE_RECENT_TTL_MS
-        : TOKEN_BALANCE_SNAPSHOT_CACHE_HISTORICAL_TTL_MS;
-}
-
-function toUtcDayStartMs(timestampMs: number): number {
-    const date = new Date(timestampMs);
-    return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-}
-
-function buildHistoricalDayStartMsList(fromSec: number, todayDayStartMs: number): number[] {
-    const fromDayStartMs = toUtcDayStartMs(fromSec * 1000);
-    const values: number[] = [];
-    for (let day = fromDayStartMs; day < todayDayStartMs; day += DAY_MS) {
-        values.push(day);
-    }
-    return values;
-}
-
-function toZeroPoint(timestamp: number): BalanceDataPoint {
-    return {
-        timestamp,
-        value: 0,
-        date: new Date(timestamp).toISOString(),
-    };
-}
-
-function toSeriesPoints(
-    snapshot: Awaited<ReturnType<typeof fetchBirdeyePortfolioSnapshot>> | null,
-    resolvedMint: string,
-    timestamp: number,
-): [BalanceDataPoint, BalanceDataPoint] {
-    if (!snapshot) {
-        const zero = toZeroPoint(timestamp);
-        return [zero, zero];
-    }
-
-    const matchedAsset = snapshot.assets.find((asset) => {
-        const assetMint = normalizeMint(asset.tokenAddress);
-        if (assetMint && assetMint === resolvedMint) {
-            return true;
-        }
-
-        return resolvedMint === SOL_MINT && isSolSymbol(asset.symbol);
-    });
-
-    if (!matchedAsset) {
-        const zero = toZeroPoint(timestamp);
-        return [zero, zero];
-    }
-
-    const balanceRaw = Number(matchedAsset.balanceRaw ?? Number.NaN);
-    const decimals = Number(matchedAsset.decimals ?? 0);
-    const tokenAmount =
-        Number.isFinite(balanceRaw) && Number.isFinite(decimals)
-            ? balanceRaw / 10 ** Math.max(0, decimals)
-            : 0;
-    const usdValue = toFiniteNumber(
-        matchedAsset.valueUsd,
-        tokenAmount * toFiniteNumber(matchedAsset.priceUsd, 0),
+  const res = await db
+    .select()
+    .from(zerionTokenList)
+    .where(
+      inArray(
+        zerionTokenList.tokenAddress,
+        fungibleImplementationAddresses,
+      ),
     );
 
-    return [
-        {
-            timestamp,
-            value: Math.max(0, tokenAmount),
-            date: new Date(timestamp).toISOString(),
-        },
-        {
-            timestamp,
-            value: Math.max(0, usdValue),
-            date: new Date(timestamp).toISOString(),
-        },
-    ];
+  if (res.length == 0) {
+    return {
+      ...(await fetchZerionId(fungibleImplementationAddresses)),
+      ...nativeSolId,
+    };
+  }
+  return {
+    ...Object.fromEntries(
+      res.map((entry) => [entry.tokenAddress, entry.zerionId]),
+    ),
+    ...nativeSolId,
+  };
 }
 
-async function getOrFetchLivePoint(
-    address: string,
-    tokenAddress: string,
-    nowMs: number,
-    todayDayStartMs: number,
-): Promise<[BalanceDataPoint, BalanceDataPoint]> {
-    const cacheKey = buildTokenLivePointCacheKey(address, tokenAddress);
-    const cached = tokenBalanceLivePointCache.get(cacheKey);
-    if (cached && cached.expiresAtMs > nowMs && cached.dayStartMs === todayDayStartMs) {
-        return [cached.tokenPoint, cached.usdPoint];
+async function fetchZerionId(
+  tokenAddresses: string[],
+): Promise<Record<string, string>> {
+  // TODO: warn about token addresses limit of 25
+  const url = zrn.getEndpoint("/fungibles/");
+  const req = new URL(url);
+
+  // Filter by chain and addresses (comma-separated)
+  req.search = new URLSearchParams({
+    "filter[chain_ids]": "solana",
+    "filter[fungible_implementations]": tokenAddresses
+      .map((addr) => `solana:${addr}`)
+      .join(","),
+  }).toString();
+
+  const resp = await fetch(req, {
+    method: "GET",
+    headers: zrn.getRequiredHeaders(),
+  });
+
+  const res = await getTrackedApiResult(zrn_FungiblesResponseSchema, resp);
+
+  if (!res) {
+    return {};
+  }
+
+  // Build a map: token address (from implementations) -> Zerion ID (uuid)
+  const idMap: Record<string, string> = {};
+  for (const item of res.data) {
+    const zerionId = item.id;
+    // Find the Solana implementation address
+    const solImpl = item.attributes.implementations.find(
+      (impl) => impl.chain_id == "solana" && impl.address != null,
+    );
+    if (solImpl?.address) {
+      idMap[solImpl.address] = zerionId;
+    }
+  }
+
+  const insertValues = Object.entries(idMap).map(([addr, id]) => ({
+    tokenAddress: addr,
+    zerionId: id,
+  }));
+
+  await db.insert(zerionTokenList).values(insertValues).onConflictDoNothing();
+
+  return idMap;
+}
+
+export async function getWalletTokenBalanceHistory(
+  address: string,
+  tokenAddresses: string[],
+  timePeriod: WalletTimePeriod = "30D",
+): Promise<WalletTokenBalanceHistory> {
+  // TODO: enforce this
+  const toZrnChartPeriod: Record<any, "week" | "month"> = {
+    "7D": "week",
+    "30D": "month",
+  };
+
+  const zrnPeriod = toZrnChartPeriod[timePeriod];
+
+  const nowUtc = dayjs().utc();
+  const end = nowUtc.valueOf();
+  const start = nowUtc.subtract(1, zrnPeriod).valueOf();
+  const thresholdDateMs = end - WALLET_BALANCE_HISTORY_STORED_TTL_MS;
+
+  const balanceTable =
+    zrnPeriod == "week"
+      ? walletTokenBalanceWeekHistory
+      : walletTokenBalanceMonthHistory;
+
+  const res = await db
+    .select()
+    .from(balanceTable)
+    .where(
+      and(
+        between(balanceTable.timestampMs, start, end),
+        eq(balanceTable.walletAddress, address),
+        inArray(balanceTable.tokenAddress, tokenAddresses),
+      ),
+    )
+    .orderBy(balanceTable.tokenAddress, balanceTable.timestampMs);
+
+  if (res.length == 0) {
+    const fetched = await fetchWalletTokenBalanceHistory(
+      address,
+      tokenAddresses,
+      zrnPeriod,
+    );
+    if (!fetched) {
+      return null;
+    }
+    const normalizedGrouped = normalizeByDay(fetched);
+    return alignEndTimestamps(normalizedGrouped);
+  }
+
+  const grouped = {} as NonNullable<WalletTokenBalanceHistory>;
+  const latestUpdateByToken = new Map<string, number | null>();
+
+  for (const value of res) {
+    if (!grouped[value.tokenAddress]) {
+      grouped[value.tokenAddress] = [];
     }
 
-    let snapshot: Awaited<ReturnType<typeof fetchBirdeyePortfolioSnapshot>> | null = null;
-    try {
-        snapshot = await fetchBirdeyePortfolioSnapshot(address, {
-            time: new Date(nowMs).toISOString(),
-        });
-    } catch {
-        snapshot = null;
-    }
-
-    const [tokenPoint, usdPoint] = toSeriesPoints(snapshot, tokenAddress, nowMs);
-    tokenBalanceLivePointCache.set(cacheKey, {
-        expiresAtMs: nowMs + TOKEN_LIVE_POINT_IN_MEMORY_TTL_MS,
-        dayStartMs: todayDayStartMs,
-        tokenPoint,
-        usdPoint,
+    grouped[value.tokenAddress].push({
+      timestampMs: value.timestampMs,
+      usdValue: value.usdValue,
     });
 
-    return [tokenPoint, usdPoint];
+    const currentUpdatedAtMs = latestUpdateByToken.get(value.tokenAddress);
+    const nextUpdatedAtMs = value.updatedAtMs;
+
+    if (
+      currentUpdatedAtMs == null ||
+      (nextUpdatedAtMs != null && nextUpdatedAtMs > currentUpdatedAtMs)
+    ) {
+      latestUpdateByToken.set(value.tokenAddress, nextUpdatedAtMs);
+    }
+  }
+
+  const missingTokens = tokenAddresses.filter((addr) => {
+    const latestUpdatedAtMs = latestUpdateByToken.get(addr);
+    return latestUpdatedAtMs == null || latestUpdatedAtMs < thresholdDateMs;
+  });
+
+  if (missingTokens.length > 0) {
+    const fetched = await fetchWalletTokenBalanceHistory(
+      address,
+      missingTokens,
+      zrnPeriod,
+    );
+    const merged = { ...grouped, ...fetched };
+    const normalizedGrouped = normalizeByDay(merged);
+    return alignEndTimestamps(normalizedGrouped);
+  }
+
+  const normalizedGrouped = normalizeByDay(grouped);
+  return alignEndTimestamps(normalizedGrouped);
+}
+
+export async function fetchWalletTokenBalanceHistory(
+  address: string,
+  tokenAddresses: string[] = [],
+  timePeriod: "week" | "month",
+): Promise<WalletTokenBalanceHistory> {
+  const idLookup = await getZerionId(tokenAddresses);
+
+  if (Object.keys(idLookup).length == 0) {
+    return null;
+  }
+
+  const zerionIdMap = tokenAddresses
+    .map((addr) => ({ addr, id: idLookup[addr] }))
+    .filter((item) => item.id);
+
+  const resArray = await Promise.all(
+    zerionIdMap.map(async ({ addr, id }) => {
+      // TODO: warn about token addresses limit of 25
+      const url = zrn.getEndpoint(`/wallets/${address}/charts/${timePeriod}`);
+      const req = new URL(url);
+      req.search = new URLSearchParams({
+        currency: "usd",
+        "filter[positions]": "only_simple",
+        "filter[chain_ids]": "solana",
+        "filter[fungible_ids]": id,
+      }).toString();
+
+      // Use the shared limiter
+      const resp = await rlFetch(req, {
+        rlLimiter: zrn.limiter,
+        method: "GET",
+        headers: zrn.getRequiredHeaders(),
+        rlRetries: 3,
+        rlRetryDelayMs: 500,
+        rlTimeoutMs: 30000,
+      });
+
+      const res = await getTrackedApiResult(zrn_WalletBalanceChartSchema, resp);
+      if (!res) {
+        return res;
+      }
+
+      return { ...res, addr };
+    }),
+  );
+
+  const insertValues = resArray
+    .filter((entry) => !!entry)
+    .flatMap((entry) =>
+      entry.data.attributes.points.map((point) => ({
+        walletAddress: address,
+        tokenAddress: entry.addr,
+        // s -> ms
+        timestampMs: point[0] * 1000,
+        usdValue: point[1],
+      })),
+    );
+
+  const balanceTable =
+    timePeriod == "week"
+      ? walletTokenBalanceWeekHistory
+      : walletTokenBalanceMonthHistory;
+
+  await db.insert(balanceTable).values(insertValues).onConflictDoNothing();
+
+  const grouped = insertValues.reduce((acc, value) => {
+    if (!acc[value.tokenAddress]) {
+      acc[value.tokenAddress] = [];
+    }
+    acc[value.tokenAddress].push({
+      timestampMs: value.timestampMs,
+      usdValue: value.usdValue,
+    });
+    return acc;
+  }, {} as NonNullable<WalletTokenBalanceHistory>);
+
+  return grouped;
+}
+
+// Group data points by UTC day, keeping only the latest point per day.
+function normalizeByDay(
+  grouped: NonNullable<WalletTokenBalanceHistory>,
+): NonNullable<WalletTokenBalanceHistory> {
+  const normalized: NonNullable<WalletTokenBalanceHistory> = {};
+
+  for (const [tokenAddress, points] of Object.entries(grouped)) {
+    const groupedByDay = new Map<
+      number,
+      { usdValue: number; timestampMs: number }
+    >();
+
+    for (const point of points) {
+      const dayStartMs = dayjs.utc(point.timestampMs).startOf("day").valueOf();
+      const existing = groupedByDay.get(dayStartMs);
+
+      if (!existing || point.timestampMs > existing.timestampMs) {
+        groupedByDay.set(dayStartMs, point);
+      }
+    }
+
+    normalized[tokenAddress] = Array.from(groupedByDay.values()).sort(
+      (a, b) => a.timestampMs - b.timestampMs,
+    );
+  }
+
+  return normalized;
+}
+
+// Align all token series to the same oldest common timestamp.
+// Truncates newer data points so all tokens have data from the same time window.
+function alignEndTimestamps(
+  grouped: NonNullable<WalletTokenBalanceHistory>,
+): WalletTokenBalanceHistory {
+  // Get all timestamp sets per token
+  const tokenTimestamps = Object.values(grouped).map(
+    (points) => new Set(points.map((p) => p.timestampMs)),
+  );
+
+  if (tokenTimestamps.length == 0) return grouped;
+
+  // Find the largest timestamp that exists in every token
+  let commonMax: number | null = null;
+  const firstSet = tokenTimestamps[0];
+  for (const ts of firstSet) {
+    if (tokenTimestamps.every((set) => set.has(ts))) {
+      if (commonMax == null || ts > commonMax) commonMax = ts;
+    }
+  }
+
+  if (commonMax == null) {
+    // No common timestamp – you may want to return empty or throw
+    return null;
+  }
+
+  // Keep only points up to that common max (including it)
+  const aligned: NonNullable<WalletTokenBalanceHistory> = {};
+  for (const [tokenAddress, points] of Object.entries(grouped)) {
+    aligned[tokenAddress] = points.filter((p) => p.timestampMs <= commonMax);
+  }
+  return aligned;
 }

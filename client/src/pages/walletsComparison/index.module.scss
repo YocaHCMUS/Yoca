@@ -1,0 +1,423 @@
+@use "@carbon/react/scss/spacing" as *;
+@use "@carbon/react/scss/theme" as *;
+@use "../../styles/variables" as *;
+
+:global(.cds--content:has(.pageLayout)) {
+  overflow: hidden !important;
+}
+
+.pageLayout {
+  --chat-panel-top-offset: calc(3.5rem + 16px);
+  --chat-panel-right-offset: 96px;
+  --chat-panel-left-offset: 16px;
+  --chat-panel-bottom-offset: 16px;
+  --chat-launcher-offset: 56px;
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: calc(100vh - 3.5rem);
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+
+  &.rightSidebarExpanded {
+    --chat-panel-right-offset: 356px;
+    --chat-launcher-offset: 316px;
+  }
+}
+
+.leftSidebar {
+  width: 480px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border-right: 1px solid $border-subtle-03;
+  background: $background;
+}
+
+.walletSection {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: $spacing-02;
+}
+
+.sidebarContainer {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-04;
+  padding: $spacing-02 $spacing-06;
+}
+
+// ===== Accordion sections (left sidebar, left-dock mode) =====
+.accordionSection {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+
+  &[data-open="false"] {
+    flex-shrink: 0;
+  }
+}
+
+.accordionSectionChat {
+  flex: 1;
+
+  &[data-open="false"] {
+    flex: none;
+    flex-shrink: 0;
+  }
+}
+
+.accordionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-03;
+  width: 100%;
+  padding: $spacing-03 $spacing-06;
+  border: none;
+  border-bottom: 1px solid $border-subtle-03;
+  background: $layer-01;
+  color: $text-primary;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: $layer-hover-01;
+  }
+}
+
+.accordionHeaderTitle {
+  display: flex;
+  align-items: center;
+  gap: $spacing-02;
+  min-width: 0;
+}
+
+.accordionChevron {
+  color: $icon-secondary;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+
+  &[data-open="false"] {
+    transform: rotate(-90deg);
+  }
+}
+
+.accordionBody {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.accordionBodyChat {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+// ===== Chat Modal Launcher =====
+.chatLauncher {
+  position: fixed;
+  right: var(--chat-launcher-offset);
+  bottom: 24px;
+  z-index: 70;
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-03;
+  min-height: 40px;
+  max-width: min(320px, calc(100% - 88px));
+  padding: 0 $spacing-04;
+  border: 1px solid $border-subtle-03;
+  border-radius: 8px;
+  background: $background;
+  color: $text-primary;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    transform 0.15s;
+
+  &:hover {
+    background: $layer-hover-01;
+    border-color: var(--cds-border-strong-01);
+    transform: translateY(-1px);
+  }
+
+  kbd {
+    flex-shrink: 0;
+    padding: 2px 6px;
+    border: 1px solid $border-subtle-03;
+    border-radius: 4px;
+    color: $text-secondary;
+    background: $layer-01;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.6875rem;
+    font-weight: 500;
+  }
+}
+
+// ===== Chat Modal Overlay =====
+.chatOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+}
+
+.chatBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: transparent;
+  pointer-events: none;
+}
+
+.chatPanel {
+  position: fixed;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: $background;
+  border: 1px solid $border-subtle-03;
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.38);
+  pointer-events: auto;
+  animation: chatPanelReveal 0.22s ease-out;
+}
+
+.chatOverlay[data-position="right"] .chatPanel {
+  top: var(--chat-panel-top-offset);
+  right: var(--chat-panel-right-offset);
+  bottom: var(--chat-panel-bottom-offset);
+  width: min(460px, calc(100% - var(--chat-panel-right-offset) - 32px));
+}
+
+.chatOverlay[data-position="left"] .chatPanel {
+  top: var(--chat-panel-top-offset);
+  bottom: 0;
+  left: 0;
+  width: min(480px, calc(100% - 48px));
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.chatOverlay[data-position="fullscreen"] .chatPanel {
+  top: var(--chat-panel-top-offset);
+  right: 24px;
+  bottom: 24px;
+  left: 24px;
+  width: calc(100% - 48px);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+@keyframes chatPanelReveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .chatLauncher {
+    right: 52px;
+    bottom: 16px;
+  }
+
+  .chatOverlay[data-position="right"] .chatPanel,
+  .chatOverlay[data-position="left"] .chatPanel,
+  .chatOverlay[data-position="fullscreen"] .chatPanel {
+    top: 12px;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    border-radius: 8px;
+  }
+}
+
+.mainContent {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.mainContentContainer {
+  flex: 1;
+  border: 1px solid $border-subtle;
+  background: $layer-01;
+}
+
+.exportCaptureContainer {
+  background: $layer-01;
+  width: 100%;
+  min-height: 1px;
+}
+
+.exportCaptureContainerExporting {
+  background: #ffffff;
+  padding: $spacing-06;
+}
+
+.exportReportHeader {
+  background: $layer-01;
+  border: 1px solid $border-subtle;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(13, 18, 28, 0.06);
+  margin-bottom: $spacing-06;
+  padding: $spacing-05 $spacing-06;
+}
+
+:global(#pdf-report-header) {
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.exportReportHeaderTopRow {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  gap: $spacing-05;
+}
+
+.exportReportKicker {
+  color: $text-secondary;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin: 0 0 $spacing-02;
+  text-transform: uppercase;
+}
+
+.exportReportTitle {
+  color: $text-primary;
+  font-size: 1.375rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.exportReportStampBlock {
+  background: $layer-accent-01;
+  border: 1px solid $border-subtle;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-01;
+  min-width: 160px;
+  padding: $spacing-03 $spacing-04;
+}
+
+.exportReportStampLabel {
+  color: $text-secondary;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.exportReportStampValue {
+  color: $text-primary;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.exportReportMeta {
+  color: $text-secondary;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.875rem;
+  gap: $spacing-05;
+  margin-top: $spacing-03;
+}
+
+.exportReportMetaDivider {
+  color: $text-disabled;
+}
+
+.sidebarTitle {
+  margin: 0;
+  color: $text-primary;
+}
+
+.sidebarHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $spacing-03;
+}
+
+.walletInput {
+  margin-bottom: $spacing-md;
+}
+
+.walletList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-03;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.buttonTag {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emptyState {
+  font-size: 0.875rem;
+  color: $text-secondary;
+}
+
+.walletTag {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 1;
+}
+
+.walletTagContainer {
+  display: flex;
+  align-items: center;
+  gap: $spacing-02;
+  width: 100%;
+}
+
+.deepDiveButton {
+  flex-shrink: 0;
+  border-radius: 4px;
+
+  &:hover {
+    background-color: $layer-hover-01;
+    color: $link-primary;
+  }
+}

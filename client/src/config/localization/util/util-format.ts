@@ -49,6 +49,35 @@ export function defineTextFormat() {
         }
       }
     },
+    txHash(
+      hash: string | null | undefined,
+      opts: AddressFormattingOptions = {},
+    ): string {
+      if (!hash) return nullDisplay;
+
+      const maxLength = opts.maxLength ?? 16;
+      const position = opts.position ?? "middle";
+
+      if (hash.length <= maxLength) {
+        return hash;
+      }
+
+      const ellipsis = ELLIPSIS;
+
+      switch (position) {
+        case "start": {
+          return `${ellipsis}${hash.slice(-maxLength)}`;
+        }
+        case "end": {
+          return `${hash.slice(0, maxLength)}${ellipsis}`;
+        }
+        case "middle":
+        default: {
+          const sideLength = Math.floor(maxLength / 2);
+          return `${hash.slice(0, sideLength)}${ellipsis}${hash.slice(-sideLength)}`;
+        }
+      }
+    },
   };
 }
 
@@ -63,20 +92,47 @@ function toSubscript(num: number): string {
 }
 
 function formatSmallCompact(value: number): string {
-  const str = value.toFixed(20);
-  const match = str.match(/^0\.0+/);
+  if (value == 0) {
+    return "0";
+  }
 
+  const str = value.toFixed(16);
+
+  const match = str.match(/^0\.0+/);
   if (!match) return value.toString();
 
   const zeroCount = match[0].length - 2;
-  const significant = str.slice(match[0].length, match[0].length + 3);
+
+  const remaining = str.slice(match[0].length);
+  const significant = remaining.replace(/0+$/, "").slice(0, 4);
 
   return `0.0${toSubscript(zeroCount)}${significant}`;
 }
 
-function replaceNumbers(formatted: string, replacement: string): string {
-  const numberPattern = /-?(?:\d+(?:\.\d+)?|\.\d+)/;
-  return formatted.replace(numberPattern, replacement);
+function replaceNumberParts(
+  parts: Intl.NumberFormatPart[],
+  replacement: string,
+): string {
+  let replaced = false;
+
+  return parts
+    .map((part) => {
+      if (
+        part.type == "integer" ||
+        part.type == "fraction" ||
+        part.type == "decimal" ||
+        part.type == "group"
+      ) {
+        if (replaced) {
+          return "";
+        }
+        replaced = true;
+        return replacement;
+      }
+
+      return part.value;
+    })
+    .join("");
 }
 
 export function defineNumberFormat(
@@ -159,16 +215,20 @@ export function defineNumberFormat(
       .get(key)!
       .format(abs ? Math.abs(exchangedValue) : exchangedValue);
 
-    if (style == "unit" && unit) {
-      return `${formatted} ${unit}`;
+    // Apply small-number override first
+    if (notation == "compact" && absValue < strategy.smallCompactThreshold) {
+      const parts = formatterMap
+        .get(key)!
+        .formatToParts(abs ? Math.abs(exchangedValue) : exchangedValue);
+      const overridden = replaceNumberParts(
+        parts,
+        formatSmallCompact(absValue),
+      );
+      return style == "unit" && unit ? `${overridden} ${unit}` : overridden;
     }
 
-    // small number override for compact
-    if (notation == "compact" && absValue < strategy.smallCompactThreshold) {
-      return replaceNumbers(
-        formatted,
-        formatSmallCompact(abs ? absValue : exchangedValue),
-      );
+    if (style == "unit" && unit) {
+      return `${formatted} ${unit}`;
     }
 
     return formatted;
@@ -197,12 +257,23 @@ export function defineNumberFormat(
     return strategy.readableCompactCurrency.format(v, opts);
   }
 
+  function percentagePoint(value: NumberLike, abs: boolean = false): string {
+    if (value == null || value == undefined || value == "") return nullDisplay;
+    const numValue = typeof value == "string" ? Number(value) : value;
+    if (!Number.isFinite(numValue)) return nullDisplay;
+    const v = abs ? Math.abs(numValue) : numValue;
+    const sign = v >= 0 ? "+" : "";
+    const decimals = strategy.decimalResolution.resolvePercent(v / 100);
+    return `${sign}${v.toFixed(decimals)}%`;
+  }
+
   return {
     ...createNotation("standard"),
     compact: createNotation("compact"),
     readableCompact: {
       currency: readableCompactCurrency,
     },
+    percentagePoint,
   };
 }
 
@@ -252,6 +323,17 @@ export function defineDateTimeFormat(
     return dayjs.utc(value).local().locale(shortLocaleCode);
   }
 
+  function duration(ms: number | null): string {
+    if (ms == null) return nullDisplay;
+    const seconds = Math.floor(ms / 1000);
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  }
+
   return {
     date: (value: DayJsConfig) =>
       value ? toLocal(value).format(fmtInfo.datePattern) : nullDisplay,
@@ -279,5 +361,6 @@ export function defineDateTimeFormat(
         : nullDisplay,
     fromUnixMilliseconds: (ms: number | null) =>
       ms ? toLocal(dayjs(ms)).format(fmtInfo.dateTimePattern) : nullDisplay,
+    duration,
   };
 }

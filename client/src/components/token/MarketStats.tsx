@@ -1,6 +1,5 @@
 import client from "@/api/main";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { formatChangePercent } from "@/util/format";
 import classNames from "classnames";
 import type { InferResponseType } from "hono/client";
 import { useRef, useState } from "react";
@@ -73,9 +72,9 @@ type PoolData = InferResponseType<
 
 type MarketData =
   | InferResponseType<
-    (typeof client.api.tokens.markets)[":addresses"]["$get"],
-    200
-  >[number]
+      (typeof client.api.tokens.markets)[":addresses"]["$get"],
+      200
+    >[number]
   | null;
 
 type TopHoldersData = InferResponseType<
@@ -85,9 +84,9 @@ type TopHoldersData = InferResponseType<
 
 type HoldersInfo =
   | InferResponseType<
-    (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
-    200
-  >[number]
+      (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
+      200
+    >[number]
   | null;
 
 interface MarketStatsProps {
@@ -110,9 +109,10 @@ export const MarketStats = ({
   void marketsCount;
   const { tr, fmt } = useLocalization();
 
-  const top10HoldersPercent = holdersInfo?.top10Percent
-    ? Number(holdersInfo.top10Percent)
-    : (topHolders?.reduce((acc, curr) => acc + curr.percentage, 0) ?? 0);
+  const top10HoldersPercent =
+    topHolders
+      ?.slice(0, 10)
+      .reduce((acc, curr) => acc + curr.percentage, 0) ?? 0;
 
   return (
     <div
@@ -129,9 +129,9 @@ export const MarketStats = ({
           <div className={styles.pricesContainer}>
             <span className={styles.valueLarge}>
               {fmt.num.currency(
-                pool?.baseTokenPriceUsd
-                  ? Number(pool.baseTokenPriceUsd)
-                  : data?.priceUsd
+                pool?.baseTokenPriceUsd != null
+                  ? Number(pool?.baseTokenPriceUsd)
+                  : data?.priceUsd != null
                     ? Number(data.priceUsd)
                     : null,
               )}
@@ -141,17 +141,18 @@ export const MarketStats = ({
         {pool && (
           <div className={styles.gridCell}>
             <span className={styles.label}>
-              {pool.poolName
-                ? pool.poolName.replace(/\s+\d+(\.\d+)?%$/, "").trim()
+              {pool?.poolName
+                ? pool?.poolName.replace(/\s+\d+(\.\d+)?%$/, "").trim()
                 : tr("token.marketStats.priceBaseQuote")}
             </span>
             <div className={styles.pricesContainer}>
               <span className={styles.valueLarge}>
-                {pool.baseTokenPriceUsd != null &&
-                  pool.quoteTokenPriceUsd != null
-                  ? (pool.baseTokenPriceUsd / pool.quoteTokenPriceUsd).toFixed(
-                    6,
-                  )
+                {pool?.baseTokenPriceUsd != null &&
+                pool?.quoteTokenPriceUsd != null
+                  ? (
+                      Number(pool?.baseTokenPriceUsd) /
+                      Number(pool?.quoteTokenPriceUsd)
+                    ).toFixed(6)
                   : "-"}
               </span>
             </div>
@@ -167,14 +168,14 @@ export const MarketStats = ({
           </span>
           <Tip
             tip={
-              pool?.liquidityUsd
-                ? fmt.num.currency(Number(pool.liquidityUsd))
+              pool?.liquidityUsd != null
+                ? fmt.num.currency(Number(pool?.liquidityUsd))
                 : null
             }
             className={styles.valueMedium}
           >
             {fmt.num.compact.currency(
-              pool?.liquidityUsd ? Number(pool.liquidityUsd) : null,
+              pool?.liquidityUsd != null ? Number(pool?.liquidityUsd) : null,
             )}
           </Tip>
         </div>
@@ -187,20 +188,22 @@ export const MarketStats = ({
           </Tip>
           <Tip
             tip={
-              pool?.marketCapUsd
-                ? fmt.num.currency(Number(pool.marketCapUsd))
-                : data?.marketCap
+              pool?.marketCapUsd != null
+                ? fmt.num.currency(Number(pool?.marketCapUsd))
+                : data?.marketCap != null
                   ? fmt.num.currency(Number(data.marketCap))
                   : null
             }
             className={styles.valueMedium}
           >
             {fmt.num.compact.currency(
-              pool?.marketCapUsd
+              pool?.marketCapUsd && Number(pool.marketCapUsd) !== 0
                 ? Number(pool.marketCapUsd)
-                : data?.marketCap
-                  ? Number(data.marketCap)
-                  : null,
+                : pool?.fdvUsd && Number(pool.fdvUsd) !== 0
+                  ? Number(pool.fdvUsd)
+                  : data?.marketCap
+                    ? Number(data.marketCap)
+                    : null,
             )}
           </Tip>
         </div>
@@ -210,18 +213,18 @@ export const MarketStats = ({
           </Tip>
           <Tip
             tip={
-              pool?.fdvUsd
-                ? fmt.num.currency(Number(pool.fdvUsd))
-                : data?.fullyDilutedValuation
+              pool?.fdvUsd != null
+                ? fmt.num.currency(Number(pool?.fdvUsd))
+                : data?.fullyDilutedValuation != null
                   ? fmt.num.currency(Number(data.fullyDilutedValuation))
                   : null
             }
             className={styles.valueMedium}
           >
             {fmt.num.compact.currency(
-              pool?.fdvUsd
-                ? Number(pool.fdvUsd)
-                : data?.fullyDilutedValuation
+              pool?.fdvUsd != null
+                ? Number(pool?.fdvUsd)
+                : data?.fullyDilutedValuation != null
                   ? Number(data.fullyDilutedValuation)
                   : null,
             )}
@@ -239,13 +242,13 @@ export const MarketStats = ({
               </span>
               <span
                 className={classNames(styles.valueMedium, {
-                  [styles.positive]: (pool.priceChangePercentage5m ?? 0) >= 0,
-                  [styles.negative]: (pool.priceChangePercentage5m ?? 0) < 0,
+                  [styles.positive]: (pool?.priceChangePercentage5m ?? 0) >= 0,
+                  [styles.negative]: (pool?.priceChangePercentage5m ?? 0) < 0,
                 })}
               >
-                {formatChangePercent(
-                  pool.priceChangePercentage5m != null
-                    ? Number(pool.priceChangePercentage5m)
+                {fmt.num.percent(
+                  pool?.priceChangePercentage5m != null
+                    ? Number(pool?.priceChangePercentage5m)
                     : null,
                 )}
               </span>
@@ -256,11 +259,15 @@ export const MarketStats = ({
               </span>
               <span
                 className={classNames(styles.valueMedium, {
-                  [styles.positive]: (pool.priceChangePercentage1h ?? 0) >= 0,
-                  [styles.negative]: (pool.priceChangePercentage1h ?? 0) < 0,
+                  [styles.positive]: (pool?.priceChangePercentage1h ?? 0) >= 0,
+                  [styles.negative]: (pool?.priceChangePercentage1h ?? 0) < 0,
                 })}
               >
-                {formatChangePercent(pool.priceChangePercentage1h)}
+                {fmt.num.percent(
+                  pool?.priceChangePercentage1h != null
+                    ? Number(pool?.priceChangePercentage1h)
+                    : null,
+                )}
               </span>
             </div>
             <div className={styles.gridCell}>
@@ -269,11 +276,15 @@ export const MarketStats = ({
               </span>
               <span
                 className={classNames(styles.valueMedium, {
-                  [styles.positive]: (pool.priceChangePercentage6h || 0) >= 0,
-                  [styles.negative]: (pool.priceChangePercentage6h || 0) < 0,
+                  [styles.positive]: (pool?.priceChangePercentage6h ?? 0) >= 0,
+                  [styles.negative]: (pool?.priceChangePercentage6h ?? 0) < 0,
                 })}
               >
-                {formatChangePercent(pool.priceChangePercentage6h)}
+                {fmt.num.percent(
+                  pool?.priceChangePercentage6h != null
+                    ? Number(pool?.priceChangePercentage6h)
+                    : null,
+                )}
               </span>
             </div>
             <div className={styles.gridCell}>
@@ -282,11 +293,15 @@ export const MarketStats = ({
               </span>
               <span
                 className={classNames(styles.valueMedium, {
-                  [styles.positive]: (pool.priceChangePercentage24h || 0) >= 0,
-                  [styles.negative]: (pool.priceChangePercentage24h || 0) < 0,
+                  [styles.positive]: (pool?.priceChangePercentage24h ?? 0) >= 0,
+                  [styles.negative]: (pool?.priceChangePercentage24h ?? 0) < 0,
                 })}
               >
-                {formatChangePercent(pool.priceChangePercentage24h)}
+                {fmt.num.percent(
+                  pool?.priceChangePercentage24h != null
+                    ? Number(pool?.priceChangePercentage24h)
+                    : null,
+                )}
               </span>
             </div>
           </>
@@ -307,7 +322,7 @@ export const MarketStats = ({
                     : 0) < 0,
               })}
             >
-              {formatChangePercent(
+              {fmt.num.percent(
                 data?.priceChangePercentage24h
                   ? Number(data.priceChangePercentage24h)
                   : null,
@@ -329,11 +344,13 @@ export const MarketStats = ({
             </Tip>
             <Tip
               tip={
-                pool.volumeUsd24h ? fmt.num.currency(pool.volumeUsd24h) : null
+                pool?.volumeUsd24h != null
+                  ? fmt.num.currency(pool?.volumeUsd24h)
+                  : null
               }
               className={styles.valueMedium}
             >
-              {fmt.num.compact.currency(pool.volumeUsd24h)}
+              {fmt.num.compact.currency(pool?.volumeUsd24h ?? null)}
             </Tip>
           </div>
           {/* Buy */}
@@ -341,13 +358,13 @@ export const MarketStats = ({
             <span className={styles.label}>{tr("token.marketStats.buy")}</span>
             <Tip
               tip={
-                pool.buyVolumeUsd24h
-                  ? fmt.num.currency(pool.buyVolumeUsd24h)
+                pool?.buyVolumeUsd24h != null
+                  ? fmt.num.currency(pool?.buyVolumeUsd24h)
                   : null
               }
               className={styles.buyColor}
             >
-              {fmt.num.compact.currency(pool.buyVolumeUsd24h)}
+              {fmt.num.compact.currency(pool?.buyVolumeUsd24h ?? null)}
             </Tip>
           </div>
           {/* Sell */}
@@ -355,13 +372,13 @@ export const MarketStats = ({
             <span className={styles.label}>{tr("token.marketStats.sell")}</span>
             <Tip
               tip={
-                pool.sellVolumeUsd24h
-                  ? fmt.num.currency(pool.sellVolumeUsd24h)
+                pool?.sellVolumeUsd24h != null
+                  ? fmt.num.currency(pool?.sellVolumeUsd24h)
                   : null
               }
               className={styles.sellColor}
             >
-              {fmt.num.compact.currency(pool.sellVolumeUsd24h)}
+              {fmt.num.compact.currency(pool?.sellVolumeUsd24h ?? null)}
             </Tip>
           </div>
           {/* Net */}
@@ -369,32 +386,33 @@ export const MarketStats = ({
             <span className={styles.label}>{tr("token.marketStats.net")}</span>
             <Tip
               tip={
-                pool.buyVolumeUsd24h != null && pool.sellVolumeUsd24h != null
+                pool?.buyVolumeUsd24h != null && pool?.sellVolumeUsd24h != null
                   ? fmt.num.currency(
-                    Number(pool.buyVolumeUsd24h) -
-                    Number(pool.sellVolumeUsd24h),
-                  )
+                      Number(pool?.buyVolumeUsd24h) -
+                        Number(pool?.sellVolumeUsd24h),
+                    )
                   : null
               }
               className={classNames(styles.valueSmall, {
                 [styles.positive]:
-                  pool.buyVolumeUsd24h != null &&
-                  pool.sellVolumeUsd24h != null &&
-                  Number(pool.buyVolumeUsd24h) -
-                  Number(pool.sellVolumeUsd24h) >=
-                  0,
+                  pool?.buyVolumeUsd24h != null &&
+                  pool?.sellVolumeUsd24h != null &&
+                  Number(pool?.buyVolumeUsd24h) -
+                    Number(pool?.sellVolumeUsd24h) >=
+                    0,
                 [styles.negative]:
-                  pool.buyVolumeUsd24h != null &&
-                  pool.sellVolumeUsd24h != null &&
-                  Number(pool.buyVolumeUsd24h) - Number(pool.sellVolumeUsd24h) <
-                  0,
+                  pool?.buyVolumeUsd24h != null &&
+                  pool?.sellVolumeUsd24h != null &&
+                  Number(pool?.buyVolumeUsd24h) -
+                    Number(pool?.sellVolumeUsd24h) <
+                    0,
               })}
             >
-              {pool.buyVolumeUsd24h != null && pool.sellVolumeUsd24h != null
+              {pool?.buyVolumeUsd24h != null && pool?.sellVolumeUsd24h != null
                 ? fmt.num.compact.currency(
-                  Number(pool.buyVolumeUsd24h) -
-                  Number(pool.sellVolumeUsd24h),
-                )
+                    Number(pool?.buyVolumeUsd24h) -
+                      Number(pool?.sellVolumeUsd24h),
+                  )
                 : "-"}
             </Tip>
           </div>
@@ -413,17 +431,17 @@ export const MarketStats = ({
             </Tip>
             <Tip
               tip={
-                pool.buys24h && pool.sells24h
+                pool?.buys24h != null && pool?.sells24h != null
                   ? fmt.num.decimal(
-                    Number(pool.buys24h) + Number(pool.sells24h),
-                  )
+                      Number(pool?.buys24h) + Number(pool?.sells24h),
+                    )
                   : null
               }
               className={styles.valueMedium}
             >
               {fmt.num.compact.decimal(
-                pool.buys24h && pool.sells24h
-                  ? Number(pool.buys24h) + Number(pool.sells24h)
+                pool?.buys24h != null && pool?.sells24h != null
+                  ? Number(pool?.buys24h) + Number(pool?.sells24h)
                   : null,
               )}
             </Tip>
@@ -432,11 +450,15 @@ export const MarketStats = ({
           <div className={styles.gridCellRight}>
             <span className={styles.label}>{tr("token.marketStats.buy")}</span>
             <Tip
-              tip={pool.buys24h ? fmt.num.decimal(Number(pool.buys24h)) : null}
+              tip={
+                pool?.buys24h != null
+                  ? fmt.num.decimal(Number(pool?.buys24h))
+                  : null
+              }
               className={styles.buyColor}
             >
               {fmt.num.compact.decimal(
-                pool.buys24h ? Number(pool.buys24h) : null,
+                pool?.buys24h != null ? Number(pool?.buys24h) : null,
               )}
             </Tip>
           </div>
@@ -445,12 +467,14 @@ export const MarketStats = ({
             <span className={styles.label}>{tr("token.marketStats.sell")}</span>
             <Tip
               tip={
-                pool.sells24h ? fmt.num.decimal(Number(pool.sells24h)) : null
+                pool?.sells24h != null
+                  ? fmt.num.decimal(Number(pool?.sells24h))
+                  : null
               }
               className={styles.sellColor}
             >
               {fmt.num.compact.decimal(
-                pool.sells24h ? Number(pool.sells24h) : null,
+                pool?.sells24h != null ? Number(pool?.sells24h) : null,
               )}
             </Tip>
           </div>
@@ -459,27 +483,27 @@ export const MarketStats = ({
             <span className={styles.label}>{tr("token.marketStats.net")}</span>
             <Tip
               tip={
-                pool.buys24h != null && pool.sells24h != null
+                pool?.buys24h != null && pool?.sells24h != null
                   ? fmt.num.decimal(
-                    Number(pool.buys24h) - Number(pool.sells24h),
-                  )
+                      Number(pool?.buys24h) - Number(pool?.sells24h),
+                    )
                   : null
               }
               className={classNames(styles.valueSmall, {
                 [styles.positive]:
-                  pool.buys24h != null &&
-                  pool.sells24h != null &&
-                  Number(pool.buys24h) >= Number(pool.sells24h),
+                  pool?.buys24h != null &&
+                  pool?.sells24h != null &&
+                  Number(pool?.buys24h) >= Number(pool?.sells24h),
                 [styles.negative]:
-                  pool.buys24h != null &&
-                  pool.sells24h != null &&
-                  Number(pool.buys24h) < Number(pool.sells24h),
+                  pool?.buys24h != null &&
+                  pool?.sells24h != null &&
+                  Number(pool?.buys24h) < Number(pool?.sells24h),
               })}
             >
-              {pool.buys24h != null && pool.sells24h != null
+              {pool?.buys24h != null && pool?.sells24h != null
                 ? fmt.num.compact.decimal(
-                  Number(pool.buys24h) - Number(pool.sells24h),
-                )
+                    Number(pool?.buys24h) - Number(pool?.sells24h),
+                  )
                 : "-"}
             </Tip>
           </div>
@@ -494,17 +518,17 @@ export const MarketStats = ({
           </span>
           <Tip
             tip={
-              pool.buyers24h && pool.sellers24h
+              pool?.buyers24h != null && pool?.sellers24h != null
                 ? fmt.num.decimal(
-                  Number(pool.buyers24h) + Number(pool.sellers24h),
-                )
+                    Number(pool?.buyers24h) + Number(pool?.sellers24h),
+                  )
                 : null
             }
             className={styles.valueLarge}
           >
             {fmt.num.compact.decimal(
-              pool.buyers24h && pool.sellers24h
-                ? Number(pool.buyers24h) + Number(pool.sellers24h)
+              pool?.buyers24h != null && pool?.sellers24h != null
+                ? Number(pool?.buyers24h) + Number(pool?.sellers24h)
                 : null,
             )}
           </Tip>

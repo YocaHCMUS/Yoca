@@ -30,7 +30,7 @@ function PnlCard({
                 <span className={valueClass}>
                     {renderValue(
                         value != null,
-                        fmt.num.currency(value != null ? parseFloat(value.toFixed(6)) : null),
+                        fmt.num.compact.currency(value != null ? parseFloat(value.toFixed(6)) : null),
                         [styles.statValue, valueClass],
                         '88px',
                         '14px',
@@ -60,7 +60,7 @@ const WalletOverviewPnLSection = ({ totalPnL, realizedPnL, unrealizedPnL, loadin
                 <span className={styles.statLabel}>{tr('wallet.totalPnL')}:</span>
                 {renderValue(
                     totalPnL != null,
-                    fmt.num.currency(totalPnL != null ? parseFloat(totalPnL.toFixed(6)) : null),
+                    fmt.num.compact.currency(totalPnL != null ? parseFloat(totalPnL.toFixed(6)) : null),
                     [styles.statValue, isTotalPositive ? styles.pnlTotalValuePositive : styles.pnlTotalValueNegative],
                     '88px',
                     '14px',
@@ -68,7 +68,7 @@ const WalletOverviewPnLSection = ({ totalPnL, realizedPnL, unrealizedPnL, loadin
                 )}
             </div>
 
-            <div className={styles.statRow}>
+            <div className={styles.cardsRow}>
                 <PnlCard
                     label={tr('wallet.realizedPnL')}
                     value={realizedPnL}

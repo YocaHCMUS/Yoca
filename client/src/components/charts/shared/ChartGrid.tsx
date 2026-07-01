@@ -44,8 +44,8 @@ export const ChartGrid: React.FC<ChartGridProps> = ({
   const gridTemplateColumns = autoFit
     ? `repeat(auto-fit, minmax(${minColumnWidth}, 1fr))`
     : itemCount > 1 
-      ? `repeat(${multiItemColumns}, 1fr)` 
-      : '1fr';
+      ? `repeat(${multiItemColumns}, minmax(0, 1fr))` 
+      : 'minmax(0, 1fr)';
 
   return (
     <div

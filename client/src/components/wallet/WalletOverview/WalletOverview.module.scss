@@ -1,17 +1,15 @@
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/theme' as *;
-@use '../../../styles/variables' as *;
+@use "@carbon/react/scss/spacing" as *;
+@use "@carbon/react/scss/theme" as *;
+@use "../../../styles/variables" as *;
 
 $color-success: #16c784;
 $color-danger: #ea3943;
-$font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 $divider: $border-subtle;
 
 .walletOverview {
   display: flex;
   flex-direction: column;
   width: 100%;
-  font-family: $font-family;
   background: $background;
   box-sizing: border-box;
   padding: 0;
@@ -32,8 +30,8 @@ $divider: $border-subtle;
 .headerSection {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: 8px;
+  padding: 12px;
   border-bottom: 1px solid $divider;
 }
 
@@ -45,14 +43,14 @@ $divider: $border-subtle;
 
 .profilePicture {
   flex-shrink: 0;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background-color: $layer-02;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: bold;
   color: $text-secondary;
 }
@@ -73,7 +71,7 @@ $divider: $border-subtle;
 
 .walletName {
   margin: 0;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   color: $text-primary;
   overflow: hidden;
@@ -91,7 +89,9 @@ $divider: $border-subtle;
   justify-content: center;
   padding: 4px;
   border-radius: 4px;
-  transition: color 0.15s, background-color 0.15s;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
   flex-shrink: 0;
 
   &:hover {
@@ -136,8 +136,8 @@ $divider: $border-subtle;
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 8px;
+  padding: 10px 12px;
   border-bottom: 1px solid $divider;
   justify-items: space-between;
 
@@ -174,7 +174,9 @@ $divider: $border-subtle;
   justify-content: center;
   padding: 8px;
   border-radius: 4px;
-  transition: color 0.15s, background-color 0.15s;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
   flex-shrink: 0;
 
   &:hover {
@@ -204,7 +206,9 @@ $divider: $border-subtle;
   justify-content: center;
   padding: 8px;
   border-radius: 4px;
-  transition: color 0.15s, background-color 0.15s;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
 
   &:hover {
     color: $icon-primary;
@@ -259,12 +263,20 @@ $divider: $border-subtle;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 16px;
+  padding: 8px 12px;
   gap: 8px;
+  min-width: 0;
 
   &:last-child {
     border-bottom: none;
   }
+}
+
+.cardsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 6px;
+  padding: 6px 12px 10px;
 }
 
 .subStatsRow {
@@ -276,9 +288,11 @@ $divider: $border-subtle;
 
 .subStatRow {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 16px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 12px;
 }
 
 .statColumn {
@@ -288,10 +302,7 @@ $divider: $border-subtle;
   flex-direction: column;
   gap: 2px;
   border-bottom: 1px solid $divider;
-
 }
-
-
 
 .alignedStatRow {
   display: flex;
@@ -300,19 +311,23 @@ $divider: $border-subtle;
 }
 
 .statLabel {
-  font-size: 14px;
-  font-weight: 400;
+  font-size: 12px;
+  font-weight: 500;
   color: $text-secondary;
   display: flex;
   align-self: center;
   gap: 6px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .statValue {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: $text-primary;
   text-align: right;
+  white-space: nowrap;
 }
 
 .valueSkeleton {
@@ -329,8 +344,8 @@ $divider: $border-subtle;
 .splitMetricBlock {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 0 16px 8px;
+  gap: 4px;
+  padding: 0 12px 12px;
 }
 
 .splitVolumePanel {
@@ -369,7 +384,12 @@ $divider: $border-subtle;
   width: 100%;
   height: 18px;
   border-radius: 999px;
-  background: linear-gradient(90deg, $layer-02 0%, $layer-hover-01 50%, $layer-02 100%);
+  background: linear-gradient(
+    90deg,
+    $layer-02 0%,
+    $layer-hover-01 50%,
+    $layer-02 100%
+  );
   background-size: 200% 100%;
   animation: splitVolumeShimmer 1.25s ease-in-out infinite;
 }
@@ -434,7 +454,6 @@ $divider: $border-subtle;
   text-align: right;
 }
 
-
 .subStatValuePositive {
   font-size: 12px;
   font-weight: 600;
@@ -454,6 +473,7 @@ $divider: $border-subtle;
   font-weight: 600;
   color: $color-success;
   text-align: right;
+  white-space: nowrap;
 }
 
 .statValueNegative {
@@ -461,6 +481,7 @@ $divider: $border-subtle;
   font-weight: 600;
   color: $color-danger;
   text-align: right;
+  white-space: nowrap;
 }
 
 .statSubValue {
@@ -484,8 +505,8 @@ $divider: $border-subtle;
 .pnlSection {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 16px;
+  gap: 8px;
+  padding: 10px 12px;
   border-bottom: 1px solid $divider;
 }
 
@@ -518,23 +539,22 @@ $divider: $border-subtle;
   color: $color-danger;
 }
 
-
 .Card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px;
+  gap: 4px;
+  padding: 10px;
   border-radius: 6px;
   background: $layer-01;
   border: 1px solid $border-subtle;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.03);
   flex: 1;
 }
 
 .CardLabel {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
   color: $text-secondary;
+  letter-spacing: 0.02em;
 }
 
 .CardValueRow {

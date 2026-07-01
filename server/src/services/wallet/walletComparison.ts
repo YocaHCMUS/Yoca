@@ -1,15 +1,16 @@
-import { mapWithConcurrency } from "@sv/util/concurrency";
-import {
+import { mapWithConcurrency } from "@sv/util/concurrency.js";
+import type {
   WalletOverviewPeriodKey,
   WalletTimePeriod,
-} from "./dtos/walletDataObjects";
+} from "./dtos/walletDataObjects.js";
 import {
   getWalletBalanceHistory,
   resolveWalletTimeRangeSec,
-} from "./walletCharts.service";
-import { getWalletOverview } from "./walletOverview.service";
-import { getWalletPortfolio } from "./walletPortfolio.service";
-import { getWalletTokenBalanceHistory } from "./walletTokenBalance.service";
+} from "./walletCharts.service.js";
+import { getWalletOverview } from "./walletOverview.service.js";
+import { getWalletPortfolio } from "./walletPortfolio.service.js";
+import { getWalletTokenBalanceHistory } from "./walletTokenBalance.service.js";
+import dayjs from "dayjs";
 
 export interface StablecoinRatioRequest {
   wallets: string[];
@@ -132,13 +133,18 @@ export async function getStablecoinRatio(
             4,
             async (token) => {
               try {
-                const series = await getWalletTokenBalanceHistory(
-                  wallet,
-                  token.tokenAddress,
-                );
+                const tokenAddress = token.tokenAddress;
+                const series = await getWalletTokenBalanceHistory(wallet, [
+                  tokenAddress,
+                ]);
+                const usdSeries =
+                  series?.[tokenAddress].map((point) => ({
+                    timestamp: point.timestampMs,
+                    value: point.usdValue,
+                  })) || [];
                 return {
                   symbol: token.symbol,
-                  usdSeries: series.usdSeries,
+                  usdSeries,
                 };
               } catch {
                 return {
@@ -296,16 +302,17 @@ export async function processStablecoinRatioData(
     const walletAddress = walletAddresses[index] ?? walletKey;
     const dataPoints = rawData.map((row) => ({
       timestamp: row.timestamp,
-      value: typeof row[walletKey] === "number" ? (row[walletKey] as number) : 0,
+      value:
+        typeof row[walletKey] === "number" ? (row[walletKey] as number) : 0,
     }));
     const currentRatio =
       dataPoints.length > 0 ? dataPoints[dataPoints.length - 1].value : null;
     const averageRatio =
       dataPoints.length > 0
         ? clampToPercent(
-          dataPoints.reduce((sum, point) => sum + point.value, 0) /
-          dataPoints.length,
-        )
+            dataPoints.reduce((sum, point) => sum + point.value, 0) /
+              dataPoints.length,
+          )
         : null;
 
     return {
@@ -381,10 +388,16 @@ export async function getDrawdown(
     wallets,
     5, // MAX_WALLET_CHART_CONCURRENCY,
     async (wallet) => {
-      const balanceHistory = await getWalletBalanceHistory(wallet);
-      if (!balanceHistory || balanceHistory.length === 0) {
+      const balanceHistoryRaw = await getWalletBalanceHistory(wallet);
+      if (!balanceHistoryRaw || balanceHistoryRaw.length === 0) {
         return { drawdownResult: [], walletAddress: wallet };
       }
+
+      const balanceHistory = balanceHistoryRaw.map((point) => ({
+        timestamp: point.timestampMs,
+        date: dayjs.utc(point.timestampMs).toISOString(),
+        value: point.usdValue,
+      }));
 
       let peak = balanceHistory[0].value;
       let trough = balanceHistory[0].value;

@@ -1,3 +1,4 @@
+import { ELLIPSIS } from "@/config/constants";
 import { IconButton } from "@carbon/react";
 import { Checkmark, Copy } from "@carbon/react/icons";
 import { useState } from "react";
@@ -5,9 +6,10 @@ import { useState } from "react";
 type CpyBtnProps = {
   size: "xs" | "sm" | "md" | "lg" | undefined;
   copyWhat: string | number;
+  align?: "left" | "right" | "top" | "bottom";
 };
 
-export function CpyBtn({ size, copyWhat }: CpyBtnProps) {
+export function CpyBtn({ size, copyWhat, align = "right" }: CpyBtnProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -21,8 +23,8 @@ export function CpyBtn({ size, copyWhat }: CpyBtnProps) {
     <IconButton
       size={size}
       kind="ghost"
-      label={copied ? "Copied" : "Copy"}
-      align="right"
+      label={copied ? "Copied" : `Copy ${copyWhat.toString().slice(0, 20) + ELLIPSIS}`}
+      align={align}
       onClick={handleCopy}
       data-export-hide="copy-button"
     >

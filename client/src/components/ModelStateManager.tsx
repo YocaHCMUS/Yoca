@@ -1,9 +1,15 @@
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import ReactDOM from "react-dom";
 
 type StateManagementProps = {
   open: boolean;
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setOpen: Dispatch<SetStateAction<boolean>>;
 };
 
 type ModalStateManagerProps = {
@@ -12,8 +18,8 @@ type ModalStateManagerProps = {
 };
 
 export const ModalStateManager = ({
-  renderLauncher: LauncherContent,
-  children: ModalContent,
+  renderLauncher,
+  children,
 }: ModalStateManagerProps) => {
   const [open, setOpen] = useState(false);
   const [modalRoot, setModalRoot] = useState<HTMLElement | null>(null);
@@ -23,14 +29,15 @@ export const ModalStateManager = ({
     setModalRoot(mRoot);
   }, []);
 
+  const stateProps: StateManagementProps = {
+    open,
+    setOpen,
+  };
+
   return (
     <>
-      {modalRoot &&
-        ReactDOM.createPortal(
-          <ModalContent open={open} setOpen={setOpen} />,
-          modalRoot,
-        )}
-      <LauncherContent open={open} setOpen={setOpen} />
+      {modalRoot && ReactDOM.createPortal(children(stateProps), modalRoot)}
+      {renderLauncher(stateProps)}
     </>
   );
 };

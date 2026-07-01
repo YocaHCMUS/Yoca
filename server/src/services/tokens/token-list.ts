@@ -27,8 +27,12 @@ export async function getCoinGeckoIdsByAddresses(
 
   if (freshCheck.length == 0 || freshCheck[0].lastRefresh < thresholdDate) {
     const addressToCgId = await fetchCoinGeckoIdsByAddresses(tokenAddresses);
-    await db.update(coinGeckoTokenListMeta).set({
+    await db.insert(coinGeckoTokenListMeta).values({
+      key: "global",
       lastRefresh: new Date(),
+    }).onConflictDoUpdate({
+      target: [coinGeckoTokenListMeta.key],
+      set: { lastRefresh: new Date() },
     });
     return addressToCgId;
   } else {
@@ -65,6 +69,13 @@ export async function getAddressesByCoinGeckoIds(
 
   if (res.length == 0) {
     const cgIdToAddress = await fetchAddressesByCoinGeckoIds(coinGeckoIds);
+    await db.insert(coinGeckoTokenListMeta).values({
+      key: "global",
+      lastRefresh: new Date(),
+    }).onConflictDoUpdate({
+      target: [coinGeckoTokenListMeta.key],
+      set: { lastRefresh: new Date() },
+    });
     return cgIdToAddress;
   }
 
@@ -74,13 +85,9 @@ export async function getAddressesByCoinGeckoIds(
   return cgIdToAddress;
 }
 
-export async function fetchCoinGeckoIdsByAddresses(
-  tokenAddresses: string[],
-): Promise<Record<string, string>> {
-  if (tokenAddresses.length == 0) {
-    return {};
-  }
+let refreshPromise: Promise<void> | null = null;
 
+async function syncCoinGeckoList() {
   const res = await cg.client.coins.list.get({
     include_platform: true,
   });
@@ -94,23 +101,45 @@ export async function fetchCoinGeckoIdsByAddresses(
       }),
     );
 
-  const addressToCgId = Object.fromEntries(
-    solanaTokens
-      .filter((t) => tokenAddresses.includes(t.tokenAddress))
-      .map(({ coinGeckoId, tokenAddress }) => [tokenAddress, coinGeckoId]),
-  );
-
   if (solanaTokens.length > 0) {
-    await db
-      .insert(coinGeckoTokenList)
-      .values(solanaTokens)
-      .onConflictDoUpdate({
-        target: [coinGeckoTokenList.tokenAddress],
-        set: { coinGeckoId: excluded(coinGeckoTokenList.coinGeckoId) },
-      });
+    for (let i = 0; i < solanaTokens.length; i += 1000) {
+      await db
+        .insert(coinGeckoTokenList)
+        .values(solanaTokens.slice(i, i + 1000))
+        .onConflictDoUpdate({
+          target: [coinGeckoTokenList.tokenAddress],
+          set: { 
+            coinGeckoId: excluded(coinGeckoTokenList.coinGeckoId),
+            tokenAddress: excluded(coinGeckoTokenList.tokenAddress)
+          },
+        });
+    }
+  }
+}
+
+export async function fetchCoinGeckoIdsByAddresses(
+  tokenAddresses: string[],
+): Promise<Record<string, string>> {
+  if (tokenAddresses.length == 0) {
+    return {};
   }
 
-  return addressToCgId;
+  if (!refreshPromise) {
+    refreshPromise = syncCoinGeckoList().finally(() => { refreshPromise = null; });
+  }
+  await refreshPromise;
+
+  const res = await db
+    .select({
+      id: coinGeckoTokenList.coinGeckoId,
+      address: coinGeckoTokenList.tokenAddress,
+    })
+    .from(coinGeckoTokenList)
+    .where(inArray(coinGeckoTokenList.tokenAddress, tokenAddresses));
+
+  return Object.fromEntries(
+    res.map(({ id, address }) => [address, id]),
+  );
 }
 
 async function fetchAddressesByCoinGeckoIds(
@@ -120,34 +149,20 @@ async function fetchAddressesByCoinGeckoIds(
     return {};
   }
 
-  const res = await cg.client.coins.list.get({
-    include_platform: true,
-  });
-
-  const solanaTokens = res
-    .filter((rawToken) => rawToken.platforms!.solana)
-    .map(
-      (rawToken): CoingeckoTokenListInsert => ({
-        coinGeckoId: rawToken.id!,
-        tokenAddress: rawToken.platforms!.solana!,
-      }),
-    );
-
-  const cgIdToAddress = Object.fromEntries(
-    solanaTokens
-      .filter((t) => coinGeckoIds.includes(t.coinGeckoId))
-      .map(({ coinGeckoId, tokenAddress }) => [coinGeckoId, tokenAddress]),
-  );
-
-  if (solanaTokens.length > 0) {
-    await db
-      .insert(coinGeckoTokenList)
-      .values(solanaTokens)
-      .onConflictDoUpdate({
-        target: [coinGeckoTokenList.tokenAddress],
-        set: { tokenAddress: excluded(coinGeckoTokenList.tokenAddress) },
-      });
+  if (!refreshPromise) {
+    refreshPromise = syncCoinGeckoList().finally(() => { refreshPromise = null; });
   }
+  await refreshPromise;
 
-  return cgIdToAddress;
+  const res = await db
+    .select({
+      id: coinGeckoTokenList.coinGeckoId,
+      address: coinGeckoTokenList.tokenAddress,
+    })
+    .from(coinGeckoTokenList)
+    .where(inArray(coinGeckoTokenList.coinGeckoId, coinGeckoIds));
+
+  return Object.fromEntries(
+    res.map(({ id, address }) => [id, address]),
+  );
 }

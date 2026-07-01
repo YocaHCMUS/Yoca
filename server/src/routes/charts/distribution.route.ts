@@ -11,7 +11,7 @@ import { z } from "zod";
 
 import type { WalletPortfolioItem } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
-import { mapWithConcurrency } from "@sv/util/concurrency";
+import { mapWithConcurrency } from "@sv/util/concurrency.js";
 
 /**
  * Request parameter schema for distribution endpoint
@@ -62,7 +62,10 @@ const app = new Hono()
 
       // If wallets parameter is provided, fetch actual portfolio data
       if (params.wallets) {
-        const walletAddresses = params.wallets.split(',').map(w => w.trim()).filter(w => w !== '');
+        const walletAddresses = params.wallets
+          .split(",")
+          .map((w) => w.trim())
+          .filter((w) => w !== "");
 
         // For single wallet, return aggregated data
         const response = await mapWithConcurrency(
@@ -71,17 +74,27 @@ const app = new Hono()
           async (address: string) => {
             try {
               const portfolio = await getWalletPortfolio(address);
-              const totalValue = portfolio.reduce((sum: number, item: WalletPortfolioItem) => sum + (item.valueUsd ?? 0), 0);
+              const totalValue = portfolio.reduce(
+                (sum: number, item: WalletPortfolioItem) =>
+                  sum + (item.valueUsd ?? 0),
+                0,
+              );
 
-              const distributionData = portfolio.map((item: WalletPortfolioItem) => ({
-                name: item.symbol || item.name || item.tokenAddress || "Unknown",
-                value: item.valueUsd ?? 0,
-                percentage: totalValue > 0 ? ((item.valueUsd ?? 0) / totalValue) * 100 : 0,
-                rawAmount: item.amount ?? 0,
-                tokenAddress: item.tokenAddress ?? "",
-                symbol: item.symbol ?? "",
-                logoUri: item.logoUri ?? undefined,
-              }));
+              const distributionData = portfolio.map(
+                (item: WalletPortfolioItem) => ({
+                  name:
+                    item.symbol || item.name || item.tokenAddress || "Unknown",
+                  value: item.valueUsd ?? 0,
+                  percentage:
+                    totalValue > 0
+                      ? ((item.valueUsd ?? 0) / totalValue) * 100
+                      : 0,
+                  rawAmount: item.amount ?? 0,
+                  tokenAddress: item.tokenAddress ?? "",
+                  symbol: item.symbol ?? "",
+                  logoUri: item.logoUri ?? undefined,
+                }),
+              );
 
               return {
                 walletAddress: address,
@@ -93,18 +106,18 @@ const app = new Hono()
                 walletAddress: address,
                 data: [],
                 totalValue: 0,
-                error: "Failed to fetch wallet portfolio"
+                error: "Failed to fetch wallet portfolio",
               };
             }
-          }
+          },
         );
 
         return c.json({
           wallets: response,
           metadata: {
-            currency: 'USD',
-            timestamp: Date.now()
-          }
+            currency: "USD",
+            timestamp: Date.now(),
+          },
         });
       }
 
@@ -141,7 +154,6 @@ const app = new Hono()
         500,
       );
     }
-  }
-  );
+  });
 
 export default app;

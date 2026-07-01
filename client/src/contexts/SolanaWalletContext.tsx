@@ -15,6 +15,7 @@ import {
   SolflareWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
 import { clusterApiUrl } from "@solana/web3.js";
+import { getSolanaRpcEndpoint, getWalletAdapterNetwork } from "@/util/solanaNetwork";
 import {
   type FC,
   type ReactNode,
@@ -81,6 +82,7 @@ function SolanaProviderContent({ children }: { children: ReactNode }) {
             open={isModalOpen}
             onClose={closeModal}
             className={styles.walletModalContainer}
+            preventCloseOnClickOutside={false}
           >
             <ModalBody
               id="wallet-modal-container"
@@ -94,12 +96,37 @@ function SolanaProviderContent({ children }: { children: ReactNode }) {
 }
 
 export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
-  const network = WalletAdapterNetwork.Devnet;
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  /**
+   * Derive the network from VITE_SOLANA_NETWORK with strict validation.
+   * Falls back to Devnet if the env is misconfigured so the UI can still
+   * mount and display the error through its own toast/alert system.
+   */
+  const network = useMemo((): WalletAdapterNetwork => {
+    try {
+      return getWalletAdapterNetwork();
+    } catch (err) {
+      console.error(
+        "[SolanaProvider] Network configuration error — falling back to Devnet:\n",
+        (err as Error).message
+      );
+      return WalletAdapterNetwork.Devnet;
+    }
+  }, []);
+  const endpoint = useMemo(() => {
+    try {
+      return getSolanaRpcEndpoint();
+    } catch (err) {
+      console.error(
+        "[SolanaProvider] RPC configuration error — falling back to clusterApiUrl:\n",
+        (err as Error).message
+      );
+      return clusterApiUrl(network);
+    }
+  }, [network]);
 
   const wallets = useMemo(
-    () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
-    [],
+    () => [new PhantomWalletAdapter(), new SolflareWalletAdapter({ network })],
+    [network],
   );
 
   localStorage.removeItem("walletName");
@@ -107,7 +134,10 @@ export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
   return (
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect={false}>
-        <WalletModalProvider container="#wallet-modal-container">
+        <WalletModalProvider
+          container="#wallet-modal-container"
+          className="hello"
+        >
           <SolanaProviderContent>{children}</SolanaProviderContent>
         </WalletModalProvider>
       </WalletProvider>

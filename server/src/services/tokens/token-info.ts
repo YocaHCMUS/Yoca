@@ -1,23 +1,41 @@
 import {
-  TOKEN_DETAILS_TTL_MS,
-  TOP_TOKEN_HOLDER_STATS_TTL_MS,
+    TOKEN_DETAILS_TTL_MS,
+    TOP_TOKEN_HOLDER_STATS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-  tokenDetails,
-  tokenHolderStats,
-  tokenMarketData,
-  tokenMeta,
-  type TokenDetailedInfoInsert,
-  type TokenHolderStatsInsert,
-  type TokenMarketDataInsert,
-  type TokenMetaInsert,
+    TokenDetailedInfoSelect,
+    tokenDetails,
+    tokenHolderStats,
+    tokenMarketData,
+    tokenMeta,
+    TokenMetaSelect,
+    type TokenDetailedInfoInsert,
+    type TokenHolderStatsInsert,
+    type TokenMarketDataInsert,
+    type TokenMetaInsert,
 } from "@sv/db/schema.js";
-import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
+import {
+  excludedAutoFromInsert,
+  excludedAutoNonNullFromInsert,
+} from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
+import * as moralis from "@sv/util/util-moralis.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { mrl_tokenMetadataSchema } from "../_types/token-raw-responses.js";
 import { and, eq, gte, inArray } from "drizzle-orm";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 import { fetchCgMarketDataBatched } from "./token-market-data.js";
+
+function isCgRateLimitError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const status = (error as { status?: unknown }).status;
+  return Number(status) === 429;
+}
 
 async function fetchHolderStatsItem(
   tokenAddress: string,
@@ -46,8 +64,16 @@ function fetchHolderStats(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
     return Promise.resolve([]);
   }
-  return Promise.all(
+
+  return Promise.allSettled(
     tokenAddresses.map((address) => fetchHolderStatsItem(address)),
+  ).then((results) =>
+    results
+      .filter(
+        (result): result is PromiseFulfilledResult<TokenHolderStatsInsert> =>
+          result.status === "fulfilled",
+      )
+      .map((result) => result.value),
   );
 }
 
@@ -63,7 +89,7 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
 
   const addressToCgIds = await getCoinGeckoIdsByAddresses(tokenAddresses);
 
-  const rawInfoList = await Promise.all(
+  const rawInfoSettled = await Promise.allSettled(
     tokenAddresses
       .filter((address) => addressToCgIds[address])
       .map(async (address) => {
@@ -78,6 +104,13 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
         return rawMeta;
       }),
   );
+
+  const rawInfoList = rawInfoSettled
+    .filter(
+      (result): result is PromiseFulfilledResult<any> =>
+        result.status === "fulfilled",
+    )
+    .map((result) => result.value);
 
   const details = rawInfoList.map(
     (
@@ -98,9 +131,11 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
         decimals: raw.detail_platforms!.solana!.decimal_place!,
         address: raw.platforms!.solana!,
         description: raw.description!.en!,
-        categories: raw.categories_details?.map((detail) => detail.id!),
+        categories: raw.categories_details?.map(
+          (detail: { id?: string | null }) => detail.id!,
+        ),
         linkBlockchainSites: raw.links?.blockchain_site,
-        linkDiscord: raw.links?.chat_url?.find((url) =>
+        linkDiscord: raw.links?.chat_url?.find((url: string) =>
           url.startsWith("https://discord.com/invite/"),
         ),
         linkHomepage: raw.links?.homepage?.at(0),
@@ -147,9 +182,9 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
   const marketDataValues = details.map((detail) => detail.market);
 
   if (
-    metaValues.length == 0
-    || detailedInfoValues.length == 0
-    || marketDataValues.length == 0
+    metaValues.length == 0 ||
+    detailedInfoValues.length == 0 ||
+    marketDataValues.length == 0
   ) {
     return {
       meta: [],
@@ -164,7 +199,11 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
       .values(metaValues)
       .onConflictDoUpdate({
         target: [tokenMeta.address],
-        set: excludedAutoFromInsert(tokenMeta, tokenMeta.address, metaValues),
+        set: excludedAutoNonNullFromInsert(
+          tokenMeta,
+          tokenMeta.address,
+          metaValues,
+        ),
       })
       .returning(),
     details: await db
@@ -234,44 +273,119 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
     .values(metaValues)
     .onConflictDoUpdate({
       target: [tokenMeta.address],
-      set: excludedAutoFromInsert(tokenMeta, tokenMeta.address, metaValues),
+      set: excludedAutoNonNullFromInsert(
+        tokenMeta,
+        tokenMeta.address,
+        metaValues,
+      ),
     })
     .returning();
 }
 
 export async function getTokenMeta(tokenAddresses: string[]) {
-  if (tokenAddresses.length == 0) {
+  const uniqueAddresses = Array.from(
+    new Set(tokenAddresses.map((address) => address.trim()).filter(Boolean)),
+  );
+  if (uniqueAddresses.length == 0) {
     return [];
   }
 
   const thresholdDate = new Date(Date.now() - TOKEN_DETAILS_TTL_MS);
-
-  const res = await db
+  const cachedRows = await db
     .select()
     .from(tokenMeta)
-    .where(
-      and(
-        inArray(tokenMeta.address, tokenAddresses),
-        gte(tokenMeta.updatedAt, thresholdDate),
-      ),
-    )
-    .limit(tokenAddresses.length);
-
-  const addressToMeta = Object.fromEntries(
-    res.map((meta) => [meta.address, meta]),
+    .where(inArray(tokenMeta.address, uniqueAddresses))
+    .limit(uniqueAddresses.length);
+  const cachedByAddress = new Map(
+    cachedRows.map((meta) => [meta.address, meta]),
   );
+  const resolvedByAddress = new Map<string, TokenMetaSelect>();
 
-  const staleAddresses = tokenAddresses.filter(
-    (address) => !addressToMeta[address],
-  );
-
-  const refreshed = await fetchTokenMeta(staleAddresses);
-
-  if (!refreshed || refreshed.length == 0) {
-    return res;
-  } else {
-    return [...res, ...refreshed];
+  for (const meta of cachedRows) {
+    if (meta.updatedAt >= thresholdDate) {
+      resolvedByAddress.set(meta.address, meta);
+    }
   }
+
+  const staleAddresses = uniqueAddresses.filter(
+    (address) => !resolvedByAddress.has(address),
+  );
+  let coinGeckoRows: Awaited<ReturnType<typeof fetchTokenMeta>> = [];
+  try {
+    coinGeckoRows = await fetchTokenMeta(staleAddresses);
+  } catch (error) {
+    if (!isCgRateLimitError(error)) {
+      console.warn("Failed to refresh token metadata from CoinGecko", error);
+    }
+  }
+
+  for (const meta of coinGeckoRows) {
+    resolvedByAddress.set(meta.address, meta);
+  }
+
+  const moralisAddresses = uniqueAddresses.filter(
+    (address) => !resolvedByAddress.has(address),
+  );
+  const moralisValues = await Promise.all(
+    moralisAddresses.map(async (address): Promise<TokenMetaInsert | null> => {
+      try {
+        const endpoint = moralis.getEndpoint(
+          `/token/mainnet/${address}/metadata`,
+        );
+        const response = await rlFetch(endpoint, {
+          method: "GET",
+          headers: moralis.getRequiredHeaders(),
+          rlLimiter: moralis.limiter,
+        });
+        const parsed = await getTrackedApiResult(
+          mrl_tokenMetadataSchema,
+          response,
+        );
+        if (!parsed) return null;
+
+        return {
+          address,
+          symbol: parsed.symbol || null,
+          name: parsed.name || null,
+          imageUrl: parsed.logo || null,
+        };
+      } catch {
+        return null;
+      }
+    }),
+  );
+  const validMoralisValues = moralisValues.filter(
+    (value): value is TokenMetaInsert => value != null,
+  );
+  if (validMoralisValues.length > 0) {
+    const moralisRows = await db
+      .insert(tokenMeta)
+      .values(validMoralisValues)
+      .onConflictDoUpdate({
+        target: [tokenMeta.address],
+        set: excludedAutoNonNullFromInsert(
+          tokenMeta,
+          tokenMeta.address,
+          validMoralisValues,
+        ),
+      })
+      .returning();
+    for (const meta of moralisRows) {
+      resolvedByAddress.set(meta.address, meta);
+    }
+  }
+
+  for (const address of uniqueAddresses) {
+    if (resolvedByAddress.has(address)) continue;
+    const stale = cachedByAddress.get(address);
+    if (stale) {
+      resolvedByAddress.set(address, stale);
+    }
+  }
+
+  return uniqueAddresses
+    .map((address) => resolvedByAddress.get(address))
+    .filter((meta): meta is TokenMetaSelect => meta != null);
 }
 
 export async function getTokenDetails(tokenAddresses: string[]) {
@@ -301,8 +415,18 @@ export async function getTokenDetails(tokenAddresses: string[]) {
   const staleAddresses = tokenAddresses.filter(
     (address) => !addressToRes[address],
   );
-  const { meta: refreshedMeta, details: refreshedDetails } =
-    await fetchTokenDetails(staleAddresses);
+  let refreshedMeta: TokenMetaSelect[] = [];
+  let refreshedDetails: TokenDetailedInfoSelect[] = [];
+  try {
+    const fetched = await fetchTokenDetails(staleAddresses);
+    refreshedMeta = fetched.meta;
+    refreshedDetails = fetched.details;
+  } catch (error) {
+    if (isCgRateLimitError(error)) {
+      return res;
+    }
+    throw error;
+  }
   const addressToRefreshedDetails = Object.fromEntries(
     refreshedDetails.map((detail) => [detail.address, detail]),
   );
@@ -344,7 +468,15 @@ export async function getTokenHolderStats(tokenAddresses: string[]) {
     return res;
   }
 
-  const refreshed = await fetchHolderStats(staleAddresses);
+  let refreshed: TokenHolderStatsInsert[] = [];
+  try {
+    refreshed = await fetchHolderStats(staleAddresses);
+  } catch (error) {
+    if (isCgRateLimitError(error)) {
+      return res;
+    }
+    throw error;
+  }
 
   if (refreshed.length == 0) {
     return res;

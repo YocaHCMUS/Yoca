@@ -1,111 +1,153 @@
-/**
- * AssetDistribution Component
- * 
- * Displays a donut chart showing cryptocurrency asset allocation with percentages,
- * values, and total portfolio value at the center.
- * 
- * Features:
- * - Donut chart with colored segments for each asset
- * - Center display showing total portfolio value
- * - Percentages and values on segments
- * - Interactive legend with toggle capability
- * - Token filtering support (All or specific tokens)
- * - Auto-refresh every 30 seconds
- * - Export to PNG/SVG/CSV
- * - Fullscreen and mini-player viewing modes
- * 
- * @module components/charts/AssetDistribution
- */
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import ReactECharts from "echarts-for-react";
+import type { EChartsOption } from "echarts";
+import type { EChartsInstance } from "@/util/echarts-setup";
+import { SlidersHorizontal } from "lucide-react";
+import { useLocalization } from "@/contexts/LocalizationContext";
+import { useChartFiltersSync } from "@/hooks/useChartFiltersSync";
+import {
+  CHART_COLOR_PALETTE,
+  useCarbonChartBaseOption,
+} from "@/util/carbon-chart-base";
+import { useCarbonTokens } from "@/hooks/useCarbonToken";
+import { cds } from "@/util/carbon-theme";
+import { useChartContext } from "@/contexts/ChartContext";
+import { fetchAssetDistribution, type InferFetcherData } from "@/services/chart/chartApi";
+import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
+import type { DistributionRequestParams } from "@/types/chart-api.types";
+import { useStandardChartController } from "@/hooks/useChartController";
+import { ChartWrapper, ChartGrid, ChartGridItem } from "@/components/charts/shared";
+import { useChartExport } from "@/hooks/useChartExport";
+import type { ExportFormat } from "@/types/chart-filters.types";
+import type { ChartDataSeries } from "@/types/chart-data.types";
+import type { ChartProps } from "../shared/ChartProp";
+import { runChartExport } from "@/services/chart/chartExportService";
+import { IconActionButton, SegmentedControl } from "@/components/charts/shared/ChartControls";
+import styles from "./AssetDistribution.module.scss";
 
-import React, { useMemo, useRef, useCallback, useState, useEffect } from 'react';
-import ReactECharts from 'echarts-for-react';
-import type { EChartsOption } from 'echarts';
-import { useLocalization } from '@/contexts/LocalizationContext';
-import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { useChartTheme, getThemedChartBaseOption } from '@/hooks/useChartTheme';
-import { useChartContext } from '@/contexts/ChartContext';
-import { fetchAssetDistribution, type InferFetcherData } from '@/services/chart/chartApi';
-import { formatCurrency } from '@/util/chart-helpers';
-import { createTooltipHeader, createTooltipRow } from '@/util/tooltip-helpers';
-import { getPieLegend } from '@/util/chart-legend-config';
-import type { DistributionRequestParams } from '@/types/chart-api.types';
-import { useStandardChartController } from '@/hooks/useChartController';
-import { ChartWrapper, ChartGrid, ChartGridItem } from '@/components/charts/shared';
-import { useChartExport } from '@/hooks/useChartExport';
-import type { ExportFormat } from '@/types/chart-filters.types';
-import type { ChartDataSeries } from '@/types/chart-data.types';
-import type { ChartProps } from '../shared/ChartProp';
-import { runChartExport } from '@/services/chart/chartExportService';
-import sharedStyles from '../shared/ChartStyle.module.scss';
-
-
-// ── Types ─────────────────────────────────────────────────────────────────
-type TopNOption = 5 | 10 | 0; // 0 = All
+type TopNOption = 5 | 10;
 type MinPctOption = 0 | 1 | 5 | 10;
+const MAX_VISIBLE_OTHERS = 10;
+const OTHERS_COLOR = "#8a8a8a";
+
+interface LegendAsset {
+  name: string;
+  color: string;
+  value: number;
+}
 
 interface AssetItem {
   name: string;
   value: number;
   percentage: number;
   color?: string;
-  /** Logo image URL from enriched backend metadata – undefined when unavailable */
   logoUri?: string;
 }
 
-// ── Grouping helper ────────────────────────────────────────────────────────
-/**
- * Apply Top-N and min-percentage grouping to a raw asset list.
- * Items that don't make the cut are merged into a single "Others" entry
- * that carries the list of hidden names so the tooltip can show them.
- */
+interface HiddenAssetItem {
+  name: string;
+  value: number;
+  percentage: number;
+}
+
+type GroupedAssetItem = AssetItem & {
+  hiddenNames?: string[];
+  hiddenItems?: HiddenAssetItem[];
+};
+
+interface WalletDistribution {
+  walletAddress: string;
+  data: AssetItem[];
+}
+
+interface TooltipParam {
+  name?: string;
+  value?: number;
+  data?: GroupedAssetItem;
+}
+
+interface ChartEntry {
+  walletAddress: string;
+  option: EChartsOption;
+  grouped: GroupedAssetItem[];
+}
+
 function applyGrouping(
   raw: AssetItem[],
   topN: TopNOption,
   minPct: MinPctOption,
   othersLabel: string,
-): (AssetItem & { hiddenNames?: string[] })[] {
+): GroupedAssetItem[] {
   if (raw.length === 0) return [];
 
-  // Recalculate percentages against the raw total so they're always fresh
-  const rawTotal = raw.reduce((s, a) => s + a.value, 0);
+  const rawTotal = raw.reduce((sum, asset) => sum + asset.value, 0);
   const withPct = raw
-    .map(a => ({ ...a, percentage: rawTotal > 0 ? (a.value / rawTotal) * 100 : 0 }))
-    .sort((a, b) => b.value - a.value); // descending by value
+    .map((asset) => ({
+      ...asset,
+      percentage: rawTotal > 0 ? (asset.value / rawTotal) * 100 : 0,
+    }))
+    .sort((left, right) => right.value - left.value);
 
-  // Step 1: apply min-% filter
   const afterMinPct = minPct > 0
-    ? withPct.filter(a => a.percentage >= minPct)
+    ? withPct.filter((asset) => asset.percentage >= minPct)
     : withPct;
-
-  // Step 2: apply Top-N cap
   const kept = topN > 0 ? afterMinPct.slice(0, topN) : afterMinPct;
-
-  // Collect everything that was cut in either step
-  const keptSet = new Set(kept.map(a => a.name));
-  const hidden = withPct.filter(a => !keptSet.has(a.name));
+  const keptNames = new Set(kept.map((asset) => asset.name));
+  const hidden = withPct.filter((asset) => !keptNames.has(asset.name));
 
   if (hidden.length === 0) return kept;
 
-  const othersValue = hidden.reduce((s, a) => s + a.value, 0);
-  const newTotal = kept.reduce((s, a) => s + a.value, 0) + othersValue;
-
-  // Recalculate percentages for the kept items
-  const recalcKept = kept.map(a => ({
-    ...a,
-    percentage: newTotal > 0 ? (a.value / newTotal) * 100 : 0,
+  const othersValue = hidden.reduce((sum, asset) => sum + asset.value, 0);
+  const groupedTotal = kept.reduce((sum, asset) => sum + asset.value, 0) + othersValue;
+  const recalcKept = kept.map((asset) => ({
+    ...asset,
+    percentage: groupedTotal > 0 ? (asset.value / groupedTotal) * 100 : 0,
   }));
 
-  const othersItem = {
-    name: othersLabel,
-    value: othersValue,
-    percentage: newTotal > 0 ? (othersValue / newTotal) * 100 : 0,
-    hiddenNames: hidden.map(a => a.name),
-  };
-
-  return [...recalcKept, othersItem];
+  return [
+    ...recalcKept,
+    {
+      name: othersLabel,
+      value: othersValue,
+      percentage: groupedTotal > 0 ? (othersValue / groupedTotal) * 100 : 0,
+      color: OTHERS_COLOR,
+      hiddenNames: hidden.map((asset) => asset.name),
+      hiddenItems: hidden.map((asset) => ({
+        name: asset.name,
+        value: asset.value,
+        percentage: asset.percentage,
+      })),
+    },
+  ];
 }
 
-// Infer the response type from the fetcher function automatically
+function chartColorFor(asset: GroupedAssetItem, index: number, othersLabel: string) {
+  if (asset.name === othersLabel) return OTHERS_COLOR;
+  return asset.color ?? CHART_COLOR_PALETTE[index % CHART_COLOR_PALETTE.length];
+}
+
+function normalizeWallets(data: AssetDistributionData | null | undefined): WalletDistribution[] {
+  if (!data || !("wallets" in data) || !data.wallets) return [];
+  return data.wallets.map((wallet) => ({
+    walletAddress: wallet.walletAddress,
+    data: wallet.data as AssetItem[],
+  }));
+}
+
+function buildGroupedAssets(
+  data: AssetItem[],
+  selectedAssets: Set<string>,
+  isMultiWallet: boolean,
+  topN: TopNOption,
+  minPct: MinPctOption,
+  othersLabel: string,
+) {
+  const filtered = isMultiWallet && selectedAssets.size > 0
+    ? data.filter((asset) => selectedAssets.has(asset.name))
+    : data;
+  return applyGrouping(filtered, topN, minPct, othersLabel);
+}
+
 type AssetDistributionData = InferFetcherData<typeof fetchAssetDistribution>;
 
 export const AssetDistribution: React.FC<ChartProps> = ({
@@ -113,489 +155,355 @@ export const AssetDistribution: React.FC<ChartProps> = ({
   initialFilters,
   autoRefresh = true,
   refreshInterval = 30000,
+  fetchEnabled = true,
   className,
+  actions: externalActions,
 }) => {
-  const { tr } = useLocalization();
-  const chartTitle = tr('charts.assetDistributionChart.title');
-  const othersLabel = tr('charts.assetDistributionChart.others');
+  const { tr, fmt } = useLocalization();
+  const chartTitle = tr("charts.assetDistributionChart.title");
+  const othersLabel = tr("charts.assetDistributionChart.others");
 
   const chartRef = useRef<ReactECharts>(null);
-  const chartTheme = useChartTheme();
+  const baseOption = useCarbonChartBaseOption();
+  const tokens = useCarbonTokens({
+    background: cds.background,
+    layer: cds.layer01,
+    borderSubtle: cds.borderSubtle01,
+    textPrimary: cds.textPrimary,
+    textSecondary: cds.textSecondary,
+  });
   const { selectedTimezone: timezone } = useChartContext();
-
-  // Track selected assets for legend filtering
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
+  const [topN, setTopN] = useState<TopNOption>(5);
+  const [minPct, setMinPct] = useState<MinPctOption>(0);
 
-  // ── New grouping filters ───────────────────────────────────────────────
-  const [topN, setTopN] = useState<TopNOption>(5);       // default: Top 5
-  const [minPct, setMinPct] = useState<MinPctOption>(0); // 0 = no min
-
-  // Use centralized filter sync hook
   const { filters, walletsString } = useChartFiltersSync({
     initialFilters,
     debounceDelay: 300,
   });
 
-  /**
-   * Memoize query to prevent unnecessary re-fetches
-   */
   const query = useMemo<DistributionRequestParams>(
     () => ({
       period: filters.timePeriod,
       wallets: walletsString,
     }),
-    [filters.timePeriod, walletsString]
+    [filters.timePeriod, walletsString],
   );
 
-  /**
-   * Centralized lifecycle handling
-   */
   const { data, loadingState, refetch } =
     useStandardChartController<AssetDistributionData, DistributionRequestParams>({
       fetcher: fetchAssetDistribution,
       query,
       autoRefresh,
       refreshInterval,
+      enabled: fetchEnabled,
     });
 
-  /**
-   * Setup chart export
-   */
   const { exportPNG, exportSVG, exportPDF, exportCSV } = useChartExport({
     chartTitle,
     timezone,
-    baseFilename: 'asset-distribution',
+    baseFilename: "asset-distribution",
   });
 
-  /**
-   * Handle export based on format
-   */
+  const wallets = useMemo(() => normalizeWallets(data), [data]);
+
   const handleExport = useCallback(
     async (format: ExportFormat) => {
       if (!data) return;
 
-      const instance = chartRef.current?.getEchartsInstance() ?? null;
-      const csv: ChartDataSeries[] = [];
-
-      if ('wallets' in data && data.wallets) {
-        data.wallets.forEach((wallet) => {
-          const grouped = applyGrouping(wallet.data as AssetItem[], topN, minPct, othersLabel);
-          csv.push({
-            id: `asset-distribution-${wallet.walletAddress}`,
-            name: `${tr('charts.assetDistributionChart.export.name')} - ${wallet.walletAddress}`,
-            type: 'pie',
-            visible: true,
-            data: grouped.map((a) => ({
-              name: a.name,
-              value: a.value,
-            })),
-          });
-        });
-      } else if ('data' in data && data.data) {
-        const grouped = applyGrouping(data.data as AssetItem[], topN, minPct, othersLabel);
-        csv.push({
-          id: 'asset-distribution',
-          name: tr('charts.assetDistributionChart.export.name'),
-          type: 'pie',
+      const instance = chartRef.current?.getEchartsInstance() as EChartsInstance | undefined;
+      const csv: ChartDataSeries[] = wallets.map((wallet) => {
+        const grouped = applyGrouping(wallet.data, topN, minPct, othersLabel);
+        return {
+          id: `asset-distribution-${wallet.walletAddress}`,
+          name: `${tr("charts.assetDistributionChart.export.name")} - ${wallet.walletAddress}`,
+          type: "pie",
           visible: true,
-          data: grouped.map((a) => ({
-            name: a.name,
-            value: a.value,
+          data: grouped.map((asset) => ({
+            name: asset.name,
+            value: asset.value,
           })),
-        });
-      }
+        };
+      });
 
       await runChartExport(
         {
           format,
           filters,
-          chartInstance: instance as any,
+          chartInstance: instance ?? null,
           csvData: csv,
           csvFilters: { ...filters, wallets: [] },
           extraFilters: {
-            [tr('charts.assetDistributionChart.filters.topN')]: topN === 0 ? tr('charts.assetDistributionChart.filters.all') : `${tr('charts.assetDistributionChart.filters.top')} ${topN}`,
-            [tr('charts.assetDistributionChart.filters.minPct')]: minPct === 0 ? tr('charts.assetDistributionChart.filters.all') : `>${minPct}%`,
+            [tr("charts.assetDistributionChart.filters.topN")]: `${tr("charts.assetDistributionChart.filters.top")} ${topN}`,
+            [tr("charts.assetDistributionChart.filters.minPct")]: minPct === 0
+              ? tr("charts.assetDistributionChart.filters.all")
+              : `>${minPct}%`,
           },
         },
-        { exportPNG, exportSVG, exportPDF, exportCSV }
+        { exportPNG, exportSVG, exportPDF, exportCSV },
       );
     },
-    [data, filters, topN, minPct, othersLabel, exportPNG, exportSVG, exportPDF, exportCSV]
+    [data, exportCSV, exportPDF, exportPNG, exportSVG, filters, minPct, othersLabel, topN, tr, wallets],
   );
 
-  /**
-   * Helper to create chart option for a single distribution dataset
-   */
-  const createChartOption = useCallback((
-    distributionData: { name: string; value: number; percentage: number; color?: string }[],
-    walletLabel?: string,
-    isMultiWallet?: boolean
-  ): EChartsOption => {
-    const base = getThemedChartBaseOption(chartTheme);
-
-    // Filter data based on selected assets in multi-wallet view
-    const preGrouped = isMultiWallet && selectedAssets.size > 0
-      ? distributionData.filter(a => selectedAssets.has(a.name))
-      : distributionData;
-
-    // Apply Top-N and min-% grouping
-    const grouped = applyGrouping(preGrouped as AssetItem[], topN, minPct, othersLabel);
-
-    // Total used for the centre label: sum of grouped data
-    const displayTotal = grouped.reduce((s, a) => s + a.value, 0);
+  const createChartOption = useCallback((grouped: GroupedAssetItem[], walletLabel?: string): EChartsOption => {
+    const displayTotal = grouped.reduce((sum, asset) => sum + asset.value, 0);
+    const tooltipBackground = tokens.layer || cds.layer01;
+    const tooltipBorder = tokens.borderSubtle || cds.borderSubtle01;
+    const tooltipText = tokens.textPrimary || cds.textPrimary;
+    const tooltipSecondaryText = tokens.textSecondary || cds.textSecondary;
 
     return {
-      ...base,
+      ...baseOption,
       xAxis: undefined,
       yAxis: undefined,
-      title: walletLabel ? {
-        text: walletLabel,
-        left: 8,
-        top: 8,
-        textStyle: {
-          color: chartTheme.textColor,
-          fontSize: 16,
-          fontWeight: 'bold',
-        },
-      } : undefined,
+      title: walletLabel
+        ? {
+          text: walletLabel,
+          left: 8,
+          top: 8,
+          textStyle: {
+            color: baseOption.textStyle.color,
+            fontSize: 16,
+            fontWeight: "bold",
+          },
+        }
+        : undefined,
       tooltip: {
-        ...base.tooltip,
-        trigger: 'item',
-        formatter: (p: any) => {
-          const isOthers = p.name === othersLabel;
-          const logoUri: string | undefined = p.data.logoUri;
-          // Build header: optional logo image followed by the token name
-          const logoHtml = logoUri
-            ? `<img src="${logoUri}" alt="${p.name}" width="16" height="16" style="border-radius:50%;vertical-align:middle;margin-right:4px;" onerror="this.style.display='none'">`
-            : '';
-          let html = createTooltipHeader(`${logoHtml}${p.name}`);
-          if (isOthers && p.data.hiddenNames?.length > 0) {
-            html += `<div style="max-height:160px;overflow-y:auto;margin-bottom:4px;">`;
-            html += (p.data.hiddenNames as string[])
-              .map(n => `<div style="padding:1px 0;font-size:11px;color:var(--cds-text-secondary)">• ${n}</div>`)
-              .join('');
-            html += `</div>`;
+        ...baseOption.tooltip,
+        trigger: "item",
+        appendToBody: true,
+        confine: true,
+        backgroundColor: tooltipBackground,
+        borderColor: tooltipBorder,
+        borderWidth: 1,
+        extraCssText: "box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16); max-width: 260px; z-index: 10000;",
+        textStyle: { color: tooltipText, fontSize: 12 },
+        formatter: (rawParam: unknown) => {
+          const param = rawParam as TooltipParam;
+          const asset = param.data;
+          const name = param.name ?? asset?.name ?? "";
+          const isOthers = name === othersLabel;
+          const logoHtml = asset?.logoUri
+            ? `<img src="${asset.logoUri}" alt="${name}" width="16" height="16" style="border-radius:50%;vertical-align:middle;margin-right:4px;" onerror="this.style.display='none'">`
+            : "";
+          let html = createTooltipHeader(`${logoHtml}${name}`);
+
+          if (isOthers && asset?.hiddenNames && asset.hiddenNames.length > 0) {
+            const visibleHiddenNames = asset.hiddenNames.slice(0, MAX_VISIBLE_OTHERS);
+            const hiddenSummary = asset.hiddenNames.length > MAX_VISIBLE_OTHERS
+              ? `${tr("charts.assetDistributionChart.filters.top")} ${MAX_VISIBLE_OTHERS} / ${asset.hiddenNames.length}`
+              : `${asset.hiddenNames.length}`;
+            html += "<div style=\"margin-bottom:8px;padding-top:2px;\">";
+            html += `<div style="padding-bottom:3px;font-size:11px;font-weight:600;color:${tooltipText}">${hiddenSummary}</div>`;
+            html += visibleHiddenNames
+              .map((hiddenName, index) => `<div style="padding:1px 0;font-size:11px;line-height:1.35;color:${tooltipSecondaryText}">${index + 1}. ${hiddenName}</div>`)
+              .join("");
+            if (asset.hiddenNames.length > MAX_VISIBLE_OTHERS) {
+              html += `<div style="padding:2px 0 0;font-size:11px;line-height:1.35;color:${tooltipSecondaryText}">...</div>`;
+            }
+            html += "</div>";
           }
+
           html += createTooltipRow(
-            tr('charts.assetDistributionChart.value'),
-            formatCurrency(p.value)
+            tr("charts.assetDistributionChart.value"),
+            fmt.num.compact.currency(Number(param.value ?? asset?.value ?? 0)),
           );
           html += createTooltipRow(
-            tr('charts.assetDistributionChart.percentage'),
-            `${p.data.percentage.toFixed(2)}%`
+            tr("charts.assetDistributionChart.percentage"),
+            `${Number(asset?.percentage ?? 0).toFixed(2)}%`,
           );
           return html;
         },
       },
-      legend: {
-        ...getPieLegend(
-          chartTheme,
-          grouped.map(d => d.name),
-          !isMultiWallet
-        ),
-        // ECharts 5: show a tooltip when hovering a legend item.
-        // For "Others" we list the constituent token names.
-        tooltip: {
-          show: true,
-          formatter: (name: string) => {
-            const item = grouped.find(g => g.name === name);
-            const hidden: string[] = (item as any)?.hiddenNames ?? [];
-            if (name !== othersLabel || hidden.length === 0) return name;
-            return (
-              `<strong>${name}</strong><br/>` +
-              hidden.map(n => `• ${n}`).join('<br/>')
-            );
-          },
-        },
-      },
+      legend: { show: false },
       series: [
         {
-          type: 'pie',
-          radius: ['26%', '56%'],
-          center: ['50%', '50%'],
-          data: grouped.map((a, i) => ({
-            name: a.name,
-            value: a.value,
-            percentage: a.percentage,
-            hiddenNames: (a as any).hiddenNames,
-            // Forward logoUri so the tooltip formatter can render it
-            logoUri: (a as AssetItem).logoUri,
+          type: "pie",
+          radius: ["54%", "78%"],
+          center: ["50%", "50%"],
+          data: grouped.map((asset, index) => ({
+            ...asset,
             itemStyle: {
-              color:
-                a.name === othersLabel
-                  ? chartTheme.textColorSecondary   // neutral grey for Others
-                  : (a as any).color ??
-                  chartTheme.colorPalette[i % chartTheme.colorPalette.length],
-              borderColor: '#ffffff',
+              color: chartColorFor(asset, index, othersLabel),
+              borderColor: tokens.layer || cds.layer01,
               borderWidth: 2,
               borderRadius: 6,
             },
           })),
-          label: {
-            formatter: (p: any) => `${p.name}\n${p.data.percentage.toFixed(1)}%`,
-            fontSize: 11,
-          },
+          label: { show: false },
+          labelLine: { show: false },
+          emphasis: { label: { show: false } },
         },
       ],
       graphic: [
         {
-          type: 'text',
-          left: 'center',
-          top: '46%',
+          type: "text",
+          left: "center",
+          top: "43%",
           style: {
-            text: tr('charts.assetDistributionChart.totalValue'),
-            fill: chartTheme.textColorSecondary,
-            fontSize: 14,
+            text: fmt.num.compact.currency(displayTotal),
+            fill: baseOption.textStyle.color,
+            fontSize: 18,
+            fontWeight: "bold",
           },
         },
         {
-          type: 'text',
-          left: 'center',
-          top: '50%',
+          type: "text",
+          left: "center",
+          top: "53%",
           style: {
-            text: formatCurrency(displayTotal),
-            fill: chartTheme.textColor,
-            fontSize: 18,
-            fontWeight: 'bold',
+            text: tr("charts.assetDistributionChart.total"),
+            fill: tokens.textSecondary || cds.textSecondary,
+            fontSize: 11,
+            fontWeight: 600,
           },
         },
       ],
     };
-  }, [chartTheme, tr, selectedAssets, topN, minPct]);
+  }, [baseOption, fmt, othersLabel, tokens, tr]);
 
-  /**
-   * Extract unique assets across all wallets for aggregated legend
-   */
   const aggregatedLegendData = useMemo(() => {
-    if (!data || !('wallets' in data) || !data.wallets || data.wallets.length <= 1) return null;
+    if (wallets.length <= 1) return null;
 
-    const uniqueAssets = new Map<string, { name: string; color: string }>();
-
-    data.wallets.forEach((wallet: any, walletIndex: number) => {
-      wallet.data.forEach((asset: any, assetIndex: number) => {
-        if (!uniqueAssets.has(asset.name)) {
-          uniqueAssets.set(asset.name, {
-            name: asset.name,
-            color: (asset as any).color ?? chartTheme.colorPalette[assetIndex % chartTheme.colorPalette.length],
-          });
+    const uniqueAssets = new Map<string, LegendAsset>();
+    wallets.forEach((wallet) => {
+      wallet.data.forEach((asset, assetIndex) => {
+        const existingAsset = uniqueAssets.get(asset.name);
+        if (existingAsset) {
+          existingAsset.value += Number(asset.value ?? 0);
+          return;
         }
+        uniqueAssets.set(asset.name, {
+          name: asset.name,
+          color: asset.color ?? CHART_COLOR_PALETTE[assetIndex % CHART_COLOR_PALETTE.length],
+          value: Number(asset.value ?? 0),
+        });
       });
     });
 
-    return Array.from(uniqueAssets.values());
-  }, [data, chartTheme.colorPalette]);
+    return Array.from(uniqueAssets.values()).sort((left, right) => right.value - left.value);
+  }, [wallets]);
 
-  /**
-   * Initialize selected assets when data changes
-   */
   useEffect(() => {
-    if (aggregatedLegendData) {
-      setSelectedAssets(new Set(aggregatedLegendData.map(a => a.name)));
+    if (!aggregatedLegendData) return;
+
+    if (selectedAssets.size === 0) {
+      setSelectedAssets(new Set(aggregatedLegendData.map((asset) => asset.name)));
+      return;
     }
-  }, [aggregatedLegendData]);
 
-  /**
-   * Toggle asset selection for legend filtering
-   */
-  const toggleAssetSelection = useCallback((assetName: string) => {
-    setSelectedAssets(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(assetName)) {
-        // Don't allow deselecting all assets
-        if (newSet.size > 1) {
-          newSet.delete(assetName);
-        }
-      } else {
-        newSet.add(assetName);
-      }
-      return newSet;
-    });
-  }, []);
+    const availableAssets = new Set(aggregatedLegendData.map((asset) => asset.name));
+    const nextSelectedAssets = new Set(
+      Array.from(selectedAssets).filter((assetName) => availableAssets.has(assetName)),
+    );
 
-  /**
-   * ECharts options - multiple charts for per-wallet view
-   */
-  const chartOptions = useMemo(() => {
-    if (!data) return [];
+    if (nextSelectedAssets.size !== selectedAssets.size) {
+      setSelectedAssets(
+        nextSelectedAssets.size > 0
+          ? nextSelectedAssets
+          : new Set(aggregatedLegendData.map((asset) => asset.name)),
+      );
+    }
+  }, [aggregatedLegendData, selectedAssets]);
 
-    const isMultiWallet = 'wallets' in data && data.wallets && data.wallets.length > 1;
+  const chartOptions = useMemo<ChartEntry[]>(() => {
+    if (wallets.length === 0) return [];
+    const isMultiWallet = wallets.length > 1;
 
-    if ('wallets' in data && data.wallets && data.wallets.length > 0) {
-      return data.wallets.map((wallet) => ({
+    return wallets.map((wallet) => {
+      const grouped = buildGroupedAssets(wallet.data, selectedAssets, isMultiWallet, topN, minPct, othersLabel);
+      return {
         walletAddress: wallet.walletAddress,
+        grouped,
         option: createChartOption(
-          wallet.data,
-          data.wallets.length > 1 ? `${wallet.walletAddress.slice(0, 8)}...` : undefined,
-          isMultiWallet
+          grouped,
+          isMultiWallet ? `${wallet.walletAddress.slice(0, 8)}...` : undefined,
         ),
-      }));
-    }
+      };
+    });
+  }, [createChartOption, minPct, othersLabel, selectedAssets, topN, wallets]);
 
-    return [];
-  }, [data, createChartOption]);
-
-  const isEmpty = !data || (
-    (!('wallets' in data) || !data.wallets || data.wallets.length === 0) &&
-    // (!('data' in data) || !data.data || data.data.length === 0)
-    (!('wallets' in data) || !data.wallets || data.wallets.length === 0)
-  ) || (filters.wallets && filters.wallets.length === 0);
+  const isEmpty = wallets.length === 0 || Boolean(filters.wallets && filters.wallets.length === 0);
 
   const topNOptions: Array<{ value: TopNOption; label: string }> = [
-    { value: 5, label: tr('charts.assetDistributionChart.filters.top5') },
-    { value: 10, label: tr('charts.assetDistributionChart.filters.top10') },
-    { value: 0, label: tr('charts.assetDistributionChart.filters.all') },
+    { value: 5, label: tr("charts.assetDistributionChart.filters.top5") },
+    { value: 10, label: tr("charts.assetDistributionChart.filters.top10") }
   ];
 
   const minPctOptions: Array<{ value: MinPctOption; label: string }> = [
-    { value: 0, label: tr('charts.assetDistributionChart.filters.allPercent') },
-    { value: 1, label: tr('charts.assetDistributionChart.filters.minPct1') },
-    { value: 5, label: tr('charts.assetDistributionChart.filters.minPct5') },
-    { value: 10, label: tr('charts.assetDistributionChart.filters.minPct10') },
+    { value: 1, label: tr("charts.assetDistributionChart.filters.minPct1") },
+    { value: 5, label: tr("charts.assetDistributionChart.filters.minPct5") },
+    { value: 10, label: tr("charts.assetDistributionChart.filters.minPct10") },
   ];
 
   const filterControls = (
-    <div
-      className={`${sharedStyles.chartControls} ${sharedStyles['chartControls--start']} ${sharedStyles['chartControls--withBackground']}`}
-    >
-      <label className={sharedStyles.filterField}>
-        <span className={sharedStyles.filterLabelSmall}>
-          {tr('charts.assetDistributionChart.filters.topN')}
-        </span>
-        <div
-          className={sharedStyles.filterSegmentedGroup}
-          role="group"
-          aria-label={tr('charts.assetDistributionChart.ariaLabels.topNFilter')}
-        >
-          {topNOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setTopN(option.value)}
-              className={`${sharedStyles.filterSegmentedButton} ${topN === option.value ? sharedStyles.filterSegmentedButtonActive : ''}`}
-              aria-pressed={topN === option.value}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </label>
-
-      <label className={sharedStyles.filterField}>
-        <span className={sharedStyles.filterLabelSmall}>
-          {tr('charts.assetDistributionChart.filters.minPct')}
-        </span>
-        <div
-          className={sharedStyles.filterSegmentedGroup}
-          role="group"
-          aria-label={tr('charts.assetDistributionChart.ariaLabels.minPctFilter')}
-        >
-          {minPctOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setMinPct(option.value)}
-              className={`${sharedStyles.filterSegmentedButton} ${minPct === option.value ? sharedStyles.filterSegmentedButtonActive : ''}`}
-              aria-pressed={minPct === option.value}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </label>
-    </div>
+    <FilterMenu
+      topN={topN}
+      minPct={minPct}
+      setTopN={setTopN}
+      setMinPct={setMinPct}
+      topNOptions={topNOptions}
+      minPctOptions={minPctOptions}
+    />
   );
+
+  const combinedActions = externalActions ? (
+    <>{externalActions}{filterControls}</>
+  ) : filterControls;
 
   return (
     <ChartWrapper
       title={chartTitle}
-      toolbarLayout="stacked"
       loadingState={loadingState}
       isEmpty={isEmpty}
       emptyState={filters.wallets && filters.wallets.length === 0
         ? {
-          title: tr('charts.noWalletsTitle'),
-          message: tr('charts.assetDistributionChart.noWalletsMessage'),
+          title: tr("charts.noWalletsTitle"),
+          message: tr("charts.assetDistributionChart.noWalletsMessage"),
         }
         : undefined}
       onRetry={() => refetch(false)}
       onExport={handleExport}
       className={className}
-      actions={filterControls}
+      wrapperMinHeight={minHeight}
+      actions={combinedActions}
+      enableExport={false}
+      enableFullscreen={false}
+      enableMiniPlayer={false}
     >
       {chartOptions.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-          {/* Aggregated Legend for Multi-Wallet View */}
+        <div className={styles.assetDistributionContent}>
           {aggregatedLegendData && chartOptions.length > 1 && (
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '1rem',
-                padding: '1rem',
-                justifyContent: 'center',
-                borderBottom: '1px solid var(--cds-border-subtle)',
-                marginBottom: '1rem',
-              }}
-            >
-              {aggregatedLegendData.map((asset) => {
-                const isSelected = selectedAssets.has(asset.name);
-                return (
-                  <div
-                    key={asset.name}
-                    onClick={() => toggleAssetSelection(asset.name)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      cursor: 'pointer',
-                      opacity: isSelected ? 1 : 0.3,
-                      transition: 'opacity 0.2s ease',
-                      userSelect: 'none',
-                    }}
-                    title={isSelected ? tr('charts.assetDistributionChart.legend.clickToHide').replace('{name}', asset.name) : tr('charts.assetDistributionChart.legend.clickToShow').replace('{name}', asset.name)}
-                  >
-                    <span
-                      style={{
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
-                        backgroundColor: asset.color,
-                        opacity: isSelected ? 1 : 0.5,
-                      }}
-                    />
-                    <span
-                      style={{
-                        fontSize: '14px',
-                        color: chartTheme.textColor,
-                      }}
-                    >
-                      {asset.name}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+            <AssetSelector
+              assets={aggregatedLegendData}
+              selectedAssets={selectedAssets}
+              onChange={setSelectedAssets}
+            />
           )}
 
-          {/* Chart Grid */}
           <ChartGrid
             itemCount={chartOptions.length}
             multiItemColumns={Math.min(3, chartOptions.length)}
           >
-            {chartOptions.map((chartData: any, index: number) => (
+            {chartOptions.map((chartData, index) => (
               <ChartGridItem
                 key={chartData.walletAddress}
                 itemKey={chartData.walletAddress}
                 minHeight={minHeight}
-                aspectRatio="1"
               >
-                <ReactECharts
-                  ref={index === 0 ? chartRef : undefined}
-                  option={chartData.option}
-                  style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
-                  notMerge
-                  lazyUpdate
-                />
+                <div className={styles.distributionLayout}>
+                  <div className={styles.donutPane}>
+                    <ReactECharts
+                      ref={index === 0 ? chartRef : undefined}
+                      option={chartData.option}
+                      style={{ height: "100%", width: "100%", minHeight: `${Math.max(220, minHeight - 40)}px` }}
+                      notMerge
+                      lazyUpdate
+                    />
+                  </div>
+                  <AssetLegend items={chartData.grouped} othersLabel={othersLabel} />
+                </div>
               </ChartGridItem>
             ))}
           </ChartGrid>
@@ -604,4 +512,131 @@ export const AssetDistribution: React.FC<ChartProps> = ({
     </ChartWrapper>
   );
 };
+
+export function AssetLegend({ items, othersLabel }: { items: GroupedAssetItem[]; othersLabel: string }) {
+  return (
+    <div className={styles.legendPane} data-testid="asset-distribution-legend">
+      <div className={styles.legendList}>
+        {items.map((asset, index) => (
+          <div key={asset.name} className={styles.legendRow}>
+            <span
+              className={styles.legendSwatch}
+              style={{ backgroundColor: chartColorFor(asset, index, othersLabel) }}
+            />
+            <span className={styles.legendName}>{asset.name}</span>
+            <span className={styles.legendPercent}>{asset.percentage.toFixed(1)}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AssetSelector({
+  assets,
+  selectedAssets,
+  onChange,
+}: {
+  assets: LegendAsset[];
+  selectedAssets: Set<string>;
+  onChange: (assets: Set<string>) => void;
+}) {
+  const { tr } = useLocalization();
+
+  const toggleAsset = (assetName: string, checked: boolean) => {
+    const next = new Set(selectedAssets);
+    if (checked) next.add(assetName);
+    else if (next.size > 1) next.delete(assetName);
+    onChange(next);
+  };
+
+  return (
+    <div className={styles.assetSelector} data-html2canvas-ignore="true">
+      <span className={styles.assetSelectorLabel}>{tr("charts.balanceChart.selectTokenLabel")}</span>
+      <div className={styles.assetSelectorList}>
+        {assets.map((asset) => (
+          <label key={asset.name} className={styles.assetSelectorItem}>
+            <input
+              type="checkbox"
+              checked={selectedAssets.has(asset.name)}
+              onChange={(event) => toggleAsset(asset.name, event.target.checked)}
+            />
+            <span className={styles.assetSelectorSwatch} style={{ backgroundColor: asset.color }} />
+            <span>{asset.name}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FilterMenu({
+  topN,
+  minPct,
+  setTopN,
+  setMinPct,
+  topNOptions,
+  minPctOptions,
+}: {
+  topN: TopNOption;
+  minPct: MinPctOption;
+  setTopN: (value: TopNOption) => void;
+  setMinPct: (value: MinPctOption) => void;
+  topNOptions: Array<{ value: TopNOption; label: string }>;
+  minPctOptions: Array<{ value: MinPctOption; label: string }>;
+}) {
+  const { tr } = useLocalization();
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!wrapperRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={wrapperRef} className={styles.filterMenu}>
+      <IconActionButton
+        icon={SlidersHorizontal}
+        label={tr("charts.assetDistributionChart.filtersMenu")}
+        onClick={() => setOpen((current) => !current)}
+      />
+      {open && (
+        <div className={styles.filterPopover} role="dialog" aria-label={tr("charts.assetDistributionChart.filtersMenu")}>
+          <div className={styles.filterGroup}>
+            <span className={styles.filterLabel}>{tr("charts.assetDistributionChart.filters.topN")}</span>
+            <SegmentedControl
+              ariaLabel={tr("charts.assetDistributionChart.filters.topN")}
+              value={String(topN)}
+              options={topNOptions.map((option) => ({ value: String(option.value), label: option.label }))}
+              onChange={(value) => setTopN(Number(value) as TopNOption)}
+            />
+          </div>
+          <div className={styles.filterGroup}>
+            <span className={styles.filterLabel}>{tr("charts.assetDistributionChart.filters.minPct")}</span>
+            <SegmentedControl
+              ariaLabel={tr("charts.assetDistributionChart.filters.minPct")}
+              value={String(minPct)}
+              options={minPctOptions.map((option) => ({ value: String(option.value), label: option.label }))}
+              onChange={(value) => setMinPct(Number(value) as MinPctOption)}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 

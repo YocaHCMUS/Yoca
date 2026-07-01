@@ -1,0 +1,39 @@
+@use "@carbon/react/scss/spacing" as *;
+@use "@carbon/react/scss/type" as *;
+
+@media (max-width: 960px) {
+  .tabSection {
+    flex-direction: column;
+    min-height: auto;
+  }
+}
+
+.tabSection {
+  display: flex;
+  flex: 1;
+  overflow: auto;
+  min-block-size: 100vh;
+}
+
+.loadingState,
+.errorState {
+  padding: $spacing-06;
+}
+
+.profileTabsShell {
+  min-height: 100%;
+  height: 100%;
+  padding: $spacing-05;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.14), transparent 22rem),
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.1), transparent 18rem),
+    linear-gradient(180deg, var(--yoca-bg, #070a13), var(--yoca-bg-soft, #0b1020));
+  color: var(--yoca-text-main, #f8fafc);
+}
+
+@media (max-width: 960px) {
+  .profileTabsShell {
+    padding: $spacing-04;
+  }
+}

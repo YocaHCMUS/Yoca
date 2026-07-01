@@ -1,40 +1,15 @@
 // I stopped trying to understand this a while ago
 import type {
-  ClientRequest,
-  ClientRequestOptions,
-  ClientResponse,
+    ClientRequestOptions,
+    ClientResponse
 } from "hono/client";
-import type { Endpoint, ResponseFormat } from "hono/types";
 import useSWR from "swr";
 
 type GetInput<T> =
-  T extends ClientRequest<any, any, infer S>
-    ? S["$get"] extends { input: infer R }
-      ? R
-      : {}
+  T extends { $get: (args: infer A, options?: ClientRequestOptions) => any }
+    ? NonNullable<A>
     : {};
-
-type GetEndpoint<T> =
-  T extends ClientRequest<any, any, infer S>
-    ? S extends { $get: infer E }
-      ? E
-      : never
-    : never;
-
-type ClientResponseOfEndpoint<T extends Endpoint = Endpoint> = T extends {
-  output: infer O;
-  outputFormat: infer F;
-  status: infer S;
-}
-  ? ClientResponse<
-      O,
-      S extends number ? S : never,
-      F extends ResponseFormat ? F : never
-    >
-  : never;
-
-type GetResponse<T> = ClientResponseOfEndpoint<GetEndpoint<T>>;
-
+    
 type HasRequiredKeys<T> = T extends object
   ? {
       [K in keyof T]-?: {} extends Pick<T, K> ? never : K;
@@ -60,21 +35,23 @@ type UseGetConfig<Success, Transformed> = {
 };
 
 export function useGet<
-  T extends { $get: any; $url: any },
+  T extends {
+    $get: (...params: any[]) => Promise<ClientResponse<any, any, any>>;
+    $url: (...params: any[]) => any;
+  },
   SuccessStatus extends number,
-  Response = GetResponse<T>,
+  Response = Awaited<ReturnType<T["$get"]>>,
   SuccessResponseType = SuccessResponse<Response, SuccessStatus>,
   Success = SuccessJson<SuccessResponseType>,
   Transformed = Success,
+  Error = ErrorResponse<Response, SuccessStatus>,
 >(
   request: T,
   successStatus: SuccessStatus,
   ...params: HasRequiredKeys<GetInput<T>> extends true
     ? [args: GetInput<T>, config?: UseGetConfig<Success, Transformed>]
     : [args?: GetInput<T>, config?: UseGetConfig<Success, Transformed>]
-) {
-  type Error = ErrorResponse<Response, SuccessStatus>;
-
+) : UseGetResp<NoInfer<Transformed>, Error>{
   const [args, config] = params;
   const { options, select, enabled = true } = config ?? {};
 
@@ -92,8 +69,17 @@ export function useGet<
     },
     {
       revalidateOnFocus: false,
+      // keepPreviousData: true,
       revalidateOnReconnect: false,
-      revalidateIfStale: false,
+      // revalidateIfStale: false,
     },
   );
 }
+
+export type UseGetResp<Data, Error = any> = {
+  isLoading: boolean;
+  isValidating: boolean;
+  data: Data | undefined;
+  error: Error | undefined;
+  mutate: () => void;
+};

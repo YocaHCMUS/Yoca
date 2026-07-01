@@ -1,6 +1,6 @@
-import { setErr } from "@sv/config/errors.js";
 import {
   recentTradesQuerySchema,
+  traderTypeQuerySchema,
   validate,
 } from "@sv/middlewares/validation.js";
 import {
@@ -8,6 +8,7 @@ import {
   getTopGainers,
   getTopLosers,
 } from "@sv/services/trades.js";
+import { setErr } from "@sv/util/errors.js";
 import { statusCode } from "@sv/util/responses.js";
 import { Hono } from "hono";
 
@@ -37,9 +38,10 @@ const app = new Hono()
       );
     }
   })
-  .get("/traders/gainers", async (c) => {
+  .get("/traders/gainers", validate("query", traderTypeQuerySchema), async (c) => {
     try {
-      const traders = await getTopGainers();
+      const { type = "1W" } = c.req.valid("query");
+      const traders = await getTopGainers(type);
 
       if (traders) {
         return c.json(traders, statusCode.Ok);
@@ -57,9 +59,10 @@ const app = new Hono()
       );
     }
   })
-  .get("/traders/losers", async (c) => {
+  .get("/traders/losers", validate("query", traderTypeQuerySchema), async (c) => {
     try {
-      const losers = await getTopLosers();
+      const { type = "1W" } = c.req.valid("query");
+      const losers = await getTopLosers(type);
 
       if (losers) {
         return c.json(losers, statusCode.Ok);
@@ -79,3 +82,5 @@ const app = new Hono()
   });
 
 export default app;
+
+export type TradesAppType = typeof app;

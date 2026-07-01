@@ -1,9 +1,9 @@
 import client from "@/api/main";
 import { SOLSCAN_ACCOUNT_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { formatAddress } from "@/util/format";
 import { ChevronDown, ChevronUp, Copy } from "@carbon/icons-react";
 import classNames from "classnames";
+import { useNavigate } from "react-router";
 import type { InferResponseType } from "hono/client";
 import { useState } from "react";
 import Tble from "../Tble";
@@ -14,16 +14,8 @@ type TopHoldersData = InferResponseType<
   200
 >;
 
-type HoldersInfo =
-  | InferResponseType<
-      (typeof client.api.tokens.holders.stats)[":addresses"]["$get"],
-      200
-    >[number]
-  | null;
-
 interface TopHoldersProps {
   holders: TopHoldersData;
-  holdersInfo?: HoldersInfo | null;
 }
 
 // Rút gọn địa chỉ ví
@@ -32,8 +24,9 @@ const shortenAddress = (address: string) => {
   return address.slice(0, 10);
 };
 
-export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
-  const { tr } = useLocalization();
+export const TopHolders = ({ holders }: TopHoldersProps) => {
+  const { tr, fmt } = useLocalization();
+  const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(true);
 
   if (!holders || holders.length === 0) {
@@ -44,14 +37,13 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
       </div>
     );
   }
-  console.log("Holders: ");
-  console.log(holdersInfo);
-
   // Tính tổng phần trăm top 10
-  // Ưu tiên lấy từ API (holdersInfo), nếu không có thì tính tổng từ danh sách holders
-  const totalPercentage = holdersInfo?.top10Percent
-    ? Number(holdersInfo.top10Percent)
-    : holders.reduce((acc: number, curr: any) => acc + curr.percentage, 0);
+  // Dùng trực tiếp dữ liệu top 10 từ mảng holders
+  const top10Holders = holders.slice(0, 10);
+  const totalPercentage = top10Holders.reduce(
+    (acc: number, curr: any) => acc + curr.percentage,
+    0
+  );
 
   const toggleExpand = () => setIsExpanded(!isExpanded);
 
@@ -86,23 +78,31 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
             headers={[
               { key: "rank", header: "#" },
               { key: "address", header: tr("token.topHolders.address") },
-              { key: "percentage", header: tr("token.topHolders.percent"), align: "end" },
+              {
+                key: "amount",
+                header: "Amount",
+                align: "end",
+              },
+              {
+                key: "percentage",
+                header: tr("token.topHolders.percent"),
+                align: "end",
+              },
             ]}
             loading={false}
             height="auto"
-            rows={holders.map((holder: any, index: number) => ({
+            rows={top10Holders.map((holder: any, index: number) => ({
               id: holder.holderAddress,
               rank: <span className={styles.rank}>{index + 1}</span>,
               address: (
                 <div className={styles.addressWrapper}>
-                  <a
-                    href={`${SOLSCAN_ACCOUNT_URL}/${holder.holderAddress}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <div
+                    onClick={() => navigate(`/wallets/${holder.holderAddress}`)}
                     className={styles.addressLink}
+                    style={{ cursor: "pointer" }}
                   >
-                    {formatAddress(holder.holderAddress)}
-                  </a>
+                    {fmt.text.address(holder.holderAddress)}
+                  </div>
                   <div
                     role="button"
                     tabIndex={0}
@@ -115,6 +115,11 @@ export const TopHolders = ({ holders, holdersInfo }: TopHoldersProps) => {
                   >
                     <Copy size={16} />
                   </div>
+                </div>
+              ),
+              amount: (
+                <div className={styles.amount}>
+                  {fmt.num.compact.decimal(holder.balance)}
                 </div>
               ),
               percentage: (

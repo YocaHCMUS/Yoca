@@ -1,32 +1,31 @@
-// --- ACMS API call cache table ---
-export const acmsApiCache = pgTable(
-  'acms_api_cache',
-  {
-    key: varchar('key', { length: 128 }).primaryKey(),
-    provider: varchar('provider', { length: 32 }).notNull(),
-    endpoint: varchar('endpoint', { length: 128 }).notNull(),
-    params: jsonb('params').notNull(),
-    result: jsonb('result').notNull(),
-    createdAt: timestamp('created_at').notNull().defaultNow(),
-    updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
-  }
-);
 import { sql } from "drizzle-orm";
 import {
   bigint,
-  check,
+  boolean,
+  date,
   decimal as dec,
+  index,
   integer,
   jsonb,
   pgEnum,
   pgTable,
   primaryKey,
+  serial,
   smallint,
   text,
   timestamp,
+  unique,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { users } from "./users";
+import dayjs from "dayjs";
+export * from "./alerts";
+export * from "./users";
+export * from "./payment";
+export * from "./wallets";
+export * from "./meta";
 
 // Decimal has "string" mode by default, due to how node-postgres saves
 // decimal numbers to keep precisions, this overrides that so you can pass
@@ -35,57 +34,33 @@ function decimal(name: string) {
   return dec(name, { mode: "number" });
 }
 
-// #region Table definitions
-export const enumAuthProvider = pgEnum("auth_provider", [
-  "password",
-  "google",
-  "github",
-  "solana",
-  "other",
-]);
-
+// #region Enums
 export const enumTradeAction = pgEnum("trade_action", ["buy", "sell"]);
 
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  displayName: varchar("display_name"),
-  // Email is not needed for wallet users, see it as contact
-  email: varchar("email"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const enumAlertRuleAction = pgEnum("alert_rule_action", [
+  "SWAP",
+  "TRANSFER",
+  "ALL",
+]);
 
-export const authAccounts = pgTable(
-  "auth_accounts",
-  {
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    provider: enumAuthProvider("provider").notNull(),
-    providerUserId: varchar("provider_user_id").notNull(),
-    hashedPassword: varchar("hashed_password"),
-    loginNounce: varchar("login_nounce"),
-    nounceExpiredAt: timestamp("nounce_expired_at"),
-  },
-  (table) => [
-    primaryKey({
-      columns: [table.provider, table.providerUserId],
-    }),
-    check(
-      "provider_password",
-      sql`(${table.provider} = 'password' AND ${table.hashedPassword} IS NOT NULL)
-          OR
-          (${table.provider} <> 'password' AND ${table.hashedPassword} IS NULL)`,
-    ),
-  ],
-);
+export const enumAlertRuleTrigger = pgEnum("alert_rule_trigger", [
+  "ONCE",
+  "ALWAYS",
+]);
+
+export const enumAlertRuleVolumeUnit = pgEnum("alert_rule_volume_unit", [
+  "USD",
+  "SOL",
+]);
+
+// #endregion
+
+// #region Table definitions
 
 export const tokenMeta = pgTable("token_meta", {
   address: varchar("address", { length: 44 }).primaryKey(),
-  name: varchar("name").notNull(),
-  symbol: varchar("symbol").notNull(),
+  name: varchar("name"),
+  symbol: varchar("symbol"),
   imageUrl: varchar("image_url"),
 
   updatedAt: timestamp("updated_at")
@@ -158,9 +133,12 @@ export const tokenPoolData = pgTable("token_pool_data", {
   poolName: varchar("name"),
 
   baseAddress: varchar("base_address", { length: 44 }).notNull(),
+  baseImageUrl: varchar("base_image_url"),
   quoteAddress: varchar("quote_address", { length: 44 }).notNull(),
+  quoteImageUrl: varchar("quote_image_url"),
 
   dexId: varchar("dex_id"),
+  dexImageUrl: varchar("dex_image_url"),
 
   poolCreatedAt: timestamp("pool_created_at"),
   liquidityUsd: decimal("liquidity_usd"),
@@ -296,6 +274,153 @@ export const tokenMarketChartDaily = pgTable(
   ],
 );
 
+/**
+ * Token price cache for timestamp-aware enrichment.
+ *
+ * Stores price-at-timestamp lookups bucketed to 5-min intervals.
+ * Composite PK prevents duplicate (mint, bucket) entries.
+ * Populated by resolve-token-price.ts cache-first flow.
+ */
+export const tokenPriceCache = pgTable(
+  "token_price_cache",
+  {
+    mint: varchar("mint", { length: 44 }).notNull(),
+    timestampSec: bigint("timestamp_sec", { mode: "number" }).notNull(),
+    priceUsd: decimal("price_usd").notNull(),
+    source: varchar("source", { length: 20 }).notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [primaryKey({ columns: [table.mint, table.timestampSec] })],
+);
+
+export const tokenVolatilityNewsCache = pgTable(
+  "token_volatility_news_cache",
+  {
+    id: serial("id").primaryKey(),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    symbol: varchar("symbol", { length: 32 }).notNull(),
+    name: varchar("name", { length: 128 }).notNull(),
+    thresholdPercent: decimal("threshold_percent").notNull(),
+    timeframe: varchar("timeframe", { length: 16 }).notNull(),
+    detectionWindow: varchar("detection_window", { length: 16 }).notNull(),
+    maxEventsWithNews: integer("max_events_with_news").notNull(),
+    includeSummary: boolean("include_summary").notNull().default(false),
+    responseJson: jsonb("response_json")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+    expiresAt: timestamp("expires_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("token_volatility_news_cache_key_uq").on(
+      table.tokenAddress,
+      table.thresholdPercent,
+      table.timeframe,
+      table.detectionWindow,
+      table.maxEventsWithNews,
+      table.includeSummary,
+    ),
+  ],
+);
+
+export const tokenChartNewsEventsCache = pgTable(
+  "token_chart_news_events_cache",
+  {
+    id: serial("id").primaryKey(),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    symbol: varchar("symbol", { length: 32 }).notNull(),
+    name: varchar("name", { length: 128 }).notNull(),
+    timeframe: varchar("timeframe", { length: 16 }).notNull(),
+    eventDate: varchar("event_date", { length: 10 }).notNull().default(""),
+    includeSummary: boolean("include_summary").notNull().default(false),
+    responseJson: jsonb("response_json")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+    expiresAt: timestamp("expires_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("token_chart_news_events_cache_key_uq").on(
+      table.tokenAddress,
+      table.symbol,
+      table.name,
+      table.timeframe,
+      table.eventDate,
+      table.includeSummary,
+    ),
+  ],
+);
+
+export const tokenAiChatCache = pgTable(
+  "token_ai_chat_cache",
+  {
+    id: serial("id").primaryKey(),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    normalizedQuestionHash: varchar("normalized_question_hash", {
+      length: 64,
+    }).notNull(),
+    timeframe: varchar("timeframe", { length: 16 }).notNull(),
+    language: varchar("language", { length: 8 }).notNull(),
+    promptVersion: varchar("prompt_version", { length: 32 }).notNull(),
+    model: varchar("model", { length: 128 }).notNull(),
+    responseJson: jsonb("response_json")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    evidenceHash: varchar("evidence_hash", { length: 64 }).notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+    expiresAt: timestamp("expires_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("token_ai_chat_cache_key_uq").on(
+      table.tokenAddress,
+      table.normalizedQuestionHash,
+      table.timeframe,
+      table.language,
+      table.promptVersion,
+      table.model,
+      table.evidenceHash,
+    ),
+  ],
+);
+
+export const aiDailyUsage = pgTable(
+  "ai_daily_usage",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    feature: varchar("feature", { length: 64 }).notNull(),
+    usageDate: date("usage_date", { mode: "string" }).notNull(),
+    usageCount: integer("usage_count").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.userId, table.feature, table.usageDate],
+    }),
+  ],
+);
+
 // {
 //     "signature": "5wHu1qwD7Jsj3xqWjdSEJmYr3Q5f5RjXqjqQJ7jqEj7jqEj7jqEj7jqEj7jqEj7jqE",
 //     "timestamp": 1704067200,
@@ -318,7 +443,7 @@ export const tokenTransfers = pgTable(
     amountUsd: decimal("amount_usd").notNull(),
     blockTime: timestamp("block_time").notNull(),
     tokenAddress: varchar("token_address", { length: 44 }).notNull(),
-    tokenSymbol: varchar("token_symbol", { length: 10 }).notNull(),
+    tokenSymbol: varchar("token_symbol", { length: 64 }).notNull(),
     transactionSignature: varchar("transaction_signature", {
       length: 88,
     }).notNull(),
@@ -351,6 +476,7 @@ export const topTokenHolders = pgTable(
     holderAddress: varchar("holder_address", { length: 44 }).notNull(),
     rank: integer("rank").notNull(),
     percentage: decimal("percentage").notNull(),
+    balance: decimal("balance"),
     updatedAt: timestamp("updated_at")
       .notNull()
       .$onUpdate(() => new Date()),
@@ -386,19 +512,6 @@ export const walletBalances = pgTable(
   },
   (table) => [primaryKey({ columns: [table.address, table.tokenAddress] })],
 );
-
-export const coinGeckoTokenListMeta = pgTable("coin_gecko_token_list_meta", {
-  key: text("key").primaryKey(),
-  lastRefresh: timestamp("last_refresh").notNull(),
-});
-
-// The point of cg token - id list is that it rarely changes, and when it does,
-// it'd be better that we update all at once
-export const coinGeckoTokenList = pgTable("coin_gecko_token_list", {
-  tokenAddress: varchar("token_address", { length: 44 }).primaryKey(),
-  // coinGeckId won't be unique during let's say an update that swaps two ids
-  coinGeckoId: text("coin_gecko_id").notNull(),
-});
 
 // Trending tokens
 export const trendingTokens = pgTable("trending_tokens", {
@@ -506,7 +619,9 @@ export const walletOverviewCache = pgTable(
   {
     address: varchar("address", { length: 66 }).notNull(),
     totalAssetValueUsd: decimal("total_asset_value_usd").notNull(),
-    totalAssetValueChange24hPercent: decimal("total_asset_value_change_24h_percent"),
+    totalAssetValueChange24hPercent: decimal(
+      "total_asset_value_change_24h_percent",
+    ),
     tradingVolumeUsd24h: decimal("trading_volume_usd_24h"),
     tradingVolumeUsd7d: decimal("trading_volume_usd_7d"),
     tradingVolumeUsd30d: decimal("trading_volume_usd_30d"),
@@ -590,6 +705,30 @@ export const walletPortfolioCache = pgTable(
   (t) => [primaryKey({ columns: [t.address] })],
 );
 
+export const walletHistoricalPortfolioCache = pgTable(
+  "wallet_historical_portfolio_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    date: varchar("date", { length: 10 }).notNull(),
+    data: jsonb("data")
+      .$type<
+        Array<{
+          tokenAddress: string;
+          symbol: string;
+          name?: string;
+          logoUri?: string;
+          amount: number;
+          priceUsd?: number;
+          valueUsd: number;
+          change24hPercent?: number;
+        }>
+      >()
+      .notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.date] })],
+);
+
 export const walletTransactionsMeta = pgTable(
   "wallet_transactions_meta",
   {
@@ -608,6 +747,8 @@ export const walletSwapMeta = pgTable(
   {
     address: varchar("address", { length: 66 }).notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    coveredFromSec: integer("covered_from_sec"),
+    coveredToSec: integer("covered_to_sec"),
   },
   (t) => [primaryKey({ columns: [t.address] })],
 );
@@ -617,6 +758,10 @@ export const walletTransferMeta = pgTable(
   {
     address: varchar("address", { length: 66 }).notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    coveredFromSec: integer("covered_from_sec"),
+    coveredToSec: integer("covered_to_sec"),
+    coveredFromCursor: varchar("last_wallet_address", { length: 66 }),
+    coveredToCursor: varchar("first_wallet_address", { length: 66 }),
   },
   (t) => [primaryKey({ columns: [t.address] })],
 );
@@ -635,6 +780,114 @@ export const walletHeliusTransactions = pgTable(
       .notNull(),
   },
   (t) => [primaryKey({ columns: [t.address, t.signature] })],
+);
+
+export const walletEnhancedTransactions = pgTable(
+  "wallet_enhanced_transactions",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    signature: text("signature").notNull(),
+    blockTimestampMs: bigint("block_timestamp_ms", {
+      mode: "number",
+    }).notNull(),
+    slot: bigint("slot", { mode: "number" }),
+    fee: bigint("fee", { mode: "number" }),
+    feePayer: varchar("fee_payer", { length: 66 }).notNull(),
+    source: text("source"),
+    type: text("type"),
+    programId: varchar("program_id", { length: 66 }),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.signature] })],
+);
+
+export const walletEnhancedTokenTransfers = pgTable(
+  "wallet_enhanced_token_transfers",
+  {
+    id: serial("id").primaryKey(),
+    address: varchar("address", { length: 66 }).notNull(),
+    signature: text("signature").notNull(),
+    mint: varchar("mint", { length: 66 }).notNull(),
+    tokenAmount: decimal("token_amount").notNull(),
+    fromUserAccount: varchar("from_user_account", { length: 66 }).notNull(),
+    toUserAccount: varchar("to_user_account", { length: 66 }).notNull(),
+    fromTokenAccount: varchar("from_token_account", { length: 66 }),
+    toTokenAccount: varchar("to_token_account", { length: 66 }),
+    symbol: text("symbol"),
+    tokenSymbol: text("token_symbol"),
+    instructionIndex: integer("instruction_index").notNull(),
+  },
+  (t) => [
+    uniqueIndex("uq_enh_token_tx").on(
+      t.address,
+      t.signature,
+      t.instructionIndex,
+    ),
+  ],
+);
+
+export const walletEnhancedNativeTransfers = pgTable(
+  "wallet_enhanced_native_transfers",
+  {
+    id: serial("id").primaryKey(),
+    address: varchar("address", { length: 66 }).notNull(),
+    signature: text("signature").notNull(),
+    amount: decimal("amount").notNull(),
+    fromUserAccount: varchar("from_user_account", { length: 66 }).notNull(),
+    toUserAccount: varchar("to_user_account", { length: 66 }).notNull(),
+    transferIndex: integer("transfer_index").notNull(),
+  },
+  (t) => [
+    uniqueIndex("uq_enh_native_tx").on(t.address, t.signature, t.transferIndex),
+  ],
+);
+
+export const walletEnhancedInstructions = pgTable(
+  "wallet_enhanced_instructions",
+  {
+    id: serial("id").primaryKey(),
+    address: varchar("address", { length: 66 }).notNull(),
+    signature: text("signature").notNull(),
+    instructionIndex: integer("instruction_index").notNull(),
+    programId: varchar("program_id", { length: 66 }).notNull(),
+    data: text("data"),
+    accounts: varchar("accounts").array(),
+  },
+  (t) => [
+    uniqueIndex("uq_enh_ins_tx").on(t.address, t.signature, t.instructionIndex),
+  ],
+);
+
+export const walletEnhancedInnerInstructions = pgTable(
+  "wallet_enhanced_inner_instructions",
+  {
+    id: serial("id").primaryKey(),
+    address: varchar("address", { length: 66 }).notNull(),
+    signature: text("signature").notNull(),
+    instructionIndex: integer("instruction_index").notNull(),
+    innerIndex: integer("inner_index").notNull(),
+    programId: varchar("program_id", { length: 66 }).notNull(),
+    data: text("data"),
+    accounts: varchar("accounts").array(),
+  },
+  (t) => [
+    uniqueIndex("uq_enh_inner_ins_tx").on(
+      t.address,
+      t.signature,
+      t.instructionIndex,
+      t.innerIndex,
+    ),
+  ],
+);
+
+export const walletEnhancedTxMeta = pgTable(
+  "wallet_enhanced_tx_meta",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    coveredFromMs: bigint("covered_from_ms", { mode: "number" }),
+    coveredToMs: bigint("covered_to_ms", { mode: "number" }),
+  },
+  (t) => [primaryKey({ columns: [t.address] })],
 );
 
 export const walletTransactions = pgTable(
@@ -664,7 +917,9 @@ export const walletSwap = pgTable(
   {
     transactionHash: text("transaction_hash").notNull(),
     transactionType: text("transaction_type").notNull(),
-    blockTimestampMs: bigint("block_timestamp_ms", { mode: "number" }).notNull(),
+    blockTimestampMs: bigint("block_timestamp_ms", {
+      mode: "number",
+    }).notNull(),
 
     subcategory: text("subcategory"),
 
@@ -673,11 +928,9 @@ export const walletSwap = pgTable(
 
     tokensInvoled: text("tokens_involved").notNull(),
 
-    exchangeAddress: varchar("exchange_address", { length: 66 }).notNull(),
-    exchangeName: text("exchange_name").notNull(),
-    exchangeLogo: text("exchange_logo").notNull(),
-
-    boughtTokenAddress: varchar("bought_token_address", { length: 66 }).notNull(),
+    boughtTokenAddress: varchar("bought_token_address", {
+      length: 66,
+    }).notNull(),
     boughtTokenAmount: decimal("bought_token_amount").notNull(),
     boughtTokenPriceUsd: decimal("bought_token_price_usd").notNull(),
 
@@ -687,29 +940,10 @@ export const walletSwap = pgTable(
 
     totalValueUsd: decimal("total_value_usd"),
     baseQuotePrice: decimal("base_quote_price_usd"),
+
+    providerSource: text("provider_source"),
   },
   (t) => [primaryKey({ columns: [t.transactionHash] })],
-);
-
-export const walletExchangeCountsCache = pgTable(
-  "wallet_exchange_counts_cache",
-  {
-    address: varchar("address", { length: 66 }).notNull(),
-    data: jsonb("data")
-      .$type<{
-        exchanges: Array<{
-          name: string;
-          deposits: number;
-          withdrawals: number;
-          depositsVolume: number;
-          withdrawalsVolume: number;
-        }>;
-        metadata: { period: string; metric: string };
-      }>()
-      .notNull(),
-    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
-  },
-  (t) => [primaryKey({ columns: [t.address] })],
 );
 
 export const walletIdentityCache = pgTable(
@@ -728,62 +962,30 @@ export const walletIdentityCache = pgTable(
   (t) => [primaryKey({ columns: [t.address] })],
 );
 
-export const walletBalanceHistoryCache = pgTable(
-  "wallet_balance_history_cache",
+export const walletAiAnalysisCache = pgTable(
+  "wallet_ai_analysis_cache",
   {
+    key: varchar("key", { length: 256 }).primaryKey(),
     address: varchar("address", { length: 66 }).notNull(),
-    timePeriod: varchar("time_period", { length: 10 }).notNull(),
-    data: jsonb("data")
-      .$type<
-        Array<{
-          timestamp: number;
-          value: number;
-          date: string;
-          changeUsd?: number;
-          changePercent?: number;
-        }>
-      >()
-      .notNull(),
+    language: varchar("language", { length: 10 }).notNull(),
+    modelVersion: varchar("model_version", { length: 64 }),
+    promptVersion: varchar("prompt_version", { length: 64 }),
+    raw: jsonb("raw").notNull(),
+    normalized: jsonb("normalized").notNull(),
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
-    coveredFromMs: bigint("covered_from_ms", { mode: "number" }).notNull(),
-    coveredToMs: bigint("covered_to_ms", { mode: "number" }).notNull(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
-  (t) => [primaryKey({ columns: [t.address, t.timePeriod] })],
-);
-
-export const walletTokenBalanceHistoryCache = pgTable(
-  "wallet_token_balance_history_cache",
-  {
-    address: varchar("address", { length: 66 }).notNull(),
-    tokenAddress: varchar("token_address", { length: 66 }).notNull(),
-    tokenSymbol: varchar("token_symbol", { length: 64 }).notNull(),
-    tokenSeries: jsonb("token_series")
-      .$type<
-        Array<{
-          timestamp: number;
-          value: number;
-          date: string;
-          changeUsd?: number;
-          changePercent?: number;
-        }>
-      >()
-      .notNull(),
-    usdSeries: jsonb("usd_series")
-      .$type<
-        Array<{
-          timestamp: number;
-          value: number;
-          date: string;
-          changeUsd?: number;
-          changePercent?: number;
-        }>
-      >()
-      .notNull(),
-    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
-    coveredFromMs: bigint("covered_from_ms", { mode: "number" }).notNull(),
-    coveredToMs: bigint("covered_to_ms", { mode: "number" }).notNull(),
-  },
-  (t) => [primaryKey({ columns: [t.address, t.tokenAddress] })],
+  (t) => [
+    uniqueIndex("wallet_ai_analysis_cache_address_lang_ver_uq").on(
+      t.address,
+      t.language,
+      t.modelVersion,
+      t.promptVersion,
+    ),
+  ],
 );
 
 export const walletUserTags = pgTable(
@@ -800,6 +1002,86 @@ export const walletUserTags = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [primaryKey({ columns: [t.userId, t.walletAddress] })],
+);
+
+/** Wallets followed for Helius webhook-driven alerts */
+export const followedWallets = pgTable(
+  "followed_wallets",
+  {
+    id: serial("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    address: text("address").notNull(),
+    label: text("label"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.userId, t.address)],
+);
+
+/**
+ * User-defined alert predicates (Observer stream + server-side filtering).
+ * Helius delivers raw events; matching rows determine Discord/email fan-out.
+ */
+export const alertRules = pgTable("alert_rules", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 200 }),
+  walletAddress: text("wallet_address").notNull(),
+  actionType: enumAlertRuleAction("action_type").notNull(),
+  minVolume: dec("min_volume", { mode: "number" }).notNull(),
+  maxVolume: dec("max_volume", { mode: "number" }),
+  volumeUnit: enumAlertRuleVolumeUnit("volume_unit").notNull().default("USD"),
+  triggerType: enumAlertRuleTrigger("trigger_type").notNull(),
+  expiryDate: timestamp("expiry_date", { withTimezone: true }).notNull(),
+  oneShotFiredAt: timestamp("one_shot_fired_at", { withTimezone: true }),
+  useDefaultDelivery: boolean("use_default_delivery").notNull().default(true),
+  discordWebhookOverride: text("discord_webhook_override"),
+  emailOverride: text("email_override"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+/** Managed Helius webhook shards for wallet alert address fan-out. */
+export const heliusWebhooks = pgTable("helius_webhooks", {
+  id: serial("id").primaryKey(),
+  heliusWebhookId: text("helius_webhook_id").notNull().unique(),
+  webhookUrl: text("webhook_url").notNull(),
+  webhookType: text("webhook_type").notNull().default("enhanced"),
+  transactionTypes: text("transaction_types")
+    .array()
+    .notNull()
+    .default(sql`ARRAY['ANY']::text[]`),
+  accountAddresses: text("account_addresses")
+    .array()
+    .notNull()
+    .default(sql`ARRAY[]::text[]`),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const heliusWebhookAddresses = pgTable(
+  "helius_webhook_addresses",
+  {
+    id: serial("id").primaryKey(),
+    heliusWebhookId: text("helius_webhook_id")
+      .notNull()
+      .references(() => heliusWebhooks.heliusWebhookId, {
+        onDelete: "cascade",
+      }),
+    walletAddress: text("wallet_address").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.heliusWebhookId, t.walletAddress)],
 );
 
 export const walletTokenDetails = pgTable(
@@ -837,9 +1119,9 @@ export const walletTokenDetails = pgTable(
     avgBuyCost: decimal("avg_buy_cost").notNull(),
     avgSellCost: decimal("avg_sell_cost").notNull(),
 
-    updatedAt: timestamp("updated_at")
+    updatedAtMs: bigint("updated_at_ms", { mode: "number" })
       .notNull()
-      .$onUpdate(() => new Date()),
+      .$onUpdate(() => dayjs.utc().valueOf()),
   },
   (t) => [primaryKey({ columns: [t.address, t.tokenAddress] })],
 );
@@ -862,18 +1144,273 @@ export const walletFirstFund = pgTable(
     slot: integer("slot").notNull(),
     explorerUrl: varchar("explorer_url", { length: 256 }),
   },
-  (t) => [primaryKey({ columns: [t.reciepient] })]
+  (t) => [primaryKey({ columns: [t.reciepient] })],
+);
+
+// for AI agent workflow, and to easily access strategy to reduce token usage in the workflow
+export const tradingStrategyDictionary = pgTable(
+  "trading_strategy_dictionary",
+  {
+    id: varchar("id", { length: 20 }).primaryKey(),
+    name: varchar("name", { length: 100 }).notNull(), // for AI agent workflow
+    description: text("description").notNull(), // for AI agent workflow
+    name_key: varchar("name_key", { length: 100 }).notNull(), // for frontend display, use localization key to support localization context
+    description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
+  },
+);
+
+// a trading strategy can have multiple benefits and risks, we store them in separate tables with foreign key reference to the strategy dictionary
+export const tradingStrategyBenefit = pgTable("trading_strategy_benefit", {
+  id: serial("id").primaryKey(),
+  strategyId: varchar("strategy_id", { length: 20 })
+    .notNull()
+    .references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
+  benefit_key: text("benefit_key").notNull(),
+});
+
+export const tradingStrategyRisk = pgTable("trading_strategy_risk", {
+  id: serial("id").primaryKey(),
+  strategyId: varchar("strategy_id", { length: 20 })
+    .notNull()
+    .references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
+  risk_key: text("risk_key").notNull(),
+});
+
+// to store the weight of each metric for a trading strategy, which can be used in the AI agent workflow to calculate the score of a strategy based on the metrics of a wallet
+export const tradingStrategyWeight = pgTable("trading_strategy_weight", {
+  id: serial("id").primaryKey(),
+  strategyId: varchar("strategy_id", { length: 20 })
+    .notNull()
+    .references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
+  metric_name: varchar("metric_name", { length: 100 }).notNull(),
+  weight: decimal("weight").notNull(),
+});
+
+// to store any other rules for a trading strategy that are not covered by the benefits, risks and weights, such as if a strategy requires a certain token holding or trading volume, we can store them in this table with a key-value pair format
+export const tradingStrategyRule = pgTable("trading_strategy_rule", {
+  id: serial("id").primaryKey(),
+  strategyId: varchar("strategy_id", { length: 20 })
+    .notNull()
+    .references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
+  rule_key: text("rule_key").notNull(),
+  value: decimal("value").notNull(),
+});
+
+export const walletCategoryDictionary = pgTable("wallet_category_dictionary", {
+  id: varchar("id", { length: 20 }).primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // for AI agent workflow
+  description: text("description").notNull(), // for AI agent workflow
+  name_key: varchar("name_key", { length: 100 }).notNull(), // for frontend display, use localization key to support localization context
+  description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
+});
+
+export const firstFunderCategoryDictionary = pgTable(
+  "first_funder_category_dictionary",
+  {
+    id: varchar("id", { length: 20 }).primaryKey(),
+    name: varchar("name", { length: 100 }).notNull(), // for AI agent workflow
+    description: text("description").notNull(), // for AI agent workflow
+    name_key: varchar("name_key", { length: 100 }).notNull(), // for frontend display, use localization key to support localization context
+    description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
+  },
+);
+
+// --- Wallet PnL Cache tables ---
+
+/**
+ * Daily wallet PnL cache (normalized: one row per day, not JSONB array).
+ *
+ * Stores computed daily PnL data per wallet/period/aggregation combination.
+ * Each row represents a single day of data within the requested period.
+ * Primary key prevents duplicate daily entries for same wallet/period/aggregation/day combo.
+ */
+export const walletPnlDataCache = pgTable(
+  "wallet_pnl_data_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    timePeriod: varchar("time_period", { length: 10 }).notNull(),
+    aggregation: varchar("aggregation", { length: 20 }).notNull(),
+    dayStartMs: bigint("day_start_ms", { mode: "number" }).notNull(),
+    dailyPnl: decimal("daily_pnl").notNull(),
+    cumulativePnl: decimal("cumulative_pnl").notNull(),
+    dayOpen: decimal("day_open").notNull(),
+    dayClose: decimal("day_close").notNull(),
+    computedAt: timestamp("computed_at").notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({
+      columns: [t.address, t.timePeriod, t.aggregation, t.dayStartMs],
+    }),
+  ],
+);
+
+/**
+ * Wallet PnL cache metadata and coverage tracking.
+ *
+ * Stores coverage ranges (from/to ms), source data ranges for balance history
+ * and transfer data, and update timestamp. Used to determine cache validity
+ * and whether recomputation is needed for a requested range.
+ */
+export const walletPnlDataMeta = pgTable(
+  "wallet_pnl_data_meta",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    timePeriod: varchar("time_period", { length: 10 }).notNull(),
+    aggregation: varchar("aggregation", { length: 20 }).notNull(),
+    coverageFromMs: bigint("coverage_from_ms", { mode: "number" }).notNull(),
+    coverageToMs: bigint("coverage_to_ms", { mode: "number" }).notNull(),
+    sourceBalanceRangeFromMs: bigint("source_balance_range_from_ms", {
+      mode: "number",
+    }).notNull(),
+    sourceBalanceRangeToMs: bigint("source_balance_range_to_ms", {
+      mode: "number",
+    }).notNull(),
+    sourceTransferRangeFromMs: bigint("source_transfer_range_from_ms", {
+      mode: "number",
+    }).notNull(),
+    sourceTransferRangeToMs: bigint("source_transfer_range_to_ms", {
+      mode: "number",
+    }).notNull(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.timePeriod, t.aggregation] })],
+);
+
+/**
+ * AI Wallet Forensic Audit cache.
+ *
+ * Stores Gemini-generated behavioural reports per wallet so we don't pay the
+ * model cost on every page view. Read path checks `fetchedAt >= now - 24h`.
+ */
+export const walletAuditCache = pgTable(
+  "wallet_audit_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    persona: varchar("persona", { length: 64 }).notNull(),
+    trustScore: integer("trust_score").notNull(),
+    summary: text("summary").notNull(),
+    observations: jsonb("observations").$type<string[]>().notNull(),
+    transactionCount: integer("transaction_count").notNull(),
+    model: varchar("model", { length: 64 }).notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.address] })],
+);
+
+/**
+ * AI Swap Summary cache.
+ *
+ * Stores Gemini-generated swap trading summaries per wallet+language so we
+ * don't pay the model cost on repeated views. Read path checks
+ * `fetchedAt >= now - 24h`.
+ */
+export const walletAiSwapSummaryCache = pgTable(
+  "wallet_ai_swap_summary_cache",
+  {
+    address: varchar("address", { length: 66 }).notNull(),
+    language: varchar("language", { length: 10 }).notNull().default("en"),
+    response: jsonb("response").$type<WalletAiSwapSummaryPersisted>().notNull(),
+    model: varchar("model", { length: 64 }).notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.language] })],
+);
+
+export type WalletAiSwapSummaryPersisted = {
+  tradeCount: number;
+  realizedPnlUsd: number;
+  winningPercentage: number;
+  totalBoughtUsd: number;
+  totalSoldUsd: number;
+  topProfitable: TokenPnlBreakdownPersisted | null;
+  topLoser: TokenPnlBreakdownPersisted | null;
+  allTokenBreakdowns: TokenPnlBreakdownPersisted[];
+  riskNotes: string[];
+  summary: string;
+};
+export type TokenPnlBreakdownPersisted = {
+  address: string;
+  symbol: string | null;
+  name: string | null;
+  logoUri: string | null;
+  pnlUsd: number;
+  trades: number;
+  wins: number;
+  exits: number;
+  buyCount: number;
+  sellCount: number;
+  totalEntered: number;
+  totalExited: number;
+  totalEnteredAmount: number;
+  totalExitedAmount: number;
+  entryPrices: number[] | null;
+  exitPrices: number[] | null;
+  totalBoughtVolumeUsd: number;
+  totalSoldVolumeUsd: number;
+  longestHoldingTimeMs: number | null;
+  maxTolerableLossPercent: number;
+};
+
+// --- News tables (Phase 1: news-fetching AI filter integration) ---
+export const newsBatches = pgTable("news_batches", {
+  id: serial("id").primaryKey(),
+  address: varchar("address", { length: 44 }).notNull(),
+  symbol: varchar("symbol").notNull(),
+  name: varchar("name").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const newsArticles = pgTable(
+  "news_articles",
+  {
+    id: serial("id").primaryKey(),
+    batchId: integer("batch_id")
+      .notNull()
+      .references(() => newsBatches.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 512 }).notNull(),
+    url: varchar("url", { length: 1024 }).notNull(),
+    description: text("description"),
+    publishedAt: timestamp("published_at"),
+    sourceName: varchar("source_name"),
+    faviconUrl: varchar("favicon_url"),
+    contentHash: varchar("content_hash", { length: 128 }).notNull(),
+    extraSnippets: jsonb("extra_snippets").$type<string[] | null>(),
+    // raw: jsonb("raw"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("news_articles_url_uq").on(t.url),
+    uniqueIndex("news_articles_content_hash_uq").on(t.contentHash),
+  ],
+);
+
+export const userSources = pgTable(
+  "user_sources",
+  {
+    id: serial("id").primaryKey(),
+    address: varchar("address", { length: 44 }).notNull(),
+    sourceName: varchar("source_name").notNull(),
+    isEnabled: boolean("is_enabled").notNull().default(true),
+  },
+  (t) => [unique().on(t.address, t.sourceName)],
 );
 
 // #endregion
 
 // #region Types
 export type TokenMetaInsert = typeof tokenMeta.$inferInsert;
+export type TokenMetaSelect = typeof tokenMeta.$inferSelect;
 export type TokenDetailedInfoInsert = typeof tokenDetails.$inferInsert;
+export type TokenDetailedInfoSelect = typeof tokenDetails.$inferSelect;
 export type TokenMarketDataInsert = typeof tokenMarketData.$inferInsert;
 export type WalletBalanceInsert = typeof walletBalances.$inferInsert;
-export type UserInsert = typeof users.$inferInsert;
-export type AuthAccountInsert = typeof authAccounts.$inferInsert;
 export type TokenTransferInsert = typeof tokenTransfers.$inferInsert;
 export type PoolTrade24hInsert = typeof poolTrades24h.$inferInsert;
 export type TokenMarketChart24hInsert = typeof tokenMarketChart24h.$inferInsert;
@@ -881,9 +1418,10 @@ export type TokenMarketChartHourlyInsert =
   typeof tokenMarketChartHourly.$inferInsert;
 export type TokenMarketChartDailyInsert =
   typeof tokenMarketChartDaily.$inferInsert;
-export type CoingeckoTokenListInsert = typeof coinGeckoTokenList.$inferInsert;
 export type TokenTopPoolInsert = typeof tokenTopPools.$inferInsert;
 export type TrendingTokenInsert = typeof trendingTokens.$inferInsert;
+export type TokenPriceCacheInsert = typeof tokenPriceCache.$inferInsert;
+export type TokenPriceCacheRow = typeof tokenPriceCache.$inferSelect;
 export type TokenHolderStatsInsert = typeof tokenHolderStats.$inferInsert;
 export type RecentTradeInsert = typeof recentTrades.$inferInsert;
 export type TokenPoolDataInsert = typeof tokenPoolData.$inferInsert;
@@ -895,23 +1433,111 @@ export type TopLoserInsert = typeof topLosers.$inferInsert;
 export type WalletOverviewCacheInsert = typeof walletOverviewCache.$inferInsert;
 export type WalletPortfolioCacheInsert =
   typeof walletPortfolioCache.$inferInsert;
+export type WalletHistoricalPortfolioCacheInsert =
+  typeof walletHistoricalPortfolioCache.$inferInsert;
 export type WalletTransactionsMetaInsert =
   typeof walletTransactionsMeta.$inferInsert;
 export type WalletTransactionInsert = typeof walletTransactions.$inferInsert;
 export type WalletSwapInsert = typeof walletSwap.$inferInsert;
-export type WalletExchangeCountsCacheInsert =
-  typeof walletExchangeCountsCache.$inferInsert;
+
 export type WalletIdentityCacheInsert = typeof walletIdentityCache.$inferInsert;
-export type WalletBalanceHistoryCacheInsert =
-  typeof walletBalanceHistoryCache.$inferInsert;
-export type WalletTokenBalanceHistoryCacheInsert =
-  typeof walletTokenBalanceHistoryCache.$inferInsert;
-export type walletHeliusTransactionsInsert = typeof walletHeliusTransactions.$inferInsert;
+export type walletHeliusTransactionsInsert =
+  typeof walletHeliusTransactions.$inferInsert;
+export type WalletEnhancedTransactionsInsert =
+  typeof walletEnhancedTransactions.$inferInsert;
+export type WalletEnhancedTokenTransfersInsert =
+  typeof walletEnhancedTokenTransfers.$inferInsert;
+export type WalletEnhancedNativeTransfersInsert =
+  typeof walletEnhancedNativeTransfers.$inferInsert;
+export type WalletEnhancedInstructionsInsert =
+  typeof walletEnhancedInstructions.$inferInsert;
+export type WalletEnhancedInnerInstructionsInsert =
+  typeof walletEnhancedInnerInstructions.$inferInsert;
+export type WalletEnhancedTxMetaInsert =
+  typeof walletEnhancedTxMeta.$inferInsert;
 export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
 export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
 export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
 export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
+export type WalletTokenDetailsSelect = typeof walletTokenDetails.$inferSelect;
 export type WalletFirstFundInsert = typeof walletFirstFund.$inferInsert;
+export type FollowedWalletInsert = typeof followedWallets.$inferInsert;
+export type FollowedWalletRow = typeof followedWallets.$inferSelect;
+export type AlertRuleInsert = typeof alertRules.$inferInsert;
+export type AlertRuleRow = typeof alertRules.$inferSelect;
+export type HeliusWebhookInsert = typeof heliusWebhooks.$inferInsert;
+export type HeliusWebhookRow = typeof heliusWebhooks.$inferSelect;
+export type HeliusWebhookAddressInsert =
+  typeof heliusWebhookAddresses.$inferInsert;
+export type HeliusWebhookAddressRow =
+  typeof heliusWebhookAddresses.$inferSelect;
+export type WalletAuditCacheInsert = typeof walletAuditCache.$inferInsert;
+export type WalletAuditCacheRow = typeof walletAuditCache.$inferSelect;
+export type WalletPnlDataCacheInsert = typeof walletPnlDataCache.$inferInsert;
+export type WalletPnlDataCacheRow = typeof walletPnlDataCache.$inferSelect;
+export type WalletPnlDataMetaInsert = typeof walletPnlDataMeta.$inferInsert;
+export type WalletPnlDataMetaRow = typeof walletPnlDataMeta.$inferSelect;
+export type NewsBatchInsert = typeof newsBatches.$inferInsert;
+export type NewsArticleInsert = typeof newsArticles.$inferInsert;
+export type UserSourceInsert = typeof userSources.$inferInsert;
 
+// #region Chatbot
+export const chatAnalysisCache = pgTable(
+  "chat_analysis_cache",
+  {
+    key: varchar("key", { length: 64 }).primaryKey(),
+    walletAddress: varchar("wallet_address", { length: 44 }).notNull(),
+    query: text("query").notNull(),
+    response: jsonb("response").$type<Record<string, unknown>>().notNull(),
+    dataFingerprint: varchar("data_fingerprint", { length: 64 }).notNull(),
+    model: varchar("model", { length: 64 }).notNull(),
+    ttlMs: integer("ttl_ms").notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+    toolsUsed: varchar("tools_used", { length: 64 }).array().notNull().default([]),
+    hasErrors: boolean("has_errors").notNull().default(false),
+    responseType: varchar("response_type", { length: 16 }).notNull().default("tool_generated"),
+  },
+);
+
+export const chatSessions = pgTable(
+  "chat_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    walletAddresses: jsonb("wallet_addresses").$type<string[]>().notNull().default([]),
+    contextType: varchar("context_type", { length: 32 }).notNull().default("wallet"),
+    contextHash: varchar("context_hash", { length: 64 }).notNull().default(""),
+    title: varchar("title", { length: 255 }),
+    messages: jsonb("messages").$type<Record<string, unknown>[]>().notNull().default([]),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("chat_sessions_user_id_idx").on(table.userId),
+  ],
+);
+
+export const chatPrompts = pgTable(
+  "chat_prompts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    label: varchar("label", { length: 255 }).notNull(),
+    query: text("query").notNull(),
+    contextTypes: jsonb("context_types").$type<string[]>().notNull().default(["wallet"]),
+    walletAddress: varchar("wallet_address", { length: 44 }),
+    forkedFrom: uuid("forked_from"),
+    isPublic: boolean("is_public").notNull().default(false),
+    usageCount: integer("usage_count").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("chat_prompts_user_id_idx").on(table.userId),
+    index("chat_prompts_public_usage_idx").on(table.isPublic, table.usageCount),
+  ],
+);
+
+export type ChatPromptInsert = typeof chatPrompts.$inferInsert;
+export type ChatPromptRow = typeof chatPrompts.$inferSelect;
 // #endregion
-

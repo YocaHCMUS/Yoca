@@ -16,8 +16,15 @@ export interface WalletOverview {
     metricsPeriod?: string;
 }
 
-export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D" | "All";
-
+export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D";
+export interface WalletOverviewWinRateStats {
+    winRate: number;       // VD: 68.4
+    winCount: number;      // Số token lãi
+    lossCount: number;     // Số token lỗ
+    totalTraded: number;   // Tổng số token có giao dịch chốt lời/lỗ
+    avgWinUsd: number;     // Trung bình số tiền lãi
+    avgLossUsd: number;    // Trung bình số tiền lỗ
+}
 export interface WalletOverviewPeriodStats {
     tradingVolumeUsd: number | null;
     buy: {
@@ -35,14 +42,15 @@ export interface WalletOverviewPeriodStats {
         realizedUsd: number | null;
         unrealizedUsd: number | null;
     };
-    source: "birdeye-overall-pnl" | "overview-cache" | "none";
+    source: "mobula-wallet-analysis" | "birdeye-overall-pnl" | "overview-cache" | "none";
+    winRateStats?: WalletOverviewWinRateStats;
 }
 
 export interface WalletOverviewHoldingsStats {
     totalAssetValueUsd: number;
     change24hPercent: number | null;
     tokensHoldingCount: number;
-    source: "birdeye-portfolio" | "helius-portfolio-fallback" | "overview-cache" | "none";
+    source: "mobula-wallet-analysis" | "birdeye-portfolio" | "helius-portfolio-fallback" | "overview-cache" | "none";
 }
 
 export interface WalletOverviewLegacy {
@@ -126,9 +134,6 @@ export interface WalletSwap {
     pairAddress: string,
 
     tokensInvolved: string,
-    exchangeAddress: string,
-    exchangeName: string,
-    exchangeLogo: string,
 
     bought: WalletSwapTokenChange,
     sold: WalletSwapTokenChange,
@@ -195,27 +200,6 @@ export interface WalletSwapsResponse {
     address: string;
     swaps: WalletSwap[];
     pageInfo: WalletPageInfo;
-}
-
-/** Exchange comparison item for chart (transaction count by platform). */
-export interface WalletExchangeCountItem {
-    name: string;
-    deposits: number;
-    withdrawals: number;
-    depositsVolume: number;
-    withdrawalsVolume: number;
-}
-
-export interface WalletExchangeCountsResponse {
-    exchanges: WalletExchangeCountItem[];
-    metadata: {
-        period?: "7D" | "30D" | "60D" | "90D" | "1Y" | "All";
-        chain?: string;
-        metric: "count" | "volume";
-        source?: "cache" | "provider" | "mixed";
-        limit?: number;
-        truncated?: boolean;
-    };
 }
 
 export type WalletTimePeriod = "24H" | "7D" | "30D" | "60D" | "90D" | "1Y" | "All";
@@ -337,55 +321,6 @@ export type WalletTokenBalanceChunkOptions = {
     chunkToSec?: number;
     limit?: number;
 };
-
-export type WalletExchangeCountsOptions = {
-    period?: string;
-    chain?: string;
-    limit?: number;
-    metric?: "count" | "volume";
-};
-
-export type WalletCounterpartyPeriod = "24h" | "7d";
-
-export interface WalletCounterpartyIdentity {
-    status: "known" | "unknown" | "unavailable";
-    name: string | null;
-    category: string | null;
-    type: string | null;
-}
-
-export interface WalletCounterpartyRow {
-    address: string;
-    identity: WalletCounterpartyIdentity;
-    uniqueTokenCount: number;
-    tokens: string[];
-    transactionCount: number;
-    totalVolumeUsd: number;
-}
-
-export interface WalletCounterpartyRankingItem {
-    address: string;
-    label: string;
-    transactionCount: number;
-    totalVolumeUsd: number;
-}
-
-export interface WalletCounterpartiesResponse {
-    counterparties: WalletCounterpartyRow[];
-    rankings: {
-        byTransactionCount: WalletCounterpartyRankingItem[];
-        byVolume: WalletCounterpartyRankingItem[];
-    };
-    metadata: {
-        period: WalletCounterpartyPeriod;
-        source: "cache" | "provider" | "mixed";
-        totals: {
-            counterparties: number;
-            transactions: number;
-            volume: number;
-        };
-    };
-}
 
 export type BirdeyeNetworthDirection = "back" | "forward";
 export type BirdeyeNetworthType = "1h" | "1d";
@@ -600,7 +535,7 @@ export type OverviewActivitySnapshot = {
     pnlTotalUsd: number | null;
     pnlRealizedUsd: number | null;
     pnlUnrealizedUsd: number | null;
-    source: "birdeye-overall-pnl" | "overview-cache" | "none";
+    source: "mobula-wallet-analysis" | "birdeye-overall-pnl" | "overview-cache" | "none";
 };
 
 export type SwapProviderSource = "helius" | "moralis";
@@ -623,3 +558,105 @@ export type HeliusWalletFirstFund = {
     explorerUrl: string
 };
 
+export interface TokenHourlyVolume {
+    hour: number;
+    buyVolumeUsd: number;
+    sellVolumeUsd: number;
+}
+
+export interface WalletDayToken {
+    address: string;
+    symbol: string;
+    logoUri: string | null;
+    buyVolumeUsd: number;
+    sellVolumeUsd: number;
+    buyAmount: number;
+    sellAmount: number;
+    totalVolumeUsd: number;
+    hourlyVolumes: TokenHourlyVolume[];
+}
+
+export interface WalletDayActivitySummary {
+    walletAddress: string;
+    date: string;
+    buyVolumeUsd: number;
+    sellVolumeUsd: number;
+    buyTxCount: number;
+    sellTxCount: number;
+    allTokens: WalletDayToken[];
+    totalTokensTraded: number;
+    swaps: WalletDaySwapSummary[];
+}
+
+export interface WalletDaySwapSummary {
+    transactionHash: string;
+    timestamp: string;
+    pair: string;
+    valueUsd: number;
+    action: "buy" | "sell";
+    soldSymbol: string | null;
+    boughtSymbol: string | null;
+    soldTokenAddress: string | null;
+    boughtTokenAddress: string | null;
+    soldAmount: number;
+    boughtAmount: number;
+
+}
+
+export interface WalletTxTransfer {
+    from: string;
+    to: string;
+    mint: string;
+    symbol: string | null;
+    name: string | null;
+    logoUri: string | null;
+    amount: number;
+    amountUsd: number | null;
+    fromTokenAccount?: string;
+    toTokenAccount?: string;
+}
+
+export interface WalletFeeReceiver {
+    address: string;
+    amount: number;
+    amountUsd: number | null;
+    label: string | null;
+}
+
+export interface WalletTxDetail {
+    transactionHash: string;
+    timestamp: string;
+    pair: string;
+    valueUsd: number;
+    action: "buy" | "sell";
+    transfers: WalletTxTransfer[];
+    feePaid: number;
+    feePaidUsd: number | null;
+    feePayer: string;
+    feeReceivers: WalletFeeReceiver[];
+}
+
+export interface WalletInnerInstruction {
+    index: number;
+    programId: string;
+    programLabel: string | null;
+    accounts: string[];
+}
+
+export interface WalletInstruction {
+    index: number;
+    programId: string;
+    programLabel: string | null;
+    accounts: string[];
+    innerInstructions: WalletInnerInstruction[];
+}
+
+export interface WalletTxInstructionDetail {
+    transactionHash: string;
+    instructions: WalletInstruction[];
+}
+
+export interface WalletDayActivityMultiResponse {
+    wallets: WalletDayActivitySummary[];
+    combined?: WalletDayActivitySummary;
+}

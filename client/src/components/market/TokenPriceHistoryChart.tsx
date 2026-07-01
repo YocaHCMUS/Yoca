@@ -62,7 +62,7 @@ export const TokenPriceHistoryChart: React.FC<TokenPriceHistoryChartProps> = ({
       setError(null);
 
       try {
-        const apiDomain = import.meta.env.CLIENT_API_DOMAIN || 'http://localhost:4000';
+        const apiDomain = import.meta.env.VITE_CLIENT_API_DOMAIN || window.location.origin;
         const response = await fetch(
           `${apiDomain}/api/tokens/markets/chart/${tokenAddress}?period=${selectedPeriod}`
         );

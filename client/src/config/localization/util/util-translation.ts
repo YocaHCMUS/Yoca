@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { ReactNode } from "react";
 
 const numVariables = ["count", "min", "max", "total"] as const;

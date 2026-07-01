@@ -1,0 +1,568 @@
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/theme' as *;
+
+.sectionCard {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.01)),
+        var(--yoca-surface, rgba(18, 24, 38, 0.82));
+    border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+    box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.32));
+    backdrop-filter: blur(18px);
+    padding: $spacing-05;
+    border-radius: var(--yoca-radius-lg, 18px);
+}
+
+.overviewHeader {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-05;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.overviewIdentity {
+    display: flex;
+    align-items: center;
+    gap: $spacing-04;
+}
+
+.overviewUid {
+    margin: $spacing-01 0 $spacing-02;
+    font-size: 12px;
+    color: var(--yoca-text-muted, #94a3b8);
+}
+
+.avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+}
+
+.metricGrid {
+    margin-top: $spacing-05;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $spacing-04;
+}
+
+.metricCard {
+    border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+    border-radius: var(--yoca-radius-md, 12px);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0)),
+      var(--yoca-surface-elevated, rgba(24, 31, 48, 0.92));
+    padding: $spacing-04;
+}
+
+.metricLabel {
+    color: var(--yoca-text-muted, #94a3b8);
+    font-size: 12px;
+    margin-bottom: $spacing-02;
+    align-items: center;
+    display: flex;
+    gap: $spacing-02;
+}
+
+.metricValue {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--yoca-text-main, #f8fafc);
+}
+
+.positive {
+    color: var(--yoca-success, #22c55e);
+}
+
+.negative {
+    color: var(--yoca-danger, #ef4444);
+}
+
+.contentStack {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-06;
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-04;
+    margin-bottom: $spacing-04;
+}
+
+.inlineActions {
+    display: flex;
+    align-items: center;
+    gap: $spacing-03;
+    flex-wrap: wrap;
+}
+
+.labelCell {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-03;
+}
+
+.labelText {
+    font-weight: 600;
+}
+
+.labelEditRow {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-03;
+    width: 100%;
+}
+
+.labelInput {
+    min-width: 180px;
+}
+
+.labelEditActions {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-02;
+}
+
+.triggerButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+    background-color: var(--yoca-surface-elevated, rgba(24, 31, 48, 0.92));
+    color: var(--yoca-text-main, #f8fafc);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: all 0.15s ease-in-out;
+
+    &:hover:not(:disabled) {
+        background-color: var(--yoca-surface-hover, rgba(32, 41, 62, 0.95));
+        border-color: rgba(45, 212, 191, 0.24);
+    }
+
+    &:active:not(:disabled) {
+        background-color: var(--yoca-surface-hover, rgba(32, 41, 62, 0.95));
+    }
+
+    &:focus {
+        outline: 2px solid var(--yoca-accent, #2dd4bf);
+        outline-offset: 2px;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    svg {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+}
+
+
+.simpleTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.simpleTable th,
+.simpleTable td {
+    border-bottom: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+    padding: $spacing-03;
+    text-align: left;
+    color: var(--yoca-text-soft, #cbd5e1);
+}
+
+.simpleTable th {
+    font-size: 12px;
+    color: var(--yoca-text-muted, #94a3b8);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.notificationItem {
+    border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+    border-radius: var(--yoca-radius-md, 12px);
+    padding: $spacing-03;
+    background: var(--yoca-surface-elevated, rgba(24, 31, 48, 0.92));
+}
+
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-04;
+}
+
+.walletRow {
+    cursor: pointer;
+}
+
+.walletRow:hover {
+    background: var(--yoca-surface-hover, rgba(32, 41, 62, 0.95));
+}
+
+.cardsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: $spacing-04;
+}
+
+.activityCard {
+    border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+    border-radius: var(--yoca-radius-md, 12px);
+    padding: $spacing-04;
+    background:
+      radial-gradient(circle at top right, rgba(37, 99, 235, 0.09), transparent 12rem),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+      var(--yoca-surface-elevated, rgba(24, 31, 48, 0.92));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+    h4 {
+        margin: 0;
+        color: var(--yoca-text-main, #f8fafc);
+    }
+}
+
+.walletCardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-03;
+    margin-bottom: $spacing-03;
+}
+
+.walletMetaActions {
+    display: flex;
+    align-items: center;
+    gap: $spacing-02;
+}
+
+.walletAddressLink {
+    color: var(--yoca-primary-2, #2563eb);
+    font-size: 12px;
+    text-decoration: none;
+
+    &:hover {
+        color: var(--yoca-accent, #2dd4bf);
+        text-decoration: underline;
+    }
+}
+
+.copyAddressButton {
+    border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+    background: rgba(255, 255, 255, 0.035);
+    color: var(--yoca-text-muted, #94a3b8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition:
+      background-color 0.16s ease,
+      color 0.16s ease,
+      border-color 0.16s ease,
+      transform 0.16s ease;
+
+    &:hover {
+        background: rgba(124, 58, 237, 0.12);
+        border-color: rgba(124, 58, 237, 0.24);
+        color: var(--yoca-text-main, #f8fafc);
+        transform: translateY(-1px);
+    }
+}
+
+.unavailableState {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 16rem;
+    gap: $spacing-03;
+    background:
+      radial-gradient(circle at top, rgba(124, 58, 237, 0.12), transparent 35%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0)),
+      var(--yoca-surface-elevated, rgba(24, 31, 48, 0.92));
+}
+
+.unavailableTitle {
+    margin: 0;
+    color: var(--yoca-text-main, #f8fafc);
+}
+
+.unavailableDescription {
+    margin: $spacing-03 0 0;
+    max-width: 36rem;
+    color: var(--yoca-text-muted, #94a3b8);
+    line-height: 1.6;
+}
+
+.profileLoadingState {
+    min-height: 18rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-04;
+}
+
+.profileLoadingText {
+    margin: 0;
+    color: var(--yoca-text-muted, #94a3b8);
+}
+
+.subscriptionsTabContainer {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-05;
+}
+
+.emptyStateContainer {
+    @extend .sectionCard;
+    min-height: 16rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background:
+      radial-gradient(circle at top, rgba(124, 58, 237, 0.12), transparent 35%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0)),
+      var(--yoca-surface-elevated, rgba(24, 31, 48, 0.92));
+}
+
+.emptyStateContent {
+    max-width: 34rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-04;
+}
+
+.emptyStateTitle {
+    margin: 0;
+    color: var(--yoca-text-main, #f8fafc);
+    font-size: clamp(1.15rem, 1.8vw, 1.4rem);
+    font-weight: 700;
+}
+
+.emptyStateDescription {
+    margin: 0;
+    color: var(--yoca-text-muted, #94a3b8);
+    line-height: 1.65;
+}
+
+.primaryButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.875rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--yoca-primary, #7c3aed), var(--yoca-primary-2, #2563eb));
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition:
+      transform 0.16s ease,
+      box-shadow 0.16s ease,
+      opacity 0.16s ease;
+
+    &:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 28px rgba(37, 99, 235, 0.22);
+    }
+
+    &:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+}
+
+.tableEmptyState {
+    min-height: 17rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: $spacing-03;
+    text-align: center;
+    align-items: center;
+    padding-inline: clamp(1.25rem, 4vw, 2.5rem);
+    background:
+      radial-gradient(circle at top, rgba(45, 212, 191, 0.12), transparent 35%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0)),
+      var(--yoca-surface, rgba(18, 24, 38, 0.82));
+}
+
+.tableEmptyEyebrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.42rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid rgba(45, 212, 191, 0.22);
+    background: rgba(45, 212, 191, 0.08);
+    color: var(--yoca-accent, #2dd4bf);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.tableEmptyTitle {
+    margin: 0;
+    color: var(--yoca-text-main, #f8fafc);
+    font-size: clamp(1.25rem, 2vw, 1.5rem);
+    font-weight: 700;
+}
+
+.tableEmptyDescription {
+    margin: 0;
+    max-width: 34rem;
+    color: var(--yoca-text-muted, #94a3b8);
+    line-height: 1.7;
+}
+
+.activityTableSurface {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.01)),
+      var(--yoca-surface, rgba(18, 24, 38, 0.82));
+    border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+    border-radius: var(--yoca-radius-lg, 18px);
+    box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.32));
+    padding: $spacing-05;
+
+    > div:first-child {
+        margin-bottom: $spacing-05;
+        padding-bottom: $spacing-04;
+        border-bottom: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+    }
+
+    h2 {
+        color: var(--yoca-text-main, #f8fafc);
+        letter-spacing: -0.02em;
+    }
+
+    input[aria-label='Search table'] {
+        min-width: 14rem;
+        border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.035);
+        color: var(--yoca-text-main, #f8fafc);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    input[aria-label='Search table']::placeholder {
+        color: var(--yoca-text-muted, #94a3b8);
+    }
+
+    input[aria-label='Search table']:focus {
+        outline: 2px solid var(--yoca-accent, #2dd4bf);
+        outline-offset: 1px;
+        border-color: rgba(45, 212, 191, 0.24);
+    }
+
+    button[aria-haspopup='menu'] {
+        border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.035);
+        color: var(--yoca-text-main, #f8fafc);
+        transition:
+          background-color 0.16s ease,
+          border-color 0.16s ease,
+          color 0.16s ease;
+    }
+
+    button[aria-haspopup='menu']:hover:not(:disabled) {
+        background: rgba(124, 58, 237, 0.12);
+        border-color: rgba(124, 58, 237, 0.24);
+    }
+
+    :global(.cds--data-table-container) {
+        background: transparent;
+    }
+
+    :global(.cds--data-table),
+    :global(.cds--data-table thead),
+    :global(.cds--data-table tbody),
+    :global(.cds--data-table tr),
+    :global(.cds--data-table th),
+    :global(.cds--data-table td) {
+        background: transparent !important;
+    }
+
+    :global(.cds--data-table th) {
+        color: var(--yoca-text-muted, #94a3b8);
+        font-size: 0.68rem;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+        border-bottom-color: rgba(148, 163, 184, 0.12);
+    }
+
+    :global(.cds--data-table td) {
+        color: var(--yoca-text-soft, #cbd5e1);
+        border-bottom-color: rgba(148, 163, 184, 0.08);
+    }
+
+    :global(.cds--data-table tbody tr:hover td) {
+        background: rgba(124, 58, 237, 0.08) !important;
+    }
+
+    :global(.cds--pagination) {
+        background: transparent;
+        border-top-color: rgba(148, 163, 184, 0.12);
+        color: var(--yoca-text-soft, #cbd5e1);
+    }
+}
+
+:global([data-yoca-theme='light']) .activityTableSurface {
+    input[aria-label='Search table'],
+    button[aria-haspopup='menu'] {
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--yoca-text-main, #0f172a);
+    }
+
+    :global(.cds--data-table td) {
+        color: var(--yoca-text-soft, #334155);
+    }
+}
+
+@media (max-width: 1100px) {
+    .metricGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .cardsGrid {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+@media (max-width: 720px) {
+    .activityTableSurface {
+        padding: $spacing-04;
+
+        > div:first-child {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: $spacing-03;
+        }
+
+        input[aria-label='Search table'] {
+            width: 100%;
+            min-width: 0;
+        }
+    }
+}

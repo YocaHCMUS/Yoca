@@ -1,0 +1,19 @@
+.item {
+  inline-size: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: start;
+  padding: 0;
+}
+
+.item:hover {
+  background: var(--cds-layer-hover-01);
+}
+.tokenOptionMain {
+  min-width: 0;
+}
+
+.tokenOptionText {
+  min-width: 0;
+}

@@ -45,8 +45,6 @@ export function TimeSeriesLineChart({
 }: TimeSeriesChartProps) {
   const { fmt, tr } = useLocalization();
 
-  console.log(markLines);
-
   const tokens = useCarbonTokens({
     textPrimary: cds.textPrimary,
     textSecondary: cds.textSecondary,
@@ -57,7 +55,7 @@ export function TimeSeriesLineChart({
     error: cds.supportError,
     borderSubtle: cds.borderSubtle00,
     // Default color for markLines
-    interactive: cds.interactive01,
+    interactive: cds.interactive,
   });
 
   const chartData = useMemo(() => {
@@ -70,18 +68,15 @@ export function TimeSeriesLineChart({
 
   const isPositive = useMemo(() => {
     if (chartData.length < 2) return true;
-    return (
-      (chartData[chartData.length - 1][1] as number) >=
-      (chartData[0][1] as number)
-    );
+    return chartData[chartData.length - 1][1] >= chartData[0][1];
   }, [chartData]);
 
   const option = useMemo((): EChartsOption => {
     if (chartData.length == 0) return {};
 
     const trendColor = isPositive ? tokens.success : tokens.error;
-    const startTime = chartData[0][0] as number;
-    const endTime = chartData[chartData.length - 1][0] as number;
+    const startTime = chartData[0][0];
+    const endTime = chartData[chartData.length - 1][0];
     const range = endTime - startTime;
 
     return {
@@ -101,6 +96,7 @@ export function TimeSeriesLineChart({
         textStyle: { color: tokens.textInverse, fontSize: 12 },
         formatter: (params) => {
           if (!Array.isArray(params) || !params[0]) return "";
+          // only casting we need
           const [ts, val] = params[0].data as [number, number];
           const dateStr =
             range < 86_400_000 * 2
@@ -117,8 +113,8 @@ export function TimeSeriesLineChart({
       },
       xAxis: {
         type: "time",
-        axisLine: { show: false },
-        axisTick: { show: false },
+        axisLine: { show: true },
+        axisTick: { show: true },
         // Suggest a reasonable number of splits for a 300px-ish height chart
         // splitNumber: 8,
         // Prevent ticks from being too close together
@@ -128,7 +124,7 @@ export function TimeSeriesLineChart({
           fontSize: 11,
           // Use hideOverlap to automatically remove clashing labels
           hideOverlap: true,
-          formatter: (val: number) => {
+          formatter: (val) => {
             // If the total range is > 30 days, just show Month/Day
             if (range > 86_400_000 * 30) {
               return fmt.datetime.date(val);
@@ -141,7 +137,14 @@ export function TimeSeriesLineChart({
             return fmt.datetime.date(val);
           },
         },
-        splitLine: { show: false },
+        splitLine: {
+          show: true,
+          lineStyle: {
+            color: tokens.borderSubtle,
+            type: "dashed",
+            width: 1,
+          },
+        },
       },
       yAxis: {
         type: "value",
@@ -152,7 +155,7 @@ export function TimeSeriesLineChart({
         axisLabel: {
           color: tokens.textSecondary,
           fontSize: 11,
-          formatter: (val: number) => fmt.num.compact.currency(val),
+          formatter: (val) => fmt.num.compact.currency(val),
         },
         splitLine: {
           lineStyle: { color: tokens.borderSubtle, type: "dashed" },

@@ -2,19 +2,19 @@
 @use '@carbon/react/scss/theme' as *;
 
 // Custom variables for table component
-$filter-popup-min-width: 280px;
-$table-max-height: 400px;
+$filter-popup-min-width: 300px;
+$table-max-height: 600px;
 $filter-popup-z-index: 9999;
 
 .filterPopup {
-  position: absolute;
-  top: calc(100% + $spacing-03);
+  position: fixed;
+  top: 0;
   z-index: $filter-popup-z-index;
   min-width: $filter-popup-min-width;
-  max-height: $table-max-height;
+  max-height: $table-max-height * 0.8;
   overflow-y: auto;
   background: var(--cds-layer-01);
-  border: 1px solid var(--cds-border-subtle-01);
+  border: 1px solid var(--cds-border-subtle-03);
   border-radius: $spacing-02;
   box-shadow: 0 $spacing-01 $spacing-04 rgba(0, 0, 0, 0.2);
   padding: $spacing-05;
@@ -44,14 +44,48 @@ $filter-popup-z-index: 9999;
 .filterPopupContent {
   display: flex;
   flex-direction: column;
-  gap: $spacing-05;
+  gap: $spacing-02;
+}
+
+.filterPopupContentGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  column-gap: $spacing-08;
+  row-gap: 0;
+}
+
+.filterPopupItem {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Range controls should span all three columns */
+.filterPopupItemRange {
+  grid-column: 1 / -1;
+}
+
+/* Selector controls occupy a single column */
+.filterPopupItemSelect {
+  grid-column: auto / span 1;
+}
+
+/* Date controls occupy a single column by default */
+.filterPopupItemDate {
+  grid-column: auto / span 1;
+}
+
+.filterPopupTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--cds-text-primary);
+  margin-bottom: 0;
 }
 
 .filterPopupHeader {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--cds-text-primary);
-  margin-bottom: $spacing-03;
+  color: var(--cds-link-primary);
+  margin-bottom: 0;
 }
 
 .filterPopupActions {
@@ -66,8 +100,8 @@ $filter-popup-z-index: 9999;
 }
 
 .tableWrapper {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   height: 100%;
   min-height: 0;
 }
@@ -75,9 +109,9 @@ $filter-popup-z-index: 9999;
 .tableViewport {
   display: flex;
   flex-direction: column;
-  flex: 1;
   min-height: 0;
   width: 100%;
+  overflow-y: auto;
 }
 
 .stretchTable {
@@ -87,11 +121,9 @@ $filter-popup-z-index: 9999;
 .tableContainer {
   display: flex;
   flex-direction: column;
-  flex: 1;
   min-height: 0;
   width: 100%;
   overflow-y: auto;
-  // max-height: $table-max-height;
   padding: 0 !important;
 
   :global(.cds--data-table-container) {
@@ -108,7 +140,7 @@ $filter-popup-z-index: 9999;
   position: sticky;
   top: 0;
   z-index: 1;
-  background-color: var(--cds-layer-01);
+  // background-color: var(--cds-layer-01);
 }
 
 /* Match Tble / Last-traded: full header labels (wrap, no ellipsis). */
@@ -178,9 +210,11 @@ $filter-popup-z-index: 9999;
 }
 
 .paginationContainer {
-  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   margin-top: $spacing-05;
-  border-top: 1px solid var(--cds-border-subtle-01);
+  border-top: 1px solid var(--cds-border-subtle-03);
   padding-top: $spacing-05;
 }
 
@@ -199,4 +233,27 @@ $filter-popup-z-index: 9999;
 
 .noHover:hover {
   background-color: transparent !important;
+}
+
+.activeRow {
+  :global(td) {
+    background-color: var(--cds-layer-hover);
+  }
+}
+
+.aiTableHeaderBtn {
+  opacity: 0.7;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.aiCell {
+  width: 40px;
+  min-width: 40px;
+  padding: 0 !important;
+  text-align: center;
+  vertical-align: middle;
 }

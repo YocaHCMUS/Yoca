@@ -1,0 +1,149 @@
+@use "@carbon/react/scss/spacing" as *;
+@use "@carbon/react/scss/theme" as *;
+@use "@carbon/react/scss/type" as *;
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.card {
+  background-color: $layer-01;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  width: 920px;
+  max-width: calc(100vw - #{$spacing-09});
+  max-height: 85vh;
+  overflow: hidden;
+  padding: $spacing-06;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: $icon-primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-02;
+  border-radius: 4px;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background-color: $layer-hover-01;
+  }
+}
+
+.tokenCard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-03;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.arrow {
+  flex-shrink: 0;
+  color: $icon-secondary;
+  display: flex;
+  align-items: center;
+}
+
+.summary {
+  text-align: center;
+  margin: $spacing-05 0;
+
+  strong {
+    color: $text-primary;
+  }
+}
+
+/* ── Two-column layout ───────────────────────── */
+.twoColumnLayout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-06;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .twoColumnLayout {
+    grid-template-columns: 1fr;
+    gap: $spacing-05;
+  }
+}
+
+.rightColumn {
+  padding-left: $spacing-06;
+  border-left: 1px solid $border-subtle;
+  height: 100%;
+  max-height: calc(85vh - #{$spacing-06} * 2 - #{$spacing-05} * 2);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: $border-subtle transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: $border-subtle;
+    border-radius: 3px;
+  }
+}
+
+/* ── Transfers section ───────────────────────── */
+.transfersSection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-03;
+}
+
+.transferList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-03;
+}
+
+.transferGroup {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-02;
+  padding: $spacing-03 $spacing-04;
+  background-color: $layer-02;
+  border-radius: 4px;
+  transition:
+    background-color 0.15s,
+    outline 0.15s;
+}
+
+.transferGroup.highlighted {
+  outline: 1px solid $link-primary;
+  background-color: $layer-hover-02;
+}
+
+/* ── Loading ─────────────────────────────────── */
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-08 0;
+}

@@ -1,45 +1,195 @@
-import { BrowserRouter, Route, Routes } from "react-router";
-import "./App.css";
+import {
+    createBrowserRouter,
+    Outlet,
+    RouterProvider,
+    useNavigation,
+} from "react-router";
 
+import { Loading } from "@carbon/react";
+import "./App.css";
 import Index from "@/pages";
-import AuthShowcase from "@/pages/auth";
+import AlertsPage from "@/pages/alerts";
+import AlertsDemo from "@/pages/alerts/demo";
 import HistoricalDataPage from "@/pages/historical-data";
 import MarketPage from "@/pages/market";
+import NotFoundPage from "@/pages/not-found";
+import PricingPage from "@/pages/pricing";
+import ProfilePage from "@/pages/profile";
 import TokenPage from "@/pages/token";
 import TokenOverviewPage from "@/pages/token-overview";
+import TransactionGraphPage from "@/pages/transactions";
+import UnauthorizedPage from "@/pages/unauthorized";
 import WalletPage from "@/pages/wallet";
-import SwrDebugDemo from "@/pages/wallet/demo";
-// import { TokenDetailsDemo } from "@/pages/wallet/TokenDetailsDemo";
-import WalletsComparisionPage from "@/pages/walletsComparision";
+import WalletsComparisonPage from "@/pages/walletsComparison";
+import WashTradingPage from "./pages/wash-trading";
+
+import { AuthGuard } from "./components/auth";
+import { useLocalization } from "./contexts/LocalizationContext";
+import { BalanceChartV2 } from "./components/charts/BalanceChartV2/BalanceChartV2";
+import { WalletTransactionActivity } from "./components/WalletTransactionActivity/WalletTransactionActivity";
+
+function RootLayout() {
+  const navigation = useNavigation();
+  const { tr } = useLocalization();
+
+  const isLoading =
+    navigation.state == "loading" || navigation.state == "submitting";
+
+  return (
+    <>
+      <Loading
+        active={isLoading}
+        description={tr("common.loading")}
+        withOverlay
+      />
+      <Outlet />
+    </>
+  );
+}
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <RootLayout />,
+
+    children: [
+      {
+        index: true,
+        element: <Index />,
+      },
+
+      {
+        path: "pricing",
+        element: <PricingPage />,
+      },
+
+      {
+        path: "unauthorized",
+        element: <UnauthorizedPage />,
+      },
+
+      {
+        path: "market",
+        element: <MarketPage />,
+      },
+
+      // {
+      //   path: "alerts",
+      //   element: <AlertsPage />,
+
+      // },
+
+      {
+        path: "alerts",
+        element: (
+          <AuthGuard>
+            <AlertsPage />
+          </AuthGuard>
+        ),
+      },
+
+      {
+        path: "alerts-token-demo",
+        element: (
+          <AuthGuard>
+            <AlertsDemo />
+          </AuthGuard>
+        ),
+      },
+
+      {
+        path: "profile",
+        element: (
+          <AuthGuard>
+            <ProfilePage />
+          </AuthGuard>
+        ),
+      },
+
+      {
+        path: "tokens",
+        element: <TokenPage />,
+      },
+
+      {
+        path: "tokens/:address",
+        element: <TokenOverviewPage />,
+      },
+
+      {
+        path: "tokens/:address/:poolAddress",
+        element: <TokenPage />,
+      },
+
+      {
+        path: "wash-trading",
+        element: <WashTradingPage />,
+      },
+      
+      {
+        path: "wash-trading/:mint",
+        element: <WashTradingPage />,
+      },
+
+      {
+        path: "historical-data/:address",
+        element: <HistoricalDataPage />,
+      },
+
+      {
+        path: "transactions",
+        element: <TransactionGraphPage />,
+      },
+
+      {
+        path: "transactions/:txHash",
+        element: <TransactionGraphPage />,
+      },
+
+      {
+        path: "comparison/wallets",
+        element: <WalletsComparisonPage />,
+      },
+
+      {
+        path: "wallets/:address",
+        element: <WalletPage />,
+      },
+
+      {
+        path: "secret-admin-dashboard",
+        element: <UnauthorizedPage />,
+      },
+
+      {
+        path: "not-found",
+        element: <NotFoundPage />,
+      },
+
+      {
+        path: "balance",
+        element: (
+          <BalanceChartV2 address="3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH" />
+        ),
+      },
+
+      {
+        path: "wallet-act",
+        element: (
+          <WalletTransactionActivity address="3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH" />
+        ),
+      },
+
+      {
+        path: "*",
+        element: <NotFoundPage />,
+      },
+    ],
+  },
+]);
 
 function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/auth" element={<AuthShowcase />} />
-        {/* <Route path="/dashboard" element={<DashboardPage />} /> */}
-        <Route path="/market" element={<MarketPage />} />
-        <Route path="/tokens" element={<TokenPage />} />
-        <Route path="/tokens/:address" element={<TokenOverviewPage />} />
-        <Route path="/debug/swr" element={<SwrDebugDemo />} />
-        <Route path="/tokens/:address/:poolAddress" element={<TokenPage />} />
-        <Route
-          path="/historical-data/:address"
-          element={<HistoricalDataPage />}
-        />
-        {/* <Route
-          path="/wallets/:address/token-details-demo"
-          element={<TokenDetailsDemo />}
-        /> */}
-        <Route path="/wallets/:address" element={<WalletPage />} />
-        <Route
-          path="/comparision/wallets"
-          element={<WalletsComparisionPage />}
-        />
-      </Routes>
-    </BrowserRouter>
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;

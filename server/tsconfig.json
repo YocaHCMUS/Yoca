@@ -13,6 +13,7 @@
       "node",
       "vitest/globals"
     ],
+    "rootDir": "./src",
     "outDir": "./build",
     "paths": {
       "@sv/*": [
@@ -23,10 +24,7 @@
     "strictNullChecks": true
   },
   "include": [
-    "src/**/*",
-    "tests/api-manager/api-manager.service.integration.test.ts",
-    "tests/api-manager/api-manager.service.queue.test.ts",
-    "tests/api-manager/api-manager.service.test.ts"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",

@@ -1,7 +1,5 @@
 import Tble from "@/components/Tble";
-import { SOLSCAN_ACCOUNT_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { formatAddress } from "@/util/format";
 import { Link } from "@carbon/react";
 import { useMemo } from "react";
 import styles from "./TopHoldersTable.module.scss";
@@ -9,6 +7,7 @@ import styles from "./TopHoldersTable.module.scss";
 type TopHoldersData = Array<{
   holderAddress: string;
   percentage: number | string;
+  balance?: number | null;
 }>;
 
 interface TopHoldersTableProps {
@@ -20,27 +19,27 @@ export function TopHoldersTable({
   holders,
   loading = false,
 }: TopHoldersTableProps) {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
 
   const rows = useMemo(() => {
-    if (!holders) return [];
+      if (!holders) return [];
 
-    return holders.map((holder, idx) => ({
+    const top10 = holders.slice(0, 10);
+    return top10.map((holder, idx) => ({
       id: holder.holderAddress,
-      rank: <span>{idx + 1}</span>,
+      rank: <span className={styles.rankBadge}>{idx + 1}</span>,
       address: (
         <Link
-          href={`${SOLSCAN_ACCOUNT_URL}/${holder.holderAddress}`}
-          target="_blank"
-          rel="noopener noreferrer"
+          href={`/wallets/${holder.holderAddress}`}
           className={styles.addressLink}
         >
-          {formatAddress(holder.holderAddress)}
+          {fmt.text.address(holder.holderAddress)}
         </Link>
       ),
+      amount: <span>{fmt.num.compact.decimal(holder.balance ?? 0)}</span>,
       percentage: <span>{Number(holder.percentage).toFixed(2)}%</span>,
     }));
-  }, [holders]);
+  }, [holders, fmt]);
 
   return (
     <Tble
@@ -55,6 +54,11 @@ export function TopHoldersTable({
           key: "address",
           header: tr("token.topHolders.address"),
           align: "start",
+        },
+        {
+          key: "amount",
+          header: "Amount",
+          align: "end",
         },
         {
           key: "percentage",

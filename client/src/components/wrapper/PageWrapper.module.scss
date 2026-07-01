@@ -1,11 +1,307 @@
+.appHeader {
+  background:
+    linear-gradient(100deg, rgba(124, 58, 237, 0.16), transparent 34%),
+    var(--yoca-surface-elevated) !important;
+  border-bottom: 1px solid var(--yoca-border) !important;
+  box-shadow: 0 8px 30px rgba(2, 6, 23, 0.12);
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+
+.headerMenuButton,
+.headerGlobalAction {
+  color: var(--yoca-text-soft) !important;
+  background: var(--yoca-surface) !important;
+  border: 1px solid var(--yoca-border) !important;
+  border-radius: 10px;
+  margin-inline: 0.125rem;
+
+  &:hover,
+  &:focus-visible,
+  &:global(.cds--header__action--active) {
+    color: var(--yoca-text-main) !important;
+    background: var(--yoca-surface-hover) !important;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--yoca-accent);
+    outline-offset: -2px;
+  }
+}
+
+.headerName {
+  min-inline-size: auto !important;
+  padding-inline: 0.75rem 1rem !important;
+  color: var(--yoca-text-main) !important;
+}
+
+.headerBrand {
+  gap: 0.5rem !important;
+
+  img {
+    height: 2rem !important;
+    filter: drop-shadow(0 0 9px rgba(45, 212, 191, 0.22));
+  }
+
+  strong {
+    letter-spacing: 0.08em;
+    font-size: 1rem !important;
+    background: linear-gradient(100deg, var(--yoca-text-main), var(--yoca-accent));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+}
+
+.headerNavigation {
+  margin-inline-start: 0.25rem;
+}
+
+.appHeader :global(.cds--header__menu-item) {
+  color: var(--yoca-text-muted) !important;
+  border-radius: 8px;
+  margin-inline: 0.125rem;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--yoca-text-main) !important;
+    background: var(--yoca-surface-hover) !important;
+  }
+}
+
+.appHeader :global(.cds--header__menu-item[aria-current="page"]),
+.headerNavItemActive {
+  color: var(--yoca-text-main) !important;
+  background: linear-gradient(
+    100deg,
+    rgba(124, 58, 237, 0.2),
+    rgba(45, 212, 191, 0.12)
+  ) !important;
+  box-shadow: inset 0 -2px 0 var(--yoca-accent);
+}
+
+.headerGlobalBar {
+  background: transparent !important;
+  padding-inline: 0.5rem;
+  position: relative;
+  z-index: 4;
+}
+
+.languageMenuAnchor {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.languageMenu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 9001;
+  width: 18rem;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-md);
+  background: var(--yoca-surface-elevated);
+  box-shadow: var(--yoca-shadow-card);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.languageMenuOption {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--yoca-text-main);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--yoca-surface-hover);
+    border-color: var(--yoca-border);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--yoca-accent);
+    outline-offset: 1px;
+  }
+
+  svg {
+    color: var(--yoca-accent);
+  }
+}
+
+.languageMenuOptionActive {
+  background:
+    linear-gradient(100deg, rgba(124, 58, 237, 0.18), rgba(45, 212, 191, 0.1)),
+    var(--yoca-surface-hover);
+  border-color: rgba(45, 212, 191, 0.36);
+}
+
+.languageMenuLocale {
+  color: var(--yoca-text-main);
+  font-size: 0.875rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.languageMenuLabel {
+  min-width: 0;
+  color: var(--yoca-text-soft);
+  font-size: 0.875rem;
+  line-height: 1.25;
+}
+
+.appHeader :global(.cds--header-panel) {
+  background: var(--yoca-surface-elevated) !important;
+  border-inline-start: 1px solid var(--yoca-border) !important;
+  box-shadow: var(--yoca-shadow-card);
+}
+
+.appSideNav {
+  background: var(--yoca-bg-soft) !important;
+  border-inline-end: 1px solid var(--yoca-border) !important;
+  box-shadow: var(--yoca-shadow-card);
+}
+
+.appSideNav :global(.cds--side-nav__items),
+.appSideNav :global(.cds--side-nav__link),
+.appSideNav :global(.cds--header__menu-item) {
+  background: transparent !important;
+  color: var(--yoca-text-soft) !important;
+}
+
+.appSideNav :global(.cds--side-nav__link:hover),
+.appSideNav :global(.cds--header__menu-item:hover) {
+  color: var(--yoca-text-main) !important;
+  background: var(--yoca-surface-hover) !important;
+}
+
+.appContent {
+  background:
+    radial-gradient(circle at top right, rgba(124, 58, 237, 0.09), transparent 30rem),
+    radial-gradient(circle at top left, rgba(45, 212, 191, 0.06), transparent 24rem),
+    var(--yoca-bg) !important;
+  color: var(--yoca-text-main);
+}
+
 .headerPanel {
+  pointer-events: none;
+
   &:global(.cds--header-panel--expanded) {
+    pointer-events: auto;
     inline-size: 22rem !important;
   }
 }
 
+.languagePanelContent {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.languagePanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--yoca-border);
+
+  strong {
+    color: var(--yoca-text-main);
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  span {
+    color: var(--yoca-text-muted);
+    font-size: 0.8125rem;
+  }
+}
+
+.languageOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.languageOption {
+  width: 100%;
+  border: 1px solid var(--yoca-border);
+  border-radius: 12px;
+  background: var(--yoca-surface);
+  color: var(--yoca-text-main);
+  padding: 0.875rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--yoca-surface-hover);
+    border-color: rgba(45, 212, 191, 0.35);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--yoca-accent);
+    outline-offset: 2px;
+  }
+}
+
+.languageOptionActive {
+  background: linear-gradient(
+      100deg,
+      rgba(124, 58, 237, 0.18),
+      rgba(37, 99, 235, 0.12)
+    ),
+    var(--yoca-surface-hover);
+  border-color: rgba(45, 212, 191, 0.38);
+  box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.12);
+}
+
+.languageOptionLabel {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.languageOptionMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--yoca-text-muted);
+  white-space: nowrap;
+}
+
 .headerPanelLarge {
+  pointer-events: none;
+
   &:global(.cds--header-panel--expanded) {
+    pointer-events: auto;
     inline-size: 48rem !important;
   }
 }
@@ -24,13 +320,66 @@
 
 :global(.cds--content) {
   --page-content-top-offset: 3.5rem;
-  padding-top: var(--page-content-top-offset) !important;
+  /* Override Carbon's default margin-top to avoid pushing the container down */
+  margin-top: 0 !important;
+  /* Total top padding: Carbon Header (3rem) + our dynamic offset */
+  padding-top: calc(3rem + var(--page-content-top-offset, 0rem)) !important;
+  
+  overflow-y: auto;
+  box-sizing: border-box;
+  height: 100vh;
+  /* Override Carbon's min-height that forces 100vh on the content height (ignoring padding) */
+  min-height: 0 !important;
 }
 
 .extraHeaderPanelContent {
   width: 100%;
   height: 100%;
   padding: 2rem 2.5rem 4rem 2rem;
+}
+
+.notificationsPanel {
+  width: 100%;
+  height: 100%;
+  padding: 1.5rem 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.notificationItem {
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-md);
+  padding: 0.75rem;
+  background: var(--yoca-surface);
+}
+
+.notificationSeverityLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  line-height: 1;
+}
+
+.notificationSeverityCritical {
+  color: var(--yoca-danger);
+}
+
+.notificationSeverityWarning {
+  color: var(--yoca-warning);
+}
+
+.notificationSeverityInfo {
+  color: var(--yoca-accent);
+}
+
+.notificationItem p {
+  margin: 0.25rem 0;
+}
+
+.notificationItem small {
+  color: var(--yoca-text-muted);
 }
 
 .contentDimmed {
@@ -52,4 +401,33 @@
   &>* {
     pointer-events: none;
   }
+}
+
+.wideContent {
+  padding: calc(3rem + var(--page-content-top-offset, 0rem)) 0 0 !important;
+  overflow: hidden;
+}
+
+.sideNavItemsLayout {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sideNavUserFooter {
+  margin-top: auto;
+  border-top: 1px solid var(--cds-border-subtle-01);
+  padding: 1rem;
+}
+
+.sideNavUserName {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.sideNavUserUid {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: var(--cds-text-secondary);
 }

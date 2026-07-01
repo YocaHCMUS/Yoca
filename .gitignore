@@ -16,7 +16,15 @@ dist-ssr
 *.local
 .gitignore
 package-lock.json
-server/postgresdb
+server/postgresdb/*
+!server/postgresdb/migrations/
+server/postgresdb/migrations/*
+!server/postgresdb/migrations/0007_managed_helius_webhooks.sql
+!server/postgresdb/migrations/0009_ai_daily_usage.sql
+!server/postgresdb/migrations/meta/
+server/postgresdb/migrations/meta/*
+!server/postgresdb/migrations/meta/_journal.json
+n8n/*.yaml
 
 # Editor directories and files
 .vscode/*
@@ -46,3 +54,8 @@ s**/.env
 CHANGES.md
 
 server/api_logs
+externals
+
+AGENTS.md
+.agents/*
+skills-lock.json

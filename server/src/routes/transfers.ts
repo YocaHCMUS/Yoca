@@ -31,3 +31,5 @@ const app = new Hono().get(
 );
 
 export default app;
+
+export type TransfersAppType = typeof app;

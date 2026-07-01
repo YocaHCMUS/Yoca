@@ -132,14 +132,12 @@ export function getThemedChartBaseOption(themeConfig: ChartThemeConfig) {
   };
 }
 
-export function getChartGridConfig() {
-  return {
-    grid: {
-      left: "6rem",
-      right: "6rem",
-      bottom: "6rem",
-      top: "6rem",
-      containLabel: true,
-    },
-  };
-}
+export const getChartGridConfig = {
+  grid: {
+    left: 16,
+    right: 16,
+    bottom: 24,
+    top: 40,
+    containLabel: true,
+  },
+};

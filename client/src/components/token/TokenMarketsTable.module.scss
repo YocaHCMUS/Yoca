@@ -1,107 +1,198 @@
-@use '@carbon/react/scss/theme' as *;
+@use "@carbon/react/scss/theme" as *;
 
 .tableContainer {
+  width: 100%;
+  background: transparent;
+  border-radius: var(--yoca-radius-lg);
+  overflow: hidden;
+
+  :global(.cds--data-table-container) {
+    background: transparent;
+  }
+
+  :global(.cds--data-table) {
+    background: transparent;
+    table-layout: fixed;
     width: 100%;
-    background: $background;
-    border-radius: 8px;
-    overflow: hidden;
+  }
 
-    // Override Carbon table background to match page
-    :global(.cds--data-table-container) {
-        background: transparent;
-    }
+  :global(.cds--data-table thead tr th),
+  :global(.cds--data-table thead tr) {
+    background: rgba(255, 255, 255, 0.02);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--yoca-text-muted);
+    text-transform: none;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--yoca-border);
+  }
 
-    :global(.cds--data-table) {
-        background: transparent;
-    }
+  :global(.cds--data-table tbody tr td),
+  :global(.cds--data-table tbody tr) {
+    background: transparent;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--yoca-text-main);
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--yoca-border);
+    vertical-align: middle;
+  }
 
-    // Header row
-    :global(.cds--data-table thead tr th),
-    :global(.cds--data-table thead tr) {
-        background: $background;
-        font-size: 14px;
-        font-weight: 700;
-        color: $text-primary;
-        text-transform: none;
-        padding: 14px 16px;
-        border-bottom: 1px solid $border-subtle;
-    }
+  :global(.cds--data-table tbody tr:hover td),
+  :global(.cds--data-table tbody tr:hover) {
+    background: rgba(255, 255, 255, 0.04);
+  }
 
-    // Data rows
-    :global(.cds--data-table tbody tr td),
-    :global(.cds--data-table tbody tr) {
-        background: $background;
-        font-size: 14px;
-        font-weight: 400;
-        color: $text-primary;
-        padding: 14px 16px;
-        border-bottom: 1px solid $border-subtle;
-        vertical-align: middle;
-    }
+  :global(.cds--data-table tbody tr:last-child td) {
+    border-bottom: none;
+  }
 
-    // Row hover
-    :global(.cds--data-table tbody tr:hover td),
-    :global(.cds--data-table tbody tr:hover) {
-        background: $layer-hover-01;
-    }
+  :global(.cds--data-table thead tr th:nth-child(-n+4)),
+  :global(.cds--data-table tbody tr td:nth-child(-n+4)) {
+    text-align: left;
+  }
 
-    // Last row no bottom border
-    :global(.cds--data-table tbody tr:last-child td) {
-        border-bottom: none;
-    }
+  :global(.cds--data-table thead tr th:nth-child(n+5)),
+  :global(.cds--data-table tbody tr td:nth-child(n+5)) {
+    text-align: right;
+  }
 
-    // Alignment: Left-align #, Exchange, Pair, and Price (columns 1-4)
-    :global(.cds--data-table thead tr th:nth-child(-n+4)),
-    :global(.cds--data-table tbody tr td:nth-child(-n+4)) {
-        text-align: left;
-    }
+  :global(.cds--data-table thead tr th:first-child),
+  :global(.cds--data-table tbody tr td:first-child) {
+    width: 56px;
+  }
 
-    // Alignment: Right-align all other columns (n >= 5)
-    :global(.cds--data-table thead tr th:nth-child(n+5)),
-    :global(.cds--data-table tbody tr td:nth-child(n+5)) {
-        text-align: right;
-    }
+  :global(.cds--data-table thead tr th:nth-child(2)),
+  :global(.cds--data-table tbody tr td:nth-child(2)) {
+    padding-left: 48px;
+  }
 
-    // Tighten # column and push Exchange right
-    :global(.cds--data-table thead tr th:first-child),
-    :global(.cds--data-table tbody tr td:first-child) {
-        width: 48px;
-    }
-
-    :global(.cds--data-table thead tr th:nth-child(2)),
-    :global(.cds--data-table tbody tr td:nth-child(2)) {
-        padding-left: 48px;
-    }
-
-    // Header buttons for right-aligned columns
-    :global(.cds--data-table thead tr th:nth-child(n+5) .cds--table-header-label) {
-        display: flex;
-        justify-content: flex-end;
-        width: 100%;
-    }
+  :global(.cds--data-table thead tr th:nth-child(n+5) .cds--table-header-label) {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+  }
 }
 
 .table {
-    background: transparent;
+  background: transparent;
+}
+
+.rankBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.08);
+  border: 1px solid rgba(45, 212, 191, 0.22);
+  color: var(--yoca-accent);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .positive {
-    color: #16c784;
-    font-weight: 600;
+  color: var(--yoca-success);
+  font-weight: 700;
 }
 
 .negative {
-    color: #ea3943;
-    font-weight: 600;
+  color: var(--yoca-danger);
+  font-weight: 700;
 }
 
 .pairLink {
-    color: inherit;
-    text-decoration: none;
-    font-weight: 500;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
 
-    &:hover {
-        text-decoration: underline;
-        opacity: 0.85;
-    }
+  &:hover {
+    text-decoration: underline;
+    opacity: 0.9;
+  }
+}
+
+.pairCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+
+  > span:last-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.pairIcons {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  width: 30px;
+  min-width: 30px;
+}
+
+.pairIconLeft,
+.pairIconRight {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(7, 10, 19, 0.9);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.pairIconLeft {
+  position: relative;
+  z-index: 2;
+}
+
+.pairIconRight {
+  position: absolute;
+  left: 12px;
+  z-index: 1;
+}
+
+.exchangeCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.exchangeIcon,
+.exchangeFallback {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border-radius: 999px;
+}
+
+.exchangeIcon {
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.exchangeFallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--yoca-text-main);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.exchangeName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

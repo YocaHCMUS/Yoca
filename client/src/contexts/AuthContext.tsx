@@ -10,35 +10,54 @@ import React, {
 type AuthUser = {
   userId: string;
   displayName: string | null;
+  avatarUrl?: string | null;
 };
 
 type AuthContextType = {
   user: AuthUser | null;
+  isUserLoading: boolean;
   setUser: (user: AuthUser | null) => void;
   refreshUser: () => Promise<void>;
   signOut: () => Promise<void>;
+  openAuthModal: (mode?: "login" | "register") => void;
+  closeAuthModal: () => void;
+  isSignInOpen: boolean;
+  isSignUpOpen: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [isUserLoading, setIsUserLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
     try {
+      setIsUserLoading(true);
+
       const resp = await client.api.users.auth.me.$get();
-      if (resp.status == 200) {
+
+      if (resp.ok) {
         const res = await resp.json();
-        setUser({ userId: res.id, displayName: res.displayName });
-      } else if (resp.status == 401) {
-        setUser(null);
-      } else if (resp.status == 500) {
-        console.error("Server error while fetching current user");
+
+        if (res) {
+          setUser({
+            userId: res.id,
+            displayName: res.displayName,
+            avatarUrl: res.avatarUrl,
+          });
+        } else {
+          // API may return null for unauthenticated sessions.
+          setUser(null);
+        }
       } else {
-        console.error("Unexpected response while fetching current user:", resp);
+        // API may return null for unauthenticated sessions.
+        setUser(null);
       }
     } catch (err) {
       console.error("Failed to fetch current user:", err);
+    } finally {
+      setIsUserLoading(false);
     }
   }, []);
 
@@ -52,8 +71,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const [isSignInOpen, setIsSignInOpen] = useState(false);
+  const [isSignUpOpen, setIsSignUpOpen] = useState(false);
+
+  const openAuthModal = useCallback((mode: "login" | "register" = "login") => {
+    if (mode === "login") setIsSignInOpen(true);
+    else setIsSignUpOpen(true);
+  }, []);
+
+  const closeAuthModal = useCallback(() => {
+    setIsSignInOpen(false);
+    setIsSignUpOpen(false);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, setUser, refreshUser, signOut }}>
+    <AuthContext.Provider
+      value={{ 
+        user, 
+        isUserLoading,
+        setUser, 
+        refreshUser, 
+        signOut, 
+        openAuthModal,
+        closeAuthModal,
+        isSignInOpen,
+        isSignUpOpen 
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

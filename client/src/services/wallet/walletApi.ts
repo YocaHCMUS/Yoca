@@ -1,24 +1,5 @@
-/**
- * Wallet API Service
- * 
- * Provides functions to fetch wallet data from backend API endpoints.
- * Types are automatically inferred from the backend Hono routes via RPC client.
- * 
- * @module services/wallet/walletApi
- */
+import client from "@/api/main";
 
-import client from '@/api/main';
-
-/**
- * Utility type to extract the inferred response type from a fetcher function
- */
-export type InferFetcherData<T extends (...args: unknown[]) => Promise<unknown>> = Awaited<ReturnType<T>>;
-
-/**
- * Wallet portfolio token item returned by the /wallets/portfolio endpoint.
- * All additive metadata fields are optional to allow graceful degradation
- * when enrichment data is partially unavailable.
- */
 export interface WalletPortfolioItem {
   tokenAddress: string;
   symbol: string;
@@ -29,48 +10,30 @@ export interface WalletPortfolioItem {
   valueUsd: number;
   change24hPercent?: number;
 }
-
-export interface WalletSwapBalanceChange {
-  mint: string;
-  amount: number;
-  decimals: number;
-  symbol?: string | null;
-  name?: string | null;
-  logoUri?: string | null;
-  priceUsd?: number | null;
-  valueUsd?: number | null;
-}
-
-export interface WalletSwapExchange {
-  name?: string | null;
-  address?: string | null;
-  logo?: string | null;
-}
-
-export interface WalletSwapPair {
-  address?: string | null;
-  label?: string | null;
-  baseTokenAddress?: string | null;
-  quoteTokenAddress?: string | null;
+// Thêm interface mới cho Win Rate
+export interface WalletOverviewWinRateStats {
+    winRate: number;       // VD: 68.4
+    winCount: number;      // Số token lãi
+    lossCount: number;     // Số token lỗ
+    totalTraded: number;   // Tổng số token có giao dịch chốt lời/lỗ
+    avgWinUsd: number;     // Trung bình số tiền lãi
+    avgLossUsd: number;    // Trung bình số tiền lỗ
 }
 
 export interface WalletSwap {
-  transactionHash: string,
-  transactionType: string,
-  blockTimestampIso: string,
+  transactionHash: string;
+  transactionType: string;
+  blockTimestampIso: string;
 
-  subcategory: string | null,
+  subcategory: string | null;
 
-  walletAddress: string,
-  pairAddress: string,
+  walletAddress: string;
+  pairAddress: string;
 
-  tokensInvolved: string,
-  exchangeAddress: string,
-  exchangeName: string,
-  exchangeLogo: string,
+  tokensInvolved: string;
 
-  bought: WalletSwapTokenChange,
-  sold: WalletSwapTokenChange,
+  bought: WalletSwapTokenChange;
+  sold: WalletSwapTokenChange;
 
   totalValueUsd: number | null;
   baseQuotePrice: number | null;
@@ -85,7 +48,6 @@ export interface WalletSwapTokenChange {
   priceUsd: number;
   valueUsd: number;
 }
-
 
 export interface WalletSwapTokenInfo {
   address: string;
@@ -104,12 +66,102 @@ export interface WalletPageInfo {
   source: "cache" | "provider" | "mixed";
 }
 
-// export interface WalletSwapsResponse {
-//   address: string;
-//   chain?: string;
-//   swaps: WalletSwap[];
-//   pageInfo: WalletPageInfo;
-// }
+export interface TokenHourlyVolume {
+  hour: number;
+  buyVolumeUsd: number;
+  sellVolumeUsd: number;
+}
+
+export interface WalletDayToken {
+  address: string;
+  symbol: string;
+  logoUri: string | null;
+  buyVolumeUsd: number;
+  sellVolumeUsd: number;
+  buyAmount: number;
+  sellAmount: number;
+  totalVolumeUsd: number;
+  hourlyVolumes: TokenHourlyVolume[];
+}
+
+export interface WalletDaySwapSummary {
+  transactionHash: string;
+  timestamp: string;
+  pair: string;
+  valueUsd: number;
+  action: "buy" | "sell";
+  soldSymbol: string | null;
+  boughtSymbol: string | null;
+  soldTokenAddress: string | null;
+  boughtTokenAddress: string | null;
+  soldAmount: number;
+  boughtAmount: number;
+}
+
+export interface WalletDayActivitySummary {
+  walletAddress: string;
+  date: string;
+  buyVolumeUsd: number;
+  sellVolumeUsd: number;
+  buyTxCount: number;
+  sellTxCount: number;
+  allTokens: WalletDayToken[];
+  totalTokensTraded: number;
+  swaps: WalletDaySwapSummary[];
+}
+
+export interface WalletTxTransfer {
+  from: string;
+  to: string;
+  mint: string;
+  symbol: string | null;
+  name: string | null;
+  logoUri: string | null;
+  amount: number;
+  amountUsd: number | null;
+  fromTokenAccount?: string;
+  toTokenAccount?: string;
+}
+
+export interface WalletFeeReceiver {
+  address: string;
+  amount: number;
+  amountUsd: number | null;
+  label: string | null;
+}
+
+export interface WalletTxDetail {
+  transactionHash: string;
+  timestamp: string;
+  pair: string;
+  valueUsd: number;
+  action: "buy" | "sell";
+  transfers: WalletTxTransfer[];
+  feePaid: number;
+  feePaidUsd: number | null;
+  feePayer: string;
+  feeReceivers: WalletFeeReceiver[];
+}
+
+export interface WalletInnerInstruction {
+  index: number;
+  programId: string;
+  programLabel: string | null;
+  accounts: string[];
+}
+
+export interface WalletInstruction {
+  index: number;
+  programId: string;
+  programLabel: string | null;
+  accounts: string[];
+  innerInstructions: WalletInnerInstruction[];
+}
+
+export interface WalletTxInstructionDetail {
+  transactionHash: string;
+  instructions: WalletInstruction[];
+}
 
 export interface WalletSwapsResponse {
   address: string;
@@ -138,47 +190,6 @@ export interface WalletTransfersResponse {
   pageInfo: WalletPageInfo;
 }
 
-export interface WalletCounterpartyIdentity {
-  status: "known" | "unknown" | "unavailable";
-  name: string | null;
-  category: string | null;
-  type: string | null;
-}
-
-export interface WalletCounterpartyRow {
-  address: string;
-  identity: WalletCounterpartyIdentity;
-  uniqueTokenCount: number;
-  tokens: string[];
-  transactionCount: number;
-  totalVolumeUsd: number;
-}
-
-export interface WalletCounterpartyRankingItem {
-  address: string;
-  label: string;
-  transactionCount: number;
-  totalVolumeUsd: number;
-}
-
-export interface WalletCounterpartiesResponse {
-  counterparties: WalletCounterpartyRow[];
-  rankings: {
-    byTransactionCount: WalletCounterpartyRankingItem[];
-    byVolume: WalletCounterpartyRankingItem[];
-  };
-  metadata: {
-    period: "24h" | "7d";
-    chain: string;
-    source: "cache" | "provider" | "mixed";
-    totals: {
-      counterparties: number;
-      transactions: number;
-      volume: number;
-    };
-  };
-}
-
 export interface WalletFirstFundInsight {
   targetAddress: string;
   funderAddress: string | null;
@@ -196,10 +207,6 @@ export interface WalletIdentityAnalysis {
   riskScore: number;
   riskLevel: "low" | "medium" | "high";
   signals: string[];
-  counterpartyProfile: {
-    exchangeInteractions24h: number;
-    uniqueKnownEntities7d: number;
-  };
   firstFund: WalletFirstFundInsight | null;
   userTags?: string[];
 }
@@ -236,7 +243,261 @@ export interface WalletIntelligenceResponse {
   };
 }
 
-export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D" | "All";
+export type WalletAiAnalysisLanguage = "en" | "vn";
+
+export type WalletAiFeature =
+  | "wallet_ai_analysis"
+  | "wash_trading_ai_analysis"
+  | "general_ai_chat"
+  | "token_chart_news_summary";
+
+export interface WalletAiUsage {
+  feature: WalletAiFeature;
+  tier: "Free" | "Lite" | "Plus" | "Pro";
+  limit: number;
+  used: number;
+  remaining: number;
+  resetsAt: string;
+  requiredTier?: "Lite" | "Plus" | "Pro";
+  disabled?: boolean;
+}
+
+export class WalletAiApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly errorCode?: string,
+    public readonly usage?: WalletAiUsage,
+    public readonly upgradePath?: string,
+  ) {
+    super(message);
+    this.name = "WalletAiApiError";
+  }
+}
+
+async function walletAiError(response: Response, fallback: string) {
+  let message = fallback;
+  let errorCode: string | undefined;
+  let usage: WalletAiUsage | undefined;
+  let upgradePath: string | undefined;
+
+  try {
+    const errorData = await response.json() as {
+      error?: string;
+      message?: string;
+      errorCode?: string;
+      feature?: WalletAiFeature;
+      tier?: WalletAiUsage["tier"];
+      limit?: number;
+      used?: number;
+      remaining?: number;
+      resetsAt?: string;
+      requiredTier?: WalletAiUsage["requiredTier"];
+      disabled?: boolean;
+      upgradePath?: string;
+    };
+    message =
+      errorData.message?.trim() ||
+      errorData.error?.trim() ||
+      message;
+    errorCode = errorData.errorCode;
+    usage =
+      errorData.feature &&
+      errorData.tier &&
+      typeof errorData.limit === "number" &&
+      typeof errorData.used === "number" &&
+      typeof errorData.remaining === "number" &&
+      errorData.resetsAt
+        ? {
+            feature: errorData.feature,
+            tier: errorData.tier,
+            limit: errorData.limit,
+            used: errorData.used,
+            remaining: errorData.remaining,
+            resetsAt: errorData.resetsAt,
+            requiredTier: errorData.requiredTier,
+            disabled: errorData.disabled,
+          }
+        : undefined;
+    upgradePath = errorData.upgradePath;
+  } catch {
+    // Keep the status-based fallback when the response body is not JSON.
+  }
+
+  return new WalletAiApiError(
+    message,
+    response.status,
+    errorCode,
+    usage,
+    upgradePath,
+  );
+}
+
+export interface WalletAiSwapSummaryTokenPnl {
+  address: string;
+  symbol: string | null;
+  name: string | null;
+  logoUri: string | null;
+  pnlUsd: number;
+  trades: number;
+  wins: number;
+  exits: number;
+  buyCount: number;
+  sellCount: number;
+  totalEntered: number;
+  totalExited: number;
+  totalEnteredAmount: number;
+  totalExitedAmount: number;
+  entryPrices: number[] | null;
+  exitPrices: number[] | null;
+  totalBoughtVolumeUsd: number;
+  totalSoldVolumeUsd: number;
+  longestHoldingTimeMs: number | null;
+  maxTolerableLossPercent: number;
+}
+
+export interface WalletAiSwapSummaryResponse {
+  address: string;
+  language: "en" | "vn";
+  tradeCount: number;
+  realizedPnlUsd: number;
+  winningPercentage: number;
+  totalBoughtUsd: number;
+  totalSoldUsd: number;
+  topProfitable: WalletAiSwapSummaryTokenPnl | null;
+  topLoser: WalletAiSwapSummaryTokenPnl | null;
+  allTokenBreakdowns: WalletAiSwapSummaryTokenPnl[];
+  riskNotes: string[];
+  summary: string;
+  model: string;
+  fetchedAt: string;
+  cached: boolean;
+}
+
+export async function fetchWalletAiSwapSummary(
+  address: string,
+  language?: WalletAiAnalysisLanguage,
+): Promise<WalletAiSwapSummaryResponse> {
+  const response = await client.api.wallets["ai-swap-summary"].$post({
+    json: { address, language },
+  });
+
+  if (!response.ok) {
+    throw await walletAiError(
+      response,
+      `Failed to fetch wallet AI swap summary (${response.status})`,
+    );
+  }
+
+  const data = await response.json();
+  return data as WalletAiSwapSummaryResponse;
+}
+
+export interface WalletTokenTradeEvent {
+  timestampMs: number;
+  type: "buy" | "sell";
+  price: number;
+  amount: number;
+  valueUsd: number;
+  pnlUsd?: number;
+  pnlPercent?: number;
+  holdingTimeMs?: number;
+}
+
+export interface WalletTokenPnlDistribution {
+  extremeProfit: number;
+  highProfit: number;
+  profit: number;
+  lowLoss: number;
+  highLoss: number;
+}
+
+export interface TokenDeepAnalysisResponse {
+  address: string;
+  tokenAddress: string;
+  symbol: string | null;
+  name: string | null;
+  logoUri: string | null;
+  analysis: string;
+  riskNotes: string[];
+  tradeCount: number;
+  realizedPnlUsd: number;
+  totalBoughtUsd: number;
+  totalSoldUsd: number;
+  tradeTimeline: WalletTokenTradeEvent[];
+  pnlDistribution: WalletTokenPnlDistribution;
+  winningPercentage: number;
+  model: string;
+  cached: boolean;
+}
+
+export async function fetchTokenDeepAnalysis(
+  walletAddress: string,
+  tokenAddress: string,
+  language?: WalletAiAnalysisLanguage,
+): Promise<TokenDeepAnalysisResponse> {
+  const response = await client.api.wallets["ai-swap-summary"]["token"].$post({
+    json: { address: walletAddress, tokenAddress, language },
+  });
+
+  if (!response.ok) {
+    throw await walletAiError(
+      response,
+      `Failed to fetch token deep analysis (${response.status})`,
+    );
+  }
+
+  const data = await response.json();
+  return data as TokenDeepAnalysisResponse;
+}
+
+export interface WalletAiReferenceEntry {
+  ref_id: number;
+  type: "wallet" | "exchange" | "token";
+  address?: string;
+  name?: string;
+  symbol?: string;
+  logoUri?: string;
+}
+
+export interface WalletAiAnalysisResponse {
+  wallet_address: string;
+  version?: string;
+  data: {
+    swaps: "ok" | "insufficient_data";
+    portfolio: "ok" | "insufficient_data";
+    first_funder: "ok" | "insufficient_data";
+    identity: "ok" | "insufficient_data";
+  };
+  activity_profile: {
+    archetype: string;
+    activity_level: "dormant" | "low" | "moderate" | "high";
+    last_active: string;
+  };
+  interaction_fingerprint: {
+    preferred_protocols: string[];
+    transaction_timing: "uniform" | "burst_mode" | "sporadic";
+    preffered_trading_tokens: string[];
+    preffered_holding_tokens: string[];
+    trading_volume_range: string;
+  };
+  funder: {
+    type: string;
+    notes: string;
+  };
+  wallet_age: {
+    category: "new" | "mid" | "old" | "unknown";
+    first_seen: string;
+    consistency: string;
+  };
+  summary: string;
+  signals: string[];
+  reference?: WalletAiReferenceEntry[];
+  usage?: WalletAiUsage;
+  counted?: boolean;
+}
+
+export type WalletOverviewPeriodKey = "24H" | "7D" | "30D" | "90D";
 
 export interface WalletOverviewPeriodStats {
   tradingVolumeUsd: number | null;
@@ -255,14 +516,24 @@ export interface WalletOverviewPeriodStats {
     realizedUsd: number | null;
     unrealizedUsd: number | null;
   };
-  source: "birdeye-overall-pnl" | "overview-cache" | "none";
+  source:
+    | "mobula-wallet-analysis"
+    | "birdeye-overall-pnl"
+    | "overview-cache"
+    | "none";
+  winRateStats?: WalletOverviewWinRateStats;
 }
 
 export interface WalletOverviewHoldingsStats {
   totalAssetValueUsd: number;
   change24hPercent: number | null;
   tokensHoldingCount: number;
-  source: "birdeye-portfolio" | "helius-portfolio-fallback" | "overview-cache" | "none";
+  source:
+    | "mobula-wallet-analysis" 
+    | "birdeye-portfolio"
+    | "helius-portfolio-fallback"
+    | "overview-cache"
+    | "none";
 }
 
 export interface WalletOverviewMultiPeriodResponse {
@@ -293,264 +564,404 @@ export interface WalletOverviewMultiPeriodResponse {
 }
 
 /**
- * Helper to handle API response with error checking
- */
-async function handleResponse(response: Response) {
-  if (!response.ok) {
-    let errorMessage = `API error: ${response.status}`;
-    try {
-      const errorData = await response.json();
-      if (errorData.message) {
-        errorMessage = errorData.message;
-      } else if (errorData.error) {
-        errorMessage = errorData.error;
-      }
-    } catch (e) {
-      console.error('[walletApi] Failed to parse error response:', e);
-    }
-    const error = new Error(errorMessage);
-    console.error('[walletApi] Request failed:', { status: response.status, error });
-    throw error;
-  }
-}
-
-/**
  * Fetch wallet overview data
  * GET /api/wallets/overview
  */
-export async function fetchWalletOverview(
+export function fetchWalletOverview(
   address: string,
-  chain?: string,
 ): Promise<WalletOverviewMultiPeriodResponse> {
-  const query = {
-    address,
-    ...(chain && { chain }),
-  };
-  const response = await client.api.wallets.overview.$get({
-    query,
+  return client.api.wallets.overview.$get({
+    query: {
+      address,
+      period: "24H",
+    },
+  }).then(async (resp) => {
+    if (resp.ok) return resp.json();
+
+    console.error(`API Error: ${resp.status}`);
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as WalletOverviewMultiPeriodResponse;
 }
 
 /**
  * Fetch wallet portfolio data
  * GET /api/wallets/portfolio
  */
-export async function fetchWalletPortfolio(
+export function fetchWalletPortfolio(
   address: string,
-  chain?: string
+  chain?: string,
 ): Promise<WalletPortfolioItem[]> {
-  const query = { address, ...(chain && { chain }) };
-  const response = await client.api.wallets.portfolio.$get({
-    query,
+  return client.api.wallets.portfolio.$get({
+    query: { address, ...(chain && { chain }) },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as WalletPortfolioItem[];
 }
 
 /**
  * Fetch wallet transfers
- * GET /api/wallets/transfers
+ * GET /api/wallets/transfers/history/:address
  */
-export async function fetchWalletTransfers(
+export function fetchWalletTransfers(
   address: string,
   params?: {
     chain?: string;
     limit?: number;
     cursor?: string;
+    minValueUsd?: number;
     before?: string;
-  }
+  },
 ): Promise<WalletTransfersResponse> {
-  const query = { address, ...params };
-  const response = await client.api.wallets.transfers.$get({
-    query,
+  return client.api.wallets.transfers.history[":address"].$get({
+    param: { address },
+    query: {
+      limit: params?.limit,
+      cursor: params?.cursor,
+      minValueUsd: params?.minValueUsd,
+    },
+  }).then(resp => {
+    if (resp.ok) {
+      return resp.json().then(transfers => ({
+        address,
+        chain: params?.chain,
+        transfers: transfers.transactions.map(transfer => ({
+          from:
+            transfer.direction === "send"
+              ? address
+              : transfer.counterpartyAddress,
+          to:
+            transfer.direction === "receive"
+              ? address
+              : transfer.counterpartyAddress,
+          amount: transfer.token.amount,
+          amountUsd: transfer.valueUsd,
+          timestamp: new Date(transfer.blockTimestampMs).toISOString(),
+          tokenAddress: transfer.token.address,
+          tokenSymbol: transfer.token.symbol ?? "",
+          tokenName: transfer.token.name ?? undefined,
+          tokenLogoUri: transfer.token.logoUri ?? undefined,
+          priceUsd: transfer.token.priceUsd ?? undefined,
+          transactionSignature: transfer.transactionHash,
+          instructionIndex: 0,
+        })),
+        pageInfo: {
+          pageSize: 100,
+          hasMore: false,
+          nextCursor: null,
+          source: "cache",
+        },
+      }));
+    }
+    console.error(`API Error: ${resp.status}`);
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as WalletTransfersResponse;
 }
 
 /**
  * Fetch wallet swaps
- * GET /api/wallets/swap
+ * GET /api/wallets/swaps/history/:address
  */
-export async function fetchWalletSwaps(
+export function fetchWalletSwaps(
   address: string,
   params?: {
     chain?: string;
     limit?: number;
     cursor?: string;
+    minValueUsd?: number;
     before?: string;
-  }
+  },
 ): Promise<WalletSwapsResponse> {
-  const query = { address, ...params };
-  const response = await client.api.wallets.swap.$get({
-    query,
-  });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as WalletSwapsResponse;
-}
+  return client.api.wallets.swaps.history[":address"].$get({
+    param: { address },
+    query: {
+      limit: params?.limit,
+      cursor: params?.cursor,
+      minValueUsd: params?.minValueUsd,
+    },
+  }).then(resp => {
+    if (resp.ok) {
+      return resp.json().then(swaps => ({
+        address,
+        swaps: swaps.transactions.map(swap => {
+          const boughtLabel =
+            swap.bought.symbol ?? swap.bought.name ?? swap.bought.address;
+          const soldLabel =
+            swap.sold.symbol ?? swap.sold.name ?? swap.sold.address;
 
-/**
- * Fetch wallet counterparties data
- * GET /api/wallets/counterparties
- */
-export async function fetchWalletCounterparties(
-  address: string,
-  params?: {
-    chain?: string;
-    period?: "24h" | "7d";
-    limit?: number;
-    includeTokens?: boolean;
-  }
-): Promise<WalletCounterpartiesResponse> {
-  const query = {
-    address,
-    ...(params?.chain && { chain: params.chain }),
-    ...(params?.period && { period: params.period }),
-    ...(params?.limit != null && { limit: params.limit }),
-    ...(params?.includeTokens != null && { includeTokens: String(params.includeTokens) }),
-  };
-
-  const response = await client.api.wallets.counterparties.$get({
-    query,
+          return {
+            transactionHash: swap.transactionHash,
+            transactionType: "SWAP",
+            blockTimestampIso: new Date(
+              swap.blockTimestampMs,
+            ).toISOString(),
+            subcategory: null,
+            walletAddress: address,
+            pairAddress: "",
+            tokensInvolved: `${soldLabel},${boughtLabel}`,
+            bought: {
+              ...swap.bought,
+              priceUsd: swap.bought.priceUsd ?? 0,
+              valueUsd:
+                swap.bought.priceUsd == null
+                  ? 0
+                  : swap.bought.amount * swap.bought.priceUsd,
+            },
+            sold: {
+              ...swap.sold,
+              priceUsd: swap.sold.priceUsd ?? 0,
+              valueUsd:
+                swap.sold.priceUsd == null
+                  ? 0
+                  : swap.sold.amount * swap.sold.priceUsd,
+            },
+            totalValueUsd: swap.totalValueUsd,
+            baseQuotePrice: null,
+          };
+        }),
+        pageInfo: {
+          pageSize: 100,
+          hasMore: false,
+          nextCursor: null,
+          source: "cache",
+        },
+      }));
+    }
+    console.error(`API Error: ${resp.status}`);
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as WalletCounterpartiesResponse;
-}
-
-/**
- * Fetch wallet exchange counts
- * GET /api/wallets/exchanges
- */
-export async function fetchWalletExchanges(
-  address: string,
-  params?: {
-    chain?: string;
-    period?: string;
-    limit?: number;
-    metric?: "count" | "volume";
-  }
-) {
-  const query = { address, ...params };
-  const response = await client.api.wallets.exchanges.$get({
-    query,
-  });
-  await handleResponse(response);
-  const data = await response.json();
-  return data;
 }
 
 /**
  * Fetch wallet balances
  * GET /api/balances
  */
-export async function fetchWalletBalances(address: string) {
-  const response = await client.api.balances[":address"].$get({
+export function fetchWalletBalances(address: string) {
+  return client.api.balances[":address"].$get({
     param: { address },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data;
 }
 
 /**
  * Fetch wallet asset distribution
  * GET /api/wallets/distribution
  */
-export async function fetchWalletDistribution(
-  address: string,
-  chain?: string
-) {
-  const query = { address, ...(chain && { chain }) };
-  const response = await client.api.wallets.distribution.$get({
-    query,
+export function fetchWalletDistribution(address: string, chain?: string) {
+  return client.api.wallets.distribution.$get({
+    query: { address, ...(chain && { chain }) },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data;
 }
 
 /**
  * Fetch wallet identity data
  * GET /api/wallets/identity
  */
-export async function fetchWalletIdentity(
-  address: string,
-  chain?: string,
-) {
-  const query = { address, ...(chain && { chain }) };
-  const response = await client.api.wallets.identity.$get({
-    query,
+export function fetchWalletIdentity(address: string) {
+  return client.api.wallets.identity.$get({
+    query: { address },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data;
 }
 
 /**
  * Fetch wallet identity batch data
  * POST /api/wallets/identity/batch
  */
-export async function fetchWalletIdentityBatch(
+export function fetchWalletIdentityBatch(
   addresses: string[],
   chain?: string,
 ) {
-  const response = await client.api.wallets.identity.batch.$post({
-    json: {
-      addresses,
-      ...(chain && { chain }),
-    },
+  return client.api.wallets.identity.batch.$post({
+    json: { addresses, ...(chain && { chain }) },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data;
 }
 
 /**
  * Fetch composed wallet intelligence data
  * GET /api/wallets/intelligence
  */
-export async function fetchWalletIntelligence(
+export function fetchWalletIntelligence(
   address: string,
   chain?: string,
 ): Promise<WalletIntelligenceResponse> {
-  const query = { address, ...(chain && { chain }) };
-  const response = await client.api.wallets.intelligence.$get({
-    query,
+  return client.api.wallets.intelligence.$get({
+    query: { address, ...(chain && { chain }) },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
+    throw new Error(`API Error: ${resp.status}`);
   });
-  await handleResponse(response);
-  const data = await response.json();
-  return data as WalletIntelligenceResponse;
 }
 
-export const walletApi = {
-  fetchWalletOverview,
-  fetchWalletPortfolio,
-  fetchWalletTransfers,
-  fetchWalletSwaps,
-  fetchWalletCounterparties,
-  fetchWalletExchanges,
-  fetchWalletBalances,
-  fetchWalletDistribution,
-  fetchWalletIdentity,
-  fetchWalletIdentityBatch,
-  fetchWalletIntelligence,
-  // Aliases for convenience
-  getOverview: fetchWalletOverview,
-  getPortfolio: fetchWalletPortfolio,
-  getTransfers: fetchWalletTransfers,
-  getSwaps: fetchWalletSwaps,
-  getCounterparties: fetchWalletCounterparties,
-  getExchanges: fetchWalletExchanges,
-  getBalances: fetchWalletBalances,
-  getDistribution: fetchWalletDistribution,
-  getIdentity: fetchWalletIdentity,
-  getIdentityBatch: fetchWalletIdentityBatch,
-  getIntelligence: fetchWalletIntelligence,
-};
+/**
+ * Fetch wallet AI analysis
+ * POST /api/wallets/ai-analysis
+ */
+export function fetchWalletAiAnalysis(
+  address: string,
+  language: WalletAiAnalysisLanguage,
+): Promise<WalletAiAnalysisResponse> {
+  return client.api.wallets["ai-analysis"].$post({
+    json: { address, language },
+  }).then(async resp => {
+    if (resp.ok) return (await resp.json()) as WalletAiAnalysisResponse;
+    throw await walletAiError(
+      resp,
+      `Failed to fetch wallet AI analysis (${resp.status})`,
+    );
+  });
+}
+
+/**
+ * AI Wallet Forensic Audit response.
+ *
+ * Mirrors the shape returned by `GET /api/wallets/:address/audit`.
+ * The backend caches results for 24 hours; `cached: true` indicates the
+ * report came straight from cache (no Gemini call was made).
+ */
+export type WalletAuditPersona =
+  | "Sniper"
+  | "Whale"
+  | "DCA"
+  | "LP"
+  | "Retail"
+  | "Unknown";
+
+export interface WalletTokenDetails {
+  symbol: string | null;
+  address: string;
+  tokenAddress: string;
+  lastTradeUnixTime: number;
+  totalBuyCount: number;
+  totalSellCount: number;
+  totalTradeCount: number;
+  totalBoughtAmount: number;
+  totalSoldAmount: number;
+  balanceAmount: number;
+  costOfQuantitySold: number;
+  totalBoughtUsd: number;
+  totalSoldUsd: number;
+  currentValue: number;
+  realizedProfitUsd: number;
+  realizedProfitPercent: number;
+  unrealizedProfitUsd: number;
+  unrealizedProfitPercent: number;
+  avgBuyCost: number;
+  avgSellCost: number;
+}
+
+export interface WalletAuditReport {
+  address: string;
+  persona: WalletAuditPersona;
+  trustScore: number;
+  summary: string;
+  observations: string[];
+  transactionCount: number;
+  model: string;
+  fetchedAt: string;
+  cached: boolean;
+}
+
+/**
+ * Fetch AI Wallet Forensic Audit
+ * GET /api/wallets/:address/audit
+ *
+ * Pass `force: true` to bypass the 24-hour cache and re-run Gemini.
+ */
+export function fetchWalletAudit(
+  address: string,
+  options?: { force?: boolean },
+): Promise<WalletAuditReport> {
+  return client.api.wallets[":address"].audit.$get({
+    param: { address },
+    query: { force: options?.force ? "true" : undefined },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
+    throw new Error(`API Error: ${resp.status}`);
+  });
+}
+
+export async function fetchWalletTokenDetails(address: string): Promise<WalletTokenDetails[]> {
+  return client.api.wallets[":address"].tokens.$get({
+    param: { address }
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
+    throw new Error(`API Error: ${resp.status}`);
+  });
+}
+
+
+export async function fetchDayActivitySummary(
+  address: string,
+  dayMs: number,
+): Promise<WalletDayActivitySummary> {
+  return client.api.wallets["day-activity"].$get({
+    query: { address, dayMs: String(dayMs) },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
+    throw new Error(`API Error: ${resp.status}`);
+  });
+}
+
+export interface TokenPriceChartPoint {
+  timestampMs: number;
+  price: number;
+}
+
+export function fetchTokenPriceChartForDay(
+  tokenAddress: string,
+  dayMs: number,
+) {
+  return client.api.wallets["token-price-chart"].$get({
+    query: { address: tokenAddress, dayMs: String(dayMs) },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
+    throw new Error(`API Error: ${resp.status}`);
+  });
+}
+
+export function fetchTxDetail(
+  address: string,
+  signature: string,
+): Promise<WalletTxDetail> {
+  return client.api.wallets["tx-detail"].$get({
+    query: { address, signature },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
+    throw new Error(`API Error: ${resp.status}`);
+  });
+}
+
+export function fetchTxInstructions(
+  address: string,
+  signature: string,
+): Promise<WalletTxInstructionDetail> {
+  return client.api.wallets["tx-instructions"].$get({
+    query: { address, signature },
+  }).then(resp => {
+    if (resp.ok) return resp.json();
+    console.error(`API Error: ${resp.status}`);
+    throw new Error(`API Error: ${resp.status}`);
+  });
+}

@@ -66,7 +66,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     >
       <GlobalTheme theme={userThemes[theme]}>
         <Theme theme={userThemes[theme]} style={{ minHeight: "100vh" }}>
-          <div ref={themeRef} data-carbon-theme>
+          <div
+            ref={themeRef}
+            className="yoca-app-theme"
+            data-carbon-theme
+            data-yoca-theme={theme}
+          >
             {children}
           </div>
         </Theme>

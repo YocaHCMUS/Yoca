@@ -1,29 +1,27 @@
 import {
-	WALLET_BALANCE_HISTORY_CACHE_TTL_MS,
-	WALLET_SWAPS_TTL_MS,
-	WALLET_TRANSACTIONS_TTL_MS,
-	WALLET_TRANSFERS_TTL_MS,
+    WALLET_SWAPS_TTL_MS,
+    WALLET_TRANSACTIONS_TTL_MS,
+    WALLET_TRANSFERS_TTL_MS
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-	tokenTransfers,
-	walletHeliusTransactions,
-	walletSwap,
-	walletSwapMeta,
-	walletTransactions,
-	walletTransactionsMeta,
-	walletTransferMeta,
-	walletBalanceHistoryCache,
-	walletFirstFund,
+    tokenTransfers,
+    walletHeliusTransactions,
+    walletSwap,
+    walletSwapMeta,
+    walletTransactions,
+    walletTransactionsMeta,
+    walletTransferMeta,
+    walletFirstFund,
+    walletPnlDataCache,
+    walletPnlDataMeta
 } from "@sv/db/schema.js";
 import { and, desc, eq, gte, lt, lte, or } from "drizzle-orm";
 import type {
-	WalletSwap,
-	WalletTransaction,
-	WalletTransactionHelius,
-	WalletTransfer,
-	BalanceDataPoint,
-	WalletTimePeriod,
+    WalletSwap,
+    WalletTransaction,
+    WalletTransactionHelius,
+    WalletTransfer
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 export type CachedRange = {
@@ -89,15 +87,6 @@ function toEpochSec(value: unknown): number | null {
 	return null;
 }
 
-function toNullableFiniteNumber(value: unknown): number | null {
-	if (value == null) {
-		return null;
-	}
-
-	const parsed = Number(value);
-	return Number.isFinite(parsed) ? parsed : null;
-}
-
 function resolveRange(input: CachedRange | "24h" | "7d") {
 	const nowSec = Math.floor(Date.now() / 1000);
 	if (typeof input === "object") {
@@ -114,7 +103,7 @@ function resolveRange(input: CachedRange | "24h" | "7d") {
 	};
 }
 
-function mapHeliusRow(row: any): WalletTransactionHelius {
+function mapHeliusRow(row: typeof walletHeliusTransactions.$inferSelect): WalletTransactionHelius {
 	return {
 		walletAddress: row.address,
 		signature: row.signature,
@@ -224,7 +213,7 @@ export async function getCachedWalletTransactionsHelius(
 ): Promise<CachedWalletTransactionsHeliusRangeResult> {
 	const requestedRange = resolveRange(range);
 
-	let metaRows = await db
+	const metaRows = await db
 		.select()
 		.from(walletTransactionsMeta)
 		.where(
@@ -294,30 +283,47 @@ export async function getCachedWalletTransactionsHelius(
 	};
 }
 
+export async function getCachedWalletTransfersMeta(address: string) {
+	return await db
+		.select()
+		.from(walletTransferMeta)
+		.where(eq(walletTransferMeta.address, address))
+		.limit(1)
+}
+
 export async function getCachedWalletTransfers(
 	address: string,
-	from: "24h" | "7d" | CachedRange = "7d",
+	from?: number, //ms
+	to?: number,
+	tokenAddress?: string,
+	direction?: "in" | "out",
+	minAmountUsd?: number
 ): Promise<WalletTransfer[] | null> {
-	const transferThreshold = new Date(Date.now() - WALLET_TRANSFERS_TTL_MS);
-	const isFresh = await hasFreshWalletMeta(address, transferThreshold, "transfers");
-	if (!isFresh) {
-		return null;
+	const predicates = [eq(tokenTransfers.address, address)];
+
+	if (from != null && to != null) {
+		predicates.push(gte(tokenTransfers.blockTime, new Date(from)));
+		predicates.push(lte(tokenTransfers.blockTime, new Date(to)));
 	}
 
-	const range = resolveRange(from);
-	const fromDate = new Date(range.fromSec * 1000);
-	const toDate = new Date(range.toSec * 1000);
+	if (tokenAddress != null) {
+		predicates.push(eq(tokenTransfers.tokenAddress, tokenAddress));
+	}
+
+	if (direction === "in") {
+		predicates.push(eq(tokenTransfers.toOwner, address));
+	} else if (direction === "out") {
+		predicates.push(eq(tokenTransfers.fromOwner, address));
+	}
+
+	if (minAmountUsd != null) {
+		predicates.push(gte(tokenTransfers.amountUsd, minAmountUsd));
+	}
 
 	const rows = await db
 		.select()
 		.from(tokenTransfers)
-		.where(
-			and(
-				or(eq(tokenTransfers.fromOwner, address), eq(tokenTransfers.toOwner, address)),
-				gte(tokenTransfers.blockTime, fromDate),
-				lte(tokenTransfers.blockTime, toDate),
-			),
-		)
+		.where(and(...predicates))
 		.orderBy(desc(tokenTransfers.blockTime));
 
 	if (rows.length === 0) {
@@ -328,6 +334,8 @@ export async function getCachedWalletTransfers(
 		from: r.fromOwner,
 		to: r.toOwner,
 		amount: r.amount,
+		amountUsd: Number(r.amountUsd) || undefined,
+		priceUsd: undefined,
 		timestamp: toIsoTimestamp(r.blockTime),
 		tokenAddress: r.tokenAddress,
 		tokenSymbol: r.tokenSymbol,
@@ -336,30 +344,38 @@ export async function getCachedWalletTransfers(
 	}));
 }
 
+export async function getCachedWalletSwapsMeta(address: string) {
+	return await db
+		.select()
+		.from(walletSwapMeta)
+		.where(eq(walletSwapMeta.address, address))
+		.limit(1)
+}
+
 export async function getCachedWalletSwaps(
 	address: string,
-	from: "24h" | "7d" | CachedRange = "7d",
+	from?: number, //ms
+	to?: number,
+	tokenAddress?: string
 ): Promise<WalletSwap[] | null> {
-	const swapThreshold = new Date(Date.now() - WALLET_SWAPS_TTL_MS);
-	const isFresh = await hasFreshWalletMeta(address, swapThreshold, "swaps");
-	if (!isFresh) {
-		return null;
+	const predicates = [eq(walletSwap.walletAddress, address)];
+
+	if (from != null && to != null) {
+		predicates.push(gte(walletSwap.blockTimestampMs, from));
+		predicates.push(lte(walletSwap.blockTimestampMs, to));
 	}
 
-	const range = resolveRange(from);
-	const fromDate = new Date(range.fromSec * 1000).getTime();
-	const toDate = new Date(range.toSec * 1000).getTime();
+	if (tokenAddress != null) {
+		predicates.push(or(
+			eq(walletSwap.boughtTokenAddress, tokenAddress),
+			eq(walletSwap.soldTokenAddress, tokenAddress),
+		)!);
+	}
 
 	const rows = await db
 		.select()
 		.from(walletSwap)
-		.where(
-			and(
-				eq(walletSwap.walletAddress, address),
-				gte(walletSwap.blockTimestampMs, fromDate),
-				lte(walletSwap.blockTimestampMs, toDate),
-			),
-		)
+		.where(and(...predicates))
 		.orderBy(desc(walletSwap.blockTimestampMs));
 
 	if (rows.length === 0) {
@@ -375,9 +391,6 @@ export async function getCachedWalletSwaps(
 		tokensInvolved: r.tokensInvoled,
 
 		pairAddress: r.pairAddress,
-		exchangeAddress: r.exchangeAddress,
-		exchangeName: r.exchangeName,
-		exchangeLogo: r.exchangeLogo,
 		bought: {
 			address: r.boughtTokenAddress,
 			amount: r.boughtTokenAmount,
@@ -405,6 +418,7 @@ export async function getCachedWalletSwaps(
 
 	}));
 }
+
 
 export async function getCachedWalletTransfersChunk(
 	address: string,
@@ -607,9 +621,6 @@ export async function getCachedWalletSwapsChunk(
 		tokensInvolved: r.tokensInvoled,
 
 		pairAddress: r.pairAddress,
-		exchangeAddress: r.exchangeAddress,
-		exchangeName: r.exchangeName,
-		exchangeLogo: r.exchangeLogo,
 		bought: {
 			address: r.boughtTokenAddress,
 			amount: r.boughtTokenAmount,
@@ -650,44 +661,6 @@ export async function getCachedWalletSwapsChunk(
 	};
 }
 
-/**
- * Retrieve cached wallet balance history from database
- * @param address - wallet address
- * @param timePeriod - time period (7D, 30D, 60D, 90D, 1Y, All, 24H)
- * @returns cached balance history with coverage metadata, or null if not fresh
- */
-export async function getCachedWalletBalanceHistory(
-	address: string,
-	timePeriod: WalletTimePeriod,
-): Promise<{
-	points: BalanceDataPoint[];
-	coveredFromMs: number;
-	coveredToMs: number;
-} | null> {
-	const threshold = new Date(Date.now() - WALLET_BALANCE_HISTORY_CACHE_TTL_MS);
-	const rows = await db
-		.select()
-		.from(walletBalanceHistoryCache)
-		.where(
-			and(
-				eq(walletBalanceHistoryCache.address, address),
-				eq(walletBalanceHistoryCache.timePeriod, timePeriod),
-				gte(walletBalanceHistoryCache.fetchedAt, threshold),
-			),
-		)
-		.limit(1);
-
-	if (rows.length === 0) {
-		return null;
-	}
-
-	return {
-		points: rows[0].data,
-		coveredFromMs: Number(rows[0].coveredFromMs),
-		coveredToMs: Number(rows[0].coveredToMs),
-	};
-}
-
 export async function getCachedWalletFirstFund(
 	address: string
 ) {
@@ -696,6 +669,61 @@ export async function getCachedWalletFirstFund(
 		.from(walletFirstFund)
 		.where(
 			eq(walletFirstFund.reciepient, address),
+		)
+		.limit(1);
+
+	return row.length > 0 ? row[0] : null;
+}
+
+/**
+ * Retrieve wallet PnL cache rows for a given address/period/aggregation within a date range.
+ *
+ * Returns daily PnL records sorted by dayStartMs ascending.
+ * If no data is cached, returns an empty array.
+ */
+export async function getCachedWalletPnl(
+	address: string,
+	timePeriod: string,
+	aggregation: string,
+	fromMs: number,
+	toMs: number,
+) {
+	const rows = await db
+		.select()
+		.from(walletPnlDataCache)
+		.where(
+			and(
+				eq(walletPnlDataCache.address, address),
+				eq(walletPnlDataCache.timePeriod, timePeriod),
+				eq(walletPnlDataCache.aggregation, aggregation),
+				gte(walletPnlDataCache.dayStartMs, fromMs),
+				lt(walletPnlDataCache.dayStartMs, toMs),
+			),
+		)
+		.orderBy(walletPnlDataCache.dayStartMs);
+
+	return rows;
+}
+
+/**
+ * Retrieve wallet PnL cache metadata for a given address/period/aggregation.
+ *
+ * Returns metadata with coverage ranges and source data ranges, or null if not cached.
+ */
+export async function getWalletPnlMeta(
+	address: string,
+	timePeriod: string,
+	aggregation: string,
+) {
+	const row = await db
+		.select()
+		.from(walletPnlDataMeta)
+		.where(
+			and(
+				eq(walletPnlDataMeta.address, address),
+				eq(walletPnlDataMeta.timePeriod, timePeriod),
+				eq(walletPnlDataMeta.aggregation, aggregation),
+			),
 		)
 		.limit(1);
 

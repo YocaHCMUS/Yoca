@@ -67,7 +67,10 @@ export default function HistoricalDataPage() {
     setVisibleCount(20);
 
     client.api.tokens.history[":address"]
-      .$get({ param: { address }, query: { days: selectedRange.days } })
+      .$get({
+        param: { address },
+        query: { days: selectedRange.days.toString() },
+      })
       .then(async (res) => {
         if (ctrl.signal.aborted) return;
         if (res.status !== 200) {

@@ -1,9 +1,9 @@
 .divider {
   display: flex;
   align-items: center;
-  width: 100%;
-  margin: 0.5rem 0;
+  inline-size: 100%;
   color: var(--cds-text-secondary);
+  padding-block: 0.4rem;
 }
 
 .divider::before,
@@ -11,5 +11,5 @@
   content: "";
   flex: 1;
   height: 1px;
-  background: var(--cds-border-subtle);
+  background: var(--cds-border-subtle-00);
 }

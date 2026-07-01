@@ -13,24 +13,30 @@ import styles from './ChartStatsHeader.module.scss';
 export interface StatItem {
   /** Stat label/name */
   label: string;
-  
+
   /** Stat value (can be string or number) */
   value: string | number;
-  
+
   /** Optional icon or prefix */
   prefix?: React.ReactNode;
-  
+
   /** Optional suffix (e.g., '%', 'days') */
   suffix?: string;
-  
+
   /** Optional value color class */
   valueClassName?: string;
 }
 
 export interface StatCard {
   /** Optional card title/header */
-  title?: string;
-  
+  title?: React.ReactNode;
+
+  /** Optional card click handler */
+  onClick?: () => void;
+
+  /** Optional active state for card styling */
+  isActive?: boolean;
+
   /** Stats to display in this card */
   stats: StatItem[];
 }
@@ -38,10 +44,10 @@ export interface StatCard {
 interface ChartStatsHeaderProps {
   /** Array of stat cards to display */
   cards: StatCard[];
-  
+
   /** Minimum column width (default: '200px') */
   minColumnWidth?: string;
-  
+
   /** Additional class name */
   className?: string;
 }
@@ -76,12 +82,26 @@ export function ChartStatsHeader({
   }
 
   return (
-    <div 
+    <div
       className={`${styles.statsHeader} ${className || ''}`}
       style={{ '--min-column-width': minColumnWidth } as React.CSSProperties}
     >
       {cards.map((card, cardIndex) => (
-        <div key={cardIndex} className={styles.statCard}>
+        <div
+          key={cardIndex}
+          className={`${styles.statCard} ${card.onClick ? styles.statCardClickable : ''} ${card.isActive ? styles.statCardActive : ''}`}
+          onClick={card.onClick}
+          role={card.onClick ? 'button' : undefined}
+          tabIndex={card.onClick ? 0 : undefined}
+          onKeyDown={card.onClick
+            ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                card.onClick?.();
+              }
+            }
+            : undefined}
+        >
           {card.title && (
             <div className={styles.cardTitle}>{card.title}</div>
           )}

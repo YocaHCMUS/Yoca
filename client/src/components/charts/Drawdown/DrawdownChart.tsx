@@ -1,49 +1,39 @@
-/**
- * Drawdown Chart Component
- *
- * Displays drawdown analysis with:
- * - Line chart per wallet with fill effect
- * - Header showing maximum drawdown data and duration
- *
- * Features:
- * - Multiple wallet support (separate lines per wallet)
- * - Fill effect below zero line
- * - Max drawdown statistics in header
- * - Auto-refresh on wallet changes
- *
- * @module components/charts/Drawdown
- */
-
 import { useChartContext } from "@/contexts/ChartContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useChartFiltersSync } from "@/hooks/useChartFiltersSync";
 import {
-  getChartGridConfig,
-  getThemedChartBaseOption,
-  useChartTheme,
-} from "@/hooks/useChartTheme";
+  CHART_COLOR_PALETTE,
+  useCarbonChartBaseOption,
+} from "@/util/carbon-chart-base";
 import {
   fetchDrawdown,
   type InferFetcherData,
 } from "@/services/chart/chartApi";
 import type { DrawdownRequestParams } from "@/types/chart-api.types";
 import { formatTimestampWithTimezone } from "@/util/chart-helpers";
-import { getConditionalLegend } from "@/util/chart-legend-config";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
-import { useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import styles from "./Drawdown.module.scss";
 
-// Infer response type from fetcher
 type DrawdownData = InferFetcherData<typeof fetchDrawdown>;
 
+type WalletSeriesMeta = {
+  walletAddress: string;
+  walletName: string;
+  drawdownResult: Array<{
+    timestamp: number;
+    drawdown: number;
+    value?: number;
+    peak?: number;
+    trough?: number;
+    date?: string;
+  }>;
+  color: string;
+};
+
 import { useStandardChartController } from "@/hooks/useChartController";
-import { BaseChart } from "../Base/BaseChart";
-import {
-  ChartContainer,
-  ChartGridItem,
-  ChartSection,
-  ChartStatsHeader,
-} from "../shared";
+import { ChartWrapper, ChartContainer, ChartGridItem, ChartSection, ChartStatsHeader } from "../shared";
 import type { ChartProps } from "../shared/ChartProp";
 import type { StatCard } from "../shared/ChartStatsHeader";
 
@@ -56,24 +46,21 @@ export function DrawdownChart({
   },
   autoRefresh = true,
   refreshInterval = 30000,
-  className,
+  fetchEnabled = true,
+  actions,
 }: ChartProps) {
-  const { tr } = useLocalization();
+  const { tr, fmt } = useLocalization();
   const chartTitle = title || tr("charts.drawdownChart.title");
 
   const chartRef = useRef<ReactECharts>(null);
-  const chartTheme = useChartTheme();
+  const baseOption = useCarbonChartBaseOption();
   const { selectedTimezone: timezone } = useChartContext();
 
-  // Use centralized filter sync hook
   const { filters, walletsString } = useChartFiltersSync({
     initialFilters,
     debounceDelay: 300,
   });
 
-  /**
-   * Memoize query
-   */
   const query = useMemo<DrawdownRequestParams>(
     () => ({
       period: filters.timePeriod,
@@ -82,9 +69,6 @@ export function DrawdownChart({
     [filters.timePeriod, walletsString],
   );
 
-  /**
-   * Lifecycle controller
-   */
   const { data, loadingState, refetch } = useStandardChartController<
     DrawdownData,
     DrawdownRequestParams
@@ -93,13 +77,15 @@ export function DrawdownChart({
     query,
     autoRefresh,
     refreshInterval,
+    enabled: fetchEnabled,
   });
 
-  /**
-   * Generate drawdown chart option
-   */
-  const chartOption = useMemo((): EChartsOption | null => {
-    const baseOption = getThemedChartBaseOption(chartTheme);
+  const getSeriesColor = useCallback(
+    (index: number) => CHART_COLOR_PALETTE[index % CHART_COLOR_PALETTE.length],
+    [],
+  );
+
+  const walletSeriesMeta = useMemo<WalletSeriesMeta[]>(() => {
     if (
       !data ||
       "error" in data ||
@@ -107,57 +93,131 @@ export function DrawdownChart({
       !Array.isArray(data.wallets) ||
       data.wallets.length === 0
     ) {
+      return [];
+    }
+
+    return data.wallets.map((wallet: any, index: number) => ({
+      walletAddress: String(wallet.walletAddress || ""),
+      walletName: String(wallet.walletName || wallet.walletAddress || ""),
+      drawdownResult: Array.isArray(wallet.drawdownResult)
+        ? wallet.drawdownResult
+          .map((item: any) => ({
+            timestamp: Number(item.timestamp),
+            drawdown: Number(item.drawdown),
+            value: item.value != null ? Number(item.value) : undefined,
+            peak: item.peak != null ? Number(item.peak) : undefined,
+            trough: item.trough != null ? Number(item.trough) : undefined,
+            date: item.date,
+          }))
+          .filter((item: any) => Number.isFinite(item.timestamp) && Number.isFinite(item.drawdown))
+        : [],
+      color: getSeriesColor(index),
+    }));
+  }, [data, getSeriesColor]);
+
+  const [visibleWalletAddresses, setVisibleWalletAddresses] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (walletSeriesMeta.length === 0) {
+      setVisibleWalletAddresses(new Set());
+      return;
+    }
+
+    setVisibleWalletAddresses((prev) => {
+      const validWallets = walletSeriesMeta.map((wallet) => wallet.walletAddress);
+      const next = new Set(validWallets.filter((walletAddress) => prev.has(walletAddress)));
+
+      if (next.size === 0) {
+        validWallets.forEach((walletAddress) => next.add(walletAddress));
+      }
+
+      return next;
+    });
+  }, [walletSeriesMeta]);
+
+  const toggleWalletVisibility = useCallback((walletAddress: string) => {
+    setVisibleWalletAddresses((prev) => {
+      const next = new Set(prev);
+
+      if (next.has(walletAddress)) {
+        if (next.size === 1) {
+          return prev;
+        }
+        next.delete(walletAddress);
+        return next;
+      }
+
+      next.add(walletAddress);
+      return next;
+    });
+  }, []);
+
+  const visibleWalletSeriesMeta = useMemo(
+    () => walletSeriesMeta.filter((wallet) => visibleWalletAddresses.has(wallet.walletAddress)),
+    [walletSeriesMeta, visibleWalletAddresses],
+  );
+
+  const compactWalletLabel = useCallback((label: string, walletAddress: string) => {
+    const normalized = (label || walletAddress || "").trim();
+    if (!normalized) return "";
+
+    const looksLikeAddress =
+      /^[1-9A-HJ-NP-Za-km-z]{24,}$/.test(normalized) || normalized === walletAddress;
+    if (looksLikeAddress) {
+      if (normalized.length <= 12) return normalized;
+      return `${normalized.slice(0, 6)}...${normalized.slice(-4)}`;
+    }
+
+    const maxLen = 18;
+    if (normalized.length <= maxLen) return normalized;
+    return `${normalized.slice(0, maxLen - 3)}...`;
+  }, []);
+
+  const chartOption = useMemo((): EChartsOption | null => {
+    if (visibleWalletSeriesMeta.length === 0) {
       return null;
     }
 
-    // data format: { wallets: Array<{ walletAddress, walletName?, data: Array<{timestamp, value, ...}>, ... }>, metadata: { timestamp } }
-    const series = data.wallets.map((wallet: any, index: number) => {
-      const color =
-        chartTheme.colorPalette[index % chartTheme.colorPalette.length];
-      return {
-        name: wallet.walletName || wallet.walletAddress,
-        type: "line" as const,
-        data: wallet.drawdownResult.map((d: any) => [
-          d.timestamp,
-          d.drawdown * 100,
-        ]), // convert to percentage
-        smooth: true,
-        lineStyle: {
-          color: color,
-          width: 2,
+    const series = visibleWalletSeriesMeta.map((wallet) => ({
+      name: wallet.walletName,
+      type: "line" as const,
+      data: wallet.drawdownResult.map((d) => [d.timestamp, d.drawdown * 100]),
+      smooth: false,
+      lineStyle: {
+        color: wallet.color,
+        width: 2,
+      },
+      itemStyle: {
+        color: wallet.color,
+      },
+      areaStyle: {
+        color: {
+          type: "linear" as const,
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [
+            {
+              offset: 0,
+              color: `${wallet.color}80`,
+            },
+            {
+              offset: 1,
+              color: `${wallet.color}20`,
+            },
+          ],
         },
-        itemStyle: {
-          color: color,
-        },
-        areaStyle: {
-          color: {
-            type: "linear" as const,
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              {
-                offset: 0,
-                color: `${color}80`, // Semi-transparent at top
-              },
-              {
-                offset: 1,
-                color: `${color}20`, // More transparent at bottom
-              },
-            ],
-          },
-        },
-        symbol: "none" as const,
-        emphasis: {
-          focus: "series" as const,
-        },
-      };
-    });
+      },
+      symbol: "none" as const,
+      emphasis: {
+        focus: "series" as const,
+      },
+    }));
 
     return {
       ...baseOption,
-      ...getChartGridConfig,
+      legend: { show: false },
       xAxis: {
         ...baseOption.xAxis,
         type: "time",
@@ -176,21 +236,8 @@ export function DrawdownChart({
           ...baseOption.yAxis.axisLabel,
           formatter: "{value}%",
         },
-        splitLine: {
-          show: true,
-          lineStyle: {
-            color: chartTheme.splitLineColor,
-            type: "dashed",
-          },
-        },
       },
-      series: series,
-      legend: getConditionalLegend(
-        chartTheme,
-        data.wallets.map((w: any) => w.walletName || w.walletAddress),
-        2,
-        false,
-      ),
+      series,
       tooltip: {
         ...baseOption.tooltip,
         trigger: "axis",
@@ -198,87 +245,71 @@ export function DrawdownChart({
           type: "cross",
         },
         formatter: (params: any) => {
-          // params is an array of points for the hovered x value
           if (!Array.isArray(params)) return "";
           let tooltip = "";
+
           params.forEach((p: any) => {
-            const data = p.data || [];
-            // data: [timestamp, drawdown%], but we want to show all drawdownResult fields
-            // Try to find the full drawdownResult object from the series data
-            const wallet = data.walletAddress || p.seriesName;
-            // Find the wallet object in data.wallets
-            const walletObj =
-              data && typeof data === "object" && data.walletAddress
-                ? data
-                : data && typeof data === "object" && data.drawdownResult
-                  ? data
-                  : null;
-            // Fallback: try to find walletObj from chart data
-            let drawdownObj = null;
-            if (walletObj && walletObj.drawdownResult) {
-              drawdownObj = walletObj.drawdownResult.find(
-                (d: any) => d.timestamp === p.value[0],
-              );
-            } else if (
-              p.value &&
-              p.seriesIndex != null &&
-              data.wallets &&
-              Array.isArray(data.wallets)
-            ) {
-              const w = data.wallets[p.seriesIndex];
-              drawdownObj = w?.drawdownResult?.find(
-                (d: any) => d.timestamp === p.value[0],
-              );
-            }
-            // If not found, fallback to p.value
-            if (!drawdownObj && p.value) {
-              drawdownObj = {
-                timestamp: p.value[0],
-                drawdown: p.value[1] / 100,
-              };
-            }
-            // Compose tooltip
+            const timestamp = Number(p?.value?.[0]);
+            const drawdownPct = Number(p?.value?.[1]);
+            const wallet = visibleWalletSeriesMeta.find((w) => w.walletName === p.seriesName);
+            const drawdownObj = wallet?.drawdownResult.find((d) => d.timestamp === timestamp);
+
             tooltip += `<div><strong>${p.seriesName}</strong></div>`;
-            tooltip += `<div>${formatTimestampWithTimezone(p.value[0], timezone, "yyyy-MM-dd HH:mm")}</div>`;
-            if (drawdownObj) {
-              tooltip += `<div>Drawdown: ${(drawdownObj.drawdown * 100).toFixed(2)}%</div>`;
-              if ("value" in drawdownObj)
-                tooltip += `<div>Value: ${drawdownObj.value}</div>`;
-              if ("peak" in drawdownObj)
-                tooltip += `<div>Peak: ${drawdownObj.peak}</div>`;
-              if ("trough" in drawdownObj)
-                tooltip += `<div>Trough: ${drawdownObj.trough}</div>`;
-              if ("date" in drawdownObj)
-                tooltip += `<div>Date: ${drawdownObj.date}</div>`;
+            tooltip += `<div>${formatTimestampWithTimezone(timestamp, timezone, "yyyy-MM-dd HH:mm")}</div>`;
+            if (Number.isFinite(drawdownPct)) {
+              tooltip += `<div>Drawdown: ${drawdownPct.toFixed(2)}%</div>`;
+            }
+            if (drawdownObj?.value != null) {
+              tooltip += `<div>Value: ${fmt.num.compact.currency(drawdownObj.value)}</div>`;
+            }
+            if (drawdownObj?.peak != null) {
+              tooltip += `<div>Peak: ${fmt.num.compact.currency(drawdownObj.peak)}</div>`;
+            }
+            if (drawdownObj?.trough != null) {
+              tooltip += `<div>Trough: ${fmt.num.compact.currency(drawdownObj.trough)}</div>`;
+            }
+            if (drawdownObj?.date) {
+              tooltip += `<div>Date: ${drawdownObj.date}</div>`;
             }
             tooltip += '<hr style="margin:2px 0;opacity:0.2">';
           });
+
           return tooltip;
         },
       },
     };
-  }, [data, chartTheme, timezone, tr]);
+  }, [visibleWalletSeriesMeta, baseOption, timezone, fmt]);
 
-  /**
-   * Generate statistics header
-   */
   const statsCards = useMemo<StatCard[]>(() => {
-    if (
-      !data ||
-      "error" in data ||
-      !data.wallets ||
-      !Array.isArray(data.wallets) ||
-      data.wallets.length === 0
-    ) {
+    if (walletSeriesMeta.length === 0) {
       return [];
     }
 
-    // Compute stats from drawdownResult for each wallet
-    return data.wallets.map((wallet) => {
-      const { drawdownResult, walletAddress } = wallet;
+    return walletSeriesMeta.map((wallet) => {
+      const { drawdownResult, walletAddress, walletName, color } = wallet;
+      const isVisible = visibleWalletAddresses.has(walletAddress);
+
+      const cardTitle = (
+        <div className={styles.cardTitleRow}>
+          <div className={styles.walletTitleWrap}>
+            <span className={styles.walletColorDot} style={{ backgroundColor: color }} />
+            <span className={styles.walletTitleText} title={walletName}>
+              {compactWalletLabel(walletName, walletAddress)}
+            </span>
+          </div>
+          <span className={`${styles.walletActiveIndicator} ${isVisible ? styles.walletActiveIndicatorOn : styles.walletActiveIndicatorOff}`}>
+            {isVisible
+              ? tr("charts.drawdownChart.visibility.active")
+              : tr("charts.drawdownChart.visibility.hidden")}
+          </span>
+        </div>
+      );
+
       if (!Array.isArray(drawdownResult) || drawdownResult.length === 0) {
         return {
-          title: walletAddress,
+          title: cardTitle,
+          onClick: () => toggleWalletVisibility(walletAddress),
+          isActive: isVisible,
           stats: [
             {
               label: "No data",
@@ -290,75 +321,58 @@ export function DrawdownChart({
         };
       }
 
-      // Max drawdown is the 'trough' value of the latest entry
       const latest = drawdownResult[drawdownResult.length - 1];
-      // const maxDrawdown = latest.trough;
-      const maxDrawdown = Math.min(
-        ...drawdownResult.map((d: any) => d.drawdown),
-      );
-      const maxDrawdownEntry = drawdownResult.find(
-        (d: any) => d.drawdown === maxDrawdown,
-      );
-      const maxDrawdownTimestamp = maxDrawdownEntry
-        ? maxDrawdownEntry.timestamp
-        : null;
+      const maxDrawdown = Math.min(...drawdownResult.map((d) => d.drawdown));
+      const maxDrawdownEntry = drawdownResult.find((d) => d.drawdown === maxDrawdown);
+      const maxDrawdownTimestamp = maxDrawdownEntry ? maxDrawdownEntry.timestamp : null;
       const currentDrawdown = latest?.drawdown ?? 0;
 
-      let daysSinceMaxDrawdown = null;
+      let daysSinceMaxDrawdown: number | null = null;
       if (maxDrawdownTimestamp) {
         const now = Date.now();
         const msPerDay = 24 * 60 * 60 * 1000;
-        daysSinceMaxDrawdown = Math.floor(
-          (now - maxDrawdownTimestamp) / msPerDay,
-        );
+        daysSinceMaxDrawdown = Math.floor((now - maxDrawdownTimestamp) / msPerDay);
       }
 
       return {
-        title: walletAddress,
+        title: cardTitle,
+        onClick: () => toggleWalletVisibility(walletAddress),
+        isActive: isVisible,
         stats: [
           {
-            label: "Max Drawdown",
+            label: tr("charts.drawdownChart.stats.maxDrawdown"),
             value: (maxDrawdown * 100).toFixed(2),
             suffix: "%",
             valueClassName: "text-danger",
           },
           {
-            label: "Days Since Max DD",
+            label: tr("charts.drawdownChart.stats.daysSinceMaxDD"),
             value: daysSinceMaxDrawdown != null ? daysSinceMaxDrawdown : "-",
-            suffix: "days",
+            suffix: tr("charts.drawdownChart.stats.days"),
           },
           {
-            label: "Current Drawdown",
+            label: tr("charts.drawdownChart.stats.currentDrawdown"),
             value: (currentDrawdown * 100).toFixed(2),
             suffix: "%",
           },
           {
-            label: "Max DD Date",
+            label: tr("charts.drawdownChart.stats.maxDDDate"),
             value: maxDrawdownTimestamp
-              ? formatTimestampWithTimezone(
-                maxDrawdownTimestamp,
-                timezone,
-                "yyyy-MM-dd",
-              )
+              ? formatTimestampWithTimezone(maxDrawdownTimestamp, timezone, "yyyy-MM-dd")
               : "-",
           },
         ],
       };
     });
-  }, [data, timezone]);
+  }, [walletSeriesMeta, visibleWalletAddresses, compactWalletLabel, toggleWalletVisibility, tr, timezone]);
 
   return (
-    <BaseChart
+    <ChartWrapper
       title={chartTitle}
       loadingState={loadingState}
-      isEmpty={
-        !data ||
-        "error" in data ||
-        !data.wallets ||
-        !Array.isArray(data.wallets) ||
-        data.wallets.length === 0
-      }
+      isEmpty={walletSeriesMeta.length === 0}
       onRetry={() => refetch(false)}
+      actions={actions}
     >
       <ChartContainer gap="0">
         <ChartStatsHeader cards={statsCards} minColumnWidth="300px" />
@@ -380,6 +394,6 @@ export function DrawdownChart({
           )}
         </ChartSection>
       </ChartContainer>
-    </BaseChart>
+    </ChartWrapper>
   );
 }

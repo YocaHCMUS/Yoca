@@ -1,114 +1,99 @@
-/**
- * Winrate Chart Component
- * 
- * Displays winrate analysis with two-row layout:
- * - Row 1: Column chart showing overall winrate of multiple wallets
- * - Row 2: Histograms showing winning/losing magnitude distribution for each wallet
- * 
- * Features:
- * - Two-part layout (overall winrate + distribution)
- * - Multiple wallet support
- * - Auto-refresh on wallet changes
- * - Inverse data display for losing trades
- * 
- * @module components/charts/Winrate
- */
-
-import React, { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { formatItemTooltip } from '@/util/tooltip-helpers';
-import { getMultiSeriesLegend } from '@/util/chart-legend-config';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
-import { useChartTheme, getThemedChartBaseOption, getChartGridConfig } from '@/hooks/useChartTheme';
-import { fetchWinrate, type InferFetcherData } from '@/services/chart/chartApi';
-import { isChartSuccess } from '@/util/chart-helpers';
+import {
+    CHART_COLOR_PALETTE,
+    useCarbonChartBaseOption,
+} from '@/util/carbon-chart-base';
 import type { WinrateRequestParams } from '@/types/chart-api.types';
-
-type WinrateData = InferFetcherData<typeof fetchWinrate>;
-import { useStandardChartController } from '@/hooks/useChartController';
-import { BaseChart } from '../Base/BaseChart';
-import { ChartContainer, ChartSection, ChartGrid, ChartGridItem } from '../shared';
+import { ChartWrapper, ChartContainer, ChartSection, ChartGrid, ChartGridItem } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
-import sharedStyles from '../shared/ChartStyle.module.scss';
-import { nonnegative } from 'zod';
+import { FilterSwitch } from '@/components/FilterSwitch';
+import { Layer } from '@carbon/react';
+import { useGet, UseGetResp } from '@/hooks/useGet';
+import client from '@/api/main';
 
-const SHORT_WALLET_PREFIX_LENGTH = 6;
-const SHORT_WALLET_SUFFIX_LENGTH = 6;
+interface WinrateBin {
+    range: string;
+    count: number;
+    min: number;
+    max: number;
+}
 
-function shortenWalletAddress(address: string): string {
-  if (address.length <= SHORT_WALLET_PREFIX_LENGTH + SHORT_WALLET_SUFFIX_LENGTH + 3) {
-    return address;
-  }
-
-  const prefix = address.slice(0, SHORT_WALLET_PREFIX_LENGTH);
-  const suffix = address.slice(-SHORT_WALLET_SUFFIX_LENGTH);
-  return `${prefix}...${suffix}`;
+type WinrateData =  {
+    wallets: {
+        walletAddress: string;
+        walletName?: string | undefined;
+        winrate: number;
+        totalTrades: number;
+        winningTrades: number;
+        losingTrades: number;
+        winningDistribution: WinrateBin[];
+        losingDistribution: WinrateBin[];
+        avgWinUsd: number;
+        avgLossUsd: number;
+    }[];
 }
 
 export function WinrateChart({
   title,
   minHeight = 400,
   initialFilters = {
-    timePeriod: '30D',
-    wallets: []
+    timePeriod: "30D",
+    wallets: [],
   },
-  autoRefresh = true,
+  autoRefresh = false,
   refreshInterval = 30000,
   className,
 }: ChartProps) {
-  const { tr } = useLocalization();
-  const chartTitle = title || tr('charts.winrateChart.title');
+  type WinrateTimeRange = "24H" | "7D" | "30D" | "90D";
+  const WINRATE_TIME_RANGES: WinrateTimeRange[] = ["24H", "7D", "30D", "90D"];
+
+  const { tr, fmt } = useLocalization();
+  const chartTitle = title || tr("charts.winrateChart.title");
+  const [timeRange, setTimeRange] = useState<WinrateTimeRange>("30D");
 
   const overallChartRef = useRef<ReactECharts>(null);
-  const chartTheme = useChartTheme();
+  const baseOption = useCarbonChartBaseOption();
 
-  // Use centralized filter sync hook
-  const { filters, walletsString } = useChartFiltersSync({
+  const { walletsString } = useChartFiltersSync({
     initialFilters,
     debounceDelay: 300,
   });
 
-  /**
-   * Memoize query
-   */
   const query = useMemo<WinrateRequestParams>(
     () => ({
-      period: filters.timePeriod,
+      period: timeRange,
       wallets: walletsString,
     }),
-    [filters.timePeriod, walletsString]
+    [timeRange, walletsString],
   );
 
-  /**
-   * Lifecycle controller
-   */
-  const { data, loadingState, refetch } =
-    useStandardChartController<WinrateData, WinrateRequestParams>({
-      fetcher: fetchWinrate,
-      query,
-      autoRefresh,
-      refreshInterval,
-    });
+  const winRateData : UseGetResp<WinrateData> = useGet(client.api.wallets.analysis.winrate, 200, {
+    query: {
+      wallets: walletsString ?? "",
+      period: timeRange,
+    }
+  })
 
-  /**
-   * Generate overall winrate column chart
-   */
   const overallWinrateOption = useMemo((): EChartsOption | null => {
-    if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) return null;
+    if (!winRateData.data || winRateData.data.wallets.length == 0) {
+      return null;
+    }
 
-    const baseOption = getThemedChartBaseOption(chartTheme);
+    const data = winRateData.data;
 
-    const categories = data.wallets.map(w => w.walletName || shortenWalletAddress(w.walletAddress));
+    const categories = data.wallets.map(w => fmt.text.address(w.walletAddress));
     const winrateValues = data.wallets.map(w => w.winrate);
 
     return {
       ...baseOption,
-      ...getChartGridConfig,
       xAxis: {
         ...baseOption.xAxis,
-        type: 'category',
+        type: "category",
         data: categories,
         axisLabel: {
           ...baseOption.xAxis.axisLabel,
@@ -118,100 +103,91 @@ export function WinrateChart({
       },
       yAxis: {
         ...baseOption.yAxis,
-        type: 'value',
-        name: 'Winrate (%)',
+        type: "value",
+        name: "Winrate (%)",
         min: 0,
         max: 100,
         axisLabel: {
           ...baseOption.yAxis.axisLabel,
-          formatter: '{value}%',
+          formatter: "{value}%",
         },
       },
       series: [
         {
-          name: 'Winrate',
-          type: 'bar',
+          name: "Winrate",
+          type: "bar",
           data: winrateValues,
           itemStyle: {
-            color: chartTheme.colorPalette[0],
+            color: CHART_COLOR_PALETTE[0],
           },
           label: {
             show: true,
             position: 'top',
             formatter: '{c}%',
-            color: chartTheme.textColor,
+            color: baseOption.textStyle.color,
           },
         },
       ],
       legend: undefined,
       tooltip: {
         ...baseOption.tooltip,
-        trigger: 'axis',
+        trigger: "axis",
         formatter: (params: any) => {
           const param = params[0];
           const wallet = data.wallets[param.dataIndex];
-          return formatItemTooltip(
-            wallet.walletName || wallet.walletAddress,
-            [
-              { label: 'Winrate', value: `${param.value}%` },
-              { label: 'Winning Trades', value: wallet.winningTrades.toString() },
-              { label: 'Losing Trades', value: wallet.losingTrades.toString() },
-              { label: 'Total Trades', value: wallet.totalTrades.toString() },
-            ]
-          );
+          return formatItemTooltip(fmt.text.address(wallet.walletAddress), [
+            { label: "Winrate", value: `${param.value}%` },
+            { label: "Winning Trades", value: wallet.winningTrades.toString() },
+            { label: "Losing Trades", value: wallet.losingTrades.toString() },
+            { label: "Total Trades", value: wallet.totalTrades.toString() },
+          ]);
         },
       },
     };
-  }, [data, chartTheme, tr]);
+  }, [winRateData.data, baseOption]);
 
-  /**
-   * Generate distribution charts for each wallet
-   */
   const distributionCharts = useMemo(() => {
-    if (!isChartSuccess(data, 'wallets') || data.wallets.length === 0) return [];
+    if (!winRateData.data || winRateData.data.wallets.length == 0) {
+      return [];
+    }
+    const data = winRateData.data;
 
     return data.wallets.map((wallet) => {
-      const baseOption = getThemedChartBaseOption(chartTheme);
-
-      // Prepare data
-      const categories = wallet.winningDistribution.map(d => d.range);
-      const winningCounts = wallet.winningDistribution.map(d => d.count);
-      const losingCounts = wallet.losingDistribution.map(d => -d.count); // Negative for inverse display
+      const categories = [
+        ...wallet.losingDistribution.map(d => d.range),
+        ...wallet.winningDistribution.map(d => d.range),
+      ];
+      const winningCounts = [
+        ...wallet.losingDistribution.map(() => 0),
+        ...wallet.winningDistribution.map(d => d.count),
+      ];
+      const losingCounts = [
+        ...wallet.losingDistribution.map(d => -d.count),
+        ...wallet.winningDistribution.map(() => 0),
+      ];
 
       const option: EChartsOption = {
         ...baseOption,
-        // title: {
-        //   text: wallet.walletName || wallet.walletAddress,
-        //   left: 'center',
-        //   textStyle: {
-        //     color: chartTheme.textColor,
-        //     fontSize: 14,
-        //     fontWeight: 'normal',
-        //   },
-        // },
         title: wallet.walletAddress ? {
-          text:
-            wallet.walletName && wallet.walletName !== wallet.walletAddress
-              ? wallet.walletName
-              : shortenWalletAddress(wallet.walletAddress),
+          text: fmt.text.address(wallet.walletAddress),
           left: 8,
           top: 8,
           textStyle: {
-            color: chartTheme.textColor,
+            color: baseOption.textStyle.color,
             fontSize: 16,
             fontWeight: 'bold',
           },
         } : undefined,
         grid: {
-          left: '8%',
-          right: '8%',
-          bottom: '12%',
-          top: '24%',
+          left: "8%",
+          right: "8%",
+          bottom: "12%",
+          top: "24%",
           containLabel: true,
         },
         xAxis: {
           ...baseOption.xAxis,
-          type: 'category',
+          type: "category",
           data: categories,
           axisLabel: {
             ...baseOption.xAxis.axisLabel,
@@ -221,8 +197,8 @@ export function WinrateChart({
         },
         yAxis: {
           ...baseOption.yAxis,
-          type: 'value',
-          name: 'Trade Count',
+          type: "value",
+          name: "Trade Count",
           axisLabel: {
             ...baseOption.yAxis.axisLabel,
             formatter: (value: number) => Math.abs(value).toString(),
@@ -230,45 +206,45 @@ export function WinrateChart({
         },
         series: [
           {
-            name: 'Winning',
-            type: 'bar',
-            stack: 'total',
+            name: "Winning",
+            type: "bar",
+            stack: "total",
             data: winningCounts,
             itemStyle: {
-              color: chartTheme.colorPalette[1], // Green
+              color: CHART_COLOR_PALETTE[1],
             },
           },
           {
-            name: 'Losing',
-            type: 'bar',
-            stack: 'total',
+            name: "Losing",
+            type: "bar",
+            stack: "total",
             data: losingCounts,
             itemStyle: {
-              color: chartTheme.colorPalette[2], // Red
+              color: CHART_COLOR_PALETTE[2],
             },
           },
         ],
-        legend: getMultiSeriesLegend(
-          chartTheme,
-          ['Winning', 'Losing'],
-          false
-        ),
+        legend: {
+          show: true,
+          data: ['Winning', 'Losing'],
+          textStyle: { color: baseOption.textStyle.color },
+        },
         tooltip: {
           ...baseOption.tooltip,
-          trigger: 'axis',
+          trigger: "axis",
           axisPointer: {
-            type: 'shadow',
+            type: "shadow",
           },
           formatter: (params: any) => {
-            const winning = params.find((p: any) => p.seriesName === 'Winning');
-            const losing = params.find((p: any) => p.seriesName === 'Losing');
+            const winning = params.find((p: any) => p.seriesName === "Winning");
+            const losing = params.find((p: any) => p.seriesName === "Losing");
             return `
               <div style="font-weight: 600; margin-bottom: 8px;">${params[0].name}</div>
               ${winning ? `<div style="display: flex; justify-content: space-between; gap: 16px;">
-                <span style="color: ${chartTheme.colorPalette[1]}">● Winning:</span><strong>${winning.value}</strong>
+                <span style="color: ${CHART_COLOR_PALETTE[1]}">● Winning:</span><strong>${winning.value}</strong>
               </div>` : ''}
               ${losing ? `<div style="display: flex; justify-content: space-between; gap: 16px;">
-                <span style="color: ${chartTheme.colorPalette[2]}">● Losing:</span><strong>${Math.abs(losing.value)}</strong>
+                <span style="color: ${CHART_COLOR_PALETTE[2]}">● Losing:</span><strong>${Math.abs(losing.value)}</strong>
               </div>` : ''}
             `;
           },
@@ -280,24 +256,51 @@ export function WinrateChart({
         option,
       };
     });
-  }, [data, chartTheme]);
+  }, [winRateData.data, baseOption]);
+
+  const timeRangeOptions = WINRATE_TIME_RANGES.map(r => ({ value: r, label: r }));
 
   return (
-    <BaseChart
+    <ChartWrapper
       title={chartTitle}
-      loadingState={loadingState}
-      isEmpty={!isChartSuccess(data, 'wallets') || data.wallets.length === 0}
-      onRetry={() => refetch(false)}
+      loadingState={{
+        status: winRateData.isLoading ? "loading" : "idle",
+        retryCount: 0,
+      }}
+      isEmpty={winRateData.data ? winRateData.data.wallets.length > 0 : false}
+      onRetry={() => winRateData.mutate()}
+      toolbarLayout="stacked"
+      actions={
+        <Layer style={{ width: 200 }}>
+          <FilterSwitch
+            options={timeRangeOptions}
+            value={timeRange}
+            onChange={(value) => {
+              if (
+                value === "24H" ||
+                value === "7D" ||
+                value === "30D" ||
+                value === "90D"
+              ) {
+                setTimeRange(value);
+              }
+            }}
+          />
+        </Layer>
+      }
     >
-      <ChartContainer gap='0'>
-        {/* Overall Winrate Section */}
+      <ChartContainer gap="0">
         <ChartSection minHeight="300px">
           {overallWinrateOption && (
             <ChartGridItem minHeight={300}>
               <ReactECharts
                 ref={overallChartRef}
                 option={overallWinrateOption}
-                style={{ height: '100%', width: '100%', minHeight: `${minHeight}px` }}
+                style={{
+                  height: "100%",
+                  width: "100%",
+                  minHeight: `${minHeight}px`,
+                }}
                 notMerge
                 lazyUpdate
               />
@@ -305,8 +308,11 @@ export function WinrateChart({
           )}
         </ChartSection>
 
-        {/* Distribution Histograms Grid */}
-        <ChartGrid itemCount={distributionCharts.length} autoFit minColumnWidth="400px">
+        <ChartGrid
+          itemCount={distributionCharts?.length}
+          autoFit
+          minColumnWidth="400px"
+        >
           {distributionCharts.map((chart) => (
             <ChartGridItem
               key={chart.walletAddress}
@@ -315,7 +321,7 @@ export function WinrateChart({
             >
               <ReactECharts
                 option={chart.option}
-                style={{ height: '100%', width: '100%' }}
+                style={{ height: "100%", width: "100%" }}
                 notMerge
                 lazyUpdate
               />
@@ -323,6 +329,6 @@ export function WinrateChart({
           ))}
         </ChartGrid>
       </ChartContainer>
-    </BaseChart>
+    </ChartWrapper>
   );
 }

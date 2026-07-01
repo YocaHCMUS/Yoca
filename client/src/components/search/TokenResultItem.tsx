@@ -1,6 +1,6 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { formatChange } from "@/util/format";
 import styles from "./TokenResultItem.module.scss";
+import { TrendNum } from "../TrendNum";
 
 export type TokenResult = {
   address: string;
@@ -38,7 +38,6 @@ export function TokenResultItem({
   onMouseLeave,
 }: TokenResultItemProps) {
   const { fmt } = useLocalization();
-  const change = formatChange(token.priceChangePercentage24h);
 
   return (
     <div
@@ -61,13 +60,13 @@ export function TokenResultItem({
       )}
 
       <div className={styles.tokenMeta}>
-        <p className={styles.tokenName}>{token.name}</p>
         <p className={styles.tokenSymbol}>{token.symbol}</p>
+        <p className={styles.tokenName}>{token.name}</p>
       </div>
 
       <div className={styles.stats}>
         <p className={styles.tokenPrice}>{fmt.num.currency(token.priceUsd)}</p>
-        <p
+        {/* <p
           className={`${styles.tokenChange} ${
             change.positive === true
               ? styles.positive
@@ -77,7 +76,11 @@ export function TokenResultItem({
           }`}
         >
           {change.text}
-        </p>
+        </p> */}
+        <TrendNum
+          value={token.priceChangePercentage24h}
+          formatter={fmt.num.percent}
+        />
       </div>
     </div>
   );

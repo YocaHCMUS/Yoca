@@ -16,7 +16,7 @@ import { getRollingAnnualReturns } from '@sv/services/wallet/walletComparison.js
  */
 const rollingAnnualReturnRequestSchema = z.object({
   wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
-  period: z.enum(['7D', '30D', '90D', 'All']).optional().default('30D'),
+  period: z.enum(['7D', '30D', '90D']).optional().default('30D'),
   timeUnit: z.enum(['month', 'quarter', 'year', 'custom']).optional().default('month'),
   windowSize: z.string().optional().transform((val) => val ? parseInt(val, 10) : undefined),
   timezone: z.string().optional().default('UTC'),
