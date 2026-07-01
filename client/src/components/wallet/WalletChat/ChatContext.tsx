@@ -3,7 +3,7 @@ import client from "@/api/main";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useChatSessions, type ChatSessionContextType, type SessionItem } from "./useChatSessions";
-import type { ChatMessageItem, ChatResponse } from "./types";
+import type { ChatAiUsage, ChatMessageItem, ChatResponse } from "./types";
 
 export const MAX_INPUT_LENGTH = 500;
 const API_BASE = import.meta.env.VITE_CLIENT_API_DOMAIN || "";
@@ -15,6 +15,7 @@ interface ChatContextValue {
   inputText: string;
   isLoading: boolean;
   error: string | null;
+  usage: ChatAiUsage | null;
   showPromptMenu: boolean;
   showSessionMenu: boolean;
   truncatedMessages: ChatMessageItem[] | null;
@@ -75,11 +76,12 @@ interface ChatContextProviderProps {
 
 export function ChatContextProvider({ addresses, contextType, lang, children }: ChatContextProviderProps) {
   const { tr } = useLocalization();
-  const { user } = useAuth();
+  const { user, openAuthModal } = useAuth();
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [usage, setUsage] = useState<ChatAiUsage | null>(null);
   const [showPromptMenu, setShowPromptMenu] = useState(false);
   const [showSessionMenu, setShowSessionMenu] = useState(false);
   const [truncatedMessages, setTruncatedMessages] = useState<ChatMessageItem[] | null>(null);
@@ -135,6 +137,33 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
     [makeMessageContext],
   );
 
+  const readChatError = useCallback(
+    async (res: Response) => {
+      if (res.status === 401) openAuthModal("login");
+
+      try {
+        const body = await res.json() as {
+          error?: string;
+          message?: string;
+          errorCode?: string;
+          upgradePath?: string;
+        };
+        const message =
+          body.message?.trim() ||
+          body.error?.trim() ||
+          tr("chat.serverError", { status: String(res.status) });
+
+        return body.upgradePath &&
+          body.errorCode === "AI_DAILY_LIMIT_EXCEEDED"
+          ? `${message} Upgrade: ${body.upgradePath}`
+          : message;
+      } catch {
+        return tr("chat.serverError", { status: String(res.status) });
+      }
+    },
+    [openAuthModal, tr],
+  );
+
   const sendQuery = useCallback(
     async (query: string, opts?: { skipCache?: boolean; promptId?: string }) => {
       if (!query.trim() || isLoading || addresses.length === 0) return;
@@ -155,7 +184,7 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
           role: m.role,
           content: m.content.length > 2000 ? m.content.slice(0, 2000) : m.content,
         }));
-        const res = await client.api.chat.index.$post({
+        const res = await client.api.chat.$post({
           json: {
             addresses,
             query: query.trim(),
@@ -168,11 +197,10 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
           },
         });
 
-        if (!res.ok) {
-          throw new Error(tr("chat.serverError", { status: String(res.status) }));
-        }
+        if (!res.ok) throw new Error(await readChatError(res));
 
         const data = (await res.json()) as ChatResponse & { sessionId?: string };
+        if (data.usage) setUsage(data.usage);
         const assistantMsg: ChatMessageItem = {
           role: "assistant",
           content: data.text,
@@ -208,7 +236,8 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
         setIsLoading(false);
       }
     },
-    [addresses, contextType, lang, isLoading, activeSessionId, setActiveSessionId, refreshSessions, tr, makeMessageContext, withMessageContext],
+
+    [addresses, contextType, lang, isLoading, activeSessionId, setActiveSessionId, refreshSessions, tr, makeMessageContext, withMessageContext, readChatError],
   );
 
   const handleRedo = useCallback(async (msgIndex: number, content: string) => {
@@ -230,7 +259,7 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
         content: m.content.length > 2000 ? m.content.slice(0, 2000) : m.content,
       }));
 
-      const res = await client.api.chat.index.$post({
+      const res = await client.api.chat.$post({
         json: {
           addresses,
           query: content.trim(),
@@ -243,10 +272,11 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
         },
       });
 
-      if (!res.ok) throw new Error(tr("chat.serverError", { status: String(res.status) }));
+      if (!res.ok) throw new Error(await readChatError(res));
 
       const data = (await res.json()) as ChatResponse & { sessionId?: string };
       const redoContext = truncated[msgIndex]?.context ?? makeMessageContext();
+      if (data.usage) setUsage(data.usage);
       const assistantMsg: ChatMessageItem = {
         role: "assistant",
         content: data.text,
@@ -286,7 +316,7 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
     } finally {
       setIsLoading(false);
     }
-  }, [addresses, activeSessionId, setActiveSessionId, contextType, isLoading, lang, saveMessagesToSession, refreshSessions, tr, makeMessageContext, withMessageContext]);
+  }, [addresses, activeSessionId, setActiveSessionId, contextType, isLoading, lang, saveMessagesToSession, refreshSessions, tr, makeMessageContext, withMessageContext, readChatError]);
 
   const handleRevert = useCallback(async (msgIndex: number, content: string) => {
     if (!activeSessionId) return;
@@ -368,6 +398,7 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
         inputText,
         isLoading,
         error,
+        usage,
         showPromptMenu,
         showSessionMenu,
         truncatedMessages,

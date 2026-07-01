@@ -1,22 +1,37 @@
-import { solanaBase58Schema } from "@sv/middlewares/validation.js";
+import { AUTH_COOKIE_NAME } from "@sv/config/constants.js";
 import {
-  getRssTokenNews,
-  type TokenNewsArticle,
+  solanaBase58Schema,
+  userPayloadSchema,
+} from "@sv/middlewares/validation.js";
+import {
+  AI_FEATURES,
+  type AiUsageReservation,
+  getAiUsage,
+  releaseAiUsage,
+  reserveAiUsage,
+} from "@sv/services/ai-usage.service.js";
+import {
+    getRssTokenNews,
+    type TokenNewsArticle,
 } from "@sv/services/rss-news.service.js";
 import {
-  getTokenChartNewsEventsCacheExpiresAt,
-  readTokenChartNewsEventsCache,
-  writeTokenChartNewsEventsCache,
-  type TokenChartNewsEventsCacheKey,
-  type TokenChartNewsTimeframe,
+    getTokenChartNewsEventsCacheExpiresAt,
+    readTokenChartNewsEventsCache,
+    writeTokenChartNewsEventsCache,
+    type TokenChartNewsEventsCacheKey,
+    type TokenChartNewsTimeframe,
 } from "@sv/services/tokens/token-chart-news-events-cache.js";
 import {
+  isTokenChartNewsSummaryGeminiConfigured,
   summarizeTokenChartNewsEvent,
   type TokenChartNewsEventSummary,
 } from "@sv/services/tokens/token-chart-news-summary.js";
 import { setErr } from "@sv/util/errors.js";
+import env from "@sv/util/load-env.js";
 import { statusCode } from "@sv/util/responses.js";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
+import { getCookie } from "hono/cookie";
+import { verify } from "hono/jwt";
 import z from "zod";
 
 interface TokenChartNewsEvent {
@@ -61,6 +76,43 @@ const timeframeDays: Record<TokenChartNewsTimeframe, number> = {
   "3m": 90,
   "1y": 365,
 };
+
+async function getAuthenticatedUserId(c: Context) {
+  const token = getCookie(c, AUTH_COOKIE_NAME);
+  if (!token) return null;
+
+  try {
+    const payload = await verify(token, env.JWT_SECRET, { alg: "HS256" });
+    const parsed = userPayloadSchema.safeParse(payload);
+    return parsed.success ? parsed.data.id : null;
+  } catch {
+    return null;
+  }
+}
+
+function tokenChartNewsSummaryLimitResponse(
+  usage: AiUsageReservation["usage"],
+) {
+  return {
+    success: false,
+    errorCode: "AI_DAILY_LIMIT_EXCEEDED",
+    message: "You have reached today's Token Chart News Summary limit.",
+    ...usage,
+    upgradePath: "/pricing",
+  };
+}
+
+class TokenChartNewsSummaryLimitError extends Error {
+  constructor(readonly usage: AiUsageReservation["usage"]) {
+    super("Token Chart News Summary daily limit exceeded");
+  }
+}
+
+function hasGeminiSummary(data: TokenChartNewsEventsData) {
+  return data.events.some((event) =>
+    event.summary?.provider?.startsWith("gemini:"),
+  );
+}
 
 const tokenChartNewsEventsQuerySchema = z.object({
   address: solanaBase58Schema,
@@ -215,6 +267,7 @@ async function addSummaries(
   data: TokenChartNewsEventsData,
   summaryDate?: string,
   options: { expandForSummary?: boolean } = {},
+  beforeGenerate?: () => Promise<void>,
 ): Promise<TokenChartNewsEventsData> {
   const events: TokenChartNewsEvent[] = [];
   const eventsToSummarize = summaryDate
@@ -247,7 +300,7 @@ async function addSummaries(
         date: expandedEvent.date,
         articleCount: expandedEvent.articleCount,
         articles: expandedEvent.articles,
-      }),
+      }, beforeGenerate),
     });
   }
 
@@ -304,6 +357,7 @@ async function buildFreshChartNewsEvents({
   timeframe,
   includeSummary,
   date,
+  beforeGenerate,
 }: {
   address: string;
   symbol: string;
@@ -311,6 +365,7 @@ async function buildFreshChartNewsEvents({
   timeframe: TokenChartNewsTimeframe;
   includeSummary: boolean;
   date?: string;
+  beforeGenerate?: () => Promise<void>;
 }): Promise<TokenChartNewsEventsData> {
   const news = await getRssTokenNews(
     { address, symbol, name },
@@ -335,7 +390,7 @@ async function buildFreshChartNewsEvents({
     events: groupArticlesByDate(news.articles, timeframe, date),
   };
 
-  return includeSummary ? addSummaries(data, date) : data;
+  return includeSummary ? addSummaries(data, date, {}, beforeGenerate) : data;
 }
 
 const app = new Hono().get("/", async (c) => {
@@ -368,6 +423,25 @@ const app = new Hono().get("/", async (c) => {
     timeframe,
     eventDate: date ?? "",
     includeSummary,
+  };
+  const userId = includeSummary ? await getAuthenticatedUserId(c) : null;
+
+  if (includeSummary && !userId) {
+    return c.json(setErr("UNAUTHORIZED"), statusCode.Unauthorized);
+  }
+
+  let reservation: AiUsageReservation | undefined;
+  let usageCounted = false;
+  const reserveForSummary = async () => {
+    if (!includeSummary || !userId || reservation) return;
+
+    reservation = await reserveAiUsage(
+      userId,
+      AI_FEATURES.TokenChartNewsSummary,
+    );
+    if (!reservation.allowed) {
+      throw new TokenChartNewsSummaryLimitError(reservation.usage);
+    }
   };
 
   try {
@@ -404,7 +478,22 @@ const app = new Hono().get("/", async (c) => {
               events: cached.data.events.length,
             });
 
-            return c.json({ success: true, data: cached.data }, statusCode.Ok);
+            const usage =
+              includeSummary && userId
+                ? await getAiUsage(
+                    userId,
+                    AI_FEATURES.TokenChartNewsSummary,
+                  )
+                : undefined;
+
+            return c.json(
+              {
+                success: true,
+                ...(usage ? { usage, counted: false } : {}),
+                data: cached.data,
+              },
+              statusCode.Ok,
+            );
           }
         }
       } catch (err) {
@@ -444,15 +533,46 @@ const app = new Hono().get("/", async (c) => {
                 ),
               }
             : baseCached.data;
-          const summarized = await addSummaries(baseData, date, {
-            expandForSummary: false,
-          });
+          const summarized = await addSummaries(
+            baseData,
+            date,
+            { expandForSummary: false },
+            isTokenChartNewsSummaryGeminiConfigured()
+              ? reserveForSummary
+              : undefined,
+          );
+          usageCounted =
+            hasGeminiSummary(summarized) &&
+            reservation?.usage.disabled !== true;
+          if (reservation?.allowed && !usageCounted) {
+            await releaseAiUsage(reservation);
+            reservation = undefined;
+          }
           const expiresAt = getTokenChartNewsEventsCacheExpiresAt(timeframe);
           await writeTokenChartNewsEventsCache(cacheKey, summarized, expiresAt);
+          const usage =
+            includeSummary && userId
+              ? reservation?.usage ??
+                (await getAiUsage(
+                  userId,
+                  AI_FEATURES.TokenChartNewsSummary,
+                ))
+              : undefined;
 
-          return c.json({ success: true, data: summarized }, statusCode.Ok);
+          return c.json(
+            {
+              success: true,
+              ...(usage ? { usage, counted: usageCounted } : {}),
+              data: summarized,
+            },
+            statusCode.Ok,
+          );
         }
       } catch (err) {
+        if (err instanceof TokenChartNewsSummaryLimitError) {
+          throw err;
+        }
+
         console.warn("[token-chart-news-events] base cache reuse failed", {
           address,
           symbol: cacheKey.symbol,
@@ -470,7 +590,16 @@ const app = new Hono().get("/", async (c) => {
       timeframe,
       includeSummary,
       date,
+      beforeGenerate: isTokenChartNewsSummaryGeminiConfigured()
+        ? reserveForSummary
+        : undefined,
     });
+    usageCounted =
+      hasGeminiSummary(data) && reservation?.usage.disabled !== true;
+    if (reservation?.allowed && !usageCounted) {
+      await releaseAiUsage(reservation);
+      reservation = undefined;
+    }
     const expiresAt = getTokenChartNewsEventsCacheExpiresAt(timeframe);
 
     try {
@@ -494,8 +623,39 @@ const app = new Hono().get("/", async (c) => {
       events: data.events.length,
     });
 
-    return c.json({ success: true, data }, statusCode.Ok);
+    const usage =
+      includeSummary && userId
+        ? reservation?.usage ??
+          (await getAiUsage(userId, AI_FEATURES.TokenChartNewsSummary))
+        : undefined;
+
+    return c.json(
+      {
+        success: true,
+        ...(usage ? { usage, counted: usageCounted } : {}),
+        data,
+      },
+      statusCode.Ok,
+    );
   } catch (err) {
+    if (err instanceof TokenChartNewsSummaryLimitError) {
+      return c.json(
+        tokenChartNewsSummaryLimitResponse(err.usage),
+        statusCode.TooManyRequests,
+      );
+    }
+
+    if (reservation?.allowed && !usageCounted) {
+      try {
+        await releaseAiUsage(reservation);
+      } catch (releaseErr) {
+        console.error(
+          "[token-chart-news-events] failed to release AI usage:",
+          releaseErr,
+        );
+      }
+    }
+
     console.error("[token-chart-news-events] error:", err);
     return c.json(
       {

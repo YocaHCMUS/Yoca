@@ -112,8 +112,13 @@ export const translation = defineTranslation({
     selectAll: "Chọn tất cả",
     from: "Từ",
     to: "Đến",
-    page: "Trang {{count}}"
-  },
+    page: "Trang {{count}}",
+      clear: "Xóa",
+      noResults: "Không có kết quả",
+      clearFilter: "Xóa bộ lọc",
+      filterSearchPlaceholder: "Tìm kiếm {{column}}...",
+      searchAriaLabel: "Tìm kiếm bảng",
+    },
   // Authentication
   auth: {
     authenticating: "Đang xác thực...",
@@ -319,7 +324,7 @@ export const translation = defineTranslation({
   pricing: {
     title: "Bảng giá",
     subtitle:
-      "Trang bị cho nền tảng của bạn dữ liệu crypto thời gian thực và insight từ hơn 200 thị trường chỉ với 1 tích hợp.",
+      "Chọn dung lượng AI mỗi ngày phù hợp với mức độ nghiên cứu thị trường của bạn.",
     placeholder: "Sẽ được cập nhật",
     free: "MIỄN PHÍ",
     period: {
@@ -327,6 +332,23 @@ export const translation = defineTranslation({
     },
     tiers: {
       standard: { name: "STANDARD" },
+    },
+    features: {
+      label: "Hạn mức AI bao gồm",
+      askYoca: "Ask Yoca AI: {{$count}} câu hỏi mỗi ngày",
+      generalAiChat: "General AI Chat: {{$count}} tin nhan moi ngay",
+      tokenChartNewsSummary:
+        "Tom tat tin tuc tren chart: {{$count}} luot moi ngay",
+      walletAiAnalysis:
+        "Wallet AI Analysis: {{$count}} luot phan tich moi ngay",
+      washTradingAiAnalysis:
+        "Wash Trading AI Analysis: {{$count}} luot phan tich moi ngay",
+      walletAiAnalysisLocked: "Wallet AI Analysis: can goi Plus",
+      washTradingAiAnalysisLocked:
+        "Wash Trading AI Analysis: can goi Plus",
+      volatilitySummary:
+        "Tóm tắt Volatility Signals: {{$count}} lượt tạo mỗi ngày",
+      dailyReset: "Hạn mức được làm mới lúc 00:00 UTC mỗi ngày",
     },
     cta: {
       buyNow: "Mua ngay",
@@ -1028,6 +1050,7 @@ export const translation = defineTranslation({
       summary: "Tóm tắt",
       riskAnalysis: "Phân tích rủi ro",
       cachedResult: "Kết quả từ bộ nhớ đệm",
+      signInRequired: "Đăng nhập để sử dụng AI tóm tắt giao dịch swap.",
       allTokens: "Tất cả token",
       entry: "Vào",
       exit: "Ra",
@@ -1710,6 +1733,12 @@ export const translation = defineTranslation({
       noDataDelta: "--",
       removeTag: "Xóa nhãn",
       atLeastOneTagRequired: "Cần chọn ít nhất một nhãn",
+      searchTokenPlaceholder: "Tìm kiếm token",
+      symbolOrNamePlaceholder: "Ký hiệu hoặc tên",
+      noMatchingTokens: "Không tìm thấy token",
+      errors: {
+        balanceUnavailable: "Lịch sử số dư tạm thời không khả dụng. Vui lòng thử lại.",
+      },
     },
     walletSingleBalanceChart: {
       title: "Xu hướng số dư theo ví",
@@ -1731,6 +1760,7 @@ export const translation = defineTranslation({
     },
     assetDistributionChart: {
       title: "Phân bổ tài sản",
+      total: "Tổng",
       totalValue: "Tổng giá trị",
       asset: "Tài sản",
       value: "Giá trị",
@@ -1959,6 +1989,7 @@ export const translation = defineTranslation({
     sendButtonTitle: "Gửi",
     promptMenuBtn: "Menu câu hỏi",
     fabTitle: "Mở AI Chat",
+    launcherLabel: "Hỏi YOCA AI",
     seriesLabel: "Series thứ {{count}}",
     tldr: "TLDR",
     warnings: "Cảnh báo",
@@ -1970,6 +2001,15 @@ export const translation = defineTranslation({
     confidenceLow: "Thấp",
     showAll: "Hiển thị tất cả ({{count}})",
     showLess: "Thu gọn",
+    aiDisclaimer:
+      "Phản hồi AI có thể chưa đầy đủ hoặc chưa chính xác và không phải lời khuyên tài chính. Hãy xác minh thông tin quan trọng trước khi hành động.",
+    limitReachedTitle: "Đã hết hạn mức AI chat trong ngày",
+    limitReachedText:
+      "Bạn đã dùng hết số tin nhắn ví AI chat trong ngày theo gói hiện tại. Các lựa chọn nâng cấp có thể tăng dung lượng AI cho nghiên cứu chuyên sâu hơn.",
+    limitReachedReset: "Hạn mức hằng ngày đặt lại lúc 00:00 UTC.",
+    upgradeOptions: "Xem lựa chọn nâng cấp",
+    goToPricing: "Đến bảng giá",
+    notNow: "Để sau",
     inputCounter: "{{current}}/{{max}}",
     inputOverLimit: "Câu hỏi phải dưới {{max}} ký tự.",
     clickToAsk: "Nhấp để hỏi: {{query}}",
@@ -2102,6 +2142,8 @@ export const translation = defineTranslation({
     NOT_FOUND: "Không tìm thấy",
     UNAUTHORIZED: "Không được ủy quyền",
     RATE_LIMIT_EXCEEDED: "Quá nhiều yêu cầu. Vui lòng thử lại sau.",
+    AI_DAILY_LIMIT_EXCEEDED:
+      "Bạn đã dùng hết lượt AI hôm nay. Hãy nâng cấp gói để có thêm lượt.",
     BAD_GATEWAY: "Cổng trung gian không hợp lệ. Vui lòng thử lại sau.",
   },
   token: {
@@ -2142,6 +2184,12 @@ export const translation = defineTranslation({
       coingecko: "Xem trên CoinGecko",
       aiWashTradingDetection: "Phát hiện giao dịch ảo",
       aiWashTradingDetectionShort: "Phát hiện giao dịch ảo",
+      washGateTitle: "Cần gói Plus",
+      washGateDescription:
+        "AI Wash Trading Detection chỉ dành cho gói Plus và Pro. Hãy nâng cấp trước khi mở phân tích này.",
+      washGateSignIn: "Đăng nhập",
+      washGateClose: "Để sau",
+      washGateUpgrade: "Nâng cấp",
     },
     chart: {
       loadingPool: "Đang tải biểu đồ...",

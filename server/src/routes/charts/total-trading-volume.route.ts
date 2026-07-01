@@ -15,7 +15,7 @@ import { getTradingVolumes } from '@sv/services/wallet/walletComparison.js';
  * Request parameter schema for total trading volume endpoint
  */
 const totalTradingVolumeRequestSchema = z.object({
-  period: z.enum(['24H', '7D', '30D', '90D', 'All']).optional().default('30D'),
+  period: z.enum(['24H', '7D', '30D', '90D']).optional().default('30D'),
   wallets: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : []),
 });
 

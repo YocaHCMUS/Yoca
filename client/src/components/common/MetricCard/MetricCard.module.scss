@@ -1,0 +1,91 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 120px;
+  padding: 18px 20px;
+  border: 1px solid var(--yoca-border);
+  border-radius: 12px;
+  background: var(--yoca-surface);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--yoca-shadow-card);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--yoca-text-muted);
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  color: var(--yoca-text-muted);
+  flex-shrink: 0;
+}
+
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.value {
+  font-size: clamp(1.3rem, 2vw, 1.75rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--yoca-text-main);
+}
+
+.trend {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.trendUp {
+  color: var(--yoca-success);
+}
+
+.trendDown {
+  color: var(--yoca-danger);
+}
+
+.trendNeutral {
+  color: var(--yoca-text-muted);
+}
+
+.subtitle {
+  font-size: 0.8rem;
+  color: var(--yoca-text-muted);
+}
+
+// Sizes
+.sm .value {
+  font-size: 1rem;
+}
+
+.sm .card {
+  min-height: 80px;
+  padding: 12px 14px;
+}
+
+.lg .value {
+  font-size: 2rem;
+}
+
+.lg .card {
+  min-height: 160px;
+  padding: 22px 24px;
+}

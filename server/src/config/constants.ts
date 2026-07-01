@@ -30,6 +30,10 @@ export const DAY_MS = 24 * 60 * 60 * 1000;
 export const HOUR_MS = 60 * 60 * 1000;
 export const MONTH_MS = 30 * DAY_MS;
 
+export const MOBULA_WALLET_ACTIVITY_PAGE_SIZE = 100;
+export const MOBULA_WALLET_ACTIVITY_MAX_PAGES = 10;
+export const MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS = 2;
+
 // Token chart intervals for hourly/daily gap detection
 export const TOKEN_CHART_HOURLY_INTERVAL_MS = HOUR_MS;
 export const TOKEN_CHART_DAILY_INTERVAL_MS = DAY_MS;
@@ -52,14 +56,10 @@ export const WALLET_PORTFOLIO_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const WALLET_TRANSACTIONS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const WALLET_TRANSFERS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const WALLET_SWAPS_TTL_MS = 60 * 60 * 1000; // 1 hour
-export const WALLET_RECENT_TRANSACTIONS_MAX_COUNT = 500;
 export const WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT = 500;
 export const WALLET_SWAP_HISTORY_LATEST_TOLERANCE_MS = 60 * 60 * 1000;
 export const WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT = 500;
 export const WALLET_TRANSFER_HISTORY_LATEST_TOLERANCE_MS = 60 * 60 * 1000;
-export const ZERION_WALLET_TRANSACTIONS_PAGE_SIZE = 100;
-export const WALLET_RECENT_TRANSACTIONS_RETENTION_MS = 24 * 60 * 60 * 1000;
-export const WALLET_RECENT_TRANSACTIONS_PRUNE_INTERVAL_MS = 60 * 60 * 1000;
 export const WALLET_EXCHANGE_COUNTS_TTL_MS = 60 * 60 * 1000; // 1 hour
 export const WALLET_IDENTITY_KNOWN_TTL_MS = 6 * 60 * 60 * 1000; // 72 hours
 export const WALLET_IDENTITY_UNKNOWN_TTL_MS = 2 * 60 * 60 * 1000; // 24 hours
@@ -70,7 +70,8 @@ export const WALLET_WINRATE_30D_TTL_MS = 24 * 60 * 60 * 1000;
 export const WALLET_WINRATE_90D_TTL_MS = 48 * 60 * 60 * 1000;
 export const WALLET_TOKEN_DETAILS_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 export const WALLET_TOKEN_DETAILS_FETCH_LIMIT = 500;
-export const WALLET_BALANCE_HISTORY_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+export const WALLET_BALANCE_HISTORY_STORED_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+export const WALLET_BALANCE_HISTORY_FETCH_TIMEOUT_MS = 120 * 1000;
 export const WALLET_TRANSACTION_HISTORY_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export const ZRN_SOL_FUNGIBLE_ID = "11111111111111111111111111111111";
@@ -185,7 +186,7 @@ export const TRANSACTION_FETCH_MAX_ITEM_COUNT = readNumberEnv(
   500,
 ); // get 500 earliest txs
 
-export const SWAPS_SAMPLE_SIZE = 200;
+export const SWAPS_SAMPLE_SIZE = 500;
 export const GEMINI_MODEL = env.GEMINI_SWAP_SUMMARY_MODEL?.trim() || "";
 
 // Chatbot

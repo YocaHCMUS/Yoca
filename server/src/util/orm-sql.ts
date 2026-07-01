@@ -64,6 +64,38 @@ export function excludedAutoFromInsert<
   );
 }
 
+export function excludedAutoNonNullFromInsert<
+  Table extends PgTable,
+  TableInsert extends Table["$inferInsert"] | Array<Table["$inferInsert"]>,
+>(
+  table: Table,
+  targetColumns: PgColumn | PgColumn[],
+  values: TableInsert | TableInsert[],
+) {
+  const targets = Array.isArray(targetColumns)
+    ? targetColumns
+    : [targetColumns];
+  if (targets.length == 0) {
+    return {};
+  }
+  const valueArray = Array.isArray(values) ? values : [values];
+  if (valueArray.length == 0) {
+    return {};
+  }
+
+  const columns = getTableColumns(table);
+  return Object.fromEntries(
+    Object.keys(valueArray[0])
+      .filter(
+        (colName) => columns[colName] && !targets.includes(columns[colName]),
+      )
+      .map((colName) => [
+        colName,
+        sql`COALESCE(${excluded(columns[colName])}, ${columns[colName]})`,
+      ]),
+  );
+}
+
 export function sum<T extends PgColumn>(column: T): SQL<T["_"]["data"]> {
   return sql.raw(`SUM(${column.name})`);
 }

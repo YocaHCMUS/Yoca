@@ -7,7 +7,7 @@ import client from "@/api/main";
 export async function fetchWalletTags(
   walletAddress: string,
 ): Promise<string[]> {
-  const response = await client.api.walletTags.index.$get({
+  const response = await client.api.wallets.tags.$get({
     query: { address: walletAddress },
   });
   if (response.status === 401) return [];
@@ -25,7 +25,7 @@ export async function saveWalletTags(
   walletAddress: string,
   tags: string[],
 ): Promise<void> {
-  const response = await client.api.walletTags.index.$put({
+  const response = await client.api.wallets.tags.$put({
     json: { address: walletAddress, tags },
   });
   if (!response.ok) {

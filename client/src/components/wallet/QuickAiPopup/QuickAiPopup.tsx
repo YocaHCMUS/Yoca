@@ -7,9 +7,9 @@ import { WalletChatMessage } from "../WalletChat/WalletChatMessage";
 import { ChatContext } from "../WalletChat/ChatContext";
 import { ChatPromptMenu } from "../WalletChat/ChatPromptMenu";
 import type {
-  ChatMessageItem,
-  ChatResponse,
-  PredefinedQuestion,
+    ChatMessageItem,
+    ChatResponse,
+    PredefinedQuestion,
 } from "../WalletChat/types";
 import styles from "./QuickAiPopup.module.scss";
 
@@ -133,7 +133,7 @@ export function QuickAiPopup({
     setError(null);
 
     try {
-      const res = await client.api.chat.index.$post({
+      const res = await client.api.chat.$post({
         json: {
           addresses,
           query: query.trim(),

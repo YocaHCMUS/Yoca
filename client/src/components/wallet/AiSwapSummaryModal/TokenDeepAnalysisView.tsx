@@ -7,12 +7,14 @@ import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import {
   fetchTokenDeepAnalysis,
+  WalletAiApiError,
   type TokenDeepAnalysisResponse,
   type WalletAiAnalysisLanguage,
 } from "@/services/wallet/walletApi";
+import { useAuth } from "@/contexts/AuthContext";
 import { TokenPriceChart, type TradeIndicator } from "@/components/charts/TokenPriceChart/TokenPriceChart";
-import TrendNumWithSign from "@/components/TrendNumWithSign";
 import styles from "./TokenDeepAnalysisView.module.scss";
+import { TrendNum } from "@/components/TrendNum";
 
 interface TokenDeepAnalysisViewProps {
   walletAddress: string;
@@ -49,6 +51,7 @@ export function TokenDeepAnalysisView({
   apiLanguage,
 }: TokenDeepAnalysisViewProps) {
   const { tr, fmt } = useLocalization();
+  const { user, isUserLoading, openAuthModal } = useAuth();
   const baseOption = useCarbonChartBaseOption();
   const [data, setData] = useState<TokenDeepAnalysisResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,17 +59,35 @@ export function TokenDeepAnalysisView({
   const [expandedNotes, setExpandedNotes] = useState(false);
 
   const fetch = useCallback(async () => {
+    if (isUserLoading) return;
+    if (!user) {
+      openAuthModal("login");
+      setError(String(tr("walletPage.aiSwapSummary.signInRequired")));
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const result = await fetchTokenDeepAnalysis(walletAddress, tokenAddress, apiLanguage);
       setData(result);
     } catch (err) {
+      if (err instanceof WalletAiApiError) {
+        if (err.status === 401) openAuthModal("login");
+      }
       setError(err instanceof Error ? err.message : "Failed to load token analysis");
     } finally {
       setLoading(false);
     }
-  }, [walletAddress, tokenAddress, apiLanguage]);
+  }, [
+    walletAddress,
+    tokenAddress,
+    apiLanguage,
+    user,
+    isUserLoading,
+    openAuthModal,
+    tr,
+  ]);
 
   useEffect(() => {
     void fetch();
@@ -211,7 +232,7 @@ export function TokenDeepAnalysisView({
           <div className={styles.statCard}>
             <span className={styles.statLabel}>{tr("walletPage.aiSwapSummary.realizedPnl")}</span>
             <span className={styles.statValue}>
-              <TrendNumWithSign
+              <TrendNum
                 value={data.realizedPnlUsd}
                 prefixes="plus-minus"
                 formatter={fmt.num.currency}

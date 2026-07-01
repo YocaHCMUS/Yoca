@@ -30,12 +30,12 @@ import {
   filterDuplicateToolCalls,
   getResolveSpec,
   getToolAllowedKeys,
-  normalizeToolCalls,
   normalizeToolInput,
   pickResolvedValue,
   RESOLVABLE_TOOLS,
+  stableStringify,
 } from "./chat-tool-normalizer.js";
-import type { ChartSpec, TableSpec, ToolDataReference, WalletConfidence, WalletWarning, WalletChatSection } from "./chat.types.js";
+import type { ActionSpec, ChartSpec, ChatSource, TableSpec, ToolDataReference, WalletConfidence, WalletWarning, WalletChatSection, WebSearchArticle } from "./chat.types.js";
 import { z } from "zod";
 import { WALLET_CHAT_RESPONSE_LIMITS as L } from "./chat-fallback.js";
 
@@ -211,6 +211,8 @@ async function resolveToolDependencies(
 ): Promise<{ tools: ChatToolCall[]; resolverResults: ChatToolResult[] }> {
   const resolvedTools: ChatToolCall[] = [];
   const resolverResults: ChatToolResult[] = [];
+  const resolverCache = new Map<string, { data: unknown; llmData: unknown }>();
+  const resolverKeys = new Set<string>();
 
   for (const tool of tools) {
     const input: Record<string, unknown> = { ...tool.input };
@@ -244,8 +246,22 @@ async function resolveToolDependencies(
       }
 
       const normalizedResolverInput = normalizeToolInput(spec.tool, spec.input, { query });
+      const cacheKey = `${spec.tool}:${stableStringify(normalizedResolverInput)}`;
       try {
-        const { data, llmData } = await handler(normalizedResolverInput);
+        let data: unknown;
+        let llmData: unknown;
+        const cached = resolverCache.get(cacheKey);
+        if (cached) {
+          data = cached.data;
+          llmData = cached.llmData;
+        } else {
+          const result = await handler(normalizedResolverInput);
+          data = result.data;
+          llmData = result.llmData;
+          resolverCache.set(cacheKey, { data, llmData });
+        }
+        resolverKeys.add(cacheKey);
+
         const picked = pickResolvedValue(llmData, spec.pick) ?? pickResolvedValue(data, spec.pick);
         resolverResults.push({
           name: spec.tool,
@@ -253,7 +269,7 @@ async function resolveToolDependencies(
           data: llmData,
           fullData: data,
         });
-        if (picked == null || picked === "") {
+        if (picked == null) {
           failed = true;
           resolverResults.push({
             name: tool.name,
@@ -284,7 +300,13 @@ async function resolveToolDependencies(
     }
   }
 
-  return { tools: resolvedTools, resolverResults };
+  // Remove tools that already ran as resolvers (standalone dedup)
+  const filtered = resolvedTools.filter((tool) => {
+    const key = `${tool.name}:${stableStringify(tool.input)}`;
+    return !resolverKeys.has(key);
+  });
+
+  return { tools: filtered, resolverResults };
 }
 async function executeToolsForAllAddresses(
   addresses: string[],
@@ -508,6 +530,80 @@ export function repairMissingDataRefs(
 
   return repaired;
 }
+
+
+function visitValues(value: unknown, visitor: (record: Record<string, unknown>) => boolean): boolean {
+  if (value == null) return false;
+  if (Array.isArray(value)) return value.some((item) => visitValues(item, visitor));
+  if (typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  if (visitor(record)) return true;
+  return Object.values(record).some((item) => visitValues(item, visitor));
+}
+
+export function hasCappedToolResults(allResults: ChatToolResult[]): boolean {
+  return allResults.some((result) => visitValues(result.data, (record) => {
+    const coverage = record.coverage;
+    if (coverage && typeof coverage === "object" && !Array.isArray(coverage)) {
+      return (coverage as Record<string, unknown>).isCapped === true;
+    }
+    return record.isCapped === true || record.scope === "limited_filtered_sample";
+  }));
+}
+
+export function computeFallbackConfidence(allResults: ChatToolResult[]): WalletConfidence {
+  if (allResults.some((result) => result.error) || hasCappedToolResults(allResults)) return "Low";
+  return "Medium";
+}
+
+function collectTokenSymbols(value: unknown, out: string[]): void {
+  if (out.length >= 4 || value == null) return;
+  if (Array.isArray(value)) {
+    for (const item of value) collectTokenSymbols(item, out);
+    return;
+  }
+  if (typeof value !== "object") return;
+
+  const record = value as Record<string, unknown>;
+  const symbol = record.symbol ?? record.token;
+  if (typeof symbol === "string" && symbol.trim() && !out.includes(symbol.trim())) {
+    out.push(symbol.trim());
+  }
+  for (const item of Object.values(record)) collectTokenSymbols(item, out);
+}
+
+function firstTokenSymbols(allResults: ChatToolResult[]): string[] {
+  const symbols: string[] = [];
+  for (const result of allResults) collectTokenSymbols(result.data, symbols);
+  return symbols;
+}
+
+export function synthesizeFollowUpActions(allResults: ChatToolResult[]): ActionSpec[] {
+  const toolNames = new Set(allResults.map((result) => result.name));
+  const symbols = firstTokenSymbols(allResults);
+  const actions: ActionSpec[] = [];
+
+  const add = (label: string, query: string): void => {
+    if (actions.length >= 5 || actions.some((action) => action.label === label)) return;
+    actions.push({ label, href: `#ask:${query}`, index: null });
+  };
+
+  if (symbols.length >= 2) add(`Compare ${symbols[0]} vs ${symbols[1]}`, `Compare ${symbols[0]} and ${symbols[1]} performance in this wallet`);
+  if (symbols.length >= 1) add(`Analyze ${symbols[0]} driver`, `What drove the ${symbols[0]} result for this wallet?`);
+  if ([...toolNames].some((name) => name.includes("pnl"))) {
+    add("Break down PnL drivers", "Break down the realized PnL by biggest winners, losers, and concentration risk");
+  }
+  if ([...toolNames].some((name) => name.includes("swap") || name.includes("transfer"))) {
+    add("Inspect recent activity", "Which recent transactions best explain this wallet activity?");
+  }
+  if ([...toolNames].some((name) => name.includes("portfolio") || name.includes("balance"))) {
+    add("Check portfolio risk", "Which holdings create the most portfolio concentration or drawdown risk?");
+  }
+  add("Expand the time window", "Compare this result with the previous 30 days for the same wallet");
+  add("Find weakest signal", "What is the weakest or least reliable signal in this analysis?");
+
+  return actions.slice(0, 5);
+}
 async function generateResponse(
   query: string,
   allResults: ChatToolResult[],
@@ -526,7 +622,7 @@ async function generateResponse(
     };
   }
 
-  const prompt = buildResponseGenerationPrompt(query, allResults, history, language);
+  const prompt = buildResponseGenerationPrompt(query, allResults, history);
   chatDebug("generateResponse: prompt built", { resultCount: allResults.length });
 
   const raw = await callGemini(prompt, CHAT_SYSTEM_INSTRUCTION);
@@ -548,7 +644,24 @@ async function generateResponse(
   const charts = sanitized.charts;
   const tables = sanitized.tables;
   const actions = sanitized.actions;
-  const sources = sanitized.sources;
+  // Extract real sources from search tool results instead of using LLM-fabricated ones
+  const realSources: ChatSource[] = [];
+  for (const result of allResults) {
+    if (!result.fullData || result.error) continue;
+    if (result.name === "search_web" || result.name === "search_news") {
+      const articles = (result.fullData as { articles?: WebSearchArticle[] }).articles ?? [];
+      for (const a of articles) {
+        realSources.push({
+          title: a.title,
+          url: a.url,
+          source: a.source,
+          snippet: a.description,
+          publishedAt: a.publishedAt ?? undefined,
+        });
+      }
+    }
+  }
+  const sources: ChatSource[] | undefined = realSources.length > 0 ? realSources : undefined;
 
   // Validate structured fields from Gemini
   const parsedJson = extractJsonObject(raw);
@@ -625,6 +738,26 @@ async function generateResponse(
     }
   }
 
+  // Auto-set xAxisType to "time" for time-series chart tools that produce [timestamp, value][] pairs
+  const TIME_SERIES_TOOLS = new Set([
+    "get_balance_history",
+    "get_drawdown_chart",
+    "get_pnl_chart",
+    "get_token_price_24h",
+    "get_token_price_hourly",
+    "get_token_price_daily",
+  ]);
+  for (const chart of charts) {
+    if (chart.xAxisType || chart.type === "pie" || chart.type === "geckoterminal") continue;
+    const idx = parseInt(chart.dataRef, 10);
+    if (!isNaN(idx) && idx < allResults.length) {
+      const result = allResults[idx];
+      if (result && !result.error && TIME_SERIES_TOOLS.has(result.name)) {
+        chart.xAxisType = "time";
+      }
+    }
+  }
+
   for (const chart of charts) {
     if ((chart.type === "line" || chart.type === "area") && chart.dataRef) {
       const idx = parseInt(chart.dataRef, 10);
@@ -664,12 +797,12 @@ async function generateResponse(
     dataRefs,
     charts,
     tables,
-    actions: actions.length > 0 ? actions : undefined,
-    sources: sources && sources.length > 0 ? sources : undefined,
+    actions: actions.length > 0 ? actions : synthesizeFollowUpActions(allResults),
+    sources,
     tldr: validatedTldr,
     sections: validatedSections,
     warnings: validatedWarnings,
-    confidence: validatedConfidence,
+    confidence: validatedConfidence ?? computeFallbackConfidence(allResults),
     asOf: new Date().toISOString(),
     generatedAt: new Date().toISOString(),
   };
@@ -752,8 +885,7 @@ export async function answerChatQuery(
       chatWarn("answerChatQuery: empty tool list, breaking", { iteration: i + 1 });
       break;
     }
-    const normalizedSelection = normalizeToolCalls(toolSelection, { query });
-    const resolvedSelection = await resolveToolDependencies(normalizedSelection, query);
+    const resolvedSelection = await resolveToolDependencies(toolSelection, query);
     if (resolvedSelection.resolverResults.length > 0) {
       allResults.push(...resolvedSelection.resolverResults);
     }

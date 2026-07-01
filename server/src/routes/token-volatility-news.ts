@@ -1,27 +1,87 @@
-import { solanaBase58Schema } from "@sv/middlewares/validation.js";
+import {
+  solanaBase58Schema,
+  userPayloadSchema,
+} from "@sv/middlewares/validation.js";
+import { AUTH_COOKIE_NAME } from "@sv/config/constants.js";
+import {
+  AI_FEATURES,
+  type AiUsageReservation,
+  getAiUsage,
+  releaseAiUsage,
+  reserveAiUsage,
+} from "@sv/services/ai-usage.service.js";
 import { getRssTokenNews, type RelatedTokenNewsArticle } from "@sv/services/rss-news.service.js";
 import {
-  getTokenPriceVolatilityEvents,
-  type TokenPriceVolatilityEvent,
-  type TokenVolatilityTimeframe,
-  type TokenVolatilityWindow,
+    getTokenPriceVolatilityEvents,
+    type TokenPriceVolatilityEvent,
+    type TokenVolatilityTimeframe,
+    type TokenVolatilityWindow,
 } from "@sv/services/tokens/token-volatility.js";
 import {
-  getTokenVolatilityNewsCacheExpiresAt,
-  readTokenVolatilityNewsCache,
-  writeTokenVolatilityNewsCache,
-  type TokenVolatilityNewsCacheKey,
+    getTokenVolatilityNewsCacheExpiresAt,
+    readTokenVolatilityNewsCache,
+    writeTokenVolatilityNewsCache,
+    type TokenVolatilityNewsCacheKey,
 } from "@sv/services/tokens/token-volatility-news-cache.js";
-import { summarizeTokenVolatilityNews } from "@sv/services/tokens/token-volatility-summary.js";
+import {
+    type TokenVolatilityNewsSummary,
+  isTokenVolatilityGeminiConfigured,
+  summarizeTokenVolatilityNews,
+} from "@sv/services/tokens/token-volatility-summary.js";
 import { setErr } from "@sv/util/errors.js";
+import env from "@sv/util/load-env.js";
 import { statusCode } from "@sv/util/responses.js";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
+import { getCookie } from "hono/cookie";
+import { verify } from "hono/jwt";
 import z from "zod";
 
 const supportedTimeframes = ["24h", "hourly", "daily"] as const;
 const supportedWindows = ["auto", "adjacent", "15m", "1h", "6h", "24h"] as const;
 const DEFAULT_MAX_EVENTS_WITH_NEWS = 5;
 const MAX_RELATED_ARTICLES_PER_EVENT = 5;
+
+type TokenVolatilityNewsEvent = TokenPriceVolatilityEvent & {
+  relatedNews: RelatedTokenNewsArticle[];
+};
+
+type TokenVolatilityNewsData = {
+  token: {
+    address: string;
+    symbol: string;
+    name: string;
+  };
+  thresholdPercent: number;
+  timeframe: TokenVolatilityTimeframe;
+  window: TokenVolatilityWindow;
+  metric: "price";
+  updatedAt: string;
+  dataPointsAnalyzed: number;
+  rawEventsDetected: number;
+  groupedEventsReturned: number;
+  evaluatedWindows: string[];
+  relatedNewsWindowHours: number;
+  meta: {
+    providersUsed: Array<"rss" | "brave">;
+    braveFallbackUsed: boolean;
+    braveNewsUsed?: boolean;
+    braveWebFallbackUsed?: boolean;
+    sourceTypeCounts: {
+      news: number;
+      web_mention: number;
+      project_update: number;
+    };
+  };
+  summary: TokenVolatilityNewsSummary | null;
+  events: TokenVolatilityNewsEvent[];
+};
+
+type TokenVolatilityNewsResponseData = TokenVolatilityNewsData & {
+  cache: {
+    hit: boolean;
+    expiresAt: string;
+  };
+};
 
 const tokenVolatilityNewsQuerySchema = z.object({
   address: solanaBase58Schema,
@@ -39,17 +99,30 @@ const tokenVolatilityNewsQuerySchema = z.object({
   forceRefresh: z
     .enum(["true", "false"])
     .optional()
-    .transform((value) => value === "true"),
+    .transform((value) => value == "true"),
   includeSummary: z
     .enum(["true", "false"])
     .optional()
-    .transform((value) => value === "true"),
+    .transform((value) => value == "true"),
 });
 
 function getDefaultRelatedNewsWindowHours(
   timeframe: TokenVolatilityTimeframe,
 ) {
-  return timeframe === "daily" ? 72 : 24;
+  return timeframe == "daily" ? 72 : 24;
+}
+
+async function getAuthenticatedUserId(c: Context) {
+  const token = getCookie(c, AUTH_COOKIE_NAME);
+  if (!token) return null;
+
+  try {
+    const payload = await verify(token, env.JWT_SECRET, { alg: "HS256" });
+    const parsed = userPayloadSchema.safeParse(payload);
+    return parsed.success ? parsed.data.id : null;
+  } catch {
+    return null;
+  }
 }
 
 async function getPossibleRelatedNewsForEvent({
@@ -71,9 +144,30 @@ async function getPossibleRelatedNewsForEvent({
     strictMode: true,
     searchMode: "event",
   });
+  const articles: RelatedTokenNewsArticle[] = [];
+
+  for (const article of news.articles) {
+    if ("type" in article && article.type == "related_news") {
+      articles.push({
+        type: "related_news",
+        title: article.title,
+        url: article.url,
+        source: article.source,
+        publishedAt: article.publishedAt,
+        description: article.description,
+        score: article.score,
+        matchedBy: article.matchedBy,
+        sourceType: article.sourceType,
+        imageUrl: article.imageUrl,
+        favicon: article.favicon,
+        timeDistanceHours: article.timeDistanceHours,
+        confidence: article.confidence,
+      });
+    }
+  }
 
   return {
-    articles: news.articles as RelatedTokenNewsArticle[],
+    articles,
     meta: news.meta,
   };
 }
@@ -109,7 +203,7 @@ const app = new Hono().get("/", async (c) => {
     symbol: symbol.trim().toUpperCase(),
     name: name.trim(),
   };
-  const volatilityTimeframe = timeframe as TokenVolatilityTimeframe;
+  const volatilityTimeframe: TokenVolatilityTimeframe = timeframe;
   const relatedNewsWindowHours =
     getDefaultRelatedNewsWindowHours(volatilityTimeframe);
   const cacheKey: TokenVolatilityNewsCacheKey = {
@@ -122,12 +216,20 @@ const app = new Hono().get("/", async (c) => {
     maxEventsWithNews,
     includeSummary,
   };
+  const userId = includeSummary ? await getAuthenticatedUserId(c) : null;
 
+  if (includeSummary && !userId) {
+    return c.json(setErr("UNAUTHORIZED"), statusCode.Unauthorized);
+  }
+
+  let reservation: AiUsageReservation | undefined;
+  let usageCounted = false;
   try {
     if (!forceRefresh) {
+      let cached = null;
       try {
         const cached =
-          await readTokenVolatilityNewsCache<Record<string, unknown>>(
+          await readTokenVolatilityNewsCache<TokenVolatilityNewsData>(
             cacheKey,
           );
 
@@ -142,9 +244,15 @@ const app = new Hono().get("/", async (c) => {
             expiresAt: cached.expiresAt,
           });
 
+          const usage =
+            includeSummary && userId
+              ? await getAiUsage(userId, AI_FEATURES.VolatilitySignalSummary)
+              : undefined;
+
           return c.json(
             {
               success: true,
+              ...(usage ? { usage, counted: false } : {}),
               data: {
                 ...cached.data,
                 cache: {
@@ -167,6 +275,8 @@ const app = new Hono().get("/", async (c) => {
           error: err instanceof Error ? err.message : String(err),
         });
       }
+
+      
     } else {
       console.info("[token-volatility-news] cache bypass requested", {
         token,
@@ -182,7 +292,7 @@ const app = new Hono().get("/", async (c) => {
       ...token,
       thresholdPercent: threshold,
       timeframe: volatilityTimeframe,
-      window: window as TokenVolatilityWindow,
+      window,
     });
 
     console.info("[token-volatility-news] volatility events", {
@@ -194,7 +304,7 @@ const app = new Hono().get("/", async (c) => {
       maxEventsWithNews,
     });
 
-    const eventsWithRelatedNews = [];
+    const eventsWithRelatedNews: TokenVolatilityNewsEvent[] = [];
     const providersUsed = new Set<"rss" | "brave">(["rss"]);
     let braveFallbackUsed = false;
     let braveNewsUsed = false;
@@ -274,9 +384,52 @@ const app = new Hono().get("/", async (c) => {
       },
       events: eventsWithRelatedNews,
     };
-    const summary = includeSummary
-      ? await summarizeTokenVolatilityNews(dataWithoutSummary)
-      : null;
+    let summary = null;
+    let usage;
+
+    if (includeSummary && userId) {
+      if (isTokenVolatilityGeminiConfigured()) {
+        reservation = await reserveAiUsage(
+          userId,
+          AI_FEATURES.VolatilitySignalSummary,
+        );
+        if (!reservation.allowed) {
+          return c.json(
+            {
+              errorCode: "AI_DAILY_LIMIT_EXCEEDED",
+              success: false,
+              message:
+                "You have reached today's Volatility Signal Summary limit.",
+              ...reservation.usage,
+              upgradePath: "/pricing",
+            },
+            statusCode.TooManyRequests,
+          );
+        }
+
+        summary = await summarizeTokenVolatilityNews(dataWithoutSummary);
+        usageCounted =
+          summary.provider?.startsWith("gemini:") === true &&
+          !reservation.usage.disabled;
+        if (usageCounted) {
+          usage = reservation.usage;
+        } else {
+          await releaseAiUsage(reservation);
+          reservation = undefined;
+          usage = await getAiUsage(
+            userId,
+            AI_FEATURES.VolatilitySignalSummary,
+          );
+        }
+      } else {
+        summary = await summarizeTokenVolatilityNews(dataWithoutSummary);
+        usage = await getAiUsage(
+          userId,
+          AI_FEATURES.VolatilitySignalSummary,
+        );
+      }
+    }
+
     const freshData = {
       ...dataWithoutSummary,
       summary,
@@ -299,9 +452,18 @@ const app = new Hono().get("/", async (c) => {
       });
     }
 
+    const responseData: TokenVolatilityNewsResponseData = {
+      ...freshData,
+      cache: {
+        hit: false,
+        expiresAt: expiresAt.toISOString(),
+      },
+    };
+
     return c.json(
       {
         success: true,
+        ...(usage ? { usage, counted: usageCounted } : {}),
         data: {
           ...freshData,
           cache: {
@@ -313,6 +475,16 @@ const app = new Hono().get("/", async (c) => {
       statusCode.Ok,
     );
   } catch (err) {
+    if (reservation?.allowed && !usageCounted) {
+      try {
+        await releaseAiUsage(reservation);
+      } catch (releaseErr) {
+        console.error(
+          "[token-volatility-news] failed to release AI usage:",
+          releaseErr,
+        );
+      }
+    }
     console.error("[token-volatility-news] error:", err);
     return c.json(
       {

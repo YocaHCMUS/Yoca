@@ -109,9 +109,30 @@ function formatSmallCompact(value: number): string {
   return `0.0${toSubscript(zeroCount)}${significant}`;
 }
 
-function replaceNumbers(formatted: string, replacement: string): string {
-  const numberPattern = /-?(?:\d+(?:\.\d+)?|\.\d+)/;
-  return formatted.replace(numberPattern, replacement);
+function replaceNumberParts(
+  parts: Intl.NumberFormatPart[],
+  replacement: string,
+): string {
+  let replaced = false;
+
+  return parts
+    .map((part) => {
+      if (
+        part.type == "integer" ||
+        part.type == "fraction" ||
+        part.type == "decimal" ||
+        part.type == "group"
+      ) {
+        if (replaced) {
+          return "";
+        }
+        replaced = true;
+        return replacement;
+      }
+
+      return part.value;
+    })
+    .join("");
 }
 
 export function defineNumberFormat(
@@ -196,9 +217,12 @@ export function defineNumberFormat(
 
     // Apply small-number override first
     if (notation == "compact" && absValue < strategy.smallCompactThreshold) {
-      const overridden = replaceNumbers(
-        formatted,
-        formatSmallCompact(abs ? absValue : exchangedValue),
+      const parts = formatterMap
+        .get(key)!
+        .formatToParts(abs ? Math.abs(exchangedValue) : exchangedValue);
+      const overridden = replaceNumberParts(
+        parts,
+        formatSmallCompact(absValue),
       );
       return style == "unit" && unit ? `${overridden} ${unit}` : overridden;
     }

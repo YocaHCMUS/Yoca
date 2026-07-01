@@ -36,10 +36,6 @@ type WinrateData =  {
         avgWinUsd: number;
         avgLossUsd: number;
     }[];
-    metadata: {
-        period: string;
-        timestamp: number;
-    };
 }
 
 export function WinrateChart({
@@ -76,7 +72,7 @@ export function WinrateChart({
     [timeRange, walletsString],
   );
 
-  const winRateData : UseGetResp<WinrateData> = useGet(client.api.charts.winrate, 200, {
+  const winRateData : UseGetResp<WinrateData> = useGet(client.api.wallets.analysis.winrate, 200, {
     query: {
       wallets: walletsString ?? "",
       period: timeRange,
