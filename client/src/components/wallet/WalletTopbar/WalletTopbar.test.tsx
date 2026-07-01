@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   useAuth: vi.fn(),
   useWatchlist: vi.fn(),
   navigate: vi.fn(),
+  toast: vi.fn(),
 }));
 
 const translations: Record<string, string> = {
@@ -43,10 +44,8 @@ vi.mock("@/api/main", () => ({
   default: {
     api: {
       alerts: {
-        index: {
-          $get: mocks.getFollowedWallets,
-          $post: mocks.postFollowedWallet,
-        },
+        $get: mocks.getFollowedWallets,
+        $post: mocks.postFollowedWallet,
         ":id": {
           $delete: mocks.deleteFollowedWallet,
         },
@@ -95,24 +94,16 @@ vi.mock("@/components/wallet/WalletTagsModal/WalletTagsModal", () => ({
   WalletTagsModal: () => null,
 }));
 
-vi.mock("@carbon/react", () => ({
-  InlineNotification: ({
-    title,
-    subtitle,
-    onClose,
-  }: {
-    title: string;
-    subtitle?: string;
-    onClose?: () => void;
-  }) => (
-    <div role="status">
-      <strong>{title}</strong>
-      {subtitle ? <span>{subtitle}</span> : null}
-      {onClose ? <button onClick={onClose}>Close</button> : null}
-    </div>
-  ),
-  Tag: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+vi.mock("@/components/common/Toast", () => ({
+  useToast: () => ({ toast: mocks.toast }),
+}));
+
+vi.mock("@/components/common/Tooltip", () => ({
   Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
+
+vi.mock("@carbon/react", () => ({
+  Tag: ({ children }: { children: ReactNode }) => <span>{children}</span>,
 }));
 
 const walletAddress = "3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH";
@@ -128,7 +119,6 @@ function renderTopbar() {
       onExportPdf={vi.fn()}
       isExporting={false}
       currentPeriod="24H"
-      winRatePeriod="24H"
       onPeriodChange={vi.fn()}
     />,
   );
@@ -197,8 +187,13 @@ describe("WalletTopbar followed wallet bell", () => {
       });
     });
     expect(mocks.deleteFollowedWallet).not.toHaveBeenCalled();
-    expect(await screen.findByRole("status")).toHaveTextContent(
+    expect(mocks.toast).toHaveBeenCalledWith(
+      "success",
       "Wallet followed",
+      {
+        subtitle: "Manage alerts and delivery settings from Alerts.",
+        action: expect.objectContaining({ label: "Manage alerts" }),
+      },
     );
     expect(
       screen.getByRole("button", { name: "Unfollow wallet" }),
@@ -241,7 +236,8 @@ describe("WalletTopbar followed wallet bell", () => {
       });
     });
     expect(mocks.postFollowedWallet).not.toHaveBeenCalled();
-    expect(await screen.findByRole("status")).toHaveTextContent(
+    expect(mocks.toast).toHaveBeenCalledWith(
+      "success",
       "Wallet unfollowed",
     );
     expect(

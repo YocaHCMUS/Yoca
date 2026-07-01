@@ -1,0 +1,40 @@
+// Cards
+$card-radius: 12px;
+$card-border: 1px solid var(--yoca-border);
+$card-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+$card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+$card-padding: 1rem;
+$card-bg: var(--yoca-surface);
+
+// Metric cards
+$metric-card-min-width: 200px;
+$metric-value-size: 1.75rem;
+$metric-label-size: 0.75rem;
+
+// Page headers
+$page-header-bottom-margin: 1.5rem;
+$page-title-size: 1.5rem;
+$page-eyebrow-size: 0.7rem;
+
+// Pill tabs
+$pill-radius: 999px;
+$pill-padding: 0.35rem 0.75rem;
+$pill-font-size: 0.75rem;
+
+// Address pills
+$address-pill-radius: 6px;
+$address-pill-bg: var(--yoca-surface-hover);
+
+// Status badges
+$badge-radius: 6px;
+$badge-padding: 2px 8px;
+$badge-font-size: 0.65rem;
+$badge-font-weight: 600;
+
+// Empty states
+$empty-state-padding: 3rem 1rem;
+
+// Buttons
+$btn-radius: 8px;
+$btn-primary-gradient: linear-gradient(120deg, #7c3aed, #2563eb);
+$btn-danger-color: var(--yoca-danger);

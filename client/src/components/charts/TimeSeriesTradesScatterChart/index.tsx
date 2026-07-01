@@ -309,13 +309,13 @@ function buildMarkPointData(
 }
 
 export function getDefaultAggregationForDayRange(
-  days: 7 | 30 | 90,
+  days: "7" | "30" | "90",
 ): TradeAggregationConfig {
-  if (days === 7) {
+  if (days === "7") {
     return { timeBucketMs: 60 * 60 * 1000 };
   }
 
-  if (days === 30) {
+  if (days === "30") {
     return { timeBucketMs: 4 * 60 * 60 * 1000 };
   }
 

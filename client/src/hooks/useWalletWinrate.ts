@@ -23,7 +23,7 @@ export function useWalletWinrate(
     if (!walletAddress || walletAddress === "null") return;
 
     setLoading(true);
-    client.api.charts.winrate
+    client.api.wallets.analysis.winrate
       .$get({
         query: {
           wallets: walletAddress,

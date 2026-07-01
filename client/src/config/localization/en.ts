@@ -119,6 +119,8 @@ const ERROR = {
   NOT_FOUND: "Not found.",
   UNAUTHORIZED: "Unauthorized",
   RATE_LIMIT_EXCEEDED: "Too many requests. Please try again later.",
+  AI_DAILY_LIMIT_EXCEEDED:
+    "You have reached today's AI usage limit. Upgrade your plan for more requests.",
   BAD_GATEWAY: "Bad gateway. Please try again later.",
 } as const satisfies Record<ApiErrCode, string>;
 
@@ -151,8 +153,13 @@ export const translation = {
     selectAll: "Select All",
     from: "From",
     to: "To",
-    page: "Page {{count}}"
-  },
+    page: "Page {{count}}",
+      clear: "Clear",
+      noResults: "No results",
+      clearFilter: "Clear filter",
+      filterSearchPlaceholder: "Search {{column}}...",
+      searchAriaLabel: "Search table",
+    },
   // Authentication
   auth: {
     authenticating: "Authenticating...",
@@ -357,7 +364,7 @@ export const translation = {
   pricing: {
     title: "Pricing",
     subtitle:
-      "Outfit your platform with real-time crypto data and insights from 200+ markets with just 1 integration.",
+      "Choose the daily AI capacity that fits how deeply you research the market.",
     placeholder: "To be updated",
     free: "FREE",
     period: {
@@ -365,6 +372,23 @@ export const translation = {
     },
     tiers: {
       standard: { name: "STANDARD" },
+    },
+    features: {
+      label: "AI usage included",
+      askYoca: "Ask Yoca AI: {{$count}} questions per day",
+      generalAiChat: "General AI Chat: {{$count}} messages per day",
+      tokenChartNewsSummary:
+        "Token Chart News Summary: {{$count}} summaries per day",
+      volatilitySummary:
+        "Volatility Signal Summary: {{$count}} generations per day",
+      walletAiAnalysis:
+        "Wallet AI Analysis: {{$count}} analyses per day",
+      washTradingAiAnalysis:
+        "Wash Trading AI Analysis: {{$count}} analyses per day",
+      walletAiAnalysisLocked: "Wallet AI Analysis: Plus required",
+      washTradingAiAnalysisLocked:
+        "Wash Trading AI Analysis: Plus required",
+      dailyReset: "Daily limits reset at 00:00 UTC",
     },
     cta: {
       buyNow: "Buy Now",
@@ -1064,6 +1088,7 @@ export const translation = {
       summary: "Summary",
       riskAnalysis: "Risk Analysis",
       cachedResult: "Cached result",
+      signInRequired: "Sign in to use Wallet AI Swap Summary.",
       allTokens: "All Tokens",
       entry: "Entry",
       exit: "Exit",
@@ -1747,6 +1772,13 @@ export const translation = {
       noDataDelta: "--",
       removeTag: "Remove tag",
       atLeastOneTagRequired: "At least one tag is required",
+      searchTokenPlaceholder: "Search token",
+      symbolOrNamePlaceholder: "Symbol or name",
+      noMatchingTokens: "No matching tokens",
+      errors: {
+        balanceUnavailable:
+          "Balance history is temporarily unavailable. Please try again.",
+      },
     },
     walletSingleBalanceChart: {
       title: "Wallet Balance Trend",
@@ -1768,6 +1800,7 @@ export const translation = {
     },
     assetDistributionChart: {
       title: "Assets Distribution",
+      total: "Total",
       totalValue: "Total Value",
       asset: "Assets",
       value: "Value",
@@ -1997,6 +2030,7 @@ export const translation = {
     sendButtonTitle: "Send",
     promptMenuBtn: "Prompt menu",
     fabTitle: "Open AI Chat",
+    launcherLabel: "Ask YOCA AI",
     seriesLabel: "Series {{count}}",
     tldr: "TLDR",
     warnings: "Warnings",
@@ -2008,6 +2042,15 @@ export const translation = {
     confidenceLow: "Low",
     showAll: "Show all ({{count}})",
     showLess: "Show less",
+    aiDisclaimer:
+      "AI responses may be incomplete or incorrect and are not financial advice. Verify important details before acting.",
+    limitReachedTitle: "Daily AI chat limit reached",
+    limitReachedText:
+      "You have used all wallet chat messages available on your current plan today. Upgrade options can add more AI capacity for deeper research.",
+    limitReachedReset: "Daily limits reset at 00:00 UTC.",
+    upgradeOptions: "View upgrade options",
+    goToPricing: "Go to pricing",
+    notNow: "Not now",
     inputCounter: "{{current}}/{{max}}",
     inputOverLimit: "Question must be {{max}} characters or fewer.",
     clickToAsk: "Click to ask: {{query}}",
@@ -2142,6 +2185,12 @@ export const translation = {
       coingecko: "View on CoinGecko",
       aiWashTradingDetection: "Wash Trading Detection",
       aiWashTradingDetectionShort: "Wash Trading Detection",
+      washGateTitle: "Plus plan required",
+      washGateDescription:
+        "AI Wash Trading Detection is available on Plus and Pro. Upgrade before opening this analysis.",
+      washGateSignIn: "Sign in",
+      washGateClose: "Not now",
+      washGateUpgrade: "Upgrade",
     },
     chart: {
       loadingPool: "Loading chart...",

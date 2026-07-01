@@ -12,7 +12,7 @@ import {
   fetchHeliusSolanaPortfolio,
 
 } from "@sv/services/wallet/fetchers/walletDataFetcher.service.js";
-import { getWalletAnalysis } from "@sv/services/charts/winrate.service.js";
+import { getWalletAnalysis } from "@sv/services/wallet/wallet-analysis.js";
 import type { WalletAnalysisSelect } from "@sv/db/schema.js";
 import type {
   ChartAggregation,
@@ -189,34 +189,49 @@ export function normalizeOverviewTimePeriod(
   return DEFAULT_OVERVIEW_TIME_PERIOD;
 }
 
-export const OVERVIEW_PERIOD_KEYS: WalletOverviewPeriodKey[] = ["24H", "7D", "30D", "90D", "All"];
+export const OVERVIEW_PERIOD_KEYS: WalletOverviewPeriodKey[] = ["24H", "7D", "30D", "90D"];
 const DEFAULT_OVERVIEW_SELECTION: WalletOverviewPeriodKey = "24H";
 
 export function normalizeOverviewSelection(timePeriod?: WalletOverviewTimePeriod): WalletOverviewPeriodKey {
   const normalized = normalizeOverviewTimePeriod(timePeriod);
-  if (normalized === "1Y") {
-    return "All";
+  if (normalized == "24H") {
+    return "24H";
   }
-  if (normalized === "60D") {
+  if (normalized == "7D") {
+    return "7D";
+  }
+  if (normalized == "30D") {
+    return "30D";
+  }
+  if (normalized == "90D") {
     return "90D";
   }
-  return normalized as WalletOverviewPeriodKey;
+  if (normalized == "1Y") {
+    return "90D";
+  }
+  if (normalized == "60D") {
+    return "90D";
+  }
+  if (normalized == "All") {
+    return "90D";
+  }
+  return DEFAULT_OVERVIEW_SELECTION;
 }
 
-export function mapPeriodToCacheColumnSuffix(period: WalletOverviewPeriodKey): "24h" | "7d" | "30d" | "90d" | "all" {
-  if (period === "24H") {
+export function mapPeriodToCacheColumnSuffix(period: WalletOverviewPeriodKey): "24h" | "7d" | "30d" | "90d" {
+  if (period == "24H") {
     return "24h";
   }
-  if (period === "7D") {
+  if (period == "7D") {
     return "7d";
   }
-  if (period === "30D") {
+  if (period == "30D") {
     return "30d";
   }
-  if (period === "90D") {
+  if (period == "90D") {
     return "90d";
   }
-  return "all";
+  return "90d";
 }
 
 export function mapOverviewTimePeriodToPeriodSec(timePeriod: WalletOverviewTimePeriod): number {
@@ -599,13 +614,6 @@ export async function buildActivitySnapshotFromProviders(
       }
 
       const period = OVERVIEW_PERIOD_KEYS[current];
-      if (period === "All") {
-        results[current] = {
-          status: "rejected",
-          reason: new Error("All-time wallet analysis is unsupported"),
-        };
-        continue;
-      }
       try {
         const value = await getWalletAnalysis(address, period);
         results[current] = { status: "fulfilled", value };

@@ -1,6 +1,5 @@
 import SparklineChart from "@/components/charts/SparklineChart";
 import { TranslateFunction } from "@/contexts/LocalizationContext.tsx";
-import type { WalletSwapTokenInfo } from "@/services/wallet/walletApi.ts";
 import {
     CaretDown,
     CaretUp,
@@ -8,14 +7,11 @@ import {
     CheckmarkFilled,
     CloseFilled,
     Copy,
-    Edit,
     Login,
-    Subtract,
+    Subtract
 } from "@carbon/icons-react";
 import { Button } from "@carbon/react";
 import React, { useState } from "react";
-import { TokenIdentityCell } from "../token/TokenIdentityCell.tsx";
-import TrendNumWithSign, { ForceSign } from "../TrendNumWithSign.tsx";
 export interface SparklineCellValue {
   data: number[];
   positive?: boolean;
@@ -239,48 +235,6 @@ export const renderHash = (
       <CopyButton />
     </span>
   );
-};
-
-export const renderTokenCell = (
-  token: WalletSwapTokenInfo,
-  formatAmount: (value: number | null) => string,
-  classNames?: {
-    container?: string;
-    amount?: string;
-  },
-  imageSize?: number,
-  colorCoded?: boolean,
-  forceSign?: ForceSign,
-) => {
-  return (value: string, row?: unknown[] | null) => {
-    if (!Array.isArray(row)) {
-      return renderCode(value);
-    }
-
-    return (
-      <span className={classNames?.container}>
-        {colorCoded ? (
-          <TrendNumWithSign
-            prefixes="none"
-            value={token.amount}
-            formatter={formatAmount}
-            forceSign={forceSign}
-          />
-        ) : (
-          <span className={classNames?.amount}>
-            {formatAmount(token.amount)}
-          </span>
-        )}
-        <TokenIdentityCell
-          symbol={token.symbol || "Unknown"}
-          fullName={token.name ?? undefined}
-          imageUrl={token.logoUri ?? undefined}
-          imageSize={imageSize}
-          tooltipAlign="right"
-        />
-      </span>
-    );
-  };
 };
 
 export interface ProfilePortfolioCellRendererOptions {

@@ -1,3 +1,4 @@
+import { ELLIPSIS } from "@/config/constants";
 import { IconButton } from "@carbon/react";
 import { Checkmark, Copy } from "@carbon/react/icons";
 import { useState } from "react";
@@ -22,7 +23,7 @@ export function CpyBtn({ size, copyWhat, align = "right" }: CpyBtnProps) {
     <IconButton
       size={size}
       kind="ghost"
-      label={copied ? "Copied" : "Copy"}
+      label={copied ? "Copied" : `Copy ${copyWhat.toString().slice(0, 20) + ELLIPSIS}`}
       align={align}
       onClick={handleCopy}
       data-export-hide="copy-button"

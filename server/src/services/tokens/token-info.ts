@@ -15,7 +15,10 @@ import {
     type TokenMarketDataInsert,
     type TokenMetaInsert,
 } from "@sv/db/schema.js";
-import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
+import {
+  excludedAutoFromInsert,
+  excludedAutoNonNullFromInsert,
+} from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import * as moralis from "@sv/util/util-moralis.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
@@ -196,7 +199,11 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
       .values(metaValues)
       .onConflictDoUpdate({
         target: [tokenMeta.address],
-        set: excludedAutoFromInsert(tokenMeta, tokenMeta.address, metaValues),
+        set: excludedAutoNonNullFromInsert(
+          tokenMeta,
+          tokenMeta.address,
+          metaValues,
+        ),
       })
       .returning(),
     details: await db
@@ -266,7 +273,11 @@ async function fetchTokenMeta(tokenAddresses: string[]) {
     .values(metaValues)
     .onConflictDoUpdate({
       target: [tokenMeta.address],
-      set: excludedAutoFromInsert(tokenMeta, tokenMeta.address, metaValues),
+      set: excludedAutoNonNullFromInsert(
+        tokenMeta,
+        tokenMeta.address,
+        metaValues,
+      ),
     })
     .returning();
 }
@@ -352,7 +363,7 @@ export async function getTokenMeta(tokenAddresses: string[]) {
       .values(validMoralisValues)
       .onConflictDoUpdate({
         target: [tokenMeta.address],
-        set: excludedAutoFromInsert(
+        set: excludedAutoNonNullFromInsert(
           tokenMeta,
           tokenMeta.address,
           validMoralisValues,
