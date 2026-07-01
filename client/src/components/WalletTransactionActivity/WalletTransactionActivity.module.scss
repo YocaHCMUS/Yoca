@@ -59,3 +59,22 @@
   outline: 2px solid var(--yoca-primary, #7c3aed);
   outline-offset: 2px;
 }
+
+.timeFormatBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--yoca-text-muted, #94a3b8);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.timeFormatBtn:hover {
+  background: var(--yoca-surface-hover, rgba(148, 163, 184, 0.12));
+  color: var(--yoca-primary, #7c3aed);
+}

@@ -87,6 +87,7 @@ interface TblProps {
   sortConfigs?: Record<string, TbleSortConfig>;
   filterSchema?: Record<string, TbleFilterConfig | null>;
   cellRenderers?: Record<string, CellRenderer>;
+  headerActions?: Record<string, ReactNode>;
   enableSearch?: boolean;
   searchPlaceholder?: string;
   searchFields?: string[];
@@ -235,6 +236,7 @@ export default function Tble({
   sortConfigs,
   filterSchema,
   cellRenderers,
+  headerActions,
   enableSearch = false,
   searchPlaceholder,
   searchFields,
@@ -246,6 +248,7 @@ export default function Tble({
 }: TblProps) {
   void _size;
   const { tr } = useLocalization();
+  const rootRef = useRef<HTMLDivElement>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageSize, setCurrentPageSize] = useState(Math.max(1, pageSize));
   const [sortState, setSortState] = useState<{ key: string; direction: SortDirection } | null>(null);
@@ -426,13 +429,14 @@ export default function Tble({
     setFilterSearches({});
     setOpenFilterKey(key);
     const btn = filterButtonRefs.current[key];
-    if (btn) {
-      const rect = btn.getBoundingClientRect();
+    if (btn && rootRef.current) {
+      const btnRect = btn.getBoundingClientRect();
+      const rootRect = rootRef.current.getBoundingClientRect();
       const popupWidth = 384;
       const offset = 8;
       setFilterPopupPos({
-        top: rect.bottom + offset,
-        left: Math.max(offset, Math.min(rect.left, window.innerWidth - popupWidth - offset)),
+        top: btnRect.bottom - rootRect.top + offset,
+        left: Math.max(offset, Math.min(btnRect.left - rootRect.left, rootRect.width - popupWidth - offset)),
       });
     }
   };
@@ -659,11 +663,11 @@ export default function Tble({
       </div>
     );
 
-    const portalTarget = themeRef.current;
-    return portalTarget ? createPortal(popup, portalTarget) : popup;
+    return popup;
   };
 
   const hasHeader = Boolean(title || description || toolBar || enableSearch || activeFilters.length > 0);
+
   const containerClass = [
     styles.root,
     boxed ? styles.boxed : "",
@@ -673,7 +677,7 @@ export default function Tble({
 
   if (loading || rows.length === 0) {
     return (
-      <section className={containerClass} style={{ marginTop }} aria-label={ariaLabel}>
+      <section ref={rootRef} className={containerClass} style={{ marginTop }} aria-label={ariaLabel}>
         {hasHeader && (
           <TbleHeader
             title={title}
@@ -695,7 +699,7 @@ export default function Tble({
   }
 
   return (
-    <section className={containerClass} style={{ marginTop }} aria-label={ariaLabel}>
+    <section ref={rootRef} className={containerClass} style={{ marginTop }} aria-label={ariaLabel}>
       {hasHeader && (
         <TbleHeader
           title={title}
@@ -710,7 +714,6 @@ export default function Tble({
         />
       )}
       <div className={styles.tableShell} style={{ height }}>
-        {renderFilterPopover()}
         <table className={styles.table}>
           {!hideHeaders && (
             <thead>
@@ -720,6 +723,7 @@ export default function Tble({
                   const sortable = Boolean(sortConfigs?.[header.key]);
                   const filterable = Boolean(filterSchema?.[header.key]);
                   const sortActive = sortState?.key === header.key;
+                  const headerAction = headerActions?.[header.key];
                   return (
                     <th key={header.key} className={`${config.className} ${styles.headerCell}`} style={config.style} scope="col">
                       <div className={styles.headerInner}>
@@ -747,6 +751,11 @@ export default function Tble({
                           >
                             <Filter size={13} />
                           </button>
+                        )}
+                        {headerAction && (
+                          <span className={styles.headerActionWrapper}>
+                            {headerAction}
+                          </span>
                         )}
                       </div>
                     </th>
@@ -780,6 +789,7 @@ export default function Tble({
           </tbody>
         </table>
       </div>
+      {renderFilterPopover()}
       {enablePagination && (
         <div className={styles.pagination}>
           <span className={styles.paginationText}>
@@ -868,36 +878,42 @@ function TbleHeader({
 }) {
   const hasHeaderTitle = Boolean(title || description);
   return (
-    <div className={`${styles.header} ${!hasHeaderTitle ? styles.headerOnlyToolbar : ''}`}>
-      {(title || description) && (
-        <div className={styles.titleBlock}>
-          {title && <strong>{title}</strong>}
-          {description && <span>{description}</span>}
+    <>
+      <div className={`${styles.header} ${!hasHeaderTitle ? styles.headerOnlyToolbar : ''}`}>
+        {(title || description) && (
+          <div className={styles.titleBlock}>
+            {title && <strong>{title}</strong>}
+            {description && <span>{description}</span>}
+          </div>
+        )}
+        <div className={styles.toolbar}>
+          {enableSearch && (
+            <label className={styles.searchBox}>
+              <Search size={15} />
+              <input
+                value={searchValue}
+                onChange={(event) => onSearchChange(event.target.value)}
+                placeholder={searchPlaceholder}
+                aria-label="Search table"
+              />
+            </label>
+          )}
+          {toolBar}
+        </div>
+      </div>
+      {activeFilters.length > 0 && (
+        <div className={styles.filterTagsRow}>
+          {activeFilters.map((filter) => (
+            <ChartTag
+              key={filter.key}
+              label={`${filter.label}: ${formatFilterValue(filter.schema, filter.value)}`}
+              onDismiss={() => removeFilter(filter.key)}
+              dismissLabel="Clear filter"
+            />
+          ))}
         </div>
       )}
-      <div className={styles.toolbar}>
-        {enableSearch && (
-          <label className={styles.searchBox}>
-            <Search size={15} />
-            <input
-              value={searchValue}
-              onChange={(event) => onSearchChange(event.target.value)}
-              placeholder={searchPlaceholder}
-              aria-label="Search table"
-            />
-          </label>
-        )}
-        {activeFilters.map((filter) => (
-          <ChartTag
-            key={filter.key}
-            label={`${filter.label}: ${formatFilterValue(filter.schema, filter.value)}`}
-            onDismiss={() => removeFilter(filter.key)}
-            dismissLabel="Clear filter"
-          />
-        ))}
-        {toolBar}
-      </div>
-    </div>
+    </>
   );
 }
 

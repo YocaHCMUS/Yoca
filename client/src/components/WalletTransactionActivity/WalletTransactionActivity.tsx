@@ -1,20 +1,19 @@
 import client from "@/api/main";
-import Tble, { TbleFilterType } from "@/components/Tble";
+import Tble, { TbleFilterType, TbleSortType } from "@/components/Tble";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal";
 import { TransferDetailModal } from "@/components/wallet/TransferDetailModal/TransferDetailModal";
 import { useGet, UseGetResp } from "@/hooks/useGet";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type { WalletSwap, WalletTransfer } from "@/services/wallet/walletApi";
 import { useMemo, useState } from "react";
-import { PillTabs } from "@/components/common/PillTabs/PillTabs";
-import { IconActionButton } from "@/components/charts/shared/ChartControls";
+import { IconActionButton, SegmentedControl } from "@/components/charts/shared/ChartControls";
 import { TknImg } from "../TknImg";
 import { Flex } from "../Flex";
 import { Txt } from "../Txt";
 import { CpyBtn } from "../CpyBtn";
 import { TrendNum } from "../TrendNum";
 import styles from "./WalletTransactionActivity.module.scss";
-import { ArrowRight, ExternalLink } from "lucide-react";
+import { ArrowRight, Clock, ExternalLink } from "lucide-react";
 import { SOLSCAN_TX_URL } from "@/config/constants";
 
 type WalletSwapData = {
@@ -221,6 +220,12 @@ export function WalletTransactionActivity({ address }: { address: string }) {
     useState<WalletTransfer | null>(null);
   const [hideLowValue, setHideLowValue] = useState(false);
   const [activeActivityTab, setActiveActivityTab] = useState<ActivityTab>("swaps");
+  const [timeFormat, setTimeFormat] = useState<"relativeShort" | "datetime" | "date">("relativeShort");
+  const cycleTimeFormat = () => setTimeFormat((prev) =>
+    prev === "relativeShort" ? "datetime"
+    : prev === "datetime" ? "date"
+    : "relativeShort",
+  );
   const minValueUsd = hideLowValue ? 1 : undefined;
 
   const swapResp: UseGetResp<WalletSwapData> = useGet(
@@ -244,11 +249,12 @@ export function WalletTransactionActivity({ address }: { address: string }) {
     return transactions.map((tx) => {
       const soldSym = tx.sold.symbol?.toUpperCase() ?? tx.sold.address;
       const boughtSym = tx.bought.symbol?.toUpperCase() ?? tx.bought.address;
-      const time = (
-        <Txt size="sm">
-          {fmt.datetime.relativeShort(tx.blockTimestampMs, true)}
-        </Txt>
-      );
+      const timeLabel = timeFormat === "relativeShort"
+        ? fmt.datetime.relativeShort(tx.blockTimestampMs, true)
+        : timeFormat === "datetime"
+          ? fmt.datetime.datetime(tx.blockTimestampMs)
+          : fmt.datetime.date(tx.blockTimestampMs);
+      const time = <Txt size="sm">{timeLabel}</Txt>;
 
       const flowDisplay = (
         <SwapFlowCell
@@ -285,10 +291,14 @@ export function WalletTransactionActivity({ address }: { address: string }) {
         flow: flowDisplay,
         value,
         transaction,
+        soldSymbol: soldSym,
+        boughtSymbol: boughtSym,
+        totalValueUsd: tx.totalValueUsd,
+        blockTimestampMs: tx.blockTimestampMs,
         _searchText: `${soldSym} ${boughtSym} ${tx.totalValueUsd ?? ""}`,
       };
     });
-  }, [swapResp.data, fmt, tr]);
+  }, [swapResp.data, fmt, timeFormat, tr]);
 
   // Transfer rows – plain text
   const transferRows = useMemo(() => {
@@ -297,11 +307,12 @@ export function WalletTransactionActivity({ address }: { address: string }) {
     return transactions
       .map((tx) => {
         const tokenSym = tx.token.symbol?.toUpperCase() ?? tx.token.address;
-        const time = (
-          <Txt size="sm">
-            {fmt.datetime.relativeShort(tx.blockTimestampMs, true)}
-          </Txt>
-        );
+        const timeLabel = timeFormat === "relativeShort"
+          ? fmt.datetime.relativeShort(tx.blockTimestampMs, true)
+          : timeFormat === "datetime"
+            ? fmt.datetime.datetime(tx.blockTimestampMs)
+            : fmt.datetime.date(tx.blockTimestampMs);
+        const time = <Txt size="sm">{timeLabel}</Txt>;
 
         const flowDisplay = (
           <TransferFlowCell
@@ -340,10 +351,16 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           token: tokenDisplay,
           value,
           transaction,
+          direction: tx.direction,
+          counterpartyAddress: tx.counterpartyAddress,
+          tokenSymbol: tokenSym,
+          tokenAmount: tx.token.amount,
+          valueUsd: tx.valueUsd,
+          blockTimestampMs: tx.blockTimestampMs,
           _searchText: `${tokenSym} ${tx.valueUsd} ${tx.counterpartyAddress}`,
         };
       });
-  }, [transferResp.data, fmt, address, tr]);
+  }, [transferResp.data, fmt, address, timeFormat, tr]);
 
   // Headers – plain text
   const swapHeaders = [
@@ -375,14 +392,14 @@ export function WalletTransactionActivity({ address }: { address: string }) {
   return (
     <div className={styles.root}>
       <div className={styles.tabsHeader}>
-        <PillTabs
+        <SegmentedControl
           options={[
             { value: "swaps", label: "Swaps" },
             { value: "transfers", label: "Transfers" },
           ]}
           value={activeActivityTab}
           onChange={(value) => setActiveActivityTab(value as ActivityTab)}
-          size="sm"
+          ariaLabel="Transaction type"
         />
         <div className={styles.headerSpacer} />
         <LowValueFilter
@@ -405,7 +422,32 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           pageUnknown
           enableSearch
           searchFields={["_searchText"]}
-          filterSchema={{ value: { type: TbleFilterType.Range, min: 0, max: 1_000_000, step: 1 } }}
+          filterSchema={{
+            flow: {
+              type: TbleFilterType.Composite,
+              filters: {
+                sold: { type: TbleFilterType.Select, field: "soldSymbol" },
+                bought: { type: TbleFilterType.Select, field: "boughtSymbol" },
+              },
+            },
+            value: { type: TbleFilterType.Range, field: "totalValueUsd", min: 0, max: 1_000_000, step: 1 },
+          }}
+          sortConfigs={{
+            time: { type: TbleSortType.Number, field: "blockTimestampMs" },
+            value: { type: TbleSortType.Number, field: "totalValueUsd" },
+          }}
+          headerActions={{
+            time: (
+              <button
+                type="button"
+                className={styles.timeFormatBtn}
+                aria-label={`Time format: ${timeFormat}`}
+                onClick={(e) => { e.stopPropagation(); cycleTimeFormat(); }}
+              >
+                <Clock size={13} />
+              </button>
+            ),
+          }}
           onRowClick={(row) => {
             const transaction = swapResp.data?.transactions.find(
               (tx, index) =>
@@ -461,7 +503,39 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           pageUnknown
           enableSearch
           searchFields={["_searchText"]}
-          filterSchema={{ value: { type: TbleFilterType.Range, min: 0, max: 1_000_000, step: 1 } }}
+          filterSchema={{
+            flow: {
+              type: TbleFilterType.Composite,
+              filters: {
+                direction: { type: TbleFilterType.Select, field: "direction" },
+                counterparty: { type: TbleFilterType.Select, field: "counterpartyAddress" },
+              },
+            },
+            token: {
+              type: TbleFilterType.Composite,
+              filters: {
+                symbol: { type: TbleFilterType.Select, field: "tokenSymbol" },
+                amount: { type: TbleFilterType.Range, field: "tokenAmount", min: 0, max: 1_000_000, step: 0.01 },
+              },
+            },
+            value: { type: TbleFilterType.Range, field: "valueUsd", min: 0, max: 1_000_000, step: 1 },
+          }}
+          sortConfigs={{
+            time: { type: TbleSortType.Number, field: "blockTimestampMs" },
+            value: { type: TbleSortType.Number, field: "valueUsd" },
+          }}
+          headerActions={{
+            time: (
+              <button
+                type="button"
+                className={styles.timeFormatBtn}
+                aria-label={`Time format: ${timeFormat}`}
+                onClick={(e) => { e.stopPropagation(); cycleTimeFormat(); }}
+              >
+                <Clock size={13} />
+              </button>
+            ),
+          }}
           onRowClick={(row) => {
             const transaction = transferResp.data?.transactions.find(
               (tx, index) =>

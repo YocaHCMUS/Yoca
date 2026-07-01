@@ -193,10 +193,15 @@ export function WalletHoldingsPanel({
         filterSchema={{
           token: { type: TbleFilterType.Select, field: "tokenLabel" },
           price: { type: TbleFilterType.Range, field: "priceUsd", min: 0, max: 500, step: 0.01 },
-          holdingValue: { type: TbleFilterType.Range, field: "valueUsd", min: 0, max: 100_000, step: 0.01 },
+          holdingValue: {
+            type: TbleFilterType.Composite,
+            filters: {
+              amount: { type: TbleFilterType.Range, field: "amount", min: 0, max: 1_000_000, step: 0.01 },
+              value: { type: TbleFilterType.Range, field: "valueUsd", min: 0, max: 100_000, step: 0.01 },
+            },
+          },
         }}
         sortConfigs={{
-          token: { type: TbleSortType.String, field: "tokenLabel" },
           price: { type: TbleSortType.Number, field: "priceUsd" },
           holdingValue: { type: TbleSortType.Number, field: "valueUsd" },
         }}

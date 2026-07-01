@@ -3,11 +3,11 @@ import { useChartContext } from "@/contexts/ChartContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useChartFiltersSync } from "@/hooks/useChartFiltersSync";
 import {
-    CHART_COLOR_PALETTE,
-    useCarbonChartBaseOption,
+  CHART_COLOR_PALETTE,
+  useCarbonChartBaseOption,
 } from "@/util/carbon-chart-base";
 import {
-    formatTimestampWithTimezone,
+  formatTimestampWithTimezone,
 } from "@/util/chart-helpers";
 import { createTooltipHeader, createTooltipRow } from "@/util/tooltip-helpers";
 import { attachChartDayClick } from "@/util/chart-click";
@@ -22,7 +22,7 @@ import {
   type SegmentedControlOption,
   chartControlStyles,
 } from "@/components/charts/shared/ChartControls";
-import { BarChart3, LineChart } from "lucide-react";
+import { BarChart3, ChartNoAxesCombined, LineChart } from "lucide-react";
 
 type PnLPoint = {
   timestamp: number;
@@ -395,7 +395,7 @@ export const PnLChart: React.FC<PnLChartProps> = ({
   const displayModeOptions: SegmentedControlOption<PnLDisplayMode>[] = [
     { value: "daily", icon: BarChart3, label: tr("charts.pnlChart.dailyPnL") },
     { value: "cumulative", icon: LineChart, label: tr("charts.pnlChart.cumulativePnL") },
-    { value: "both", icon: BarChart3, label: tr("charts.pnlChart.both") },
+    { value: "both", icon: ChartNoAxesCombined, label: tr("charts.pnlChart.both") },
   ];
 
   const periodOptions: Array<{ value: PnLTimePeriod; label: string }> = [

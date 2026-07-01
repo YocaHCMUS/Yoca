@@ -60,6 +60,14 @@
   }
 }
 
+.filterTagsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 1rem 0.65rem;
+}
+
 .searchBox,
 .filterSearchRow {
   display: inline-flex;
@@ -189,6 +197,30 @@
   cursor: pointer;
 }
 
+.headerActionWrapper {
+  display: inline-flex;
+  align-items: center;
+}
+
+.headerActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--yoca-text-muted, #94a3b8);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.headerActionButton:hover {
+  background: var(--yoca-surface-hover, rgba(148, 163, 184, 0.12));
+  color: var(--yoca-primary, #7c3aed);
+}
+
 .filterButton:hover,
 .filterPopoverHeader button:hover,
 .pageButtons button:hover:not(:disabled) {
@@ -217,7 +249,7 @@
 }
 
 .filterPopover {
-  position: fixed;
+  position: absolute;
   z-index: 30;
   display: grid;
   gap: 0.85rem;
@@ -227,17 +259,23 @@
   padding: 0.9rem;
   border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.18));
   border-radius: 12px;
-  background: var(--yoca-surface, #121826);
+  background: #1a2035;
   box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.32));
 }
 
 .filterPopoverHeader,
-.filterActions,
 .rangeReadout,
 .pagination {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.filterActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 0.75rem;
 }
 

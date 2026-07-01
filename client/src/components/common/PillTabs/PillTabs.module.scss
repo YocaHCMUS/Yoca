@@ -2,33 +2,51 @@
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  padding: 6px 8px;
+  border: 1px solid var(--yoca-border);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 30%),
+    var(--yoca-surface);
+  box-shadow: var(--yoca-shadow-card, 0 1px 3px rgba(0, 0, 0, 0.04));
+  backdrop-filter: blur(18px);
 }
 
 .pill {
   border-radius: 999px;
   padding: 0.35rem 0.75rem;
   font-size: 0.75rem;
-  font-weight: 500;
-  border: 1px solid var(--yoca-border);
+  font-weight: 600;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--yoca-text-muted);
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 
   &:hover:not(.active) {
-    background: var(--yoca-surface-hover);
-    border-color: var(--yoca-text-muted);
+    color: var(--yoca-text-main);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.04);
   }
 }
 
 .active {
-  background: var(--yoca-primary);
-  border-color: var(--yoca-primary);
-  color: #fff;
+  color: var(--yoca-text-main);
+  background:
+    linear-gradient(135deg, rgba(124, 58, 237, 0.22), rgba(37, 99, 235, 0.14)),
+    rgba(255, 255, 255, 0.03);
+  border-color: rgba(124, 58, 237, 0.22);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
 }
 
 .sm .pill {
-  padding: 0.25rem 0.6rem;
-  font-size: 0.7rem;
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  border-radius: 10px;
 }
