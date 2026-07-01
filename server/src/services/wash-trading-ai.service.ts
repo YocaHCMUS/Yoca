@@ -1066,6 +1066,12 @@ export async function analyzeWashTradingWithAI(params: {
   algorithm?: GnnAlgorithm;
   language?: WashTradingLanguage;
   limit?: number;
+  /**
+   * Skip the Gemini verdict-generation call when another server feature already
+   * needs the deterministic graph analysis as context (for example the scoped
+   * wash-trading chat). The graph/risk calculation remains identical.
+   */
+  generateNarrative?: boolean;
 }): Promise<WashTradingAIResult> {
   const mint = params.mint.trim();
   const symbol = (params.symbol ?? "TOKEN").trim() || "TOKEN";
@@ -1144,17 +1150,19 @@ export async function analyzeWashTradingWithAI(params: {
 
   const localAI = buildLocalAIAnalysis(symbol, circularPatterns, suspiciousWallets, overallRiskScore, source, localizedReason, algorithm, language);
   addLog(language === "vi" ? "Tạo AI explanation cho kết quả phân tích" : "Generating AI explanation for analysis result", "info");
-  const aiAnalysis = await tryGeminiAnalysis(localAI, {
-    mint,
-    symbol,
-    summary,
-    circularPatterns,
-    suspiciousWallets,
-    dataSource: source,
-    dataSourceReason: localizedReason,
-    algorithm,
-    language,
-  });
+  const aiAnalysis = params.generateNarrative === false
+    ? localAI
+    : await tryGeminiAnalysis(localAI, {
+      mint,
+      symbol,
+      summary,
+      circularPatterns,
+      suspiciousWallets,
+      dataSource: source,
+      dataSourceReason: localizedReason,
+      algorithm,
+      language,
+    });
   addLog(language === "vi"
     ? `Hoàn tất phân tích — Verdict: ${aiAnalysis.verdict}`
     : `Analysis completed — Verdict: ${aiAnalysis.verdict}`, aiAnalysis.verdict === "HIGH_RISK" ? "high" : aiAnalysis.verdict === "MEDIUM_RISK" ? "medium" : "success");

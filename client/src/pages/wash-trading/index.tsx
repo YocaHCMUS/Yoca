@@ -7,6 +7,7 @@ import { useUserTheme } from "@/contexts/ThemeContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { getUserSubscription, type PlanTier } from "@/services/profile/subscriptionApi";
 import styles from "./wash-trading.module.scss";
+import { WashTradingChat } from "@/components/wash-trading/WashTradingChat/WashTradingChat";
 
 const API_DOMAIN: string = import.meta.env.VITE_CLIENT_API_DOMAIN || "";
 
@@ -1674,6 +1675,20 @@ const WashTradingPage: React.FC = () => {
             </div>
           </div>
         )}
+
+        <WashTradingChat
+          context={{
+            mint: targetMint,
+            symbol: symbol || result?.symbol || "TOKEN",
+            timeframe,
+            algorithm: algoTab,
+            dataSource: result?.dataSource,
+            analyzedAt: result?.analyzedAt,
+            riskScore: result?.summary.overallRiskScore,
+            isAnalysisReady: Boolean(result),
+          }}
+          disabled={isAnalyzing || !targetMint}
+        />
       </div>
     </PageWrapper>
   );
