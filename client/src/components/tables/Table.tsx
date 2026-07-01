@@ -166,6 +166,8 @@ export interface TableProps {
     onTableAiAction?: (e: React.MouseEvent<HTMLElement>) => void;
     /** Per-row AI action button */
     onRowAiAction?: (row: any[], rowIndex: number, e: React.MouseEvent<HTMLElement>) => void;
+    /** Optional wrapper className passed to the shared table shell. */
+    wrapperClassName?: string;
 }
 
 function isEnabledFilterConfig(
@@ -457,6 +459,7 @@ export const Table: React.FC<TableProps> = ({
     loading = false,
     onTableAiAction,
     onRowAiAction,
+    wrapperClassName,
 }) => {
     const { tr } = useLocalization();
     const { labels: headerLabels, minWidths: headerMinWidths, aligns: headerAligns } =
@@ -1107,6 +1110,7 @@ export const Table: React.FC<TableProps> = ({
         <TableWrapper
             title={title}
             actions={<>{actions}{headerAiButton}</>}
+            className={wrapperClassName}
             onExport={handleExport}
             enableExport={enableExport}
             isEmpty={!loading && filteredData.length === 0}

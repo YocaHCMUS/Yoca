@@ -1,26 +1,19 @@
 import client from "@/api/main";
-import Tble from "@/components/Tble"; // adjust import path as needed
+import Tble, { TbleFilterType, TbleSortType } from "@/components/Tble";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal";
 import { TransferDetailModal } from "@/components/wallet/TransferDetailModal/TransferDetailModal";
 import { useGet, UseGetResp } from "@/hooks/useGet";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type { WalletSwap, WalletTransfer } from "@/services/wallet/walletApi";
 import { useMemo, useState } from "react";
-import {
-    TabPanel,
-    TabPanels,
-    Tab,
-    Tabs,
-    TabList,
-    Checkbox,
-    IconButton,
-} from "@carbon/react";
+import { IconActionButton, SegmentedControl } from "@/components/charts/shared/ChartControls";
 import { TknImg } from "../TknImg";
 import { Flex } from "../Flex";
 import { Txt } from "../Txt";
 import { CpyBtn } from "../CpyBtn";
 import { TrendNum } from "../TrendNum";
-import { Launch } from "@carbon/icons-react";
+import styles from "./WalletTransactionActivity.module.scss";
+import { ArrowRight, Clock, ExternalLink } from "lucide-react";
 import { SOLSCAN_TX_URL } from "@/config/constants";
 
 type WalletSwapData = {
@@ -48,6 +41,8 @@ type WalletSwapData = {
   }[];
   cursor: string | null;
 };
+
+type ActivityTab = "swaps" | "transfers";
 
 type WalletTransferData = {
   transactions: {
@@ -81,13 +76,25 @@ function LowValueFilter({
   const { tr } = useLocalization();
 
   return (
-    <Flex align="center" justify="end" gap={2} pBlock={3} pInline={4}>
-      <Checkbox
-        id={id}
-        labelText={tr("walletPage.hideLowValue")}
-        checked={checked}
-        onChange={(_, { checked: nextChecked }) => onChange(nextChecked)}
-      />
+    <Flex
+      className={styles.lowValueFilter}
+      align="center"
+      justify="end"
+      gap={2}
+      pBlock={3}
+      pInline={4}
+    >
+      <label className={styles.checkboxLabel} htmlFor={id}>
+        <input
+          id={id}
+          className={styles.checkboxInput}
+          type="checkbox"
+          checked={checked}
+          onChange={(event) => onChange(event.target.checked)}
+        />
+        <span className={styles.checkboxBox} aria-hidden="true" />
+        <span>{tr("walletPage.hideLowValue")}</span>
+      </label>
     </Flex>
   );
 }
@@ -142,12 +149,83 @@ function TokenAmountCell({
   );
 }
 
+function SwapFlowCell({
+  sold,
+  bought,
+}: {
+  sold: {
+    address: string;
+    amount: number;
+    symbol: string | null;
+    logoUri: string | null;
+  };
+  bought: {
+    address: string;
+    amount: number;
+    symbol: string | null;
+    logoUri: string | null;
+  };
+}) {
+  const soldSym = sold.symbol?.toUpperCase() ?? sold.address;
+  const boughtSym = bought.symbol?.toUpperCase() ?? bought.address;
+  return (
+    <Flex gap={4} align="center">
+      <TokenAmountCell
+        address={sold.address}
+        amount={sold.amount}
+        symbol={soldSym}
+        logoUri={sold.logoUri}
+        direction="out"
+      />
+      <ArrowRight size={14} />
+      <TokenAmountCell
+        address={bought.address}
+        amount={bought.amount}
+        symbol={boughtSym}
+        logoUri={bought.logoUri}
+        direction="in"
+      />
+    </Flex>
+  );
+}
+
+function TransferFlowCell({
+  direction,
+  walletAddress,
+  counterpartyAddress,
+}: {
+  direction: "send" | "receive";
+  walletAddress: string;
+  counterpartyAddress: string;
+}) {
+  return (
+    <Flex gap={4} align="center">
+      <AddressCell
+        address={direction === "send" ? walletAddress : counterpartyAddress}
+        secondary={direction === "receive"}
+      />
+      <ArrowRight size={14} />
+      <AddressCell
+        address={direction === "send" ? counterpartyAddress : walletAddress}
+        secondary={direction === "send"}
+      />
+    </Flex>
+  );
+}
+
 export function WalletTransactionActivity({ address }: { address: string }) {
   const { tr, fmt } = useLocalization();
   const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
   const [selectedTransfer, setSelectedTransfer] =
     useState<WalletTransfer | null>(null);
   const [hideLowValue, setHideLowValue] = useState(false);
+  const [activeActivityTab, setActiveActivityTab] = useState<ActivityTab>("swaps");
+  const [timeFormat, setTimeFormat] = useState<"relativeShort" | "datetime" | "date">("relativeShort");
+  const cycleTimeFormat = () => setTimeFormat((prev) =>
+    prev === "relativeShort" ? "datetime"
+    : prev === "datetime" ? "date"
+    : "relativeShort",
+  );
   const minValueUsd = hideLowValue ? 1 : undefined;
 
   const swapResp: UseGetResp<WalletSwapData> = useGet(
@@ -171,27 +249,27 @@ export function WalletTransactionActivity({ address }: { address: string }) {
     return transactions.map((tx) => {
       const soldSym = tx.sold.symbol?.toUpperCase() ?? tx.sold.address;
       const boughtSym = tx.bought.symbol?.toUpperCase() ?? tx.bought.address;
-      const time = (
-        <Txt size="sm">
-          {fmt.datetime.relativeShort(tx.blockTimestampMs, true)}
-        </Txt>
-      );
-      const soldDisplay = (
-        <TokenAmountCell
-          address={tx.sold.address}
-          amount={tx.sold.amount}
-          symbol={soldSym}
-          logoUri={tx.sold.logoUri}
-          direction="out"
-        />
-      );
-      const boughtDisplay = (
-        <TokenAmountCell
-          address={tx.bought.address}
-          amount={tx.bought.amount}
-          symbol={boughtSym}
-          logoUri={tx.bought.logoUri}
-          direction="in"
+      const timeLabel = timeFormat === "relativeShort"
+        ? fmt.datetime.relativeShort(tx.blockTimestampMs, true)
+        : timeFormat === "datetime"
+          ? fmt.datetime.datetime(tx.blockTimestampMs)
+          : fmt.datetime.date(tx.blockTimestampMs);
+      const time = <Txt size="sm">{timeLabel}</Txt>;
+
+      const flowDisplay = (
+        <SwapFlowCell
+          sold={{
+            address: tx.sold.address,
+            amount: tx.sold.amount,
+            symbol: tx.sold.symbol,
+            logoUri: tx.sold.logoUri,
+          }}
+          bought={{
+            address: tx.bought.address,
+            amount: tx.bought.amount,
+            symbol: tx.bought.symbol,
+            logoUri: tx.bought.logoUri,
+          }}
         />
       );
       const value = (
@@ -199,27 +277,28 @@ export function WalletTransactionActivity({ address }: { address: string }) {
       );
 
       const transaction = (
-        <IconButton
+        <IconActionButton
           href={`${SOLSCAN_TX_URL}/${tx.transactionHash}`}
           label={tr("walletPage.openInSolscan")}
-          kind="ghost"
-          size="xs"
+          icon={ExternalLink}
           target="_blank"
-        >
-          <Launch size={12} />
-        </IconButton>
+        />
       );
 
       return {
         id: `${tx.transactionHash}-${tx.actId}`,
         time,
-        tokenSold: soldDisplay,
-        tokenBought: boughtDisplay,
+        flow: flowDisplay,
         value,
         transaction,
+        soldSymbol: soldSym,
+        boughtSymbol: boughtSym,
+        totalValueUsd: tx.totalValueUsd,
+        blockTimestampMs: tx.blockTimestampMs,
+        _searchText: `${soldSym} ${boughtSym} ${tx.totalValueUsd ?? ""}`,
       };
     });
-  }, [swapResp.data, fmt]);
+  }, [swapResp.data, fmt, timeFormat, tr]);
 
   // Transfer rows – plain text
   const transferRows = useMemo(() => {
@@ -228,22 +307,18 @@ export function WalletTransactionActivity({ address }: { address: string }) {
     return transactions
       .map((tx) => {
         const tokenSym = tx.token.symbol?.toUpperCase() ?? tx.token.address;
-        const time = (
-          <Txt size="sm">
-            {fmt.datetime.relativeShort(tx.blockTimestampMs, true)}
-          </Txt>
-        );
+        const timeLabel = timeFormat === "relativeShort"
+          ? fmt.datetime.relativeShort(tx.blockTimestampMs, true)
+          : timeFormat === "datetime"
+            ? fmt.datetime.datetime(tx.blockTimestampMs)
+            : fmt.datetime.date(tx.blockTimestampMs);
+        const time = <Txt size="sm">{timeLabel}</Txt>;
 
-        const sender = (
-          <AddressCell
-            address={tx.direction == "send" ? address : tx.counterpartyAddress}
-            secondary={tx.direction == "receive"}
-          />
-        );
-        const receiver = (
-          <AddressCell
-            address={tx.direction == "send" ? tx.counterpartyAddress : address}
-            secondary={tx.direction == "send"}
+        const flowDisplay = (
+          <TransferFlowCell
+            direction={tx.direction}
+            walletAddress={address}
+            counterpartyAddress={tx.counterpartyAddress}
           />
         );
 
@@ -261,34 +336,36 @@ export function WalletTransactionActivity({ address }: { address: string }) {
         );
 
         const transaction = (
-          <IconButton
+          <IconActionButton
             href={`${SOLSCAN_TX_URL}/${tx.transactionHash}`}
             label={tr("walletPage.openInSolscan")}
-            kind="ghost"
-            size="xs"
+            icon={ExternalLink}
             target="_blank"
-          >
-            <Launch size={12} />
-          </IconButton>
+          />
         );
 
         return {
           id: `${tx.transactionHash}-${tx.actId}`,
           time,
-          sender,
-          receiver,
+          flow: flowDisplay,
           token: tokenDisplay,
           value,
           transaction,
+          direction: tx.direction,
+          counterpartyAddress: tx.counterpartyAddress,
+          tokenSymbol: tokenSym,
+          tokenAmount: tx.token.amount,
+          valueUsd: tx.valueUsd,
+          blockTimestampMs: tx.blockTimestampMs,
+          _searchText: `${tokenSym} ${tx.valueUsd} ${tx.counterpartyAddress}`,
         };
       });
-  }, [transferResp.data, fmt, address]);
+  }, [transferResp.data, fmt, address, timeFormat, tr]);
 
   // Headers – plain text
   const swapHeaders = [
     { key: "time", header: tr("walletPage.time") },
-    { key: "tokenSold", header: tr("walletPage.tokenSold") },
-    { key: "tokenBought", header: tr("walletPage.tokenBought") },
+    { key: "flow", header: tr("walletPage.pair") },
     { key: "value", header: tr("walletPage.value") },
     {
       key: "transaction",
@@ -299,8 +376,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
 
   const transferHeaders = [
     { key: "time", header: tr("walletPage.time") },
-    { key: "sender", header: tr("walletPage.sender") },
-    { key: "receiver", header: tr("walletPage.receiver") },
+    { key: "flow", header: tr("walletPage.transfer") },
     { key: "token", header: tr("walletPage.token") },
     { key: "value", header: tr("walletPage.value") },
     {
@@ -314,128 +390,184 @@ export function WalletTransactionActivity({ address }: { address: string }) {
   const transferLoading = transferResp.isLoading;
 
   return (
-    <div style={{ padding: "0.5rem" }}>
-      <Tabs>
-        <TabList scrollDebounceWait={200} fullWidth contained>
-          <Tab>Swaps</Tab>
-          <Tab>Transfers</Tab>
-        </TabList>
-        <TabPanels>
-          <TabPanel>
-            <Tble
-              key="swaps"
-              rows={swapRows}
-              headers={swapHeaders}
-              loading={swapLoading}
-              height={480}
-              enablePagination
-              pageSize={16}
-              stickyHeader
-              boxed
-              toolBar={
-                <LowValueFilter
-                  id="hide-low-value-swaps"
-                  checked={hideLowValue}
-                  onChange={setHideLowValue}
-                />
-              }
-              // onRowClick={(row) => {
-              //   const transaction = swapResp.data?.transactions.find(
-              //     (tx, index) =>
-              //       (tx.transactionHash || `swap-${index}`) == row.id,
-              //   );
-              //   if (!transaction) return;
+    <div className={styles.root}>
+      <div className={styles.tabsHeader}>
+        <SegmentedControl
+          options={[
+            { value: "swaps", label: "Swaps" },
+            { value: "transfers", label: "Transfers" },
+          ]}
+          value={activeActivityTab}
+          onChange={(value) => setActiveActivityTab(value as ActivityTab)}
+          ariaLabel="Transaction type"
+        />
+        <div className={styles.headerSpacer} />
+        <LowValueFilter
+          id="hide-low-value"
+          checked={hideLowValue}
+          onChange={setHideLowValue}
+        />
+      </div>
 
-              //   const soldPriceUsd = transaction.sold.priceUsd ?? 0;
-              //   const boughtPriceUsd = transaction.bought.priceUsd ?? 0;
-              //   setSelectedSwap({
-              //     transactionHash: transaction.transactionHash,
-              //     transactionType: "swap",
-              //     blockTimestampIso: new Date(
-              //       transaction.blockTimestampMs,
-              //     ).toISOString(),
-              //     subcategory: null,
-              //     walletAddress: address,
-              //     pairAddress: "",
-              //     tokensInvolved: `${transaction.sold.symbol ?? transaction.sold.address},${transaction.bought.symbol ?? transaction.bought.address}`,
-              //     sold: {
-              //       address: transaction.sold.address,
-              //       amount: transaction.sold.amount,
-              //       symbol: transaction.sold.symbol,
-              //       name: transaction.sold.name,
-              //       logoUri: transaction.sold.logoUri,
-              //       priceUsd: soldPriceUsd,
-              //       valueUsd: transaction.sold.amount * soldPriceUsd,
-              //     },
-              //     bought: {
-              //       address: transaction.bought.address,
-              //       amount: transaction.bought.amount,
-              //       symbol: transaction.bought.symbol,
-              //       name: transaction.bought.name,
-              //       logoUri: transaction.bought.logoUri,
-              //       priceUsd: boughtPriceUsd,
-              //       valueUsd: transaction.bought.amount * boughtPriceUsd,
-              //     },
-              //     totalValueUsd: transaction.totalValueUsd,
-              //     baseQuotePrice: null,
-              //   });
-              // }}
-            />
-          </TabPanel>
+      {activeActivityTab == "swaps" ? (
+        <Tble
+          key="swaps"
+          rows={swapRows}
+          headers={swapHeaders}
+          loading={swapLoading}
+          height="auto"
+          enablePagination
+          pageSize={16}
+          boxed
+          pageUnknown
+          enableSearch
+          searchFields={["_searchText"]}
+          filterSchema={{
+            flow: {
+              type: TbleFilterType.Composite,
+              filters: {
+                sold: { type: TbleFilterType.Select, field: "soldSymbol" },
+                bought: { type: TbleFilterType.Select, field: "boughtSymbol" },
+              },
+            },
+            value: { type: TbleFilterType.Range, field: "totalValueUsd", min: 0, max: 1_000_000, step: 1 },
+          }}
+          sortConfigs={{
+            time: { type: TbleSortType.Number, field: "blockTimestampMs" },
+            value: { type: TbleSortType.Number, field: "totalValueUsd" },
+          }}
+          headerActions={{
+            time: (
+              <button
+                type="button"
+                className={styles.timeFormatBtn}
+                aria-label={`Time format: ${timeFormat}`}
+                onClick={(e) => { e.stopPropagation(); cycleTimeFormat(); }}
+              >
+                <Clock size={13} />
+              </button>
+            ),
+          }}
+          onRowClick={(row) => {
+            const transaction = swapResp.data?.transactions.find(
+              (tx, index) =>
+                (tx.transactionHash || `swap-${index}`) == row.id,
+            );
+            if (!transaction) return;
 
-          <TabPanel>
-            <Tble
-              key="transfers"
-              rows={transferRows}
-              headers={transferHeaders}
-              loading={transferLoading}
-              height={480}
-              enablePagination
-              pageSize={16}
-              stickyHeader
-              boxed
-              // pageUnknown
-              toolBar={
-                <LowValueFilter
-                  id="hide-low-value-transfers"
-                  checked={hideLowValue}
-                  onChange={setHideLowValue}
-                />
-              }
-              // onRowClick={(row) => {
-              //   const transaction = transferResp.data?.transactions.find(
-              //     (tx, index) =>
-              //       (tx.transactionHash || `transfer-${index}`) == row.id,
-              //   );
-              //   if (!transaction) return;
+            const soldPriceUsd = transaction.sold.priceUsd ?? 0;
+            const boughtPriceUsd = transaction.bought.priceUsd ?? 0;
+            setSelectedSwap({
+              transactionHash: transaction.transactionHash,
+              transactionType: "swap",
+              blockTimestampIso: new Date(
+                transaction.blockTimestampMs,
+              ).toISOString(),
+              subcategory: null,
+              walletAddress: address,
+              pairAddress: "",
+              tokensInvolved: `${transaction.sold.symbol ?? transaction.sold.address},${transaction.bought.symbol ?? transaction.bought.address}`,
+              sold: {
+                address: transaction.sold.address,
+                amount: transaction.sold.amount,
+                symbol: transaction.sold.symbol,
+                name: transaction.sold.name,
+                logoUri: transaction.sold.logoUri,
+                priceUsd: soldPriceUsd,
+                valueUsd: transaction.sold.amount * soldPriceUsd,
+              },
+              bought: {
+                address: transaction.bought.address,
+                amount: transaction.bought.amount,
+                symbol: transaction.bought.symbol,
+                name: transaction.bought.name,
+                logoUri: transaction.bought.logoUri,
+                priceUsd: boughtPriceUsd,
+                valueUsd: transaction.bought.amount * boughtPriceUsd,
+              },
+              totalValueUsd: transaction.totalValueUsd,
+              baseQuotePrice: null,
+            });
+          }}
+        />
+      ) : (
+        <Tble
+          key="transfers"
+          rows={transferRows}
+          headers={transferHeaders}
+          loading={transferLoading}
+          height="auto"
+          enablePagination
+          pageSize={16}
+          boxed
+          pageUnknown
+          enableSearch
+          searchFields={["_searchText"]}
+          filterSchema={{
+            flow: {
+              type: TbleFilterType.Composite,
+              filters: {
+                direction: { type: TbleFilterType.Select, field: "direction" },
+                counterparty: { type: TbleFilterType.Select, field: "counterpartyAddress" },
+              },
+            },
+            token: {
+              type: TbleFilterType.Composite,
+              filters: {
+                symbol: { type: TbleFilterType.Select, field: "tokenSymbol" },
+                amount: { type: TbleFilterType.Range, field: "tokenAmount", min: 0, max: 1_000_000, step: 0.01 },
+              },
+            },
+            value: { type: TbleFilterType.Range, field: "valueUsd", min: 0, max: 1_000_000, step: 1 },
+          }}
+          sortConfigs={{
+            time: { type: TbleSortType.Number, field: "blockTimestampMs" },
+            value: { type: TbleSortType.Number, field: "valueUsd" },
+          }}
+          headerActions={{
+            time: (
+              <button
+                type="button"
+                className={styles.timeFormatBtn}
+                aria-label={`Time format: ${timeFormat}`}
+                onClick={(e) => { e.stopPropagation(); cycleTimeFormat(); }}
+              >
+                <Clock size={13} />
+              </button>
+            ),
+          }}
+          onRowClick={(row) => {
+            const transaction = transferResp.data?.transactions.find(
+              (tx, index) =>
+                (tx.transactionHash || `transfer-${index}`) == row.id,
+            );
+            if (!transaction) return;
 
-              //   setSelectedTransfer({
-              //     from:
-              //       transaction.direction == "send"
-              //         ? address
-              //         : transaction.counterpartyAddress,
-              //     to:
-              //       transaction.direction == "send"
-              //         ? transaction.counterpartyAddress
-              //         : address,
-              //     amount: transaction.token.amount,
-              //     amountUsd: transaction.valueUsd,
-              //     timestamp: new Date(
-              //       transaction.blockTimestampMs,
-              //     ).toISOString(),
-              //     tokenAddress: transaction.token.address,
-              //     tokenSymbol: transaction.token.symbol ?? "Unknown",
-              //     tokenName: transaction.token.name ?? undefined,
-              //     tokenLogoUri: transaction.token.logoUri ?? undefined,
-              //     priceUsd: transaction.token.priceUsd ?? undefined,
-              //     transactionSignature: transaction.transactionHash,
-              //     instructionIndex: 0,
-              //   });
-              // }}
-            />
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
+            setSelectedTransfer({
+              from:
+                transaction.direction == "send"
+                  ? address
+                  : transaction.counterpartyAddress,
+              to:
+                transaction.direction == "send"
+                  ? transaction.counterpartyAddress
+                  : address,
+              amount: transaction.token.amount,
+              amountUsd: transaction.valueUsd,
+              timestamp: new Date(
+                transaction.blockTimestampMs,
+              ).toISOString(),
+              tokenAddress: transaction.token.address,
+              tokenSymbol: transaction.token.symbol ?? "Unknown",
+              tokenName: transaction.token.name ?? undefined,
+              tokenLogoUri: transaction.token.logoUri ?? undefined,
+              priceUsd: transaction.token.priceUsd ?? undefined,
+              transactionSignature: transaction.transactionHash,
+              instructionIndex: 0,
+            });
+          }}
+        />
+      )}
       <SwapDetailModal
         isOpen={selectedSwap != null}
         onClose={() => setSelectedSwap(null)}

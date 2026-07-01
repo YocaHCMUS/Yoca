@@ -1,9 +1,57 @@
 @use "@carbon/react/scss/theme" as *;
 
-// ===== Layout =====
 .tokenOverviewPage {
   min-height: 100vh;
-  background: $background;
+  padding: 16px 20px 24px;
+  background:
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.12), transparent 34%),
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(7, 10, 19, 0.02), transparent 12%);
+}
+
+.pageHero {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  background:
+    linear-gradient(135deg, rgba(124, 58, 237, 0.16), rgba(37, 99, 235, 0.08)),
+    var(--yoca-surface);
+  box-shadow: var(--yoca-shadow-card);
+}
+
+.pageHeroEyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--yoca-accent);
+}
+
+.pageHeroBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pageHeroTitle {
+  margin: 0;
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  color: var(--yoca-text-main);
+}
+
+.pageHeroDescription {
+  max-width: 72ch;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--yoca-text-muted);
 }
 
 .tokenOverviewGrid {
@@ -15,80 +63,80 @@
   --cds-body-long-01-font-family: inherit !important;
   --cds-body-long-02-font-family: inherit !important;
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  padding: 0;
+  grid-template-columns: minmax(320px, 396px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
   min-height: calc(100vh - 48px);
-
-  @media (min-width: 1024px) {
-    grid-template-columns: 430px 1fr;
-    gap: 0;
-  }
 }
 
-// ===== Left Column =====
 .leftColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
   min-width: 0;
-  border-right: 1px solid $border-subtle;
+  position: static;
 }
 
 .sidebarGroup {
-  background: $background;
   display: flex;
   flex-direction: column;
-  padding: 0;
-  gap: 0;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 32%),
+    var(--yoca-surface);
+  box-shadow: var(--yoca-shadow-card);
+  backdrop-filter: blur(18px);
 }
 
-// ===== Right Column =====
 .rightColumn {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-// Sticky tabs header — sits outside scroll area
 .rightHeader {
   flex-shrink: 0;
-  padding: 8px 24px 0;
-  background: $background;
+  padding: 0 0 12px;
   z-index: 10;
 }
 
-// Scrollable content below the tabs
 .rightContent {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 24px;
+  gap: 18px;
+  min-width: 0;
 }
 
 .marketsSection {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 36%),
+    var(--yoca-surface);
+  box-shadow: var(--yoca-shadow-card);
+  backdrop-filter: blur(18px);
 }
 
 .marketsSectionTitle {
   font-size: 16px;
   font-weight: 700;
-  color: $text-primary;
+  color: var(--yoca-text-main);
 }
 
 .marketsSectionDescription {
   font-size: 14px;
-  color: $text-secondary;
+  line-height: 1.55;
+  color: var(--yoca-text-muted);
 }
 
 .scrollAnchor {
   scroll-margin-top: 96px;
 }
 
-// ===== Skeleton Loading =====
 @keyframes shimmer {
   0% {
     background-position: -400px 0;
@@ -102,26 +150,25 @@
 .skeletonBlock {
   background: linear-gradient(
     90deg,
-    $layer-accent-01 25%,
-    $layer-accent-02 50%,
-    $layer-accent-01 75%
+    rgba(148, 163, 184, 0.08) 25%,
+    rgba(148, 163, 184, 0.16) 50%,
+    rgba(148, 163, 184, 0.08) 75%
   );
   background-size: 800px 100%;
   animation: shimmer 1.4s infinite linear;
-  border-radius: 4px;
+  border-radius: 999px;
 }
 
 .skeletonHeader {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px;
 }
 
 .skeletonAvatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
   flex-shrink: 0;
 }
 
@@ -134,32 +181,64 @@
 
 .skeletonLine {
   height: 12px;
-  border-radius: 6px;
+  border-radius: 999px;
 }
 
 .skeletonLineLong {
-  width: 80%;
+  width: 82%;
 }
 
 .skeletonLineMedium {
-  width: 60%;
+  width: 58%;
 }
 
 .skeletonLineShort {
-  width: 40%;
+  width: 38%;
 }
 
 .skeletonStats {
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 8px 0;
 }
 
 .skeletonStatRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid $border-subtle;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--yoca-border);
+}
+
+.skeletonStatRow:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 1180px) {
+  .tokenOverviewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .leftColumn {
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .tokenOverviewPage {
+    padding: 12px 12px 20px;
+  }
+
+  .pageHero {
+    padding: 16px;
+  }
+
+  .sidebarGroup,
+  .marketsSection {
+    padding: 16px;
+  }
+
+  .tokenOverviewGrid {
+    gap: 16px;
+  }
 }

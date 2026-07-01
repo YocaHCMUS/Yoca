@@ -1,434 +1,354 @@
-@use '@carbon/react/scss/theme' as *;
+@use "@carbon/react/scss/theme" as *;
 
 .container {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 0px;
-    background: $background; // solid background so content behind doesn't show
-    position: sticky;
-    top: 0; // sticky inside local scroll container
-    z-index: 10;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 0;
+  background: transparent;
 }
 
 .image {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    object-fit: cover;
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--yoca-border);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.22);
 }
 
 .info {
-    display: flex;
-    flex: 1;
-    min-width: 0;
-    flex-direction: column;
-    gap: 4px;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .symbol {
-    font-size: 18px;
-    font-weight: 500;
-    color: $text-primary;
-    text-transform: uppercase;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--yoca-text-main);
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
 }
 
 .name {
-    font-size: 14px;
-    font-weight: 500;
-    color: $text-secondary;
-    line-height: 1.2;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--yoca-text-muted);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.ageBadge {
-    font-size: 12px;
-    font-weight: 600;
-    color: $text-secondary;
-    background: $layer-accent-01;
-    padding: 2px 6px;
-    border-radius: 4px;
-    white-space: nowrap;
+.ageBadge,
+.rankBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 9px;
+  border: 1px solid var(--yoca-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--yoca-text-soft);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .addressGroup {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    cursor: default;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  cursor: default;
 }
 
 .address {
-    font-size: 12px;
-    color: $text-secondary;
-    font-family: 'Courier New', monospace;
-    background: $layer-accent-01;
-    padding: 4px 8px;
-    border-radius: 4px;
-    user-select: none;
-
-    &:hover {
-        background: $border-subtle;
-    }
+  font-size: 11px;
+  color: var(--yoca-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--yoca-border);
+  padding: 4px 8px;
+  border-radius: 999px;
+  user-select: none;
 }
 
 .externalLinks {
-    display: flex;
-    align-items: center;
-    gap: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .iconBtn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 27px;
-    height: 27px;
-    padding: 0;
-    background: none;
-    border: none;
-    border-radius: 4px;
-    color: $text-secondary;
-    cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--yoca-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--yoca-text-soft);
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
 
-    &:hover {
-        background: $layer-hover-01;
-        color: $text-primary;
-    }
+  &:hover {
+    background: rgba(124, 58, 237, 0.16);
+    border-color: rgba(124, 58, 237, 0.35);
+    color: var(--yoca-text-main);
+    transform: translateY(-1px);
+  }
 }
-// Bubblemaps popup
+
 .popupOverlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .popupWindow {
-    position: relative;
-    width: min(900px, 92vw);
-    height: min(680px, 88vh);
-    background: $background;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  position: relative;
+  width: min(900px, 92vw);
+  height: min(680px, 88vh);
+  background: var(--yoca-surface-elevated);
+  border-radius: var(--yoca-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--yoca-border);
+  box-shadow: var(--yoca-shadow-card);
+  backdrop-filter: blur(18px);
 }
 
 .popupClose {
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    z-index: 10;
-    background: $layer-01;
-    border: 1px solid $border-subtle;
-    border-radius: 4px;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 13px;
-    color: $text-secondary;
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--yoca-border);
+  border-radius: 10px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--yoca-text-soft);
 
-    &:hover {
-        background: $layer-hover-01;
-        color: $text-primary;
-    }
+  &:hover {
+    background: rgba(124, 58, 237, 0.14);
+    color: var(--yoca-text-main);
+  }
 }
 
 .popupFrame {
-    width: 100%;
-    height: 100%;
-    border: none;
-}
-.coingeckoIcon {
-    width: 14px;
-    height: 14px;
-    object-fit: contain;
+  width: 100%;
+  height: 100%;
+  border: none;
 }
 
-.rankBadge {
-    display: inline-flex;
-    align-items: center;
-    padding: 1px 7px;
-    border-radius: 4px;
-    background: $layer-accent-01;
-    font-size: 12px;
-    font-weight: 600;
-    color: $text-secondary;
-    white-space: nowrap;
+.coingeckoIcon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
 }
 
 .compact {
-    padding: 16px 16px 8px 16px; // Align left edge (16px) with stats padding, reduced top/bottom padding
-    gap: 8px;
-    align-items: center;
+  padding: 0;
+  gap: 12px;
+  align-items: center;
 
-    .image {
-        width: 36px;
-        height: 36px;
-        flex-shrink: 0;
-    }
-
-    .row {
-        align-items: center;
-        gap: 8px;
-    }
-
-    .symbol {
-        font-size: 19px;
-        font-weight: 600; // Put back slightly bolder for "PENGU" but smaller size
-        line-height: 1;
-    }
-
-    .name {
-        font-size: 14px;
-        font-weight: 400;
-        color: $text-secondary; // Use distinct color for full name if they liked it before
-    }
-
-    .rankBadge {
-        font-size: 13px;
-        padding: 4px 10px;
-        border-radius: 6px;
-        margin-left: 2px;
-        background: #f0f2f5; // Lighter gray background
-        color: #5c6c7f;
-    }
-}
-.aiWashButton {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+  .image {
+    width: 44px;
+    height: 44px;
     flex-shrink: 0;
-    margin-left: auto;
-    padding: 8px 12px;
-    border: 1px solid rgba(133, 183, 235, 0.35);
-    border-radius: 8px;
-    background: linear-gradient(135deg, rgba(26, 58, 92, 0.95), rgba(69, 41, 129, 0.88));
-    color: #dbeafe;
-    text-decoration: none;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: transform 0.15s ease, opacity 0.15s ease, border-color 0.15s ease;
+  }
 
-    &:hover {
-        opacity: 0.92;
-        transform: translateY(-1px);
-        border-color: rgba(133, 183, 235, 0.65);
-        color: #ffffff;
-    }
+  .row {
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
 
-    &:disabled {
-        opacity: 0.65;
-        cursor: wait;
-        transform: none;
-    }
+  .symbol {
+    font-size: 19px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .name {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .rankBadge {
+    padding: 3px 8px;
+    background: rgba(45, 212, 191, 0.08);
+    color: var(--yoca-accent);
+  }
+}
+
+.aiWashButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 8px 12px;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(124, 58, 237, 0.24), rgba(37, 99, 235, 0.18)),
+    rgba(255, 255, 255, 0.04);
+  color: var(--yoca-text-main);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.18);
+
+  &:hover {
+    opacity: 0.98;
+    transform: translateY(-1px);
+    border-color: rgba(45, 212, 191, 0.4);
+    box-shadow: 0 16px 28px rgba(0, 0, 0, 0.24);
+    color: #ffffff;
+  }
 }
 
 .aiWashIcon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 24px;
-    height: 20px;
-    padding: 0 5px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.16);
-    color: #ffffff;
-    font-size: 10px;
-    font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
 }
 
 .aiWashLabelFull {
-    display: inline;
+  display: inline;
 }
 
 .aiWashLabelShort {
-    display: none;
+  display: none;
 }
 
 .aiWashButtonCompact {
-    padding: 7px 10px;
-    font-size: 11px;
+  padding: 7px 10px;
+  font-size: 11px;
 }
 
 .sidebar {
-    align-items: flex-start;
-    gap: 12px;
+  align-items: flex-start;
+  gap: 12px;
 
-    .image {
-        flex-shrink: 0;
-    }
+  .image {
+    flex-shrink: 0;
+  }
 
-    .info {
-        min-width: 0;
-        gap: 8px;
-    }
+  .info {
+    min-width: 0;
+    gap: 8px;
+  }
 
-    .row {
-        flex-wrap: wrap;
-        row-gap: 6px;
-        max-width: 100%;
-    }
+  .row {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    max-width: 100%;
+  }
 
-    .addressGroup {
-        flex-shrink: 0;
-    }
+  .addressGroup {
+    flex-shrink: 0;
+  }
 
-    .externalLinks {
-        flex: 1 1 100%;
-        flex-wrap: wrap;
-        row-gap: 4px;
-    }
+  .externalLinks {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
 
-    .iconBtn {
-        width: 24px;
-        height: 24px;
-    }
+  .iconBtn {
+    width: 26px;
+    height: 26px;
+  }
 }
 
 .aiWashButtonSidebar {
-    align-self: flex-start;
-    width: fit-content;
-    max-width: 100%;
-    height: 26px;
-    margin-left: 0;
-    margin-top: 0;
-    padding: 4px 7px;
-    gap: 2px;
-    border-radius: 7px;
-    font-size: 11px;
-    line-height: 1;
+  align-self: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  height: 30px;
+  margin-left: 0;
+  margin-top: 0;
+  padding: 4px 8px;
+  gap: 4px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1;
 
-    .aiWashIcon {
-        min-width: 18px;
-        height: 16px;
-        padding: 0 4px;
-        font-size: 9px;
-    }
+  .aiWashIcon {
+    min-width: 18px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 9px;
+  }
 
-    .aiWashLabelFull {
-        display: none;
-    }
+  .aiWashLabelFull {
+    display: none;
+  }
 
-    .aiWashLabelShort {
-        display: inline;
-    }
-}
-
-.washGateOverlay {
-    position: fixed;
-    inset: 0;
-    z-index: 10030;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 18px;
-    background: rgba(0, 0, 0, 0.68);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-}
-
-.washGateCard {
-    width: min(420px, 100%);
-    padding: 22px;
-    border-radius: 14px;
-    border: 1px solid rgba(133, 183, 235, 0.24);
-    background: $background;
-    color: $text-primary;
-    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.46);
-}
-
-.washGateIcon {
-    width: 44px;
-    height: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-    margin-bottom: 14px;
-    border: 1px solid rgba(133, 183, 235, 0.3);
-    background: rgba(133, 183, 235, 0.14);
-    color: #85b7eb;
-    font-size: 13px;
-    font-weight: 850;
-}
-
-.washGateTitle {
-    margin: 0;
-    color: $text-primary;
-    font-size: 20px;
-    line-height: 1.25;
-    font-weight: 800;
-}
-
-.washGateText {
-    margin: 10px 0 0;
-    color: $text-secondary;
-    font-size: 14px;
-    line-height: 1.55;
-}
-
-.washGateActions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
-    flex-wrap: wrap;
-}
-
-.washGatePrimary,
-.washGateSecondary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 36px;
-    padding: 8px 14px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 750;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-.washGatePrimary {
-    border: 1px solid rgba(133, 183, 235, 0.35);
-    background: linear-gradient(135deg, rgba(26, 58, 92, 0.95), rgba(69, 41, 129, 0.88));
-    color: #dbeafe;
-}
-
-.washGateSecondary {
-    border: 1px solid $border-subtle;
-    background: $layer-01;
-    color: $text-secondary;
+  .aiWashLabelShort {
+    display: inline;
+  }
 }
 
 @media (max-width: 768px) {
-    .container {
-        flex-wrap: wrap;
-        align-items: flex-start;
-    }
+  .container {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
 
-    .info {
-        flex: 1 1 calc(100% - 56px);
-    }
+  .info {
+    flex: 1 1 calc(100% - 56px);
+  }
 
-    .aiWashButton {
-        width: 100%;
-        margin-left: 0;
-    }
+  .aiWashButton {
+    width: 100%;
+    margin-left: 0;
+  }
 }

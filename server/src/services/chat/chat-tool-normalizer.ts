@@ -5,14 +5,13 @@ const DEFAULT_TX_LOOKBACK_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const DETAILED_LIMITS = new Set(["get_wallet_swaps", "get_wallet_transfers"]);
-const COMPACT_LIMITS = new Set(["get_wallet_swaps_compact", "get_wallet_transfers_compact", "get_wallet_pnl_compact"]);
+const COMPACT_LIMITS = new Set(["get_wallet_swaps_compact", "get_wallet_transfers_compact"]);
 const RANGE_TOOLS = new Set([
   "get_wallet_swaps",
   "get_wallet_transfers",
   "get_wallet_swaps_compact",
   "get_wallet_transfers_compact",
   "get_wallet_pnl",
-  "get_wallet_pnl_compact",
 ]);
 
 export interface NormalizeToolOptions {
@@ -105,7 +104,7 @@ function extractRelativeRangeMs(query: string, nowMs: number): { fromMs: number;
 function normalizeTimePeriod(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const normalized = value.trim().toUpperCase();
-  if (["7D", "30D", "60D", "90D", "1Y"].includes(normalized)) return normalized;
+  if (["7D", "30D"].includes(normalized)) return normalized;
   return undefined;
 }
 
@@ -202,16 +201,36 @@ export function getResolveSpec(value: unknown): ToolResolveSpec | null {
   return { tool: spec.tool, input: spec.input, pick: spec.pick };
 }
 
+const BRACKET_PARTS = /^(\w*)\[(\d+|first)\]$/;
+
+function tryResolvePart(current: unknown, part: string): unknown {
+  if (part === "first") {
+    return Array.isArray(current) ? current[0] : undefined;
+  }
+
+  const bracket = BRACKET_PARTS.exec(part);
+  if (bracket) {
+    const key = bracket[1];
+    const idx = bracket[2] === "first" ? 0 : parseInt(bracket[2], 10);
+    let resolved = current;
+    if (key) {
+      if (!isRecord(resolved)) return undefined;
+      resolved = resolved[key];
+    }
+    if (!Array.isArray(resolved) || idx < 0 || idx >= resolved.length) return undefined;
+    return resolved[idx];
+  }
+
+  if (!isRecord(current)) return undefined;
+  return current[part];
+}
+
 export function pickResolvedValue(data: unknown, pick: string): unknown {
   const parts = pick.split(".").filter(Boolean);
   let current: unknown = data;
   for (const part of parts) {
-    if (part === "first") {
-      current = Array.isArray(current) ? current[0] : undefined;
-      continue;
-    }
-    if (!isRecord(current)) return undefined;
-    current = current[part];
+    current = tryResolvePart(current, part);
+    if (current === undefined) return undefined;
   }
   return current;
 }

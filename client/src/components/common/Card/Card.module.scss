@@ -1,0 +1,49 @@
+.card {
+  background: var(--yoca-surface);
+  border: 1px solid var(--yoca-border);
+  border-radius: 12px;
+  padding: 1rem;
+  overflow: hidden;
+  backdrop-filter: blur(18px);
+  box-shadow: var(--yoca-shadow-card);
+  transition: box-shadow 0.2s, border-color 0.2s;
+
+  &.hoverable:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: var(--yoca-primary);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--yoca-text-main);
+  line-height: 1.3;
+}
+
+.subtitle {
+  font-size: 0.8rem;
+  color: var(--yoca-text-muted);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}

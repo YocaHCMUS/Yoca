@@ -1,0 +1,124 @@
+.modalRoot :global(.cds--modal-container) {
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.16), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(45, 212, 191, 0.08), transparent 26%),
+    linear-gradient(180deg, rgba(124, 58, 237, 0.08), rgba(255, 255, 255, 0.02)),
+    var(--yoca-surface-elevated, rgba(24, 31, 48, 0.92));
+  color: var(--yoca-text-main, #f8fafc);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.42);
+}
+
+.modalRoot :global(.cds--modal-header),
+.modalRoot :global(.cds--modal-content),
+.modalRoot :global(.cds--modal-footer) {
+  background: transparent;
+}
+
+.modalRoot :global(.cds--modal-header) {
+  padding-bottom: 0.75rem;
+}
+
+.modalRoot :global(.cds--modal-header__label) {
+  color: var(--yoca-accent, #2dd4bf);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.modalRoot :global(.cds--modal-header__heading) {
+  color: var(--yoca-text-main, #f8fafc);
+}
+
+.modalRoot :global(.cds--modal-close),
+.modalRoot :global(.cds--btn) {
+  border-radius: 14px;
+}
+
+.modalRoot :global(.cds--btn--primary) {
+  background: linear-gradient(135deg, var(--yoca-primary, #7c3aed), var(--yoca-primary-2, #2563eb));
+  border-color: transparent;
+}
+
+.modalRoot :global(.cds--btn--secondary) {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--yoca-text-soft, #cbd5e1);
+}
+
+.modalRoot :global(.cds--text-input),
+.modalRoot :global(.cds--text-area),
+.modalRoot :global(.cds--select-input),
+.modalRoot :global(.cds--list-box__field) {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(148, 163, 184, 0.14);
+  color: var(--yoca-text-main, #f8fafc);
+}
+
+.modalRoot :global(.cds--label),
+.modalRoot :global(.cds--text-input__label),
+.modalRoot :global(.cds--radio-button__label),
+.modalRoot :global(.cds--toggle__label-text) {
+  color: var(--yoca-text-soft, #cbd5e1);
+}
+
+.modalRoot :global(.cds--helper-text),
+.modalRoot :global(.cds--form__helper-text),
+.modalRoot :global(.cds--inline-loading__text) {
+  color: var(--yoca-text-muted, #94a3b8);
+}
+
+.modalBody {
+  padding-top: 0;
+}
+
+.modalContent {
+  padding-top: 0.25rem;
+}
+
+.stepIndicator {
+  margin: 0;
+  color: var(--yoca-text-muted, #94a3b8);
+  font-size: 0.85rem;
+}
+
+.notice {
+  max-inline-size: none;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.stepFields {
+  min-width: 0;
+}
+
+.dualFieldRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.deliveryOverrides {
+  padding: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.previewCard {
+  padding: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.modalFooter {
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+@media (max-width: 640px) {
+  .dualFieldRow {
+    grid-template-columns: 1fr;
+  }
+}

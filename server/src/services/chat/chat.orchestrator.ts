@@ -30,12 +30,12 @@ import {
   filterDuplicateToolCalls,
   getResolveSpec,
   getToolAllowedKeys,
-  normalizeToolCalls,
   normalizeToolInput,
   pickResolvedValue,
   RESOLVABLE_TOOLS,
+  stableStringify,
 } from "./chat-tool-normalizer.js";
-import type { ActionSpec, ChartSpec, TableSpec, ToolDataReference, WalletConfidence, WalletWarning, WalletChatSection } from "./chat.types.js";
+import type { ActionSpec, ChartSpec, ChatSource, TableSpec, ToolDataReference, WalletConfidence, WalletWarning, WalletChatSection, WebSearchArticle } from "./chat.types.js";
 import { z } from "zod";
 import { WALLET_CHAT_RESPONSE_LIMITS as L } from "./chat-fallback.js";
 
@@ -211,6 +211,8 @@ async function resolveToolDependencies(
 ): Promise<{ tools: ChatToolCall[]; resolverResults: ChatToolResult[] }> {
   const resolvedTools: ChatToolCall[] = [];
   const resolverResults: ChatToolResult[] = [];
+  const resolverCache = new Map<string, { data: unknown; llmData: unknown }>();
+  const resolverKeys = new Set<string>();
 
   for (const tool of tools) {
     const input: Record<string, unknown> = { ...tool.input };
@@ -244,8 +246,22 @@ async function resolveToolDependencies(
       }
 
       const normalizedResolverInput = normalizeToolInput(spec.tool, spec.input, { query });
+      const cacheKey = `${spec.tool}:${stableStringify(normalizedResolverInput)}`;
       try {
-        const { data, llmData } = await handler(normalizedResolverInput);
+        let data: unknown;
+        let llmData: unknown;
+        const cached = resolverCache.get(cacheKey);
+        if (cached) {
+          data = cached.data;
+          llmData = cached.llmData;
+        } else {
+          const result = await handler(normalizedResolverInput);
+          data = result.data;
+          llmData = result.llmData;
+          resolverCache.set(cacheKey, { data, llmData });
+        }
+        resolverKeys.add(cacheKey);
+
         const picked = pickResolvedValue(llmData, spec.pick) ?? pickResolvedValue(data, spec.pick);
         resolverResults.push({
           name: spec.tool,
@@ -253,7 +269,7 @@ async function resolveToolDependencies(
           data: llmData,
           fullData: data,
         });
-        if (picked == null || picked === "") {
+        if (picked == null) {
           failed = true;
           resolverResults.push({
             name: tool.name,
@@ -284,7 +300,13 @@ async function resolveToolDependencies(
     }
   }
 
-  return { tools: resolvedTools, resolverResults };
+  // Remove tools that already ran as resolvers (standalone dedup)
+  const filtered = resolvedTools.filter((tool) => {
+    const key = `${tool.name}:${stableStringify(tool.input)}`;
+    return !resolverKeys.has(key);
+  });
+
+  return { tools: filtered, resolverResults };
 }
 async function executeToolsForAllAddresses(
   addresses: string[],
@@ -622,7 +644,24 @@ async function generateResponse(
   const charts = sanitized.charts;
   const tables = sanitized.tables;
   const actions = sanitized.actions;
-  const sources = sanitized.sources;
+  // Extract real sources from search tool results instead of using LLM-fabricated ones
+  const realSources: ChatSource[] = [];
+  for (const result of allResults) {
+    if (!result.fullData || result.error) continue;
+    if (result.name === "search_web" || result.name === "search_news") {
+      const articles = (result.fullData as { articles?: WebSearchArticle[] }).articles ?? [];
+      for (const a of articles) {
+        realSources.push({
+          title: a.title,
+          url: a.url,
+          source: a.source,
+          snippet: a.description,
+          publishedAt: a.publishedAt ?? undefined,
+        });
+      }
+    }
+  }
+  const sources: ChatSource[] | undefined = realSources.length > 0 ? realSources : undefined;
 
   // Validate structured fields from Gemini
   const parsedJson = extractJsonObject(raw);
@@ -699,6 +738,26 @@ async function generateResponse(
     }
   }
 
+  // Auto-set xAxisType to "time" for time-series chart tools that produce [timestamp, value][] pairs
+  const TIME_SERIES_TOOLS = new Set([
+    "get_balance_history",
+    "get_drawdown_chart",
+    "get_pnl_chart",
+    "get_token_price_24h",
+    "get_token_price_hourly",
+    "get_token_price_daily",
+  ]);
+  for (const chart of charts) {
+    if (chart.xAxisType || chart.type === "pie" || chart.type === "geckoterminal") continue;
+    const idx = parseInt(chart.dataRef, 10);
+    if (!isNaN(idx) && idx < allResults.length) {
+      const result = allResults[idx];
+      if (result && !result.error && TIME_SERIES_TOOLS.has(result.name)) {
+        chart.xAxisType = "time";
+      }
+    }
+  }
+
   for (const chart of charts) {
     if ((chart.type === "line" || chart.type === "area") && chart.dataRef) {
       const idx = parseInt(chart.dataRef, 10);
@@ -739,7 +798,7 @@ async function generateResponse(
     charts,
     tables,
     actions: actions.length > 0 ? actions : synthesizeFollowUpActions(allResults),
-    sources: sources && sources.length > 0 ? sources : undefined,
+    sources,
     tldr: validatedTldr,
     sections: validatedSections,
     warnings: validatedWarnings,
@@ -826,8 +885,7 @@ export async function answerChatQuery(
       chatWarn("answerChatQuery: empty tool list, breaking", { iteration: i + 1 });
       break;
     }
-    const normalizedSelection = normalizeToolCalls(toolSelection, { query });
-    const resolvedSelection = await resolveToolDependencies(normalizedSelection, query);
+    const resolvedSelection = await resolveToolDependencies(toolSelection, query);
     if (resolvedSelection.resolverResults.length > 0) {
       allResults.push(...resolvedSelection.resolverResults);
     }

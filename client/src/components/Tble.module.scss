@@ -1,0 +1,559 @@
+﻿.root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  width: 100%;
+  color: var(--yoca-text-main, #f8fafc);
+}
+
+.boxed {
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+  border-radius: 12px;
+  background: var(--yoca-surface, rgba(18, 24, 38, 0.82));
+  box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.22));
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding: 0.9rem 1rem 0.65rem;
+}
+
+.titleBlock {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.titleBlock strong {
+  color: var(--yoca-text-main, #f8fafc);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.titleBlock span {
+  color: var(--yoca-text-muted, #94a3b8);
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: min(100%, 18rem);
+}
+
+.headerOnlyToolbar {
+  justify-content: flex-end;
+
+  .toolbar {
+    justify-content: flex-start;
+    min-width: auto;
+  }
+}
+
+.filterTagsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 1rem 0.65rem;
+}
+
+.filterSearchRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2rem;
+  width: 100%;
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.18));
+  border-radius: 999px;
+  background: var(--yoca-surface-raised, rgba(255, 255, 255, 0.04));
+  color: var(--yoca-text-muted, #94a3b8);
+}
+
+.filterSearchRow input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--yoca-text-main, #f8fafc);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.filterSearchRow input::placeholder {
+  color: var(--yoca-text-muted, #94a3b8);
+}
+
+.tableSearchWrap {
+  min-width: min(16rem, 100%);
+}
+
+.tableShell {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: auto;
+}
+
+.table th,
+.table td {
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.12));
+  vertical-align: middle;
+}
+
+.table th {
+  color: var(--yoca-text-muted, #94a3b8);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--yoca-surface, rgba(18, 24, 38, 0.92));
+}
+
+.table td {
+  color: var(--yoca-text-soft, #cbd5e1);
+  font-size: 0.82rem;
+}
+
+.sticky .table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.headerCell {
+  white-space: nowrap;
+}
+
+.headerInner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.alignEnd .headerInner {
+  justify-content: flex-end;
+}
+
+.alignCenter .headerInner {
+  justify-content: center;
+}
+
+.headerButton,
+.filterButton,
+.filterPopoverHeader button,
+.pageButtons button,
+.primaryButton,
+.secondaryButton {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.headerButton {
+  padding: 0;
+  cursor: pointer;
+  text-transform: inherit;
+  font-weight: inherit;
+}
+
+.headerButton:disabled {
+  cursor: default;
+}
+
+.filterButton,
+.filterPopoverHeader button,
+.pageButtons button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 8px;
+  color: var(--yoca-text-muted, #94a3b8);
+  cursor: pointer;
+}
+
+.headerActionWrapper {
+  display: inline-flex;
+  align-items: center;
+}
+
+.headerActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--yoca-text-muted, #94a3b8);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.headerActionButton:hover {
+  background: var(--yoca-surface-hover, rgba(148, 163, 184, 0.12));
+  color: var(--yoca-primary, #7c3aed);
+}
+
+.filterButton:hover,
+.filterPopoverHeader button:hover,
+.pageButtons button:hover:not(:disabled) {
+  background: var(--yoca-surface-hover, rgba(148, 163, 184, 0.12));
+  color: var(--yoca-primary, #7c3aed);
+}
+
+.clickableRow {
+  cursor: pointer;
+}
+
+.clickableRow:hover td {
+  background: rgba(124, 58, 237, 0.08);
+}
+
+.alignStart {
+  text-align: left;
+}
+
+.alignCenter {
+  text-align: center;
+}
+
+.alignEnd {
+  text-align: right;
+}
+
+.filterPopover {
+  position: absolute;
+  z-index: 30;
+  display: grid;
+  gap: 0.85rem;
+  width: min(24rem, calc(100vw - 2rem));
+  max-height: min(32rem, calc(100vh - 8rem));
+  overflow: auto;
+  padding: 0.9rem;
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.18));
+  border-radius: 12px;
+  background: var(--yoca-bg, #070a13);
+  box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.32));
+}
+
+.filterPopoverHeader,
+.rangeReadout,
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.filterActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.filterPopoverHeader strong {
+  font-size: 0.84rem;
+}
+
+.filterSearchRow {
+  width: 100%;
+}
+
+.selectFilter,
+.compositeFilter,
+.rangeControl {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.checkboxList {
+  display: grid;
+  gap: 0.35rem;
+  max-height: 13rem;
+  overflow: auto;
+  padding-right: 0.2rem;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  color: var(--yoca-text-soft, #cbd5e1);
+  font-size: 0.78rem;
+}
+
+.checkboxRow input {
+  width: 0.9rem;
+  height: 0.9rem;
+  accent-color: var(--yoca-primary, #7c3aed);
+}
+
+.emptyFilter {
+  color: var(--yoca-text-muted, #94a3b8);
+  font-size: 0.76rem;
+  padding: 0.35rem 0;
+}
+
+.compositeSection {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.7rem;
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.14));
+  border-radius: 10px;
+  background: var(--yoca-surface-raised, rgba(255, 255, 255, 0.03));
+}
+
+.compositeTitle {
+  color: var(--yoca-text-muted, #94a3b8);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.rangeReadout {
+  color: var(--yoca-text-main, #f8fafc);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.dualRangeSlider {
+  position: relative;
+  height: 1.5rem;
+  margin: 0.25rem 0;
+}
+
+.sliderTrack {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--yoca-border, rgba(148, 163, 184, 0.18));
+  border-radius: 2px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.sliderRange {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: var(--yoca-primary, #7c3aed);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.sliderThumb {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: none;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+  z-index: 2;
+}
+
+.sliderThumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--yoca-primary, #7c3aed);
+  border: 2px solid var(--yoca-surface, #121826);
+  pointer-events: auto;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.sliderThumb::-moz-range-thumb {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--yoca-primary, #7c3aed);
+  border: 2px solid var(--yoca-surface, #121826);
+  pointer-events: auto;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.sliderThumb::-webkit-slider-runnable-track {
+  background: transparent;
+}
+
+.sliderThumb::-moz-range-track {
+  background: transparent;
+}
+
+.sliderThumb:last-child {
+  z-index: 3;
+}
+
+.rangeInputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.rangeInputs label {
+  display: grid;
+  gap: 0.3rem;
+  color: var(--yoca-text-muted, #94a3b8);
+  font-size: 0.72rem;
+}
+
+.rangeInputs input {
+  min-height: 2rem;
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.18));
+  border-radius: 8px;
+  background: var(--yoca-surface-raised, rgba(255, 255, 255, 0.04));
+  color: var(--yoca-text-main, #f8fafc);
+  padding: 0 0.5rem;
+}
+
+.primaryButton,
+.secondaryButton {
+  min-height: 2rem;
+  border-radius: 8px;
+  padding: 0 0.75rem;
+  cursor: pointer;
+}
+
+.primaryButton {
+  background: var(--yoca-primary, #7c3aed);
+  color: #fff;
+}
+
+.secondaryButton {
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.18));
+  color: var(--yoca-text-soft, #cbd5e1);
+}
+
+.state {
+  display: grid;
+  place-items: center;
+  color: var(--yoca-text-muted, #94a3b8);
+  padding: 2rem;
+}
+
+.pagination {
+  min-height: 3rem;
+  padding: 0.55rem 0.8rem;
+  border-top: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.12));
+  color: var(--yoca-text-muted, #94a3b8);
+  font-size: 0.76rem;
+}
+
+.pageSizeControl,
+.pageButtons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.customSelect {
+  position: relative;
+  display: inline-flex;
+}
+
+.customSelectTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.18));
+  border-radius: 8px;
+  background: var(--yoca-surface-raised, rgba(255, 255, 255, 0.04));
+  color: var(--yoca-text-main, #f8fafc);
+  font: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.pageSizePopup {
+  position: fixed;
+  z-index: 40;
+  display: grid;
+  gap: 0.125rem;
+  min-width: 4rem;
+  padding: 0.25rem;
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.18));
+  border-radius: 8px;
+  background: var(--yoca-surface, #121826);
+  box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.32));
+}
+
+.pageSizeOption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.75rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--yoca-text-soft, #cbd5e1);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.pageSizeOption:hover {
+  background: var(--yoca-surface-hover, rgba(148, 163, 184, 0.12));
+  color: var(--yoca-primary, #7c3aed);
+}
+
+.pageSizeOption[aria-selected="true"] {
+  color: var(--yoca-primary, #7c3aed);
+  font-weight: 600;
+}
+
+.pageButtons button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+@media (max-width: 720px) {
+
+  .header,
+  .pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .toolbar {
+    justify-content: flex-start;
+  }
+
+  .searchBox {
+    width: 100%;
+  }
+}

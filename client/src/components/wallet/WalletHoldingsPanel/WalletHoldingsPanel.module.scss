@@ -1,12 +1,9 @@
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/theme' as *;
-
 .holdingsPanel {
-  // padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 18px;
   flex: 1;
+  min-height: 0;
 }
 
 .holdingsHeader {
@@ -16,14 +13,26 @@
 }
 
 .holdingsTitle {
-  font-size: 13px;
-  font-weight: 600;
-  color: $text-primary;
+  color: var(--yoca-text-main, #f8fafc);
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 
 .holdingsCount {
-  font-size: 11px;
-  color: $text-secondary;
+  color: var(--yoca-text-muted, #94a3b8);
+  font-size: 0.75rem;
+}
+
+.chartSection,
+.tableSection {
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+  border-radius: var(--yoca-radius-lg, 18px);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.01)),
+    var(--yoca-surface, rgba(18, 24, 38, 0.82));
+  box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.32));
+  overflow: hidden;
+  backdrop-filter: blur(18px);
 }
 
 .chartSection {
@@ -36,27 +45,114 @@
   overflow-x: auto;
 }
 
+.tableSection :global(.cds--table-container),
+.tableSection :global(.cds--data-table-container),
+.tableSection :global(.cds--data-table-header),
+.tableSection :global(.cds--data-table-content),
+.tableSection :global(.cds--pagination),
+.tableSection :global(.cds--pagination__control-buttons) {
+  background: transparent !important;
+}
+
+.tableSection :global(.cds--data-table),
+.tableSection :global(.cds--data-table thead),
+.tableSection :global(.cds--data-table tbody),
+.tableSection :global(.cds--data-table tr),
+.tableSection :global(.cds--data-table th),
+.tableSection :global(.cds--data-table td) {
+  background: transparent !important;
+}
+
+.tableSection :global(.cds--data-table th) {
+  color: var(--yoca-text-muted, #94a3b8);
+}
+
+.tableSection :global(.cds--data-table td) {
+  color: var(--yoca-text-soft, #cbd5e1);
+}
+
+.tableSection :global(.cds--data-table tbody tr:hover td) {
+  background: rgba(124, 58, 237, 0.08) !important;
+}
+
 .loadingSkeleton {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+  border-radius: var(--yoca-radius-lg, 18px);
+  background: var(--yoca-surface, rgba(18, 24, 38, 0.82));
 }
 
 .skeletonRow {
-  height: 32px;
-  border-radius: 4px;
-  background: $layer-02;
+  height: 36px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.14), rgba(37, 99, 235, 0.1), rgba(45, 212, 191, 0.12));
   animation: pulse 1.5s infinite;
+}
 
-  @keyframes pulse {
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
 
-    0%,
-    100% {
-      opacity: 0.4;
-    }
-
-    50% {
-      opacity: 0.7;
-    }
+  50% {
+    opacity: 0.85;
   }
 }
+.watchButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--yoca-text-muted, #94a3b8);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.watchButton:hover:not(:disabled),
+.watchButton:focus-visible {
+  border-color: var(--yoca-border, rgba(148, 163, 184, 0.2));
+  background: var(--yoca-surface-hover, rgba(148, 163, 184, 0.12));
+  color: var(--yoca-primary, #7c3aed);
+}
+
+.watchButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.watchButtonActive {
+  color: var(--yoca-primary, #7c3aed);
+}
+
+.watchButtonActive svg {
+  fill: currentColor;
+}
+
+.holdingValueCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 0;
+}
+
+.holdingAmount {
+  color: var(--yoca-text-main, #f8fafc);
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.holdingUsd {
+  color: var(--yoca-text-muted, #94a3b8);
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+

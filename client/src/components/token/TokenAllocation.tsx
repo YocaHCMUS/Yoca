@@ -1,6 +1,5 @@
 import React from "react";
 import ReactECharts from "echarts-for-react";
-import { useUserTheme } from "@/contexts/ThemeContext";
 import styles from "./TokenAllocation.module.scss";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -19,14 +18,9 @@ interface TokenAllocationProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export const TokenAllocation = ({ symbol, name, distribution }: TokenAllocationProps) => {
-  const { theme } = useUserTheme();
-  const isDark = theme === "dark";
-  const textColor = isDark ? "#f4f4f4" : "#161616";
-  const textSecondaryColor = isDark ? "#c6c6c6" : "#525252";
-
   const customColors = [
-    "#D15B40", "#EE9F43", "#F8DE5B", "#F3AD8E",
-    "#D74F71", "#F08CB1", "#F7D0DF", "#B385D5", "#DFCAEF",
+    "#7C3AED", "#2563EB", "#2DD4BF", "#22C55E",
+    "#F59E0B", "#EC4899", "#8B5CF6", "#38BDF8", "#A855F7",
   ];
 
   const displaySymbol = symbol ? symbol.toUpperCase() : "";
@@ -37,9 +31,9 @@ export const TokenAllocation = ({ symbol, name, distribution }: TokenAllocationP
     color: customColors,
     tooltip: {
       trigger: "item",
-      backgroundColor: "var(--cds-layer)",
-      borderColor: "var(--cds-border-subtle)",
-      textStyle: { color: "var(--cds-text-primary)" },
+      backgroundColor: "rgba(11,16,32,0.96)",
+      borderColor: "rgba(148,163,184,0.16)",
+      textStyle: { color: "#F8FAFC" },
       formatter: "{b}: <span style=\"font-weight: bold\">{c}%</span>",
     },
     legend: {
@@ -58,10 +52,10 @@ export const TokenAllocation = ({ symbol, name, distribution }: TokenAllocationP
         return `{name|${displayName}}{percent|${item.percentage.toFixed(2)}%}`;
       },
       textStyle: {
-        color: textColor,
+        color: "var(--yoca-text-main)",
         rich: {
-          name: { color: textSecondaryColor, fontSize: 13, width: 190 },
-          percent: { color: textColor, fontSize: 13, fontWeight: 600, width: 50, align: "right" },
+          name: { color: "var(--yoca-text-muted)", fontSize: 13, width: 190 },
+          percent: { color: "var(--yoca-text-main)", fontSize: 13, fontWeight: 600, width: 50, align: "right" },
         },
       },
     },
@@ -82,43 +76,16 @@ export const TokenAllocation = ({ symbol, name, distribution }: TokenAllocationP
   };
 
   return (
-    <div style={{ padding: "0.5rem 0" }}>
-      <h2
-        style={{
-          fontSize: "1.25rem",
-          fontWeight: 600,
-          marginBottom: "1rem",
-          color: "var(--cds-text-primary)",
-        }}
-      >
+    <div className={styles.container}>
+      <h2 className={styles.title}>
         {displayCleanName} ({displaySymbol}) Tokenomics
       </h2>
 
-      <div
-        style={{
-          border: "1px solid var(--cds-border-subtle)",
-          borderRadius: "8px",
-          padding: "1.5rem",
-          backgroundColor: "var(--cds-ui-background, #ffffff)",
-        }}
-      >
-        <h3
-          style={{
-            fontSize: "1.125rem",
-            fontWeight: 600,
-            marginBottom: "0.25rem",
-            color: "var(--cds-text-primary)",
-          }}
-        >
+      <div className={styles.card}>
+        <h3 className={styles.sectionTitle}>
           {displaySymbol} Allocation
         </h3>
-        <p
-          style={{
-            color: "var(--cds-text-secondary)",
-            marginBottom: "1.5rem",
-            fontSize: "0.875rem",
-          }}
-        >
+        <p className={styles.description}>
           The initial token distribution of {displaySymbol} is as follows:
         </p>
 

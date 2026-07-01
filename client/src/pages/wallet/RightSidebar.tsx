@@ -192,11 +192,11 @@ export function RightSidebar({
           {activeTab === "watchlist" && (
             <>
               {/* Token Section Container */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <div className={styles.panelSection}>
                 {/* Token Watchlist Section */}
                 <div className={styles.sectionHeader}>
                   <div className={styles.headerLeft}>
-                    <div className={styles.headerSquare} style={{ backgroundColor: '#20b2aa' }} />
+                    <div className={`${styles.headerSquare} ${styles.headerSquareMint}`} />
                     <span>Watchlist ({tokenWatchlist.length})</span>
                     <ChevronDown size={16} />
                   </div>
@@ -206,7 +206,7 @@ export function RightSidebar({
                 </div>
 
                 {isAddingToken && (
-                  <div style={{ padding: '8px', borderBottom: '1px solid var(--cds-border-subtle)' }}>
+                  <div className={styles.addTokenPanel}>
                     <TokenSearch 
                       setValue={(val) => {
                         if (val?.address) {
@@ -224,7 +224,7 @@ export function RightSidebar({
                   <div className={styles.th} style={{ flex: 1, textAlign: 'right' }}>%CHG</div>
                   <div className={styles.th} style={{ flex: 1, textAlign: 'right' }}>VOL</div>
                 </div>
-                <div className={styles.tableBody} style={{ overflowY: 'auto', flex: 1 }}>
+                <div className={styles.tableBody}>
                   {tokenWatchlist.length === 0 ? (
                     <div className={styles.emptyState}>No tokens watched</div>
                   ) : (
@@ -240,11 +240,11 @@ export function RightSidebar({
               </div>
 
               {/* Wallet Section Container */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <div className={styles.panelSection}>
                 {/* Wallet Watchlist Section */}
                 <div className={styles.sectionHeader}>
                   <div className={styles.headerLeft}>
-                    <div className={styles.headerSquare} style={{backgroundColor: '#0f62fe'}} />
+                    <div className={`${styles.headerSquare} ${styles.headerSquareBlue}`} />
                     <span>Watchlist ({walletWatchlist.length})</span>
                     <ChevronDown size={16} />
                   </div>
@@ -256,7 +256,7 @@ export function RightSidebar({
                   <div className={styles.th} style={{ flex: 2 }}>WALLET</div>
                   <div className={styles.th} style={{ flex: 1, textAlign: 'right' }}>TODAY VOLUME</div>
                 </div>
-                <div className={styles.tableBody} style={{ overflowY: 'auto', flex: 1 }}>
+                <div className={styles.tableBody}>
                   {walletWatchlist.length === 0 ? (
                     <div className={styles.emptyState}>No wallets watched</div>
                   ) : (
@@ -280,7 +280,7 @@ export function RightSidebar({
                 </div>
               </div>
 
-              <div style={{ flex: 1, overflowY: 'auto' }}>
+              <div className={styles.labelBody}>
                 {Object.keys(labels).length === 0 ? (
                   <div className={styles.emptyState}>No labels created</div>
                 ) : (

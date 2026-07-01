@@ -8,13 +8,11 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import {
   Button,
-  Column,
   ComposedModal,
-  Grid,
   ModalBody,
   ModalHeader,
-  Section,
   Stack,
+  InlineLoading,
 } from "@carbon/react";
 import { Add } from "@carbon/react/icons";
 import { ComponentType, useMemo, useState } from "react";
@@ -58,23 +56,25 @@ interface AlertTypeOption {
 type AlertTypeTileProps = {
   option: AlertTypeOption;
   onClick: (type: AlertType) => void;
+  accentLabel: string;
 };
 
-function AlertTypeTile({ option, onClick }: AlertTypeTileProps) {
+function AlertTypeTile({ option, onClick, accentLabel }: AlertTypeTileProps) {
   return (
     <Button
       kind="ghost"
       onClick={() => onClick(option.id)}
       className={styles.alertTypeTile}
     >
-      <Stack gap={2}>
+      <Stack gap={2} className={styles.alertTypeTileBody}>
+        <span className={styles.alertTypeTileEyebrow}>{accentLabel}</span>
         <Txt size="md" block bold>
-          {option.title}
+          <span className={styles.alertTypeTileTitle}>{option.title}</span>
         </Txt>
-        <Txt size="sm" block>
+        <Txt size="sm" block className={styles.alertTypeTileDescription}>
           {option.description}
         </Txt>
-        <Txt secondary size="sm" block>
+        <Txt secondary size="sm" block className={styles.alertTypeTileExample}>
           {option.example}
         </Txt>
       </Stack>
@@ -96,22 +96,33 @@ function AlertTypeSelection({
   onSelectType,
 }: AlertTypeSelectionProps) {
   return (
-    <ComposedModal open={open} onClose={onClose}>
+    <ComposedModal
+      open={open}
+      onClose={onClose}
+      className={styles.alertModalRoot}
+    >
       <ModalHeader label="Alerts" title="Select trigger type" />
-      <ModalBody>
-        <Stack>
-          <Txt secondary size="sm">
-            Please select an alert trigger type
+      <ModalBody className={styles.alertTypeModalBody}>
+        <Stack gap={4}>
+          <Txt secondary size="sm" className={styles.modalIntro}>
+            Please select an alert trigger type to continue.
           </Txt>
-          <Stack gap={1}>
+          <div className={styles.alertTypeGrid}>
             {alertTypeOptions.map((option) => (
               <AlertTypeTile
                 key={option.id}
                 option={option}
                 onClick={onSelectType}
+                accentLabel={
+                  option.id == "token-stats"
+                    ? "Token Alerts"
+                    : option.id == "trading-events"
+                      ? "Trading Alerts"
+                      : "Coming Soon"
+                }
               />
             ))}
-          </Stack>
+          </div>
         </Stack>
       </ModalBody>
     </ComposedModal>
@@ -146,6 +157,8 @@ export default function AlertsDemo() {
     },
   );
 
+  const isLoading = tokenAlerts.isLoading || tradingAlerts.isLoading;
+
   const rows: AlertRow[] = useMemo(() => {
     const tokenRows = (tokenAlerts.data ?? []).map((alertDetails) => ({
       id: alertDetails.alertId,
@@ -175,6 +188,18 @@ export default function AlertsDemo() {
 
     return [...tokenRows, ...tradingRows];
   }, [fmt, tokenAlerts.data, tradingAlerts.data]);
+
+  const tokenAlertCount = useMemo(
+    () => (tokenAlerts.data ?? []).length,
+    [tokenAlerts.data],
+  );
+
+  const tradingAlertCount = useMemo(
+    () => (tradingAlerts.data ?? []).length,
+    [tradingAlerts.data],
+  );
+
+  const totalAlertCount = rows.length;
 
   const headers = useMemo(
     () => [
@@ -231,88 +256,187 @@ export default function AlertsDemo() {
 
   return (
     <PageWrapper noMarketTickers>
-      <Grid fullWidth>
-        <Column lg={16} md={8} sm={4} style={{ marginTop: 32 }}>
-          <Section level={1}>
-            <Stack gap={5}>
-              <div>
-                <h1>Alerts Demo</h1>
-                <p>View all alerts for your account</p>
+      <div className={styles.page}>
+        <section className={styles.hero}>
+          <div className={styles.heroEyebrow}>Alert Center</div>
+          <div className={styles.heroTop}>
+            <div className={styles.heroCopy}>
+              <h1 className={styles.title}>Token Alerts</h1>
+              <p className={styles.subtitle}>
+                Monitor token-specific alert rules, trading events, and delivery
+                settings in a clean Yoca dashboard layout.
+              </p>
+              <div className={styles.heroPills}>
+                <span className={styles.heroPill}>Token performance</span>
+                <span className={styles.heroPill}>Trading events</span>
+                <span className={styles.heroPill}>Delivery sync</span>
               </div>
+            </div>
 
-              <ModalStateManager
-                renderLauncher={({ setOpen }) => (
-                  <Button
-                    kind="primary"
-                    renderIcon={Add}
-                    onClick={() => setOpen(true)}
-                  >
-                    Create New Alert
-                  </Button>
-                )}
-              >
-                {({ open, setOpen }) => {
-                  const ConfigComponent =
-                    selectedAlertType && alertConfigModules[selectedAlertType];
+            <div className={styles.heroStats}>
+              <div className={styles.metricCard}>
+                <span className={styles.metricValue}>
+                  {isLoading ? "..." : String(totalAlertCount)}
+                </span>
+                <span className={styles.metricLabel}>Total alerts</span>
+              </div>
+              <div className={styles.metricCard}>
+                <span className={styles.metricValue}>
+                  {isLoading ? "..." : String(tokenAlertCount)}
+                </span>
+                <span className={styles.metricLabel}>Token alerts</span>
+              </div>
+              <div className={styles.metricCard}>
+                <span className={styles.metricValue}>
+                  {isLoading ? "..." : String(tradingAlertCount)}
+                </span>
+                <span className={styles.metricLabel}>Trading alerts</span>
+              </div>
+            </div>
+          </div>
+        </section>
 
-                  return (
-                    <>
-                      {step == "type-selection" && (
-                        <AlertTypeSelection
-                          open={open}
-                          onClose={() => setOpen(false)}
-                          alertTypeOptions={alertTypeOptions}
-                          onSelectType={selectAlertType}
-                        />
-                      )}
+        <section className={styles.panelCard}>
+          <div className={styles.panelHeader}>
+            <div className={styles.panelHeading}>
+              <h2 className={styles.sectionTitle}>Your Alerts</h2>
+              <p className={styles.sectionCopy}>
+                Token and trading alert rules created for your account.
+              </p>
+            </div>
 
-                      {step == "configuration" &&
-                        (ConfigComponent ? (
-                          <ConfigComponent
-                            open={open}
-                            onReturn={() => setStep("type-selection")}
-                            onFinish={() => {
-                              onModalClose();
-                              tokenAlerts.mutate();
-                              tradingAlerts.mutate();
-                              setOpen(false);
-                            }}
-                          />
-                        ) : (
-                          <ComposedModal
-                            open={open}
-                            onClose={() => {
-                              console.log("close");
-                              onModalClose();
-                              setOpen(false);
-                            }}
-                          >
-                            <ModalBody>Not implemented yet</ModalBody>
-                          </ComposedModal>
-                        ))}
-                    </>
-                  );
-                }}
-              </ModalStateManager>
-
-              <Tble
-                rows={rows}
-                headers={headers}
-                title="Your Alerts"
-                loading={tokenAlerts.isLoading || tradingAlerts.isLoading}
-                enablePagination
-                pageSize={10}
-              />
-
-              {(tokenAlerts.error || tradingAlerts.error) && (
-                <Txt block secondary>
-                  Failed to load alerts
-                </Txt>
+            <ModalStateManager
+              renderLauncher={({ setOpen }) => (
+                <Button
+                  kind="primary"
+                  renderIcon={Add}
+                  onClick={() => setOpen(true)}
+                  className={styles.primaryAction}
+                >
+                  Create New Alert
+                </Button>
               )}
-            </Stack>
-          </Section>
-        </Column>
-      </Grid>
+            >
+              {({ open, setOpen }) => {
+                const ConfigComponent =
+                  selectedAlertType && alertConfigModules[selectedAlertType];
+
+                return (
+                  <>
+                    {step == "type-selection" && (
+                      <AlertTypeSelection
+                        open={open}
+                        onClose={() => {
+                          onModalClose();
+                          setOpen(false);
+                        }}
+                        alertTypeOptions={alertTypeOptions}
+                        onSelectType={selectAlertType}
+                      />
+                    )}
+
+                    {step == "configuration" &&
+                      (ConfigComponent ? (
+                        <ConfigComponent
+                          open={open}
+                          onReturn={() => setStep("type-selection")}
+                          onFinish={() => {
+                            onModalClose();
+                            tokenAlerts.mutate();
+                            tradingAlerts.mutate();
+                            setOpen(false);
+                          }}
+                        />
+                      ) : (
+                        <ComposedModal
+                          open={open}
+                          onClose={() => {
+                            onModalClose();
+                            setOpen(false);
+                          }}
+                          className={styles.alertModalRoot}
+                        >
+                          <ModalBody className={styles.alertModalBody}>
+                            <div className={styles.emptyState}>
+                              <div className={styles.emptyStateEyebrow}>
+                                Coming soon
+                              </div>
+                              <h3 className={styles.emptyStateTitle}>
+                                Not implemented yet
+                              </h3>
+                              <p className={styles.emptyStateDescription}>
+                                This alert type is reserved for future token
+                                alert workflows.
+                              </p>
+                            </div>
+                          </ModalBody>
+                        </ComposedModal>
+                      ))}
+                  </>
+                );
+              }}
+            </ModalStateManager>
+          </div>
+
+          <div className={styles.panelBody}>
+            {isLoading ? (
+              <div className={styles.loadingCard}>
+                <InlineLoading description="Loading alerts" />
+              </div>
+            ) : rows.length > 0 ? (
+              <div className={styles.tableSection}>
+                <div className={styles.tableShell}>
+                  <Tble
+                    rows={rows.map((row) => ({
+                      ...row,
+                      type: (
+                        <span
+                          className={styles.alertTypeLabel}
+                          data-type={row.type}
+                        >
+                          {row.type === "token" ? "Token" : "Trading"}
+                        </span>
+                      ),
+                      target: (
+                        <span className={styles.targetCell}>{row.target}</span>
+                      ),
+                      alertName: (
+                        <span className={styles.nameCell}>{row.alertName}</span>
+                      ),
+                      createdAt: (
+                        <span className={styles.dateCell}>{row.createdAt}</span>
+                      ),
+                    }))}
+                    headers={headers}
+                    enablePagination
+                    pageSize={10}
+                    boxed={false}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className={styles.emptyState}>
+                <div className={styles.emptyStateEyebrow}>Token alerts</div>
+                <h3 className={styles.emptyStateTitle}>No token alerts yet</h3>
+                <p className={styles.emptyStateDescription}>
+                  Create your first token alert to track token performance and
+                  trading changes from a polished alert center.
+                </p>
+                <p className={styles.modalIntro}>
+                  Use the Create New Alert button above to open the alert
+                  builder.
+                </p>
+              </div>
+            )}
+
+            {(tokenAlerts.error || tradingAlerts.error) && (
+              <Txt block secondary>
+                Failed to load alerts
+              </Txt>
+            )}
+          </div>
+        </section>
+      </div>
     </PageWrapper>
   );
 }

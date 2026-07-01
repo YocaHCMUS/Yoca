@@ -573,7 +573,6 @@ export async function getWalletPnLComputed(
     undefined,
     filters?.minAmountUsd,
     filters?.maxAmountUsd,
-    pnlLimit,
   );
   const recent = swapsResult.swaps ?? [];
   const coverage = buildPnLCoverage(recent.length, pnlLimit, swapsResult.pageInfo?.hasMore);

@@ -2,7 +2,7 @@ import { cds } from "@/util/carbon-theme";
 import classNames from "classnames";
 import { type CSSProperties, type PropsWithChildren } from "react";
 
-type TxtSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+type TxtSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "inherit";
 type TxtWeight = "regular" | "medium" | "semibold" | "bold";
 type TxtProps = {
   size?: TxtSize;
@@ -20,7 +20,7 @@ type TxtProps = {
   style?: CSSProperties;
 };
 
-const sizeFontSize: Record<TxtSize, number> = {
+const sizeFontSize: Partial<Record<TxtSize, number>> = {
   xs: 0.5,
   sm: 0.75,
   md: 1,
@@ -62,7 +62,7 @@ export function Txt({
       style={{
         textTransform: uppercase ? "uppercase" : undefined,
         fontWeight: resolvedWeight ? weightValue[resolvedWeight] : undefined,
-        fontSize: `${sizeFontSize[size]}rem`,
+        fontSize: size !== "inherit" ? `${sizeFontSize[size]}rem` : undefined,
         display: block ? "block" : stretch ? "inline-block" : undefined,
         color: secondary ? cds.textSecondary : "inherit",
         width: stretch ? "100%" : width,

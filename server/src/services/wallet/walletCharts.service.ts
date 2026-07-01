@@ -143,8 +143,8 @@ type WalletBalanceHistory =
 export async function getWalletBalanceHistory(
   address: string,
   timePeriod: WalletTimePeriod = "30D",
-  fromMs?: number,
-  toMs?: number,
+  _fromMs?: number,
+  _toMs?: number,
 ): Promise<WalletBalanceHistory> {
   // TODO: enforce this
   const toBalanceChartPeriod: Record<string, "week" | "month"> = {

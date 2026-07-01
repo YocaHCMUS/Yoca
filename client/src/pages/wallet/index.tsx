@@ -1,4 +1,6 @@
 import client from "@/api/main";
+import { Card } from "@/components/common/Card/Card";
+import { PageHeader } from "@/components/common/PageHeader/PageHeader";
 import { PnLChart } from "@/components/charts/PnLChart/index.ts";
 import { WalletTopbar } from "@/components/wallet/WalletTopbar/WalletTopbar.tsx";
 import { WalletHero } from "@/components/wallet/WalletHero/WalletHero.tsx";
@@ -11,8 +13,8 @@ import {
 import { AiAnalysisModal } from "@/components/wallet/AiAnalysisModal/AiAnalysisModal.tsx";
 import { useWalletWinrate } from "@/hooks/useWalletWinrate";
 import {
-    WalletReportTemplate,
-    type WalletReportSection,
+  WalletReportTemplate,
+  type WalletReportSection,
 } from "@/components/WalletReportTemplate";
 import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
@@ -21,41 +23,41 @@ import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { useExportReport } from "@/hooks/useExportReport.ts";
 import { useGet } from "@/hooks/useGet";
 import {
-    fetchWalletSwaps,
-    fetchWalletTransfers,
-    fetchWalletPortfolio,
-    fetchWalletOverview,
-    fetchWalletIntelligence,
-    type WalletSwap,
-    type WalletTransfer,
-    type WalletPortfolioItem,
-    type WalletIntelligenceResponse,
-    type WalletOverviewMultiPeriodResponse,
-    type WalletPageInfo,
+  fetchWalletSwaps,
+  fetchWalletTransfers,
+  fetchWalletPortfolio,
+  fetchWalletOverview,
+  fetchWalletIntelligence,
+  type WalletSwap,
+  type WalletTransfer,
+  type WalletPortfolioItem,
+  type WalletIntelligenceResponse,
+  type WalletOverviewMultiPeriodResponse,
+  type WalletPageInfo,
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import { AiGenerate, Close } from "@carbon/icons-react";
 import { Button } from "@carbon/react";
 import JSZip from "jszip";
 import {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
 import { useParams } from "react-router";
 import * as XLSX from "xlsx";
 import {
-    buildPortfolioMetaMap,
-    mapPortfolioItems,
+  buildPortfolioMetaMap,
+  mapPortfolioItems,
 } from "../../util/wallet-portfolio-mapper.ts";
 import styles from "./index.module.scss";
 import {
-    TokenAverageTradePrice,
-    TokenDetailsDemo,
+  TokenAverageTradePrice,
+  TokenDetailsDemo,
 } from "./TokenDetailsDemo.tsx";
 // import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
 import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
@@ -169,6 +171,19 @@ export default function WalletPage() {
     avgBuyCost: number;
     avgSellCost: number;
   } | null>(null);
+
+  useEffect(() => {
+    if (!selectedToken) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedToken(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedToken]);
 
   const walletTokenDetails = useGet(
     client.api.wallets[":address"].tokens,
@@ -610,11 +625,10 @@ export default function WalletPage() {
         fmt.datetime.relativeShort(transfer.timestamp, true),
         transfer.from,
         transfer.to,
-        `${
-          typeof transfer.tokenSymbol === "string" &&
+        `${typeof transfer.tokenSymbol === "string" &&
           transfer.tokenSymbol.trim().length > 0
-            ? transfer.tokenSymbol
-            : "Unknown"
+          ? transfer.tokenSymbol
+          : "Unknown"
         } (${fmt.num.decimal(transfer.amount)})`,
         transfer.amountUsd != null ? fmt.num.currency(transfer.amountUsd) : "—",
       ]);
@@ -948,11 +962,10 @@ export default function WalletPage() {
           fmt.datetime.relativeShort(transfer.timestamp, true),
           transfer.from,
           transfer.to,
-          `${
-            typeof transfer.tokenSymbol === "string" &&
+          `${typeof transfer.tokenSymbol === "string" &&
             transfer.tokenSymbol.trim().length > 0
-              ? transfer.tokenSymbol
-              : "Unknown"
+            ? transfer.tokenSymbol
+            : "Unknown"
           } (${fmt.num.decimal(transfer.amount)})`,
         ])}
         chunkSize={PDF_TABLE_ROWS_PER_PAGE}
@@ -1017,8 +1030,14 @@ export default function WalletPage() {
         onClose: () => setSelectedToken(null),
       }}
     >
-      <div className={styles.pageLayout}>
+      <div className={`${styles.pageLayout}${isRightSidebarOpen ? ` ${styles.rightSidebarExpanded}` : ''}`}>
         <div className={styles.shell}>
+          {/* <PageHeader
+            eyebrow="Wallet Intelligence"
+            title="Wallet Detail"
+            subtitle="Track holdings, capital flow, trading performance, and recent on-chain activity for this address."
+          /> */}
+
           <WalletTopbar
             address={walletAddress}
             onAiAnalysisOpen={() => setAiAnalysisOpen(true)}
@@ -1042,9 +1061,9 @@ export default function WalletPage() {
           />
 
           <div className={styles.body}>
-            <div className={styles.mainCol}>
+            <main className={styles.mainCol}>
               {/* Balance History */}
-              <div className={styles.section}>
+              <Card>
                 <BalanceChartV2
                   minHeight={324}
                   address={walletAddress}
@@ -1053,10 +1072,10 @@ export default function WalletPage() {
                     setDayPopupOpen(true);
                   }}
                 />
-              </div>
+              </Card>
 
               {/* Profit & Loss */}
-              <div className={styles.section}>
+              <Card>
                 <PnLChart
                   minHeight={324}
                   initialFilters={{ wallets: [walletAddress] }}
@@ -1065,27 +1084,29 @@ export default function WalletPage() {
                     setDayPopupOpen(true);
                   }}
                 />
-              </div>
+              </Card>
 
               {/* Activity Tables */}
-              <div className={styles.section}>
+              <Card>
                 <WalletTransactionActivity address={walletAddress} />
-              </div>
-            </div>
+              </Card>
+            </main>
 
-            <div className={styles.sideCol}>
-              <WalletHoldingsPanel
-                walletAddress={walletAddress}
-                portfolio={portfolio}
-                portfolioMeta={portfolioMetaAsMap}
-                loading={portfolioLoading}
-              />
-            </div>
+            <aside className={styles.sideCol}>
+              <Card>
+                <WalletHoldingsPanel
+                  walletAddress={walletAddress}
+                  portfolio={portfolio}
+                  portfolioMeta={portfolioMetaAsMap}
+                  loading={portfolioLoading}
+                />
+              </Card>
+            </aside>
           </div>
 
-          <div className={styles.tokenDetailsWrapper}>
+          <section className={styles.tokenDetailsWrapper}>
             <TokenDetailsDemo setSelectedToken={setSelectedToken} />
-          </div>
+          </section>
         </div>
 
         {/* Modal chat panel (right/left dock + fullscreen) */}
@@ -1127,6 +1148,58 @@ export default function WalletPage() {
           )}
 
         </ChatContextProvider>
+
+        {selectedToken && (
+          <div
+            className={styles.tokenGraphOverlay}
+            role="presentation"
+            onClick={() => setSelectedToken(null)}
+          >
+            <aside
+              className={styles.tokenGraphPanel}
+              aria-label={tr("walletPage.averageTradingPrice")}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={styles.tokenGraphHeader}>
+                <div>
+                  <span className={styles.tokenGraphEyebrow}>
+                    {tr("walletPage.graph")}
+                  </span>
+                  <h2 className={styles.tokenGraphTitle}>
+                    {tr("walletPage.averageTradingPrice")}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  className={styles.tokenGraphCloseBtn}
+                  aria-label={tr("common.cancel")}
+                  onClick={() => setSelectedToken(null)}
+                >
+                  <Close size={20} />
+                </button>
+              </div>
+
+              <div className={styles.tokenGraphContent}>
+                <TokenAverageTradePrice
+                  walletAddress={address}
+                  tokenAddress={selectedToken.address}
+                  tokenImgUrl={
+                    tokenMeta.data?.[selectedToken.address]?.imageUrl || null
+                  }
+                  tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
+                  tokenSymbol={
+                    tokenMeta.data?.[selectedToken.address]?.symbol || null
+                  }
+                  tokenCurrentPrice={
+                    tokenMarket.data?.[selectedToken.address]?.priceUsd || null
+                  }
+                  avgBuyPrice={selectedToken.avgBuyCost}
+                  avgSellPrice={selectedToken.avgSellCost}
+                />
+              </div>
+            </aside>
+          </div>
+        )}
       </div>
 
       <div

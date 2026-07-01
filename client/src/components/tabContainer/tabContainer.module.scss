@@ -9,6 +9,60 @@
   padding: 0;
 }
 
+.tabContainerProfile {
+  gap: $spacing-05;
+  padding: $spacing-05;
+  background:
+    radial-gradient(circle at top right, rgba(124, 58, 237, 0.12), transparent 24rem),
+    radial-gradient(circle at top left, rgba(45, 212, 191, 0.08), transparent 18rem),
+    linear-gradient(180deg, var(--yoca-bg, #070a13), var(--yoca-bg-soft, #0b1020));
+  color: var(--yoca-text-main, #f8fafc);
+
+  .tabHeaders {
+    border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+    border-radius: var(--yoca-radius-lg, 18px);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+      var(--yoca-surface, rgba(18, 24, 38, 0.82));
+    box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.32));
+    backdrop-filter: blur(18px);
+  }
+
+  .tabContent {
+    border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+    border-radius: var(--yoca-radius-lg, 18px);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.01)),
+      var(--yoca-surface, rgba(18, 24, 38, 0.82));
+    box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.32));
+    backdrop-filter: blur(18px);
+  }
+
+  .tabButton,
+  .tabButtonActive {
+    color: var(--yoca-text-muted, #94a3b8);
+    transition:
+      color 0.16s ease,
+      background-color 0.16s ease,
+      border-color 0.16s ease,
+      box-shadow 0.16s ease,
+      transform 0.16s ease;
+  }
+
+  .tabButton:hover {
+    color: var(--yoca-text-main, #f8fafc);
+    background: var(--yoca-surface-hover, rgba(32, 41, 62, 0.95));
+  }
+
+  .tabButtonActive {
+    color: var(--yoca-text-main, #f8fafc);
+    background:
+      linear-gradient(110deg, rgba(124, 58, 237, 0.18), rgba(37, 99, 235, 0.12)),
+      var(--yoca-surface-hover, rgba(32, 41, 62, 0.95));
+    box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.12);
+  }
+}
+
 .tabHeaders {
   display: flex;
   align-items: stretch;
@@ -178,12 +232,69 @@
   overflow: auto;
 }
 
+.tabContainerProfile.tabContainerVertical {
+  align-items: stretch;
+
+  .tabHeadersVertical {
+    width: 17.5rem;
+    min-width: 17.5rem;
+    flex: 0 0 17.5rem;
+    padding: $spacing-04;
+    gap: $spacing-03;
+    border-right: none;
+  }
+
+  .tabHeaderTabsVertical {
+    gap: $spacing-02;
+
+    .tabButton,
+    .tabButtonActive {
+      min-height: 3.25rem;
+      padding: 0.9rem 1rem;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-right: none;
+      border-radius: 14px;
+      justify-content: flex-start;
+    }
+
+    .tabButton:hover {
+      border-color: var(--yoca-border, rgba(148, 163, 184, 0.16));
+    }
+
+    .tabButtonActive {
+      border-color: rgba(45, 212, 191, 0.24);
+      box-shadow: inset 3px 0 0 var(--yoca-accent, #2dd4bf);
+    }
+  }
+
+  .tabButtonInner {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 0.75rem;
+  }
+
+  .tabButtonIcon {
+    width: 1.25rem;
+    height: 1.25rem;
+    justify-content: center;
+    color: inherit;
+  }
+
+  .tabContentVertical {
+    flex: 1 1 auto;
+    padding: $spacing-05;
+    background:
+      radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 22rem),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+      var(--yoca-surface, rgba(18, 24, 38, 0.82));
+  }
+}
+
 @media (max-width: 960px) {
   .tabContainerVertical {
     flex-direction: column;
   }
-
-
 
   .tabHeadersVertical {
     border-bottom: 1px solid $border-subtle-01;
@@ -212,5 +323,36 @@
 
   .tabContentVertical {
     flex-direction: column;
+  }
+
+  .tabContainerProfile.tabContainerVertical {
+    padding: $spacing-04;
+
+    .tabHeadersVertical {
+      width: 100%;
+      min-width: auto;
+      flex-basis: auto;
+    }
+
+    .tabHeaderTabsVertical {
+      flex-direction: row;
+      gap: $spacing-03;
+      padding-bottom: $spacing-02;
+
+      .tabButton,
+      .tabButtonActive {
+        min-width: max-content;
+        border-bottom: 1px solid transparent;
+      }
+
+      .tabButtonActive {
+        border-bottom-color: rgba(45, 212, 191, 0.24);
+        box-shadow: inset 0 -3px 0 var(--yoca-accent, #2dd4bf);
+      }
+    }
+
+    .tabContentVertical {
+      padding: $spacing-04;
+    }
   }
 }

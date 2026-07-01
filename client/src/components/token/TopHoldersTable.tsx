@@ -22,12 +22,12 @@ export function TopHoldersTable({
   const { tr, fmt } = useLocalization();
 
   const rows = useMemo(() => {
-    if (!holders) return [];
+      if (!holders) return [];
 
     const top10 = holders.slice(0, 10);
     return top10.map((holder, idx) => ({
       id: holder.holderAddress,
-      rank: <span>{idx + 1}</span>,
+      rank: <span className={styles.rankBadge}>{idx + 1}</span>,
       address: (
         <Link
           href={`/wallets/${holder.holderAddress}`}

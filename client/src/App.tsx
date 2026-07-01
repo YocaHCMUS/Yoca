@@ -9,6 +9,7 @@ import { Loading } from "@carbon/react";
 import "./App.css";
 import Index from "@/pages";
 import AlertsPage from "@/pages/alerts";
+import AlertsDemo from "@/pages/alerts/demo";
 import HistoricalDataPage from "@/pages/historical-data";
 import MarketPage from "@/pages/market";
 import NotFoundPage from "@/pages/not-found";
@@ -83,6 +84,15 @@ const router = createBrowserRouter([
         element: (
           <AuthGuard>
             <AlertsPage />
+          </AuthGuard>
+        ),
+      },
+
+      {
+        path: "alerts-token-demo",
+        element: (
+          <AuthGuard>
+            <AlertsDemo />
           </AuthGuard>
         ),
       },
