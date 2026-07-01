@@ -65,6 +65,11 @@
   gap: 6px;
 }
 
+.periodTabs {
+  width: fit-content;
+  align-self: flex-start;
+}
+
 .topbarActions {
   justify-content: flex-end;
   display: flex;

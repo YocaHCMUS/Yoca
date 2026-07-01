@@ -135,29 +135,39 @@ Text primitive — used instead of raw `<span>` for consistent typography.
 
 ### 4.2 Data Display Components
 
-#### Tble — `components/Tble.tsx` (Data Table)
-**Primary table component** — wraps Carbon DataTable with pagination, boxed mode, sticky headers, and loading/empty states.
+#### Tble � `components/Tble.tsx` (Data Table)
+**Primary native table component** � Yoca-styled table shell with search, pagination, sticky headers, loading/empty states, sort configs, cell renderers, and lightweight filters.
 ```tsx
 <Tble
-  rows={[{ id: "1", name: "Alice" }]}
+  rows={[{ id: "1", name: "Alice", valueUsd: 120 }]}
   headers={[{ header: "Name", key: "name", align: "start", width: 200, minWidth: 100 }]}
   title="Table Title"
   description="Optional subtitle"
   loading={false}
   height={400}
+  enableSearch
+  searchFields={["name", "address"]}
   enablePagination
   pageSize={20}
   pageSizes={[8,16,24,32]}
   stickyHeader
-  boxed                    // adds 1px border
-  toolBar={<button />}    // rendered in toolbar area
+  boxed
+  toolBar={<button />}
   onRowClick={(row, idx) => void}
+  sortConfigs={{ valueUsd: { type: TbleSortType.Number } }}
+  filterSchema={{
+    name: { type: TbleFilterType.Select },
+    valueUsd: { type: TbleFilterType.Range, min: 0, max: 1000, step: 1 },
+    mixed: { type: TbleFilterType.Composite, filters: { name: { type: TbleFilterType.Select } } }
+  }}
+  cellRenderers={{ name: (value, row) => <TokenIdentityCell symbol={String(value)} /> }}
 />
 ```
-- Alignment: `header.align` ∈ `"start" | "center" | "end"`
-- Uses CSS modules from `styles/_overwrite.module.scss` for Carbon overrides
-- Pagination text via `useLocalization().tr("table.*")`
-
+- Alignment: `header.align` ? `"start" | "center" | "end"`.
+- Search is opt-in with `enableSearch`; use `searchFields` to restrict search to stable primitive row fields.
+- Supported filters: searchable checkbox `Select`, dual-slider `Range`, and nested `Composite` groups. Date filters stay on the old rich `Table` until explicitly migrated.
+- Active filters use `ChartTag`; filter popovers use native inputs/buttons and `--yoca-*` styling.
+- Wallet holdings tables should use `Tble`; condense holding amount + USD value into one column when both are row-level portfolio values.
 #### Table — `components/tables/Table.tsx` (Rich Table)
 Advanced table with column-level filtering, sort configs, AI actions, and CSV export. Uses `TableWrapper` as outer shell.
 ```tsx
@@ -453,6 +463,8 @@ Use these non-Carbon controls for compact chart headers, table tabs, token selec
 - Preferred replacements for `FilterSwitch`, Carbon `ContentSwitcher`/`IconSwitch`, Carbon chart-local `Button`, Carbon `Tag`, and Carbon `IconButton`.
 - Header controls should be passed through `ChartWrapper.actions` and right-aligned in the chart header, not placed in the chart body.
 - Styling uses `--yoca-*` theme variables and native buttons/links.
+- Asset distribution charts should render as a two-section layout: label-less donut on the left, custom bounded legend on the right with color swatches and percentages. `Others` stays a single aggregate row; hidden token names are not rendered in the chart body.
+- Carbon `Dropdown`, `FilterableMultiSelect`, chart-local filter dropdowns, Carbon chart buttons, and Carbon tags are deprecated for new chart/table-local controls.
 
 ### 5.10 Chart Types (`types/chart.types.ts`)
 | Type | Description |
@@ -1157,3 +1169,4 @@ After each step, manually verify:
 | **Alerts page** | Each section is a distinct card. Empty state renders when no alert rules. Delete action visible and works. |
 | **Profile pages** | Each tab has proper empty states instead of blank/stub. Tables match other pages. |
 | **Global** | `npm run typecheck` passes. No visual regressions on existing charts/tables. |
+

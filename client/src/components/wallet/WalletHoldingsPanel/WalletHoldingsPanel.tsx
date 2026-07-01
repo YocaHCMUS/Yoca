@@ -1,27 +1,21 @@
-import { useMemo } from "react";
+﻿import { useMemo, type MouseEvent } from "react";
 import { useNavigate } from "react-router";
+import { Star } from "lucide-react";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWatchlist } from "@/contexts/WatchlistContext";
 import { AssetDistribution } from "@/components/charts/AssetDistribution/AssetDistribution.tsx";
-import {
-  FilterType,
-  type FilterConfig,
-  SortType,
-  Table,
-} from "@/components/tables/Table.tsx";
+import Tble, {
+  TbleFilterType,
+  TbleSortType,
+  type TblRw,
+} from "@/components/Tble.tsx";
 import {
   renderBase,
   renderReducedNumber,
 } from "@/components/tables/TableCellRenderer.tsx";
 import { TokenIdentityCell } from "@/components/token/TokenIdentityCell.tsx";
 import { locale } from "@/config/localization/index.ts";
-import {
-  Star,
-  StarFilled,
-  User,
-} from "@carbon/icons-react";
-import { IconButton } from "@carbon/react";
 import {
   buildPortfolioMetaMap,
   isNativeSolToken,
@@ -38,20 +32,13 @@ interface WalletHoldingsPanelProps {
   actions?: React.ReactNode;
 }
 
-function resolveTokenMetaLookupAddress(
-  tokenAddress: string | undefined,
-): string | undefined {
-  if (!tokenAddress) return undefined;
-  const normalized = tokenAddress.trim().toLowerCase();
-  if (
-    normalized === "native" ||
-    normalized === "sol" ||
-    normalized === "11111111111111111111111111111111" ||
-    normalized === "so11111111111111111111111111111111111111111"
-  ) {
-    return "So11111111111111111111111111111111111111112";
-  }
-  return tokenAddress;
+interface HoldingTableRow extends TblRw {
+  tokenAddress: string;
+  tokenLabel: string;
+  tokenName: string;
+  priceUsd: number;
+  amount: number;
+  valueUsd: number;
 }
 
 export function WalletHoldingsPanel({
@@ -77,49 +64,43 @@ export function WalletHoldingsPanel({
     [portfolioMetaRows],
   );
 
-  const portfolioTableData = useMemo(
-    () =>
-      portfolioData.map((row: (string | number)[], rowIndex: number) => [
-        portfolioMetaRows[rowIndex]?.tokenAddress ?? "",
-        ...row,
-      ]),
-    [portfolioData, portfolioMetaRows],
-  );
-
   const tokenWatchlistLookup = useMemo(
     () => new Set(tokenWatchlist.map((item) => item.toLowerCase())),
     [tokenWatchlist],
   );
 
+  const holdingsRows = useMemo<HoldingTableRow[]>(
+    () =>
+      portfolioData.map((row, rowIndex) => {
+        const tokenLabel = String(row[0] ?? "");
+        const meta = portfolioMetaRows[rowIndex] ?? portfolioMeta.get(rowIndex);
+        return {
+          id: `${meta?.tokenAddress ?? tokenLabel}-${rowIndex}`,
+          tokenAddress: meta?.tokenAddress ?? "",
+          tokenLabel,
+          tokenName: meta?.fullName ?? "",
+          priceUsd: Number(row[1] ?? 0),
+          amount: Number(row[2] ?? 0),
+          valueUsd: Number(row[3] ?? 0),
+          watchlist: meta?.tokenAddress ?? "",
+          token: tokenLabel,
+          price: Number(row[1] ?? 0),
+          holdingValue: Number(row[3] ?? 0),
+        };
+      }),
+    [portfolioData, portfolioMeta, portfolioMetaRows],
+  );
+
   const portfolioHeaders = [
-    { header: "", align: "center" as const, minWidth: "3.25rem" },
-    { header: tr("walletPage.token"), align: "start" as const, minWidth: "11rem" },
-    { header: tr("walletPage.price"), align: "end" as const, minWidth: "8rem" },
-    { header: tr("walletPage.holding"), align: "end" as const, minWidth: "8rem" },
-    { header: tr("walletPage.value"), align: "end" as const, minWidth: "8.5rem" },
+    { key: "watchlist", header: "", align: "center" as const, minWidth: "3rem", width: "3rem" },
+    { key: "token", header: tr("walletPage.token"), align: "start" as const, minWidth: "11rem" },
+    { key: "price", header: tr("walletPage.price"), align: "end" as const, minWidth: "7rem" },
+    { key: "holdingValue", header: `${tr("walletPage.holding")} / ${tr("walletPage.value")}`, align: "end" as const, minWidth: "9rem" },
   ];
 
-  const isSortablePortfolio = [false, false, true, true, true];
-
-  const portfolioSortConfig = {
-    2: { type: SortType.Number },
-    3: { type: SortType.Number },
-    4: { type: SortType.Number },
-  };
-
-  const portfolioFilterSchema: Record<number, FilterConfig | null> = {
-    1: { type: FilterType.Select },
-    2: { type: FilterType.Range, min: 0, max: 500, step: 0.01 },
-    3: { type: FilterType.Range, min: 0, max: 1_000_000, step: 0.001 },
-    4: { type: FilterType.Range, min: 0, max: 100_000, step: 0.01 },
-  };
-
-  const portfolioCellRenderers = [
-    (value: string) => {
-      const tokenAddress =
-        typeof value === "string" && value.trim().length > 0
-          ? value
-          : undefined;
+  const cellRenderers = {
+    watchlist: (value: unknown) => {
+      const tokenAddress = typeof value === "string" ? value : "";
       const watched = Boolean(
         tokenAddress && tokenWatchlistLookup.has(tokenAddress.toLowerCase()),
       );
@@ -128,33 +109,31 @@ export function WalletHoldingsPanel({
       if (!tokenAddress) return null;
 
       return (
-        <IconButton
-          kind="ghost"
-          size="sm"
+        <button
+          type="button"
+          className={`${styles.watchButton} ${watched ? styles.watchButtonActive : ""}`}
           disabled={pending || !user}
-          label={
+          aria-label={
             watched
               ? tr("marketPage.removeFromWatchlist")
               : tr("marketPage.addToWatchlist")
           }
-          onClick={(event) => {
+          onClick={(event: MouseEvent<HTMLButtonElement>) => {
             event.preventDefault();
             event.stopPropagation();
             void toggleToken(tokenAddress);
           }}
         >
-          {watched ? <StarFilled size={16} /> : <Star size={16} />}
-        </IconButton>
+          <Star size={16} />
+        </button>
       );
     },
-    (value: string) => {
-      const portfolioTokenMeta = portfolioMetaMap.get(value);
-      const tokenMetaLookupAddress = resolveTokenMetaLookupAddress(
-        portfolioTokenMeta?.tokenAddress,
-      );
+    token: (value: unknown) => {
+      const tokenLabel = String(value ?? "");
+      const portfolioTokenMeta = portfolioMetaMap.get(tokenLabel);
       return (
         <TokenIdentityCell
-          symbol={value}
+          symbol={tokenLabel}
           fullName={portfolioTokenMeta?.fullName}
           imageUrl={portfolioTokenMeta?.logoUri}
           imageSize={30}
@@ -162,16 +141,23 @@ export function WalletHoldingsPanel({
         />
       );
     },
-    (value: unknown) => {
-      const n = Number(value);
-      return Number.isFinite(n) ? fmt.num.currency(n) : renderBase(value);
+    price: (value: unknown) => {
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? fmt.num.currency(numeric) : renderBase(value);
     },
-    (value: string) => renderReducedNumber(value, renderBase, bcp47),
-    (value: unknown) => {
-      const n = Number(value);
-      return Number.isFinite(n) ? fmt.num.currency(n) : renderBase(value);
+    holdingValue: (_value: unknown, row: TblRw) => {
+      const amount = Number(row.amount ?? 0);
+      const valueUsd = Number(row.valueUsd ?? 0);
+      return (
+        <div className={styles.holdingValueCell}>
+          <span className={styles.holdingAmount}>
+            {renderReducedNumber(String(amount), renderBase, bcp47)}
+          </span>
+          <span className={styles.holdingUsd}>{fmt.num.currency(valueUsd)}</span>
+        </div>
+      );
     },
-  ];
+  };
 
   if (loading && portfolio.length === 0) {
     return (
@@ -200,30 +186,39 @@ export function WalletHoldingsPanel({
         minHeight={340}
       />
 
-      <Table
+      <Tble
         title={tr("walletPage.portfolio")}
+        rows={holdingsRows}
         headers={portfolioHeaders}
-        initialFilters={{}}
-        fetcher={Promise.resolve(portfolioTableData)}
-        filterSchema={portfolioFilterSchema}
-        cellRenderers={portfolioCellRenderers}
-        dataEntries={portfolioTableData}
-        isSortable={isSortablePortfolio}
-        sortConfigs={portfolioSortConfig}
-        onRowClick={(_row: (string | number)[], rowIndex: number) => {
-          const tokenAddress =
-            rowIndex >= 0
-              ? portfolioMeta.get(rowIndex)?.tokenAddress
-              : undefined;
+        filterSchema={{
+          token: { type: TbleFilterType.Select, field: "tokenLabel" },
+          price: { type: TbleFilterType.Range, field: "priceUsd", min: 0, max: 500, step: 0.01 },
+          holdingValue: { type: TbleFilterType.Range, field: "valueUsd", min: 0, max: 100_000, step: 0.01 },
+        }}
+        sortConfigs={{
+          token: { type: TbleSortType.String, field: "tokenLabel" },
+          price: { type: TbleSortType.Number, field: "priceUsd" },
+          holdingValue: { type: TbleSortType.Number, field: "valueUsd" },
+        }}
+        cellRenderers={cellRenderers}
+        enableSearch
+        searchFields={["tokenLabel", "tokenName", "tokenAddress"]}
+        onRowClick={(row) => {
+          const tokenAddress = String(row.tokenAddress ?? "");
           if (tokenAddress && !isNativeSolToken(tokenAddress)) {
             navigate(`/tokens/${tokenAddress}`);
           }
         }}
-        enableExport={false}
-        loading={loading && portfolioTableData.length === 0}
+        enablePagination
+        pageSize={16}
+        boxed
+        loading={loading && holdingsRows.length === 0}
       />
     </div>
   );
 }
 
 export default WalletHoldingsPanel;
+
+
+

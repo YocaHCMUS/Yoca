@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from "react";
+import { type ComponentType, type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import styles from "./ChartControls.module.scss";
 
 export interface SegmentedControlOption<TValue extends string> {
@@ -28,13 +28,37 @@ export function SegmentedControl<TValue extends string>({
   disabled = false,
   renderLabel,
 }: SegmentedControlProps<TValue>) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [sliderStyle, setSliderStyle] = useState({ width: 0, offsetX: 0 });
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const activeBtn = container.querySelector<HTMLButtonElement>(
+      '[data-active="true"]',
+    );
+    if (!activeBtn) return;
+    setSliderStyle({
+      width: activeBtn.offsetWidth,
+      offsetX: activeBtn.offsetLeft,
+    });
+  }, [value, options]);
+
   return (
     <div
+      ref={containerRef}
       className={`${styles.segmented} ${className}`}
       role="toolbar"
       aria-label={ariaLabel}
       data-html2canvas-ignore="true"
     >
+      <div
+        className={styles.slider}
+        style={{
+          width: sliderStyle.width,
+          transform: `translateX(${sliderStyle.offsetX}px)`,
+        }}
+      />
       {options.map((option) => {
         const active = option.value === value;
         const Icon = option.icon;
@@ -42,6 +66,7 @@ export function SegmentedControl<TValue extends string>({
           <button
             key={option.value}
             type="button"
+            data-active={active}
             className={`${styles.segment} ${active ? styles.segmentActive : ""} ${iconOnly ? styles.segmentIconOnly : ""}`}
             onClick={() => onChange(option.value)}
             aria-pressed={active}

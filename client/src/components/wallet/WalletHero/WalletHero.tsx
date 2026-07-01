@@ -167,6 +167,7 @@ export function WalletHero({
           <TrendNum
             value={totalPnL}
             prefixes="arrow"
+            size="inherit"
             formatter={(value) => fmt.num.currency(value ?? 0)}
           />
         </div>

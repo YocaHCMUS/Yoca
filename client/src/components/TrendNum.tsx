@@ -17,7 +17,7 @@ export function TrendNum({
   prefixes?: "plus-minus" | "arrow" | "none";
   direction?: Direction;
   mono?: boolean;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "inherit";
   epsilon?: number;
   formatter: (value: number | null) => string;
 }) {

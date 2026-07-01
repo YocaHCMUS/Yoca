@@ -12,7 +12,7 @@ import {
 } from "@carbon/icons-react";
 import { InlineNotification, Tag, Tooltip } from "@carbon/react";
 import client from "@/api/main";
-import { PillTabs } from "@/components/common/PillTabs/PillTabs";
+import { SegmentedControl } from "@/components/charts/shared/ChartControls";
 import { AddressPill } from "@/components/common/AddressPill/AddressPill";
 import { StatusBadge } from "@/components/common/StatusBadge/StatusBadge";
 import { WalletLabelModal } from "@/components/wallet/WalletLabelModal/WalletLabelModal";
@@ -475,15 +475,18 @@ export function WalletTopbar({
 
 
         <div className={styles.topbarRight}>
-          <PillTabs
+          <div className={styles.periodTabs}>
+          <SegmentedControl
+            className={styles.periodTabs}
             options={PERIOD_OPTIONS.map((opt) => ({
               label: tr(opt.labelKey),
               value: opt.key,
             }))}
             value={currentPeriod}
             onChange={(key) => onPeriodChange(key as WalletOverviewPeriodKey)}
-            size="sm"
+            ariaLabel={tr("charts.timePeriod")}
           />
+          </div>
 
           <div className={styles.topbarActions}>
             <Tooltip
