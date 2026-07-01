@@ -11,10 +11,6 @@
   gap: 0.5rem;
   width: min(28rem, calc(100vw - 2rem));
   pointer-events: none;
-
-  border: 1px solid var(--yoca-border);
-  background: var(--yoca-bg-soft);
-  box-shadow: var(--yoca-shadow-card);
 }
 
 .toast {
