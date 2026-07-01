@@ -1,6 +1,7 @@
-import { ErrorBoundary, Stack, Tooltip } from "@carbon/react";
+import { Stack, Tooltip } from "@carbon/react";
 import { type ComponentProps } from "react";
 import { TknImg } from "../TknImg";
+import { Txt } from "../Txt";
 
 type TooltipAlign = ComponentProps<typeof Tooltip>["align"];
 
@@ -28,15 +29,16 @@ export function TokenIdentityCell({
   return (
     <Stack orientation="horizontal" gap={2} style={{ alignItems: "center" }}>
       <TknImg src={source} alt={normalizedSymbol} size={imageSize} />
-      <span>
-        <Tooltip label={tooltipLabel} align={tooltipAlign}>
+      <Tooltip label={tooltipLabel} align={tooltipAlign}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
           {emphasizeSymbol ? (
             <strong>{normalizedSymbol}</strong>
           ) : (
             <span>{normalizedSymbol}</span>
           )}
-        </Tooltip>
-      </span>
+          {fullName?.trim() && <Txt size="sm" secondary>{fullName.trim()}</Txt>}
+        </div>
+      </Tooltip>
     </Stack>
   );
 }

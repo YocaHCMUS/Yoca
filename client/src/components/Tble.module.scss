@@ -51,6 +51,15 @@
   min-width: min(100%, 18rem);
 }
 
+.headerOnlyToolbar {
+  justify-content: flex-end;
+
+  .toolbar {
+    justify-content: flex-start;
+    min-width: auto;
+  }
+}
+
 .searchBox,
 .filterSearchRow {
   display: inline-flex;
@@ -499,6 +508,7 @@
 }
 
 @media (max-width: 720px) {
+
   .header,
   .pagination {
     align-items: stretch;

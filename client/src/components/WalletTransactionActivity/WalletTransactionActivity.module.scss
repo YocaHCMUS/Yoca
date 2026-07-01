@@ -2,74 +2,22 @@
   padding: 0.75rem;
 }
 
-.tabs,
-.tabPanel {
-  background: transparent;
+.tabsHeader {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.24));
+  padding: 0 0 0.5rem;
+  margin-bottom: 0.75rem;
+  gap: 0;
+  flex-wrap: wrap;
 }
 
-.tabList {
-  padding-inline: 0.25rem;
+.headerSpacer {
+  flex: 1;
 }
 
 .lowValueFilter {
   color: var(--yoca-text-muted, #94a3b8);
-}
-
-.root :global(.cds--tabs),
-.root :global(.cds--tabs__nav),
-.root :global(.cds--tabs__nav-item),
-.root :global(.cds--tab-content),
-.root :global(.cds--layer),
-.root :global(.cds--table-container),
-.root :global(.cds--data-table-container),
-.root :global(.cds--data-table-header),
-.root :global(.cds--data-table-content),
-.root :global(.cds--pagination),
-.root :global(.cds--pagination__control-buttons) {
-  background: transparent !important;
-}
-
-.root :global(.cds--tabs__nav-item) {
-  border-bottom-color: rgba(148, 163, 184, 0.14);
-}
-
-.root :global(.cds--tabs__nav-link) {
-  color: var(--yoca-text-muted, #94a3b8);
-}
-
-.root :global(.cds--tabs__nav-item--selected),
-.root :global(.cds--tabs__nav-item--selected .cds--tabs__nav-link) {
-  color: var(--yoca-text-main, #f8fafc);
-}
-
-.root :global(.cds--tabs__nav-item--selected::after) {
-  border-bottom-color: var(--yoca-primary, #7c3aed);
-}
-
-.root :global(.cds--data-table),
-.root :global(.cds--data-table thead),
-.root :global(.cds--data-table tbody),
-.root :global(.cds--data-table tr),
-.root :global(.cds--data-table th),
-.root :global(.cds--data-table td) {
-  background: transparent !important;
-}
-
-.root :global(.cds--data-table th) {
-  color: var(--yoca-text-muted, #94a3b8);
-}
-
-.root :global(.cds--data-table td) {
-  color: var(--yoca-text-soft, #cbd5e1);
-}
-
-.root :global(.cds--data-table tbody tr:hover td) {
-  background: rgba(124, 58, 237, 0.08) !important;
-}
-
-.tabSwitch {
-  justify-content: flex-start;
-  margin: 0 0 0.75rem;
 }
 
 .checkboxLabel {

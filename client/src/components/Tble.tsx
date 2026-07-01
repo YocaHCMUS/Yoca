@@ -866,8 +866,9 @@ function TbleHeader({
   activeFilters: Array<{ key: string; label: string; schema: TbleFilterConfig | null | undefined; value: FilterValue }>;
   removeFilter: (key: string) => void;
 }) {
+  const hasHeaderTitle = Boolean(title || description);
   return (
-    <div className={styles.header}>
+    <div className={`${styles.header} ${!hasHeaderTitle ? styles.headerOnlyToolbar : ''}`}>
       {(title || description) && (
         <div className={styles.titleBlock}>
           {title && <strong>{title}</strong>}
