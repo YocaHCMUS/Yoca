@@ -1,50 +1,52 @@
-@use "@carbon/react/scss/theme" as *;
-
-// Semantic colors (same in both themes)
-$color-buy: #10b981;
-$color-sell: #f43f5e;
-
 .container {
   margin-top: 0;
-  background: $background;
-  border-radius: 0;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
-  border: none;
-  border-top: 1px solid $border-subtle;
+  overflow: hidden;
   flex-shrink: 0;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 28%),
+    var(--yoca-surface);
+  box-shadow: var(--yoca-shadow-card);
+  backdrop-filter: blur(18px);
 }
 
 .tabsHeader {
   display: flex;
   align-items: center;
-  border-bottom: 1px solid $border-subtle;
-  background: $background;
-  padding: 0;
-  gap: 0;
+  gap: 4px;
   flex-wrap: wrap;
+  padding: 6px 10px 0;
+  border-bottom: 1px solid var(--yoca-border);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .tab {
-  padding: 12px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  color: $text-secondary;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s;
+  padding: 12px 16px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 14px 14px 0 0;
+  color: var(--yoca-text-muted);
+  font-size: 13px;
+  font-weight: 700;
   white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
 
   &:hover {
-    color: $text-primary;
-    background: $layer-02;
+    color: var(--yoca-text-main);
+    background: rgba(255, 255, 255, 0.04);
   }
 
   &.active {
-    color: $text-primary;
-    border-bottom-color: $focus;
-    background: $background;
+    color: var(--yoca-text-main);
+    border-color: var(--yoca-border);
+    background: var(--yoca-surface-elevated);
   }
 }
 
@@ -52,58 +54,57 @@ $color-sell: #f43f5e;
   flex: 1;
 }
 
-// ── Filter buttons ──────────────────────────────────
 .filterGroup {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 8px 10px 12px;
 }
 
 .filterBtn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid $border-subtle;
-  background: transparent;
-  color: $text-secondary;
+  min-height: 32px;
+  padding: 5px 12px;
+  border: 1px solid var(--yoca-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--yoca-text-muted);
   font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  font-weight: 700;
   white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 
   &:hover {
-    background: $layer-hover-01;
-    color: $text-primary;
+    background: rgba(124, 58, 237, 0.08);
+    color: var(--yoca-text-main);
   }
 
-  // "All" active state
   &.filterAll {
-    background: $layer-01;
-    color: $text-primary;
-    border-color: $border-strong;
-    font-weight: 600;
+    background: rgba(124, 58, 237, 0.1);
+    color: var(--yoca-primary);
+    border-color: rgba(124, 58, 237, 0.3);
   }
 
-  // Buy active state
   &.filterBuyActive {
     background: rgba(16, 185, 129, 0.12);
-    color: $color-buy;
+    color: var(--yoca-success);
     border-color: rgba(16, 185, 129, 0.4);
-    font-weight: 600;
   }
 
-  // Sell active state
   &.filterSellActive {
     background: rgba(244, 63, 94, 0.12);
-    color: $color-sell;
+    color: var(--yoca-danger);
     border-color: rgba(244, 63, 94, 0.4);
-    font-weight: 600;
   }
 }
+
+.filterBuyBtn {}
+
+.filterSellBtn {}
 
 .filterCount {
   display: inline-flex;
@@ -112,24 +113,23 @@ $color-sell: #f43f5e;
   min-width: 18px;
   height: 16px;
   padding: 0 4px;
-  border-radius: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--yoca-text-soft);
   font-size: 11px;
-  font-weight: 600;
-  background: $layer-01;
-  color: $text-helper;
+  font-weight: 700;
 }
 
 .filterCountBuy {
   background: rgba(16, 185, 129, 0.15);
-  color: $color-buy;
+  color: var(--yoca-success);
 }
 
 .filterCountSell {
   background: rgba(244, 63, 94, 0.15);
-  color: $color-sell;
+  color: var(--yoca-danger);
 }
 
-// ── Row tinting ─────────────────────────────────────
 .rowBuy {
   td {
     background: rgba(16, 185, 129, 0.028);
@@ -150,25 +150,28 @@ $color-sell: #f43f5e;
   }
 }
 
-// ── Pagination (Carbon) ─────────────────────────────
 .paginationContainer {
-  border-top: 1px solid $border-subtle;
+  border-top: 1px solid var(--yoca-border);
+
+  :global(.cds--pagination) {
+    background: transparent;
+    color: var(--yoca-text-soft);
+  }
 }
 
 .content {
+  width: 100%;
   padding: 0;
   overflow-x: auto;
-  width: 100%;
 }
 
 .emptyState {
   padding: 32px;
   text-align: center;
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-size: 14px;
 }
 
-// Table Styles
 .table {
   width: 100%;
   table-layout: fixed;
@@ -178,47 +181,49 @@ $color-sell: #f43f5e;
 
   th,
   td {
-    // Time
     &:nth-child(1) {
       width: 13%;
     }
-    // Type
+
     &:nth-child(2) {
       width: 10%;
     }
-    // Price USD
+
     &:nth-child(3) {
       width: 13%;
     }
-    // PENGU
+
     &:nth-child(4) {
       width: 14%;
     }
-    // Value
+
     &:nth-child(5) {
       width: 12%;
     }
-    // From
+
     &:nth-child(6) {
       width: 15%;
     }
-    // TX
+
     &:nth-child(7) {
       width: 8%;
     }
   }
 
   th {
-    text-align: right;
-    padding: 12px 16px;
-    color: $text-secondary;
-    font-weight: 500;
-    border-bottom: 1px solid $border-subtle;
-    white-space: nowrap;
-    background: $background;
     position: sticky;
     top: 0;
     z-index: 10;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--yoca-border);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--yoca-text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-align: right;
+    text-transform: uppercase;
+    white-space: nowrap;
 
     &:first-child {
       text-align: left;
@@ -230,22 +235,14 @@ $color-sell: #f43f5e;
   }
 
   td {
-    padding: 10px 16px;
-    border-bottom: 1px solid $border-subtle;
-    color: $text-primary;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--yoca-border);
+    color: var(--yoca-text-main);
     vertical-align: middle;
     text-align: right;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-
-    &.buy {
-      color: $color-buy;
-    }
-
-    &.sell {
-      color: $color-sell;
-    }
 
     &:first-child {
       text-align: left;
@@ -254,104 +251,83 @@ $color-sell: #f43f5e;
     &:nth-child(2) {
       text-align: center;
     }
-
-    .dateBadge {
-      background: $layer-accent-01;
-      color: $text-secondary;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-      white-space: nowrap;
-    }
-
-    .timeText {
-      color: $text-secondary;
-      font-size: 13px;
-      white-space: nowrap;
-    }
-
-    .type {
-      font-weight: 600;
-      text-transform: uppercase;
-      font-size: 12px;
-
-      &.buy {
-        color: $color-buy;
-      }
-
-      &.sell {
-        color: $color-sell;
-      }
-    }
-
-    .price,
-    .amount,
-    .value {
-      font-weight: 500;
-
-      &.buy {
-        color: $color-buy;
-      }
-
-      &.sell {
-        color: $color-sell;
-      }
-    }
-
-    .link {
-      color: $text-secondary;
-      text-decoration: none;
-      font-family: monospace;
-      font-size: 13px;
-      font-weight: 400;
-
-      &:hover {
-        color: $text-primary;
-        text-decoration: underline;
-      }
-    }
-
-    .iconLink {
-      color: $text-helper;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-
-      &:hover {
-        color: $text-secondary;
-      }
-    }
   }
 }
 
-// Bubblemaps Modal styles (top-level so position:fixed works)
+.timeText {
+  color: var(--yoca-text-soft);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.type,
+.price,
+.amount,
+.value {
+  font-weight: 600;
+}
+
+.type {
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.buy {
+  color: var(--yoca-success);
+}
+
+.sell {
+  color: var(--yoca-danger);
+}
+
+.link {
+  color: var(--yoca-text-soft);
+  text-decoration: none;
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: 400;
+
+  &:hover {
+    color: var(--yoca-text-main);
+    text-decoration: underline;
+  }
+}
+
+.iconLink {
+  color: var(--yoca-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    color: var(--yoca-text-main);
+  }
+}
+
 .modalOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.75);
+  inset: 0;
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
   padding: 12px 20px;
+  background: rgba(0, 0, 0, 0.75);
 }
 
 .modalContent {
-  background: $background;
-  border-radius: 8px;
   width: 88%;
   max-width: 960px;
   height: 78vh;
   max-height: 680px;
   display: flex;
   flex-direction: column;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  background: var(--yoca-surface-elevated);
   box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    0 20px 25px -5px rgba(0, 0, 0, 0.14),
+    0 10px 10px -5px rgba(0, 0, 0, 0.08);
 }
 
 .modalHeader {
@@ -359,32 +335,31 @@ $color-sell: #f43f5e;
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  border-bottom: 1px solid $border-subtle;
+  border-bottom: 1px solid var(--yoca-border);
 
   h3 {
     margin: 0;
+    color: var(--yoca-text-main);
     font-size: 18px;
-    font-weight: 600;
-    color: $text-primary;
+    font-weight: 800;
   }
 }
 
 .closeButton {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: $text-secondary;
-  cursor: pointer;
   padding: 4px 8px;
+  border: none;
+  background: none;
+  color: var(--yoca-text-muted);
+  font-size: 24px;
   line-height: 1;
-  transition: color 0.2s;
+  cursor: pointer;
+  transition: color 0.2s ease;
 
   &:hover {
-    color: $text-primary;
+    color: var(--yoca-text-main);
   }
 }
 
-// Bubblemaps container in modal
 .bubblemapsContainer {
   flex: 1;
   width: 100%;
@@ -397,4 +372,14 @@ $color-sell: #f43f5e;
   height: 100%;
   border: none;
   border-radius: 0;
+}
+
+@media (max-width: 768px) {
+  .tabsHeader {
+    padding-bottom: 10px;
+  }
+
+  .table {
+    min-width: 860px;
+  }
 }

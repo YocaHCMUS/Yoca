@@ -1,38 +1,51 @@
-@use "@carbon/react/scss/theme" as *;
-
 .container {
   width: 100%;
   background: transparent;
-  padding: 12px 16px;
+  padding: 0;
   position: relative;
 }
 
 .label {
-  font-size: 12px;
-  color: $text-secondary;
   margin-bottom: 6px;
-  font-weight: 500;
+  color: var(--yoca-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .selector {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 12px;
-  background: $background;
-  border: 1px solid $border-subtle;
-  border-radius: 6px;
+  gap: 12px;
+  min-height: 54px;
+  padding: 12px 14px;
+  border: 1px solid var(--yoca-border);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 120%),
+    var(--yoca-surface-elevated);
+  color: var(--yoca-text-main);
   cursor: pointer;
-  transition: all 0.2s;
-  color: $text-primary;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 
   &:hover {
-    border-color: $text-helper;
+    border-color: rgba(124, 58, 237, 0.35);
+    background: var(--yoca-surface-hover);
+    transform: translateY(-1px);
   }
 
   &.active {
-    border-color: $focus;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+    border-color: rgba(124, 58, 237, 0.42);
+    box-shadow:
+      0 0 0 1px rgba(124, 58, 237, 0.18),
+      0 18px 30px rgba(15, 23, 42, 0.12);
   }
 }
 
@@ -40,51 +53,61 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .selectedName {
+  overflow: hidden;
+  color: var(--yoca-text-main);
   font-size: 14px;
-  font-weight: 600;
-  color: $text-primary;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sourceTag {
+  padding: 4px 8px;
+  border: 1px solid rgba(45, 212, 191, 0.24);
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.12);
+  color: var(--yoca-accent);
   font-size: 11px;
-  color: $text-secondary;
-  background: $layer-accent-01;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 500;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
-// Dropdown
 .dropdown {
   position: absolute;
-  top: calc(100% - 5px);
-  left: 16px;
-  right: 16px;
-  background: $background;
-  border: 1px solid $border-subtle;
-  border-radius: 8px;
-  box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  z-index: 1000;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  z-index: 1001;
   overflow: hidden;
+  border: 1px solid var(--yoca-border);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 120%),
+    var(--yoca-surface-elevated);
+  box-shadow:
+    0 24px 45px rgba(15, 23, 42, 0.16),
+    0 12px 24px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(18px);
 }
 
 .headerRow {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr;
-  padding: 10px 12px;
-  background: $layer-02;
-  border-bottom: 1px solid $border-subtle;
   align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--yoca-border);
+  background: rgba(255, 255, 255, 0.04);
 
   span {
+    color: var(--yoca-text-muted);
     font-size: 11px;
-    font-weight: 600;
-    color: $text-secondary;
+    font-weight: 700;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 }
@@ -96,64 +119,79 @@
 .colVol,
 .colLiq {
   text-align: right;
+  color: var(--yoca-text-soft);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .list {
-  max-height: 240px;
+  max-height: 280px;
   overflow-y: auto;
 }
 
 .listItem {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr;
-  padding: 10px 12px;
   align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--yoca-border);
   cursor: pointer;
-  border-bottom: 1px solid $border-subtle;
-  transition: background 0.15s;
+  transition: background 0.15s ease, border-color 0.15s ease;
 
   &:last-child {
     border-bottom: none;
   }
 
   &:hover {
-    background: $layer-02;
+    background: rgba(124, 58, 237, 0.08);
   }
 
   &.selected {
-    background: $layer-selected-01;
+    background:
+      linear-gradient(90deg, rgba(124, 58, 237, 0.12), transparent 85%),
+      rgba(255, 255, 255, 0.04);
   }
 }
 
-// Inside List Item
 .pairInfo {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .pairName {
-  font-size: 13px;
-  font-weight: 600;
-  color: $text-primary;
-  white-space: nowrap;
   overflow: hidden;
+  color: var(--yoca-text-main);
+  font-size: 13px;
+  font-weight: 700;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pairSource {
+  color: var(--yoca-text-muted);
   font-size: 11px;
-  color: $text-secondary;
 }
 
-.colVol,
-.colLiq {
-  font-size: 13px;
-  color: $text-primary;
-  font-weight: 500;
-}
-
-// Global override for dropdown behavior if needed
 :global(.cds--dropdown) {
-  display: none; // Hide old carbon dropdown if any remains
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .headerRow {
+    display: none;
+  }
+
+  .listItem {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .colVol,
+  .colLiq {
+    width: 100%;
+    text-align: left;
+  }
 }

@@ -1,12 +1,15 @@
-@use "@carbon/react/scss/theme" as *;
-
 .panel {
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 20px 24px 24px;
-  background: $background;
-  border-top: 1px solid $border-subtle;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 28%),
+    var(--yoca-surface);
+  box-shadow: var(--yoca-shadow-card);
+  backdrop-filter: blur(18px);
 }
 
 .header {
@@ -24,22 +27,22 @@
 
   h2 {
     margin: 0;
-    color: $text-primary;
+    color: var(--yoca-text-main);
     font-size: 18px;
-    font-weight: 600;
+    font-weight: 800;
     line-height: 1.3;
   }
 
   p {
     margin: 0;
-    color: $text-secondary;
-    font-size: 12px;
-    line-height: 1.4;
+    color: var(--yoca-text-muted);
+    font-size: 13px;
+    line-height: 1.5;
   }
 }
 
 .cacheMeta {
-  color: $text-helper;
+  color: var(--yoca-text-muted);
   font-size: 11px;
   line-height: 1.3;
 }
@@ -50,11 +53,21 @@
   gap: 8px;
   flex-shrink: 0;
 
+  :global(.cds--select) {
+    min-width: 86px;
+  }
+
   :global(.cds--select-input) {
     min-width: 86px;
     height: 2rem;
-    background: $background;
-    border-color: $border-subtle;
+    border-color: var(--yoca-border);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--yoca-text-main);
+  }
+
+  :global(.cds--label) {
+    color: var(--yoca-text-muted);
   }
 }
 
@@ -69,10 +82,11 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .summaryError {
-  color: $text-error;
+  color: var(--yoca-danger);
   font-size: 12px;
 }
 
@@ -81,29 +95,33 @@
   flex-direction: column;
   gap: 8px;
   padding: 14px;
-  border: 1px solid $border-subtle;
-  border-radius: 8px;
-  background: $layer-01;
+  border: 1px solid rgba(124, 58, 237, 0.18);
+  border-radius: 16px;
+  background:
+    linear-gradient(90deg, rgba(124, 58, 237, 0.08), transparent 70%),
+    rgba(255, 255, 255, 0.04);
 }
 
 .summaryLabel {
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .summaryHeadline {
   margin: 0;
-  color: $text-primary;
+  color: var(--yoca-text-main);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.4;
 }
 
 .summaryBullets {
   margin: 0;
   padding-left: 18px;
-  color: $text-primary;
+  color: var(--yoca-text-soft);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -111,7 +129,7 @@
 .summaryRiskNote,
 .summaryProvider {
   margin: 0;
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-size: 12px;
   line-height: 1.4;
 }
@@ -122,9 +140,9 @@
 
 .loadingEvent,
 .eventCard {
-  border: 1px solid $border-subtle;
-  border-radius: 8px;
-  background: $background;
+  border: 1px solid var(--yoca-border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .loadingEvent {
@@ -181,14 +199,14 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 8px;
-  color: $text-primary;
+  color: var(--yoca-text-main);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.35;
 
   strong {
     color: #fa4d56;
-    font-weight: 700;
+    font-weight: 800;
   }
 }
 
@@ -214,7 +232,7 @@
 
 .eventMeta {
   margin-top: 3px;
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-size: 12px;
   line-height: 1.4;
 }
@@ -225,13 +243,13 @@
   align-items: center;
   gap: 8px;
   margin: 10px 0 0 19px;
-  color: $text-primary;
+  color: var(--yoca-text-main);
   font-size: 13px;
   font-weight: 600;
 }
 
 .arrow {
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-weight: 400;
 }
 
@@ -241,13 +259,13 @@
   gap: 8px;
   margin: 14px 0 0 19px;
   padding-top: 12px;
-  border-top: 1px solid $border-subtle;
+  border-top: 1px solid var(--yoca-border);
 }
 
 .relatedNewsLabel {
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .relatedNewsItem {
@@ -256,15 +274,15 @@
   align-items: center;
   gap: 10px;
   padding: 10px;
-  border: 1px solid $border-subtle;
-  border-radius: 6px;
-  color: $text-primary;
+  border: 1px solid var(--yoca-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--yoca-text-main);
   text-decoration: none;
-  background: $layer-01;
 
   &:hover {
-    border-color: $border-strong;
-    background: $layer-02;
+    border-color: rgba(124, 58, 237, 0.24);
+    background: rgba(124, 58, 237, 0.08);
   }
 }
 
@@ -277,9 +295,9 @@
 
 .relatedNewsTitle {
   overflow: hidden;
-  color: $text-primary;
+  color: var(--yoca-text-main);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -287,7 +305,7 @@
 
 .relatedNewsMeta {
   overflow: hidden;
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-size: 11px;
   line-height: 1.35;
   text-overflow: ellipsis;
@@ -301,20 +319,20 @@
   min-width: 52px;
   padding: 3px 7px;
   border-radius: 999px;
-  color: #161616;
+  color: #0f172a;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: capitalize;
 }
 
 .linkIcon {
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
 }
 
 .noRelatedNews,
 .empty,
 .error {
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -326,13 +344,13 @@
 .empty,
 .error {
   padding: 18px;
-  border: 1px solid $border-subtle;
-  border-radius: 8px;
-  background: $background;
+  border: 1px solid var(--yoca-border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .error {
-  color: $text-error;
+  color: var(--yoca-danger);
 }
 
 @media (max-width: 768px) {

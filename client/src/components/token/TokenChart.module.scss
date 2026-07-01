@@ -1,24 +1,92 @@
-@use '@carbon/react/scss/theme' as *;
-
 .container {
-    background: $background;
-    padding: 0;
-    border-radius: 0;
-    border: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  overflow: hidden;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 28%),
+    var(--yoca-surface);
+  box-shadow: var(--yoca-shadow-card);
+  backdrop-filter: blur(18px);
 }
 
 .header {
-    margin-bottom: 12px;
-    font-size: 14px;
-    font-weight: 600;
-    color: $text-primary;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.eyebrow {
+  color: var(--yoca-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  color: var(--yoca-text-main);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--yoca-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.metaBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border: 1px solid var(--yoca-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--yoca-text-soft);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.frame {
+  overflow: hidden;
+  border: 1px solid var(--yoca-border);
+  border-radius: 16px;
+  background: var(--yoca-surface-elevated);
 }
 
 .loading {
-    background: $background;
-    padding: 32px;
-    text-align: center;
-    border-radius: 8px;
-    color: $text-secondary;
-    font-size: 14px;
+  padding: 32px;
+  text-align: center;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  background: var(--yoca-surface);
+  color: var(--yoca-text-muted);
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+  }
 }

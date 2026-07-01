@@ -1,17 +1,9 @@
-@use "@carbon/react/scss/theme" as *;
-// @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-// Semantic colors (same in both themes)
-$color-success: #10b981; // Emerald 500
-$color-danger: #ef4444; // Red 500
-// $font-family: 'Inter', system-ui, sans-serif;
-
 .container {
   display: flex;
   flex-direction: column;
   width: 100%;
-  border-radius: 0;
-  background: $background;
+  gap: 10px;
+  background: transparent;
   overflow: visible;
   box-sizing: border-box;
 
@@ -20,42 +12,37 @@ $color-danger: #ef4444; // Red 500
   }
 }
 
-// Grid Row - Generic container for a row of stats
 .gridRow {
   display: flex;
   width: 100%;
-  border-bottom: 1px solid $border-subtle;
-  min-height: 60px;
+  min-height: 72px;
+  overflow: hidden;
+  border: 1px solid var(--yoca-border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
 
-  &:last-child {
-    border-bottom: none;
-  }
-
-  // Special styling for single item rows (like Traders)
   &.singleItemRow {
     justify-content: space-between;
     align-items: center;
-    padding: 0 16px;
+    padding: 0 18px;
   }
 }
 
-// Grid Cell - Generic cell
 .gridCell {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 12px 8px;
-  border-right: 1px solid $border-subtle;
   gap: 4px;
+  padding: 14px 10px;
+  border-right: 1px solid var(--yoca-border);
 
   &:last-child {
     border-right: none;
   }
 }
 
-// Special Cells for Vol/Txns Row (Left aligned first col, Right aligned others)
 .gridCellLeft {
   flex: 4 1 0%;
   min-width: 0;
@@ -63,8 +50,8 @@ $color-danger: #ef4444; // Red 500
   flex-direction: column;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 10px 12px;
   gap: 0;
+  padding: 12px 14px;
 }
 
 .gridCellRight {
@@ -74,18 +61,16 @@ $color-danger: #ef4444; // Red 500
   flex-direction: column;
   align-items: flex-end;
   justify-content: space-between;
-  padding: 10px 12px;
   gap: 0;
+  padding: 12px 14px;
 }
 
-// Labels & Values
-
 .label {
-  font-size: 13px;
-  font-weight: 400;
-  color: $text-helper;
+  color: var(--yoca-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: -0.1px;
   white-space: nowrap;
 }
 
@@ -96,47 +81,94 @@ $color-danger: #ef4444; // Red 500
 }
 
 .subtext {
+  color: var(--yoca-text-muted);
   font-size: 12px;
-  color: $text-helper;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .valueLarge {
-  font-size: 15px;
-  font-weight: 600;
-  color: $text-primary;
+  color: var(--yoca-text-main);
+  font-size: 18px;
+  font-weight: 800;
 }
 
 .valueMedium {
+  color: var(--yoca-text-main);
   font-size: 15px;
-  font-weight: 500;
-  color: $text-primary;
+  font-weight: 700;
 }
 
 .valueSmall {
-  font-size: 15px;
-  font-weight: 500;
-  color: $text-primary;
+  color: var(--yoca-text-main);
+  font-size: 14px;
+  font-weight: 700;
 }
 
-// Utility Colors
-
 .buyColor {
-  color: $color-success !important;
+  color: var(--yoca-success) !important;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .sellColor {
-  color: $color-danger !important;
+  color: var(--yoca-danger) !important;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .positive {
-  color: $color-success !important;
+  color: var(--yoca-success) !important;
 }
 
 .negative {
-  color: $color-danger !important;
+  color: var(--yoca-danger) !important;
+}
+
+@media (max-width: 768px) {
+  .gridRow {
+    flex-wrap: wrap;
+  }
+
+  .gridCell,
+  .gridCellLeft,
+  .gridCellRight {
+    min-width: 50%;
+    align-items: flex-start;
+    text-align: left;
+    border-right: 1px solid var(--yoca-border);
+    border-bottom: 1px solid var(--yoca-border);
+  }
+
+  .gridCellRight {
+    align-items: flex-start;
+  }
+
+  .gridRow > *:nth-last-child(-n + 2) {
+    border-bottom: none;
+  }
+
+  .gridRow > *:nth-child(even) {
+    border-right: none;
+  }
+
+  .gridRow.singleItemRow {
+    padding: 14px 16px;
+  }
+}
+
+@media (max-width: 560px) {
+  .gridCell,
+  .gridCellLeft,
+  .gridCellRight {
+    min-width: 100%;
+    border-right: none;
+  }
+
+  .gridRow > * {
+    border-bottom: 1px solid var(--yoca-border);
+  }
+
+  .gridRow > *:last-child {
+    border-bottom: none;
+  }
 }
