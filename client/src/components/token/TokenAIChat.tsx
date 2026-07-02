@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp, Send } from "@carbon/icons-react";
-import { Button, TextArea } from "@carbon/react";
+import { Button } from "@carbon/react";
 import classNames from "classnames";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
@@ -641,9 +641,10 @@ export function TokenAIChat({
       {user ? (
         <>
           <div className={styles.inputRow}>
-            <TextArea
-              labelText=""
-              hideLabel
+            <textarea
+              className={classNames(styles.textarea, {
+                [styles.textareaInvalid]: trimmedQuestion.length > 500,
+              })}
               value={question}
               maxLength={500}
               placeholder="Ask about price moves, news, risk, signals, or what to watch."
@@ -656,18 +657,16 @@ export function TokenAIChat({
                 }
               }}
               disabled={isLoading || quotaExhausted}
-              invalid={trimmedQuestion.length > 500}
-              invalidText="Question must be 500 characters or fewer."
             />
-            <Button
-              kind="primary"
-              size="md"
-              renderIcon={Send}
+            <button
+              type="button"
+              className={styles.sendButton}
               onClick={() => submitQuestion()}
               disabled={isLoading || quotaExhausted || Boolean(validationError)}
             >
               Send
-            </Button>
+              <Send size={16} />
+            </button>
           </div>
 
           <div className={styles.inputMeta}>
