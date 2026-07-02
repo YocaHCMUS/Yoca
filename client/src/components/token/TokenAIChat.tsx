@@ -690,9 +690,13 @@ export function TokenAIChat({
             <p>Get 5 free questions every day.</p>
           </div>
           <div className={styles.authGateActions}>
-            <Button size="sm" onClick={() => openAuthModal("login")}>
+            <button
+              type="button"
+              className={styles.signInButton}
+              onClick={() => openAuthModal("login")}
+            >
               Sign in
-            </Button>
+            </button>
             <Link to="/pricing" className={styles.learnMoreLink}>
               Learn more
             </Link>

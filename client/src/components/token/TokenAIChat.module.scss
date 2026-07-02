@@ -99,20 +99,20 @@
   justify-content: space-between;
   gap: 20px;
   padding: 18px;
-  border: 1px solid $border-subtle;
-  border-left: 4px solid $link-primary;
+  border: 1px solid var(--yoca-border);
+  border-left: 3px solid var(--yoca-primary);
   border-radius: 8px;
-  background: $layer-01;
+  background: var(--yoca-surface);
 
   strong {
-    color: $text-primary;
+    color: var(--yoca-text-main);
     font-size: 15px;
     line-height: 1.4;
   }
 
   p {
     margin: 4px 0 0;
-    color: $text-secondary;
+    color: var(--yoca-text-muted);
     font-size: 12px;
     line-height: 1.4;
   }
@@ -125,20 +125,48 @@
   gap: 8px;
 }
 
+.signInButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+
+  &:hover {
+    opacity: 0.92;
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
 .learnMoreLink {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 32px;
   padding: 0 14px;
-  border: 1px solid $link-primary;
-  color: $link-primary;
+  border: 1px solid var(--yoca-border);
+  border-radius: 8px;
+  background: var(--yoca-surface);
+  color: var(--yoca-text-main);
   font-size: 12px;
   font-weight: 700;
   text-decoration: none;
 
   &:hover {
-    background: $layer-hover-01;
+    background: rgba(124, 58, 237, 0.08);
   }
 
   &:active {
@@ -921,7 +949,7 @@
   .authGateActions {
     width: 100%;
 
-    > :global(.cds--btn),
+    .signInButton,
     .learnMoreLink {
       flex: 1;
     }
