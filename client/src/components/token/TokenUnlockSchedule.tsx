@@ -64,6 +64,36 @@ function buildChartData(schedule: UnlockEvent[]) {
   return { categories, uniqueDates, deduped };
 }
 
+// ─── Locate "now" on the category axis (fractional index, interpolated by month) ──
+
+function getNowXAxisIndex(uniqueDates: string[]): number | null {
+  if (uniqueDates.length === 0) return null;
+
+  const toMonthIndex = (label: string) => {
+    const [year, month] = label.split("/").map(Number);
+    return year * 12 + (month - 1);
+  };
+
+  const now = new Date();
+  const nowMonths = now.getFullYear() * 12 + now.getMonth();
+  const monthIndices = uniqueDates.map(toMonthIndex);
+
+  if (nowMonths <= monthIndices[0]) return 0;
+  if (nowMonths >= monthIndices[monthIndices.length - 1]) {
+    return monthIndices.length - 1;
+  }
+
+  for (let i = 0; i < monthIndices.length - 1; i += 1) {
+    if (nowMonths >= monthIndices[i] && nowMonths <= monthIndices[i + 1]) {
+      const span = monthIndices[i + 1] - monthIndices[i];
+      if (span === 0) return i;
+      return i + (nowMonths - monthIndices[i]) / span;
+    }
+  }
+
+  return monthIndices.length - 1;
+}
+
 // ─── Build ECharts option (no legend — we use custom HTML legend) ─────────────
 
 function buildChartOption(
@@ -135,12 +165,36 @@ function buildChartOption(
       },
       splitLine: { lineStyle: { color: gridColor } },
     },
-    series: categories.map((cat, i) => ({
-      name: cat, type: "line", stack: "unlock", smooth: true, symbol: "none",
-      lineStyle: { width: 0 }, areaStyle: { opacity: 0.85 },
-      itemStyle: { color: COLORS[i % COLORS.length] },
-      data: deduped[cat],
-    })),
+    series: categories.map((cat, i) => {
+      const isLast = i === categories.length - 1;
+      const nowIndex = isLast ? getNowXAxisIndex(uniqueDates) : null;
+      return {
+        name: cat, type: "line", stack: "unlock", smooth: true, symbol: "none",
+        lineStyle: { width: 0 }, areaStyle: { opacity: 0.85 },
+        itemStyle: { color: COLORS[i % COLORS.length] },
+        data: deduped[cat],
+        ...(nowIndex != null && {
+          markLine: {
+            silent: true,
+            symbol: "none",
+            lineStyle: {
+              color: isDark ? "#FBBF24" : "#D97706",
+              type: "dashed",
+              width: 1.5,
+            },
+            label: {
+              show: true,
+              formatter: "Now",
+              position: "insideEndTop",
+              color: isDark ? "#FBBF24" : "#D97706",
+              fontSize: 10,
+              fontWeight: 700,
+            },
+            data: [{ xAxis: nowIndex }],
+          },
+        }),
+      };
+    }),
   };
 }
 
