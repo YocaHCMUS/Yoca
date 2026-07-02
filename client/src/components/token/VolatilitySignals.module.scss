@@ -5,8 +5,34 @@
   flex-direction: column;
   gap: 16px;
   padding: 20px 24px 24px;
-  background: $background;
-  border-top: 1px solid $border-subtle;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 26%),
+    var(--yoca-surface);
+  box-shadow: var(--yoca-shadow-card);
+  backdrop-filter: blur(18px);
+}
+
+.panel :global(.cds--btn) {
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.panel :global(.cds--btn--primary) {
+  background: linear-gradient(135deg, var(--yoca-primary), var(--yoca-primary-2));
+  border-color: transparent;
+}
+
+.panel :global(.cds--btn--tertiary),
+.panel :global(.cds--btn--ghost) {
+  border-color: var(--yoca-border);
+  color: var(--yoca-text-soft);
+}
+
+.panel :global(.cds--btn--ghost:hover),
+.panel :global(.cds--btn--tertiary:hover) {
+  background: rgba(124, 58, 237, 0.1);
 }
 
 .header {
@@ -24,22 +50,22 @@
 
   h2 {
     margin: 0;
-    color: $text-primary;
+    color: var(--yoca-text-main);
     font-size: 18px;
-    font-weight: 600;
+    font-weight: 800;
     line-height: 1.3;
   }
 
   p {
     margin: 0;
-    color: $text-secondary;
+    color: var(--yoca-text-muted);
     font-size: 12px;
     line-height: 1.4;
   }
 }
 
 .cacheMeta {
-  color: $text-helper;
+  color: var(--yoca-text-muted);
   font-size: 11px;
   line-height: 1.3;
 }
@@ -53,8 +79,10 @@
   :global(.cds--select-input) {
     min-width: 86px;
     height: 2rem;
-    background: $background;
-    border-color: $border-subtle;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--yoca-border);
+    color: var(--yoca-text-main);
   }
 }
 
@@ -72,12 +100,12 @@
 }
 
 .summaryError {
-  color: $text-error;
+  color: var(--yoca-danger);
   font-size: 12px;
 }
 
 .summaryUsage {
-  color: $text-helper;
+  color: var(--yoca-text-muted);
   font-size: 12px;
 }
 
@@ -87,15 +115,15 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  border: 1px solid $support-warning;
+  border: 1px solid rgba(245, 158, 11, 0.35);
   border-radius: 8px;
-  color: $text-secondary;
-  background: $layer-01;
+  color: var(--yoca-text-muted);
+  background: rgba(245, 158, 11, 0.08);
   font-size: 12px;
 
   a {
     flex-shrink: 0;
-    color: $link-primary;
+    color: var(--yoca-primary);
     font-weight: 600;
     text-decoration: none;
 
@@ -110,20 +138,20 @@
   flex-direction: column;
   gap: 8px;
   padding: 14px;
-  border: 1px solid $border-subtle;
-  border-radius: 8px;
-  background: $layer-01;
+  border: 1px solid var(--yoca-border);
+  border-radius: 10px;
+  background: var(--yoca-surface-elevated);
 }
 
 .summaryLabel {
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-size: 12px;
   font-weight: 600;
 }
 
 .summaryHeadline {
   margin: 0;
-  color: $text-primary;
+  color: var(--yoca-text-main);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.4;
@@ -132,7 +160,7 @@
 .summaryBullets {
   margin: 0;
   padding-left: 18px;
-  color: $text-primary;
+  color: var(--yoca-text-main);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -140,7 +168,7 @@
 .summaryRiskNote,
 .summaryProvider {
   margin: 0;
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-size: 12px;
   line-height: 1.4;
 }
@@ -151,9 +179,9 @@
 
 .loadingEvent,
 .eventCard {
-  border: 1px solid $border-subtle;
-  border-radius: 8px;
-  background: $background;
+  border: 1px solid var(--yoca-border);
+  border-radius: 10px;
+  background: var(--yoca-surface-elevated);
 }
 
 .loadingEvent {
@@ -190,19 +218,19 @@
 }
 
 .medium {
-  background: #f1c21b;
+  background: var(--yoca-warning);
 }
 
 .low {
-  background: #c6c6c6;
+  background: var(--yoca-text-muted);
 }
 
 .high {
-  background: #ff832b;
+  background: #fb923c;
 }
 
 .extreme {
-  background: #fa4d56;
+  background: var(--yoca-danger);
 }
 
 .eventTitle {
@@ -210,40 +238,40 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 8px;
-  color: $text-primary;
+  color: var(--yoca-text-main);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.35;
 
   strong {
-    color: #fa4d56;
+    color: var(--yoca-danger);
     font-weight: 700;
   }
 }
 
 .priceSpike {
   .severityDot {
-    background: #24a148;
+    background: var(--yoca-success);
   }
 
   .eventTitle strong {
-    color: #24a148;
+    color: var(--yoca-success);
   }
 }
 
 .priceDrop {
   .severityDot {
-    background: #fa4d56;
+    background: var(--yoca-danger);
   }
 
   .eventTitle strong {
-    color: #fa4d56;
+    color: var(--yoca-danger);
   }
 }
 
 .eventMeta {
   margin-top: 3px;
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-size: 12px;
   line-height: 1.4;
 }
@@ -254,13 +282,13 @@
   align-items: center;
   gap: 8px;
   margin: 10px 0 0 19px;
-  color: $text-primary;
+  color: var(--yoca-text-main);
   font-size: 13px;
   font-weight: 600;
 }
 
 .arrow {
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-weight: 400;
 }
 
@@ -270,11 +298,11 @@
   gap: 8px;
   margin: 14px 0 0 19px;
   padding-top: 12px;
-  border-top: 1px solid $border-subtle;
+  border-top: 1px solid var(--yoca-border);
 }
 
 .relatedNewsLabel {
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-size: 12px;
   font-weight: 600;
 }
@@ -285,15 +313,15 @@
   align-items: center;
   gap: 10px;
   padding: 10px;
-  border: 1px solid $border-subtle;
-  border-radius: 6px;
-  color: $text-primary;
+  border: 1px solid var(--yoca-border);
+  border-radius: 8px;
+  color: var(--yoca-text-main);
   text-decoration: none;
-  background: $layer-01;
+  background: var(--yoca-surface);
 
   &:hover {
-    border-color: $border-strong;
-    background: $layer-02;
+    border-color: rgba(124, 58, 237, 0.4);
+    background: var(--yoca-surface-hover);
   }
 }
 
@@ -306,7 +334,7 @@
 
 .relatedNewsTitle {
   overflow: hidden;
-  color: $text-primary;
+  color: var(--yoca-text-main);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.35;
@@ -316,7 +344,7 @@
 
 .relatedNewsMeta {
   overflow: hidden;
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-size: 11px;
   line-height: 1.35;
   text-overflow: ellipsis;
@@ -337,13 +365,13 @@
 }
 
 .linkIcon {
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
 }
 
 .noRelatedNews,
 .empty,
 .error {
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -355,13 +383,13 @@
 .empty,
 .error {
   padding: 18px;
-  border: 1px solid $border-subtle;
-  border-radius: 8px;
-  background: $background;
+  border: 1px solid var(--yoca-border);
+  border-radius: 10px;
+  background: var(--yoca-surface-elevated);
 }
 
 .error {
-  color: $text-error;
+  color: var(--yoca-danger);
 }
 
 @media (max-width: 768px) {
