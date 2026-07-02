@@ -93,11 +93,42 @@ substitution pass, page by page, using the shared component library under
 
 ## Design tokens — action, not invention
 
-`client/src/styles/theme.scss` already has `--yoca-bg`, `--yoca-bg-soft`,
-`--yoca-surface`, `--yoca-surface-elevated`, `--yoca-surface-hover`,
-`--yoca-border`, `--yoca-text-main`, `--yoca-text-muted`, `--yoca-text-soft`,
-`--yoca-primary`, `--yoca-primary-2`, `--yoca-accent`, `--yoca-success`,
-`--yoca-danger`, `--yoca-warning`, `--yoca-radius-md/lg`, `--yoca-shadow-card`.
+`client/src/styles/theme.scss` already defines the full `--yoca-*` palette,
+scoped to `.yoca-app-theme[data-yoca-theme="light|dark"]`. Current values
+(read from the file directly, 2026-07-02):
+
+| Token | Light | Dark |
+|---|---|---|
+| `--yoca-bg` | `#f5f7fb` | `#070a13` |
+| `--yoca-bg-soft` | `#edf1f8` | `#0b1020` |
+| `--yoca-surface` | `rgba(255,255,255,0.84)` | `rgba(18,24,38,0.82)` |
+| `--yoca-surface-elevated` | `rgba(255,255,255,0.96)` | `rgba(24,31,48,0.92)` |
+| `--yoca-surface-hover` | `rgba(241,245,249,0.98)` | `rgba(32,41,62,0.95)` |
+| `--yoca-border` | `rgba(71,85,105,0.16)` | `rgba(148,163,184,0.16)` |
+| `--yoca-text-main` | `#0f172a` | `#f8fafc` |
+| `--yoca-text-muted` | `#64748b` | `#94a3b8` |
+| `--yoca-text-soft` | `#334155` | `#cbd5e1` |
+| `--yoca-primary` | `#7c3aed` | `#7c3aed` |
+| `--yoca-primary-2` | `#2563eb` | `#2563eb` |
+| `--yoca-accent` | `#0fbaa7` | `#2dd4bf` |
+| `--yoca-success` | `#15803d` | `#22c55e` |
+| `--yoca-danger` | `#dc2626` | `#ef4444` |
+| `--yoca-warning` | `#d97706` | `#f59e0b` |
+| `--yoca-radius-md` | `12px` | `12px` |
+| `--yoca-radius-lg` | `18px` | `18px` |
+| `--yoca-shadow-card` | `0 18px 50px rgba(15,23,42,0.12)` | `0 18px 50px rgba(0,0,0,0.32)` |
+
+**Cross-check against the colleague's suggested token list**: the dark-mode
+values above already match the brief's suggested hex codes almost exactly —
+`--primary`, `--primary-2`, `--accent` (`#2DD4BF`), `--success`, `--danger`,
+`--warning`, `--bg`, `--bg-soft`, `--border`, `--text-main`, `--text-muted`,
+`--surface` are all identical or equivalent. The one measurable difference:
+brief suggests `--surface-hover: rgba(27, 63, 90, 0.9)`-style
+`rgba(27, 35, 54, 0.9)` vs. the current `rgba(32, 41, 62, 0.95)` — close
+enough that it's a judgment call, not a bug; flag it during Phase 0 review
+and only change it if the current hover state visually reads too flat/bright
+against `--yoca-surface`. **No color values need to be invented or migrated
+— implementation should consume the existing tokens as-is.**
 
 Gaps to fill in this same file (additive, both light/dark blocks):
 - Spacing scale tokens (`--yoca-space-1..6`) if per-page SCSS is currently

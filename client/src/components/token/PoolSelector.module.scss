@@ -59,10 +59,7 @@
 
 // Dropdown
 .dropdown {
-  position: absolute;
-  top: calc(100% - 5px);
-  left: 16px;
-  right: 16px;
+  position: fixed;
   background: $background;
   border: 1px solid $border-subtle;
   border-radius: 8px;

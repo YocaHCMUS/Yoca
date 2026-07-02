@@ -1,12 +1,12 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
 import {
   BUBBLEMAPS_SOL_URL,
-  SOLSCAN_ACCOUNT_URL,
   SOLSCAN_TX_URL,
 } from "@/config/constants";
 import { Launch } from "@carbon/icons-react";
 import { Pagination } from "@carbon/react";
 import { useMemo, useState } from "react";
+import { Link } from "react-router";
 import styles from "./RecentTransactions.module.scss";
 
 const DEFAULT_PAGE_SIZE = 12;
@@ -167,14 +167,12 @@ export const RecentTransactions = ({
                     {fmt.num.compact.currency(trade.volumeUsd)}
                   </td>
                   <td>
-                    <a
-                      href={`${SOLSCAN_ACCOUNT_URL}/${trade.fromAddress}`}
-                      target="_blank"
-                      rel="noreferrer"
+                    <Link
+                      to={`/wallets/${trade.fromAddress}`}
                       className={styles.link}
                     >
                       {fmt.text.address(trade.fromAddress)}
-                    </a>
+                    </Link>
                   </td>
                   <td>
                     <a
