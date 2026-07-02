@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { Check, ChevronDown, List, Maximize2, Minus, PanelLeftOpen, PanelRightOpen, Plus, Send, Trash2, X, Zap } from "lucide-react";
@@ -15,7 +15,6 @@ import styles from "./WalletChat.module.scss";
 import { useAuth } from "@/contexts/AuthContext";
 import { AddressPill } from "@/components/common/AddressPill/AddressPill";
 import { IconButton } from "@/components/common/IconButton/IconButton";
-import { UpgradePromptModal } from "@/components/common/UpgradePromptModal/UpgradePromptModal";
 import { ChatContext, ChatContextProvider, MAX_INPUT_LENGTH, useChatContext } from "./ChatContext";
 
 const MAX_QUICK_QUESTIONS = 5;
@@ -23,6 +22,9 @@ const SESSION_MENU_WIDTH = 320;
 const SESSION_MENU_MAX_HEIGHT = 300;
 const SESSION_MENU_OFFSET = 4;
 const VIEWPORT_PADDING = 8;
+const PLANS_POPUP_WIDTH = 280;
+const PLANS_POPUP_ESTIMATED_HEIGHT = 220;
+const PLANS_POPUP_OFFSET = 8;
 
 interface Props {
   address?: string;
@@ -54,8 +56,9 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
   const sessionToggleRef = useRef<HTMLButtonElement>(null);
   const sessionMenuRef = useRef<HTMLDivElement>(null);
   const plansBtnRef = useRef<HTMLButtonElement>(null);
+  const plansTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const plansPopupRef = useRef<HTMLDivElement>(null);
   const [activeMessageContext, setActiveMessageContext] = useState<ChatMessageItem["context"] | null>(null);
-  const [isUpgradePromptOpen, setIsUpgradePromptOpen] = useState(false);
   const [isPlansOpen, setIsPlansOpen] = useState(false);
   const [plansDropdownStyle, setPlansDropdownStyle] = useState<CSSProperties>();
 
@@ -146,12 +149,17 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
   }, [showSessionMenu, setShowSessionMenu, updateSessionDropdownPosition]);
 
   const updatePlansDropdownPosition = useCallback(() => {
-    const btn = plansBtnRef.current;
+    const btn = plansTriggerRef.current ?? plansBtnRef.current;
     if (!btn) return;
     const rect = btn.getBoundingClientRect();
+    const popupHeight = plansPopupRef.current?.offsetHeight ?? PLANS_POPUP_ESTIMATED_HEIGHT;
+
     setPlansDropdownStyle({
-      left: Math.max(8, Math.min(rect.right - 280, window.innerWidth - 288)),
-      top: rect.top - 8 - 220,
+      left: Math.max(
+        VIEWPORT_PADDING,
+        Math.min(rect.right - PLANS_POPUP_WIDTH, window.innerWidth - PLANS_POPUP_WIDTH - VIEWPORT_PADDING),
+      ),
+      top: Math.max(VIEWPORT_PADDING, rect.top - PLANS_POPUP_OFFSET - popupHeight),
     });
   }, []);
 
@@ -161,7 +169,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
 
     const handlePointerDown = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (plansBtnRef.current?.contains(target)) return;
+      if (plansTriggerRef.current?.contains(target) || plansBtnRef.current?.contains(target)) return;
       if (e.defaultPrevented) return;
       const popup = document.querySelector('[data-plans-popup="true"]');
       if (popup?.contains(target)) return;
@@ -178,6 +186,22 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
       window.removeEventListener("scroll", updatePlansDropdownPosition, true);
     };
   }, [isPlansOpen, updatePlansDropdownPosition]);
+
+  const handlePlansToggle = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    plansTriggerRef.current = event.currentTarget;
+    setIsPlansOpen((open) => !open);
+  };
+
+  const planPopupBenefits = [
+    // insert actual benefits here, for example:
+    String(tr("pricing.features.askYoca", { $count: 50 })),
+    // String(tr("pricing.features.generalAiChat", { $count: 50 })),
+    // String(tr("pricing.features.tokenChartNewsSummary", { $count: 50 })),
+    // String(tr("pricing.features.volatilitySummary", { $count: 50 })),
+    // String(tr("pricing.features.walletAiAnalysis", { $count: 50 })),
+    // String(tr("pricing.features.washTradingAiAnalysis", { $count: 50 })),
+    // String(tr("pricing.features.dailyReset")),
+  ];
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -406,11 +430,6 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
     return null;
   }
 
-  const handleConfirmUpgrade = () => {
-    setIsUpgradePromptOpen(false);
-    navigate("/pricing");
-  };
-
   const renderPromptMenu = () => (
     <ChatPromptMenu
       walletAddress={walletAddresses[0]}
@@ -581,7 +600,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
           />
           <div className={styles.inputFooter}>
             <span className={styles.charCount}>
-              {usage
+              {usage && !usage.disabled
                 ? tr("chat.usageLabel", { remaining: String(usage.remaining), limit: String(usage.limit) })
                 : tr("chat.inputCounter", { current: String(inputText.length), max: MAX_INPUT_LENGTH })}
             </span>
@@ -590,7 +609,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
                 ref={plansBtnRef}
                 type="button"
                 className={styles.viewPlansBtn}
-                onClick={() => setIsPlansOpen((v) => !v)}
+                onClick={handlePlansToggle}
               >
                 <Zap size={12} />
                 {tr("chat.viewPlans")}
@@ -620,25 +639,14 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
           {quotaExhausted && (
             <div className={styles.limitNotice}>
               <span>{tr("chat.limitReachedTitle")}</span>
-              <button type="button" className={styles.limitAction} onClick={() => setIsUpgradePromptOpen(true)}>
+              <button type="button" className={styles.limitAction} onClick={handlePlansToggle}>
                 {tr("chat.upgradeOptions")}
               </button>
             </div>
           )}
         </div>
-        <UpgradePromptModal
-          open={isUpgradePromptOpen}
-          title={tr("chat.limitReachedTitle")}
-          description={tr("chat.limitReachedText")}
-          confirmLabel={tr("chat.goToPricing")}
-          cancelLabel={tr("chat.notNow")}
-          onConfirm={handleConfirmUpgrade}
-          onClose={() => setIsUpgradePromptOpen(false)}
-        >
-          {tr("chat.limitReachedReset")}
-        </UpgradePromptModal>
         {isPlansOpen && themeRef.current && createPortal(
-          <div className={styles.plansPopup} style={plansDropdownStyle} data-plans-popup="true">
+          <div ref={plansPopupRef} className={styles.plansPopup} style={plansDropdownStyle} data-plans-popup="true">
             <div className={styles.plansPopupHeader}>
               <span className={styles.plansPopupTitle}>{tr("chat.planBenefitsTitle")}</span>
               <button type="button" className={styles.plansPopupClose} onClick={() => setIsPlansOpen(false)}>
@@ -647,18 +655,12 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
             </div>
             <p className={styles.plansPopupDesc}>{tr("chat.planBenefitsDesc")}</p>
             <ul className={styles.benefitsList}>
-              <li className={styles.benefitItem}>
-                <Check size={14} />
-                <span>{tr("chat.planBenefit1", { count: 500 })}</span>
-              </li>
-              <li className={styles.benefitItem}>
-                <Check size={14} />
-                <span>{tr("chat.planBenefit2")}</span>
-              </li>
-              <li className={styles.benefitItem}>
-                <Check size={14} />
-                <span>{tr("chat.planBenefit3")}</span>
-              </li>
+              {planPopupBenefits.map((benefit) => (
+                <li key={benefit} className={styles.benefitItem}>
+                  <Check size={14} />
+                  <span>{benefit}</span>
+                </li>
+              ))}
             </ul>
             <div className={styles.plansPopupActions}>
               <button type="button" className={styles.plansPopupSecondary} onClick={() => setIsPlansOpen(false)}>
@@ -672,7 +674,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
           themeRef.current,
         )}
       </div>
-    </div>
+    </div >
   );
 }
 

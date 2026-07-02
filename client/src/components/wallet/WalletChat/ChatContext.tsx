@@ -118,6 +118,18 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
     };
   }, [activeSession]);
 
+  useEffect(() => {
+    if (!user?.userId) return;
+    let cancelled = false;
+    client.api.chat.usage.$get()
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setUsage(data as ChatAiUsage);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [user?.userId]);
+
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 

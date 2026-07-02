@@ -1,59 +1,52 @@
 // ===== Prompt Menu Tabs =====
+.promptMenuTopbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.promptSearchWrap {
+  flex: 1 1 auto;
+  min-width: min(16rem, 100%);
+
+  label {
+    width: 100%;
+  }
+}
+
 .promptTabs {
   display: flex;
-  gap: 2px;
-  margin-bottom: 8px;
-  border-bottom: 1px solid var(--yoca-border);
-  padding-bottom: 4px;
-}
-
-.promptPillTabs {
-  display: flex;
   gap: 4px;
-  margin-bottom: 8px;
-}
+  width: fit-content;
+  padding: 0;
+  margin-bottom: 12px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 
-.promptPillTab {
-  background: var(--yoca-surface-elevated);
-  border: 1px solid var(--yoca-border);
-  border-radius: 12px;
-  padding: 3px 10px;
-  font-size: 10px;
-  color: var(--yoca-text-muted);
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
-
-  &:hover {
-    background: rgba(124, 58, 237, 0.08);
+  button {
+    min-height: 36px;
+    padding: 6px 16px;
+    border: 1px solid var(--yoca-border);
+    border-radius: 8px;
+    background: var(--yoca-surface);
     color: var(--yoca-text-main);
+    font-size: 0.8rem;
+    font-weight: 600;
+    box-shadow: none;
+
+    &:hover {
+      border-color: color-mix(in srgb, var(--yoca-primary) 35%, var(--yoca-border));
+      background: var(--yoca-surface-elevated);
+    }
   }
-}
 
-.promptPillTabActive {
-  background: var(--yoca-primary);
-  color: #fff;
-  border-color: var(--yoca-primary);
-
-  &:hover {
-    background: var(--yoca-primary);
-    opacity: 0.9;
-  }
-}
-
-.promptLoadMoreBtn {
-  width: 100%;
-  background: none;
-  border: 1px solid var(--yoca-border);
-  border-radius: 4px;
-  padding: 6px 8px;
-  margin-top: 4px;
-  font-size: 10px;
-  color: var(--yoca-primary);
-  cursor: pointer;
-  transition: background-color 0.15s;
-
-  &:hover {
-    background: rgba(124, 58, 237, 0.08);
+  button[aria-pressed="true"] {
+    border-color: color-mix(in srgb, var(--yoca-primary) 45%, var(--yoca-border));
+    background: color-mix(in srgb, var(--yoca-primary) 10%, var(--yoca-surface));
+    color: var(--yoca-text-main);
   }
 }
 
@@ -65,47 +58,48 @@
 }
 
 .promptCreateBtn {
-  background: none;
-  border: none;
+  flex: 0 0 auto;
+  height: 36px;
+  border: 1px solid var(--yoca-border);
+  border-radius: 999px;
+  background: var(--yoca-surface);
   color: var(--yoca-primary);
   cursor: pointer;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: background-color 0.15s;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0 12px;
+  white-space: nowrap;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 
   &:hover {
-    background: rgba(124, 58, 237, 0.12);
+    border-color: color-mix(in srgb, var(--yoca-primary) 42%, var(--yoca-border));
+    background: color-mix(in srgb, var(--yoca-primary) 9%, var(--yoca-surface));
   }
 }
 
 .promptItem {
-  border: none;
-  border-radius: 4px;
-  padding: 4px 8px;
-  margin-bottom: 2px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 8px 10px;
   font-size: 12px;
   color: var(--yoca-text-main);
   cursor: pointer;
   text-align: left;
-  line-height: 1.4;
+  line-height: 1.35;
   background: transparent;
-  transition: background-color 0.15s;
+  transition: background-color 0.15s, border-color 0.15s;
   position: relative;
   width: 100%;
   box-sizing: border-box;
 
   &:hover {
-    background: rgba(124, 58, 237, 0.08);
+    background: color-mix(in srgb, var(--yoca-primary) 8%, transparent);
+    border-color: color-mix(in srgb, var(--yoca-primary) 20%, transparent);
   }
 }
 
 .promptItemLabel {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 13px;
   color: var(--yoca-text-main);
   margin-bottom: 2px;
@@ -122,15 +116,15 @@
 .promptItemMeta {
   display: flex;
   gap: 8px;
-  margin-top: 4px;
+  margin-top: 5px;
   font-size: 10px;
   color: var(--yoca-text-muted);
 }
 
 .promptItemActions {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 6px;
+  right: 6px;
   display: flex;
   gap: 2px;
   opacity: 0;
@@ -144,7 +138,7 @@
 .promptItemAction {
   background: var(--yoca-surface-elevated);
   border: 1px solid var(--yoca-border);
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 2px 6px;
   color: var(--yoca-text-muted);
   cursor: pointer;
@@ -155,9 +149,53 @@
   transition: background-color 0.12s, color 0.12s;
 
   &:hover {
-    background: rgba(124, 58, 237, 0.08);
+    background: color-mix(in srgb, var(--yoca-primary) 8%, var(--yoca-surface));
     color: var(--yoca-text-main);
   }
+}
+
+.systemPromptGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.systemPromptCard {
+  min-height: 96px;
+  border: 1px solid var(--yoca-border);
+  border-radius: 8px;
+  padding: 12px 10px 10px;
+  background: var(--yoca-surface);
+  color: var(--yoca-text-main);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.15s;
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--yoca-primary) 36%, var(--yoca-border));
+    background: var(--yoca-surface-elevated);
+    transform: translateY(-1px);
+  }
+
+  .promptItemQuery {
+    display: -webkit-box;
+    overflow: hidden;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    line-height: 1.25;
+  }
+}
+
+.systemPromptIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-bottom: 8px;
+  color: var(--yoca-primary-2, var(--yoca-primary));
 }
 
 .promptLoading {
@@ -186,8 +224,7 @@
 }
 
 .dialog {
-  background: var(--yoca-bg);
-  border: 1px solid var(--yoca-border);
+  background: var(--yoca-surface);
   border-radius: 12px;
   width: 380px;
   max-width: 90vw;
