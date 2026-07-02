@@ -2,7 +2,7 @@ import classNames from "classnames";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import ReactDOM from "react-dom";
 import { useNavigate } from "react-router";
-import { Copy, Checkmark, Restart, Edit } from "@carbon/icons-react";
+import { Copy, Check, RefreshCw, Pencil } from "lucide-react";
 import { ID_MODAL_ROOT } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type { TranslationKeyPath } from "@/config/localization";
@@ -314,16 +314,16 @@ const CONFIDENCE_LEVEL_KEYS = {
 } as const satisfies Record<WalletConfidence, TranslationKeyPath>;
 
 const SECTION_KIND_META = {
-  market_snapshot: { labelKey: "chat.section.market_snapshot", icon: "M", className: "kindMarket" },
-  key_findings: { labelKey: "chat.section.key_findings", icon: "K", className: "kindDrivers" },
-  pnl_summary: { labelKey: "chat.section.pnl_summary", icon: "P", className: "kindBullish" },
-  trading_activity: { labelKey: "chat.section.trading_activity", icon: "T", className: "kindNews" },
-  top_holdings: { labelKey: "chat.section.top_holdings", icon: "H", className: "kindDeepDive" },
-  risk_factors: { labelKey: "chat.section.risk_factors", icon: "!", className: "kindRisk" },
-  what_to_watch: { labelKey: "chat.section.what_to_watch", icon: "?", className: "kindWatch" },
-  conclusion: { labelKey: "chat.section.conclusion", icon: "\u2713", className: "kindConclusion" },
-  custom: { labelKey: "chat.section.custom", icon: "A", className: "kindSimple" },
-} as const satisfies Record<WalletSectionKind, { labelKey: TranslationKeyPath; icon: string; className: string }>;
+  market_snapshot: { labelKey: "chat.section.market_snapshot" },
+  key_findings: { labelKey: "chat.section.key_findings" },
+  pnl_summary: { labelKey: "chat.section.pnl_summary" },
+  trading_activity: { labelKey: "chat.section.trading_activity" },
+  top_holdings: { labelKey: "chat.section.top_holdings" },
+  risk_factors: { labelKey: "chat.section.risk_factors" },
+  what_to_watch: { labelKey: "chat.section.what_to_watch" },
+  conclusion: { labelKey: "chat.section.conclusion" },
+  custom: { labelKey: "chat.section.custom" },
+} as const satisfies Record<WalletSectionKind, { labelKey: TranslationKeyPath }>;
 
 // ─── Section Renderer ───────────────────────────────────────────────────
 
@@ -341,18 +341,17 @@ function WalletChatSectionRenderer({ section, onBulletClick, onCopySection, copi
   const contentText = section.content;
 
   return (
-    <div className={classNames(styles.sectionBlock, styles[meta.className])}>
+    <div className={styles.sectionBlock}>
       <button
         type="button"
         className={classNames(styles.sectionCopyBtn, { [styles.sectionCopyBtnVisible]: isCopied })}
         onClick={() => onCopySection?.(sectionId, sectionCopyText)}
         title={tr("chat.copySection")}
       >
-        {isCopied ? <Checkmark size={12} /> : <Copy size={12} />}
+        {isCopied ? <Check size={12} /> : <Copy size={12} />}
         {isCopied ? tr("chat.copied") : tr("chat.copy")}
       </button>
       <div className={styles.sectionHeader}>
-        <span className={styles.sectionIcon} aria-hidden="true">{meta.icon}</span>
         <div className={styles.sectionHeaderInner}>
           <span className={styles.sectionKind}>{tr(meta.labelKey)}</span>
           {section.title && <div className={styles.sectionTitle}>{section.title}</div>}
@@ -627,7 +626,7 @@ export function WalletChatMessage({ message, index, onAction, onRedo, onRevert }
             onClick={() => onRedo?.(index, message.content)}
             title={tr("chat.redo")}
           >
-            <Restart size={12} />
+            <RefreshCw size={12} />
             {tr("chat.redo")}
           </button>
           <button
@@ -636,7 +635,7 @@ export function WalletChatMessage({ message, index, onAction, onRedo, onRevert }
             onClick={() => onRevert?.(index, message.content)}
             title={tr("chat.revert")}
           >
-            <Edit size={12} />
+            <Pencil size={12} />
             {tr("chat.revert")}
           </button>
           <button
@@ -644,7 +643,7 @@ export function WalletChatMessage({ message, index, onAction, onRedo, onRevert }
             className={classNames(styles.copyBtn, { [styles.copyBtnCopied]: isUserCopied })}
             onClick={() => handleCopySection(userCopyId, message.content)}
           >
-            {isUserCopied ? <Checkmark size={12} /> : <Copy size={12} />}
+            {isUserCopied ? <Check size={12} /> : <Copy size={12} />}
             {isUserCopied ? tr("chat.copied") : tr("chat.copy")}
           </button>
         </div>
@@ -661,29 +660,25 @@ export function WalletChatMessage({ message, index, onAction, onRedo, onRevert }
     const tldrCopied = copiedSectionId === tldrId;
     const tldrCopyText = message.tldr.map((item) => item).join("\n");
     elements.push(
-      <div key="tldr" className={styles.sectionCopyWrapper}>
+      <div key="tldr" className={styles.tldr}>
         <button
           type="button"
           className={classNames(styles.sectionCopyBtn, { [styles.sectionCopyBtnVisible]: tldrCopied })}
           onClick={() => handleCopySection(tldrId, tldrCopyText)}
         >
-          {tldrCopied ? <Checkmark size={12} /> : <Copy size={12} />}
+          {tldrCopied ? <Check size={12} /> : <Copy size={12} />}
           {tldrCopied ? tr("chat.copied") : tr("chat.copy")}
         </button>
-        <div className={styles.tldr}>
-          <div className={styles.tldrHeader}>
-            <span className={styles.tldrIcon}>AI</span>
-            <h3>{tr("chat.tldr")}</h3>
-          </div>
-          <ol>
-            {message.tldr.map((item, idx) => (
-              <li key={idx}>
-                <span className={styles.tldrNumber}>{idx + 1}</span>
-                <WalletRichText text={item} inline />
-              </li>
-            ))}
-          </ol>
+        <div className={styles.tldrHeader}>
+          <h3>{tr("chat.tldr")}</h3>
         </div>
+        <ol>
+          {message.tldr.map((item, idx) => (
+            <li key={idx}>
+              <WalletRichText text={item} inline />
+            </li>
+          ))}
+        </ol>
       </div>,
     );
   }
@@ -781,28 +776,25 @@ export function WalletChatMessage({ message, index, onAction, onRedo, onRevert }
     const warnCopied = copiedSectionId === warnId;
     const warnCopyText = message.warnings.map((w) => w.text).join("\n");
     elements.push(
-      <div key="warnings" className={styles.sectionCopyWrapper}>
+      <div key="warnings" className={styles.warnings}>
         <button
           type="button"
           className={classNames(styles.sectionCopyBtn, { [styles.sectionCopyBtnVisible]: warnCopied })}
           onClick={() => handleCopySection(warnId, warnCopyText)}
         >
-          {warnCopied ? <Checkmark size={12} /> : <Copy size={12} />}
+          {warnCopied ? <Check size={12} /> : <Copy size={12} />}
           {warnCopied ? tr("chat.copied") : tr("chat.copy")}
         </button>
-        <div className={styles.warnings}>
-          <div className={styles.warnHeader}>
-            <span className={styles.warnIcon}>!</span>
-            <h3>{tr("chat.warnings")}</h3>
-          </div>
-          <ul>
-            {message.warnings.map((w, i) => (
-              <li key={i} className={styles[`warn${w.severity === "error" ? "Error" : w.severity === "warning" ? "Warning" : "Info"}`]}>
-                <WalletRichText text={w.text} inline />
-              </li>
-            ))}
-          </ul>
+        <div className={styles.warnHeader}>
+          <h3>{tr("chat.warnings")}</h3>
         </div>
+        <ul>
+          {message.warnings.map((w, i) => (
+            <li key={i} className={styles[`warn${w.severity === "error" ? "Error" : w.severity === "warning" ? "Warning" : "Info"}`]}>
+              <WalletRichText text={w.text} inline />
+            </li>
+          ))}
+        </ul>
       </div>,
     );
   }
@@ -823,7 +815,7 @@ export function WalletChatMessage({ message, index, onAction, onRedo, onRevert }
           className={classNames(styles.sectionCopyBtn, { [styles.sectionCopyBtnVisible]: evCopied })}
           onClick={() => handleCopySection(evId, evCopyText)}
         >
-          {evCopied ? <Checkmark size={12} /> : <Copy size={12} />}
+          {evCopied ? <Check size={12} /> : <Copy size={12} />}
           {evCopied ? tr("chat.copied") : tr("chat.copy")}
         </button>
         <div className={styles.evidenceBlock}>

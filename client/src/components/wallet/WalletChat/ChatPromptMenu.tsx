@@ -5,6 +5,7 @@ import { ChatPromptDialog } from "./ChatPromptDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { PillTabs } from "@/components/common/PillTabs/PillTabs";
+import { SearchBox } from "@/components/charts/shared/ChartControls";
 import styles from "./WalletChat.module.scss";
 
 type TabId = "mine" | "explore";
@@ -237,11 +238,11 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
   );
 
   const renderSearchInput = () => (
-    <input
-      className={styles.promptSearchInput}
+    <SearchBox
       value={searchQuery}
-      onChange={(e) => setSearchQuery(e.target.value)}
+      onChange={setSearchQuery}
       placeholder={tr("chat.prompt.searchPlaceholder")}
+      ariaLabel={tr("chat.prompt.searchPlaceholder")}
     />
   );
 
@@ -279,7 +280,6 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
         )}
       </div>
 
-      {renderSearchInput()}
       {renderApiPromptList(tr("chat.prompt.emptyMine"))}
     </>
   );
@@ -289,8 +289,6 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
       <div className={styles.promptMenuHeader}>
         <div className={styles.promptMenuTitle}>{tr("chat.prompt.tabExplore")}</div>
       </div>
-
-      {renderSearchInput()}
 
       <PillTabs
         className={styles.promptPillTabs}
@@ -324,6 +322,8 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
           { value: "explore", label: tr("chat.prompt.tabExplore") },
         ]}
       />
+
+      {renderSearchInput()}
 
       {activeTab === "mine" && renderMineContent()}
       {activeTab === "explore" && renderExploreContent()}

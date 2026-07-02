@@ -2,8 +2,6 @@ import { useMemo, useState, useRef, useEffect } from "react";
 import ReactECharts from "echarts-for-react";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useCarbonChartBaseOption, CHART_COLOR_PALETTE } from "@/util/carbon-chart-base";
-import { useCarbonTokens } from "@/hooks/useCarbonToken";
-import { cds } from "@/util/carbon-theme";
 import type { ChartSpec, TableFilter, TableSpec } from "./types";
 import styles from "./WalletChat.module.scss";
 
@@ -62,7 +60,6 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
     | undefined;
   const { tr, fmt } = useLocalization();
   const baseOption = useCarbonChartBaseOption();
-  const chartTokens = useCarbonTokens({ bg: cds.layer01 });
   const chartRef = useRef<ReactECharts>(null);
 
   const option = useMemo(() => {
@@ -138,7 +135,6 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
       const ds = datasets[0];
       return {
         ...baseOption,
-        // backgroundColor: chartTokens.bg,
         color: colors,
         xAxis: undefined,
         yAxis: undefined,
@@ -190,7 +186,6 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
 
     return {
       ...baseOption,
-      // backgroundColor: chartTokens.bg,
       color: colors,
       tooltip,
       grid: {
@@ -223,7 +218,7 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
       },
       series,
     };
-  }, [raw, spec, fmt, tr, baseOption, chartTokens]);
+  }, [raw, spec, fmt, tr, baseOption]);
 
   useEffect(() => {
     if (!spec.pointActions || !onAction || !raw?.labels) return;
@@ -464,7 +459,7 @@ function TableRenderer({ spec, data, onAction }: TableRendererProps) {
                 onMouseEnter={() => setHoveredIdx(globalIdx)}
                 onMouseLeave={() => setHoveredIdx(null)}
                 className={styles.tableRow}
-                style={{ background: hoveredIdx === globalIdx && rowQuery ? "var(--cds-layer-hover)" : undefined }}
+                style={{ background: hoveredIdx === globalIdx && rowQuery ? "var(--yoca-surface-hover)" : undefined }}
               >
                 {cols.map((col) => (
                   <td key={col.field} className={styles.tableTd}>
