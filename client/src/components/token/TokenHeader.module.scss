@@ -273,6 +273,107 @@
   font-size: 11px;
 }
 
+.washGateOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.washGateCard {
+  width: min(420px, 100%);
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
+  background: var(--yoca-surface-elevated);
+  box-shadow: var(--yoca-shadow-card);
+  padding: 22px;
+}
+
+.washGateIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(124, 58, 237, 0.24), rgba(37, 99, 235, 0.18)),
+    rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
+.washGateTitle {
+  margin: 0;
+  color: var(--yoca-text-main);
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.washGateText {
+  margin: 10px 0 0;
+  color: var(--yoca-text-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.washGateActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.washGateSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--yoca-border);
+  border-radius: 8px;
+  background: var(--yoca-surface);
+  color: var(--yoca-text-main);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(124, 58, 237, 0.08);
+  }
+}
+
+.washGatePrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  color: #fff;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 0.92;
+  }
+}
+
 .sidebar {
   align-items: flex-start;
   gap: 12px;
