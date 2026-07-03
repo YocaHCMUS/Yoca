@@ -1,8 +1,8 @@
 import type { ApiErrCode } from "@/api/main";
 import {
-    defineDateTimeFormat,
-    defineNumberFormat,
-    defineTextFormat,
+  defineDateTimeFormat,
+  defineNumberFormat,
+  defineTextFormat,
 } from "./util/util-format";
 import { defineTranslationWithBase } from "./util/util-translation";
 
@@ -154,12 +154,12 @@ export const translation = {
     from: "From",
     to: "To",
     page: "Page {{count}}",
-      clear: "Clear",
-      noResults: "No results",
-      clearFilter: "Clear filter",
-      filterSearchPlaceholder: "Search {{column}}...",
-      searchAriaLabel: "Search table",
-    },
+    clear: "Clear",
+    noResults: "No results",
+    clearFilter: "Clear filter",
+    filterSearchPlaceholder: "Search {{column}}...",
+    searchAriaLabel: "Search table",
+  },
   // Authentication
   auth: {
     authenticating: "Authenticating...",
@@ -1036,15 +1036,6 @@ export const translation = {
     manageTagsLabel: "Manage tags",
     signInManageTagsLabel: "Sign in to manage tags",
     defaultWalletName: "Wallet",
-    exportPdfFailed: "Failed to export PDF. Please try again.",
-    exportXlsxFailed: "Failed to export data (.xlsx). Please try again.",
-    exportZipFailed: "Failed to export charts (.zip). Please try again.",
-    exportingData: "Exporting data...",
-    exportDataXlsx: "Export Data (.xlsx)",
-    exportingCharts: "Exporting charts...",
-    exportChartsZip: "Export Charts (.zip images)",
-    exportingReport: "Exporting report...",
-    exportReportPdf: "Export Report (.pdf)",
     aiAnalysis: "AI Analysis",
     aiAnalysisLoading: "Analyzing wallet with AI...",
     aiAnalysisFailed: "Failed to load AI analysis",
@@ -1165,6 +1156,33 @@ export const translation = {
     list: "List",
     timeline: "Timeline",
     mixed: "Mixed",
+    activityTabSwaps: "Swaps",
+    activityTabTransfers: "Transfers",
+    activityTypeLabel: "Transaction type",
+    timeFormatAriaLabel: "Change time format",
+  },
+  rightSidebar: {
+    watchlist: "Watchlist",
+    token: "TOKEN",
+    price: "PRICE",
+    changePercent: "%CHG",
+    volume: "VOL",
+    wallet: "WALLET",
+    todayVolume: "TODAY VOLUME",
+    label: "LABEL",
+    noTokensWatched: "No tokens watched",
+    noWalletsWatched: "No wallets watched",
+    noLabelsCreated: "No labels created",
+    addToken: "Add token",
+    removeToken: "Remove token",
+    aiChat: "AI Chat",
+  },
+  aiAnalysis: {
+    title: "AI Wallet Analysis",
+    close: "Close",
+    analyzing: "Analyzing wallet...",
+    retry: "Retry",
+    failed: "AI analysis failed",
   },
   dictionary: {
     tradingStrategy: {
@@ -1435,6 +1453,76 @@ export const translation = {
     pdfWalletsCompared: "Wallets Compared",
     pdfWalletAddresses: "Wallet Addresses",
     viewDeepDive: "Deep Dive",
+    walletCount: "{{count}} / {{max}} wallets",
+    copyAddress: "Copy address",
+    followWallet: "Follow wallet",
+    unfollowWallet: "Unfollow wallet",
+    removeWallet: "Remove wallet",
+    openWalletPage: "Open wallet page",
+    addFollowedWalletToComparison: "Add to comparison",
+    alreadyInComparison: "Already in comparison",
+    comparisonListFull: "Comparison list full",
+    tabs: {
+      empty: {
+        title: "No Wallets Selected",
+        description:
+          "Please select at least one wallet to view comparison data.",
+      },
+      holdings: {
+        title: "Holdings Comparison Table",
+        loading: "Loading holdings data...",
+        noTradingData: "No trading data",
+        displayMode: {
+          raw: "Raw",
+        },
+        table: {
+          token: "Token",
+          overlap: "Overlap",
+        },
+        summary: {
+          assets: "{{count}} assets",
+          topAsset: "Top: {{symbol}} ({{percentage}})",
+          top3: "Top3: {{percentage}}",
+        },
+        controls: {
+          minPercent: "Min %",
+          visibleTokens: "{{shown}} of {{total}} tokens",
+        },
+        aria: {
+          displayMode: "Holding display mode",
+          closeDetails: "Close trading details",
+        },
+        trading: {
+          pnl: "PnL",
+          buy: "Buy",
+          sell: "Sell",
+          trades: "Trades",
+          avgBuy: "Avg Buy",
+        },
+      },
+      risk: {
+        title: "Risk Summary",
+        notAvailable: "N/A",
+        table: {
+          metric: "Metric",
+        },
+        metrics: {
+          winRate: "Win Rate",
+          balance: "Balance",
+          pnl: "PnL ({{period}})",
+          pnlPercent: "PnL %",
+          realizedPnl: "Realized PnL",
+          unrealizedPnl: "Unrealized PnL",
+          tradingVolume: "Trading Volume ({{period}})",
+          winCount: "Win Count",
+          lossCount: "Loss Count",
+          totalTrades: "Total Trades",
+          avgWin: "Avg Win",
+          avgLoss: "Avg Loss",
+          winLossRatio: "Win/Loss Ratio",
+        },
+      },
+    },
     aiChat: "AI Chat",
   },
   // Wallet Report PDF Template
@@ -1950,6 +2038,21 @@ export const translation = {
       topN: "Show Top",
       wallet: "Wallet",
     },
+    multiWalletBalanceChart: {
+      title: "Combined Balance History",
+      total: "Total",
+      change24h: "24h Change",
+      balanceHistoryUnavailable:
+        "Balance history is temporarily unavailable. Please try again.",
+    },
+    volumeComparisonChart: {
+      title: "Volume Comparison",
+      totalVolume: "Total Volume",
+      buyVolume: "Buy Volume",
+      sellVolume: "Sell Volume",
+      volPerTx: "Vol / Tx",
+      trades: "Trades",
+    },
     totalTradingVolumeChart: {
       title: "Total Trading Volume Ranking",
     },
@@ -2031,6 +2134,7 @@ export const translation = {
     promptMenuBtn: "Prompt menu",
     fabTitle: "Open AI Chat",
     launcherLabel: "Ask YOCA AI",
+    launcherShortcutTitle: "Open AI chat (Shift + /)",
     seriesLabel: "Series {{count}}",
     tldr: "TLDR",
     warnings: "Warnings",
@@ -2053,6 +2157,17 @@ export const translation = {
     notNow: "Not now",
     inputCounter: "{{current}}/{{max}}",
     inputOverLimit: "Question must be {{max}} characters or fewer.",
+    usageLabel: "{{remaining}}/{{limit}} chats left today",
+    viewPlans: "View plans",
+    planBenefitsTitle: "Unlock More AI Power",
+    planBenefitsDesc: "Upgrade your plan for more daily AI queries and premium features.",
+    currentPlanSummary: "You are currently on {{tier}} with {{limit}} wallet chats per day.",
+    currentTierBadge: "Current",
+    walletChatLimitValue: "{{limit}}/day",
+    walletChatLimitLabel: "Wallet chat limit",
+    planBenefit1: "Up to {{count}} AI queries per day",
+    planBenefit2: "Priority support & faster responses",
+    planBenefit3: "Advanced wallet & portfolio analysis",
     clickToAsk: "Click to ask: {{query}}",
     tableNullValue: "-",
     newChat: "New session",
@@ -2068,6 +2183,7 @@ export const translation = {
     copySection: "Copy section",
     sources: "Sources",
     fabLabel: "AI",
+    shortcutHint: "Shift + /",
     greetingTitle: "👋Hi, I'm YOCA AI",
     greetingDescription: "What would you like to know about this wallet?",
     greetingDescriptionComparison: "What would you like to know about these wallets?",
@@ -2078,6 +2194,7 @@ export const translation = {
     contextTypeWallet: "Wallet",
     contextTypeComparison: "Comparison",
     contextChanged: "Context changed",
+    contextSwitchedTo: "Switched to",
     rightSidebar: "Right sidebar",
     fullscreenMode: "Fullscreen",
     minimize: "Minimize",
@@ -2716,3 +2833,5 @@ export const translation = {
 // English as base translation
 export const defineTranslation =
   defineTranslationWithBase<typeof translation>();
+
+

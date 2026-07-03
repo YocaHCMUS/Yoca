@@ -373,6 +373,8 @@ export function DrawdownChart({
       isEmpty={walletSeriesMeta.length === 0}
       onRetry={() => refetch(false)}
       actions={actions}
+      enableFullscreen={false}
+      enableExport={false}
     >
       <ChartContainer gap="0">
         <ChartStatsHeader cards={statsCards} minColumnWidth="300px" />

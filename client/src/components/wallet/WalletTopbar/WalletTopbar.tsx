@@ -7,7 +7,6 @@ import {
   Repeat,
   Share,
   AiGenerate,
-  Edit,
   Tag as TagIcon,
 } from "@carbon/icons-react";
 import { Tag } from "@carbon/react";
@@ -17,7 +16,6 @@ import client from "@/api/main";
 import { SegmentedControl } from "@/components/charts/shared/ChartControls";
 import { AddressPill } from "@/components/common/AddressPill/AddressPill";
 import { StatusBadge } from "@/components/common/StatusBadge/StatusBadge";
-import { WalletLabelModal } from "@/components/wallet/WalletLabelModal/WalletLabelModal";
 import { WalletTagsModal } from "@/components/wallet/WalletTagsModal/WalletTagsModal";
 import {
   fetchWalletIntelligence,
@@ -123,11 +121,6 @@ function resolveWalletAgeDays(
 export interface WalletTopbarProps {
   address: string;
   onAiAnalysisOpen: () => void;
-  onAuditOpen: () => void;
-  onExportData: () => void;
-  onExportCharts: () => void;
-  onExportPdf: () => void;
-  isExporting: boolean;
   currentPeriod: WalletOverviewPeriodKey;
   onPeriodChange: (period: WalletOverviewPeriodKey) => void;
 }
@@ -149,7 +142,8 @@ export function WalletTopbar({
   const [tags, setTags] = useState<string[]>([]);
   const { labels, setLabel: setApiLabel } = useWalletLabels();
   const label = labels[address] ?? "";
-  const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
+  const [isEditingLabel, setIsEditingLabel] = useState(false);
+  const [labelDraft, setLabelDraft] = useState("");
   const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [followedWallets, setFollowedWallets] = useState<FollowedWalletRow[]>(
@@ -158,6 +152,9 @@ export function WalletTopbar({
   const [followLoading, setFollowLoading] = useState(false);
   const [followPending, setFollowPending] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  const labelInputRef = useRef<HTMLInputElement>(null);
+  const labelCommitInFlightRef = useRef(false);
+  const skipLabelBlurRef = useRef(false);
 
   const isBookmarked = walletWatchlist.some(
     (a) => a.toLowerCase() === address.toLowerCase(),
@@ -199,6 +196,7 @@ export function WalletTopbar({
     (identityStatus === "known" && identityName
       ? identityName
       : shortenWalletAddress(address));
+  const canEditLabel = Boolean(user && address && address !== "null");
 
   useEffect(() => {
     if (!address || address === "null") return;
@@ -260,6 +258,15 @@ export function WalletTopbar({
     }
   }, [isExportMenuOpen]);
 
+  useEffect(() => {
+    if (!isEditingLabel) return;
+    const id = requestAnimationFrame(() => {
+      labelInputRef.current?.focus();
+      labelInputRef.current?.select();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [isEditingLabel]);
+
   const handleCopyAddress = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(address);
@@ -268,12 +275,70 @@ export function WalletTopbar({
     }
   }, [address]);
 
-  const handleLabelSave = useCallback(
-    (newLabel: string) => {
-      setApiLabel(address, newLabel);
+  const handleStartLabelEdit = useCallback(() => {
+    if (!canEditLabel) return;
+    setLabelDraft(label || displayName);
+    setIsEditingLabel(true);
+  }, [canEditLabel, displayName, label]);
+
+  const commitLabelDraft = useCallback(async () => {
+    if (!isEditingLabel || labelCommitInFlightRef.current) return;
+    labelCommitInFlightRef.current = true;
+
+    const nextLabel = labelDraft.trim();
+    const currentLabel = label.trim();
+    const isUnchangedFallback = !currentLabel && nextLabel === displayName;
+
+    setIsEditingLabel(false);
+
+    if (nextLabel === currentLabel || isUnchangedFallback) {
+      setLabelDraft("");
+      labelCommitInFlightRef.current = false;
+      return;
+    }
+
+    try {
+      await setApiLabel(address, nextLabel);
+    } catch (error) {
+      console.error("[WalletTopbar] Failed to save wallet label", error);
+      toast("error", "Failed to save wallet label");
+    } finally {
+      setLabelDraft("");
+      labelCommitInFlightRef.current = false;
+    }
+  }, [
+    address,
+    displayName,
+    isEditingLabel,
+    label,
+    labelDraft,
+    setApiLabel,
+    toast,
+  ]);
+
+  const handleLabelKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        void commitLabelDraft();
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        skipLabelBlurRef.current = true;
+        setLabelDraft("");
+        setIsEditingLabel(false);
+      }
     },
-    [address, setApiLabel],
+    [commitLabelDraft],
   );
+
+  const handleLabelBlur = useCallback(() => {
+    if (skipLabelBlurRef.current) {
+      skipLabelBlurRef.current = false;
+      return;
+    }
+    void commitLabelDraft();
+  }, [commitLabelDraft]);
 
   const handleTagsSave = useCallback(
     async (newTags: string[]) => {
@@ -402,7 +467,31 @@ export function WalletTopbar({
           />
           <div className={styles.topbarIdentity}>
             <div className={styles.topbarNameRow}>
-              <span className={styles.topbarName}>{displayName}</span>
+              {isEditingLabel ? (
+                <input
+                  ref={labelInputRef}
+                  className={styles.topbarNameInput}
+                  type="text"
+                  value={labelDraft}
+                  onChange={(event) => setLabelDraft(event.target.value)}
+                  onBlur={handleLabelBlur}
+                  onKeyDown={handleLabelKeyDown}
+                  maxLength={30}
+                  aria-label="Edit wallet label"
+                />
+              ) : canEditLabel ? (
+                <button
+                  type="button"
+                  className={styles.topbarNameButton}
+                  onClick={handleStartLabelEdit}
+                  aria-label="Edit wallet label"
+                  title="Edit wallet label"
+                >
+                  {displayName}
+                </button>
+              ) : (
+                <span className={styles.topbarName}>{displayName}</span>
+              )}
               {displayName !== shortenWalletAddress(address) &&
                 displayName !== address && (
                   <AddressPill
@@ -420,14 +509,6 @@ export function WalletTopbar({
                   <rect x="2" y="2" width="10" height="10" rx="1.5" />
                   <path d="M4 4V2.5A1.5 1.5 0 0 1 5.5 1h8A1.5 1.5 0 0 1 15 2.5v8a1.5 1.5 0 0 1-1.5 1.5H12" />
                 </svg>
-              </button>
-              <button
-                className={styles.iconBtnSmall}
-                onClick={() => setIsLabelModalOpen(true)}
-                aria-label="Edit wallet label"
-                title="Assign custom label"
-              >
-                <Edit size={14} />
               </button>
             </div>
             <div className={styles.topbarTags}>
@@ -474,16 +555,16 @@ export function WalletTopbar({
 
         <div className={styles.topbarRight}>
           <div className={styles.periodTabs}>
-          <SegmentedControl
-            className={styles.periodTabs}
-            options={PERIOD_OPTIONS.map((opt) => ({
-              label: tr(opt.labelKey),
-              value: opt.key,
-            }))}
-            value={currentPeriod}
-            onChange={(key) => onPeriodChange(key as WalletOverviewPeriodKey)}
-            ariaLabel={tr("charts.timePeriod")}
-          />
+            <SegmentedControl
+              className={styles.periodTabs}
+              options={PERIOD_OPTIONS.map((opt) => ({
+                label: tr(opt.labelKey),
+                value: opt.key,
+              }))}
+              value={currentPeriod}
+              onChange={(key) => onPeriodChange(key as WalletOverviewPeriodKey)}
+              ariaLabel={tr("charts.timePeriod")}
+            />
           </div>
 
           <div className={styles.topbarActions}>
@@ -544,13 +625,6 @@ export function WalletTopbar({
         </div>
       </div>
 
-      <WalletLabelModal
-        isOpen={isLabelModalOpen}
-        onClose={() => setIsLabelModalOpen(false)}
-        onSave={handleLabelSave}
-        walletAddress={address}
-        initialLabel={label}
-      />
       <WalletTagsModal
         isOpen={isTagsModalOpen}
         onClose={() => setIsTagsModalOpen(false)}

@@ -796,50 +796,52 @@ export default function Tble({
               ? tr("table.page", { count: currentPage })
               : tr("table.pageRangeText", { count: currentPage, total: totalPages })}
           </span>
-          <label className={styles.pageSizeControl}>
-            <span>{tr("table.itemsPerPageText")}</span>
-            <div className={styles.customSelect}>
-              <button
-                ref={pageSizeTriggerRef}
-                type="button"
-                className={styles.customSelectTrigger}
-                onClick={() => {
-                  if (!pageSizeOpen) {
-                    const rect = pageSizeTriggerRef.current?.getBoundingClientRect();
-                    if (rect) {
-                      setPageSizePos({ top: rect.bottom + 4, left: Math.max(4, rect.left) });
+          {pageSizes.length > 1 && (
+            <label className={styles.pageSizeControl}>
+              <span>{tr("table.itemsPerPageText")}</span>
+              <div className={styles.customSelect}>
+                <button
+                  ref={pageSizeTriggerRef}
+                  type="button"
+                  className={styles.customSelectTrigger}
+                  onClick={() => {
+                    if (!pageSizeOpen) {
+                      const rect = pageSizeTriggerRef.current?.getBoundingClientRect();
+                      if (rect) {
+                        setPageSizePos({ top: rect.bottom + 4, left: Math.max(4, rect.left) });
+                      }
                     }
-                  }
-                  setPageSizeOpen((prev) => !prev);
-                }}
-              >
-                {currentPageSize}
-                <ChevronDown size={13} />
-              </button>
-              {pageSizeOpen && (() => {
-                const pageSizePopup = (
-                  <div ref={pageSizePopupRef} className={styles.pageSizePopup} style={pageSizePos}>
-                    {pageSizes.map((size) => (
-                      <button
-                        key={size}
-                        type="button"
-                        className={styles.pageSizeOption}
-                        aria-selected={size === currentPageSize}
-                        onClick={() => {
-                          setCurrentPageSize(size);
-                          setPageSizeOpen(false);
-                        }}
-                      >
-                        {size}
-                      </button>
-                    ))}
-                  </div>
-                );
-                const portalTarget = themeRef.current;
-                return portalTarget ? createPortal(pageSizePopup, portalTarget) : pageSizePopup;
-              })()}
-            </div>
-          </label>
+                    setPageSizeOpen((prev) => !prev);
+                  }}
+                >
+                  {currentPageSize}
+                  <ChevronDown size={13} />
+                </button>
+                {pageSizeOpen && (() => {
+                  const pageSizePopup = (
+                    <div ref={pageSizePopupRef} className={styles.pageSizePopup} style={pageSizePos}>
+                      {pageSizes.map((size) => (
+                        <button
+                          key={size}
+                          type="button"
+                          className={styles.pageSizeOption}
+                          aria-selected={size === currentPageSize}
+                          onClick={() => {
+                            setCurrentPageSize(size);
+                            setPageSizeOpen(false);
+                          }}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                  const portalTarget = themeRef.current;
+                  return portalTarget ? createPortal(pageSizePopup, portalTarget) : pageSizePopup;
+                })()}
+              </div>
+            </label>
+          )}
           <div className={styles.pageButtons}>
             <button type="button" aria-label={tr("table.previousPage")} disabled={currentPage <= 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}>
               <ChevronLeft size={15} />

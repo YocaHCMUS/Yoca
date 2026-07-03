@@ -9,6 +9,7 @@ import {
   AI_FEATURES,
   type AiUsageMetadata,
   type AiUsageReservation,
+  getAiUsage,
   releaseAiUsage,
   reserveAiUsage,
 } from "@sv/services/ai-usage.service.js";
@@ -479,6 +480,13 @@ const promptRoutes = new Hono()
 
     return c.json(prompt, 201);
   });
+
+// GET /usage — current daily usage for GeneralAiChat
+chatRoute.get("/usage", honoJwt, userExtract, async (c) => {
+  const { id: userId } = c.get("userPayload")!;
+  const usage = await getAiUsage(userId, AI_FEATURES.GeneralAiChat);
+  return c.json(usage, 200);
+});
 
 const app = chatRoute
   .route("/tool-data", toolDataRoutes)

@@ -33,7 +33,7 @@ export function AddressPill({
   const handleCopy = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      navigator.clipboard.writeText(address).catch(() => {});
+      navigator.clipboard.writeText(address).catch(() => { });
     },
     [address],
   );
@@ -50,7 +50,7 @@ export function AddressPill({
     >
       {icon && <span className={styles.icon}>{icon}</span>}
       {label && <span className={styles.label}>{label}</span>}
-      <span className={styles.address}>{displayText}</span>
+      {!label && <span className={styles.address}>{displayText}</span>}
       {copyable && (
         <button
           type="button"

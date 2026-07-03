@@ -26,6 +26,10 @@
   --yoca-radius-md: 12px;
   --yoca-radius-lg: 18px;
   --yoca-shadow-card: 0 18px 50px rgba(15, 23, 42, 0.12);
+  --yoca-highlight: #2563eb;
+  --yoca-surface-gradient:
+    radial-gradient(circle at 92% 0%, rgba(15, 186, 167, 0.12), transparent 30%),
+    radial-gradient(circle at 70% 120%, rgba(124, 58, 237, 0.18), transparent 48%);
 }
 
 .yoca-app-theme[data-yoca-theme="dark"] {
@@ -38,7 +42,7 @@
   --yoca-text-main: #f8fafc;
   --yoca-text-muted: #94a3b8;
   --yoca-text-soft: #cbd5e1;
-  --yoca-primary: #7c3aed;
+  --yoca-primary: #2467f7; // Purple look bad on darkmode
   --yoca-primary-2: #2563eb;
   --yoca-accent: #2dd4bf;
   --yoca-success: #22c55e;
@@ -47,6 +51,10 @@
   --yoca-radius-md: 12px;
   --yoca-radius-lg: 18px;
   --yoca-shadow-card: 0 18px 50px rgba(0, 0, 0, 0.32);
+  --yoca-highlight: #2dd4bf;
+  --yoca-surface-gradient:
+    radial-gradient(circle at 92% 0%, rgba(45, 212, 191, 0.15), transparent 30%),
+    radial-gradient(circle at 70% 120%, rgba(124, 58, 237, 0.22), transparent 48%);
 }
 
 // Smooth theme transitions for all elements

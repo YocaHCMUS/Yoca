@@ -2,13 +2,12 @@ import client from "@/api/main.ts";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
 import { MultiTimeSeriesLineChart } from "../MultiTimeSeriesLineChart";
-import { FilterSwitch } from "@/components/FilterSwitch";
 import { TrendNum } from "@/components/TrendNum";
 import { Txt } from "@/components/Txt";
 import { useMemo, useState } from "react";
 import { Flex } from "@/components/Flex";
 import { ONE_DAY_MS } from "@/config/constants";
-import { Tag } from "@carbon/react";
+import { SegmentedControl, ChartTag, chartControlStyles } from "@/components/charts/shared/ChartControls";
 import { ChartWrapper } from "../shared";
 
 type ChangeMetric = {
@@ -70,7 +69,7 @@ export function MultiWalletBalanceChart({
   show24Change = true,
   actions,
 }: MultiWalletBalanceChartProps) {
-  const { fmt } = useLocalization();
+  const { fmt, tr } = useLocalization();
 
   const [timePeriod, setTimePeriod] = useState<"7D" | "30D">("30D");
 
@@ -113,7 +112,7 @@ export function MultiWalletBalanceChart({
 
     const totalSeries = {
       key: "total",
-      label: "Total",
+      label: tr("charts.multiWalletBalanceChart.total"),
       data:
         walletSeries[0]?.data.map((_, idx) => ({
           unixTimeMs: walletSeries[0].data[idx].unixTimeMs,
@@ -125,7 +124,7 @@ export function MultiWalletBalanceChart({
     };
 
     return [totalSeries, ...walletSeries];
-  }, [balanceHistory.data]);
+  }, [balanceHistory.data, fmt.text, showTotal, tr]);
 
   const series24hChanges = useMemo(() => {
     return balanceSeries.reduce<Record<string, ChangeMetric | null>>(
@@ -145,7 +144,7 @@ export function MultiWalletBalanceChart({
         error: {
           code: "BALANCE_HISTORY_UNAVAILABLE",
           message:
-            "Balance history is temporarily unavailable. Please try again.",
+            tr("charts.multiWalletBalanceChart.balanceHistoryUnavailable"),
           retryable: true,
         },
       }
@@ -154,9 +153,26 @@ export function MultiWalletBalanceChart({
         retryCount: 0,
       };
 
+  const periodOptions: Array<{ value: "7D" | "30D"; label: string }> = [
+    { value: "7D", label: "7D" },
+    { value: "30D", label: "30D" },
+  ];
+
+  const toolbarActions = (
+    <div className={chartControlStyles.toolbar}>
+      <SegmentedControl
+        ariaLabel={tr("charts.timePeriod")}
+        options={periodOptions}
+        value={timePeriod}
+        onChange={setTimePeriod}
+      />
+      {actions}
+    </div>
+  );
+
   return (
     <ChartWrapper
-      title="Combined Balance History"
+      title={tr("charts.multiWalletBalanceChart.title")}
       loadingState={balanceHistoryLoadingState}
       onRetry={
         balanceHistory.error
@@ -165,27 +181,16 @@ export function MultiWalletBalanceChart({
             }
           : undefined
       }
+      actions={toolbarActions}
     >
       <Flex dir="column" gap={8}>
-        <Flex justify="end">
-          <FilterSwitch
-            options={[
-              { value: "7D", label: "7D" },
-              { value: "30D", label: "30D" },
-            ]}
-            value={timePeriod}
-            onChange={(v) => setTimePeriod(v)}
-            width="sm"
-          />
-        </Flex>
-
         <Flex dir="row" gap={4} align="center" wrap="wrap">
           {show24Change && (
             <>
               <Txt size="md" secondary>
-                24h Change:
+                {tr("charts.multiWalletBalanceChart.change24h")}:
               </Txt>
-              <Flex dir="row" gap={2} wrap="wrap">
+              <div className={chartControlStyles.tagRow}>
                 {balanceSeries.map((series) => {
                   const change = series24hChanges[series.label];
 
@@ -194,22 +199,20 @@ export function MultiWalletBalanceChart({
                   }
 
                   return (
-                    <Tag key={series.key} size="lg" title={series.label}>
-                      <Flex align="center" justify="between" gap={2}>
-                        <Txt size="sm" secondary>
-                          {series.label}
-                        </Txt>
-
+                    <ChartTag
+                      key={series.key}
+                      label={series.label}
+                      value={
                         <TrendNum
                           value={change.pct}
                           prefixes="plus-minus"
                           formatter={fmt.num.percent}
                         />
-                      </Flex>
-                    </Tag>
+                      }
+                    />
                   );
                 })}
-              </Flex>
+              </div>
             </>
           )}
         </Flex>

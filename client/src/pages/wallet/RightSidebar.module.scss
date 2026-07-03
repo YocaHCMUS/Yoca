@@ -312,6 +312,51 @@
     color: var(--yoca-text-main, #f8fafc);
   }
 }
+.walletIdentity {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.compareWalletBtn,
+.copyInlineBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--yoca-text-muted, #94a3b8);
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(45, 212, 191, 0.22);
+    background: rgba(45, 212, 191, 0.12);
+    color: var(--yoca-text-main, #f8fafc);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(45, 212, 191, 0.34);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+}
+
+.compareWalletBtn:disabled {
+  color: var(--yoca-accent, #2dd4bf);
+}
 
 .emptyState {
   padding: 32px 16px;
@@ -329,3 +374,4 @@
     display: none;
   }
 }
+

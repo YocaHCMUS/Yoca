@@ -4,6 +4,7 @@ import ReactDOM from "react-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
 import WalletAnalystPanel from "@/components/WalletAnalystPanel.tsx";
 import { ID_MODAL_ROOT } from "@/config/constants";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import {
   analyzeWalletWithAI,
   type WalletAnalysisApiResponse,
@@ -23,6 +24,7 @@ export function AiAnalysisModal({
   walletAddress,
   language,
 }: AiAnalysisModalProps) {
+  const { tr } = useLocalization();
   const [data, setData] = useState<WalletAnalysisApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export function AiAnalysisModal({
       } catch (err) {
         if (requestId === requestIdRef.current) {
           const message =
-            err instanceof Error ? err.message : "AI analysis failed";
+            err instanceof Error ? err.message : tr("aiAnalysis.failed");
           setError(message);
           setLoading(false);
         }
@@ -82,17 +84,17 @@ export function AiAnalysisModal({
 
   return ReactDOM.createPortal(
     <div className={styles.backdrop} onClick={onClose}>
-      <div className={styles.card} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="AI Wallet Analysis">
+      <div className={styles.card} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={tr("aiAnalysis.title")}>
         <div className={styles.header}>
-          <span className={styles.title}>AI Wallet Analysis</span>
-          <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Close">
+          <span className={styles.title}>{tr("aiAnalysis.title")}</span>
+          <button type="button" className={styles.closeBtn} onClick={onClose} aria-label={tr("aiAnalysis.close")}>
             <Close size={20} />
           </button>
         </div>
 
         {loading && (
           <div className={styles.loadingState}>
-            <InlineLoading description="Analyzing wallet..." />
+            <InlineLoading description={tr("aiAnalysis.analyzing")} />
           </div>
         )}
 
@@ -100,7 +102,7 @@ export function AiAnalysisModal({
           <div className={styles.errorState}>
             <p className={styles.errorMessage}>{error}</p>
             <button type="button" className={styles.retryBtn} onClick={() => void loadData(true)}>
-              Retry
+              {tr("aiAnalysis.retry")}
             </button>
           </div>
         )}

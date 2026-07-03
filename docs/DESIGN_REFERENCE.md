@@ -40,6 +40,8 @@ Key variables:
 --yoca-primary: #7c3aed (purple)
 --yoca-accent: #0fbaa7 / #2dd4bf (teal)
 --yoca-primary-2: #2563eb (blue)
+--yoca-highlight: #2563eb (light) / #2dd4bf (dark) — accent for inline highlights, borders, labels
+--yoca-surface-gradient: radial gradient pair for subtle surface texture (optional)
 ```
 
 ### 2.3 Transition Defaults
@@ -462,6 +464,7 @@ Use these non-Carbon controls for compact chart headers, table tabs, token selec
 <IconActionButton label="Open" icon={ExternalLink} href={url} />
 ```
 - Preferred replacements for `FilterSwitch`, Carbon `ContentSwitcher`/`IconSwitch`, Carbon chart-local `Button`, Carbon `Tag`, and Carbon `IconButton`.
+- Also used outside chart context: `ChatPromptMenu` uses `SearchBox`; `WalletChat` header uses `SegmentedControl` for position switching (left/right/fullscreen).
 - Header controls should be passed through `ChartWrapper.actions` and right-aligned in the chart header, not placed in the chart body.
 - Styling uses `--yoca-*` theme variables and native buttons/links.
 - Asset distribution charts should render as a two-section layout: label-less donut on the left, custom bounded legend on the right with color swatches and percentages. `Others` stays a single aggregate row; hidden token names are not rendered in the chart body.
@@ -538,7 +541,7 @@ Wraps protected routes. Shows Loading while checking auth, redirects to `/unauth
 | `WalletTopbar` | `WalletTopbar/` | Sub-header with wallet identity (`AddressPill`, `StatusBadge`), `PillTabs` period selector, bookmark/follow/compare/share/AI buttons, tag/label modals |
 | `WalletHero` | `WalletHero/` | 4-column CSS grid of `MetricCard`s: Total Asset Value, Total PnL, Trading Volume, Win rate with sub-metrics |
 | `WalletHoldingsPanel` | `WalletHoldingsPanel/` | Sidebar portfolio holdings list |
-| `WalletChat` | `WalletChat/` | AI chat sidebar/overlay with context |
+| `WalletChat` | `WalletChat/` | AI chat sidebar/overlay with context. Uses `SegmentedControl` for position (left/right/fullscreen), `SearchBox` from ChartControls, `lucide-react` icons (migrated from `@carbon/icons-react`). Features circular header buttons (`.circleBtn`), border-left highlighted section blocks (`.sectionBlock`), contextual plans popup, and real-time usage quota label. |
 | `AiAnalysisModal` | `AiAnalysisModal/` | Full AI analysis modal |
 | `WalletAiAnalysisPopup` | `WalletAiAnalysisPopup/` | Quick AI popup |
 | `SwapDetailModal` | `SwapDetailModal/` | Swap transaction detail |
@@ -553,6 +556,22 @@ Wraps protected routes. Shows Loading while checking auth, redirects to `/unauth
 | `SwapPairCell` | `SwapPairCell/` | Swap pair display |
 | `QuickAiPopup` | `QuickAiPopup/` | Quick AI insight popup |
 | `WalletTransactionActivity` | `WalletTransactionActivity/` | Swap + Transfer activity tables section |
+
+#### Chat Section Design Pattern
+
+Wallet chat sections (`.sectionBlock`, `.tldr`, `.warnings`) follow a left-border highlight pattern instead of card containers:
+
+```
+position: relative;
+margin: 0.6rem 0;
+padding-left: 12px;
+border-left: 2px solid var(--yoca-highlight);
+```
+
+- Section headers and copy buttons use `--yoca-highlight` for accent color
+- Section kind labels are plain uppercase text (no icon badges, no colored backgrounds)
+- Copy buttons are absolute-positioned, opacity 0 → 1 on parent hover
+- TLDR and warnings dropped the numbered/icon badges — rely on text hierarchy
 
 #### Chat Panel Positioning
 
@@ -814,6 +833,16 @@ $empty-state-padding: 3rem 1rem;
 $btn-radius: 8px;
 $btn-primary-gradient: linear-gradient(120deg, #7c3aed, #2563eb);
 $btn-danger-color: var(--yoca-danger);
+
+// Circle icon button
+$circle-btn-size: 2.25rem;
+$circle-btn-radius: 999px;
+$circle-btn-border: 1px solid var(--yoca-border);
+
+// Left-border highlight section
+$section-highlight-width: 2px;
+$section-highlight-color: var(--yoca-highlight);
+$section-padding-left: 12px;
 ```
 
 ### 18.2 Shared Component Library to Build
