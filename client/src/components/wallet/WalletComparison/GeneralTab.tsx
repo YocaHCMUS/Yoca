@@ -3,7 +3,6 @@ import type WalletComparisonProp from "./WalletComparisonProp";
 import styles from './GeneralTab.module.scss';
 import { MultiWalletBalanceChart } from '@/components/charts/BalanceChartMultiV2';
 import { VolumeComparisonChart } from '@/components/charts/VolumeComparisonChart/VolumeComparisonChart';
-import { IconButton } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 
 const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
@@ -19,8 +18,8 @@ export const GeneralTab: React.FC<WalletComparisonProp> = ({
         return (
             <div className={styles.emptyState}>
                 <div className={styles.emptyStateContent}>
-                    <h3>No Wallets Selected</h3>
-                    <p>Please select at least one wallet to view comparison data.</p>
+                    <h3>{tr("walletComparison.tabs.empty.title")}</h3>
+                    <p>{tr("walletComparison.tabs.empty.description")}</p>
                 </div>
             </div>
         );

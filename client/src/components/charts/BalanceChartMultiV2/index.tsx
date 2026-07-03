@@ -69,7 +69,7 @@ export function MultiWalletBalanceChart({
   show24Change = true,
   actions,
 }: MultiWalletBalanceChartProps) {
-  const { fmt } = useLocalization();
+  const { fmt, tr } = useLocalization();
 
   const [timePeriod, setTimePeriod] = useState<"7D" | "30D">("30D");
 
@@ -112,7 +112,7 @@ export function MultiWalletBalanceChart({
 
     const totalSeries = {
       key: "total",
-      label: "Total",
+      label: tr("charts.multiWalletBalanceChart.total"),
       data:
         walletSeries[0]?.data.map((_, idx) => ({
           unixTimeMs: walletSeries[0].data[idx].unixTimeMs,
@@ -124,7 +124,7 @@ export function MultiWalletBalanceChart({
     };
 
     return [totalSeries, ...walletSeries];
-  }, [balanceHistory.data]);
+  }, [balanceHistory.data, fmt.text, showTotal, tr]);
 
   const series24hChanges = useMemo(() => {
     return balanceSeries.reduce<Record<string, ChangeMetric | null>>(
@@ -144,7 +144,7 @@ export function MultiWalletBalanceChart({
         error: {
           code: "BALANCE_HISTORY_UNAVAILABLE",
           message:
-            "Balance history is temporarily unavailable. Please try again.",
+            tr("charts.multiWalletBalanceChart.balanceHistoryUnavailable"),
           retryable: true,
         },
       }
@@ -161,7 +161,7 @@ export function MultiWalletBalanceChart({
   const toolbarActions = (
     <div className={chartControlStyles.toolbar}>
       <SegmentedControl
-        ariaLabel="Time period"
+        ariaLabel={tr("charts.timePeriod")}
         options={periodOptions}
         value={timePeriod}
         onChange={setTimePeriod}
@@ -172,7 +172,7 @@ export function MultiWalletBalanceChart({
 
   return (
     <ChartWrapper
-      title="Combined Balance History"
+      title={tr("charts.multiWalletBalanceChart.title")}
       loadingState={balanceHistoryLoadingState}
       onRetry={
         balanceHistory.error
@@ -188,7 +188,7 @@ export function MultiWalletBalanceChart({
           {show24Change && (
             <>
               <Txt size="md" secondary>
-                24h Change:
+                {tr("charts.multiWalletBalanceChart.change24h")}:
               </Txt>
               <div className={chartControlStyles.tagRow}>
                 {balanceSeries.map((series) => {

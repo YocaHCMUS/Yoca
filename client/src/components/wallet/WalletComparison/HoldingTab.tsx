@@ -1,5 +1,4 @@
 import { AssetDistribution } from "@/components/charts/AssetDistribution";
-import { StablecoinRatioChart } from "@/components/charts/StablecoinRatio";
 import { SegmentedControl } from "@/components/charts/shared/ChartControls";
 import { Card } from "@/components/common/Card/Card";
 import { CpyBtn } from "@/components/CpyBtn";
@@ -11,8 +10,6 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import { fetchAssetDistribution } from "@/services/chart/chartApi";
 import { fetchWalletTokenDetails } from "@/services/wallet/walletApi";
 import type { WalletTokenDetails } from "@/services/wallet/walletApi";
-import { AiGenerate } from '@carbon/icons-react';
-import { IconButton } from '@carbon/react';
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./GeneralTab.module.scss";
 import type WalletComparisonProp from "./WalletComparisonProp";
@@ -80,12 +77,6 @@ interface WalletSummary {
   topAsset: { symbol: string; percentage: number } | null;
   top3Concentration: number;
 }
-
-const DISPLAY_MODE_OPTIONS = [
-  { value: "percentage" as const, label: "%" },
-  { value: "raw" as const, label: "Raw" },
-  { value: "usd" as const, label: "USD" },
-];
 
 function formatHoldingValue(
   cell: WalletHolding,
@@ -156,11 +147,11 @@ function OverlapBadge({ count, total }: { count: number; total: number }) {
 }
 
 function TradingDetailPanel({ data }: { data: MergedCell | null }) {
-  const { fmt } = useLocalization();
+  const { fmt, tr } = useLocalization();
   if (!data) {
     return (
       <span style={{ fontSize: "0.65rem", color: "var(--yoca-text-muted)" }}>
-        No trading data
+        {tr("walletComparison.tabs.holdings.noTradingData")}
       </span>
     );
   }
@@ -177,7 +168,7 @@ function TradingDetailPanel({ data }: { data: MergedCell | null }) {
     }}>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <span>
-          PnL:{" "}
+          {tr("walletComparison.tabs.holdings.trading.pnl")}: {" "}
           <TrendNum
             value={totalPnl}
             prefixes="plus-minus"
@@ -199,17 +190,17 @@ function TradingDetailPanel({ data }: { data: MergedCell | null }) {
         </span>
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <span>Buy: {fmt.num.compact.currency(data.totalBoughtUsd)}</span>
-        <span>/ Sell: {fmt.num.compact.currency(data.totalSoldUsd)}</span>
+        <span>{tr("walletComparison.tabs.holdings.trading.buy")}: {fmt.num.compact.currency(data.totalBoughtUsd)}</span>
+        <span>/ {tr("walletComparison.tabs.holdings.trading.sell")}: {fmt.num.compact.currency(data.totalSoldUsd)}</span>
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <span>
-          Trades: {data.totalBuyCount}B / {data.totalSellCount}S
+          {tr("walletComparison.tabs.holdings.trading.trades")}: {data.totalBuyCount}B / {data.totalSellCount}S
         </span>
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <span>Avg Buy: {fmt.num.compact.currency(data.avgBuyCost)}</span>
-        <span>| Sell: {fmt.num.compact.currency(data.avgSellCost)}</span>
+        <span>{tr("walletComparison.tabs.holdings.trading.avgBuy")}: {fmt.num.compact.currency(data.avgBuyCost)}</span>
+        <span>| {tr("walletComparison.tabs.holdings.trading.sell")}: {fmt.num.compact.currency(data.avgSellCost)}</span>
       </div>
     </div>
   );
@@ -222,7 +213,12 @@ function HoldingsComparisonTable({
   walletAddresses: string[];
   fetchEnabled: boolean;
 }) {
-  const { fmt } = useLocalization();
+  const { fmt, tr } = useLocalization();
+  const displayModeOptions = useMemo(() => [
+    { value: "percentage" as const, label: "%" },
+    { value: "raw" as const, label: tr("walletComparison.tabs.holdings.displayMode.raw") },
+    { value: "usd" as const, label: "USD" },
+  ], [tr]);
   const [displayMode, setDisplayMode] = useState<HoldingDisplayMode>("percentage");
   const [minThreshold, setMinThreshold] = useState(5);
   const [tokenRows, setTokenRows] = useState<TokenRow[]>([]);
@@ -474,7 +470,7 @@ function HoldingsComparisonTable({
   }, [walletAddresses, enrichedRows]);
 
   const headers = useMemo(() => [
-    { key: "token", header: "Token", width: 150, minWidth: 120 },
+    { key: "token", header: tr("walletComparison.tabs.holdings.table.token"), width: 150, minWidth: 120 },
     ...walletAddresses.map((addr) => ({
       key: `wallet_${addr}`,
       header: addr.slice(0, 6),
@@ -482,8 +478,8 @@ function HoldingsComparisonTable({
       minWidth: 140,
       align: "end" as const,
     })),
-    { key: "overlap", header: "Overlap", align: "center" as const, width: 80, minWidth: 70 },
-  ], [walletAddresses]);
+    { key: "overlap", header: tr("walletComparison.tabs.holdings.table.overlap"), align: "center" as const, width: 80, minWidth: 70 },
+  ], [tr, walletAddresses]);
 
   const tbleRows = useMemo(() => {
     return filteredRows.map((r) => {
@@ -589,7 +585,7 @@ function HoldingsComparisonTable({
   if (anyLoading && tokenRows.length === 0) {
     return (
       <div style={{ padding: "24px", textAlign: "center", color: "var(--yoca-text-muted)" }}>
-        Loading holdings data...
+        {tr("walletComparison.tabs.holdings.loading")}
       </div>
     );
   }
@@ -624,13 +620,13 @@ function HoldingsComparisonTable({
               {fmt.num.compact.currency(s.totalValue)}
             </div>
             <div style={{ fontSize: "0.7rem", color: "var(--yoca-text-muted)", lineHeight: 1.5 }}>
-              <div>{s.assetCount} assets</div>
+              <div>{tr("walletComparison.tabs.holdings.summary.assets", { count: s.assetCount })}</div>
               {s.topAsset && (
                 <div>
-                  Top: {s.topAsset.symbol} ({s.topAsset.percentage.toFixed(1)}%)
+                  {tr("walletComparison.tabs.holdings.summary.topAsset", { symbol: s.topAsset.symbol, percentage: `${s.topAsset.percentage.toFixed(1)}%` })}
                 </div>
               )}
-              <div>Top3: {s.top3Concentration.toFixed(1)}%</div>
+              <div>{tr("walletComparison.tabs.holdings.summary.top3", { percentage: `${s.top3Concentration.toFixed(1)}%` })}</div>
             </div>
           </div>
         ))}
@@ -646,7 +642,7 @@ function HoldingsComparisonTable({
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <label style={{ fontSize: "0.7rem", color: "var(--yoca-text-muted)", fontWeight: 600, whiteSpace: "nowrap" }}>
-            Min %
+            {tr("walletComparison.tabs.holdings.controls.minPercent")}
           </label>
           <input
             type="range"
@@ -670,14 +666,14 @@ function HoldingsComparisonTable({
           </span>
         </div>
         <span style={{ fontSize: "0.65rem", color: "var(--yoca-text-muted)" }}>
-          ({filteredRows.length} of {enrichedRows.length} tokens)
+          {tr("walletComparison.tabs.holdings.controls.visibleTokens", { shown: fmt.num.decimal(filteredRows.length), total: enrichedRows.length })}
         </span>
         <div style={{ marginLeft: "auto" }}>
           <SegmentedControl
-            ariaLabel="Holding display mode"
+            ariaLabel={tr("walletComparison.tabs.holdings.aria.displayMode")}
             value={displayMode}
             onChange={(v) => setDisplayMode(v as HoldingDisplayMode)}
-            options={DISPLAY_MODE_OPTIONS}
+            options={displayModeOptions}
           />
         </div>
       </div>
@@ -726,10 +722,11 @@ function HoldingsComparisonTable({
               textTransform: "uppercase",
               letterSpacing: "0.04em",
             }}>
-              {popupData.walletAddress.slice(0, 6)} — {popupData.tokenAddress.slice(0, 8)}
+              {popupData.walletAddress.slice(0, 6)} - {popupData.tokenAddress.slice(0, 8)}
             </span>
             <button
               type="button"
+              aria-label={tr("walletComparison.tabs.holdings.aria.closeDetails")}
               onClick={() => setPopupData(null)}
               style={{
                 background: "none",
@@ -741,7 +738,7 @@ function HoldingsComparisonTable({
                 lineHeight: 1,
               }}
             >
-              ✕
+              x
             </button>
           </div>
           <TradingDetailPanel data={popupData.cell} />
@@ -754,15 +751,14 @@ function HoldingsComparisonTable({
 export const HoldingTab: React.FC<WalletComparisonProp> = ({
   walletAddresses,
   fetchEnabled = true,
-  onAiAction,
 }) => {
   const { tr } = useLocalization();
   if (!walletAddresses || walletAddresses.length === 0) {
     return (
       <div className={styles.emptyState}>
         <div className={styles.emptyStateContent}>
-          <h3>No Wallets Selected</h3>
-          <p>Please select at least one wallet to view comparison data.</p>
+          <h3>{tr("walletComparison.tabs.empty.title")}</h3>
+          <p>{tr("walletComparison.tabs.empty.description")}</p>
         </div>
       </div>
     );
@@ -772,7 +768,7 @@ export const HoldingTab: React.FC<WalletComparisonProp> = ({
     <div className={styles.grid}>
       {/* Summary + Holdings Comparison Table */}
       <div className={`${PDF_EXPORT_SECTION_CLASS}`}>
-        <Card title="Holdings Comparison Table">
+        <Card title={tr("walletComparison.tabs.holdings.title")}>
           <HoldingsComparisonTable walletAddresses={walletAddresses} fetchEnabled={fetchEnabled} />
         </Card>
       </div>
@@ -786,12 +782,6 @@ export const HoldingTab: React.FC<WalletComparisonProp> = ({
               initialFilters={{ wallets: [address] }}
               minHeight={300}
               fetchEnabled={fetchEnabled}
-              actions={onAiAction ? (
-                <IconButton kind="ghost" size="sm" label="AI" align="bottom"
-                  onClick={(e: React.MouseEvent<HTMLElement>) => onAiAction(e, tr("charts.assetDistributionChart.title"), ["commonHoldings"])}>
-                  <AiGenerate size={16} />
-                </IconButton>
-              ) : undefined}
             />
           </Card>
         ))}

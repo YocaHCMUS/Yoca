@@ -1,15 +1,18 @@
 import { SegmentedControl } from "@/components/charts/shared/ChartControls";
 import { DrawdownChart } from "@/components/charts/Drawdown";
 import { PnLChart } from "@/components/charts/PnLChart";
+import { Card } from "@/components/common/Card/Card";
 import Tble, { TbleSortType } from "@/components/Tble";
 import type { TblRw } from "@/components/Tble";
-import { Card } from "@/components/common/Card/Card";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import React, { useMemo, useState } from "react";
 import styles from "./GeneralTab.module.scss";
 import type WalletComparisonProp from "./WalletComparisonProp";
-import { useWalletComparisonSummary, type WalletMetricSummary } from "./useWalletComparisonSummary";
-import { useLocalization } from '@/contexts/LocalizationContext';
+import {
+  useWalletComparisonSummary,
+  type WalletMetricSummary,
+} from "./useWalletComparisonSummary";
 
 const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
 
@@ -18,13 +21,8 @@ const PERIOD_OPTIONS = [
   { value: "30D", label: "30D" },
 ] as const;
 
-function formatCurrency(value: number): string {
-  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(2)}M`;
-  if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
-  return `$${value.toFixed(2)}`;
-}
-
 interface MetricDef {
+  id: string;
   label: string;
   getValue: (s: WalletMetricSummary) => number | null;
   format: (v: number) => string;
@@ -40,27 +38,117 @@ function RiskSummaryTable({
   fetchEnabled: boolean;
   period: string;
 }) {
-  const { summaries, loading } = useWalletComparisonSummary(walletAddresses, fetchEnabled, period);
+  const { fmt, tr } = useLocalization();
+  const { summaries, loading } = useWalletComparisonSummary(
+    walletAddresses,
+    fetchEnabled,
+    period,
+  );
 
-  const metrics: MetricDef[] = useMemo(() => [
-    // Page 1 — Portfolio Summary
-    { label: "Win Rate", getValue: (s: WalletMetricSummary) => s.winRate, format: (v: number) => `${v.toFixed(1)}%`, higherIsBetter: true },
-    { label: "Balance", getValue: (s: WalletMetricSummary) => s.totalAssetValue, format: (v: number) => formatCurrency(v), higherIsBetter: true },
-    { label: `PnL (${period})`, getValue: (s: WalletMetricSummary) => s.pnl, format: (v: number) => formatCurrency(v), higherIsBetter: true },
-    { label: "PnL %", getValue: (s: WalletMetricSummary) => s.totalAssetValue && s.totalAssetValue > 0 && s.pnl != null ? (s.pnl / s.totalAssetValue) * 100 : null, format: (v: number) => `${v.toFixed(1)}%`, higherIsBetter: true },
-    // Page 2 — PnL Breakdown
-    { label: "Realized PnL", getValue: (s: WalletMetricSummary) => s.realizedPnl, format: (v: number) => formatCurrency(v), higherIsBetter: true },
-    { label: "Unrealized PnL", getValue: (s: WalletMetricSummary) => s.unrealizedPnl, format: (v: number) => formatCurrency(v), higherIsBetter: true },
-    { label: `Trading Volume (${period})`, getValue: (s: WalletMetricSummary) => s.tradingVolume, format: (v: number) => formatCurrency(v), higherIsBetter: true },
-    // Page 3 — Trading Performance
-    { label: "Win Count", getValue: (s: WalletMetricSummary) => s.winningTrades, format: (v: number) => v.toString(), higherIsBetter: true },
-    { label: "Loss Count", getValue: (s: WalletMetricSummary) => s.losingTrades, format: (v: number) => v.toString(), higherIsBetter: false },
-    { label: "Total Trades", getValue: (s: WalletMetricSummary) => s.totalTrades, format: (v: number) => v.toString(), higherIsBetter: false },
-    // Page 4 — Trade Averages
-    { label: "Avg Win", getValue: (s: WalletMetricSummary) => s.avgWinUsd, format: (v: number) => formatCurrency(v), higherIsBetter: true },
-    { label: "Avg Loss", getValue: (s: WalletMetricSummary) => s.avgLossUsd, format: (v: number) => formatCurrency(v), higherIsBetter: false },
-    { label: "Win/Loss Ratio", getValue: (s: WalletMetricSummary) => s.losingTrades && s.losingTrades > 0 && s.winningTrades != null ? s.winningTrades / s.losingTrades : null, format: (v: number) => v.toFixed(2), higherIsBetter: true },
-  ], [period]);
+  const metrics: MetricDef[] = useMemo(
+    () => [
+      {
+        id: "winRate",
+        label: tr("walletComparison.tabs.risk.metrics.winRate"),
+        getValue: (s: WalletMetricSummary) => s.winRate,
+        format: (v: number) => fmt.num.percent(v / 100),
+        higherIsBetter: true,
+      },
+      {
+        id: "balance",
+        label: tr("walletComparison.tabs.risk.metrics.balance"),
+        getValue: (s: WalletMetricSummary) => s.totalAssetValue,
+        format: fmt.num.compact.currency,
+        higherIsBetter: true,
+      },
+      {
+        id: "pnl",
+        label: tr("walletComparison.tabs.risk.metrics.pnl", { period }),
+        getValue: (s: WalletMetricSummary) => s.pnl,
+        format: fmt.num.compact.currency,
+        higherIsBetter: true,
+      },
+      {
+        id: "pnlPercent",
+        label: tr("walletComparison.tabs.risk.metrics.pnlPercent"),
+        getValue: (s: WalletMetricSummary) =>
+          s.totalAssetValue && s.totalAssetValue > 0 && s.pnl != null
+            ? s.pnl / s.totalAssetValue
+            : null,
+        format: fmt.num.percent,
+        higherIsBetter: true,
+      },
+      {
+        id: "realizedPnl",
+        label: tr("walletComparison.tabs.risk.metrics.realizedPnl"),
+        getValue: (s: WalletMetricSummary) => s.realizedPnl,
+        format: fmt.num.compact.currency,
+        higherIsBetter: true,
+      },
+      {
+        id: "unrealizedPnl",
+        label: tr("walletComparison.tabs.risk.metrics.unrealizedPnl"),
+        getValue: (s: WalletMetricSummary) => s.unrealizedPnl,
+        format: fmt.num.compact.currency,
+        higherIsBetter: true,
+      },
+      {
+        id: "tradingVolume",
+        label: tr("walletComparison.tabs.risk.metrics.tradingVolume", {
+          period,
+        }),
+        getValue: (s: WalletMetricSummary) => s.tradingVolume,
+        format: fmt.num.compact.currency,
+        higherIsBetter: true,
+      },
+      {
+        id: "winCount",
+        label: tr("walletComparison.tabs.risk.metrics.winCount"),
+        getValue: (s: WalletMetricSummary) => s.winningTrades,
+        format: fmt.num.decimal,
+        higherIsBetter: true,
+      },
+      {
+        id: "lossCount",
+        label: tr("walletComparison.tabs.risk.metrics.lossCount"),
+        getValue: (s: WalletMetricSummary) => s.losingTrades,
+        format: fmt.num.decimal,
+        higherIsBetter: false,
+      },
+      {
+        id: "totalTrades",
+        label: tr("walletComparison.tabs.risk.metrics.totalTrades"),
+        getValue: (s: WalletMetricSummary) => s.totalTrades,
+        format: fmt.num.decimal,
+        higherIsBetter: false,
+      },
+      {
+        id: "avgWin",
+        label: tr("walletComparison.tabs.risk.metrics.avgWin"),
+        getValue: (s: WalletMetricSummary) => s.avgWinUsd,
+        format: fmt.num.compact.currency,
+        higherIsBetter: true,
+      },
+      {
+        id: "avgLoss",
+        label: tr("walletComparison.tabs.risk.metrics.avgLoss"),
+        getValue: (s: WalletMetricSummary) => s.avgLossUsd,
+        format: fmt.num.compact.currency,
+        higherIsBetter: false,
+      },
+      {
+        id: "winLossRatio",
+        label: tr("walletComparison.tabs.risk.metrics.winLossRatio"),
+        getValue: (s: WalletMetricSummary) =>
+          s.losingTrades && s.losingTrades > 0 && s.winningTrades != null
+            ? s.winningTrades / s.losingTrades
+            : null,
+        format: (v: number) => fmt.num.decimal(v),
+        higherIsBetter: true,
+      },
+    ],
+    [fmt, period, tr],
+  );
 
   const bestMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -68,85 +156,108 @@ function RiskSummaryTable({
     for (const metric of metrics) {
       let bestIdx = -1;
       for (let i = 0; i < summaries.length; i++) {
-        const v = metric.getValue(summaries[i]);
-        if (v === null) continue;
-        if (bestIdx === -1) { bestIdx = i; continue; }
-        const bestVal = metric.getValue(summaries[bestIdx])!;
-        if ((v > bestVal) === metric.higherIsBetter) bestIdx = i;
+        const value = metric.getValue(summaries[i]);
+        if (value === null) continue;
+        if (bestIdx === -1) {
+          bestIdx = i;
+          continue;
+        }
+        const bestValue = metric.getValue(summaries[bestIdx])!;
+        if ((value > bestValue) === metric.higherIsBetter) bestIdx = i;
       }
-      if (bestIdx >= 0) map[metric.label] = bestIdx;
+      if (bestIdx >= 0) map[metric.id] = bestIdx;
     }
     return map;
   }, [metrics, summaries]);
 
-  const headers = useMemo(() => [
-    { key: "metric", header: "Metric", width: 140, minWidth: 120 },
-    ...(summaries?.map((s) => ({
-      key: `wallet_${s.address}`,
-      header: `${s.address.slice(0, 6)}...${s.address.slice(-4)}`,
-      width: 140,
-      minWidth: 110,
-      align: "end" as const,
-    })) ?? []),
-  ], [summaries]);
+  const headers = useMemo(
+    () => [
+      {
+        key: "metric",
+        header: tr("walletComparison.tabs.risk.table.metric"),
+        width: 140,
+        minWidth: 120,
+      },
+      ...(summaries?.map((summary) => ({
+        key: `wallet_${summary.address}`,
+        header: `${summary.address.slice(0, 6)}...${summary.address.slice(-4)}`,
+        width: 140,
+        minWidth: 110,
+        align: "end" as const,
+      })) ?? []),
+    ],
+    [summaries, tr],
+  );
 
   const rows = useMemo(() => {
     if (!summaries || summaries.length === 0) return [];
-    return metrics.map((metric, idx) => {
+    return metrics.map((metric) => {
       const row: Record<string, unknown> = {
-        id: `metric_${idx}`,
+        id: `metric_${metric.id}`,
         _label: metric.label,
         _format: metric.format,
-        _bestIdx: bestMap[metric.label] ?? -1,
+        _bestIdx: bestMap[metric.id] ?? -1,
       };
-      for (const s of summaries) {
-        const val = metric.getValue(s);
-        row[`wallet_${s.address}`] = val;
-        row[`sort_${s.address}`] = val ?? -Infinity;
+      for (const summary of summaries) {
+        const value = metric.getValue(summary);
+        row[`wallet_${summary.address}`] = value;
+        row[`sort_${summary.address}`] = value ?? -Infinity;
       }
       return row as TblRw;
     });
   }, [summaries, metrics, bestMap]);
 
-  const sortConfigs = useMemo(() => ({
-    ...Object.fromEntries(
-      (summaries ?? []).map((s) => [
-        `wallet_${s.address}`,
-        { type: TbleSortType.Number as const, field: `sort_${s.address}` },
-      ]),
-    ),
-  }), [summaries]);
+  const sortConfigs = useMemo(
+    () => ({
+      ...Object.fromEntries(
+        (summaries ?? []).map((summary) => [
+          `wallet_${summary.address}`,
+          { type: TbleSortType.Number as const, field: `sort_${summary.address}` },
+        ]),
+      ),
+    }),
+    [summaries],
+  );
 
-  const cellRenderers = useMemo(() => ({
-    metric: (_value: unknown, row: TblRw) => (
-      <span style={{ fontWeight: 600, fontSize: "0.75rem", color: "var(--yoca-text-main)" }}>
-        {row._label as string}
-      </span>
-    ),
-    ...Object.fromEntries(
-      (summaries ?? []).map((s) => [
-        `wallet_${s.address}`,
-        (value: unknown, row: TblRw) => {
-          const val = value as number | null;
-          const bestIdx = row._bestIdx as number;
-          const walletIdx = (summaries ?? []).findIndex((x) => x.address === s.address);
-          const isBest = bestIdx >= 0 && walletIdx === bestIdx;
-          const format = row._format as (v: number) => string;
-          return (
-            <span style={{
-              fontFamily: "monospace",
-              fontSize: "0.75rem",
-              fontWeight: isBest ? 700 : 400,
-              color: isBest ? "var(--yoca-success, #22c55e)" : "var(--yoca-text-main)",
-              whiteSpace: "nowrap",
-            }}>
-              {val !== null && val !== undefined ? format(val) : "N/A"}
-            </span>
-          );
-        },
-      ]),
-    ),
-  }), [summaries]);
+  const cellRenderers = useMemo(
+    () => ({
+      metric: (_value: unknown, row: TblRw) => (
+        <span style={{ fontWeight: 600, fontSize: "0.75rem", color: "var(--yoca-text-main)" }}>
+          {row._label as string}
+        </span>
+      ),
+      ...Object.fromEntries(
+        (summaries ?? []).map((summary) => [
+          `wallet_${summary.address}`,
+          (value: unknown, row: TblRw) => {
+            const numericValue = value as number | null;
+            const bestIdx = row._bestIdx as number;
+            const walletIdx = (summaries ?? []).findIndex(
+              (item) => item.address === summary.address,
+            );
+            const isBest = bestIdx >= 0 && walletIdx === bestIdx;
+            const format = row._format as (v: number) => string;
+            return (
+              <span
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "0.75rem",
+                  fontWeight: isBest ? 700 : 400,
+                  color: isBest ? "var(--yoca-success, #22c55e)" : "var(--yoca-text-main)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {numericValue !== null && numericValue !== undefined
+                  ? format(numericValue)
+                  : tr("walletComparison.tabs.risk.notAvailable")}
+              </span>
+            );
+          },
+        ]),
+      ),
+    }),
+    [summaries, tr],
+  );
 
   if (!summaries || summaries.length === 0) return null;
 
@@ -177,8 +288,8 @@ export const RiskTab: React.FC<WalletComparisonProp> = ({
     return (
       <div className={styles.emptyState}>
         <div className={styles.emptyStateContent}>
-          <h3>No Wallets Selected</h3>
-          <p>Please select at least one wallet to view comparison data.</p>
+          <h3>{tr("walletComparison.tabs.empty.title")}</h3>
+          <p>{tr("walletComparison.tabs.empty.description")}</p>
         </div>
       </div>
     );
@@ -186,24 +297,31 @@ export const RiskTab: React.FC<WalletComparisonProp> = ({
 
   return (
     <div className={styles.grid}>
-      {/* Risk Summary Comparison Table */}
       <div className={`${PDF_EXPORT_SECTION_CLASS}`}>
         <Card
-          title="Risk Summary"
+          title={tr("walletComparison.tabs.risk.title")}
           actions={
             <SegmentedControl
-              ariaLabel="Time period"
+              ariaLabel={tr("charts.timePeriod")}
               value={period}
               onChange={setPeriod}
               options={PERIOD_OPTIONS}
             />
           }
         >
-          <RiskSummaryTable walletAddresses={walletAddresses} fetchEnabled={fetchEnabled} period={period} />
+          <RiskSummaryTable
+            walletAddresses={walletAddresses}
+            fetchEnabled={fetchEnabled}
+            period={period}
+          />
         </Card>
       </div>
 
-      <PnLChart minHeight={300} initialWallets={walletAddresses} fetchEnabled={fetchEnabled} onDayClick={onDayClick}
+      <PnLChart
+        minHeight={300}
+        initialWallets={walletAddresses}
+        fetchEnabled={fetchEnabled}
+        onDayClick={onDayClick}
       />
 
       <DrawdownChart
@@ -214,9 +332,6 @@ export const RiskTab: React.FC<WalletComparisonProp> = ({
         }}
         fetchEnabled={fetchEnabled}
       />
-
-
-
     </div>
   );
 };

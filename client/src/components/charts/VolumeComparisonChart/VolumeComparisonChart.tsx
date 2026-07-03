@@ -25,6 +25,10 @@ interface VolumeComparisonWallet {
   tradeCount: number;
 }
 
+interface TooltipParam {
+  dataIndex: number;
+}
+
 interface VolumeComparisonResponse {
   wallets: VolumeComparisonWallet[];
   metadata: {
@@ -121,7 +125,7 @@ export function VolumeComparisonChart({
   actions,
 }: ChartProps) {
   const { tr, fmt } = useLocalization();
-  const chartTitle = title || 'Volume Comparison';
+  const chartTitle = title || tr("charts.volumeComparisonChart.title");
   const chartRef = useRef<ReactECharts>(null);
   const baseOption = useCarbonChartBaseOption();
   const tradeColors = useCarbonTokens({
@@ -198,7 +202,7 @@ export function VolumeComparisonChart({
           type: allZeroVolume ? 'value' : 'log',
           logBase: 10,
           min: allZeroVolume ? 0 : 1,
-          name: 'Volume (USD)',
+          name: tr("charts.volumeComparisonChart.totalVolume"),
           nameTextStyle: { color: baseOption.textStyle?.color },
           axisLabel: {
             show: true,
@@ -215,7 +219,7 @@ export function VolumeComparisonChart({
           type: allZeroPerTx ? 'value' : 'log',
           logBase: 10,
           min: allZeroPerTx ? 0 : 1,
-          name: 'Vol / Tx (USD)',
+          name: tr("charts.volumeComparisonChart.volPerTx"),
           nameTextStyle: { color: baseOption.textStyle?.color },
           axisLabel: {
             show: true,
@@ -226,7 +230,7 @@ export function VolumeComparisonChart({
       ],
       series: [
         {
-          name: 'Total Volume',
+          name: tr("charts.volumeComparisonChart.totalVolume"),
           type: 'bar',
           data: wallets.map(w => w.totalVolume > 0 ? w.totalVolume : null),
           itemStyle: {
@@ -239,7 +243,7 @@ export function VolumeComparisonChart({
           yAxisIndex: 0,
         },
         {
-          name: 'Buy Volume',
+          name: tr("charts.volumeComparisonChart.buyVolume"),
           type: 'bar',
           data: wallets.map(w => w.buyVolume > 0 ? w.buyVolume : null),
           itemStyle: {
@@ -252,7 +256,7 @@ export function VolumeComparisonChart({
           yAxisIndex: 0,
         },
         {
-          name: 'Sell Volume',
+          name: tr("charts.volumeComparisonChart.sellVolume"),
           type: 'bar',
           data: wallets.map(w => w.sellVolume > 0 ? w.sellVolume : null),
           itemStyle: {
@@ -265,7 +269,7 @@ export function VolumeComparisonChart({
           yAxisIndex: 0,
         },
         {
-          name: 'Vol / Tx',
+          name: tr("charts.volumeComparisonChart.volPerTx"),
           type: 'bar',
           data: wallets.map(w => w.tradingVolumePerTransaction > 0 ? w.tradingVolumePerTransaction : null),
           itemStyle: {
@@ -282,30 +286,32 @@ export function VolumeComparisonChart({
         ...baseOption.tooltip,
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
-        formatter: (params: any) => {
-          if (!Array.isArray(params) || params.length === 0) return '';
-          const idx = params[0].dataIndex;
+        formatter: (params: unknown) => {
+          const tooltipParams = Array.isArray(params) ? (params as TooltipParam[]) : [];
+          if (tooltipParams.length === 0) return '';
+          const idx = tooltipParams[0].dataIndex;
           const w = wallets[idx];
           if (!w) return '';
           const header = `<div style="font-weight:600;margin-bottom:4px">#${idx + 1} ${w.walletAddress.slice(0, 8)}...${w.walletAddress.slice(-4)}</div>`;
           const rows = [
-            { label: 'Total Volume', value: fmt.num.compact.currency(w.totalVolume) },
-            { label: 'Buy Volume', value: fmt.num.compact.currency(w.buyVolume) },
-            { label: 'Sell Volume', value: fmt.num.compact.currency(w.sellVolume) },
-            { label: 'Vol / Tx', value: fmt.num.compact.currency(w.tradingVolumePerTransaction) },
-            { label: 'Trades', value: w.tradeCount.toLocaleString() },
+            { label: tr("charts.volumeComparisonChart.totalVolume"), value: fmt.num.compact.currency(w.totalVolume) },
+            { label: tr("charts.volumeComparisonChart.buyVolume"), value: fmt.num.compact.currency(w.buyVolume) },
+            { label: tr("charts.volumeComparisonChart.sellVolume"), value: fmt.num.compact.currency(w.sellVolume) },
+            { label: tr("charts.volumeComparisonChart.volPerTx"), value: fmt.num.compact.currency(w.tradingVolumePerTransaction) },
+            { label: tr("charts.volumeComparisonChart.trades"), value: fmt.num.decimal(w.tradeCount) },
           ];
           const tableRows = rows.map(r => `<tr><td style="text-align:left;padding-right:16px">${r.label}</td><td style="text-align:right">${r.value}</td></tr>`).join('');
           return header + `<table style="width:100%">${tableRows}</table>`;
         },
       },
     };
-  }, [data, baseOption, fmt, tradeColors]);
+  }, [data, baseOption, fmt, tradeColors, tr]);
 
   return (
     <ChartWrapper
       title={chartTitle}
       loadingState={loadingState}
+      className={className}
       isEmpty={!data?.wallets?.length}
       onRetry={() => refetch(false)}
       // toolbarLayout="stacked"
@@ -321,7 +327,7 @@ export function VolumeComparisonChart({
             ]}
             value={filters.timePeriod}
             onChange={(v) => setTimePeriod(v)}
-            ariaLabel="Time period"
+            ariaLabel={tr("charts.timePeriod")}
           />
         </>
       }

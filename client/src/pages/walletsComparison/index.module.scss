@@ -357,8 +357,17 @@
   min-width: 0;
 }
 
-.walletInput {
-  margin-bottom: 1rem;
+.sidebarHeadingBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.walletCount {
+  color: var(--yoca-text-muted, #94a3b8);
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .walletList {
@@ -369,93 +378,114 @@
   overflow-y: auto;
 }
 
-.buttonTag {
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.75rem;
-}
-
 .emptyState {
   font-size: 0.875rem;
   color: var(--yoca-text-muted, #94a3b8);
   margin: 0;
   padding: 16px;
   border: 1px dashed var(--yoca-border, rgba(148, 163, 184, 0.16));
-  border-radius: 10px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.03);
   text-align: center;
 }
 
-.walletTag {
-  width: 100% !important;
-  max-width: 100% !important;
-  flex: 1;
+.walletCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  width: 100%;
   min-width: 0;
-  justify-content: space-between !important;
-  border-color: transparent !important;
-  border-radius: 8px !important;
-  background: var(--yoca-surface-hover, rgba(32, 41, 62, 0.95)) !important;
-  color: var(--yoca-text-muted, #94a3b8) !important;
-  padding-inline: 10px !important;
+  padding: 8px 8px 8px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+  background: var(--yoca-surface-hover, rgba(32, 41, 62, 0.95));
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
 
-  &:hover {
-    border-color: rgba(124, 58, 237, 0.28) !important;
-    background: rgba(124, 58, 237, 0.1) !important;
-    color: var(--yoca-text-main, #f8fafc) !important;
+  &:hover,
+  &:focus-within {
+    border-color: rgba(124, 58, 237, 0.28);
+    background: rgba(124, 58, 237, 0.1);
+    transform: translateY(-1px);
+  }
+
+  &:focus-within {
+    outline: 2px solid rgba(45, 212, 191, 0.24);
+    outline-offset: 2px;
+  }
+
+  &:hover .walletCardActions,
+  &:focus-within .walletCardActions {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 
-.walletTagContainer {
+.walletCardMain {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
   min-width: 0;
 }
 
-.deepDiveButton {
+.walletFollowIndicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
-  border-radius: 999px !important;
-  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16)) !important;
-  color: var(--yoca-text-muted, #94a3b8) !important;
+  color: var(--yoca-text-muted, #94a3b8);
 
-  &:hover {
-    background: rgba(124, 58, 237, 0.16) !important;
-    border-color: rgba(124, 58, 237, 0.3) !important;
-    color: var(--yoca-text-main, #f8fafc) !important;
+  &[data-followed="true"] {
+    color: var(--yoca-accent, #2dd4bf);
   }
 }
 
-.sidebarContainer :global(.cds--search-input),
-.sidebarContainer :global(.cds--search-magnifier) {
-  background: var(--yoca-surface-hover, rgba(32, 41, 62, 0.95));
+.walletCardAddress {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--yoca-text-main, #f8fafc);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8125rem;
+  font-weight: 650;
 }
 
-.sidebarContainer :global(.cds--search-input) {
-  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
-  border-radius: 10px;
+.walletCardActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
 }
 
-.sidebarContainer :global(.cds--search-input::placeholder) {
-  color: var(--yoca-text-muted, #94a3b8);
+.walletActionButton {
+  width: 28px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  border-radius: 999px !important;
+  color: var(--yoca-text-muted, #94a3b8) !important;
+
+  &:hover {
+    color: var(--yoca-text-main, #f8fafc) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+  }
 }
 
-.sidebarContainer :global(.cds--label) {
-  color: var(--yoca-text-muted, #94a3b8);
-  font-weight: 600;
+.walletActionDanger {
+  &:hover {
+    color: var(--yoca-danger, #ef4444) !important;
+    background: rgba(239, 68, 68, 0.14) !important;
+  }
 }
-
-.sidebarHeaderRow :global(.cds--btn) {
-  min-height: 2rem;
-  border-radius: 999px;
-  color: var(--yoca-text-main, #f8fafc);
-}
-
 @media (max-width: 1080px) {
   .pageLayout {
     flex-direction: column;
@@ -498,3 +528,4 @@
     border-radius: 12px;
   }
 }
+

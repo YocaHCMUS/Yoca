@@ -1,3 +1,4 @@
+import { SearchBox } from "@/components/charts/shared/ChartControls/SearchBox";
 import { TabContainer } from "@/components/tabContainer/tabContainer";
 import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup";
 import { GeneralTab } from "@/components/wallet/WalletComparison/GeneralTab";
@@ -11,21 +12,42 @@ import {
 import { PREDEFINED_QUESTIONS } from "@/components/wallet/WalletChat/WalletChatConstants";
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { Button, Search, Stack } from "@carbon/react";
+import { useWatchlist } from "@/contexts/WatchlistContext";
+import { IconButton } from "@carbon/react";
 import {
-  ChartLine,
-  Close,
-  SearchAdvanced,
-  Wallet,
-  User,
-  Launch,
   AiGenerate,
-} from "@carbon/react/icons";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router";
+  ChartLine,
+  Copy,
+  Launch,
+  Star,
+  StarFilled,
+  TrashCan,
+  User,
+  Wallet,
+} from "@carbon/icons-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+} from "react";
+import { useNavigate, useSearchParams } from "react-router";
 import { RightSidebar } from "@/pages/wallet/RightSidebar";
 import styles from "./index.module.scss";
 
+const MAX_COMPARISON_WALLETS = 4;
+
+function formatWalletAddress(address: string): string {
+  if (address.length <= 14) {
+    return address;
+  }
+
+  return `${address.slice(0, 6)}...${address.slice(-6)}`;
+}
 
 function isEditableShortcutTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -44,76 +66,153 @@ function isEditableShortcutTarget(target: EventTarget | null): boolean {
 interface WalletComparisonSidebarProps {
   walletAddress: string;
   selectedWallets: string[];
+  maxWallets: number;
   onWalletAddressChange: (value: string) => void;
-  onWalletKeyPress: (event: React.KeyboardEvent) => void;
+  onWalletKeyPress: (event: KeyboardEvent<HTMLInputElement>) => void;
   onRemoveWallet: (address: string) => void;
 }
 
 interface WalletComparisonMainContentProps {
   activeTab: number;
   visitedTabs: ReadonlySet<number>;
-  comparisonTabs: React.ReactNode[];
+  comparisonTabs: ReactNode[];
   onTabChange: (index: number) => void;
 }
 
 function WalletComparisonSidebar({
   walletAddress,
   selectedWallets,
+  maxWallets,
   onWalletAddressChange,
   onWalletKeyPress,
   onRemoveWallet,
 }: WalletComparisonSidebarProps) {
   const { tr } = useLocalization();
+  const navigate = useNavigate();
+  const { walletWatchlist, walletPending, toggleWallet } = useWatchlist();
+  const isFull = selectedWallets.length >= maxWallets;
+
+  const handleCopyWallet = useCallback((address: string) => {
+    void navigator.clipboard.writeText(address);
+  }, []);
+
+  const handleToggleWallet = useCallback(
+    (address: string) => {
+      void toggleWallet(address).catch((error: unknown) => {
+        console.error("Failed to update wallet watchlist:", error);
+      });
+    },
+    [toggleWallet],
+  );
 
   return (
     <div className={styles.sidebarContainer}>
       <div className={styles.sidebarHeaderRow}>
-        <h3 className={styles.sidebarTitle}>
-          {selectedWallets.length === 1
-            ? tr("walletComparison.activeWallet")
-            : tr("walletComparison.selectedWallets")}
-        </h3>
+        <div className={styles.sidebarHeadingBlock}>
+          <h3 className={styles.sidebarTitle}>
+            {selectedWallets.length === 1
+              ? tr("walletComparison.activeWallet")
+              : tr("walletComparison.selectedWallets")}
+          </h3>
+          <span className={styles.walletCount}>
+            {tr("walletComparison.walletCount", {
+              count: selectedWallets.length,
+              max: maxWallets,
+            })}
+          </span>
+        </div>
       </div>
-      <Search
-        id="wallet-search"
-        labelText={tr("walletComparison.addWalletAddress")}
-        placeholder={tr("walletComparison.enterWalletAddress")}
+
+      <SearchBox
         value={walletAddress}
-        onChange={(e) => onWalletAddressChange(e.target.value)}
+        onChange={onWalletAddressChange}
         onKeyDown={onWalletKeyPress}
-        renderIcon={SearchAdvanced}
+        placeholder={
+          isFull
+            ? tr("walletComparison.comparisonListFull")
+            : tr("walletComparison.enterWalletAddress")
+        }
+        ariaLabel={tr("walletComparison.addWalletAddress")}
+        disabled={isFull}
       />
 
-      <Stack gap={4} className={styles.walletList}>
+      <div className={styles.walletList}>
         {selectedWallets.length === 0 ? (
           <p className={styles.emptyState}>
             {tr("walletComparison.noWalletsSelected")}
           </p>
         ) : (
-          selectedWallets.map((wallet) => (
-            <div key={wallet} className={styles.walletTagContainer}>
-              <Button
-                className={styles.walletTag}
-                renderIcon={Close}
-                onClick={() => onRemoveWallet(wallet)}
-                kind="tertiary"
-              >
-                <span className={styles.buttonTag}>{wallet}</span>
-              </Button>
-              <Button
-                kind="ghost"
-                size="sm"
-                hasIconOnly
-                renderIcon={Launch}
-                iconDescription={tr("walletComparison.viewDeepDive")}
-                tooltipPosition="left"
-                onClick={() => window.open(`/wallets/${wallet}`, "_blank")}
-                className={styles.deepDiveButton}
-              />
-            </div>
-          ))
+          selectedWallets.map((wallet) => {
+            const isFollowed = walletWatchlist.includes(wallet);
+            const isPending = Boolean(walletPending[wallet]);
+
+            return (
+              <div key={wallet} className={styles.walletCard} title={wallet}>
+                <div className={styles.walletCardMain}>
+                  <span
+                    className={styles.walletFollowIndicator}
+                    data-followed={isFollowed}
+                    aria-hidden="true"
+                  >
+                    {isFollowed ? <StarFilled size={14} /> : <Star size={14} />}
+                  </span>
+                  <span className={styles.walletCardAddress}>
+                    {formatWalletAddress(wallet)}
+                  </span>
+                </div>
+
+                <div className={styles.walletCardActions}>
+                  <IconButton
+                    size="sm"
+                    kind="ghost"
+                    label={tr("walletComparison.copyAddress")}
+                    align="left"
+                    onClick={() => handleCopyWallet(wallet)}
+                    className={styles.walletActionButton}
+                  >
+                    <Copy size={16} />
+                  </IconButton>
+                  <IconButton
+                    size="sm"
+                    kind="ghost"
+                    label={
+                      isFollowed
+                        ? tr("walletComparison.unfollowWallet")
+                        : tr("walletComparison.followWallet")
+                    }
+                    align="left"
+                    disabled={isPending}
+                    onClick={() => handleToggleWallet(wallet)}
+                    className={styles.walletActionButton}
+                  >
+                    {isFollowed ? <StarFilled size={16} /> : <Star size={16} />}
+                  </IconButton>
+                  <IconButton
+                    size="sm"
+                    kind="ghost"
+                    label={tr("walletComparison.removeWallet")}
+                    align="left"
+                    onClick={() => onRemoveWallet(wallet)}
+                    className={`${styles.walletActionButton} ${styles.walletActionDanger}`}
+                  >
+                    <TrashCan size={16} />
+                  </IconButton>
+                  <IconButton
+                    size="sm"
+                    kind="ghost"
+                    label={tr("walletComparison.openWalletPage")}
+                    align="left"
+                    onClick={() => navigate(`/wallets/${wallet}`)}
+                    className={styles.walletActionButton}
+                  >
+                    <Launch size={16} />
+                  </IconButton>
+                </div>
+              </div>
+            );
+          })
         )}
-      </Stack>
+      </div>
     </div>
   );
 }
@@ -152,7 +251,6 @@ function WalletComparisonMainContent({
 
 export default function WalletsComparisonPage() {
   const [activeTab, setActiveTab] = useState(0);
-  /** Tabs that have been opened at least once — panels stay mounted but pause fetching when inactive. */
   const [visitedTabs, setVisitedTabs] = useState<Set<number>>(
     () => new Set([0]),
   );
@@ -174,18 +272,49 @@ export default function WalletsComparisonPage() {
   const [aiPopupOpen, setAiPopupOpen] = useState(false);
   const [aiPopupAnchor, setAiPopupAnchor] = useState<HTMLElement | null>(null);
   const [aiPopupLabel, setAiPopupLabel] = useState("");
-  const [aiPopupQuestionIds, setAiPopupQuestionIds] = useState<string[] | undefined>(undefined);
+  const [aiPopupQuestionIds, setAiPopupQuestionIds] = useState<
+    string[] | undefined
+  >(undefined);
 
-  const handleDayClick = (walletAddress: string, timestamp: number) => {
+  const handleDayClick = (_walletAddress: string, timestamp: number) => {
     setDayPopupTimestamp(timestamp);
     setDayPopupOpen(true);
   };
 
-  const handleAiAction = useCallback((e: React.MouseEvent<HTMLElement>, label: string, questionIds?: string[]) => {
-    setAiPopupAnchor(e.currentTarget);
-    setAiPopupLabel(label);
-    setAiPopupQuestionIds(questionIds);
-    setAiPopupOpen(true);
+  const handleAiAction = useCallback(
+    (
+      e: ReactMouseEvent<HTMLElement>,
+      label: string,
+      questionIds?: string[],
+    ) => {
+      setAiPopupAnchor(e.currentTarget);
+      setAiPopupLabel(label);
+      setAiPopupQuestionIds(questionIds);
+      setAiPopupOpen(true);
+    },
+    [],
+  );
+
+  const addComparisonWallet = useCallback((address: string) => {
+    const normalizedAddress = address.trim();
+    if (!normalizedAddress) {
+      return false;
+    }
+
+    let added = false;
+    setSelectedWallets((previousWallets) => {
+      if (
+        previousWallets.includes(normalizedAddress) ||
+        previousWallets.length >= MAX_COMPARISON_WALLETS
+      ) {
+        return previousWallets;
+      }
+
+      added = true;
+      return [...previousWallets, normalizedAddress];
+    });
+
+    return added;
   }, []);
 
   useEffect(() => {
@@ -198,6 +327,7 @@ export default function WalletsComparisonPage() {
       setActiveTab(0);
     }
   }, [selectedWallets.length]);
+
   useEffect(() => {
     const handleChatShortcut = (event: globalThis.KeyboardEvent) => {
       if (
@@ -216,21 +346,20 @@ export default function WalletsComparisonPage() {
     window.addEventListener("keydown", handleChatShortcut);
     return () => window.removeEventListener("keydown", handleChatShortcut);
   }, []);
-  const hasInitializedRef = useRef(false);
 
-  // Pre-populate from ?wallets=addr1,addr2 query param.
-  // Depends on searchParams so that navigating here from a different wallet
-  // (Back → Compare on a new wallet) correctly resets the list.
   useEffect(() => {
     const param = searchParams.get("wallets");
     if (!param) return;
+
     const addresses = param
       .split(",")
-      .map((a) => a.trim())
-      .filter(Boolean);
+      .map((address) => address.trim())
+      .filter(Boolean)
+      .filter((address, index, allAddresses) => allAddresses.indexOf(address) === index)
+      .slice(0, MAX_COMPARISON_WALLETS);
+
     if (addresses.length > 0) {
       setSelectedWallets(addresses);
-      hasInitializedRef.current = true;
     }
   }, [searchParams]);
 
@@ -285,40 +414,45 @@ export default function WalletsComparisonPage() {
     [selectedWallets, activeTab, exportContainerClassName, handleAiAction],
   );
 
-  const handleAddWallet = () => {
-    if (
-      walletAddress.trim() &&
-      !selectedWallets.includes(walletAddress.trim())
-    ) {
-      setSelectedWallets([...selectedWallets, walletAddress.trim()]);
+  const handleAddWallet = useCallback(() => {
+    if (addComparisonWallet(walletAddress)) {
       setWalletAddress("");
     }
-  };
+  }, [addComparisonWallet, walletAddress]);
 
-  const handleRemoveWallet = (address: string) => {
-    setSelectedWallets(selectedWallets.filter((w) => w !== address));
-  };
+  const handleRemoveWallet = useCallback((address: string) => {
+    setSelectedWallets((previousWallets) =>
+      previousWallets.filter((wallet) => wallet !== address),
+    );
+  }, []);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleAddWallet();
-    }
-  };
+  const handleKeyPress = useCallback(
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        handleAddWallet();
+      }
+    },
+    [handleAddWallet],
+  );
 
   return (
     <PageWrapper noMarketTickers wideContent>
-      <div className={`${styles.pageLayout}${isRightSidebarOpen ? ` ${styles.rightSidebarExpanded}` : ''}`}>
+      <div
+        className={`${styles.pageLayout}${isRightSidebarOpen ? ` ${styles.rightSidebarExpanded}` : ""
+          }`}
+      >
         <ChatContextProvider
           addresses={selectedWallets}
           contextType="wallet-comparison"
           lang={lang}
         >
-          {/* Left Sidebar */}
           <aside className={styles.leftSidebar}>
             <div className={styles.walletSection}>
               <WalletComparisonSidebar
                 walletAddress={walletAddress}
                 selectedWallets={selectedWallets}
+                maxWallets={MAX_COMPARISON_WALLETS}
                 onWalletAddressChange={setWalletAddress}
                 onWalletKeyPress={handleKeyPress}
                 onRemoveWallet={handleRemoveWallet}
@@ -335,13 +469,13 @@ export default function WalletsComparisonPage() {
             />
           </main>
 
-          {/* Modal chat panel (right/left dock + fullscreen) */}
           {!isChatOpen && (
             <button
               type="button"
               className={styles.chatLauncher}
               onClick={() => setIsChatOpen(true)}
-              title="Shift + /"
+              title={tr("chat.launcherShortcutTitle")}
+              aria-label={tr("chat.launcherShortcutTitle")}
             >
               <AiGenerate size={18} />
               <span>{tr("chat.launcherLabel")}</span>
@@ -353,6 +487,9 @@ export default function WalletsComparisonPage() {
             isChatOpen={isChatOpen}
             onChatToggle={() => setIsChatOpen((v) => !v)}
             onToggle={setIsRightSidebarOpen}
+            comparisonWallets={selectedWallets}
+            maxComparisonWallets={MAX_COMPARISON_WALLETS}
+            onAddComparisonWallet={addComparisonWallet}
           />
 
           {isChatOpen && (
@@ -378,12 +515,13 @@ export default function WalletsComparisonPage() {
             componentLabel={aiPopupLabel}
             predefinedQuestions={
               aiPopupQuestionIds
-                ? PREDEFINED_QUESTIONS.filter((q) => aiPopupQuestionIds.includes(q.id))
+                ? PREDEFINED_QUESTIONS.filter((q) =>
+                  aiPopupQuestionIds.includes(q.id),
+                )
                 : undefined
             }
             onOpenChat={() => setIsChatOpen(true)}
           />
-
         </ChatContextProvider>
       </div>
 
@@ -396,4 +534,3 @@ export default function WalletsComparisonPage() {
     </PageWrapper>
   );
 }
-
