@@ -59,3 +59,9 @@ externals
 AGENTS.md
 .agents/*
 skills-lock.json
+
+.mcp.json
+.claude/
+
+.codegraph/
+.fallow/
