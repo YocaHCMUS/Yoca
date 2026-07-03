@@ -3,9 +3,9 @@ import "dayjs/locale/vi";
 import { defineTranslation } from "./en";
 import { getUsdToVndRate } from "./util/exchange-service";
 import {
-    defineDateTimeFormat,
-    defineNumberFormat,
-    defineTextFormat,
+  defineDateTimeFormat,
+  defineNumberFormat,
+  defineTextFormat,
 } from "./util/util-format";
 
 export const langCode = "vi-VN";
@@ -113,12 +113,12 @@ export const translation = defineTranslation({
     from: "Từ",
     to: "Đến",
     page: "Trang {{count}}",
-      clear: "Xóa",
-      noResults: "Không có kết quả",
-      clearFilter: "Xóa bộ lọc",
-      filterSearchPlaceholder: "Tìm kiếm {{column}}...",
-      searchAriaLabel: "Tìm kiếm bảng",
-    },
+    clear: "Xóa",
+    noResults: "Không có kết quả",
+    clearFilter: "Xóa bộ lọc",
+    filterSearchPlaceholder: "Tìm kiếm {{column}}...",
+    searchAriaLabel: "Tìm kiếm bảng",
+  },
   // Authentication
   auth: {
     authenticating: "Đang xác thực...",
@@ -2016,6 +2016,10 @@ export const translation = defineTranslation({
     viewPlans: "Xem gói",
     planBenefitsTitle: "Mở khóa thêm sức mạnh AI",
     planBenefitsDesc: "Nâng cấp gói của bạn để có thêm truy vấn AI và tính năng cao cấp.",
+    currentPlanSummary: "Bạn hiện dang ở gói {{tier}} với {{limit}} lượt chat ví mỗi ngày.",
+    currentTierBadge: "Hiện tại",
+    walletChatLimitValue: "{{limit}}/ngày",
+    walletChatLimitLabel: "Giới hạn chat ví",
     planBenefit1: "Lên đến {{count}} truy vấn AI mỗi ngày",
     planBenefit2: "Hỗ trợ ưu tiên & phản hồi nhanh hơn",
     planBenefit3: "Phân tích ví & danh mục nâng cao",
@@ -2719,3 +2723,4 @@ export const translation = defineTranslation({
     },
   },
 });
+

@@ -2057,6 +2057,10 @@ export const translation = {
     viewPlans: "View plans",
     planBenefitsTitle: "Unlock More AI Power",
     planBenefitsDesc: "Upgrade your plan for more daily AI queries and premium features.",
+    currentPlanSummary: "You are currently on {{tier}} with {{limit}} wallet chats per day.",
+    currentTierBadge: "Current",
+    walletChatLimitValue: "{{limit}}/day",
+    walletChatLimitLabel: "Wallet chat limit",
     planBenefit1: "Up to {{count}} AI queries per day",
     planBenefit2: "Priority support & faster responses",
     planBenefit3: "Advanced wallet & portfolio analysis",
@@ -2724,3 +2728,4 @@ export const translation = {
 // English as base translation
 export const defineTranslation =
   defineTranslationWithBase<typeof translation>();
+

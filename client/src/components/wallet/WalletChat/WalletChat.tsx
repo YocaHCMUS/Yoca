@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
-import { Check, ChevronDown, List, Maximize2, Minus, PanelLeftOpen, PanelRightOpen, Plus, Send, Trash2, X, Zap } from "lucide-react";
+import { AppWindow, ChevronDown, List, Minus, PanelLeft, PanelRight, Plus, Send, Trash2, X, Zap } from "lucide-react";
 import { SegmentedControl } from "@/components/charts/shared/ChartControls";
 import { WalletChatMessage } from "./WalletChatMessage";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
@@ -22,9 +22,16 @@ const SESSION_MENU_WIDTH = 320;
 const SESSION_MENU_MAX_HEIGHT = 300;
 const SESSION_MENU_OFFSET = 4;
 const VIEWPORT_PADDING = 8;
-const PLANS_POPUP_WIDTH = 280;
-const PLANS_POPUP_ESTIMATED_HEIGHT = 220;
+const PLANS_POPUP_WIDTH = 360;
+const PLANS_POPUP_ESTIMATED_HEIGHT = 430;
 const PLANS_POPUP_OFFSET = 8;
+
+const WALLET_CHAT_TIERS = [
+  { key: "Free", label: "Standard", limit: 5 },
+  { key: "Lite", label: "Lite", limit: 20 },
+  { key: "Plus", label: "Plus", limit: 50 },
+  { key: "Pro", label: "Pro", limit: 100 },
+] as const;
 
 interface Props {
   address?: string;
@@ -192,16 +199,8 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
     setIsPlansOpen((open) => !open);
   };
 
-  const planPopupBenefits = [
-    // insert actual benefits here, for example:
-    String(tr("pricing.features.askYoca", { $count: 50 })),
-    // String(tr("pricing.features.generalAiChat", { $count: 50 })),
-    // String(tr("pricing.features.tokenChartNewsSummary", { $count: 50 })),
-    // String(tr("pricing.features.volatilitySummary", { $count: 50 })),
-    // String(tr("pricing.features.walletAiAnalysis", { $count: 50 })),
-    // String(tr("pricing.features.washTradingAiAnalysis", { $count: 50 })),
-    // String(tr("pricing.features.dailyReset")),
-  ];
+  const currentTierKey = usage?.tier ?? "Free";
+  const currentTier = WALLET_CHAT_TIERS.find((tier) => tier.key === currentTierKey) ?? WALLET_CHAT_TIERS[0];
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -531,9 +530,9 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
           </div>
           <SegmentedControl
             options={[
-              { value: "left", icon: PanelLeftOpen, label: tr("chat.leftSidebar") },
-              { value: "right", icon: PanelRightOpen, label: tr("chat.rightSidebar") },
-              { value: "fullscreen", icon: Maximize2, label: tr("chat.fullscreenMode") },
+              { value: "left", icon: PanelLeft, label: tr("chat.leftSidebar") },
+              { value: "fullscreen", icon: AppWindow, label: tr("chat.fullscreenMode") },
+              { value: "right", icon: PanelRight, label: tr("chat.rightSidebar") },
             ]}
             value={chatPosition}
             onChange={onChatPositionChange}
@@ -653,15 +652,34 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
                 <X size={12} />
               </button>
             </div>
-            <p className={styles.plansPopupDesc}>{tr("chat.planBenefitsDesc")}</p>
-            <ul className={styles.benefitsList}>
-              {planPopupBenefits.map((benefit) => (
-                <li key={benefit} className={styles.benefitItem}>
-                  <Check size={14} />
-                  <span>{benefit}</span>
-                </li>
-              ))}
-            </ul>
+            <p className={styles.plansPopupDesc}>
+              {tr("chat.currentPlanSummary", {
+                tier: currentTier.label,
+                limit: String(usage?.limit ?? currentTier.limit),
+              })}
+            </p>
+            <div className={styles.planTierGrid}>
+              {WALLET_CHAT_TIERS.map((tier) => {
+                const isCurrent = tier.key === currentTierKey;
+                return (
+                  <div
+                    key={tier.key}
+                    className={`${styles.planTierCard} ${isCurrent ? styles.planTierCardActive : ""}`}
+                  >
+                    <div className={styles.planTierCardTop}>
+                      <span className={styles.planTierName}>{tier.label}</span>
+                      {isCurrent && (
+                        <span className={styles.planTierBadge}>{tr("chat.currentTierBadge")}</span>
+                      )}
+                    </div>
+                    <div className={styles.planTierLimit}>
+                      {tr("chat.walletChatLimitValue", { limit: String(tier.limit) })}
+                    </div>
+                    <div className={styles.planTierLimitLabel}>{tr("chat.walletChatLimitLabel")}</div>
+                  </div>
+                );
+              })}
+            </div>
             <div className={styles.plansPopupActions}>
               <button type="button" className={styles.plansPopupSecondary} onClick={() => setIsPlansOpen(false)}>
                 {tr("chat.notNow")}
@@ -694,3 +712,4 @@ export function WalletChat({ address, addresses, lang, variant = "widget", chatP
     </ChatContextProvider>
   );
 }
+
