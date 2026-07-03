@@ -6,6 +6,12 @@
   padding: 18px 18px 96px;
 }
 
+.grid2Col {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+
 .chartContainer {
   padding: 1rem;
   border-radius: 12px;
