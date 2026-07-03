@@ -250,7 +250,7 @@ export function SolanaPaymentFlow({
     return (
       <div className="flex flex-col gap-4">
         {/* Header */}
-        <div className="rounded-2xl border border-[#14F195]/20 bg-[#14F195]/5 p-4">
+        <div className="rounded-2xl border border-[#7C3AED]/20 bg-[#7C3AED]/5 !p-5">
           <div className="flex items-center gap-3 mb-2">
             <span className="text-2xl">SOL</span>
             <div>
@@ -267,7 +267,7 @@ export function SolanaPaymentFlow({
         {/* Wallet list */}
         <div className="flex flex-col gap-2">
           {wallets.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-center">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] !p-5 text-center">
               <p className="text-[#64748b] text-sm">
                 {tr("payment.solana.noWallets")}
               </p>
@@ -277,7 +277,7 @@ export function SolanaPaymentFlow({
                   href="https://phantom.app"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#14F195] hover:underline"
+                  className="text-[#7C3AED] hover:underline"
                 >
                   Phantom
                 </a>{" "}
@@ -286,7 +286,7 @@ export function SolanaPaymentFlow({
                   href="https://solflare.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#14F195] hover:underline"
+                  className="text-[#7C3AED] hover:underline"
                 >
                   Solflare
                 </a>{" "}
@@ -303,24 +303,24 @@ export function SolanaPaymentFlow({
                   type="button"
                   disabled={isThisWalletConnecting}
                   onClick={() => handleWalletSelect(w.adapter.name)}
-                  className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left transition-all duration-200 hover:border-white/25 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="group flex items-center gap-4 !rounded-3xl border border-white/10 bg-white/[0.04] !px-5 !py-4 text-left transition-all duration-200 hover:border-white/25 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {/* Wallet icon */}
                   {w.adapter.icon ? (
                     <img
                       src={w.adapter.icon}
                       alt={w.adapter.name}
-                      className="w-8 h-8 rounded-lg flex-shrink-0"
+                      className="w-8 h-8 !rounded-xl flex-shrink-0"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-lg bg-[#14F195]/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-[#14F195] text-sm font-bold">SOL</span>
+                    <div className="w-8 h-8 !rounded-xl bg-[#7C3AED]/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-[#7C3AED] text-sm font-bold">SOL</span>
                     </div>
                   )}
 
                   {/* Wallet name + readiness */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm font-semibold group-hover:text-[#14F195] transition-colors">
+                    <p className="text-white text-sm font-semibold group-hover:text-[#7C3AED] transition-colors">
                       {w.adapter.name}
                     </p>
                     <p className="text-[#64748b] text-xs capitalize">
@@ -334,10 +334,10 @@ export function SolanaPaymentFlow({
 
                   {/* Spinner or Chevron */}
                   {isThisWalletConnecting ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-[#14F195] flex-shrink-0" />
+                    <Loader2 className="w-4 h-4 animate-spin text-[#7C3AED] flex-shrink-0" />
                   ) : (
                     <svg
-                      className="w-4 h-4 text-[#64748b] group-hover:text-[#14F195] transition-colors flex-shrink-0"
+                      className="w-4 h-4 text-[#64748b] group-hover:text-[#7C3AED] transition-colors flex-shrink-0"
                       fill="none"
                       stroke="currentColor"
                       strokeWidth={2}
@@ -357,7 +357,7 @@ export function SolanaPaymentFlow({
           id="solana-cancel-connect-btn"
           type="button"
           onClick={onCancel}
-          className="w-full !py-3 rounded-full text-sm font-medium border border-white/10 text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all duration-200 mt-1"
+          className="w-full !py-3 !rounded-full text-sm font-medium border border-white/10 text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all duration-200 mt-1"
         >
           {tr("payment.shared.cancel")}
         </button>
@@ -371,7 +371,7 @@ export function SolanaPaymentFlow({
   if (txSignature && !verifyingSignature) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="rounded-2xl border border-green-500/30 bg-green-500/10 p-4">
+        <div className="rounded-2xl border border-green-500/30 bg-green-500/10 !p-5">
           <p className="font-semibold text-green-400 mb-2">
             {tr("payment.solana.transactionSubmitted")}
           </p>
@@ -645,18 +645,18 @@ export function SolanaPaymentFlow({
   return (
     <div className="flex flex-col gap-4">
       {/* -- Connected Wallet Card -- */}
-      <div className="flex items-center justify-between rounded-2xl border border-[#14F195]/20 bg-[#14F195]/5 p-3">
+      <div className="flex items-center justify-between !rounded-3xl border border-[#7C3AED]/20 bg-[#7C3AED]/5 !p-5">
         <div className="flex items-center gap-3 min-w-0">
           {/* Wallet icon */}
           {wallet?.adapter.icon ? (
             <img
               src={wallet.adapter.icon}
               alt={wallet.adapter.name}
-              className="w-8 h-8 rounded-lg flex-shrink-0"
+              className="w-8 h-8 !rounded-xl flex-shrink-0"
             />
           ) : (
-            <div className="w-8 h-8 rounded-lg bg-[#14F195]/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-[#14F195] text-sm font-bold">SOL</span>
+            <div className="w-8 h-8 !rounded-xl bg-[#7C3AED]/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-[#7C3AED] text-sm font-bold">SOL</span>
             </div>
           )}
 
@@ -665,13 +665,13 @@ export function SolanaPaymentFlow({
               {wallet?.adapter.name ?? "Solana Wallet"}
             </p>
             <div className="flex items-center gap-2 mt-0.5">
-              <p className="text-[#14F195] text-xs font-mono">
+              <p className="text-[#7C3AED] text-xs font-mono">
                 {truncatePubKey(publicKey.toString())}
               </p>
               <button
                 type="button"
                 onClick={handleCopyAddress}
-                className="text-[10px] text-[#94a3b8] hover:text-[#14F195] transition-colors font-medium border border-white/10 px-1.5 py-0.5 rounded bg-white/5 whitespace-nowrap"
+                className="text-[10px] text-[#94a3b8] hover:text-[#7C3AED] transition-colors font-medium border border-white/10 !px-2 !py-1 rounded bg-white/5 whitespace-nowrap"
               >
                 {copied ? tr("payment.solana.copied") : tr("payment.solana.copyAddress")}
               </button>
@@ -691,8 +691,8 @@ export function SolanaPaymentFlow({
       </div>
 
       {/* -- Balance Info Card -- */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-xs">
-        <div className="flex flex-col gap-1.5">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] !p-5 text-xs">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between text-[#94a3b8]">
             <span>{tr("payment.solana.balanceConfigured", { networkName })}:</span>
             {balances.loading ? (
@@ -717,7 +717,7 @@ export function SolanaPaymentFlow({
       </div>
 
       {/* -- Transaction Details -- */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] !p-5">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b] mb-1">{tr("payment.checkout.plan")}</p>
@@ -725,7 +725,7 @@ export function SolanaPaymentFlow({
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b] mb-1">{tr("payment.solana.amount")}</p>
-            <p className="text-[#14F195] font-extrabold">{solAmount} SOL</p>
+            <p className="text-[#7C3AED] font-extrabold">{solAmount} SOL</p>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b] mb-1">{tr("payment.solana.network")}</p>
@@ -739,8 +739,8 @@ export function SolanaPaymentFlow({
       </div>
 
       {/* -- Info Box -- */}
-      <div className="rounded-2xl border border-[#14F195]/20 bg-[#14F195]/5 p-3 text-sm">
-        <p className="text-xs text-[#64748b]">
+      <div className="rounded-2xl border border-[#7C3AED]/20 bg-[#7C3AED]/5 !p-5 text-sm">
+        <p className="text-xs text-[#64748b] leading-relaxed">
           {tr("payment.solana.transferNotice", {
             amount: `${solAmount} SOL`,
             networkName,
@@ -750,7 +750,7 @@ export function SolanaPaymentFlow({
 
       {/* -- Network Mismatch Warning -- */}
       {showNetworkMismatchAlert && (
-        <div className="flex flex-col gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
+        <div className="flex flex-col gap-2 !rounded-3xl border border-amber-500/30 bg-amber-500/10 !p-4 text-xs text-amber-300">
           <div className="flex items-start gap-2">
             <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
@@ -769,7 +769,7 @@ export function SolanaPaymentFlow({
 
       {/* -- Insufficient Funds Warning -- */}
       {showInsufficientFundsAlert && (
-        <div className="flex flex-col gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
+        <div className="flex flex-col gap-2 !rounded-3xl border border-red-500/30 bg-red-500/10 !p-4 text-xs text-red-400">
           <div className="flex items-start gap-2">
             <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -788,7 +788,7 @@ export function SolanaPaymentFlow({
               href="https://faucet.solana.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#14F195] hover:bg-[#0fd484] text-[#0a0a0f] font-bold text-xs uppercase tracking-wider transition-colors"
+              className="inline-flex items-center justify-center px-4 py-2 !rounded-xl bg-gradient-to-r from-[#7C3AED] to-[#2563EB] hover:from-[#8B5CF6] hover:to-[#3B82F6] text-white font-bold text-xs uppercase tracking-wider transition-all"
             >
               {tr("payment.solana.faucetButton")}
             </a>
@@ -801,7 +801,7 @@ export function SolanaPaymentFlow({
       {errorMsg && (
         <div
           role="alert"
-          className="flex items-start gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400"
+          className="flex items-start gap-3 !rounded-3xl border border-red-500/30 bg-red-500/10 !p-4 text-sm text-red-400"
         >
           <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -817,7 +817,7 @@ export function SolanaPaymentFlow({
           type="button"
           onClick={handleSendTransaction}
           disabled={isProcessing || verifyingSignature !== null}
-          className="flex-1 !py-4 rounded-full text-sm font-bold uppercase tracking-widest text-[#0a0a0f] bg-[#14F195] hover:bg-[#0fd484] shadow-[0_0_24px_rgba(20,241,149,0.35)] hover:shadow-[0_0_36px_rgba(20,241,149,0.5)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="flex-1 !py-4 !rounded-full text-sm font-bold uppercase tracking-widest text-white bg-gradient-to-r from-[#7C3AED] to-[#2563EB] hover:from-[#8B5CF6] hover:to-[#3B82F6] shadow-[0_10px_28px_-6px_rgba(124,58,237,0.55)] hover:shadow-[0_12px_36px_-6px_rgba(124,58,237,0.7)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-[#7C3AED] disabled:hover:to-[#2563EB] flex items-center justify-center gap-2"
         >
           {isProcessing ? (
             <>
@@ -845,7 +845,7 @@ export function SolanaPaymentFlow({
           type="button"
           onClick={verifyingSignature ? handleRetry : onCancel}
           disabled={isProcessing && !verifyingSignature}
-          className="flex-1 !py-4 rounded-full text-sm font-medium border border-white/10 text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all duration-200 disabled:opacity-50"
+          className="flex-1 !py-4 !rounded-full text-sm font-medium border border-white/10 text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all duration-200 disabled:opacity-50"
         >
           {verifyingSignature
             ? tr("payment.solana.tryAgain")

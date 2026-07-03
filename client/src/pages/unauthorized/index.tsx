@@ -6,6 +6,7 @@ import { ArrowRight } from "@carbon/icons-react";
 import { Button } from "@carbon/react";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
+import styles from "./index.module.scss";
 
 type UnauthorizedRouteState = {
   from?: string;
@@ -41,21 +42,32 @@ export default function UnauthorizedPage() {
       authPopup={{
         isOpen: isSignInOpen,
         onClose: () => setIsSignInOpen(false),
+        redirectUrl: requestedPath || "/",
       }}
     >
-      <Flex align="center" justify="center" style={{ blockSize: 450 }}>
-        <Flex dir="column" align="center" gap={20}>
+      <Flex align="center" justify="center" className={styles.page} style={{ blockSize: 450 }}>
+        <Flex dir="column" align="center" gap={28}>
           <Flex dir="column" align="center" gap={8}>
-            <Txt uppercase>{tr("errorPages.unauthorized.error401")}</Txt>
-            <Flex dir="column" align="center" gap={10}>
-              <Txt size="2xl">{tr("errorPages.unauthorized.accessDenied")}</Txt>
+            <Txt
+              uppercase
+              secondary
+              size="sm"
+              weight="semibold"
+              style={{ letterSpacing: "0.12em" }}
+            >
+              {tr("errorPages.unauthorized.error401")}
+            </Txt>
+            <Flex dir="column" align="center" gap={12}>
+              <Txt size="2xl" weight="bold">
+                {tr("errorPages.unauthorized.accessDenied")}
+              </Txt>
 
-              <Txt secondary size="md">
+              <Txt secondary size="md" align="center" style={{ maxWidth: 380 }}>
                 {tr("errorPages.unauthorized.description")}
               </Txt>
 
               {requestedPath.length > 0 ? (
-                <Txt secondary>
+                <Txt secondary size="sm">
                   {tr("errorPages.unauthorized.protectedPath", {
                     $path: <Txt mono>{requestedPath}</Txt>,
                   })}
@@ -64,7 +76,7 @@ export default function UnauthorizedPage() {
             </Flex>
           </Flex>
 
-          <Flex dir="row" gap={4} style={{ inlineSize: 400 }}>
+          <Flex dir="row" gap={12} style={{ inlineSize: 400 }}>
             <Button
               kind="primary"
               onClick={() => setIsSignInOpen(true)}

@@ -78,6 +78,7 @@ type PageWrapperProps = {
   authPopup?: {
     isOpen: boolean;
     onClose: () => void;
+    redirectUrl?: string;
   };
 };
 
@@ -128,17 +129,14 @@ export function PageWrapper({
   const isHeaderNotificationPanelOpen = openPanel == "notifications";
   const isAnyExtraPanelOpen = isExtraPanelOpen || isHeaderNotificationPanelOpen;
 
+  // Open the shared sign-in modal when the caller asks for it. Closing is
+  // handled directly by the modal's onClose below (see render) instead of a
+  // second effect watching isSignInOpen — that used to fight this effect:
+  // both fired in the same render, so the modal opened and was immediately
+  // closed again before it could ever show.
   useEffect(() => {
-    if (!authPopup) return;
-    if (authPopup.isOpen) openAuthModal("login");
-    else closeAuthModal();
-  }, [authPopup, closeAuthModal, openAuthModal]);
-
-  useEffect(() => {
-    if (authPopup && !isSignInOpen) {
-      authPopup.onClose();
-    }
-  }, [authPopup, isSignInOpen]);
+    if (authPopup?.isOpen) openAuthModal("login");
+  }, [authPopup?.isOpen, openAuthModal]);
 
   // Ctrl+K / Cmd+K to open search
   useEffect(() => {
@@ -617,7 +615,14 @@ export function PageWrapper({
         />
       )}
 
-      <SignInModal open={isSignInOpen} onClose={closeAuthModal} />
+      <SignInModal
+        open={isSignInOpen}
+        onClose={() => {
+          closeAuthModal();
+          authPopup?.onClose();
+        }}
+        redirectUrl={authPopup?.redirectUrl}
+      />
       {isSearchOpen && <SearchBar onClose={() => setIsSearchOpen(false)} />}
 
       <Content

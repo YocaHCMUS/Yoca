@@ -149,7 +149,7 @@ export function CheckoutForm({
   return (
     <div className="flex flex-col gap-6">
       {/* Order Summary */}
-      <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] !p-5 shadow-inner">
+      <div className="flex items-center justify-between !rounded-3xl border border-white/10 bg-white/[0.04] !p-5 shadow-inner">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b]">
             {tr("payment.checkout.plan")}
@@ -160,7 +160,7 @@ export function CheckoutForm({
           <p className="text-xs font-semibold uppercase tracking-widest text-[#64748b]">
             {tr("payment.checkout.total")}
           </p>
-          <p className="text-[#14F195] font-extrabold text-lg">{tierPrice}</p>
+          <p className="text-[#A78BFA] font-extrabold text-lg drop-shadow-[0_0_12px_rgba(124,58,237,0.45)]">{tierPrice}</p>
         </div>
       </div>
 
@@ -173,19 +173,15 @@ export function CheckoutForm({
             onMethodChange("card");
             setErrorMsg(null);
           }}
-          className={`relative flex min-h-24 flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border px-3 py-4 text-center transition-all duration-300 ${
+          className={`relative flex min-h-24 flex-col items-center justify-center gap-2 overflow-hidden !rounded-3xl border px-3 py-4 text-center transition-all duration-300 ${
             activeMethod === "card"
-              ? "bg-[#14F195] border-[#14F195] shadow-[0_16px_34px_-22px_rgba(20,241,149,0.95)]"
+              ? "bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9] border-[#8B5CF6]/60 shadow-[0_16px_34px_-18px_rgba(124,58,237,0.85)]"
               : "bg-white/[0.03] border-white/10 hover:border-white/25 hover:bg-white/[0.06]"
           }`}
         >
-          <CreditCard className={`h-5 w-5 ${activeMethod === "card" ? "text-[#0a0a0f]" : "text-[#94a3b8]"}`} aria-hidden="true" />
+          <CreditCard className={`h-5 w-5 ${activeMethod === "card" ? "text-[#fff]" : "text-[#94a3b8]"}`} aria-hidden="true" />
           <div>
-            <p
-              className={`text-sm font-bold tracking-wide ${
-                activeMethod === "card" ? "text-[#0a0a0f]" : "text-white"
-              }`}
-            >
+            <p className="text-sm font-bold tracking-wide text-white">
               {tr("payment.checkout.methods.card")}
             </p>
           </div>
@@ -198,25 +194,21 @@ export function CheckoutForm({
             onMethodChange("bank");
             setErrorMsg(null);
           }}
-          className={`relative flex min-h-24 flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border px-3 py-4 text-center transition-all duration-300 ${
+          className={`relative flex min-h-24 flex-col items-center justify-center gap-2 overflow-hidden !rounded-3xl border px-3 py-4 text-center transition-all duration-300 ${
             activeMethod === "bank"
-              ? "bg-[#14F195] border-[#14F195] shadow-[0_16px_34px_-22px_rgba(20,241,149,0.95)]"
+              ? "bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9] border-[#8B5CF6]/60 shadow-[0_16px_34px_-18px_rgba(124,58,237,0.85)]"
               : "bg-white/[0.03] border-white/10 hover:border-white/25 hover:bg-white/[0.06]"
           }`}
         >
-          <Building2 className={`h-5 w-5 ${activeMethod === "bank" ? "text-[#0a0a0f]" : "text-[#94a3b8]"}`} aria-hidden="true" />
+          <Building2 className={`h-5 w-5 ${activeMethod === "bank" ? "text-[#fff]" : "text-[#94a3b8]"}`} aria-hidden="true" />
           <div>
-            <p
-              className={`text-sm font-bold tracking-wide ${
-                activeMethod === "bank" ? "text-[#0a0a0f]" : "text-white"
-              }`}
-            >
+            <p className="text-sm font-bold tracking-wide text-white">
               {tr("payment.checkout.methods.bank")}
             </p>
             <p
               className={`text-xs ${
                 activeMethod === "bank"
-                  ? "text-[#0a0a0f]/70"
+                  ? "text-[#fff]/70"
                   : "text-[#64748b]"
               }`}
             >
@@ -232,19 +224,15 @@ export function CheckoutForm({
             onMethodChange("solana");
             setErrorMsg(null);
           }}
-          className={`relative flex min-h-24 flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border px-3 py-4 text-center transition-all duration-300 ${
+          className={`relative flex min-h-24 flex-col items-center justify-center gap-2 overflow-hidden !rounded-3xl border px-3 py-4 text-center transition-all duration-300 ${
             activeMethod === "solana"
-              ? "bg-[#14F195] border-[#14F195] shadow-[0_16px_34px_-22px_rgba(20,241,149,0.95)]"
+              ? "bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9] border-[#8B5CF6]/60 shadow-[0_16px_34px_-18px_rgba(124,58,237,0.85)]"
               : "bg-white/[0.03] border-white/10 hover:border-white/25 hover:bg-white/[0.06]"
           }`}
         >
-          <Wallet className={`h-5 w-5 ${activeMethod === "solana" ? "text-[#0a0a0f]" : "text-[#94a3b8]"}`} aria-hidden="true" />
+          <Wallet className={`h-5 w-5 ${activeMethod === "solana" ? "text-[#fff]" : "text-[#94a3b8]"}`} aria-hidden="true" />
           <div>
-            <p
-              className={`text-sm font-bold tracking-wide ${
-                activeMethod === "solana" ? "text-[#0a0a0f]" : "text-white"
-              }`}
-            >
+            <p className="text-sm font-bold tracking-wide text-white">
               {tr("payment.checkout.methods.wallet")}
             </p>
           </div>
@@ -254,7 +242,7 @@ export function CheckoutForm({
       {/* Card Payment Form */}
       {activeMethod === "card" && (
         <form onSubmit={handleStripeSubmit} className="flex flex-col gap-4">
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+          <div className="overflow-hidden !rounded-3xl border border-white/10 bg-white/[0.03]">
             <PaymentElement
               id="stripe-payment-element-card"
               options={{
@@ -268,7 +256,7 @@ export function CheckoutForm({
           {errorMsg && (
             <div
               role="alert"
-              className="flex items-start gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400"
+              className="flex items-start gap-3 !rounded-3xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400"
             >
               <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -282,7 +270,7 @@ export function CheckoutForm({
               id="checkout-card-submit-btn"
               type="submit"
               disabled={isProcessing || !stripe}
-              className="flex-1 !py-4 rounded-full text-sm font-bold uppercase tracking-widest text-[#0a0a0f] bg-[#14F195] hover:bg-[#0fd484] shadow-[0_0_24px_rgba(20,241,149,0.35)] hover:shadow-[0_0_36px_rgba(20,241,149,0.5)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 !py-4 !rounded-full text-sm font-bold uppercase tracking-widest text-white bg-gradient-to-r from-[#7C3AED] to-[#2563EB] hover:from-[#8B5CF6] hover:to-[#3B82F6] shadow-[0_10px_28px_-6px_rgba(124,58,237,0.55)] hover:shadow-[0_12px_36px_-6px_rgba(124,58,237,0.7)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-[#7C3AED] disabled:hover:to-[#2563EB]"
             >
               {isProcessing
                 ? tr("payment.checkout.processing")
@@ -294,7 +282,7 @@ export function CheckoutForm({
               type="button"
               onClick={onCancel}
               disabled={isProcessing}
-              className="flex-1 !py-4 rounded-full text-sm font-medium border border-white/10 text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all duration-200 disabled:opacity-50"
+              className="flex-1 !py-4 !rounded-full text-sm font-medium border border-white/10 text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all duration-200 disabled:opacity-50"
             >
               {tr("payment.shared.cancel")}
             </button>
@@ -305,7 +293,7 @@ export function CheckoutForm({
       {/* Bank Account Payment Form */}
       {activeMethod === "bank" && (
         <form onSubmit={handleStripeSubmit} className="flex flex-col gap-4">
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+          <div className="overflow-hidden !rounded-3xl border border-white/10 bg-white/[0.03]">
             <PaymentElement
               id="stripe-payment-element-bank"
               options={{
@@ -319,7 +307,7 @@ export function CheckoutForm({
           {errorMsg && (
             <div
               role="alert"
-              className="flex items-start gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400"
+              className="flex items-start gap-3 !rounded-3xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400"
             >
               <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -333,7 +321,7 @@ export function CheckoutForm({
               id="checkout-bank-submit-btn"
               type="submit"
               disabled={isProcessing || !stripe}
-              className="flex-1 !py-4 rounded-full text-sm font-bold uppercase tracking-widest text-[#0a0a0f] bg-[#14F195] hover:bg-[#0fd484] shadow-[0_0_24px_rgba(20,241,149,0.35)] hover:shadow-[0_0_36px_rgba(20,241,149,0.5)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 !py-4 !rounded-full text-sm font-bold uppercase tracking-widest text-white bg-gradient-to-r from-[#7C3AED] to-[#2563EB] hover:from-[#8B5CF6] hover:to-[#3B82F6] shadow-[0_10px_28px_-6px_rgba(124,58,237,0.55)] hover:shadow-[0_12px_36px_-6px_rgba(124,58,237,0.7)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-[#7C3AED] disabled:hover:to-[#2563EB]"
             >
               {isProcessing
                 ? tr("payment.checkout.processing")
@@ -345,7 +333,7 @@ export function CheckoutForm({
               type="button"
               onClick={onCancel}
               disabled={isProcessing}
-              className="flex-1 !py-4 rounded-full text-sm font-medium border border-white/10 text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all duration-200 disabled:opacity-50"
+              className="flex-1 !py-4 !rounded-full text-sm font-medium border border-white/10 text-[#94a3b8] hover:text-white hover:bg-white/5 transition-all duration-200 disabled:opacity-50"
             >
               {tr("payment.shared.cancel")}
             </button>
