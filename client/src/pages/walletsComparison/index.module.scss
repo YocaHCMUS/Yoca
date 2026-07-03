@@ -1,57 +1,63 @@
-@use "@carbon/react/scss/spacing" as *;
-@use "@carbon/react/scss/theme" as *;
-@use "../../styles/variables" as *;
-
 :global(.cds--content:has(.pageLayout)) {
   overflow: hidden !important;
 }
 
 .pageLayout {
   --chat-panel-top-offset: calc(3.5rem + 16px);
-  --chat-panel-right-offset: 96px;
+  --chat-panel-right-offset: 100px;
   --chat-panel-left-offset: 16px;
   --chat-panel-bottom-offset: 16px;
-  --chat-launcher-offset: 56px;
+  --chat-launcher-offset: 100px;
   display: flex;
   flex-direction: row;
+  gap: 18px;
   width: 100%;
   height: calc(100vh - 3.5rem);
   min-height: 0;
+  padding: 18px;
   overflow: hidden;
   position: relative;
+  background:
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.14), transparent 28%),
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 30%),
+    linear-gradient(180deg, var(--yoca-bg, #070a13) 0%, var(--yoca-bg-soft, #0b1020) 100%);
 
   &.rightSidebarExpanded {
-    --chat-panel-right-offset: 356px;
-    --chat-launcher-offset: 316px;
+    --chat-panel-right-offset: 400px;
+    --chat-launcher-offset: 400px;
   }
 }
 
 .leftSidebar {
-  width: 480px;
+  width: clamp(300px, 28vw, 420px);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  border-right: 1px solid $border-subtle-03;
-  background: $background;
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+    var(--yoca-surface, rgba(18, 24, 38, 0.82));
+  box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.32));
+  backdrop-filter: blur(18px);
 }
 
 .walletSection {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding-right: $spacing-02;
+  scrollbar-gutter: stable;
 }
 
 .sidebarContainer {
   display: flex;
   flex-direction: column;
-  gap: $spacing-04;
-  padding: $spacing-02 $spacing-06;
+  gap: 14px;
+  padding: 16px;
 }
 
-// ===== Accordion sections (left sidebar, left-dock mode) =====
 .accordionSection {
   display: flex;
   flex-direction: column;
@@ -76,13 +82,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: $spacing-03;
+  gap: 12px;
   width: 100%;
-  padding: $spacing-03 $spacing-06;
+  padding: 12px 16px;
   border: none;
-  border-bottom: 1px solid $border-subtle-03;
-  background: $layer-01;
-  color: $text-primary;
+  border-bottom: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+  background: var(--yoca-surface, rgba(18, 24, 38, 0.82));
+  color: var(--yoca-text-main, #f8fafc);
   cursor: pointer;
   flex-shrink: 0;
   font-size: 0.8125rem;
@@ -90,19 +96,19 @@
   transition: background-color 0.15s;
 
   &:hover {
-    background: $layer-hover-01;
+    background: var(--yoca-surface-hover, rgba(32, 41, 62, 0.95));
   }
 }
 
 .accordionHeaderTitle {
   display: flex;
   align-items: center;
-  gap: $spacing-02;
+  gap: 8px;
   min-width: 0;
 }
 
 .accordionChevron {
-  color: $icon-secondary;
+  color: var(--yoca-text-muted, #94a3b8);
   flex-shrink: 0;
   transition: transform 0.2s;
 
@@ -111,14 +117,7 @@
   }
 }
 
-.accordionBody {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
+.accordionBody,
 .accordionBodyChat {
   flex: 1;
   min-height: 0;
@@ -127,7 +126,6 @@
   flex-direction: column;
 }
 
-// ===== Chat Modal Launcher =====
 .chatLauncher {
   position: fixed;
   right: var(--chat-launcher-offset);
@@ -135,43 +133,43 @@
   z-index: 70;
   display: inline-flex;
   align-items: center;
-  gap: $spacing-03;
+  gap: 8px;
   min-height: 40px;
   max-width: min(320px, calc(100% - 88px));
-  padding: 0 $spacing-04;
-  border: 1px solid $border-subtle-03;
-  border-radius: 8px;
-  background: $background;
-  color: $text-primary;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  padding: 0 12px;
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+  border-radius: 12px;
+  background: var(--yoca-surface-elevated, rgba(24, 31, 48, 0.92));
+  color: var(--yoca-text-main, #f8fafc);
+  box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.32));
   cursor: pointer;
-  font-size: 0.8125rem;
+  font-size: 13px;
   font-weight: 600;
+  backdrop-filter: blur(18px);
   transition:
-    background-color 0.15s,
-    border-color 0.15s,
-    transform 0.15s;
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
 
   &:hover {
-    background: $layer-hover-01;
-    border-color: var(--cds-border-strong-01);
+    background: rgba(124, 58, 237, 0.16);
+    border-color: rgba(124, 58, 237, 0.3);
     transform: translateY(-1px);
   }
 
   kbd {
     flex-shrink: 0;
     padding: 2px 6px;
-    border: 1px solid $border-subtle-03;
-    border-radius: 4px;
-    color: $text-secondary;
-    background: $layer-01;
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.6875rem;
+    border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+    border-radius: 6px;
+    color: var(--yoca-text-muted, #94a3b8);
+    background: rgba(255, 255, 255, 0.04);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
     font-weight: 500;
   }
 }
 
-// ===== Chat Modal Overlay =====
 .chatOverlay {
   position: fixed;
   inset: 0;
@@ -193,10 +191,12 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: $background;
-  border: 1px solid $border-subtle-03;
-  border-radius: 8px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.38);
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+  border-radius: var(--yoca-radius-lg, 18px);
+  background:
+    linear-gradient(180deg, rgba(124, 58, 237, 0.06), rgba(255, 255, 255, 0.02)),
+    var(--yoca-surface-elevated, rgba(24, 31, 48, 0.92));
+  box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.32));
   pointer-events: auto;
   animation: chatPanelReveal 0.22s ease-out;
 }
@@ -210,11 +210,9 @@
 
 .chatOverlay[data-position="left"] .chatPanel {
   top: var(--chat-panel-top-offset);
-  bottom: 0;
-  left: 0;
-  width: min(480px, calc(100% - 48px));
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
+  bottom: var(--chat-panel-bottom-offset);
+  left: var(--chat-panel-left-offset);
+  width: min(460px, calc(100% - 48px));
 }
 
 .chatOverlay[data-position="fullscreen"] .chatPanel {
@@ -239,7 +237,249 @@
   }
 }
 
+.mainContent {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.mainContentContainer {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.exportCaptureContainer {
+  background: transparent;
+  width: 100%;
+  min-height: 1px;
+}
+
+.exportCaptureContainerExporting {
+  background: #ffffff;
+  padding: 24px;
+}
+
+.exportReportHeader {
+  background: var(--yoca-surface, rgba(18, 24, 38, 0.82));
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+  border-radius: 12px;
+  box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.32));
+  margin-bottom: 24px;
+  padding: 20px 24px;
+}
+
+:global(#pdf-report-header) {
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.exportReportHeaderTopRow {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.exportReportKicker {
+  color: var(--yoca-text-muted, #94a3b8);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.exportReportTitle {
+  color: var(--yoca-text-main, #f8fafc);
+  font-size: 1.375rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.exportReportStampBlock {
+  background: var(--yoca-surface-hover, rgba(32, 41, 62, 0.95));
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+  padding: 12px 16px;
+}
+
+.exportReportStampLabel {
+  color: var(--yoca-text-muted, #94a3b8);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.exportReportStampValue {
+  color: var(--yoca-text-main, #f8fafc);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.exportReportMeta {
+  color: var(--yoca-text-muted, #94a3b8);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.875rem;
+  gap: 20px;
+  margin-top: 12px;
+}
+
+.exportReportMetaDivider {
+  color: var(--yoca-border, rgba(148, 163, 184, 0.16));
+}
+
+.sidebarTitle {
+  margin: 0;
+  color: var(--yoca-text-main, #f8fafc);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.sidebarHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.walletInput {
+  margin-bottom: 1rem;
+}
+
+.walletList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: none;
+  overflow-y: auto;
+}
+
+.buttonTag {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+}
+
+.emptyState {
+  font-size: 0.875rem;
+  color: var(--yoca-text-muted, #94a3b8);
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed var(--yoca-border, rgba(148, 163, 184, 0.16));
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  text-align: center;
+}
+
+.walletTag {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 1;
+  min-width: 0;
+  justify-content: space-between !important;
+  border-color: transparent !important;
+  border-radius: 8px !important;
+  background: var(--yoca-surface-hover, rgba(32, 41, 62, 0.95)) !important;
+  color: var(--yoca-text-muted, #94a3b8) !important;
+  padding-inline: 10px !important;
+
+  &:hover {
+    border-color: rgba(124, 58, 237, 0.28) !important;
+    background: rgba(124, 58, 237, 0.1) !important;
+    color: var(--yoca-text-main, #f8fafc) !important;
+  }
+}
+
+.walletTagContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.deepDiveButton {
+  flex-shrink: 0;
+  border-radius: 999px !important;
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16)) !important;
+  color: var(--yoca-text-muted, #94a3b8) !important;
+
+  &:hover {
+    background: rgba(124, 58, 237, 0.16) !important;
+    border-color: rgba(124, 58, 237, 0.3) !important;
+    color: var(--yoca-text-main, #f8fafc) !important;
+  }
+}
+
+.sidebarContainer :global(.cds--search-input),
+.sidebarContainer :global(.cds--search-magnifier) {
+  background: var(--yoca-surface-hover, rgba(32, 41, 62, 0.95));
+  color: var(--yoca-text-main, #f8fafc);
+}
+
+.sidebarContainer :global(.cds--search-input) {
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+  border-radius: 10px;
+}
+
+.sidebarContainer :global(.cds--search-input::placeholder) {
+  color: var(--yoca-text-muted, #94a3b8);
+}
+
+.sidebarContainer :global(.cds--label) {
+  color: var(--yoca-text-muted, #94a3b8);
+  font-weight: 600;
+}
+
+.sidebarHeaderRow :global(.cds--btn) {
+  min-height: 2rem;
+  border-radius: 999px;
+  color: var(--yoca-text-main, #f8fafc);
+}
+
+@media (max-width: 1080px) {
+  .pageLayout {
+    flex-direction: column;
+    height: auto;
+    min-height: calc(100vh - 3.5rem);
+    overflow-y: auto;
+  }
+
+  .leftSidebar {
+    width: 100%;
+    height: auto;
+    max-height: none;
+  }
+
+  .mainContent {
+    overflow: visible;
+  }
+}
+
 @media (max-width: 768px) {
+  .pageLayout {
+    padding: 14px;
+  }
+
   .chatLauncher {
     right: 52px;
     bottom: 16px;
@@ -255,169 +495,6 @@
     width: auto;
     max-width: none;
     margin: 0;
-    border-radius: 8px;
-  }
-}
-
-.mainContent {
-  flex: 1;
-  min-width: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.mainContentContainer {
-  flex: 1;
-  border: 1px solid $border-subtle;
-  background: $layer-01;
-}
-
-.exportCaptureContainer {
-  background: $layer-01;
-  width: 100%;
-  min-height: 1px;
-}
-
-.exportCaptureContainerExporting {
-  background: #ffffff;
-  padding: $spacing-06;
-}
-
-.exportReportHeader {
-  background: $layer-01;
-  border: 1px solid $border-subtle;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(13, 18, 28, 0.06);
-  margin-bottom: $spacing-06;
-  padding: $spacing-05 $spacing-06;
-}
-
-:global(#pdf-report-header) {
-  position: absolute !important;
-  top: -9999px !important;
-  left: -9999px !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-.exportReportHeaderTopRow {
-  align-items: flex-start;
-  display: flex;
-  justify-content: space-between;
-  gap: $spacing-05;
-}
-
-.exportReportKicker {
-  color: $text-secondary;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  margin: 0 0 $spacing-02;
-  text-transform: uppercase;
-}
-
-.exportReportTitle {
-  color: $text-primary;
-  font-size: 1.375rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.exportReportStampBlock {
-  background: $layer-accent-01;
-  border: 1px solid $border-subtle;
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-01;
-  min-width: 160px;
-  padding: $spacing-03 $spacing-04;
-}
-
-.exportReportStampLabel {
-  color: $text-secondary;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.exportReportStampValue {
-  color: $text-primary;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.exportReportMeta {
-  color: $text-secondary;
-  display: flex;
-  flex-wrap: wrap;
-  font-size: 0.875rem;
-  gap: $spacing-05;
-  margin-top: $spacing-03;
-}
-
-.exportReportMetaDivider {
-  color: $text-disabled;
-}
-
-.sidebarTitle {
-  margin: 0;
-  color: $text-primary;
-}
-
-.sidebarHeaderRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: $spacing-03;
-}
-
-.walletInput {
-  margin-bottom: $spacing-md;
-}
-
-.walletList {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-03;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.buttonTag {
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.emptyState {
-  font-size: 0.875rem;
-  color: $text-secondary;
-}
-
-.walletTag {
-  width: 100% !important;
-  max-width: 100% !important;
-  flex: 1;
-}
-
-.walletTagContainer {
-  display: flex;
-  align-items: center;
-  gap: $spacing-02;
-  width: 100%;
-}
-
-.deepDiveButton {
-  flex-shrink: 0;
-  border-radius: 4px;
-
-  &:hover {
-    background-color: $layer-hover-01;
-    color: $link-primary;
+    border-radius: 12px;
   }
 }

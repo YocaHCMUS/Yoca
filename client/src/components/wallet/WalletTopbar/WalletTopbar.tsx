@@ -121,11 +121,6 @@ function resolveWalletAgeDays(
 export interface WalletTopbarProps {
   address: string;
   onAiAnalysisOpen: () => void;
-  onAuditOpen: () => void;
-  onExportData: () => void;
-  onExportCharts: () => void;
-  onExportPdf: () => void;
-  isExporting: boolean;
   currentPeriod: WalletOverviewPeriodKey;
   onPeriodChange: (period: WalletOverviewPeriodKey) => void;
 }

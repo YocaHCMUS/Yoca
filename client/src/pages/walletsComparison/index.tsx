@@ -34,12 +34,6 @@ const TAB_EXPORT_FILENAME_SEGMENTS = [
   "Profit_Risk_Management",
 ] as const;
 
-const TAB_EXPORT_HEADER_TITLES = [
-  "General Overview",
-  "Holdings",
-  "Profit & Risk Management",
-] as const;
-
 const TAB_TRANSLATION_KEYS = [
   "walletComparison.general",
   "walletComparison.holdings",
@@ -169,6 +163,7 @@ function WalletComparisonMainContent({
     <div className={styles.mainContentContainer}>
       <TabContainer
         activeTab={activeTab}
+        variant="profile"
         names={[
           tr("walletComparison.general"),
           tr("walletComparison.holdings"),
@@ -366,7 +361,7 @@ export default function WalletsComparisonPage() {
           ? selectedWallets
               .map(
                 (address) =>
-                  `<div style=\"line-height:1.45;word-break:break-all;\">${address}</div>`,
+                  `<div style="line-height:1.45;word-break:break-all;">${address}</div>`,
               )
               .join("")
           : `<div>${String(tr("marketPage.na"))}</div>`;
@@ -611,3 +606,4 @@ export default function WalletsComparisonPage() {
     </PageWrapper>
   );
 }
+

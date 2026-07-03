@@ -167,6 +167,7 @@ export function RightSidebar({
   onChatToggle,
   noChatToggle = false,
 }: RightSidebarProps) {
+  const { tr } = useLocalization();
   const [activeTab, setActiveTab] = useState<"watchlist" | "labels" | null>(null);
   const [isAddingToken, setIsAddingToken] = useState(false);
 
@@ -197,7 +198,7 @@ export function RightSidebar({
                 <div className={styles.sectionHeader}>
                   <div className={styles.headerLeft}>
                     <div className={`${styles.headerSquare} ${styles.headerSquareMint}`} />
-                    <span>Watchlist ({tokenWatchlist.length})</span>
+                    <span>{tr("rightSidebar.watchlist")} ({tokenWatchlist.length})</span>
                     <ChevronDown size={16} />
                   </div>
                   <div className={styles.headerIcons}>
@@ -219,14 +220,14 @@ export function RightSidebar({
                 )}
                 
                 <div className={styles.tableHeader}>
-                  <div className={styles.th} style={{ flex: 2 }}>TOKEN</div>
-                  <div className={styles.th} style={{ flex: 1, textAlign: 'right' }}>PRICE</div>
-                  <div className={styles.th} style={{ flex: 1, textAlign: 'right' }}>%CHG</div>
-                  <div className={styles.th} style={{ flex: 1, textAlign: 'right' }}>VOL</div>
+                  <div className={styles.th} style={{ flex: 2 }}>{tr("rightSidebar.token")}</div>
+                  <div className={styles.th} style={{ flex: 1, textAlign: 'right' }}>{tr("rightSidebar.price")}</div>
+                  <div className={styles.th} style={{ flex: 1, textAlign: 'right' }}>{tr("rightSidebar.changePercent")}</div>
+                  <div className={styles.th} style={{ flex: 1, textAlign: 'right' }}>{tr("rightSidebar.volume")}</div>
                 </div>
                 <div className={styles.tableBody}>
                   {tokenWatchlist.length === 0 ? (
-                    <div className={styles.emptyState}>No tokens watched</div>
+                    <div className={styles.emptyState}>{tr("rightSidebar.noTokensWatched")}</div>
                   ) : (
                     tokenWatchlist.map((token, i) => (
                       <TokenWatchlistRow key={`token-${i}`} token={token} />
@@ -245,7 +246,7 @@ export function RightSidebar({
                 <div className={styles.sectionHeader}>
                   <div className={styles.headerLeft}>
                     <div className={`${styles.headerSquare} ${styles.headerSquareBlue}`} />
-                    <span>Watchlist ({walletWatchlist.length})</span>
+                    <span>{tr("rightSidebar.watchlist")} ({walletWatchlist.length})</span>
                     <ChevronDown size={16} />
                   </div>
                   <div className={styles.headerIcons}>
@@ -253,12 +254,12 @@ export function RightSidebar({
                 </div>
                 
                 <div className={styles.tableHeader}>
-                  <div className={styles.th} style={{ flex: 2 }}>WALLET</div>
-                  <div className={styles.th} style={{ flex: 1, textAlign: 'right' }}>TODAY VOLUME</div>
+                  <div className={styles.th} style={{ flex: 2 }}>{tr("rightSidebar.wallet")}</div>
+                  <div className={styles.th} style={{ flex: 1, textAlign: 'right' }}>{tr("rightSidebar.todayVolume")}</div>
                 </div>
                 <div className={styles.tableBody}>
                   {walletWatchlist.length === 0 ? (
-                    <div className={styles.emptyState}>No wallets watched</div>
+                    <div className={styles.emptyState}>{tr("rightSidebar.noWalletsWatched")}</div>
                   ) : (
                     walletWatchlist.map((wallet, i) => (
                       <WalletWatchlistRow key={`wallet-${i}`} wallet={wallet} />
@@ -274,7 +275,7 @@ export function RightSidebar({
             <>
               <div className={styles.sectionHeader}>
                 <div className={styles.headerLeft}>
-                  <span style={{textTransform: 'uppercase', letterSpacing: '1px'}}>LABEL</span>
+                  <span style={{textTransform: 'uppercase', letterSpacing: '1px'}}>{tr("rightSidebar.label")}</span>
                 </div>
                 <div className={styles.headerIcons}>
                 </div>
@@ -282,7 +283,7 @@ export function RightSidebar({
 
               <div className={styles.labelBody}>
                 {Object.keys(labels).length === 0 ? (
-                  <div className={styles.emptyState}>No labels created</div>
+                  <div className={styles.emptyState}>{tr("rightSidebar.noLabelsCreated")}</div>
                 ) : (
                   Object.entries(labels).map(([address, label], i) => (
                     <div key={`label-${i}`} className={styles.labelRow}>
@@ -325,7 +326,7 @@ export function RightSidebar({
             <button
               className={`${styles.toolBtn} ${isChatOpen ? styles.toolBtnActive : ""}`}
               onClick={onChatToggle}
-              title="AI Chat"
+              title={tr("rightSidebar.aiChat")}
             >
               <AiGenerate size={20} />
             </button>
