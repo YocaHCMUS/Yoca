@@ -45,10 +45,10 @@ export function AuthReminderModal({ open, onClose }: AuthReminderModalProps) {
           aria-labelledby="auth-reminder-title"
           className="fixed inset-0 z-[201] flex items-center justify-center p-4 pointer-events-none"
         >
-          <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-white/10 bg-[#111118]/95 !px-8 !py-10 sm:!px-12 sm:!py-12 text-center shadow-[0_28px_90px_-44px_rgba(20,241,149,0.5)] backdrop-blur-xl">
+          <div className="pointer-events-auto w-full max-w-md !rounded-3xl border border-white/10 bg-[#111118]/95 !px-8 !py-10 sm:!px-12 sm:!py-12 text-center shadow-[0_28px_90px_-44px_rgba(124,58,237,0.5)] backdrop-blur-xl">
             {/* Icon */}
             <div className="mb-7 flex justify-center">
-              <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-[#14F195]/25 bg-[#14F195]/10 text-[#14F195] shadow-[0_0_32px_rgba(20,241,149,0.14)]">
+              <span className="inline-flex h-14 w-14 items-center justify-center !rounded-3xl border border-[#7C3AED]/25 bg-[#7C3AED]/10 text-[#7C3AED] shadow-[0_0_32px_rgba(124,58,237,0.14)]">
                 <LockKeyhole className="h-7 w-7" aria-hidden="true" />
               </span>
             </div>
@@ -79,7 +79,7 @@ export function AuthReminderModal({ open, onClose }: AuthReminderModalProps) {
                 id="auth-reminder-signin-btn"
                 type="button"
                 onClick={() => setActiveView("signin")}
-                className="flex-1 rounded-full bg-[#14F195] px-4 !py-4 text-sm font-bold uppercase tracking-[0.16em] text-[#0a0a0f] shadow-[0_14px_36px_-20px_rgba(20,241,149,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#0fd484]"
+                className="flex-1 !rounded-full bg-gradient-to-r from-[#7C3AED] to-[#2563EB] px-4 !py-4 text-sm font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_28px_-8px_rgba(124,58,237,0.7)] transition-all duration-200 hover:-translate-y-0.5 hover:from-[#8B5CF6] hover:to-[#3B82F6] hover:shadow-[0_14px_36px_-8px_rgba(124,58,237,0.85)]"
               >
                 {tr("auth.signIn")}
               </button>
@@ -88,7 +88,7 @@ export function AuthReminderModal({ open, onClose }: AuthReminderModalProps) {
                 id="auth-reminder-close-btn"
                 type="button"
                 onClick={onClose}
-                className="flex-1 rounded-full border border-white/10 px-4 !py-4 text-sm font-medium text-[#94a3b8] transition-all duration-200 hover:bg-white/5 hover:text-white"
+                className="flex-1 !rounded-full border border-white/10 px-4 !py-4 text-sm font-medium text-[#94a3b8] transition-all duration-200 hover:bg-white/5 hover:text-white"
               >
                 {tr("payment.shared.maybeLater")}
               </button>

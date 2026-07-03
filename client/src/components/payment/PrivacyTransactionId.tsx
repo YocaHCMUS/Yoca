@@ -82,7 +82,7 @@ export function PrivacyTransactionId({
                 ? tr("payment.transactionId.hide")
                 : tr("payment.transactionId.reveal")
             }
-            className="rounded-lg p-1.5 text-[#64748b] transition-all duration-150 hover:bg-[#14F195]/10 hover:text-[#14F195]"
+            className="rounded-lg p-1.5 text-[#64748b] transition-all duration-150 hover:bg-[#7C3AED]/10 hover:text-[#7C3AED]"
           >
             {isVisible ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
           </button>
@@ -97,11 +97,11 @@ export function PrivacyTransactionId({
               title={tr("payment.transactionId.copyTitle")}
               className="p-1.5 rounded-lg transition-all duration-150"
               style={{
-                color: isCopied ? "#14F195" : "#64748b",
+                color: isCopied ? "#7C3AED" : "#64748b",
               }}
               onMouseEnter={(e) => {
-                if (!isCopied) (e.currentTarget as HTMLButtonElement).style.color = "#14F195";
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(20,241,149,0.1)";
+                if (!isCopied) (e.currentTarget as HTMLButtonElement).style.color = "#7C3AED";
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(124,58,237,0.1)";
               }}
               onMouseLeave={(e) => {
                 if (!isCopied) (e.currentTarget as HTMLButtonElement).style.color = "#64748b";
@@ -120,9 +120,9 @@ export function PrivacyTransactionId({
               <span
                 className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded-md text-[10px] font-semibold whitespace-nowrap pointer-events-none"
                 style={{
-                  backgroundColor: "#14F195",
-                  color: "#0a0a0f",
-                  boxShadow: "0 0 12px rgba(20,241,149,0.4)",
+                  backgroundColor: "#7C3AED",
+                  color: "#fff",
+                  boxShadow: "0 0 12px rgba(124,58,237,0.4)",
                 }}
               >
                 {tr("payment.transactionId.copied")}

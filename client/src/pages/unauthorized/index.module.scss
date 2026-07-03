@@ -1,0 +1,14 @@
+.page :global(.cds--btn) {
+  border-radius: 14px;
+  font-weight: 600;
+}
+
+.page :global(.cds--btn--primary) {
+  background: linear-gradient(135deg, var(--yoca-primary, #7c3aed), var(--yoca-primary-2, #2563eb));
+  border-color: transparent;
+}
+
+.page :global(.cds--btn--secondary) {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--yoca-text-soft, #cbd5e1);
+}
