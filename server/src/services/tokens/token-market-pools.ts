@@ -4,7 +4,8 @@ import type { CG_TopPoolData } from "../_types/token-raw-responses.js";
 
 const INCLUDE = "base_token,quote_token,dex";
 const TARGET_POOL_COUNT = 100;
-const MAX_PAGE_ROUNDS = 12;
+// ponytail: CoinGecko demo/free plan hard-caps `page` at 10 (401 above that) — raise if the project upgrades tiers.
+const MAX_PAGE_ROUNDS = 10;
 const VALIDATION_CONCURRENCY = 8;
 const VALIDATION_CACHE_TTL_MS = 10 * 60 * 1000;
 const DETAIL_ENRICH_CONCURRENCY = 6;
@@ -336,10 +337,13 @@ export async function getNewMarketPools() {
 }
 
 export async function getTopMarketPools(sortBy: PoolTopSort) {
+  // CoinGecko's /onchain/networks/{network}/pools endpoint only accepts
+  // h24_volume_usd_desc / h24_tx_count_desc as `sort` — there is no market-cap sort,
+  // so marketCap fetches by volume and re-ranks client-side below.
   const sortCandidates: Record<PoolTopSort, string[]> = {
     volume: ["h24_volume_usd_desc"],
-    txns: ["h24_tx_count_desc", "tx_count_desc", "h24_txns_desc"],
-    marketCap: ["market_cap_usd_desc"],
+    txns: ["h24_tx_count_desc"],
+    marketCap: ["h24_volume_usd_desc"],
   };
 
   for (const sort of sortCandidates[sortBy]) {
@@ -350,7 +354,11 @@ export async function getTopMarketPools(sortBy: PoolTopSort) {
     );
 
     if (result.length > 0) {
-      return result;
+      return sortBy === "marketCap"
+        ? result.sort(
+            (a, b) => (b.marketCapUsd ?? -Infinity) - (a.marketCapUsd ?? -Infinity),
+          )
+        : result;
     }
   }
 
@@ -363,11 +371,8 @@ const DEXPAPRIKA_BASE = "https://api.dexpaprika.com";
 
 interface DexPaprikaToken {
   id: string;
-  name: string;
-  symbol: string;
   chain: string;
   has_image: boolean;
-  fdv?: number;
 }
 
 interface DexPaprikaPool {
@@ -375,24 +380,23 @@ interface DexPaprikaPool {
   dex_id: string;
   dex_name: string;
   chain: string;
-  volume_usd: number;
+  volume_usd_24h: number;
   created_at: string;
-  transactions: number;
+  transactions_24h: number;
   price_usd: number;
-  last_price_change_usd_5m: number | null;
-  last_price_change_usd_1h: number | null;
-  last_price_change_usd_24h: number | null;
+  price_change_percentage_5m: number | null;
+  price_change_percentage_1h: number | null;
+  price_change_percentage_24h: number | null;
+  liquidity_usd: number;
   tokens: DexPaprikaToken[];
 }
 
+// GET /networks/{network}/pools/search — replaces the deprecated (410 Gone as of 2026-06-30)
+// GET /networks/{network}/pools. Cursor-based, no page_info.
 interface DexPaprikaPoolsResponse {
-  pools: DexPaprikaPool[];
-  page_info: {
-    limit: number;
-    page: number;
-    total_items: number;
-    total_pages: number;
-  };
+  results: DexPaprikaPool[];
+  has_next_page: boolean;
+  next_cursor: string | null;
 }
 
 function getDexPaprikaImageUrl(tokenId: string, hasImage: boolean): string | null {
@@ -408,33 +412,33 @@ function mapDexPaprikaPools(pools: DexPaprikaPool[]): MarketPoolItem[] {
     return {
       id: pool.id,
       poolAddress: pool.id,
-      poolName: baseToken
-        ? `${baseToken.symbol}/${quoteToken?.symbol ?? "???"}`
-        : pool.id,
+      // /pools/search tokens no longer carry name/symbol; CoinGecko enrichment
+      // (see getTopGainerMarketPools) fills in the real name for almost every result.
+      poolName: pool.id,
       dexId: pool.dex_id,
       dexName: pool.dex_name,
       baseAddress: baseToken?.id ?? "",
-      baseName: baseToken?.name ?? "",
-      baseSymbol: baseToken?.symbol ?? "",
+      baseName: "",
+      baseSymbol: "",
       baseImageUrl: baseToken
         ? getDexPaprikaImageUrl(baseToken.id, baseToken.has_image)
         : null,
       quoteAddress: quoteToken?.id ?? "",
-      quoteName: quoteToken?.name ?? "",
-      quoteSymbol: quoteToken?.symbol ?? "",
-      quoteImageUrl: quoteToken 
+      quoteName: "",
+      quoteSymbol: "",
+      quoteImageUrl: quoteToken
         ? getDexPaprikaImageUrl(quoteToken.id, quoteToken.has_image)
         : null,
       priceUsd: toNumber(pool.price_usd),
-      marketCapUsd: toNumber(baseToken?.fdv),
-      fdvUsd: toNumber(baseToken?.fdv),
-      txns24h: toNumber(pool.transactions),
-      volume24h: toNumber(pool.volume_usd),
-      priceChange5m: null, // USD delta, not %, needs CoinGecko enrichment
-      priceChange1h: null, // USD delta, not %, needs CoinGecko enrichment
-      priceChange6h: null,
-      priceChange24h: null, // USD delta, not %, needs CoinGecko enrichment
-      liquidityUsd: null, // DexPaprika list không trả về liquidity (phải lấy từ CoinGecko)
+      marketCapUsd: null, // not provided by /pools/search; CoinGecko enrichment fills this in
+      fdvUsd: null,
+      txns24h: toNumber(pool.transactions_24h),
+      volume24h: toNumber(pool.volume_usd_24h),
+      priceChange5m: toNumber(pool.price_change_percentage_5m),
+      priceChange1h: toNumber(pool.price_change_percentage_1h),
+      priceChange6h: null, // not provided by /pools/search
+      priceChange24h: toNumber(pool.price_change_percentage_24h),
+      liquidityUsd: toNumber(pool.liquidity_usd),
       poolCreatedAt: pool.created_at ?? null,
     };
   });
@@ -445,13 +449,16 @@ async function fetchDexPaprikaGainers(
   pages: number = 1,
 ): Promise<MarketPoolItem[]> {
   const allPools: DexPaprikaPool[] = [];
+  let cursor: string | undefined;
 
   for (let page = 0; page < pages; page++) {
-    const url = new URL(`${DEXPAPRIKA_BASE}/networks/solana/pools`);
+    const url = new URL(`${DEXPAPRIKA_BASE}/networks/solana/pools/search`);
     url.searchParams.set("limit", String(limit));
-    url.searchParams.set("page", String(page));
+    url.searchParams.set("order_by", "price_change_percentage_24h");
     url.searchParams.set("sort", "desc");
-    url.searchParams.set("order_by", "last_price_change_usd_24h");
+    if (cursor) {
+      url.searchParams.set("cursor", cursor);
+    }
 
     const resp = await trackedFetch({
       provider: "dexpaprika",
@@ -469,9 +476,12 @@ async function fetchDexPaprikaGainers(
     }
 
     const data = (await resp.json()) as DexPaprikaPoolsResponse;
-    if (!data.pools || data.pools.length === 0) break;
+    if (!data.results || data.results.length === 0) break;
 
-    allPools.push(...data.pools);
+    allPools.push(...data.results);
+
+    if (!data.has_next_page || !data.next_cursor) break;
+    cursor = data.next_cursor;
   }
 
   // Map raw DexPaprika pools thành MarketPoolItem (dùng pool.id làm address)
@@ -530,10 +540,15 @@ export async function getTopGainerMarketPools(): Promise<MarketPoolItem[]> {
     console.error("[DexPaprika] getTopGainerMarketPools failed:", err);
   }
 
-  // Fallback
-  return fetchPools(
+  // Fallback: CoinGecko's basic pools endpoint only allows sorting by volume or tx
+  // count (no price-change sort) — fetch by volume, then re-rank client-side by real % change.
+  const result = await fetchPools(
     "/networks/solana/pools",
-    { sort: "h24_price_change_percentage_desc" },
-    "getTopGainerMarketPools:fallback"
+    { sort: "h24_volume_usd_desc" },
+    "getTopGainerMarketPools:fallback",
+  );
+
+  return result.sort(
+    (a, b) => (b.priceChange24h ?? -Infinity) - (a.priceChange24h ?? -Infinity),
   );
 }
