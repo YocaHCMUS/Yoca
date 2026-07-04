@@ -2,9 +2,18 @@ const DEFAULT_HELIUS_API_BASE_URL = "https://api.helius.xyz";
 import { trackApiCallResponse } from "@sv/services/tracking/apiCallTracker.service.js";
 import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.js";
 import { mergeOutboundFetchTimeout } from "@sv/util/outbound-fetch.js";
+import Bottleneck from "bottleneck";
 import { createHelius } from "helius-sdk";
 import { apiKeyManager, buildApiKeyMetadata } from "./api-key-manager.js";
 import env from "./load-env.js";
+
+// ponytail: assumes Helius free tier (2 req/s for Enhanced/REST & Wallet API); raise reservoir/lower minTime if on a paid tier
+export const limiter = new Bottleneck({
+  reservoir: 2,
+  reservoirRefreshAmount: 2,
+  reservoirRefreshInterval: 1000,
+  maxConcurrent: 2,
+});
 
 const HELIUS_SERVICE_NAME = "helius";
 let heliusKeysInitialized = false;
