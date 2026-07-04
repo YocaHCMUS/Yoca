@@ -382,7 +382,7 @@ export async function buildTokenAiContext(
     holderStatsRes.ok && holderStatsRes.value.length > 0
       ? holderStatsRes.value[0]
       : null;
-  const topHolders = holdersRes.ok ? holdersRes.value.slice(0, 10) : [];
+  const topHolders = holdersRes.ok ? (holdersRes.value?.slice(0, 10) ?? []) : [];
   const chartSummary = chartRes.ok ? chartRes.value.summary : null;
   const security = securityRes.ok ? securityRes.value : null;
 

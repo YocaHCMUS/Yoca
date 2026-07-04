@@ -28,8 +28,6 @@ import {
   SideNavItems,
   Stack,
   Switcher,
-  SwitcherDivider,
-  SwitcherItem,
 } from "@carbon/react";
 import {
   Checkmark,
@@ -80,6 +78,7 @@ type PageWrapperProps = {
   authPopup?: {
     isOpen: boolean;
     onClose: () => void;
+    redirectUrl?: string;
   };
 };
 
@@ -120,6 +119,7 @@ export function PageWrapper({
   const { user, signOut, isSignInOpen, openAuthModal, closeAuthModal } = useAuth();
   const navigate = useNavigate();
   const languageMenuRef = useRef<HTMLDivElement | null>(null);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const [openPanel, setOpenPanel] = useState<
     "lang" | "account" | "notifications" | null
   >(null);
@@ -129,17 +129,14 @@ export function PageWrapper({
   const isHeaderNotificationPanelOpen = openPanel == "notifications";
   const isAnyExtraPanelOpen = isExtraPanelOpen || isHeaderNotificationPanelOpen;
 
+  // Open the shared sign-in modal when the caller asks for it. Closing is
+  // handled directly by the modal's onClose below (see render) instead of a
+  // second effect watching isSignInOpen — that used to fight this effect:
+  // both fired in the same render, so the modal opened and was immediately
+  // closed again before it could ever show.
   useEffect(() => {
-    if (!authPopup) return;
-    if (authPopup.isOpen) openAuthModal("login");
-    else closeAuthModal();
-  }, [authPopup, closeAuthModal, openAuthModal]);
-
-  useEffect(() => {
-    if (authPopup && !isSignInOpen) {
-      authPopup.onClose();
-    }
-  }, [authPopup, isSignInOpen]);
+    if (authPopup?.isOpen) openAuthModal("login");
+  }, [authPopup?.isOpen, openAuthModal]);
 
   // Ctrl+K / Cmd+K to open search
   useEffect(() => {
@@ -170,12 +167,15 @@ export function PageWrapper({
   }, [location.pathname]);
 
   useEffect(() => {
-    if (openPanel != "lang") return;
+    if (openPanel != "lang" && openPanel != "account") return;
+
+    const activeMenuRef =
+      openPanel == "lang" ? languageMenuRef : accountMenuRef;
 
     const handleMouseDown = (event: MouseEvent) => {
       if (
-        languageMenuRef.current &&
-        !languageMenuRef.current.contains(event.target as Node)
+        activeMenuRef.current &&
+        !activeMenuRef.current.contains(event.target as Node)
       ) {
         setOpenPanel(null);
       }
@@ -368,26 +368,79 @@ export function PageWrapper({
             <Notification size={20} />
           </HeaderGlobalAction>
 
-          <HeaderGlobalAction
-            className={styles.headerGlobalAction}
-            aria-label={tr("nav.account")}
-            isActive={openPanel == "account"}
-            onClick={() => {
-              if (!user) {
-                setOpenPanel(null);
-                openAuthModal("login");
-              }
+          <div className={styles.accountMenuAnchor} ref={accountMenuRef}>
+            <HeaderGlobalAction
+              className={styles.headerGlobalAction}
+              aria-label={tr("nav.account")}
+              aria-haspopup="menu"
+              aria-expanded={openPanel == "account"}
+              isActive={openPanel == "account"}
+              onClick={() => {
+                if (!user) {
+                  setOpenPanel(null);
+                  openAuthModal("login");
+                  return;
+                }
 
-              setOpenPanel(null);
-              navigate("/profile");
-            }}
-          >
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} style={{ width: 20, height: 20, borderRadius: "50%" }} alt="" />
-            ) : (
-              <User size={20} />
+                togglePanel("account");
+              }}
+            >
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} style={{ width: 20, height: 20, borderRadius: "50%" }} alt="" />
+              ) : (
+                <User size={20} />
+              )}
+            </HeaderGlobalAction>
+
+            {openPanel == "account" && user && (
+              <div
+                className={styles.accountMenu}
+                role="menu"
+                aria-label={tr("nav.account")}
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={styles.accountPanelUser}
+                  onClick={() => {
+                    setOpenPanel(null);
+                    navigate("/profile");
+                  }}
+                >
+                  <span className={styles.accountPanelAvatar}>
+                    {user.avatarUrl ? (
+                      <img
+                        src={user.avatarUrl}
+                        style={{ width: 16, height: 16, borderRadius: "50%" }}
+                        alt=""
+                      />
+                    ) : (
+                      <User size={16} />
+                    )}
+                  </span>
+                  <span className={styles.accountPanelIdentity}>
+                    <strong>
+                      {user.displayName || `${user.userId.slice(0, 8)}...`}
+                    </strong>
+                    <small>{tr("nav.profile")}</small>
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={styles.accountPanelAction}
+                  onClick={async () => {
+                    setOpenPanel(null);
+                    await signOut();
+                  }}
+                >
+                  <Logout size={16} />
+                  <span>{tr("auth.signOut")}</span>
+                </button>
+              </div>
             )}
-          </HeaderGlobalAction>
+          </div>
 
           <ThemeToggleGlobalAction className={styles.headerGlobalAction} />
         </HeaderGlobalBar>
@@ -461,50 +514,46 @@ export function PageWrapper({
 
         <HeaderPanel
           className={styles.headerPanel}
-          expanded={openPanel == "account"}
+          expanded={false}
           onHeaderPanelFocus={() => setOpenPanel(null)}
         >
-          <Switcher aria-label="Account" expanded={openPanel == "account"}>
-            <SwitcherItem
-              aria-labelledby="account-id"
-              isSelected={false}
-              href="/profile"
+          <section className={styles.accountPanel} aria-label={tr("nav.account")}>
+            <button
+              type="button"
+              className={styles.accountPanelUser}
+              onClick={() => {
+                setOpenPanel(null);
+                navigate("/profile");
+              }}
             >
-              <Stack
-                orientation="horizontal"
-                gap={4}
-                style={{ alignItems: "center" }}
-              >
+              <span className={styles.accountPanelAvatar}>
                 {user?.avatarUrl ? (
                   <img src={user.avatarUrl} style={{ width: 16, height: 16, borderRadius: "50%" }} alt="" />
                 ) : (
                   <User size={16} />
                 )}
-                <p style={{ fontFamily: "monospace" }}>
+                </span>
+                <span className={styles.accountPanelIdentity}>
+                  <strong>
                   {user
                     ? user.displayName || `${user.userId.slice(0, 8)}…`
                     : ""}
-                </p>
-              </Stack>
-            </SwitcherItem>
-            <SwitcherDivider />
-            <SwitcherItem
-              aria-labelledby="account-signout"
+                  </strong>
+                  <small>{tr("nav.profile")}</small>
+                </span>
+            </button>
+            <button
+              type="button"
+              className={styles.accountPanelAction}
               onClick={async () => {
                 setOpenPanel(null);
                 await signOut();
               }}
             >
-              <Stack
-                orientation="horizontal"
-                gap={4}
-                style={{ alignItems: "center" }}
-              >
-                <Logout size={16} />
-                <p>{tr("auth.signOut")}</p>
-              </Stack>
-            </SwitcherItem>
-          </Switcher>
+              <Logout size={16} />
+              <span>{tr("auth.signOut")}</span>
+            </button>
+          </section>
         </HeaderPanel>
 
         <HeaderPanel
@@ -566,7 +615,14 @@ export function PageWrapper({
         />
       )}
 
-      <SignInModal open={isSignInOpen} onClose={closeAuthModal} />
+      <SignInModal
+        open={isSignInOpen}
+        onClose={() => {
+          closeAuthModal();
+          authPopup?.onClose();
+        }}
+        redirectUrl={authPopup?.redirectUrl}
+      />
       {isSearchOpen && <SearchBar onClose={() => setIsSearchOpen(false)} />}
 
       <Content

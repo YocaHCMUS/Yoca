@@ -54,6 +54,8 @@ describe("ChartSelect", () => {
         getSearchText={(token) => `${token.symbol} ${token.name}`}
         renderValue={(token) => token.symbol}
         renderOption={(token) => <span>{token.name}</span>}
+        searchPlaceholder="Search tokens"
+        emptyText="No matching tokens"
         actionIcon={Plus}
         actionLabel="Add token"
         onAction={onAction}
@@ -61,7 +63,7 @@ describe("ChartSelect", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Select token" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Search" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Search tokens" }), {
       target: { value: "beta" },
     });
 

@@ -95,7 +95,7 @@ export function PaymentModalWrapper({
         aria-labelledby="payment-modal-title"
         className="fixed inset-0 z-[201] flex items-center justify-center p-4 pointer-events-none"
       >
-        <div className="pointer-events-auto flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0f0f17]/95 shadow-[0_28px_100px_-44px_rgba(20,241,149,0.55)] backdrop-blur-xl">
+        <div className="pointer-events-auto flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden !rounded-3xl border border-white/10 bg-[#0f0f17]/95 shadow-[0_28px_100px_-44px_rgba(124,58,237,0.55)] backdrop-blur-xl">
           {/* Header */}
           <div className="border-b border-white/10 !px-6 !py-6 sm:!px-8 sm:!py-7">
             <div className="flex items-center justify-between">
@@ -114,7 +114,7 @@ export function PaymentModalWrapper({
                 id="payment-modal-close-btn"
                 type="button"
                 onClick={onClose}
-                className="rounded-full border border-transparent p-2 text-[#64748b] transition-colors hover:border-white/10 hover:bg-white/5 hover:text-white"
+                className="!rounded-full border border-transparent p-2 text-[#64748b] transition-colors hover:border-white/10 hover:bg-white/5 hover:text-white"
                 aria-label={tr("payment.modal.close")}
               >
                 <X className="h-5 w-5" aria-hidden="true" />
@@ -126,7 +126,7 @@ export function PaymentModalWrapper({
           <div className="custom-scrollbar overflow-y-auto !px-6 !py-6 sm:!px-8 sm:!py-7">
             {intentState.status === "error" && (
               <div className="flex flex-col items-center gap-4 py-8 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10">
+                <div className="flex h-12 w-12 items-center justify-center !rounded-3xl border border-red-500/20 bg-red-500/10">
                   <AlertCircle className="h-6 w-6 text-red-400" aria-hidden="true" />
                 </div>
                 <p className="text-red-400 text-sm">{intentState.message}</p>
@@ -153,7 +153,7 @@ export function PaymentModalWrapper({
                   appearance: {
                     theme: "night",
                     variables: {
-                      colorPrimary: "#14F195",
+                      colorPrimary: "#7C3AED",
                       colorBackground: "#0f0f17",
                       colorText: "#f8fafc",
                       colorDanger: "#f87171",

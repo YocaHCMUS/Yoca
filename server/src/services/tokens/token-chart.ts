@@ -1,23 +1,22 @@
 import {
-  DAY_MS,
-  TOKEN_CHART_24H_UPDATE_THRESHOLD,
-  TOKEN_CHART_DAILY_INTERVAL_MS,
-  TOKEN_CHART_HOURLY_INTERVAL_MS,
-  TOKEN_CHART_HOURLY_MIN_POINTS,
-  TOKEN_CHART_HOURLY_MIN_SPAN_MS,
-  TOKEN_CHART_HOURLY_UPDATE_THRESHOLD,
+    DAY_MS,
+    TOKEN_CHART_24H_UPDATE_THRESHOLD,
+    TOKEN_CHART_DAILY_INTERVAL_MS,
+    TOKEN_CHART_HOURLY_INTERVAL_MS,
+    TOKEN_CHART_HOURLY_MIN_POINTS,
+    TOKEN_CHART_HOURLY_MIN_SPAN_MS,
+    TOKEN_CHART_HOURLY_UPDATE_THRESHOLD,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-  tokenMarketChart24h,
-  tokenMarketChartDaily,
-  tokenMarketChartHourly,
-  type TokenMarketChart24hInsert,
-  type TokenMarketChartDailyInsert,
-  type TokenMarketChartHourlyInsert,
+    tokenMarketChart24h,
+    tokenMarketChartDaily,
+    tokenMarketChartHourly,
+    type TokenMarketChart24hInsert,
+    type TokenMarketChartDailyInsert,
+    type TokenMarketChartHourlyInsert,
 } from "@sv/db/schema.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
-import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
 import { excluded } from "@sv/util/orm-sql.js";
 import * as bds from "@sv/util/util-birdeye.js";
 import * as cg from "@sv/util/util-coingecko.js";
@@ -25,9 +24,8 @@ import { rlFetch } from "@sv/util/rate-limit.js";
 import dayjs from "dayjs";
 import { and, eq, gte, lte } from "drizzle-orm";
 import {
-  bds_HistoryPriceSchema,
-  cg_TokenMarketChartSchema,
-  type CG_TokenMarketChart,
+    bds_HistoryPriceSchema,
+    cg_TokenMarketChartSchema
 } from "../_types/token-raw-responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
@@ -91,58 +89,58 @@ export async function fetch24hTokenMarketChart(
     from = latestUpdateUnixMs;
   }
 
-  // CoinGecko accepts UNIX timestamps for range parameters.
   cgEndpoint.search = new URLSearchParams({
     vs_currency: "usd",
     from: toUnixSecondsString(from),
     to: toUnixSecondsString(to),
   }).toString();
-  const resp = await trackedFetch({
-    provider: "unknown",
-    url: cgEndpoint,
-    init: {
-      method: "GET",
-      headers: cg.getRequiredHeaders(),
-    },
-    serviceFile: "server/src/services/tokens/token-chart.ts",
-    functionName: "fetch24hTokenMarketChart",
+
+  const resp = await rlFetch(cgEndpoint, {
+    method: "GET",
+    headers: cg.getRequiredHeaders(),
+    rlLimiter: cg.limiter,
   });
 
-  if (resp.ok) {
-    const res = (await resp.json()) as CG_TokenMarketChart;
-    const chartDataPoints = res.prices.map(
-      ([timestamp, price], index): TokenMarketChart24hInsert => ({
-        address: tokenAddress,
-        unixTimestampMs: timestamp,
-        price: price,
-        marketCap: res.market_caps[index][1],
-        totalVolume: res.total_volumes[index][1],
-      }),
-    );
-    if (chartDataPoints.length == 0) {
-      return [];
-    }
-
-    const chartData = await db
-      .insert(tokenMarketChart24h)
-      .values(chartDataPoints)
-      .onConflictDoUpdate({
-        target: [
-          tokenMarketChart24h.address,
-          tokenMarketChart24h.unixTimestampMs,
-        ],
-        set: {
-          price: excluded(tokenMarketChart24h.price),
-          marketCap: excluded(tokenMarketChart24h.marketCap),
-          totalVolume: excluded(tokenMarketChart24h.totalVolume),
-        },
-      })
-      .returning();
-
-    return chartData;
+  if (!resp.ok) {
+    return [];
   }
 
-  return [];
+  const res = await getTrackedApiResult(cg_TokenMarketChartSchema, resp);
+
+  if (!res) {
+    return [];
+  }
+
+  const chartDataPoints = res.prices.map(
+    ([timestamp, price], index): TokenMarketChart24hInsert => ({
+      address: tokenAddress,
+      unixTimestampMs: timestamp,
+      price: price,
+      marketCap: res.market_caps[index][1],
+      totalVolume: res.total_volumes[index][1],
+    }),
+  );
+  if (chartDataPoints.length == 0) {
+    return [];
+  }
+
+  const chartData = await db
+    .insert(tokenMarketChart24h)
+    .values(chartDataPoints)
+    .onConflictDoUpdate({
+      target: [
+        tokenMarketChart24h.address,
+        tokenMarketChart24h.unixTimestampMs,
+      ],
+      set: {
+        price: excluded(tokenMarketChart24h.price),
+        marketCap: excluded(tokenMarketChart24h.marketCap),
+        totalVolume: excluded(tokenMarketChart24h.totalVolume),
+      },
+    })
+    .returning();
+
+  return chartData;
 }
 
 export async function get24hTokenMarketChart(tokenAddress: string) {
@@ -192,17 +190,29 @@ async function fetchAndCacheChartRange(
   toMs: number,
   interval: "hourly" | "daily",
 ): Promise<void> {
-  const res = await cg.safeClient(
-    cg.client.coins.marketChart.getRange(cgId, {
-      from: toUnixSecondsString(fromMs),
-      to: toUnixSecondsString(toMs),
-      interval,
-      vs_currency: "usd",
-    }),
-    cg_TokenMarketChartSchema,
-  );
+  const cgEndpoint = cg.getEndpoint(`/coins/${cgId}/market_chart/range`);
+  cgEndpoint.search = new URLSearchParams({
+    from: toUnixSecondsString(fromMs),
+    to: toUnixSecondsString(toMs),
+    interval,
+    vs_currency: "usd",
+  }).toString();
 
-  if (!res || res.prices.length == 0) return;
+  const resp = await rlFetch(cgEndpoint, {
+    method: "GET",
+    headers: cg.getRequiredHeaders(),
+    rlLimiter: cg.limiter,
+  });
+
+  if (!resp.ok) {
+    return;
+  }
+
+  const res = await getTrackedApiResult(cg_TokenMarketChartSchema, resp);
+
+  if (!res || res.prices.length == 0) {
+    return;
+  }
 
   const unixUpdatedAtMs = Date.now();
   const points = res.prices.map(

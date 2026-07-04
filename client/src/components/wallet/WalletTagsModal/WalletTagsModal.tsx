@@ -1,17 +1,13 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { Close } from "@carbon/react/icons";
 import { ID_MODAL_ROOT } from "@/config/constants";
 import styles from "./WalletTagsModal.module.scss";
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
 function truncateAddress(addr: string): string {
   if (!addr || addr.length <= 12) return addr;
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 }
-
-// ── Props ──────────────────────────────────────────────────────────────────
 
 export interface WalletTagsModalProps {
   isOpen: boolean;
@@ -21,8 +17,6 @@ export interface WalletTagsModalProps {
   walletLabel?: string;
   initialTags: string[];
 }
-
-// ── Component ──────────────────────────────────────────────────────────────
 
 export function WalletTagsModal({
   isOpen,
@@ -36,7 +30,6 @@ export function WalletTagsModal({
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Sync tags when modal opens
   useEffect(() => {
     if (isOpen) {
       setTags([...initialTags]);
@@ -44,7 +37,6 @@ export function WalletTagsModal({
     }
   }, [isOpen, initialTags]);
 
-  // Focus input when modal opens
   useEffect(() => {
     if (isOpen) {
       const id = requestAnimationFrame(() => inputRef.current?.focus());
@@ -52,7 +44,6 @@ export function WalletTagsModal({
     }
   }, [isOpen]);
 
-  // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -65,9 +56,7 @@ export function WalletTagsModal({
   const commitTag = useCallback((raw: string) => {
     const value = raw.trim().replace(/,$/, "").trim();
     if (!value) return;
-    setTags((prev) =>
-      prev.includes(value) ? prev : [...prev, value]
-    );
+    setTags((prev) => (prev.includes(value) ? prev : [...prev, value]));
     setInputValue("");
   }, []);
 
@@ -76,7 +65,6 @@ export function WalletTagsModal({
       e.preventDefault();
       commitTag(inputValue);
     } else if (e.key === "Backspace" && inputValue === "" && tags.length > 0) {
-      // Remove last tag when backspacing on empty input
       setTags((prev) => prev.slice(0, -1));
     }
   };
@@ -95,7 +83,6 @@ export function WalletTagsModal({
   };
 
   const handleSave = () => {
-    // Commit any pending input before saving
     const pending = inputValue.trim().replace(/,$/, "").trim();
     const finalTags =
       pending && !tags.includes(pending) ? [...tags, pending] : tags;
@@ -117,7 +104,6 @@ export function WalletTagsModal({
       aria-label="Manage wallet tags"
     >
       <div className={styles.card} onClick={(e) => e.stopPropagation()}>
-        {/* ── Header ── */}
         <div className={styles.header}>
           <span className={styles.title}>Manage Wallet Tags</span>
           <button
@@ -129,7 +115,6 @@ export function WalletTagsModal({
           </button>
         </div>
 
-        {/* ── Context ── */}
         <div className={styles.context}>
           {walletLabel && (
             <span className={styles.walletLabel}>{walletLabel}</span>
@@ -139,14 +124,12 @@ export function WalletTagsModal({
           </span>
         </div>
 
-        {/* ── Body ── */}
         <div className={styles.body}>
           <div className={styles.field}>
             <label className={styles.fieldLabel} htmlFor="wtm-tag-input">
               Tags
             </label>
 
-            {/* Tag chips + input combined box */}
             <div
               className={styles.tagInputContainer}
               onClick={() => inputRef.current?.focus()}
@@ -176,7 +159,7 @@ export function WalletTagsModal({
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyDown={handleInputKeyDown}
-                placeholder={tags.length === 0 ? 'e.g. Whale, Smart Money' : ''}
+                placeholder={tags.length === 0 ? "e.g. Whale, Smart Money" : ""}
                 maxLength={30}
                 aria-label="New tag"
               />
@@ -189,7 +172,6 @@ export function WalletTagsModal({
           </div>
         </div>
 
-        {/* ── Footer ── */}
         <div className={styles.footer}>
           <button className={styles.cancelBtn} onClick={onClose} type="button">
             Cancel
@@ -200,6 +182,6 @@ export function WalletTagsModal({
         </div>
       </div>
     </div>,
-    modalRoot
+    modalRoot,
   );
 }

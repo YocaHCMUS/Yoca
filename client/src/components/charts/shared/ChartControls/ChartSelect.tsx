@@ -20,8 +20,8 @@ interface ChartSelectProps<TItem> {
   getSearchText: (item: TItem) => string;
   renderValue: (item: TItem) => ReactNode;
   renderOption: (item: TItem) => ReactNode;
-  searchPlaceholder?: string;
-  emptyText?: string;
+  searchPlaceholder: string;
+  emptyText: string;
   disabled?: boolean;
   actionIcon?: LucideIcon;
   actionLabel?: string;
@@ -41,8 +41,8 @@ export function ChartSelect<TItem>({
   getSearchText,
   renderValue,
   renderOption,
-  searchPlaceholder = "Search",
-  emptyText = "No results",
+  searchPlaceholder,
+  emptyText,
   disabled = false,
   actionIcon: ActionIcon,
   actionLabel,

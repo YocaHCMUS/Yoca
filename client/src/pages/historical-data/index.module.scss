@@ -3,11 +3,14 @@
 .page {
     height: calc(100vh - 48px);
     overflow-y: auto;
-    background: $background;
+    background:
+        radial-gradient(circle at top left, rgba(124, 58, 237, 0.1), transparent 34%),
+        radial-gradient(circle at top right, rgba(45, 212, 191, 0.07), transparent 28%),
+        var(--yoca-bg);
 }
 
 .tokenHeaderWrap {
-    border-bottom: 1px solid $border-subtle;
+    border-bottom: 1px solid var(--yoca-border);
 }
 
 .content {
@@ -26,8 +29,8 @@
 
 .title {
     font-size: 22px;
-    font-weight: 700;
-    color: $text-primary;
+    font-weight: 800;
+    color: var(--yoca-text-main);
     margin: 0;
 }
 
@@ -36,128 +39,50 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    background: $layer-01;
-    border-radius: 6px;
+    background: var(--yoca-surface);
+    border: 1px solid var(--yoca-border);
+    border-radius: 10px;
     padding: 4px;
 }
 
 .rangeBtn {
     padding: 5px 14px;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
     background: transparent;
-    color: $text-secondary;
+    color: var(--yoca-text-muted);
     transition: background 0.15s, color 0.15s;
 
     &:hover {
-        background: $layer-hover-01;
-        color: $text-primary;
+        background: var(--yoca-surface-hover);
+        color: var(--yoca-text-main);
     }
 }
 
 .rangeBtnActive {
-    background: $background !important;
-    color: $text-primary !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-}
+    background: linear-gradient(135deg, var(--yoca-primary), var(--yoca-primary-2)) !important;
+    color: #fff !important;
 
-// ===== Table =====
-.tableContainer {
-    width: 100%;
-    background: $background;
-    border-radius: 8px;
-    overflow: hidden;
-
-    :global(.cds--data-table-container) {
-        background: transparent;
+    &:hover {
+        background: linear-gradient(135deg, var(--yoca-primary), var(--yoca-primary-2)) !important;
     }
-
-    :global(.cds--data-table) {
-        background: transparent;
-    }
-
-    // Header
-    :global(.cds--data-table thead tr th),
-    :global(.cds--data-table thead tr) {
-        background: $background;
-        font-size: 14px;
-        font-weight: 700;
-        color: $text-primary;
-        text-transform: capitalize;
-        padding: 14px 16px;
-        border-bottom: 1px solid $border-subtle;
-        text-align: center !important;
-    }
-
-    :global(.cds--table-header-label) {
-        text-align: center !important;
-        justify-content: center;
-    }
-
-    // Data rows
-    :global(.cds--data-table tbody tr td),
-    :global(.cds--data-table tbody tr) {
-        background: $background;
-        font-size: 14px;
-        font-weight: 400;
-        color: $text-primary;
-        padding: 14px 16px;
-        border-bottom: 1px solid $border-subtle;
-        vertical-align: middle;
-        text-align: center;
-    }
-
-    // Row hover
-    :global(.cds--data-table tbody tr:hover td),
-    :global(.cds--data-table tbody tr:hover) {
-        background: $layer-hover-01;
-    }
-
-    // Last row no bottom border
-    :global(.cds--data-table tbody tr:last-child td) {
-        border-bottom: none;
-    }
-}
-
-.table {
-    background: transparent;
 }
 
 .errorMsg {
     padding: 24px;
-    color: $text-error;
+    color: var(--yoca-danger);
     font-size: 14px;
     text-align: center;
-    border: 1px solid $border-subtle;
-    border-radius: 4px;
+    border: 1px solid var(--yoca-border);
+    border-radius: 10px;
+    background: var(--yoca-surface);
 }
 
-// ===== Show More =====
-.showMoreWrap {
-    display: flex;
-    justify-content: center;
-    padding: 24px 0 8px;
-}
-
-.showMoreBtn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 20px;
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 1.4;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    background: $layer-01;
-    color: $text-primary;
-    transition: background 0.15s;
-
-    &:hover {
-        background: $layer-hover-01;
+@media (max-width: 900px) {
+    .content {
+        padding: 20px 16px;
     }
 }

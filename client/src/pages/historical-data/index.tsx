@@ -1,19 +1,9 @@
 import client from "@/api/main";
+import Tble from "@/components/Tble";
 import { TokenHeader } from "@/components/token";
 import { PageWrapper } from "@/components/wrapper/PageWrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet } from "@/hooks/useGet";
-import {
-  DataTable,
-  DataTableSkeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@carbon/react";
 import type { InferResponseType } from "hono/client";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
@@ -41,7 +31,6 @@ export default function HistoricalDataPage() {
   const [rows, setRows] = useState<HistoryPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(20);
   const abortRef = useRef<AbortController | null>(null);
 
   const tokenDetails = useGet(
@@ -64,7 +53,6 @@ export default function HistoricalDataPage() {
 
     setLoading(true);
     setError(false);
-    setVisibleCount(20);
 
     client.api.tokens.history[":address"]
       .$get({
@@ -95,7 +83,6 @@ export default function HistoricalDataPage() {
 
   if (!address) return <>Missing address</>;
 
-  const PAGE_SIZE = 20;
   const allRows = rows.map((r, i) => ({
     id: String(i),
     date: fmt.datetime.datetime(r.dateStr),
@@ -103,14 +90,12 @@ export default function HistoricalDataPage() {
     volume: fmt.num.currency(r.volume),
     close: fmt.num.currency(r.price),
   }));
-  const tableRows = allRows.slice(0, visibleCount);
-  const hasMore = visibleCount < allRows.length;
 
   const TABLE_HEADERS = [
-    { key: "date", header: tr("token.historicalData.date") },
-    { key: "marketCap", header: tr("token.historicalData.marketCap") },
-    { key: "volume", header: tr("token.historicalData.volume") },
-    { key: "close", header: tr("token.historicalData.close") },
+    { key: "date", header: tr("token.historicalData.date"), align: "start" as const },
+    { key: "marketCap", header: tr("token.historicalData.marketCap"), align: "end" as const },
+    { key: "volume", header: tr("token.historicalData.volume"), align: "end" as const },
+    { key: "close", header: tr("token.historicalData.close"), align: "end" as const },
   ];
 
   return (
@@ -153,71 +138,20 @@ export default function HistoricalDataPage() {
           </div>
 
           {/* Table */}
-          {loading ? (
-            <DataTableSkeleton
-              headers={TABLE_HEADERS}
-              rowCount={selectedRange.days}
-              showHeader={false}
-              showToolbar={false}
-            />
-          ) : error ? (
+          {error ? (
             <div className={styles.errorMsg}>
               {tr("token.historicalData.error")}
             </div>
           ) : (
-            <div className={styles.tableContainer}>
-              <DataTable rows={tableRows} headers={TABLE_HEADERS}>
-                {({
-                  rows: tRows,
-                  headers,
-                  getTableProps,
-                  getHeaderProps,
-                  getRowProps,
-                  getCellProps,
-                }) => (
-                  <TableContainer>
-                    <Table {...getTableProps()} className={styles.table}>
-                      <TableHead>
-                        <TableRow>
-                          {headers.map((h) => (
-                            <TableHeader
-                              {...getHeaderProps({ header: h })}
-                              key={h.key}
-                            >
-                              {h.header}
-                            </TableHeader>
-                          ))}
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {tRows.map((row) => (
-                          <TableRow {...getRowProps({ row })} key={row.id}>
-                            {row.cells.map((cell) => (
-                              <TableCell
-                                {...getCellProps({ cell })}
-                                key={cell.id}
-                              >
-                                {cell.value}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                )}
-              </DataTable>
-              {hasMore && (
-                <div className={styles.showMoreWrap}>
-                  <button
-                    className={styles.showMoreBtn}
-                    onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-                  >
-                    {tr("token.historicalData.showMore")}
-                  </button>
-                </div>
-              )}
-            </div>
+            <Tble
+              rows={allRows}
+              headers={TABLE_HEADERS}
+              loading={loading}
+              boxed
+              enablePagination
+              pageSize={20}
+              pageSizes={[20, 50, 100]}
+            />
           )}
         </div>
       </div>

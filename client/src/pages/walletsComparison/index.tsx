@@ -1,3 +1,4 @@
+import { SearchBox } from "@/components/charts/shared/ChartControls/SearchBox";
 import { TabContainer } from "@/components/tabContainer/tabContainer";
 import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup";
 import { GeneralTab } from "@/components/wallet/WalletComparison/GeneralTab";
@@ -6,50 +7,47 @@ import { RiskTab } from "@/components/wallet/WalletComparison/RiskTab";
 import {
   WalletChat,
   ChatContextProvider,
+  QuickAiPopup,
 } from "@/components/wallet/WalletChat";
+import { PREDEFINED_QUESTIONS } from "@/components/wallet/WalletChat/WalletChatConstants";
 import { PageWrapper } from "@/components/wrapper";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { applyRobotoRegularPdfFont } from "@/util/pdf-fonts";
-import { Button, Search, Stack } from "@carbon/react";
+import { useWatchlist } from "@/contexts/WatchlistContext";
+import { IconButton } from "@carbon/react";
 import {
-  ChartLine,
-  Close,
-  Download,
-  SearchAdvanced,
-  Wallet,
-  User,
-  Launch,
   AiGenerate,
-} from "@carbon/react/icons";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router";
+  ChartLine,
+  Copy,
+  Launch,
+  Star,
+  StarFilled,
+  TrashCan,
+  User,
+  Wallet,
+} from "@carbon/icons-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+} from "react";
+import { useNavigate, useSearchParams } from "react-router";
 import { RightSidebar } from "@/pages/wallet/RightSidebar";
 import styles from "./index.module.scss";
 
-const TAB_EXPORT_FILENAME_SEGMENTS = [
-  "General",
-  "Holdings",
-  "Profit_Risk_Management",
-] as const;
+const MAX_COMPARISON_WALLETS = 4;
 
-const TAB_EXPORT_HEADER_TITLES = [
-  "General Overview",
-  "Holdings",
-  "Profit & Risk Management",
-] as const;
+function formatWalletAddress(address: string): string {
+  if (address.length <= 14) {
+    return address;
+  }
 
-const TAB_TRANSLATION_KEYS = [
-  "walletComparison.general",
-  "walletComparison.holdings",
-  "walletComparison.profitRiskManagement",
-] as const;
-
-const PDF_EXPORT_SECTION_CLASS = "pdf-export-section";
-const PDF_EXPORT_TOP_MARGIN_MM = 10;
-const PDF_EXPORT_SECTION_GAP_MM = 10;
-const PDF_EXPORT_SCALE = 2;
+  return `${address.slice(0, 6)}...${address.slice(-6)}`;
+}
 
 function isEditableShortcutTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -68,91 +66,153 @@ function isEditableShortcutTarget(target: EventTarget | null): boolean {
 interface WalletComparisonSidebarProps {
   walletAddress: string;
   selectedWallets: string[];
+  maxWallets: number;
   onWalletAddressChange: (value: string) => void;
-  onWalletKeyPress: (event: React.KeyboardEvent) => void;
+  onWalletKeyPress: (event: KeyboardEvent<HTMLInputElement>) => void;
   onRemoveWallet: (address: string) => void;
-  onExport: () => void;
-  isExporting: boolean;
 }
 
 interface WalletComparisonMainContentProps {
   activeTab: number;
   visitedTabs: ReadonlySet<number>;
-  comparisonTabs: React.ReactNode[];
+  comparisonTabs: ReactNode[];
   onTabChange: (index: number) => void;
 }
 
 function WalletComparisonSidebar({
   walletAddress,
   selectedWallets,
+  maxWallets,
   onWalletAddressChange,
   onWalletKeyPress,
   onRemoveWallet,
-  onExport,
-  isExporting,
 }: WalletComparisonSidebarProps) {
   const { tr } = useLocalization();
+  const navigate = useNavigate();
+  const { walletWatchlist, walletPending, toggleWallet } = useWatchlist();
+  const isFull = selectedWallets.length >= maxWallets;
+
+  const handleCopyWallet = useCallback((address: string) => {
+    void navigator.clipboard.writeText(address);
+  }, []);
+
+  const handleToggleWallet = useCallback(
+    (address: string) => {
+      void toggleWallet(address).catch((error: unknown) => {
+        console.error("Failed to update wallet watchlist:", error);
+      });
+    },
+    [toggleWallet],
+  );
 
   return (
     <div className={styles.sidebarContainer}>
       <div className={styles.sidebarHeaderRow}>
-        <h3 className={styles.sidebarTitle}>
-          {selectedWallets.length === 1
-            ? tr("walletComparison.activeWallet")
-            : tr("walletComparison.selectedWallets")}
-        </h3>
-        <Button
-          kind="ghost"
-          size="sm"
-          renderIcon={Download}
-          onClick={onExport}
-          disabled={isExporting || selectedWallets.length === 0}
-        >
-          {isExporting
-            ? tr("walletComparison.generatingPdf")
-            : tr("walletComparison.exportPdf")}
-        </Button>
+        <div className={styles.sidebarHeadingBlock}>
+          <h3 className={styles.sidebarTitle}>
+            {selectedWallets.length === 1
+              ? tr("walletComparison.activeWallet")
+              : tr("walletComparison.selectedWallets")}
+          </h3>
+          <span className={styles.walletCount}>
+            {tr("walletComparison.walletCount", {
+              count: selectedWallets.length,
+              max: maxWallets,
+            })}
+          </span>
+        </div>
       </div>
-      <Search
-        id="wallet-search"
-        labelText={tr("walletComparison.addWalletAddress")}
-        placeholder={tr("walletComparison.enterWalletAddress")}
+
+      <SearchBox
         value={walletAddress}
-        onChange={(e) => onWalletAddressChange(e.target.value)}
+        onChange={onWalletAddressChange}
         onKeyDown={onWalletKeyPress}
-        renderIcon={SearchAdvanced}
+        placeholder={
+          isFull
+            ? tr("walletComparison.comparisonListFull")
+            : tr("walletComparison.enterWalletAddress")
+        }
+        ariaLabel={tr("walletComparison.addWalletAddress")}
+        disabled={isFull}
       />
 
-      <Stack gap={4} className={styles.walletList}>
+      <div className={styles.walletList}>
         {selectedWallets.length === 0 ? (
           <p className={styles.emptyState}>
             {tr("walletComparison.noWalletsSelected")}
           </p>
         ) : (
-          selectedWallets.map((wallet) => (
-            <div key={wallet} className={styles.walletTagContainer}>
-              <Button
-                className={styles.walletTag}
-                renderIcon={Close}
-                onClick={() => onRemoveWallet(wallet)}
-                kind="tertiary"
-              >
-                <span className={styles.buttonTag}>{wallet}</span>
-              </Button>
-              <Button
-                kind="ghost"
-                size="sm"
-                hasIconOnly
-                renderIcon={Launch}
-                iconDescription={tr("walletComparison.viewDeepDive")}
-                tooltipPosition="left"
-                onClick={() => window.open(`/wallets/${wallet}`, "_blank")}
-                className={styles.deepDiveButton}
-              />
-            </div>
-          ))
+          selectedWallets.map((wallet) => {
+            const isFollowed = walletWatchlist.includes(wallet);
+            const isPending = Boolean(walletPending[wallet]);
+
+            return (
+              <div key={wallet} className={styles.walletCard} title={wallet}>
+                <div className={styles.walletCardMain}>
+                  <span
+                    className={styles.walletFollowIndicator}
+                    data-followed={isFollowed}
+                    aria-hidden="true"
+                  >
+                    {isFollowed ? <StarFilled size={14} /> : <Star size={14} />}
+                  </span>
+                  <span className={styles.walletCardAddress}>
+                    {formatWalletAddress(wallet)}
+                  </span>
+                </div>
+
+                <div className={styles.walletCardActions}>
+                  <IconButton
+                    size="sm"
+                    kind="ghost"
+                    label={tr("walletComparison.copyAddress")}
+                    align="left"
+                    onClick={() => handleCopyWallet(wallet)}
+                    className={styles.walletActionButton}
+                  >
+                    <Copy size={16} />
+                  </IconButton>
+                  <IconButton
+                    size="sm"
+                    kind="ghost"
+                    label={
+                      isFollowed
+                        ? tr("walletComparison.unfollowWallet")
+                        : tr("walletComparison.followWallet")
+                    }
+                    align="left"
+                    disabled={isPending}
+                    onClick={() => handleToggleWallet(wallet)}
+                    className={styles.walletActionButton}
+                  >
+                    {isFollowed ? <StarFilled size={16} /> : <Star size={16} />}
+                  </IconButton>
+                  <IconButton
+                    size="sm"
+                    kind="ghost"
+                    label={tr("walletComparison.removeWallet")}
+                    align="left"
+                    onClick={() => onRemoveWallet(wallet)}
+                    className={`${styles.walletActionButton} ${styles.walletActionDanger}`}
+                  >
+                    <TrashCan size={16} />
+                  </IconButton>
+                  <IconButton
+                    size="sm"
+                    kind="ghost"
+                    label={tr("walletComparison.openWalletPage")}
+                    align="left"
+                    onClick={() => navigate(`/wallets/${wallet}`)}
+                    className={styles.walletActionButton}
+                  >
+                    <Launch size={16} />
+                  </IconButton>
+                </div>
+              </div>
+            );
+          })
         )}
-      </Stack>
+      </div>
     </div>
   );
 }
@@ -169,6 +229,7 @@ function WalletComparisonMainContent({
     <div className={styles.mainContentContainer}>
       <TabContainer
         activeTab={activeTab}
+        variant="profile"
         names={[
           tr("walletComparison.general"),
           tr("walletComparison.holdings"),
@@ -190,8 +251,6 @@ function WalletComparisonMainContent({
 
 export default function WalletsComparisonPage() {
   const [activeTab, setActiveTab] = useState(0);
-  const [isExporting, setIsExporting] = useState(false);
-  /** Tabs that have been opened at least once — panels stay mounted but pause fetching when inactive. */
   const [visitedTabs, setVisitedTabs] = useState<Set<number>>(
     () => new Set([0]),
   );
@@ -210,10 +269,53 @@ export default function WalletsComparisonPage() {
     "right" | "left" | "fullscreen"
   >("right");
 
-  const handleDayClick = (walletAddress: string, timestamp: number) => {
+  const [aiPopupOpen, setAiPopupOpen] = useState(false);
+  const [aiPopupAnchor, setAiPopupAnchor] = useState<HTMLElement | null>(null);
+  const [aiPopupLabel, setAiPopupLabel] = useState("");
+  const [aiPopupQuestionIds, setAiPopupQuestionIds] = useState<
+    string[] | undefined
+  >(undefined);
+
+  const handleDayClick = (_walletAddress: string, timestamp: number) => {
     setDayPopupTimestamp(timestamp);
     setDayPopupOpen(true);
   };
+
+  const handleAiAction = useCallback(
+    (
+      e: ReactMouseEvent<HTMLElement>,
+      label: string,
+      questionIds?: string[],
+    ) => {
+      setAiPopupAnchor(e.currentTarget);
+      setAiPopupLabel(label);
+      setAiPopupQuestionIds(questionIds);
+      setAiPopupOpen(true);
+    },
+    [],
+  );
+
+  const addComparisonWallet = useCallback((address: string) => {
+    const normalizedAddress = address.trim();
+    if (!normalizedAddress) {
+      return false;
+    }
+
+    let added = false;
+    setSelectedWallets((previousWallets) => {
+      if (
+        previousWallets.includes(normalizedAddress) ||
+        previousWallets.length >= MAX_COMPARISON_WALLETS
+      ) {
+        return previousWallets;
+      }
+
+      added = true;
+      return [...previousWallets, normalizedAddress];
+    });
+
+    return added;
+  }, []);
 
   useEffect(() => {
     setVisitedTabs((prev) => new Set(prev).add(activeTab));
@@ -225,6 +327,7 @@ export default function WalletsComparisonPage() {
       setActiveTab(0);
     }
   }, [selectedWallets.length]);
+
   useEffect(() => {
     const handleChatShortcut = (event: globalThis.KeyboardEvent) => {
       if (
@@ -243,21 +346,20 @@ export default function WalletsComparisonPage() {
     window.addEventListener("keydown", handleChatShortcut);
     return () => window.removeEventListener("keydown", handleChatShortcut);
   }, []);
-  const hasInitializedRef = useRef(false);
 
-  // Pre-populate from ?wallets=addr1,addr2 query param.
-  // Depends on searchParams so that navigating here from a different wallet
-  // (Back → Compare on a new wallet) correctly resets the list.
   useEffect(() => {
     const param = searchParams.get("wallets");
     if (!param) return;
+
     const addresses = param
       .split(",")
-      .map((a) => a.trim())
-      .filter(Boolean);
+      .map((address) => address.trim())
+      .filter(Boolean)
+      .filter((address, index, allAddresses) => allAddresses.indexOf(address) === index)
+      .slice(0, MAX_COMPARISON_WALLETS);
+
     if (addresses.length > 0) {
       setSelectedWallets(addresses);
-      hasInitializedRef.current = true;
     }
   }, [searchParams]);
 
@@ -275,6 +377,7 @@ export default function WalletsComparisonPage() {
             key="wc-general"
             walletAddresses={selectedWallets}
             fetchEnabled={activeTab === 0}
+            onAiAction={handleAiAction}
           />
         </div>
       </div>,
@@ -288,6 +391,7 @@ export default function WalletsComparisonPage() {
             key="wc-holding"
             walletAddresses={selectedWallets}
             fetchEnabled={activeTab === 1}
+            onAiAction={handleAiAction}
           />
         </div>
       </div>,
@@ -302,257 +406,56 @@ export default function WalletsComparisonPage() {
             walletAddresses={selectedWallets}
             fetchEnabled={activeTab === 2}
             onDayClick={handleDayClick}
+            onAiAction={handleAiAction}
           />
         </div>
       </div>,
     ],
-    [selectedWallets, activeTab, exportContainerClassName],
+    [selectedWallets, activeTab, exportContainerClassName, handleAiAction],
   );
 
-  const handleExportPDF = async (activeTabTranslationKey: string) => {
-    const exportTarget = exportRef.current;
-    if (isExporting || !exportTarget) {
-      return;
-    }
-
-    const activeSegment =
-      TAB_EXPORT_FILENAME_SEGMENTS[activeTab] ?? `Tab_${activeTab}`;
-    const localizedTabName = String(
-      tr(TAB_TRANSLATION_KEYS[activeTab] ?? "walletComparison.general"),
-    );
-    const activeHeaderTitle = activeTabTranslationKey.trim()
-      ? String(tr(activeTabTranslationKey as never))
-      : localizedTabName;
-    const { width, height } = exportTarget.getBoundingClientRect();
-    if (width <= 0 || height <= 0) {
-      return;
-    }
-
-    const reportTitle =
-      selectedWallets.length === 1
-        ? String(tr("walletComparison.walletAnalysisReport"))
-        : String(tr("walletComparison.pdfReportTitle"));
-    const generatedDateLabel = String(tr("walletComparison.pdfGeneratedDate"));
-    const walletsComparedLabel = String(
-      tr("walletComparison.pdfWalletsCompared"),
-    );
-    const walletAddressesLabel = String(
-      tr("walletComparison.pdfWalletAddresses"),
-    );
-    const generatedDate = new Intl.DateTimeFormat(lang, {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date());
-    setIsExporting(true);
-
-    try {
-      const tempHeader = document.createElement("div");
-      tempHeader.style.position = "absolute";
-      tempHeader.style.top = "-9999px";
-      tempHeader.style.left = "-9999px";
-      tempHeader.style.width = "800px";
-      tempHeader.style.backgroundColor = "#ffffff";
-      tempHeader.style.padding = "20px";
-      tempHeader.style.border = "1px solid #d0d7de";
-      tempHeader.style.borderRadius = "12px";
-      tempHeader.style.boxSizing = "border-box";
-      tempHeader.style.fontFamily =
-        "'DejaVu Sans', 'Arial Unicode MS', Arial, Tahoma, sans-serif";
-      tempHeader.style.color = "#0f172a";
-
-      const headerWallets =
-        selectedWallets.length > 0
-          ? selectedWallets
-              .map(
-                (address) =>
-                  `<div style=\"line-height:1.45;word-break:break-all;\">${address}</div>`,
-              )
-              .join("")
-          : `<div>${String(tr("marketPage.na"))}</div>`;
-
-      tempHeader.innerHTML = `
-        <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;">
-          <div>
-            <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin-bottom:6px;font-weight:600;">${reportTitle}</div>
-            <div style="font-size:24px;font-weight:700;line-height:1.2;">${reportTitle} - ${activeHeaderTitle}</div>
-          </div>
-          <div style="min-width:180px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:#64748b;font-weight:600;">${generatedDateLabel}</div>
-            <div style="margin-top:4px;font-size:14px;font-weight:600;color:#0f172a;">${generatedDate}</div>
-          </div>
-        </div>
-        <div style="margin-top:14px;font-size:14px;color:#334155;">${walletsComparedLabel}: ${selectedWallets.length}</div>
-        <div style="margin-top:14px;padding-top:12px;border-top:1px solid #e2e8f0;">
-          <div style="font-size:14px;font-weight:600;margin-bottom:8px;">${walletAddressesLabel}:</div>
-          <div style="font-size:13px;color:#475569;">${headerWallets}</div>
-        </div>
-      `;
-
-      document.body.appendChild(tempHeader);
-      let headerCanvas: HTMLCanvasElement;
-
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        headerCanvas = await html2canvas(tempHeader, {
-          scale: PDF_EXPORT_SCALE,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-          logging: false,
-        });
-      } finally {
-        tempHeader.remove();
-      }
-
-      const pdf = new jsPDF("p", "mm", "a4");
-      await applyRobotoRegularPdfFont(pdf);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      let currentY = PDF_EXPORT_TOP_MARGIN_MM;
-
-      const headerImgData = headerCanvas.toDataURL("image/png");
-      const headerImgHeight =
-        (headerCanvas.height * pdfWidth) / headerCanvas.width;
-      pdf.addImage(
-        headerImgData,
-        "PNG",
-        0,
-        currentY,
-        pdfWidth,
-        headerImgHeight,
-      );
-      currentY += headerImgHeight + PDF_EXPORT_SECTION_GAP_MM;
-
-      const sections = exportTarget.querySelectorAll<HTMLElement>(
-        `.${PDF_EXPORT_SECTION_CLASS}`,
-      );
-
-      if (sections.length === 0) {
-        return;
-      }
-
-      for (const section of sections) {
-        const titleElement = section.querySelector<HTMLElement>(
-          ".hide-on-print-title",
-        );
-        const sectionTitle = titleElement?.innerText.trim() ?? "";
-        const previousStyleAttribute = titleElement
-          ? titleElement.getAttribute("style")
-          : null;
-
-        if (titleElement) {
-          titleElement.style.setProperty("display", "none", "important");
-        }
-
-        let canvas: HTMLCanvasElement;
-        try {
-          canvas = await html2canvas(section, {
-            scale: PDF_EXPORT_SCALE,
-            useCORS: true,
-            backgroundColor: "#ffffff",
-            logging: false,
-            onclone: (clonedDocument) => {
-              clonedDocument
-                .querySelectorAll<HTMLElement>(
-                  ".recharts-accessibility-layer, .recharts-tooltip-wrapper",
-                )
-                .forEach((element) => {
-                  element.style.display = "none";
-                });
-
-              clonedDocument
-                .querySelectorAll<HTMLElement>(".recharts-responsive-container")
-                .forEach((element) => {
-                  element.style.minWidth = "800px";
-                });
-            },
-          });
-        } finally {
-          if (titleElement) {
-            if (previousStyleAttribute === null) {
-              titleElement.removeAttribute("style");
-            } else {
-              titleElement.setAttribute("style", previousStyleAttribute);
-            }
-          }
-        }
-
-        if (canvas.width <= 0 || canvas.height <= 0) {
-          continue;
-        }
-
-        const imgData = canvas.toDataURL("image/png");
-        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-        const titleHeight = sectionTitle ? 8 : 0;
-        const blockHeight = imgHeight + titleHeight;
-
-        if (currentY + blockHeight > pageHeight - PDF_EXPORT_TOP_MARGIN_MM) {
-          pdf.addPage();
-          currentY = PDF_EXPORT_TOP_MARGIN_MM;
-        }
-
-        if (sectionTitle) {
-          pdf.setFontSize(14);
-          pdf.setFont("Roboto", "normal");
-          pdf.text(sectionTitle, 14, currentY);
-          currentY += titleHeight;
-        }
-
-        pdf.addImage(imgData, "PNG", 0, currentY, pdfWidth, imgHeight);
-        currentY += imgHeight + PDF_EXPORT_SECTION_GAP_MM;
-      }
-
-      pdf.save(`Wallet_Comparison_${activeSegment}_${lang.toLowerCase()}.pdf`);
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleAddWallet = () => {
-    if (
-      walletAddress.trim() &&
-      !selectedWallets.includes(walletAddress.trim())
-    ) {
-      setSelectedWallets([...selectedWallets, walletAddress.trim()]);
+  const handleAddWallet = useCallback(() => {
+    if (addComparisonWallet(walletAddress)) {
       setWalletAddress("");
     }
-  };
+  }, [addComparisonWallet, walletAddress]);
 
-  const handleRemoveWallet = (address: string) => {
-    setSelectedWallets(selectedWallets.filter((w) => w !== address));
-  };
+  const handleRemoveWallet = useCallback((address: string) => {
+    setSelectedWallets((previousWallets) =>
+      previousWallets.filter((wallet) => wallet !== address),
+    );
+  }, []);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleAddWallet();
-    }
-  };
-
-  const handleSidebarExport = () => {
-    const activeTabTranslationKey =
-      TAB_TRANSLATION_KEYS[activeTab] ?? "walletComparison.general";
-    void handleExportPDF(activeTabTranslationKey);
-  };
+  const handleKeyPress = useCallback(
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        handleAddWallet();
+      }
+    },
+    [handleAddWallet],
+  );
 
   return (
     <PageWrapper noMarketTickers wideContent>
-      <div className={`${styles.pageLayout}${isRightSidebarOpen ? ` ${styles.rightSidebarExpanded}` : ''}`}>
+      <div
+        className={`${styles.pageLayout}${isRightSidebarOpen ? ` ${styles.rightSidebarExpanded}` : ""
+          }`}
+      >
         <ChatContextProvider
           addresses={selectedWallets}
           contextType="wallet-comparison"
           lang={lang}
         >
-          {/* Left Sidebar */}
           <aside className={styles.leftSidebar}>
             <div className={styles.walletSection}>
               <WalletComparisonSidebar
                 walletAddress={walletAddress}
                 selectedWallets={selectedWallets}
+                maxWallets={MAX_COMPARISON_WALLETS}
                 onWalletAddressChange={setWalletAddress}
                 onWalletKeyPress={handleKeyPress}
                 onRemoveWallet={handleRemoveWallet}
-                onExport={handleSidebarExport}
-                isExporting={isExporting}
               />
             </div>
           </aside>
@@ -566,13 +469,13 @@ export default function WalletsComparisonPage() {
             />
           </main>
 
-          {/* Modal chat panel (right/left dock + fullscreen) */}
           {!isChatOpen && (
             <button
               type="button"
               className={styles.chatLauncher}
               onClick={() => setIsChatOpen(true)}
-              title="Shift + /"
+              title={tr("chat.launcherShortcutTitle")}
+              aria-label={tr("chat.launcherShortcutTitle")}
             >
               <AiGenerate size={18} />
               <span>{tr("chat.launcherLabel")}</span>
@@ -584,6 +487,9 @@ export default function WalletsComparisonPage() {
             isChatOpen={isChatOpen}
             onChatToggle={() => setIsChatOpen((v) => !v)}
             onToggle={setIsRightSidebarOpen}
+            comparisonWallets={selectedWallets}
+            maxComparisonWallets={MAX_COMPARISON_WALLETS}
+            onAddComparisonWallet={addComparisonWallet}
           />
 
           {isChatOpen && (
@@ -599,6 +505,23 @@ export default function WalletsComparisonPage() {
             </div>
           )}
 
+          <QuickAiPopup
+            open={aiPopupOpen}
+            onClose={() => setAiPopupOpen(false)}
+            anchorElement={aiPopupAnchor}
+            addresses={selectedWallets}
+            contextType="wallet-comparison"
+            lang={lang}
+            componentLabel={aiPopupLabel}
+            predefinedQuestions={
+              aiPopupQuestionIds
+                ? PREDEFINED_QUESTIONS.filter((q) =>
+                  aiPopupQuestionIds.includes(q.id),
+                )
+                : undefined
+            }
+            onOpenChat={() => setIsChatOpen(true)}
+          />
         </ChatContextProvider>
       </div>
 

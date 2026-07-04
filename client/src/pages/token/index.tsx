@@ -359,9 +359,11 @@ export default function TokenPage() {
               />
             </section>
 
-            <section className={styles.sidebarSection}>
-              <TopHolders holders={holders} />
-            </section>
+            {holders.length > 0 && (
+              <section className={styles.sidebarSection}>
+                <TopHolders holders={holders} />
+              </section>
+            )}
 
             <section className={styles.sidebarSection}>
               <NewsTab

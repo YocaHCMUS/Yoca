@@ -11,6 +11,7 @@ import {
 } from "@sv/db/schema.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import { bds_TopTradersSchema } from "@sv/services/_types/trade-raw-responses.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 import * as bds from "@sv/util/util-birdeye.js";
 import { and, asc, desc, gte } from "drizzle-orm";
 import { bds_RecentTradesSchema } from "./_types/token-raw-responses.js";
@@ -32,12 +33,11 @@ async function fetchRecentTrades() {
     tx_type: "swap",
   }).toString();
 
-  const req = new Request(bdsEndpoint, {
+  const resp = await rlFetch(bdsEndpoint, {
     method: "GET",
     headers: bds.getRequiredHeaders(),
+    rlLimiter: bds.limiter,
   });
-
-  const resp = await fetch(req);
 
   const res = await getTrackedApiResult(bds_RecentTradesSchema, resp);
 
@@ -146,12 +146,11 @@ async function fetchTraderGainersLosers(
     sort_type: sortType,
   }).toString();
 
-  const req = new Request(bdsEndpoint, {
+  const resp = await rlFetch(bdsEndpoint, {
     method: "GET",
     headers: bds.getRequiredHeaders(),
+    rlLimiter: bds.limiter,
   });
-
-  const resp = await fetch(req);
   const res = await getTrackedApiResult(bds_TopTradersSchema, resp);
 
   if (!res) {

@@ -1,9 +1,11 @@
 import { COINGECKO_THUMBNAIL_URL } from "@/config/constants";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { useUserTheme } from "@/contexts/ThemeContext";
 import { getUserSubscription, type PlanTier } from "@/services/profile/subscriptionApi";
 import { Copy, LogoDiscord, Search, Wikis } from "@carbon/icons-react";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router";
 import styles from "./TokenHeader.module.scss";
 
@@ -43,6 +45,7 @@ export const TokenHeader = ({
   const copyToClipboard = () => navigator.clipboard.writeText(address);
   const { tr } = useLocalization();
   const { user, isUserLoading, openAuthModal } = useAuth();
+  const { themeRef } = useUserTheme();
   const navigate = useNavigate();
   const [isCheckingWashAccess, setIsCheckingWashAccess] = useState(false);
   const [isWashGateOpen, setIsWashGateOpen] = useState(false);
@@ -188,45 +191,49 @@ export const TokenHeader = ({
 
       {!sidebar && aiWashButton}
 
-      {isWashGateOpen && (
-        <div
-          className={styles.washGateOverlay}
-          role="dialog"
-          aria-modal="true"
-          aria-label={String(tr("token.header.washGateTitle"))}
-          onClick={() => setIsWashGateOpen(false)}
-        >
-          <div className={styles.washGateCard} onClick={(event) => event.stopPropagation()}>
-            <div className={styles.washGateIcon}>AI</div>
-            <h2 className={styles.washGateTitle}>{tr("token.header.washGateTitle")}</h2>
-            <p className={styles.washGateText}>{tr("token.header.washGateDescription")}</p>
-            <div className={styles.washGateActions}>
-              {!user && (
-                <button
-                  type="button"
-                  className={styles.washGateSecondary}
-                  onClick={() => {
-                    setIsWashGateOpen(false);
-                    openAuthModal("login");
-                  }}
-                >
-                  {tr("token.header.washGateSignIn")}
-                </button>
-              )}
-              <button
-                type="button"
-                className={styles.washGateSecondary}
-                onClick={() => setIsWashGateOpen(false)}
-              >
-                {tr("token.header.washGateClose")}
-              </button>
-              <Link className={styles.washGatePrimary} to="/pricing">
-                {tr("token.header.washGateUpgrade")}
-              </Link>
+      {isWashGateOpen &&
+        (() => {
+          const gate = (
+            <div
+              className={styles.washGateOverlay}
+              role="dialog"
+              aria-modal="true"
+              aria-label={String(tr("token.header.washGateTitle"))}
+              onClick={() => setIsWashGateOpen(false)}
+            >
+              <div className={styles.washGateCard} onClick={(event) => event.stopPropagation()}>
+                <div className={styles.washGateIcon}>AI</div>
+                <h2 className={styles.washGateTitle}>{tr("token.header.washGateTitle")}</h2>
+                <p className={styles.washGateText}>{tr("token.header.washGateDescription")}</p>
+                <div className={styles.washGateActions}>
+                  {!user && (
+                    <button
+                      type="button"
+                      className={styles.washGateSecondary}
+                      onClick={() => {
+                        setIsWashGateOpen(false);
+                        openAuthModal("login");
+                      }}
+                    >
+                      {tr("token.header.washGateSignIn")}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className={styles.washGateSecondary}
+                    onClick={() => setIsWashGateOpen(false)}
+                  >
+                    {tr("token.header.washGateClose")}
+                  </button>
+                  <Link className={styles.washGatePrimary} to="/pricing">
+                    {tr("token.header.washGateUpgrade")}
+                  </Link>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          );
+          return themeRef.current ? createPortal(gate, themeRef.current) : gate;
+        })()}
     </div>
   );
 };

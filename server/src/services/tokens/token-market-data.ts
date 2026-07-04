@@ -2,9 +2,14 @@ import { TOKEN_MARKET_DATA_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import { tokenMarketData, type TokenMarketDataInsert } from "@sv/db/schema.js";
 import { excludedAuto } from "@sv/util/orm-sql.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import * as cg from "@sv/util/util-coingecko.js";
+import {
+    cg_CoinMarketsSchema,
+    type CG_CoinMarkets,
+} from "../_types/token-raw-responses.js";
 import { and, gte, inArray } from "drizzle-orm";
-import type { CG_CoinMarkets } from "../_types/token-raw-responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
 function isCgRateLimitError(error: unknown): boolean {
@@ -23,8 +28,6 @@ export async function fetchCgMarketDataBatched(
     return [];
   }
 
-  // Coin markets endpoint limited to 50 coins per request
-  // https://docs.coingecko.com/v3.0.1/reference/coins-markets
   const cgBatchSize = 50;
 
   const chunks: string[][] = [];
@@ -34,14 +37,29 @@ export async function fetchCgMarketDataBatched(
 
   const settled = await Promise.allSettled(
     chunks.map(
-      async (chunk) =>
-        (await cg.client.coins.markets.get({
+      async (chunk) => {
+        const endpoint = cg.getEndpoint("/coins/markets");
+        endpoint.search = new URLSearchParams({
           ids: chunk.join(","),
           vs_currency: "usd",
           order: "market_cap_desc",
-          sparkline: true,
+          sparkline: "true",
           price_change_percentage: "1h,24h,7d,14d,30d,200d,1y",
-        })) as CG_CoinMarkets,
+        }).toString();
+
+        const resp = await rlFetch(endpoint, {
+          method: "GET",
+          headers: cg.getRequiredHeaders(),
+          rlLimiter: cg.limiter,
+        });
+
+        if (!resp.ok) {
+          return [];
+        }
+
+        const data = await getTrackedApiResult(cg_CoinMarketsSchema, resp);
+        return data || [];
+      }
     ),
   );
 

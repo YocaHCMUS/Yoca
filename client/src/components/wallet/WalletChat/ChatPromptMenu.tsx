@@ -1,14 +1,27 @@
 import { useCallback, useEffect, useMemo, useState, type UIEvent } from "react";
+import {
+  Activity,
+  ArrowLeftRight,
+  BarChart3,
+  Coins,
+  GitCompare,
+  LayoutGrid,
+  LineChart,
+  ShieldCheck,
+  Trophy,
+  WalletCards,
+  type LucideIcon,
+} from "lucide-react";
 import { useChatPrompts, type ChatPromptData, type CreatePromptInput, type PromptScope, type UpdatePromptInput } from "./useChatPrompts";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
 import { ChatPromptDialog } from "./ChatPromptDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { PillTabs } from "@/components/common/PillTabs/PillTabs";
+import { SearchBox } from "@/components/charts/shared/ChartControls";
 import styles from "./WalletChat.module.scss";
 
-type TabId = "mine" | "explore";
-type ExploreSubTab = "popular" | "new" | "system";
+type PromptCategory = "system" | "popular" | "new" | "saved";
 
 interface Props {
   walletAddress?: string;
@@ -19,6 +32,34 @@ interface Props {
 const PROMPT_PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 300;
 const SCROLL_LOAD_THRESHOLD_PX = 72;
+const SYSTEM_PROMPT_DESCRIPTIONS: Record<string, string> = {
+  overview: "Balance, 24h change, trades",
+  pnl: "Realized and unrealized P&L",
+  trades: "Swap history with USD",
+  tokens: "Holdings by USD value",
+  balance: "30-day history",
+  portfolioChange: "Changes since past holdings",
+  tokenPrices: "Market data for holdings",
+  compareOverview: "Value and 24h side-by-side",
+  comparePnl: "Profit and win-rate comparison",
+  commonHoldings: "Shared token overlap",
+  topPerformer: "ROI and trading performance",
+  riskComparison: "Diversification and risk profile",
+};
+const SYSTEM_PROMPT_ICONS: Partial<Record<string, LucideIcon>> = {
+  overview: LayoutGrid,
+  pnl: LineChart,
+  trades: ArrowLeftRight,
+  tokens: Coins,
+  balance: BarChart3,
+  portfolioChange: Activity,
+  tokenPrices: WalletCards,
+  compareOverview: GitCompare,
+  comparePnl: LineChart,
+  commonHoldings: Coins,
+  topPerformer: Trophy,
+  riskComparison: ShieldCheck,
+};
 
 export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
   const { tr } = useLocalization();
@@ -37,8 +78,7 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
     forkPrompt,
   } = useChatPrompts();
 
-  const [activeTab, setActiveTab] = useState<TabId>(user ? "mine" : "explore");
-  const [exploreSubTab, setExploreSubTab] = useState<ExploreSubTab>("popular");
+  const [activeCategory, setActiveCategory] = useState<PromptCategory>("system");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [dialogMode, setDialogMode] = useState<"create" | "edit" | "fork" | "view" | null>(null);
@@ -47,19 +87,25 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
   const [viewingPrompt, setViewingPrompt] = useState<ChatPromptData | null>(null);
 
   useEffect(() => {
+    if (!user && activeCategory === "saved") {
+      setActiveCategory("system");
+    }
+  }, [activeCategory, user]);
+
+  useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setDebouncedSearchQuery(searchQuery.trim());
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timeoutId);
   }, [searchQuery]);
 
-  const activePromptScope: PromptScope | null = activeTab === "mine"
-    ? "mine"
-    : exploreSubTab === "system"
-      ? null
-      : exploreSubTab;
+  const activePromptScope: PromptScope | null = activeCategory === "system"
+    ? null
+    : activeCategory === "saved"
+      ? "mine"
+      : activeCategory;
 
-  const activePromptSort: "usage" | "recent" = activePromptScope === "popular" ? "usage" : "recent";
+  const activePromptSort: "usage" | "recent" = activeCategory === "popular" ? "usage" : "recent";
 
   useEffect(() => {
     if (!activePromptScope) return;
@@ -73,14 +119,8 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
     });
   }, [activePromptScope, activePromptSort, debouncedSearchQuery, walletAddress, fetchPrompts]);
 
-  const handleTabChange = (tab: TabId) => {
-    setActiveTab(tab);
-    setSearchQuery("");
-    setDebouncedSearchQuery("");
-  };
-
-  const handleExploreSubTabChange = (sub: ExploreSubTab) => {
-    setExploreSubTab(sub);
+  const handleCategoryChange = (category: PromptCategory) => {
+    setActiveCategory(category);
     setSearchQuery("");
     setDebouncedSearchQuery("");
   };
@@ -225,23 +265,33 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
     );
   };
 
-  const renderSystemPromptItem = (q: typeof PREDEFINED_QUESTIONS[number]) => (
-    <button
-      key={q.id}
-      className={styles.promptItem}
-      onClick={() => handleSelectPrompt(resolveQuery(q))}
-    >
-      <div className={styles.promptItemLabel}>{resolveLabel(q)}</div>
-      <div className={styles.promptItemQuery}>{resolveQuery(q)}</div>
-    </button>
-  );
+  const renderSystemPromptItem = (q: typeof PREDEFINED_QUESTIONS[number]) => {
+    const Icon = SYSTEM_PROMPT_ICONS[q.id] ?? LayoutGrid;
+
+    return (
+      <button
+        key={q.id}
+        type="button"
+        className={styles.systemPromptCard}
+        onClick={() => handleSelectPrompt(resolveQuery(q))}
+      >
+        <span className={styles.systemPromptIcon} aria-hidden="true">
+          <Icon size={16} strokeWidth={2} />
+        </span>
+        <div className={styles.promptItemLabel}>{resolveLabel(q)}</div>
+        <div className={styles.promptItemQuery}>
+          {SYSTEM_PROMPT_DESCRIPTIONS[q.id] ?? resolveQuery(q)}
+        </div>
+      </button>
+    );
+  };
 
   const renderSearchInput = () => (
-    <input
-      className={styles.promptSearchInput}
+    <SearchBox
       value={searchQuery}
-      onChange={(e) => setSearchQuery(e.target.value)}
+      onChange={setSearchQuery}
       placeholder={tr("chat.prompt.searchPlaceholder")}
+      ariaLabel={tr("chat.prompt.searchPlaceholder")}
     />
   );
 
@@ -268,65 +318,49 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
     );
   };
 
-  const renderMineContent = () => (
-    <>
-      <div className={styles.promptMenuHeader}>
-        <div className={styles.promptMenuTitle}>{tr("chat.prompt.tabMine")}</div>
+  const renderCategoryContent = () => {
+    if (activeCategory === "system") {
+      return (
+        <div className={styles.systemPromptGrid}>
+          {filteredSystemPrompts.map(renderSystemPromptItem)}
+        </div>
+      );
+    }
+
+    return renderApiPromptList(
+      activeCategory === "saved" ? tr("chat.prompt.emptyMine") : tr("chat.prompt.empty"),
+    );
+  };
+
+  return (
+    <div className={styles.promptMenuOverlay} onScroll={handlePromptMenuScroll}>
+      <div className={styles.promptMenuTopbar}>
+        <div className={styles.promptSearchWrap}>{renderSearchInput()}</div>
         {user && (
-          <button className={styles.promptCreateBtn} onClick={() => setDialogMode("create")}>
+          <button
+            type="button"
+            className={styles.promptCreateBtn}
+            onClick={() => setDialogMode("create")}
+          >
             {tr("chat.prompt.createBtn")}
           </button>
         )}
       </div>
 
-      {renderSearchInput()}
-      {renderApiPromptList(tr("chat.prompt.emptyMine"))}
-    </>
-  );
-
-  const renderExploreContent = () => (
-    <>
-      <div className={styles.promptMenuHeader}>
-        <div className={styles.promptMenuTitle}>{tr("chat.prompt.tabExplore")}</div>
-      </div>
-
-      {renderSearchInput()}
-
-      <PillTabs
-        className={styles.promptPillTabs}
-        size="sm"
-        value={exploreSubTab}
-        onChange={(value) => handleExploreSubTabChange(value as ExploreSubTab)}
-        options={[
-          { value: "popular", label: tr("chat.prompt.exploreSubtabPopular") },
-          { value: "new", label: tr("chat.prompt.exploreSubtabNew") },
-          { value: "system", label: tr("chat.prompt.exploreSubtabSystem") },
-        ]}
-      />
-
-      {exploreSubTab === "system" ? (
-        <div className={styles.promptMenuList}>
-          {filteredSystemPrompts.map(renderSystemPromptItem)}
-        </div>
-      ) : renderApiPromptList(tr("chat.prompt.empty"))}
-    </>
-  );
-
-  return (
-    <div className={styles.promptMenuOverlay} onScroll={handlePromptMenuScroll}>
       <PillTabs
         className={styles.promptTabs}
         size="sm"
-        value={activeTab}
-        onChange={(value) => handleTabChange(value as TabId)}
+        value={activeCategory}
+        onChange={(value) => handleCategoryChange(value as PromptCategory)}
         options={[
-          ...(user ? [{ value: "mine", label: tr("chat.prompt.tabMine") }] : []),
-          { value: "explore", label: tr("chat.prompt.tabExplore") },
+          { value: "system", label: tr("chat.prompt.exploreSubtabSystem") },
+          { value: "popular", label: tr("chat.prompt.exploreSubtabPopular") },
+          { value: "new", label: tr("chat.prompt.exploreSubtabNew") },
+          ...(user ? [{ value: "saved", label: "Saved" }] : []),
         ]}
       />
 
-      {activeTab === "mine" && renderMineContent()}
-      {activeTab === "explore" && renderExploreContent()}
+      {renderCategoryContent()}
 
       {dialogMode === "create" && (
         <ChatPromptDialog

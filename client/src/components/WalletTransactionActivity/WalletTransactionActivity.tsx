@@ -394,12 +394,12 @@ export function WalletTransactionActivity({ address }: { address: string }) {
       <div className={styles.tabsHeader}>
         <SegmentedControl
           options={[
-            { value: "swaps", label: "Swaps" },
-            { value: "transfers", label: "Transfers" },
+            { value: "swaps", label: tr("walletPage.activityTabSwaps") },
+            { value: "transfers", label: tr("walletPage.activityTabTransfers") },
           ]}
           value={activeActivityTab}
           onChange={(value) => setActiveActivityTab(value as ActivityTab)}
-          ariaLabel="Transaction type"
+          ariaLabel={tr("walletPage.activityTypeLabel")}
         />
         <div className={styles.headerSpacer} />
         <LowValueFilter
@@ -441,7 +441,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
               <button
                 type="button"
                 className={styles.timeFormatBtn}
-                aria-label={`Time format: ${timeFormat}`}
+                aria-label={tr("walletPage.timeFormatAriaLabel")}
                 onClick={(e) => { e.stopPropagation(); cycleTimeFormat(); }}
               >
                 <Clock size={13} />
@@ -529,7 +529,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
               <button
                 type="button"
                 className={styles.timeFormatBtn}
-                aria-label={`Time format: ${timeFormat}`}
+                aria-label={tr("walletPage.timeFormatAriaLabel")}
                 onClick={(e) => { e.stopPropagation(); cycleTimeFormat(); }}
               >
                 <Clock size={13} />

@@ -7,10 +7,12 @@ import {
     type TokenMetaInsert,
     type TopTokensByMarketCapInsert,
 } from "@sv/db/schema.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import { excludedAutoFromInsert, excludedAutoNonNullFromInsert } from "@sv/util/orm-sql.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { asc, gt } from "drizzle-orm";
-import type { CG_CoinMarkets } from "../_types/token-raw-responses.js";
+import { cg_CoinMarketsSchema } from "../_types/token-raw-responses.js";
 import { getAddressesByCoinGeckoIds } from "./token-list.js";
 import { getMarketDataFromRaw } from "./token-market-data.js";
 
@@ -27,21 +29,30 @@ export async function getTopTokensByMarketCap() {
     return dbRes;
   }
 
-  const res = (await cg.client.coins.markets.get({
+  const endpoint = cg.getEndpoint("/coins/markets");
+  endpoint.search = new URLSearchParams({
     vs_currency: "usd",
     order: "market_cap_desc",
-    per_page: 250,
+    per_page: "250",
     price_change_percentage: "1h,24h,7d,14d,30d,200d,1y",
-    sparkline: true,
-  })) as CG_CoinMarkets;
+    sparkline: "true",
+  }).toString();
 
-  const cgIds = res.map((raw) => raw.id!);
+  const resp = await rlFetch(endpoint, {
+    method: "GET",
+    headers: cg.getRequiredHeaders(),
+    rlLimiter: cg.limiter,
+  });
+
+  const res = (await getTrackedApiResult(cg_CoinMarketsSchema, resp)) ?? [];
+
+  const cgIds = res.map((raw) => raw.id);
   const cgIdToAddress = await getAddressesByCoinGeckoIds(cgIds);
 
-  const solanaRes = res.filter((raw) => cgIdToAddress[raw.id!]);
+  const solanaRes = res.filter((raw) => cgIdToAddress[raw.id]);
   const topTokenInsert = solanaRes.map(
     (raw, index): TopTokensByMarketCapInsert => ({
-      address: cgIdToAddress[raw.id!]!,
+      address: cgIdToAddress[raw.id]!,
       rank: index + 1,
     }),
   );
@@ -51,7 +62,7 @@ export async function getTopTokensByMarketCap() {
 
   // Extra updates
   const marketDataValues = solanaRes
-    .map((raw) => getMarketDataFromRaw(cgIdToAddress[raw.id!], raw))
+    .map((raw) => getMarketDataFromRaw(cgIdToAddress[raw.id], raw))
     .filter((raw) => raw != null);
 
   await db
@@ -68,7 +79,7 @@ export async function getTopTokensByMarketCap() {
 
   const metaValues = solanaRes.map(
     (raw): TokenMetaInsert => ({
-      address: cgIdToAddress[raw.id!],
+      address: cgIdToAddress[raw.id],
       name: raw.name!,
       symbol: raw.symbol!,
       imageUrl: raw.image,

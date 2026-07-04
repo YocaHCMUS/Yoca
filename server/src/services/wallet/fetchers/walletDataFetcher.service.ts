@@ -31,11 +31,12 @@ import {
     birdeyePostJson,
 } from "@sv/services/wallet/providers/birdeye.client.js";
 import { heliusGetJson } from "@sv/services/wallet/providers/helius.client.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 import { normalizeBirdeyeTimeParam } from "@sv/util/util-birdeye.js";
 import {
     getEndpoint,
     getRequiredHeaders,
-    heliusFetch,
+    limiter as heliusLimiter,
 } from "@sv/util/util-helius.js";
 import * as moralis from "@sv/util/util-moralis.js";
 import type {
@@ -315,9 +316,10 @@ export async function fetchHeliusSolanaPortfolio(
 
     try {
       const headers = getRequiredHeaders();
-      const resp = await heliusFetch(url, {
+      const resp = await rlFetch(url, {
         method: "GET",
         headers,
+        rlLimiter: heliusLimiter,
       });
 
       if (!resp.ok) {

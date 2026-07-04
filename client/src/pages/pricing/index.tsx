@@ -2,9 +2,6 @@ import "@/styles/landing-tailwind.css";
 import { useState, useEffect } from "react";
 import { Check, Zap } from "lucide-react";
 import { LandingFooter, LandingNavbar } from "@/components/landing";
-import {
-  LANDING_ACCENT_GLOW,
-} from "@/components/landing/tokens";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useUserTheme } from "@/contexts/ThemeContext";
@@ -26,23 +23,23 @@ const PLUS_TIER = {
   name: "Plus",
   price: "$199",
   isMostPopular: true,
-  accentColor: "#14F195" as const,
+  accentColor: "#7C3AED" as const,
 };
 
 const PRO_TIER = {
   name: "Pro",
   price: "$499",
   isMostPopular: false,
-  accentColor: "#14F195" as const,
+  accentColor: "#7C3AED" as const,
 };
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 const pricingCardClass =
-  "flex flex-col !p-7 lg:!p-8 rounded-2xl border border-[var(--landing-card-border)] bg-[var(--landing-card-bg)] backdrop-blur-xl shadow-[var(--landing-card-shadow)] transition-all duration-300 hover:-translate-y-1 hover:border-[#14F195]/45 hover:shadow-[0_22px_70px_-44px_rgba(20,241,149,0.65)]";
+  "flex flex-col !p-7 lg:!p-8 !rounded-3xl border border-[var(--landing-card-border)] bg-[var(--landing-card-bg)] backdrop-blur-xl shadow-[var(--landing-card-shadow)] transition-all duration-300 hover:-translate-y-1 hover:border-[#7C3AED]/45 hover:shadow-[0_22px_70px_-44px_rgba(124,58,237,0.65)]";
 
 const pricingCtaClass =
-  "w-full min-h-11 py-3 rounded-full text-xs font-bold uppercase tracking-[0.18em] bg-[var(--landing-button-secondary-bg)] border border-[var(--landing-button-secondary-border)] hover:bg-[var(--landing-button-secondary-hover-bg)] hover:border-[var(--landing-button-secondary-hover-border)] transition-all duration-300 text-[var(--landing-foreground)]";
+  "w-full min-h-11 py-3 !rounded-full text-xs font-bold uppercase tracking-[0.18em] bg-gradient-to-r from-[#7C3AED] to-[#2563EB] border border-transparent shadow-[0_10px_28px_-10px_rgba(124,58,237,0.7)] hover:from-[#8B5CF6] hover:to-[#3B82F6] hover:shadow-[0_14px_32px_-8px_rgba(124,58,237,0.85)] transition-all duration-300 text-white";
 
 function PricingFeatures({
   label,
@@ -53,7 +50,7 @@ function PricingFeatures({
 }) {
   return (
     <div className="space-y-4">
-      <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#14F195]">
+      <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#7C3AED]">
         {label}
       </p>
       <ul className="space-y-3">
@@ -63,7 +60,7 @@ function PricingFeatures({
             className="flex items-start gap-3 text-sm leading-relaxed text-[var(--landing-muted)]"
           >
             <Check
-              className="mt-0.5 h-4 w-4 shrink-0 text-[#14F195]"
+              className="mt-0.5 h-4 w-4 shrink-0 text-[#7C3AED]"
               aria-hidden="true"
             />
             <span>{feature}</span>
@@ -147,9 +144,9 @@ export default function PricingPage() {
   };
   const col1 = isStandard ? localizedStandard : localizedLite;
   const isLightTheme = theme === "light";
-  const purpleOrb = isLightTheme ? "rgba(153,69,255,0.08)" : "rgba(153,69,255,0.2)";
-  const greenOrb = isLightTheme ? "rgba(20,241,149,0.07)" : "rgba(20,241,149,0.10)";
-  const centerGlow = isLightTheme ? "rgba(20,241,149,0.11)" : LANDING_ACCENT_GLOW;
+  const purpleOrb = isLightTheme ? "rgba(124,58,237,0.08)" : "rgba(124,58,237,0.2)";
+  const accentOrb = isLightTheme ? "rgba(45,212,191,0.07)" : "rgba(45,212,191,0.10)";
+  const centerGlow = isLightTheme ? "rgba(45,212,191,0.11)" : "rgba(45,212,191,0.24)";
 
   // Payment flow state
   const [isAuthReminderOpen, setIsAuthReminderOpen] = useState(false);
@@ -219,7 +216,7 @@ export default function PricingPage() {
             top: "8rem",
             width: 420,
             height: 420,
-            background: greenOrb,
+            background: accentOrb,
             filter: "blur(110px)",
           }}
         />
@@ -265,7 +262,7 @@ export default function PricingPage() {
                 {/* Tier name + price */}
                 <div className="space-y-3 pb-6 border-b border-[var(--landing-border)]">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#14F195]/25 bg-[#14F195]/10 text-[#14F195]">
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#7C3AED]/25 bg-[#7C3AED]/10 text-[#7C3AED]">
                       <Zap className="h-4 w-4" aria-hidden="true" />
                     </span>
                     <h3 className="text-xl font-semibold text-[var(--landing-foreground)]">{col1.name}</h3>
@@ -299,7 +296,7 @@ export default function PricingPage() {
                     </span>
                     <span
                       className={`relative flex items-center justify-start h-6 w-11 shrink-0 !rounded-full transition-colors duration-300 p-0.5 ${
-                        isStandard ? "bg-[#14F195]" : "bg-[var(--landing-card-border)]"
+                        isStandard ? "bg-[#7C3AED]" : "bg-[var(--landing-card-border)]"
                       }`}
                     >
                       <span
@@ -334,12 +331,12 @@ export default function PricingPage() {
             </div>
 
             {/* ── Card 2: Plus ── */}
-            <div className={`${pricingCardClass} relative border-[#14F195]/35 shadow-[0_22px_70px_-48px_rgba(20,241,149,0.8)]`}>
+            <div className={`${pricingCardClass} relative border-[#7C3AED]/35 shadow-[0_22px_70px_-48px_rgba(124,58,237,0.8)]`}>
               <div className="flex flex-col flex-1 gap-6">
                 {/* Tier name + price */}
                 <div className="space-y-3 pb-6 border-b border-[var(--landing-border)]">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#14F195]/25 bg-[#14F195]/10 text-[#14F195]">
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#7C3AED]/25 bg-[#7C3AED]/10 text-[#7C3AED]">
                       <Zap className="h-4 w-4" aria-hidden="true" />
                     </span>
                     <h3 className="text-xl font-semibold text-[var(--landing-foreground)]">{localizedPlus.name}</h3>
@@ -377,7 +374,7 @@ export default function PricingPage() {
                 {/* Tier name + price */}
                 <div className="space-y-3 pb-6 border-b border-[var(--landing-border)]">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#14F195]/25 bg-[#14F195]/10 text-[#14F195]">
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#7C3AED]/25 bg-[#7C3AED]/10 text-[#7C3AED]">
                       <Zap className="h-4 w-4" aria-hidden="true" />
                     </span>
                     <h3 className="text-xl font-semibold text-[var(--landing-foreground)]">{localizedPro.name}</h3>

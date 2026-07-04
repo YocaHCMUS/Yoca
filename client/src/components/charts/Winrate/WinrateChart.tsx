@@ -5,37 +5,36 @@ import { useLocalization } from '@/contexts/LocalizationContext';
 import { formatItemTooltip } from '@/util/tooltip-helpers';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import {
-    CHART_COLOR_PALETTE,
-    useCarbonChartBaseOption,
+  CHART_COLOR_PALETTE,
+  useCarbonChartBaseOption,
 } from '@/util/carbon-chart-base';
 import type { WinrateRequestParams } from '@/types/chart-api.types';
 import { ChartWrapper, ChartContainer, ChartSection, ChartGrid, ChartGridItem } from '../shared';
 import type { ChartProps } from '../shared/ChartProp';
-import { FilterSwitch } from '@/components/FilterSwitch';
-import { Layer } from '@carbon/react';
+import { SegmentedControl, chartControlStyles } from '@/components/charts/shared/ChartControls';
 import { useGet, UseGetResp } from '@/hooks/useGet';
 import client from '@/api/main';
 
 interface WinrateBin {
-    range: string;
-    count: number;
-    min: number;
-    max: number;
+  range: string;
+  count: number;
+  min: number;
+  max: number;
 }
 
-type WinrateData =  {
-    wallets: {
-        walletAddress: string;
-        walletName?: string | undefined;
-        winrate: number;
-        totalTrades: number;
-        winningTrades: number;
-        losingTrades: number;
-        winningDistribution: WinrateBin[];
-        losingDistribution: WinrateBin[];
-        avgWinUsd: number;
-        avgLossUsd: number;
-    }[];
+type WinrateData = {
+  wallets: {
+    walletAddress: string;
+    walletName?: string | undefined;
+    winrate: number;
+    totalTrades: number;
+    winningTrades: number;
+    losingTrades: number;
+    winningDistribution: WinrateBin[];
+    losingDistribution: WinrateBin[];
+    avgWinUsd: number;
+    avgLossUsd: number;
+  }[];
 }
 
 export function WinrateChart({
@@ -72,7 +71,7 @@ export function WinrateChart({
     [timeRange, walletsString],
   );
 
-  const winRateData : UseGetResp<WinrateData> = useGet(client.api.wallets.analysis.winrate, 200, {
+  const winRateData: UseGetResp<WinrateData> = useGet(client.api.wallets.analysis.winrate, 200, {
     query: {
       wallets: walletsString ?? "",
       period: timeRange,
@@ -270,9 +269,13 @@ export function WinrateChart({
       isEmpty={winRateData.data ? winRateData.data.wallets.length > 0 : false}
       onRetry={() => winRateData.mutate()}
       toolbarLayout="stacked"
+      enableMiniPlayer={false}
+      enableExport={false}
+      enableFullscreen={false}
       actions={
-        <Layer style={{ width: 200 }}>
-          <FilterSwitch
+        <div className={chartControlStyles.toolbar}>
+          <SegmentedControl
+            ariaLabel={tr("charts.timePeriod")}
             options={timeRangeOptions}
             value={timeRange}
             onChange={(value) => {
@@ -286,7 +289,7 @@ export function WinrateChart({
               }
             }}
           />
-        </Layer>
+        </div>
       }
     >
       <ChartContainer gap="0">

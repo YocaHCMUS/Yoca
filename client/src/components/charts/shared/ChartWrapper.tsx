@@ -47,10 +47,10 @@ export function ChartWrapper({
   emptyState,
   className,
   isEmpty = false,
-  enableExport = true,
+  enableExport = false,
   onExport,
-  enableFullscreen = true,
-  enableMiniPlayer = true,
+  enableFullscreen = false,
+  enableMiniPlayer = false,
   toolbarLayout = "default",
   wrapperMinHeight,
 }: ChartWrapperProps) {

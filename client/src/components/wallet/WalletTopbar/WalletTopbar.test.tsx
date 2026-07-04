@@ -113,11 +113,7 @@ function renderTopbar() {
     <WalletTopbar
       address={walletAddress}
       onAiAnalysisOpen={vi.fn()}
-      onAuditOpen={vi.fn()}
-      onExportData={vi.fn()}
-      onExportCharts={vi.fn()}
-      onExportPdf={vi.fn()}
-      isExporting={false}
+
       currentPeriod="24H"
       onPeriodChange={vi.fn()}
     />,

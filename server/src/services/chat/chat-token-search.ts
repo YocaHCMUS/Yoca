@@ -1,9 +1,12 @@
 import { db } from "@sv/db/index.js";
 import { tokenMeta } from "@sv/db/schema.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import { getAddressesByCoinGeckoIds } from "@sv/services/tokens/token-list.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, gte, or, sql } from "drizzle-orm";
 import { TOKEN_DETAILS_TTL_MS } from "@sv/config/constants.js";
+import { cg_SearchSchema } from "../_types/token-raw-responses.js";
 
 export interface TokenSearchResult {
   address: string;
@@ -45,19 +48,26 @@ async function searchLocal(query: string): Promise<TokenSearchResult[]> {
 
 async function searchCoinGecko(query: string): Promise<TokenSearchResult[]> {
   try {
-    const res = await cg.client.search.get({ query });
-    const coins = res.coins ?? [];
+    const endpoint = cg.getEndpoint("/search");
+    endpoint.search = new URLSearchParams({ query }).toString();
+
+    const resp = await rlFetch(endpoint, {
+      method: "GET",
+      headers: cg.getRequiredHeaders(),
+      rlLimiter: cg.limiter,
+    });
+
+    const res = await getTrackedApiResult(cg_SearchSchema, resp);
+    const coins = res?.coins ?? [];
     if (coins.length === 0) return [];
 
-    const cgIds = coins.map((c) => c.id!).filter(Boolean);
-    if (cgIds.length === 0) return [];
-
+    const cgIds = coins.map((c) => c.id);
     const cgIdToAddress = await getAddressesByCoinGeckoIds(cgIds);
 
     return coins
-      .filter((c) => c.id && cgIdToAddress[c.id])
+      .filter((c) => cgIdToAddress[c.id])
       .map((c) => ({
-        address: cgIdToAddress[c.id!],
+        address: cgIdToAddress[c.id],
         symbol: c.symbol ?? "",
         name: c.name ?? null,
         imageUrl: c.large ?? c.thumb ?? null,

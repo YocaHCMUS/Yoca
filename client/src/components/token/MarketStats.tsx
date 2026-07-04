@@ -109,10 +109,10 @@ export const MarketStats = ({
   void marketsCount;
   const { tr, fmt } = useLocalization();
 
-  const top10HoldersPercent =
-    topHolders
-      ?.slice(0, 10)
-      .reduce((acc, curr) => acc + curr.percentage, 0) ?? 0;
+  const hasTopHoldersData = (topHolders?.length ?? 0) > 0;
+  const top10HoldersPercent = hasTopHoldersData
+    ? topHolders!.slice(0, 10).reduce((acc, curr) => acc + curr.percentage, 0)
+    : 0;
 
   return (
     <div
@@ -542,7 +542,7 @@ export const MarketStats = ({
             {tr("token.marketStats.top10Holders")}
           </span>
           <span className={styles.valueMedium}>
-            {top10HoldersPercent.toFixed(2)}%
+            {hasTopHoldersData ? `${top10HoldersPercent.toFixed(2)}%` : "-"}
           </span>
         </div>
         <div className={styles.gridCell}>

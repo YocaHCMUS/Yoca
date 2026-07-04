@@ -12,15 +12,10 @@ import {
 } from "@/components/wallet/WalletChat";
 import { AiAnalysisModal } from "@/components/wallet/AiAnalysisModal/AiAnalysisModal.tsx";
 import { useWalletWinrate } from "@/hooks/useWalletWinrate";
-import {
-  WalletReportTemplate,
-  type WalletReportSection,
-} from "@/components/WalletReportTemplate";
-import { WalletAuditPanel } from "@/components/wallet/WalletAuditPanel/WalletAuditPanel.tsx";
+
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { locale } from "@/config/localization/index.ts";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
-import { useExportReport } from "@/hooks/useExportReport.ts";
 import { useGet } from "@/hooks/useGet";
 import {
   fetchWalletSwaps,
@@ -37,19 +32,17 @@ import {
 } from "@/services/wallet/walletApi.ts";
 import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import { AiGenerate, Close } from "@carbon/icons-react";
-import { Button } from "@carbon/react";
-import JSZip from "jszip";
+
 import {
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
 import { useParams } from "react-router";
-import * as XLSX from "xlsx";
+
 import {
   buildPortfolioMetaMap,
   mapPortfolioItems,
@@ -84,19 +77,6 @@ function isEditableShortcutTarget(target: EventTarget | null): boolean {
   );
 }
 
-function chunkArray<T>(items: T[], size: number): T[][] {
-  if (size <= 0 || items.length === 0) {
-    return [];
-  }
-
-  const output: T[][] = [];
-  for (let index = 0; index < items.length; index += size) {
-    output.push(items.slice(index, index + size));
-  }
-
-  return output;
-}
-
 function getMaxLoadedPage<T>(pages: Record<number, T[]>): number {
   const loadedPages = Object.keys(pages)
     .map((page) => Number(page))
@@ -113,9 +93,7 @@ function flattenLoadedPages<T>(pages: Record<number, T[]>): T[] {
     .flatMap((page) => pages[page] ?? []);
 }
 
-const PDF_TABLE_ROWS_PER_PAGE = 20;
-const PDF_CHUNK_PAGE_BASE_CLASS = "break-inside-avoid print:break-inside-avoid";
-const PDF_CHUNK_PAGE_BREAK_CLASS = "break-after-page print:break-after-page";
+
 
 export default function WalletPage() {
   const { tr, fmt, lang } = useLocalization();
@@ -149,17 +127,11 @@ export default function WalletPage() {
   const [selectedPeriod, setSelectedPeriod] =
     useState<WalletOverviewPeriodKey>("24H");
   const [aiAnalysisOpen, setAiAnalysisOpen] = useState(false);
-  const [auditOpen, setAuditOpen] = useState(false);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatPosition, setChatPosition] = useState<ChatPosition>("right");
 
-  const [isPagePdfExporting, setIsPagePdfExporting] = useState(false);
-  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
-  const [isDataExporting, setIsDataExporting] = useState(false);
-  const [isChartsExporting, setIsChartsExporting] = useState(false);
-  const exportMenuRef = useRef<HTMLDivElement | null>(null);
-  const reportTemplateRef = useRef<HTMLDivElement | null>(null);
+
 
   const { stats, loading } = useWalletWinrate(
     walletAddress,
@@ -230,13 +202,7 @@ export default function WalletPage() {
 
   const [aiSwapSummaryOpen, setAiSwapSummaryOpen] = useState(false);
 
-  const loadedSwaps = useMemo(() => flattenLoadedPages(swapPages), [swapPages]);
-  const loadedTransfers = useMemo(
-    () => flattenLoadedPages(transferPages),
-    [transferPages],
-  );
-
-  const { rows: portfolioData, meta: portfolioMeta } = useMemo(
+  const { meta: portfolioMeta } = useMemo(
     () => mapPortfolioItems(portfolio),
     [portfolio],
   );
@@ -263,47 +229,7 @@ export default function WalletPage() {
     return map;
   }, [portfolioMeta]);
 
-  const formatSwapPair = (swap: WalletSwap): string => {
-    const tokensInvolved =
-      typeof swap.tokensInvolved === "string"
-        ? swap.tokensInvolved
-        : String(swap.tokensInvolved ?? "");
-    return tokensInvolved.replace(/,/g, " → ");
-  };
 
-  const toOptionalFiniteNumber = (value: unknown): number | undefined => {
-    if (value == null) return undefined;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  };
-
-  const swapReportRows = useMemo(
-    () =>
-      loadedSwaps.map((swap) => [
-        fmt.datetime.relativeShort(swap.blockTimestampIso, true),
-        formatSwapPair(swap),
-        swap.sold?.symbol ? String(swap.sold.symbol).toUpperCase() : "—",
-        swap.bought?.symbol ? String(swap.bought.symbol).toUpperCase() : "—",
-        swap.totalValueUsd != null ? fmt.num.currency(swap.totalValueUsd) : "—",
-      ]),
-    [fmt, loadedSwaps],
-  );
-
-  const swapHeaders = [
-    tr("walletPage.time"),
-    tr("walletPage.pair"),
-    tr("walletPage.tokenSold"),
-    tr("walletPage.tokenBought"),
-    tr("walletPage.value"),
-  ];
-
-  const transferHeaders = [
-    tr("walletPage.time"),
-    tr("walletPage.sender"),
-    tr("walletPage.receiver"),
-    tr("walletPage.token"),
-    tr("walletPage.value"),
-  ];
 
   // const handleSwapPageChange = async (): Promise<boolean> => {
   //   if (!address || swapLoading) return false;
@@ -503,494 +429,8 @@ export default function WalletPage() {
       );
   }, [address, loadPortfolioData, loadActivityData]);
 
-  const ensurePortfolioAndActivityForExport = useCallback(async (): Promise<{
-    portfolio: WalletPortfolioItem[];
-    swaps: WalletSwap[];
-    transfers: WalletTransfer[];
-  }> => {
-    if (!address || address === "null") {
-      return { portfolio: [], swaps: [], transfers: [] };
-    }
 
-    let p = portfolio;
-    if (p.length === 0) {
-      p = await loadPortfolioData();
-    }
 
-    let s = loadedSwaps;
-    let t = loadedTransfers;
-    if (s.length === 0 && t.length === 0) {
-      const activity = await loadActivityData();
-      s = activity.swaps;
-      t = activity.transfers;
-    }
-
-    return { portfolio: p, swaps: s, transfers: t };
-  }, [
-    address,
-    portfolio,
-    loadedSwaps,
-    loadedTransfers,
-    loadPortfolioData,
-    loadActivityData,
-  ]);
-  const activeReportSection = useMemo<WalletReportSection>(() => {
-    return "overview";
-  }, []);
-
-  const reportHeaderTags = useMemo(() => {
-    const tags: string[] = [];
-
-    const identityCategory =
-      intelligenceReport?.identity?.status === "known"
-        ? intelligenceReport.identity.category
-        : null;
-    if (
-      typeof identityCategory === "string" &&
-      identityCategory.trim().length > 0
-    ) {
-      tags.push(identityCategory.trim());
-    }
-
-    const firstFund = intelligenceReport?.analysis?.firstFund ?? null;
-    const firstFunderLabel =
-      firstFund?.funderLabel ?? firstFund?.funderAddress ?? null;
-    if (firstFund?.funderAddress && firstFunderLabel) {
-      tags.push(`${tr("walletPage.firstFunderTag")}: ${firstFunderLabel}`);
-    }
-
-    const walletAgeLabel = firstFund?.walletAgeLabel ?? null;
-    if (walletAgeLabel) {
-      tags.push(`${tr("walletPage.walletAgeTag")}: ${walletAgeLabel}`);
-    }
-
-    if (walletTags.length > 0) {
-      tags.push(...walletTags);
-    }
-
-    return Array.from(new Set(tags));
-  }, [intelligenceReport, walletTags, tr]);
-
-  const reportDate = useMemo(() => new Date(), []);
-
-  const { exportReportAsPdf } = useExportReport({
-    filenameBase: `wallet-report-${address?.slice(0, 8) || "overview"}`,
-    reportRef: reportTemplateRef,
-  });
-
-  async function handleExportPagePdf() {
-    if (isPagePdfExporting || !address || address === "null") return;
-    setIsPagePdfExporting(true);
-    setIsExportMenuOpen(false);
-    try {
-      await ensurePortfolioAndActivityForExport();
-      const [ov, intel] = await Promise.all([
-        fetchWalletOverview(address),
-        fetchWalletIntelligence(address, "solana"),
-      ]);
-      flushSync(() => {
-        setOverviewReport(ov ?? null);
-        setIntelligenceReport(intel ?? null);
-      });
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => resolve()),
-      );
-      await exportReportAsPdf();
-    } catch (error) {
-      console.error("[WalletPage] Failed to export page PDF:", error);
-    } finally {
-      setIsPagePdfExporting(false);
-    }
-  }
-
-  async function handleExportDataXlsx() {
-    try {
-      setIsDataExporting(true);
-      const snap = await ensurePortfolioAndActivityForExport();
-      const { rows: portfolioRows } = mapPortfolioItems(snap.portfolio);
-      const swapSheetRows = snap.swaps.map((swap) => {
-        const totalValueUsd = toOptionalFiniteNumber(swap.totalValueUsd);
-        const baseQuotePrice = toOptionalFiniteNumber(swap.baseQuotePrice);
-        return [
-          String(swap.blockTimestampIso ?? ""),
-          formatSwapPair(swap),
-          `${swap.sold.symbol ?? "Unknown"} (${fmt.num.compact.decimal(swap.sold.amount)})`,
-          `${swap.bought.symbol ?? "Unknown"} (${fmt.num.compact.decimal(swap.bought.amount)})`,
-          totalValueUsd ?? "—",
-          baseQuotePrice ?? "—",
-          swap.transactionHash,
-        ];
-      });
-      const transferSheetRows = snap.transfers.map((transfer) => [
-        fmt.datetime.relativeShort(transfer.timestamp, true),
-        transfer.from,
-        transfer.to,
-        `${typeof transfer.tokenSymbol === "string" &&
-          transfer.tokenSymbol.trim().length > 0
-          ? transfer.tokenSymbol
-          : "Unknown"
-        } (${fmt.num.decimal(transfer.amount)})`,
-        transfer.amountUsd != null ? fmt.num.currency(transfer.amountUsd) : "—",
-      ]);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(
-        workbook,
-        XLSX.utils.aoa_to_sheet([swapHeaders, ...swapSheetRows]),
-        "Swaps",
-      );
-      XLSX.utils.book_append_sheet(
-        workbook,
-        XLSX.utils.aoa_to_sheet([transferHeaders, ...transferSheetRows]),
-        "Transfers",
-      );
-      XLSX.utils.book_append_sheet(
-        workbook,
-        XLSX.utils.aoa_to_sheet([
-          ["", "Token", "Price", "Holding", "Value"],
-          ...portfolioRows,
-        ]),
-        "Portfolio",
-      );
-      const filename = `wallet-data-${address?.slice(0, 8) || "overview"}-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5)}.xlsx`;
-      XLSX.writeFile(workbook, filename);
-    } catch (error) {
-      console.error("[WalletPage] Failed to export XLSX:", error);
-      window.alert(tr("walletPage.exportXlsxFailed"));
-    } finally {
-      setIsDataExporting(false);
-      setIsExportMenuOpen(false);
-    }
-  }
-
-  async function handleExportChartsZip() {
-    try {
-      setIsChartsExporting(true);
-      const root = document.querySelector(`.${styles.mainCol}`);
-      if (!root) throw new Error("Chart container not found");
-      const zip = new JSZip();
-      const imagesFolder = zip.folder("charts");
-      if (!imagesFolder) throw new Error("Unable to create ZIP folder");
-      const canvases = Array.from(root.querySelectorAll("canvas"));
-      if (canvases.length === 0)
-        throw new Error("No chart images found to export");
-
-      await Promise.all(
-        canvases.map(async (canvas, index) => {
-          const blob = await new Promise<Blob | null>((resolve) =>
-            canvas.toBlob((nextBlob) => resolve(nextBlob), "image/png"),
-          );
-          if (blob) imagesFolder.file(`chart-${index + 1}.png`, blob);
-        }),
-      );
-
-      const zipBlob = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(zipBlob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `wallet-charts-${address?.slice(0, 8) || "overview"}-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5)}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (error) {
-      console.error("[WalletPage] Failed to export charts ZIP:", error);
-      window.alert(tr("walletPage.exportZipFailed"));
-    } finally {
-      setIsChartsExporting(false);
-      setIsExportMenuOpen(false);
-    }
-  }
-
-  const pdfPageStyle: React.CSSProperties = {
-    width: 1024,
-    background: "#ffffff",
-    color: "#0f172a",
-    padding: 32,
-    boxSizing: "border-box",
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-  };
-
-  const pdfCardStyle: React.CSSProperties = {
-    border: "1px solid #e2e8f0",
-    borderRadius: 12,
-    background: "#ffffff",
-    overflow: "hidden",
-    marginBottom: 20,
-  };
-
-  const renderPdfHeader = (pageTitle: string) => (
-    <header
-      style={{
-        borderBottom: "1px solid #e2e8f0",
-        paddingBottom: 16,
-        marginBottom: 20,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 16,
-          alignItems: "flex-start",
-        }}
-      >
-        <div>
-          <h1 style={{ margin: 0, fontSize: 30, lineHeight: 1.2 }}>
-            Wallet Audit Report
-          </h1>
-          <p style={{ margin: "8px 0 0", fontSize: 13, color: "#475569" }}>
-            Export Date: {reportDate.toLocaleDateString("en-GB")}
-          </p>
-        </div>
-        <div
-          style={{
-            border: "1px solid #cbd5e1",
-            borderRadius: 8,
-            padding: "10px 12px",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 11,
-              color: "#64748b",
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-            }}
-          >
-            Wallet Address
-          </div>
-          <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>
-            {walletAddress}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {reportHeaderTags.length > 0 ? (
-          reportHeaderTags.map((tag) => (
-            <span
-              key={tag}
-              style={{
-                border: "1px solid #cbd5e1",
-                borderRadius: 999,
-                padding: "4px 10px",
-                fontSize: 12,
-                color: "#1e293b",
-                background: "#f8fafc",
-              }}
-            >
-              {tag}
-            </span>
-          ))
-        ) : (
-          <span style={{ fontSize: 12, color: "#64748b" }}>No Tags</span>
-        )}
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        <h2 style={{ margin: 0, fontSize: 20 }}>{pageTitle}</h2>
-      </div>
-    </header>
-  );
-
-  const PrintableTable = ({
-    title,
-    headers,
-    rows,
-  }: {
-    title: string;
-    headers: string[];
-    rows: (string | number)[][];
-  }) => (
-    <section style={pdfCardStyle}>
-      <div
-        style={{
-          padding: "12px 14px",
-          borderBottom: "1px solid #e2e8f0",
-          background: "#f8fafc",
-        }}
-      >
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>{title}</h3>
-      </div>
-      <div style={{ padding: 12 }}>
-        {rows.length > 0 ? (
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              tableLayout: "fixed",
-              fontSize: 11,
-            }}
-          >
-            <thead>
-              <tr style={{ background: "#f1f5f9" }}>
-                {headers.map((header) => (
-                  <th
-                    key={header}
-                    style={{
-                      borderBottom: "1px solid #cbd5e1",
-                      padding: "8px 6px",
-                      textAlign: "left",
-                      verticalAlign: "top",
-                      wordBreak: "break-word",
-                      whiteSpace: "normal",
-                    }}
-                  >
-                    {header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, rowIndex) => (
-                <tr key={`${title}-${rowIndex}`}>
-                  {row.map((cell, cellIndex) => (
-                    <td
-                      key={`${title}-${rowIndex}-${cellIndex}`}
-                      style={{
-                        borderBottom: "1px solid #e2e8f0",
-                        padding: "8px 6px",
-                        verticalAlign: "top",
-                        wordBreak: "break-word",
-                        whiteSpace: "normal",
-                      }}
-                    >
-                      {String(cell)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div
-            style={{
-              minHeight: 120,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#64748b",
-            }}
-          >
-            No data available
-          </div>
-        )}
-      </div>
-    </section>
-  );
-
-  const ChunkedPdfPages = <T,>({
-    items,
-    chunkSize,
-    renderChunk,
-  }: {
-    items: T[];
-    chunkSize: number;
-    renderChunk: (
-      chunk: T[],
-      chunkIndex: number,
-      chunkCount: number,
-    ) => ReactNode;
-  }) => {
-    const chunks = useMemo(() => {
-      const chunkedItems = chunkArray(items, chunkSize);
-      return chunkedItems.length > 0 ? chunkedItems : [[] as T[]];
-    }, [items, chunkSize]);
-
-    return (
-      <>
-        {chunks.map((chunk, chunkIndex) =>
-          renderChunk(chunk, chunkIndex, chunks.length),
-        )}
-      </>
-    );
-  };
-
-  const activityRiskPdfContent = (
-    <>
-      <div data-report-page="true" style={pdfPageStyle}>
-        {renderPdfHeader("Activity / Risk")}
-        <section style={pdfCardStyle}>
-          <div
-            style={{
-              padding: "12px 14px",
-              borderBottom: "1px solid #e2e8f0",
-              background: "#f8fafc",
-            }}
-          >
-            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
-              Counterparty Activity Analysis
-            </h3>
-          </div>
-          <div
-            style={{
-              padding: 12,
-              display: "flex",
-              flexDirection: "column",
-              gap: 20,
-            }}
-          ></div>
-        </section>
-      </div>
-
-      <ChunkedPdfPages
-        items={swapReportRows}
-        chunkSize={PDF_TABLE_ROWS_PER_PAGE}
-        renderChunk={(chunkRows, chunkIndex, chunkCount) => (
-          <div
-            key={`swap-pdf-page-${chunkIndex}`}
-            data-report-page="true"
-            style={pdfPageStyle}
-            className={`${PDF_CHUNK_PAGE_BASE_CLASS} ${chunkIndex < chunkCount - 1 ? PDF_CHUNK_PAGE_BREAK_CLASS : ""}`.trim()}
-          >
-            {renderPdfHeader("Activity / Risk")}
-            <PrintableTable
-              title={
-                chunkCount > 1
-                  ? `Swap (${chunkIndex + 1}/${chunkCount})`
-                  : "Swap"
-              }
-              headers={swapHeaders}
-              rows={chunkRows}
-            />
-          </div>
-        )}
-      />
-
-      <ChunkedPdfPages
-        items={loadedTransfers.map((transfer) => [
-          fmt.datetime.relativeShort(transfer.timestamp, true),
-          transfer.from,
-          transfer.to,
-          `${typeof transfer.tokenSymbol === "string" &&
-            transfer.tokenSymbol.trim().length > 0
-            ? transfer.tokenSymbol
-            : "Unknown"
-          } (${fmt.num.decimal(transfer.amount)})`,
-        ])}
-        chunkSize={PDF_TABLE_ROWS_PER_PAGE}
-        renderChunk={(chunkRows, chunkIndex, chunkCount) => (
-          <div
-            key={`transfer-pdf-page-${chunkIndex}`}
-            data-report-page="true"
-            style={pdfPageStyle}
-            className={`${PDF_CHUNK_PAGE_BASE_CLASS} ${chunkIndex < chunkCount - 1 ? PDF_CHUNK_PAGE_BREAK_CLASS : ""}`.trim()}
-          >
-            {renderPdfHeader("Activity / Risk")}
-            <PrintableTable
-              title={
-                chunkCount > 1
-                  ? `Transfer (${chunkIndex + 1}/${chunkCount})`
-                  : "Transfer"
-              }
-              headers={transferHeaders}
-              rows={chunkRows}
-            />
-          </div>
-        )}
-      />
-    </>
-  );
 
   if (!address) {
     return (
@@ -1041,13 +481,6 @@ export default function WalletPage() {
           <WalletTopbar
             address={walletAddress}
             onAiAnalysisOpen={() => setAiAnalysisOpen(true)}
-            onAuditOpen={() => setAuditOpen(true)}
-            onExportData={handleExportDataXlsx}
-            onExportCharts={handleExportChartsZip}
-            onExportPdf={handleExportPagePdf}
-            isExporting={
-              isPagePdfExporting || isDataExporting || isChartsExporting
-            }
             currentPeriod={selectedPeriod}
             onPeriodChange={(period) => setSelectedPeriod(period)}
           />
@@ -1120,11 +553,11 @@ export default function WalletPage() {
               type="button"
               className={styles.chatLauncher}
               onClick={() => setIsChatOpen(true)}
-              title="Shift + /"
+              title={tr("chat.shortcutHint")}
             >
               <AiGenerate size={18} />
               <span>{tr("chat.launcherLabel")}</span>
-              <kbd>Shift /</kbd>
+              <kbd>{tr("chat.shortcutHint")}</kbd>
             </button>
           )}
 
@@ -1202,23 +635,6 @@ export default function WalletPage() {
         )}
       </div>
 
-      <div
-        ref={reportTemplateRef}
-        className={styles.hiddenReportTemplate}
-        aria-hidden="true"
-      >
-        <WalletReportTemplate
-          walletAddress={walletAddress}
-          tags={reportHeaderTags}
-          overview={overviewReport}
-          activeSection={activeReportSection}
-          overviewContent={null}
-          holdingsContent={null}
-          activityRiskContent={activityRiskPdfContent}
-          reportDate={reportDate}
-        />
-      </div>
-
       <SwapDetailModal
         isOpen={swapModalOpen}
         onClose={() => setSwapModalOpen(false)}
@@ -1252,33 +668,6 @@ export default function WalletPage() {
         walletAddress={walletAddress}
         language={lang === "vi" ? "vi" : "en"}
       />
-
-      {auditOpen && (
-        <div
-          className={styles.auditOverlay}
-          onClick={() => setAuditOpen(false)}
-        >
-          <div
-            className={styles.auditPanel}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className={styles.auditHeader}>
-              <span className={styles.auditTitle}>Forensic Audit</span>
-              <button
-                type="button"
-                className={styles.auditCloseBtn}
-                onClick={() => setAuditOpen(false)}
-              >
-                <Close />
-              </button>
-            </div>
-            <WalletAuditPanel
-              walletAddress={walletAddress}
-              enabled={auditOpen}
-            />
-          </div>
-        </div>
-      )}
     </PageWrapper>
   );
 }

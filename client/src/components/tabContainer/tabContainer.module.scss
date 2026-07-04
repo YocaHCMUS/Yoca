@@ -26,6 +26,7 @@
       var(--yoca-surface, rgba(18, 24, 38, 0.82));
     box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.32));
     backdrop-filter: blur(18px);
+    overflow: hidden;
   }
 
   .tabContent {
