@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent as ReactMouseEvent, type ReactSVGElement } from "react";
+import { useEffect, useState, type MouseEvent as ReactMouseEvent } from "react";
 import {
   Add,
   AiGenerate,
@@ -292,7 +292,7 @@ export function RightSidebar({
   const { labels } = useWalletLabels();
   const navigate = useNavigate();
 
-  const handleCopy = (e: ReactMouseEvent<ReactSVGElement>, text: string) => {
+  const handleCopy = (e: ReactMouseEvent<SVGSVGElement>, text: string) => {
     e.stopPropagation();
     void navigator.clipboard.writeText(text);
   };

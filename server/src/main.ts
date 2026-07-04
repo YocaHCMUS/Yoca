@@ -75,12 +75,17 @@ const app = new Hono()
 
 // startTokenPolling();
 
+// Render assigns the public HTTP port through process.env.PORT.
+// Keep SERVER_PORT as the local-development fallback.
+const port = Number(process.env.PORT ?? env.SERVER_PORT);
+
 // Server
 serve(
   {
     // Redirect Node's requests to Hono
     fetch: app.fetch,
-    port: env.SERVER_PORT,
+    hostname: "0.0.0.0",
+    port,
   },
   (info) => {
     console.log(`Server is running on http://localhost:${info.port}`);

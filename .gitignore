@@ -15,7 +15,6 @@ dist
 dist-ssr
 *.local
 .gitignore
-package-lock.json
 server/postgresdb/*
 !server/postgresdb/migrations/
 server/postgresdb/migrations/*
@@ -42,10 +41,13 @@ n8n/*.yaml
 client/build
 server/build
 
-# Environment variables
+# Environment variables (never commit real values)
 .env
-s**/.env
-**/.env.local
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
 
 # TypeScript
 *.tsbuildinfo

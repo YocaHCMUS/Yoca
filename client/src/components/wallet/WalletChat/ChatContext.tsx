@@ -119,15 +119,36 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
   }, [activeSession]);
 
   useEffect(() => {
-    if (!user?.userId) return;
+    if (!user?.userId) {
+      setUsage(null);
+      return;
+    }
+
     let cancelled = false;
-    client.api.chat.usage.$get()
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled) setUsage(data as ChatAiUsage);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
+
+    const loadUsage = async () => {
+      try {
+        // Native fetch is intentional here. Hono's typed client exposes a
+        // 200 | 401 response union for this endpoint, which makes chained
+        // res.json() inference fail even though the runtime response is valid.
+        const res = await fetch(`${API_BASE}/api/chat/usage`, {
+          credentials: "include",
+        });
+
+        if (!res.ok) return;
+
+        const data = (await res.json()) as ChatAiUsage;
+        if (!cancelled) setUsage(data);
+      } catch {
+        // Usage is supplementary UI information; do not block chat on failure.
+      }
+    };
+
+    void loadUsage();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.userId]);
 
   const messagesRef = useRef(messages);

@@ -481,14 +481,16 @@ const promptRoutes = new Hono()
     return c.json(prompt, 201);
   });
 
-// GET /usage — current daily usage for GeneralAiChat
-chatRoute.get("/usage", honoJwt, userExtract, async (c) => {
+// GET /usage — current daily usage for GeneralAiChat.
+// Keep the returned Hono instance so this route is present in the exported AppType
+// used by the typed client in client/src/api/main.ts.
+const chatRouteWithUsage = chatRoute.get("/usage", honoJwt, userExtract, async (c) => {
   const { id: userId } = c.get("userPayload")!;
   const usage = await getAiUsage(userId, AI_FEATURES.GeneralAiChat);
   return c.json(usage, 200);
 });
 
-const app = chatRoute
+const app = chatRouteWithUsage
   .route("/tool-data", toolDataRoutes)
   .route("/sessions", sessionRoutes)
   .route("/prompts", promptRoutes);
