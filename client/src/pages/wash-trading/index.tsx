@@ -5,7 +5,7 @@ import { PageWrapper } from "@/components/wrapper/PageWrapper";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserTheme } from "@/contexts/ThemeContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { getUserSubscription, type PlanTier } from "@/services/profile/subscriptionApi";
+import type { PlanTier } from "@/services/profile/subscriptionApi";
 import styles from "./wash-trading.module.scss";
 import { WashTradingChat } from "@/components/wash-trading/WashTradingChat/WashTradingChat";
 
@@ -1075,7 +1075,7 @@ const LogItem: React.FC<{ time: string; text: string; color: string }> = ({ time
 const WashTradingPage: React.FC = () => {
   const { theme } = useUserTheme();
   const { tr, lang, fmt } = useLocalization();
-  const { user, isUserLoading, openAuthModal } = useAuth();
+  const { user, isUserLoading, openAuthModal, effectiveTier: planTier, isSubscriptionLoading: isPlanLoading } = useAuth();
   const isLight = theme === "light";
   const navigate = useNavigate();
   const { mint } = useParams<{ mint: string }>();
@@ -1098,8 +1098,6 @@ const WashTradingPage: React.FC = () => {
   const [selectedWalletAddress, setSelectedWalletAddress] = useState<string | null>(null);
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
   const [isAiVerdictOpen, setIsAiVerdictOpen] = useState(true);
-  const [planTier, setPlanTier] = useState<"Free" | PlanTier>("Free");
-  const [isPlanLoading, setIsPlanLoading] = useState(false);
   const [isPlusGateOpen, setIsPlusGateOpen] = useState(false);
   const canUseWashTradingAi = hasWashTradingTier(planTier);
 
@@ -1130,38 +1128,6 @@ const WashTradingPage: React.FC = () => {
   useEffect(() => {
     setSymbol(symbolFromUrl);
   }, [symbolFromUrl]);
-
-  useEffect(() => {
-    if (isUserLoading) return;
-    if (!user) {
-      setPlanTier("Free");
-      setIsPlanLoading(false);
-      return;
-    }
-
-    let active = true;
-    setIsPlanLoading(true);
-    getUserSubscription()
-      .then((subscription) => {
-        if (!active) return;
-        const isCurrent =
-          subscription &&
-          (subscription.status === "active" || subscription.status === "trialing") &&
-          (!subscription.currentPeriodEnd || new Date(subscription.currentPeriodEnd).getTime() > Date.now());
-        setPlanTier(isCurrent ? subscription.planTier : "Free");
-      })
-      .catch((err) => {
-        console.error("Failed to fetch subscription for wash trading gate", err);
-        if (active) setPlanTier("Free");
-      })
-      .finally(() => {
-        if (active) setIsPlanLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [user, isUserLoading]);
 
   useEffect(() => {
     if (!user || isUserLoading || isPlanLoading || canUseWashTradingAi) return;
@@ -1602,9 +1568,8 @@ const WashTradingPage: React.FC = () => {
             role="dialog"
             aria-modal="true"
             aria-label="Wash Trading AI Analysis requires Plus"
-            onClick={() => setIsPlusGateOpen(false)}
           >
-            <div className={styles.plusGateModal} onClick={(event) => event.stopPropagation()}>
+            <div className={styles.plusGateModal}>
               <div className={styles.plusGateIcon}>AI</div>
               <h2 className={styles.plusGateTitle}>Plus plan required</h2>
               <p className={styles.plusGateText}>
@@ -1614,7 +1579,7 @@ const WashTradingPage: React.FC = () => {
                 <button
                   type="button"
                   className={styles.btnSecondary}
-                  onClick={() => setIsPlusGateOpen(false)}
+                  onClick={() => navigate(mint ? `/tokens/${mint}` : "/")}
                 >
                   Not now
                 </button>

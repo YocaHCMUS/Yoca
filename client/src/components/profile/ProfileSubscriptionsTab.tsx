@@ -1,6 +1,7 @@
 import TabContainer from "@/components/tabContainer/tabContainer";
 import { useEffect, useState } from "react";
 import styles from "./profile.module.scss";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import {
     getUserSubscription,
@@ -49,6 +50,7 @@ function formatMoney(cents: number, currency: string) {
 
 export function ProfileSubscriptionsTab() {
   const { fmt } = useLocalization();
+  const { refreshSubscription } = useAuth();
   const [activeSubtab, setActiveSubtab] =
     useState<SubscriptionSubtab>("subscriptions");
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -72,6 +74,10 @@ export function ProfileSubscriptionsTab() {
     } finally {
       if (showLoading) setLoading(false);
     }
+  };
+
+  const refreshAll = async (showLoading = true) => {
+    await Promise.all([fetchData(showLoading), refreshSubscription()]);
   };
 
   useEffect(() => {
@@ -99,7 +105,7 @@ export function ProfileSubscriptionsTab() {
             key="subscriptions"
             subscription={subscription}
             subscriptions={subscriptions}
-            onUpdate={() => fetchData(false)}
+            onUpdate={() => refreshAll(false)}
           />,
           <PaymentHistoryPanel
             key="payment-history"
