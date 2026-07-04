@@ -72,7 +72,7 @@ function PricingFeatures({
 }
 
 export default function PricingPage() {
-  const { user } = useAuth();
+  const { user, refreshSubscription } = useAuth();
   const { tr } = useLocalization();
   const { theme } = useUserTheme();
   const [isStandard, setIsStandard] = useState(false);
@@ -163,10 +163,11 @@ export default function PricingPage() {
     if (successParam === "true" && tierParam) {
       setSelectedTier({ name: tierParam, price: "" });
       setPaymentSuccess(true);
+      void refreshSubscription();
       // Clean up URL without reloading
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, []);
+  }, [refreshSubscription]);
 
   /**
    * Called when a "Buy Now" CTA button is clicked.
@@ -184,6 +185,7 @@ export default function PricingPage() {
   function handlePaymentSuccess() {
     setIsPaymentModalOpen(false);
     setPaymentSuccess(true);
+    void refreshSubscription();
   }
 
   return (

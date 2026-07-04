@@ -2,12 +2,11 @@ import {
     SUBSCRIPTION_TIER_LABELS,
     SUBSCRIPTION_TIER_TAG_KIND
 } from "@/components/profile/shared/profile.constants";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { getUserSubscription, type PlanTier } from "@/services/profile/subscriptionApi";
 import type { ProfileOverviewData } from "@/types/profile";
 import { SkeletonPlaceholder, SkeletonText, Tag } from "@carbon/react";
 import { Activity, ChartLine, Wallet, Link as LinkIcon } from "@carbon/react/icons";
-import { useEffect, useState } from "react";
 import styles from "@/components/profile/shared/profile.module.scss";
 interface ProfileOverviewProps {
   data: ProfileOverviewData;
@@ -16,26 +15,8 @@ interface ProfileOverviewProps {
 
 export function ProfileOverview({ data, loading }: ProfileOverviewProps) {
   const { fmt } = useLocalization();
-  const [subscriptionTier, setSubscriptionTier] = useState<PlanTier | "Standard">(
-    "Standard",
-  );
-  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchSubscription = async () => {
-      try {
-        const subscription = await getUserSubscription();
-        setSubscriptionTier(subscription?.planTier ?? "Standard");
-      } catch (error) {
-        console.error("Failed to fetch subscription:", error);
-        setSubscriptionTier("Standard");
-      } finally {
-        setSubscriptionLoading(false);
-      }
-    };
-
-    fetchSubscription();
-  }, []);
+  const { subscription } = useAuth();
+  const subscriptionTier = subscription?.planTier ?? "Standard";
 
   return (
     <section className={styles.sectionCard}>
