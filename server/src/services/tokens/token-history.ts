@@ -1,17 +1,19 @@
-import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 import * as cg from "@sv/util/util-coingecko.js";
-import type { CG_TokenMarketChart } from "../_types/token-raw-responses.js";
+import {
+    cg_TokenMarketChartSchema
+} from "../_types/token-raw-responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
 export type HistoricalDataPoint = {
-  dateStr: string; // "YYYY-MM-DD"
+  dateStr: string;
   timestampMs: number;
   price: number | null;
   marketCap: number | null;
   volume: number | null;
 };
 
-// https://docs.coingecko.com/v3.0.1/reference/coins-id-market-chart
 export async function getTokenHistoricalData(
   tokenAddress: string,
   days: number,
@@ -29,24 +31,21 @@ export async function getTokenHistoricalData(
     precision: "full",
   }).toString();
 
-  const resp = await trackedFetch({
-    provider: "unknown",
-    url: cgEndpoint,
-    init: {
-      method: "GET",
-      headers: cg.getRequiredHeaders(),
-    },
-    serviceFile: "server/src/services/tokens/token-history.ts",
-    functionName: "getTokenHistoricalData",
+  const resp = await rlFetch(cgEndpoint, {
+    method: "GET",
+    headers: cg.getRequiredHeaders(),
+    rlLimiter: cg.limiter,
   });
+
   if (!resp.ok) return null;
 
-  const data = (await resp.json()) as CG_TokenMarketChart;
+  const data = await getTrackedApiResult(cg_TokenMarketChartSchema, resp);
 
-  // CoinGecko trả về dữ liệu mỗi ngày, index đồng bộ giữa prices/market_caps/total_volumes
+  if (!data) return null;
+
   return data.prices.map(([ts, price], i): HistoricalDataPoint => {
     const date = new Date(ts);
-    const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
+    const dateStr = date.toISOString().slice(0, 10);
     return {
       dateStr,
       timestampMs: ts,

@@ -1,7 +1,13 @@
+import Bottleneck from "bottleneck";
 import Coingecko, { APIPromise } from "@coingecko/coingecko-typescript";
 import { validateResponseDataSchema } from "@sv/middlewares/validation";
 import { z } from "zod";
 import env from "./load-env";
+
+export const limiter = new Bottleneck({
+  maxConcurrent: 1,
+  minTime: 1200,
+});
 
 export function getEndpoint(path: string): URL {
   return new URL(`${env.COINGECKO_API_BASE_URL}${path}`);

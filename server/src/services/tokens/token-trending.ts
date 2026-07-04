@@ -1,21 +1,25 @@
 import {
-  TRENDING_TOKENS_BIRDEYE_FETCH_LIMIT,
-  TRENDING_TOKENS_MAX_FETCH_ROUNDS,
-  TRENDING_TOKENS_RESULT_LIMIT,
-  UPDATE_TRENDING_TOKENS_TTL_MS,
+    TRENDING_TOKENS_BIRDEYE_FETCH_LIMIT,
+    TRENDING_TOKENS_MAX_FETCH_ROUNDS,
+    TRENDING_TOKENS_RESULT_LIMIT,
+    UPDATE_TRENDING_TOKENS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import { trendingTokens } from "@sv/db/schema.js";
-import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 import * as bds from "@sv/util/util-birdeye.js";
+import {
+    bds_TrendingListSchema,
+    type BDS_TrendingListSchema,
+} from "../_types/token-raw-responses.js";
 import { asc } from "drizzle-orm";
-import type { BDS_TrendingList } from "../_types/token-raw-responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 
 async function fetchTrendingPage(params: {
   offset: number;
   limit: number;
-}): Promise<BDS_TrendingList | null> {
+}): Promise<BDS_TrendingListSchema | null> {
   const bdsEndpoint = bds.getEndpoint("/defi/token_trending");
 
   bdsEndpoint.search = new URLSearchParams({
@@ -26,24 +30,19 @@ async function fetchTrendingPage(params: {
     limit: String(params.limit),
   }).toString();
 
-  const { headers, apiKey } = bds.getRequiredHeadersWithMetadata();
-  const resp = await trackedFetch({
-    provider: "birdeye",
-    url: bdsEndpoint,
-    init: {
-      method: "GET",
-      headers,
-    },
-    apiKey,
-    serviceFile: "server/src/services/tokens/token-trending.ts",
-    functionName: "fetchTrendingPage",
+  const resp = await rlFetch(bdsEndpoint, {
+    method: "GET",
+    headers: bds.getRequiredHeaders(),
+    rlLimiter: bds.limiter,
   });
+
   if (!resp.ok) {
     return null;
   }
 
-  const res = (await resp.json()) as BDS_TrendingList;
-  if (!res.success) {
+  const res = await getTrackedApiResult(bds_TrendingListSchema, resp);
+
+  if (!res || !res.success) {
     return null;
   }
 

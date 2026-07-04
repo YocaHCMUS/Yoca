@@ -1,61 +1,119 @@
 import { TOP_TOKEN_HOLDERS_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
-import { topTokenHolders, type TokenTopHolderInsert } from "@sv/db/schema.js";
-import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
-import { excludedAuto } from "@sv/util/orm-sql.js";
-import * as mrl from "@sv/util/util-moralis.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import {
+  tokenHolderStats,
+  topTokenHolders,
+  type TokenHolderStatsInsert,
+  type TokenTopHolderInsert,
+} from "@sv/db/schema.js";
+import {
+  mbl_TokenTopHoldersSchema,
+  type MBL_TokenTopHolderSchema,
+} from "@sv/services/_types/token-raw-responses.js";
+import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
+import * as mobula from "@sv/util/util-mobula.js";
 import { eq } from "drizzle-orm";
-import type { MRL_TopHolders } from "../_types/token-raw-responses.js";
 
-// https://docs.moralis.com/web3-data-api/solana/reference/get-token-top-holders
-async function fetchTopHoldersForToken(tokenAddress: string) {
-  const defaultLimit = 50;
-  const mrlUrl = mrl.getEndpoint(
-    `/token/mainnet/${tokenAddress}/top-holders?limit=${defaultLimit}`,
-  );
-  const { headers, apiKey } = mrl.getRequiredHeadersWithMetadata();
-  const resp = await trackedFetch({
-    provider: "moralis",
-    url: mrlUrl,
-    init: {
-      method: "GET",
-      headers,
-    },
-    apiKey,
-    serviceFile: "server/src/services/tokens/token-holders.ts",
-    functionName: "fetchTopHoldersForToken",
+export async function fetchTokenHolderPositions(
+  tokenAddress: string,
+): Promise<MBL_TokenTopHolderSchema | null> {
+  const endpoint = mobula.getEndpoint("/2/token/holder-positions");
+  endpoint.search = new URLSearchParams({
+    chainId: "solana:solana",
+    address: tokenAddress,
+    limit: "1000",
+  }).toString();
+
+  const resp = await rlFetch(endpoint, {
+    method: "GET",
+    headers: mobula.getRequiredHeaders(),
+    rlLimiter: mobula.limiter,
   });
 
   if (!resp.ok) {
-    return [];
+    return null;
   }
-  const res = (await resp.json()) as MRL_TopHolders;
+  const res = await getTrackedApiResult(mbl_TokenTopHoldersSchema, resp);
 
-  if (res.result.length == 0) {
-    return [];
+  if (!res) {
+    return null;
   }
 
-  const topHolders = res.result.map(
-    (raw, idx): TokenTopHolderInsert => ({
-      holderAddress: raw.ownerAddress,
-      tokenAddress: tokenAddress,
-      rank: idx,
-      percentage: Number(raw.percentageRelativeToTotalSupply),
-      balance: Number(raw.balanceFormatted) || Number(raw.balance) || 0,
-    }),
-  );
+  return res;
+}
 
-  return await db
-    .insert(topTokenHolders)
-    .values(topHolders)
-    .onConflictDoUpdate({
-      target: [topTokenHolders.tokenAddress, topTokenHolders.rank],
-      set: excludedAuto(topTokenHolders, [
-        topTokenHolders.tokenAddress,
-        topTokenHolders.rank,
-      ]),
-    })
-    .returning();
+export async function refreshTokenHolderSnapshot(tokenAddress: string) {
+  const positions = await fetchTokenHolderPositions(tokenAddress);
+
+  if (!positions) {
+    return null;
+  }
+
+  const topHolders = positions.data
+    .filter((raw) => Number(raw.tokenAmountRaw) > 0)
+    .sort(
+      (a, b) =>
+        Number(b.percentageOfTotalSupply) -
+        Number(a.percentageOfTotalSupply),
+    )
+    .map(
+      (raw, idx): TokenTopHolderInsert => ({
+        holderAddress: raw.walletAddress,
+        tokenAddress: tokenAddress,
+        rank: idx,
+        percentage: Number(raw.percentageOfTotalSupply),
+        balance: Number(raw.tokenAmount) || Number(raw.tokenAmountRaw) || 0,
+      }),
+    );
+
+  const stats: TokenHolderStatsInsert = {
+    address: tokenAddress,
+    holdersCount: positions.totalCount,
+    top10Percent: topHolders
+      .slice(0, 10)
+      .reduce((sum, holder) => sum + Number(holder.percentage), 0),
+    rank11To20Percent: topHolders
+      .slice(10, 20)
+      .reduce((sum, holder) => sum + Number(holder.percentage), 0),
+    rank21To40Percent: topHolders
+      .slice(20, 40)
+      .reduce((sum, holder) => sum + Number(holder.percentage), 0),
+  };
+
+  return await db.transaction(async (tx) => {
+    await tx
+      .delete(topTokenHolders)
+      .where(eq(topTokenHolders.tokenAddress, tokenAddress));
+
+    const holders =
+      topHolders.length > 0
+        ? await tx.insert(topTokenHolders).values(topHolders).returning()
+        : [];
+
+    const persistedStats = await tx
+      .insert(tokenHolderStats)
+      .values(stats)
+      .onConflictDoUpdate({
+        target: [tokenHolderStats.address],
+        set: excludedAutoFromInsert(
+          tokenHolderStats,
+          tokenHolderStats.address,
+          stats,
+        ),
+      })
+      .returning();
+
+    if (!persistedStats[0]) {
+      return null;
+    }
+
+    return {
+      holders,
+      stats: persistedStats[0],
+    };
+  });
 }
 
 export async function getTopTokenHolders(tokenAddress: string) {
@@ -79,7 +137,8 @@ export async function getTopTokenHolders(tokenAddress: string) {
   }
 
   if (stale) {
-    return await fetchTopHoldersForToken(tokenAddress);
+    const refreshed = await refreshTokenHolderSnapshot(tokenAddress);
+    return refreshed?.holders ?? null;
   }
   return res;
 }

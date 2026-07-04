@@ -1,12 +1,17 @@
 import { CG_TOKEN_LIST_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-  coinGeckoTokenList,
-  coinGeckoTokenListMeta,
-  type CoingeckoTokenListInsert,
+    coinGeckoTokenList,
+    coinGeckoTokenListMeta,
+    type CoingeckoTokenListInsert,
 } from "@sv/db/schema.js";
+import { getTrackedApiResult } from "@sv/middlewares/validation.js";
 import { excluded } from "@sv/util/orm-sql.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 import * as cg from "@sv/util/util-coingecko.js";
+import {
+    cg_CoinListSchema
+} from "@sv/services/_types/token-raw-responses.js";
 import { inArray } from "drizzle-orm";
 
 export async function getCoinGeckoIdsByAddresses(
@@ -88,16 +93,33 @@ export async function getAddressesByCoinGeckoIds(
 let refreshPromise: Promise<void> | null = null;
 
 async function syncCoinGeckoList() {
-  const res = await cg.client.coins.list.get({
-    include_platform: true,
+  const endpoint = cg.getEndpoint("/coins/list");
+  endpoint.search = new URLSearchParams({
+    include_platform: "true",
+  }).toString();
+
+  const resp = await rlFetch(endpoint, {
+    method: "GET",
+    headers: cg.getRequiredHeaders(),
+    rlLimiter: cg.limiter,
   });
 
+  if (!resp.ok) {
+    return;
+  }
+
+  const res = await getTrackedApiResult(cg_CoinListSchema, resp);
+
+  if (!res) {
+    return;
+  }
+
   const solanaTokens = res
-    .filter((raw) => raw.platforms!.solana)
+    .filter((raw) => raw.platforms?.["solana"])
     .map(
       (rawToken): CoingeckoTokenListInsert => ({
-        coinGeckoId: rawToken.id!,
-        tokenAddress: rawToken.platforms!.solana!,
+        coinGeckoId: rawToken.id,
+        tokenAddress: rawToken.platforms!["solana"]!,
       }),
     );
 

@@ -1,6 +1,6 @@
 import {
     TOKEN_DETAILS_TTL_MS,
-    TOP_TOKEN_HOLDER_STATS_TTL_MS,
+    TOP_TOKEN_HOLDERS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
@@ -11,22 +11,25 @@ import {
     tokenMeta,
     TokenMetaSelect,
     type TokenDetailedInfoInsert,
-    type TokenHolderStatsInsert,
     type TokenMarketDataInsert,
     type TokenMetaInsert,
 } from "@sv/db/schema.js";
 import {
-  excludedAutoFromInsert,
-  excludedAutoNonNullFromInsert,
+    excludedAutoFromInsert,
+    excludedAutoNonNullFromInsert,
 } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import * as moralis from "@sv/util/util-moralis.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
 import { getTrackedApiResult } from "@sv/middlewares/validation.js";
-import { mrl_tokenMetadataSchema } from "../_types/token-raw-responses.js";
+import {
+    cg_CoinDetailSchema,
+    mrl_tokenMetadataSchema,
+} from "../_types/token-raw-responses.js";
 import { and, eq, gte, inArray } from "drizzle-orm";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
 import { fetchCgMarketDataBatched } from "./token-market-data.js";
+import { refreshTokenHolderSnapshot } from "./token-holders.js";
 
 function isCgRateLimitError(error: unknown): boolean {
   if (!error || typeof error !== "object") {
@@ -37,47 +40,6 @@ function isCgRateLimitError(error: unknown): boolean {
   return Number(status) === 429;
 }
 
-async function fetchHolderStatsItem(
-  tokenAddress: string,
-): Promise<TokenHolderStatsInsert> {
-  const res = await cg.client.onchain.networks.tokens.info.get(tokenAddress, {
-    network: "solana",
-  });
-
-  return {
-    address: res.data!.attributes!.address!,
-    holdersCount: res.data?.attributes?.holders?.count || 0,
-    top10Percent:
-      res.data?.attributes?.holders?.distribution_percentage?.top_10 || 0,
-    rank11To20Percent:
-      (res.data?.attributes?.holders?.distribution_percentage as any)?.[
-        "11_20"
-      ] || 0,
-    rank21To40Percent:
-      (res.data?.attributes?.holders?.distribution_percentage as any)?.[
-        "21_40"
-      ] || 0,
-  };
-}
-
-function fetchHolderStats(tokenAddresses: string[]) {
-  if (tokenAddresses.length == 0) {
-    return Promise.resolve([]);
-  }
-
-  return Promise.allSettled(
-    tokenAddresses.map((address) => fetchHolderStatsItem(address)),
-  ).then((results) =>
-    results
-      .filter(
-        (result): result is PromiseFulfilledResult<TokenHolderStatsInsert> =>
-          result.status === "fulfilled",
-      )
-      .map((result) => result.value),
-  );
-}
-
-// https://docs.coingecko.com/v3.0.1/reference/coins-id
 async function fetchTokenDetails(tokenAddresses: string[]) {
   if (tokenAddresses.length == 0) {
     return {
@@ -93,22 +55,37 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
     tokenAddresses
       .filter((address) => addressToCgIds[address])
       .map(async (address) => {
-        const rawMeta = await cg.client.coins.getID(addressToCgIds[address], {
-          localization: false,
-          tickers: false,
-          market_data: true,
-          community_data: true,
-          developer_data: true,
-          include_categories_details: true,
+        const endpoint = cg.getEndpoint(
+          `/coins/${addressToCgIds[address]}`
+        );
+        endpoint.search = new URLSearchParams({
+          localization: "false",
+          tickers: "false",
+          market_data: "true",
+          community_data: "true",
+          developer_data: "true",
+          include_categories_details: "true",
+        }).toString();
+
+        const resp = await rlFetch(endpoint, {
+          method: "GET",
+          headers: cg.getRequiredHeaders(),
+          rlLimiter: cg.limiter,
         });
-        return rawMeta;
+
+        if (!resp.ok) {
+          return null;
+        }
+
+        const data = await getTrackedApiResult(cg_CoinDetailSchema, resp);
+        return data;
       }),
   );
 
   const rawInfoList = rawInfoSettled
     .filter(
       (result): result is PromiseFulfilledResult<any> =>
-        result.status === "fulfilled",
+        result.status === "fulfilled" && result.value != null,
     )
     .map((result) => result.value);
 
@@ -121,16 +98,16 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
       market: TokenMarketDataInsert;
     } => ({
       meta: {
-        address: raw.platforms!.solana!,
-        name: raw.name!,
-        symbol: raw.symbol!,
+        address: raw.platforms.solana!,
+        name: raw.name,
+        symbol: raw.symbol,
         imageUrl: raw.image?.small,
       },
       detailedInfo: {
         coingeckoId: raw.id,
-        decimals: raw.detail_platforms!.solana!.decimal_place!,
-        address: raw.platforms!.solana!,
-        description: raw.description!.en!,
+        decimals: raw.detail_platforms?.solana?.decimal_place!,
+        address: raw.platforms.solana!,
+        description: raw.description?.en!,
         categories: raw.categories_details?.map(
           (detail: { id?: string | null }) => detail.id!,
         ),
@@ -143,7 +120,7 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
         twitterScreenName: raw.links?.twitter_screen_name,
       },
       market: {
-        address: raw.platforms!.solana!,
+        address: raw.platforms.solana!,
         fullyDilutedValuation: raw.market_data?.fully_diluted_valuation?.usd!,
         marketCap: raw.market_data?.market_cap?.usd!,
         marketCapRank: raw.market_data?.market_cap_rank!,
@@ -444,7 +421,7 @@ export async function getTokenDetails(tokenAddresses: string[]) {
 }
 
 export async function getTokenHolderStats(tokenAddresses: string[]) {
-  const thresholdDate = new Date(Date.now() - TOP_TOKEN_HOLDER_STATS_TTL_MS);
+  const thresholdDate = new Date(Date.now() - TOP_TOKEN_HOLDERS_TTL_MS);
 
   const res = await db
     .select()
@@ -456,44 +433,24 @@ export async function getTokenHolderStats(tokenAddresses: string[]) {
       ),
     );
 
-  const addressToHolderStat = Object.fromEntries(
+  const addressToStats = Object.fromEntries(
     res.map((holderStat) => [holderStat.address, holderStat]),
   );
 
   const staleAddresses = tokenAddresses.filter(
-    (address) => !addressToHolderStat[address],
+    (address) => !addressToStats[address],
   );
 
   if (staleAddresses.length == 0) {
     return res;
   }
 
-  let refreshed: TokenHolderStatsInsert[] = [];
-  try {
-    refreshed = await fetchHolderStats(staleAddresses);
-  } catch (error) {
-    if (isCgRateLimitError(error)) {
-      return res;
-    }
-    throw error;
-  }
+  const refreshed = await Promise.all(
+    staleAddresses.map((address) => refreshTokenHolderSnapshot(address)),
+  );
+  const refreshedStats = refreshed.flatMap((snapshot) =>
+    snapshot ? [snapshot.stats] : [],
+  );
 
-  if (refreshed.length == 0) {
-    return res;
-  }
-
-  const persisted = await db
-    .insert(tokenHolderStats)
-    .values(refreshed)
-    .onConflictDoUpdate({
-      target: [tokenHolderStats.address],
-      set: excludedAutoFromInsert(
-        tokenHolderStats,
-        tokenHolderStats.address,
-        refreshed,
-      ),
-    })
-    .returning();
-
-  return [...res, ...persisted];
+  return [...res, ...refreshedStats];
 }

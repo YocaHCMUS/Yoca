@@ -1,11 +1,7 @@
-import type { MarketGetResponse } from "@coingecko/coingecko-typescript/resources/coins.mjs";
 import { z } from "zod";
-export interface CG_Token {
-  id: string;
-  name: string;
-  symbol: string;
-  platforms: { solana?: string };
-}
+
+const cg_NumberByCurrencySchema = z.record(z.string(), z.number().nullable());
+const cg_StringByCurrencySchema = z.record(z.string(), z.string().nullable());
 
 export const cg_TokenMarketChartSchema = z.object({
   prices: z.array(z.tuple([z.number(), z.number()])),
@@ -23,22 +19,254 @@ export type MRL_TokenMetadata = z.infer<
   typeof mrl_tokenMetadataSchema
 >;
 
-// https://docs.coingecko.com/v3.0.1/reference/coins-markets
-type MarketItem = MarketGetResponse[number];
+export const cg_CoinListItemSchema = z.object({
+  id: z.string(),
+  symbol: z.string(),
+  name: z.string(),
+  platforms: z.record(z.string(), z.string().nullable()).optional(),
+});
+export type CG_Token = z.infer<typeof cg_CoinListItemSchema>;
 
-// The coingecko library does not return results for optional parameters
-export interface MarketGet extends MarketItem {
-  // When: price_change_percentage = "1h,24h,7d,14d,30d,200d,1y"
-  price_change_percentage_1h_in_currency: number | null;
-  price_change_percentage_24h_in_currency: number | null;
-  price_change_percentage_7d_in_currency: number | null;
-  price_change_percentage_14d_in_currency: number | null;
-  price_change_percentage_30d_in_currency: number | null;
-  price_change_percentage_200d_in_currency: number | null;
-  price_change_percentage_1y_in_currency: number | null;
-  // When: sparkline = true
-  sparkline_in_7d: { price: number[] };
-}
+export const cg_CoinListSchema = z.array(cg_CoinListItemSchema);
+export type CG_CoinList = z.infer<typeof cg_CoinListSchema>;
+
+export const cg_CoinMarketSchema = z.object({
+  id: z.string(),
+  symbol: z.string().nullable().optional(),
+  name: z.string().nullable().optional(),
+  image: z.string().nullable().optional(),
+  current_price: z.number().nullable().optional(),
+  market_cap: z.number().nullable().optional(),
+  market_cap_rank: z.number().nullable().optional(),
+  fully_diluted_valuation: z.number().nullable().optional(),
+  total_volume: z.number().nullable().optional(),
+  high_24h: z.number().nullable().optional(),
+  low_24h: z.number().nullable().optional(),
+  price_change_24h: z.number().nullable().optional(),
+  price_change_percentage_24h: z.number().nullable().optional(),
+  market_cap_change_24h: z.number().nullable().optional(),
+  market_cap_change_percentage_24h: z.number().nullable().optional(),
+  circulating_supply: z.number().nullable().optional(),
+  total_supply: z.number().nullable().optional(),
+  max_supply: z.number().nullable().optional(),
+  ath: z.number().nullable().optional(),
+  ath_change_percentage: z.number().nullable().optional(),
+  ath_date: z.string().nullable().optional(),
+  atl: z.number().nullable().optional(),
+  atl_change_percentage: z.number().nullable().optional(),
+  atl_date: z.string().nullable().optional(),
+  roi: z.unknown().nullable().optional(),
+  last_updated: z.string().nullable().optional(),
+  sparkline_in_7d: z.object({ price: z.array(z.number()) }).optional(),
+  price_change_percentage_1h_in_currency: z.number().nullable().optional(),
+  price_change_percentage_24h_in_currency: z.number().nullable().optional(),
+  price_change_percentage_7d_in_currency: z.number().nullable().optional(),
+  price_change_percentage_14d_in_currency: z.number().nullable().optional(),
+  price_change_percentage_30d_in_currency: z.number().nullable().optional(),
+  price_change_percentage_200d_in_currency: z.number().nullable().optional(),
+  price_change_percentage_1y_in_currency: z.number().nullable().optional(),
+});
+
+export const cg_CoinMarketsSchema = z.array(cg_CoinMarketSchema);
+export type CG_CoinMarkets = z.infer<typeof cg_CoinMarketsSchema>;
+
+export const cg_CoinDetailSchema = z.object({
+  id: z.string(),
+  symbol: z.string(),
+  name: z.string(),
+  platforms: z.record(z.string(), z.string().nullable()),
+  detail_platforms: z.record(
+    z.string(),
+    z.object({
+      decimal_place: z.number().nullable(),
+      contract_address: z.string().nullable(),
+    }),
+  ).optional(),
+  description: z.record(z.string(), z.string()).optional(),
+  categories: z.array(z.string()).optional(),
+  categories_details: z.array(z.object({ id: z.string().nullable().optional() })).optional(),
+  links: z.object({
+    homepage: z.array(z.string()).optional(),
+    blockchain_site: z.array(z.string()).optional(),
+    chat_url: z.array(z.string()).optional(),
+    telegram_channel_identifier: z.string().nullable().optional(),
+    twitter_screen_name: z.string().nullable().optional(),
+  }).optional(),
+  image: z.object({
+    thumb: z.string().nullable().optional(),
+    small: z.string().nullable().optional(),
+    large: z.string().nullable().optional(),
+  }).optional(),
+  market_data: z.object({
+    current_price: cg_NumberByCurrencySchema.optional(),
+    market_cap: cg_NumberByCurrencySchema.optional(),
+    market_cap_rank: z.number().nullable().optional(),
+    fully_diluted_valuation: cg_NumberByCurrencySchema.optional(),
+    total_volume: cg_NumberByCurrencySchema.optional(),
+    high_24h: cg_NumberByCurrencySchema.optional(),
+    low_24h: cg_NumberByCurrencySchema.optional(),
+    ath: cg_NumberByCurrencySchema.optional(),
+    ath_change_percentage: cg_NumberByCurrencySchema.optional(),
+    ath_date: cg_StringByCurrencySchema.optional(),
+    atl: cg_NumberByCurrencySchema.optional(),
+    atl_change_percentage: cg_NumberByCurrencySchema.optional(),
+    atl_date: cg_StringByCurrencySchema.optional(),
+    circulating_supply: z.number().nullable().optional(),
+    max_supply: z.number().nullable().optional(),
+    total_supply: z.number().nullable().optional(),
+    price_change_24h: z.number().nullable().optional(),
+    price_change_percentage_1h_in_currency: cg_NumberByCurrencySchema.optional(),
+    price_change_percentage_24h: z.number().nullable().optional(),
+    price_change_percentage_7d: z.number().nullable().optional(),
+    price_change_percentage_14d: z.number().nullable().optional(),
+    price_change_percentage_30d: z.number().nullable().optional(),
+    price_change_percentage_200d: z.number().nullable().optional(),
+    price_change_percentage_1y: z.number().nullable().optional(),
+    market_cap_change_24h: z.number().nullable().optional(),
+    market_cap_change_percentage_24h: z.number().nullable().optional(),
+  }).optional(),
+});
+export type CG_CoinDetail = z.infer<typeof cg_CoinDetailSchema>;
+
+export const cg_SearchSchema = z.object({
+  coins: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string().nullable().optional(),
+      api_symbol: z.string().nullable().optional(),
+      symbol: z.string().nullable().optional(),
+      market_cap_rank: z.number().nullable().optional(),
+      thumb: z.string().nullable().optional(),
+      large: z.string().nullable().optional(),
+    }),
+  ),
+  exchanges: z.array(z.unknown()).optional(),
+  icos: z.array(z.unknown()).optional(),
+  categories: z.array(z.unknown()).optional(),
+  nfts: z.array(z.unknown()).optional(),
+});
+export type CG_Search = z.infer<typeof cg_SearchSchema>;
+
+const cg_PoolTimeframeStatsSchema = z.object({
+  m5: z.string(),
+  m15: z.string(),
+  m30: z.string(),
+  h1: z.string(),
+  h6: z.string(),
+  h24: z.string(),
+});
+
+const cg_PoolTransactionStatsSchema = z.object({
+  buys: z.number(),
+  sells: z.number(),
+  buyers: z.number(),
+  sellers: z.number(),
+});
+
+const cg_PoolTransactionsSchema = z.object({
+  m5: cg_PoolTransactionStatsSchema,
+  m15: cg_PoolTransactionStatsSchema,
+  m30: cg_PoolTransactionStatsSchema,
+  h1: cg_PoolTransactionStatsSchema,
+  h6: cg_PoolTransactionStatsSchema,
+  h24: cg_PoolTransactionStatsSchema,
+});
+
+const cg_PoolResourceSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  attributes: z.object({
+    base_token_price_usd: z.string(),
+    base_token_price_native_currency: z.string(),
+    quote_token_price_usd: z.string(),
+    quote_token_price_native_currency: z.string(),
+    base_token_price_quote_token: z.string(),
+    quote_token_price_base_token: z.string(),
+    address: z.string(),
+    name: z.string(),
+    pool_created_at: z.string(),
+    token_price_usd: z.string().nullable().optional(),
+    fdv_usd: z.string().nullable().optional(),
+    market_cap_usd: z.string().nullable().optional(),
+    price_change_percentage: cg_PoolTimeframeStatsSchema,
+    transactions: cg_PoolTransactionsSchema,
+    volume_usd: cg_PoolTimeframeStatsSchema,
+    reserve_in_usd: z.string(),
+    sentiment_vote_positive_percentage: z.number().optional(),
+    sentiment_vote_negative_percentage: z.number().optional(),
+    community_sus_report: z.number().optional(),
+  }),
+  relationships: z.object({
+    base_token: z.object({ data: z.object({ id: z.string(), type: z.string() }) }),
+    quote_token: z.object({ data: z.object({ id: z.string(), type: z.string() }) }),
+    dex: z.object({ data: z.object({ id: z.string(), type: z.string() }) }),
+  }),
+});
+
+const cg_PoolIncludedResourceSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  attributes: z.object({
+    address: z.string().optional(),
+    name: z.string(),
+    symbol: z.string().optional(),
+    decimals: z.number().optional(),
+    image_url: z.string().nullable().optional(),
+    coingecko_coin_id: z.string().nullable().optional(),
+  }),
+});
+
+export const cg_TopPoolDataSchema = z.object({
+  data: z.array(cg_PoolResourceSchema),
+  included: z.array(cg_PoolIncludedResourceSchema).optional(),
+});
+export type CG_TopPoolData = z.infer<typeof cg_TopPoolDataSchema>;
+
+export const cg_OnchainPoolSearchSchema = cg_TopPoolDataSchema;
+export type CG_OnchainPoolSearch = z.infer<typeof cg_OnchainPoolSearchSchema>;
+
+export const cg_PoolDataSchema = z.object({
+  data: cg_PoolResourceSchema.extend({
+    attributes: cg_PoolResourceSchema.shape.attributes.extend({
+      base_token_balance: z.string().optional(),
+      base_token_liquidity_usd: z.string().optional(),
+      quote_token_balance: z.string().optional(),
+      quote_token_liquidity_usd: z.string().optional(),
+      pool_name: z.string().optional(),
+      pool_fee_percentage: z.unknown().nullable().optional(),
+      net_buy_volume_usd: cg_PoolTimeframeStatsSchema.optional(),
+      buy_volume_usd: cg_PoolTimeframeStatsSchema.optional(),
+      sell_volume_usd: cg_PoolTimeframeStatsSchema.optional(),
+      locked_liquidity_percentage: z.unknown().nullable().optional(),
+    }),
+  }),
+  included: z.array(cg_PoolIncludedResourceSchema).optional(),
+});
+export type CG_PoolData = z.infer<typeof cg_PoolDataSchema>;
+
+export const cg_24hPoolTradesSchema = z.object({
+  data: z.array(z.object({
+    id: z.string(),
+    type: z.string(),
+    attributes: z.object({
+      block_number: z.number(),
+      tx_hash: z.string(),
+      tx_from_address: z.string(),
+      from_token_amount: z.string(),
+      to_token_amount: z.string(),
+      price_from_in_currency_token: z.string(),
+      price_to_in_currency_token: z.string(),
+      price_from_in_usd: z.string(),
+      price_to_in_usd: z.string(),
+      block_timestamp: z.string(),
+      kind: z.string(),
+      volume_in_usd: z.string(),
+      from_token_address: z.string(),
+      to_token_address: z.string(),
+    }),
+  })),
+});
+export type CG_24hPoolTrades = z.infer<typeof cg_24hPoolTradesSchema>;
 
 export type BDS_TrendingList = {
   success: boolean;
@@ -62,276 +290,6 @@ export type BDS_TrendingList = {
     }>;
     total: number;
   };
-};
-
-export type CG_CoinMarkets = Array<MarketGet>;
-
-export type CG_TopPoolData = {
-  data: Array<{
-    id: string;
-    type: string;
-    attributes: {
-      base_token_price_usd: string;
-      base_token_price_native_currency: string;
-      quote_token_price_usd: string;
-      quote_token_price_native_currency: string;
-      base_token_price_quote_token: string;
-      quote_token_price_base_token: string;
-      address: string;
-      name: string;
-      pool_created_at: string;
-      token_price_usd: string;
-      fdv_usd: string;
-      market_cap_usd: string;
-      price_change_percentage: {
-        m5: string;
-        m15: string;
-        m30: string;
-        h1: string;
-        h6: string;
-        h24: string;
-      };
-      transactions: {
-        m5: {
-          buys: number;
-          sells: number;
-          buyers: number;
-          sellers: number;
-        };
-        m15: {
-          buys: number;
-          sells: number;
-          buyers: number;
-          sellers: number;
-        };
-        m30: {
-          buys: number;
-          sells: number;
-          buyers: number;
-          sellers: number;
-        };
-        h1: {
-          buys: number;
-          sells: number;
-          buyers: number;
-          sellers: number;
-        };
-        h6: {
-          buys: number;
-          sells: number;
-          buyers: number;
-          sellers: number;
-        };
-        h24: {
-          buys: number;
-          sells: number;
-          buyers: number;
-          sellers: number;
-        };
-      };
-      volume_usd: {
-        m5: string;
-        m15: string;
-        m30: string;
-        h1: string;
-        h6: string;
-        h24: string;
-      };
-      reserve_in_usd: string;
-    };
-    relationships: {
-      base_token: {
-        data: {
-          id: string;
-          type: string;
-        };
-      };
-      quote_token: {
-        data: {
-          id: string;
-          type: string;
-        };
-      };
-      dex: {
-        data: {
-          id: string;
-          type: string;
-        };
-      };
-    };
-  }>;
-  included: Array<{
-    id: string;
-    type: string;
-    attributes: {
-      address?: string;
-      name: string;
-      symbol?: string;
-      decimals?: number;
-      image_url?: string;
-      coingecko_coin_id?: string;
-    };
-  }>;
-};
-
-export type CG_24hPoolTrades = {
-  data: Array<{
-    id: string;
-    type: string;
-    attributes: {
-      block_number: number;
-      tx_hash: string;
-      tx_from_address: string;
-      from_token_amount: string;
-      to_token_amount: string;
-      price_from_in_currency_token: string;
-      price_to_in_currency_token: string;
-      price_from_in_usd: string;
-      price_to_in_usd: string;
-      block_timestamp: string;
-      kind: string;
-      volume_in_usd: string;
-      from_token_address: string;
-      to_token_address: string;
-    };
-  }>;
-};
-export type CG_PoolData = {
-  data: {
-    id: string;
-    type: string;
-    attributes: {
-      base_token_price_usd: string;
-      base_token_price_native_currency: string;
-      base_token_balance: string;
-      base_token_liquidity_usd: string;
-      quote_token_price_usd: string;
-      quote_token_price_native_currency: string;
-      quote_token_balance: string;
-      quote_token_liquidity_usd: string;
-      base_token_price_quote_token: string;
-      quote_token_price_base_token: string;
-      address: string;
-      name: string;
-      pool_name: string;
-      pool_fee_percentage: any;
-      pool_created_at: string;
-      fdv_usd: string;
-      market_cap_usd: string;
-      price_change_percentage: {
-        m5: string;
-        m15: string;
-        m30: string;
-        h1: string;
-        h6: string;
-        h24: string;
-      };
-      transactions: {
-        m5: {
-          buys: number;
-          sells: number;
-          buyers: number;
-          sellers: number;
-        };
-        m15: {
-          buys: number;
-          sells: number;
-          buyers: number;
-          sellers: number;
-        };
-        m30: {
-          buys: number;
-          sells: number;
-          buyers: number;
-          sellers: number;
-        };
-        h1: {
-          buys: number;
-          sells: number;
-          buyers: number;
-          sellers: number;
-        };
-        h6: {
-          buys: number;
-          sells: number;
-          buyers: number;
-          sellers: number;
-        };
-        h24: {
-          buys: number;
-          sells: number;
-          buyers: number;
-          sellers: number;
-        };
-      };
-      volume_usd: {
-        m5: string;
-        m15: string;
-        m30: string;
-        h1: string;
-        h6: string;
-        h24: string;
-      };
-      net_buy_volume_usd: {
-        m5: string;
-        m15: string;
-        m30: string;
-        h1: string;
-        h6: string;
-        h24: string;
-      };
-      buy_volume_usd: {
-        m5: string;
-        m15: string;
-        m30: string;
-        h1: string;
-        h6: string;
-        h24: string;
-      };
-      sell_volume_usd: {
-        m5: string;
-        m15: string;
-        m30: string;
-        h1: string;
-        h6: string;
-        h24: string;
-      };
-      reserve_in_usd: string;
-      locked_liquidity_percentage: any;
-    };
-    relationships: {
-      base_token: {
-        data: {
-          id: string;
-          type: string;
-        };
-      };
-      quote_token: {
-        data: {
-          id: string;
-          type: string;
-        };
-      };
-      dex: {
-        data: {
-          id: string;
-          type: string;
-        };
-      };
-    };
-  };
-  included: Array<{
-    id: string;
-    type: string;
-    attributes: {
-      address?: string;
-      name: string;
-      symbol?: string;
-      decimals?: number;
-      image_url?: string;
-      coingecko_coin_id?: string;
-    };
-  }>;
 };
 
 export type MRL_TopHolders = {
@@ -424,3 +382,225 @@ export const zrn_FungiblesResponseSchema = z.object({
 });
 
 export type ZRN_FungiblesResponse = z.infer<typeof zrn_FungiblesResponseSchema>;
+
+
+
+const mbl_TokenTopHoldersMetadataSchema = z.object({
+  entityName: z.string().nullable(),
+  entityLogo: z.string().nullable(),
+  entityLabels: z.array(z.string()),
+  entityType: z.string().nullable(),
+  entityDescription: z.string().nullable(),
+  entityTwitter: z.string().nullable(),
+  entityWebsite: z.string().nullable(),
+  entityGithub: z.string().nullable(),
+  entityDiscord: z.string().nullable(),
+  entityTelegram: z.string().nullable(),
+}).nullable();
+
+export const mbl_TokenTopHoldersSchema = z.object({
+  data: z.array(z.object({
+    chainId: z.string(),
+    walletAddress: z.string(),
+    tokenAddress: z.string(),
+    tokenAmount: z.string(),
+    tokenAmountRaw: z.string(),
+    tokenAmountUSD: z.string(),
+    percentageOfTotalSupply: z.string(),
+    pnlUSD: z.string(),
+    realizedPnlUSD: z.string(),
+    unrealizedPnlUSD: z.string(),
+    totalPnlUSD: z.string(),
+    totalFeesPaidUSD: z.string(),
+    buyFeesPaidUSD: z.string(),
+    sellFeesPaidUSD: z.string(),
+    buys: z.number(),
+    sells: z.number(),
+    volumeBuyToken: z.string(),
+    volumeSellToken: z.string(),
+    volumeBuyUSD: z.string(),
+    volumeSellUSD: z.string(),
+    avgBuyPriceUSD: z.string(),
+    avgSellPriceUSD: z.string(),
+    nativeBalance: z.string(),
+    nativeBalanceRaw: z.string(),
+    walletFundAt: z.string().nullable(),
+    lastActivityAt: z.string().nullable(),
+    firstTradeAt: z.string().nullable(),
+    lastTradeAt: z.string().nullable(),
+    labels: z.array(z.string()),
+    walletMetadata: mbl_TokenTopHoldersMetadataSchema,
+    platform: z.object({
+      id: z.string(),
+      name: z.string(),
+      logo: z.string().nullable(),
+    }).nullable(),
+    fundingInfo: z.object({
+      from: z.string().nullable(),
+      date: z.string().nullable(),
+      chainId: z.string().nullable(),
+      txHash: z.string().nullable(),
+      amount: z.string().nullable(),
+      formattedAmount: z.number().nullable(),
+      currency: z.object({
+        name: z.string(),
+        symbol: z.string(),
+        logo: z.string().nullable(),
+        decimals: z.number(),
+        address: z.string(),
+      }).nullable(),
+      fromWalletLogo: z.string().nullable(),
+      fromWalletTag: z.string().nullable(),
+      fromWalletMetadata: mbl_TokenTopHoldersMetadataSchema,
+    }).nullable(),
+  })),
+  totalCount: z.number(),
+});
+
+export type MBL_TokenTopHolderSchema = z.infer<typeof mbl_TokenTopHoldersSchema>;
+
+export const bds_TrendingListSchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    updateUnixTime: z.number(),
+    updateTime: z.string(),
+    tokens: z.array(
+      z.object({
+        address: z.string(),
+        decimals: z.number(),
+        liquidity: z.number(),
+        logoURI: z.string().nullable().optional(),
+        name: z.string(),
+        symbol: z.string(),
+        volume24hUSD: z.number(),
+        volume24hChangePercent: z.number(),
+        rank: z.number(),
+        price: z.number(),
+        price24hChangePercent: z.number(),
+        fdv: z.number(),
+        marketcap: z.number(),
+      }),
+    ),
+    total: z.number(),
+  }),
+});
+
+export type BDS_TrendingListSchema = z.infer<typeof bds_TrendingListSchema>;
+
+export const helius_WalletTransfersSchema = z.object({
+  result: z.array(
+    z.object({
+      signature: z.string(),
+      description: z.string().nullable().optional(),
+      type: z.string(),
+      source: z.string().nullable(),
+      fee: z.number(),
+      feePayer: z.string().nullable(),
+      timestamp: z.number(),
+      tokenTransfers: z.array(
+        z.object({
+          fromTokenAccount: z.string(),
+          toTokenAccount: z.string(),
+          fromUserAccount: z.string().nullable(),
+          toUserAccount: z.string().nullable(),
+          tokenAmount: z.number().nullable(),
+          tokenMint: z.string(),
+          tokenStandard: z.string().nullable(),
+        }),
+      ).optional(),
+      nativeTransfers: z.array(
+        z.object({
+          fromUserAccount: z.string(),
+          toUserAccount: z.string(),
+          lamports: z.number(),
+        }),
+      ).optional(),
+    }),
+  ),
+  nativeBalanceChange: z.number().optional(),
+});
+
+export type HL_WalletTransfers = z.infer<typeof helius_WalletTransfersSchema>;
+
+export const helius_WalletFundedBySchema = z.object({
+  result: z.object({
+    fundedBy: z.array(
+      z.object({
+        address: z.string(),
+        amount: z.number(),
+        percentage: z.number(),
+        source: z.string().nullable().optional(),
+      }),
+    ),
+    totalAmount: z.number(),
+  }).nullable(),
+});
+
+export type HL_WalletFundedBy = z.infer<typeof helius_WalletFundedBySchema>;
+
+export const dex_TopPoolsSchema = z.object({
+  data: z.array(
+    z.object({
+      address: z.string(),
+      name: z.string().nullable(),
+      baseToken: z.object({
+        address: z.string(),
+        name: z.string().nullable(),
+        symbol: z.string().nullable(),
+      }).nullable(),
+      quoteToken: z.object({
+        address: z.string(),
+        name: z.string().nullable(),
+        symbol: z.string().nullable(),
+      }).nullable(),
+      price: z.number().nullable(),
+      lastPrice24h: z.number().nullable(),
+      lastPriceChange24hPercent: z.number().nullable(),
+      fdv: z.number().nullable(),
+      volumeUsd24h: z.number().nullable(),
+      uniqueWallets24h: z.number().nullable(),
+      txs24h: z.number().nullable(),
+    }),
+  ),
+  pagination: z.object({
+    page: z.number().optional(),
+    pageSize: z.number().optional(),
+    total: z.number().optional(),
+  }).optional(),
+});
+
+export type DEX_TopPools = z.infer<typeof dex_TopPoolsSchema>;
+
+export const mrl_WalletSwapsSchema = z.object({
+  result: z.array(
+    z.object({
+      transactionHash: z.string(),
+      fromAddress: z.string(),
+      toAddress: z.string(),
+      blockNumber: z.number(),
+      blockTimestamp: z.number(),
+      fromTokenSymbol: z.string().nullable(),
+      fromTokenName: z.string().nullable(),
+      fromTokenDecimals: z.number().nullable(),
+      fromTokenAddress: z.string(),
+      toTokenSymbol: z.string().nullable(),
+      toTokenName: z.string().nullable(),
+      toTokenDecimals: z.number().nullable(),
+      toTokenAddress: z.string(),
+      fromTokenAmount: z.string(),
+      toTokenAmount: z.string(),
+      fromTokenAmountUSD: z.string().nullable(),
+      toTokenAmountUSD: z.string().nullable(),
+      dexName: z.string().nullable(),
+      routerAddress: z.string().nullable(),
+    }),
+  ).nullable(),
+  pagination: z.object({
+    page: z.number().optional(),
+    pageSize: z.number().optional(),
+    pageCount: z.number().optional(),
+    total: z.number().optional(),
+  }).optional(),
+});
+
+export type MRL_WalletSwaps = z.infer<typeof mrl_WalletSwapsSchema>;
