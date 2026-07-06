@@ -1,11 +1,8 @@
 import client from "@/api/main";
-import Tble, { TbleFilterType, TbleSortType } from "@/components/Tble";
-import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal";
-import { TransferDetailModal } from "@/components/wallet/TransferDetailModal/TransferDetailModal";
+import Tble, { TbleFilterType, TbleSortType, type TbleFilterValue, type TbleSelectFilterOption, type TbleSortValue } from "@/components/Tble";
 import { useGet, UseGetResp } from "@/hooks/useGet";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import type { WalletSwap, WalletTransfer } from "@/services/wallet/walletApi";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { IconActionButton, SegmentedControl } from "@/components/charts/shared/ChartControls";
 import { TknImg } from "../TknImg";
 import { Flex } from "../Flex";
@@ -43,6 +40,48 @@ type WalletSwapData = {
 };
 
 type ActivityTab = "swaps" | "transfers";
+type TableFilters = Record<string, TbleFilterValue>;
+
+const SEARCH_DEBOUNCE_MS = 300;
+
+function getRangeFilter(value: TbleFilterValue): { min?: number; max?: number } {
+  if (!value || Array.isArray(value) || typeof value !== "object") return {};
+  const min = "min" in value && typeof value.min === "number" ? value.min : undefined;
+  const max = "max" in value && typeof value.max === "number" ? value.max : undefined;
+  return { min, max };
+}
+
+function getCompositeFilter(value: TbleFilterValue): Record<string, TbleFilterValue> {
+  if (!value || Array.isArray(value) || typeof value !== "object") return {};
+  if ("min" in value || "max" in value) return {};
+  return value as Record<string, TbleFilterValue>;
+}
+
+function getSelectedValues(value: TbleFilterValue): string[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function firstSelected(value: TbleFilterValue): string | undefined {
+  return getSelectedValues(value)[0];
+}
+
+function mergeMinValueUsd(hiddenLowValue: boolean, explicitMin?: number): number | undefined {
+  if (!hiddenLowValue) return explicitMin;
+  return explicitMin == null ? 1 : Math.max(1, explicitMin);
+}
+
+function makeTokenOptions(items: Array<{ address: string; symbol: string | null; name?: string | null }>): TbleSelectFilterOption[] {
+  const byAddress = new Map<string, TbleSelectFilterOption>();
+  for (const item of items) {
+    const address = item.address.trim();
+    if (!address || byAddress.has(address)) continue;
+    byAddress.set(address, {
+      value: address,
+      label: item.symbol?.toUpperCase() ?? item.name ?? address,
+    });
+  }
+  return Array.from(byAddress.values()).sort((left, right) => left.label.localeCompare(right.label));
+}
 
 type WalletTransferData = {
   transactions: {
@@ -215,34 +254,79 @@ function TransferFlowCell({
 
 export function WalletTransactionActivity({ address }: { address: string }) {
   const { tr, fmt } = useLocalization();
-  const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
-  const [selectedTransfer, setSelectedTransfer] =
-    useState<WalletTransfer | null>(null);
   const [hideLowValue, setHideLowValue] = useState(false);
   const [activeActivityTab, setActiveActivityTab] = useState<ActivityTab>("swaps");
+  const [swapSearch, setSwapSearch] = useState("");
+  const [debouncedSwapSearch, setDebouncedSwapSearch] = useState("");
+  const [swapFilters, setSwapFilters] = useState<TableFilters>({});
+  const [swapSort, setSwapSort] = useState<TbleSortValue>(null);
+  const [transferSearch, setTransferSearch] = useState("");
+  const [debouncedTransferSearch, setDebouncedTransferSearch] = useState("");
+  const [transferFilters, setTransferFilters] = useState<TableFilters>({});
+  const [transferSort, setTransferSort] = useState<TbleSortValue>(null);
   const [timeFormat, setTimeFormat] = useState<"relativeShort" | "datetime" | "date">("relativeShort");
   const cycleTimeFormat = () => setTimeFormat((prev) =>
     prev === "relativeShort" ? "datetime"
     : prev === "datetime" ? "date"
     : "relativeShort",
   );
-  const minValueUsd = hideLowValue ? 1 : undefined;
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setDebouncedSwapSearch(swapSearch), SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [swapSearch]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setDebouncedTransferSearch(transferSearch), SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [transferSearch]);
+
+  const swapQuery = useMemo(() => {
+    const flowFilter = getCompositeFilter(swapFilters.flow ?? null);
+    const valueFilter = getRangeFilter(swapFilters.value ?? null);
+    return {
+      search: debouncedSwapSearch.trim() || undefined,
+      soldTokenAddress: firstSelected(flowFilter.sold ?? null),
+      boughtTokenAddress: firstSelected(flowFilter.bought ?? null),
+      minValueUsd: mergeMinValueUsd(hideLowValue, valueFilter.min),
+      maxValueUsd: valueFilter.max,
+      sortBy: swapSort?.key === "value" ? ("value" as const) : undefined,
+      sortDirection: swapSort?.direction,
+    };
+  }, [debouncedSwapSearch, hideLowValue, swapFilters, swapSort]);
+
+  const transferQuery = useMemo(() => {
+    const flowFilter = getCompositeFilter(transferFilters.flow ?? null);
+    const tokenFilter = getCompositeFilter(transferFilters.token ?? null);
+    const amountFilter = getRangeFilter(tokenFilter.amount ?? null);
+    const valueFilter = getRangeFilter(transferFilters.value ?? null);
+    return {
+      search: debouncedTransferSearch.trim() || undefined,
+      direction: firstSelected(flowFilter.direction ?? null) as "send" | "receive" | undefined,
+      counterpartyAddress: firstSelected(flowFilter.counterparty ?? null),
+      tokenAddress: firstSelected(tokenFilter.symbol ?? null),
+      minTokenAmount: amountFilter.min,
+      maxTokenAmount: amountFilter.max,
+      minValueUsd: mergeMinValueUsd(hideLowValue, valueFilter.min),
+      maxValueUsd: valueFilter.max,
+      sortBy: transferSort?.key === "value" ? ("value" as const) : undefined,
+      sortDirection: transferSort?.direction,
+    };
+  }, [debouncedTransferSearch, hideLowValue, transferFilters, transferSort]);
 
   const swapResp: UseGetResp<WalletSwapData> = useGet(
     client.api.wallets.swaps.history[":address"],
     200,
     {
       param: { address },
-      query: { minValueUsd },
+      query: swapQuery,
     },
   );
 
   const transferResp: UseGetResp<WalletTransferData> = useGet(
     client.api.wallets.transfers.history[":address"],
     200,
-    { param: { address }, query: { minValueUsd } },
+    { param: { address }, query: transferQuery },
   );
-
   // Swap rows – plain text
   const swapRows = useMemo(() => {
     const transactions = swapResp.data?.transactions ?? [];
@@ -292,7 +376,9 @@ export function WalletTransactionActivity({ address }: { address: string }) {
         value,
         transaction,
         soldSymbol: soldSym,
+        soldTokenAddress: tx.sold.address,
         boughtSymbol: boughtSym,
+        boughtTokenAddress: tx.bought.address,
         totalValueUsd: tx.totalValueUsd,
         blockTimestampMs: tx.blockTimestampMs,
         _searchText: `${soldSym} ${boughtSym} ${tx.totalValueUsd ?? ""}`,
@@ -354,6 +440,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           direction: tx.direction,
           counterpartyAddress: tx.counterpartyAddress,
           tokenSymbol: tokenSym,
+          tokenAddress: tx.token.address,
           tokenAmount: tx.token.amount,
           valueUsd: tx.valueUsd,
           blockTimestampMs: tx.blockTimestampMs,
@@ -363,6 +450,36 @@ export function WalletTransactionActivity({ address }: { address: string }) {
   }, [transferResp.data, fmt, address, timeFormat, tr]);
 
   // Headers – plain text
+  const swapSoldOptions = useMemo(
+    () => makeTokenOptions((swapResp.data?.transactions ?? []).map((tx) => ({
+      address: tx.sold.address,
+      symbol: tx.sold.symbol,
+      name: tx.sold.name,
+    }))),
+    [swapResp.data],
+  );
+  const swapBoughtOptions = useMemo(
+    () => makeTokenOptions((swapResp.data?.transactions ?? []).map((tx) => ({
+      address: tx.bought.address,
+      symbol: tx.bought.symbol,
+      name: tx.bought.name,
+    }))),
+    [swapResp.data],
+  );
+  const transferTokenOptions = useMemo(
+    () => makeTokenOptions((transferResp.data?.transactions ?? []).map((tx) => ({
+      address: tx.token.address,
+      symbol: tx.token.symbol,
+      name: tx.token.name,
+    }))),
+    [transferResp.data],
+  );
+  const transferCounterpartyOptions = useMemo(
+    () => Array.from(new Set((transferResp.data?.transactions ?? []).map((tx) => tx.counterpartyAddress).filter(Boolean)))
+      .sort((left, right) => left.localeCompare(right))
+      .map((item) => ({ label: fmt.text.address(item), value: item })),
+    [fmt, transferResp.data],
+  );
   const swapHeaders = [
     { key: "time", header: tr("walletPage.time") },
     { key: "flow", header: tr("walletPage.pair") },
@@ -422,12 +539,20 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           pageUnknown
           enableSearch
           searchFields={["_searchText"]}
+          searchValue={swapSearch}
+          onSearchChange={setSwapSearch}
+          filterValues={swapFilters}
+          onFilterValuesChange={setSwapFilters}
+          sortValue={swapSort}
+          onSortChange={setSwapSort}
+          clientFiltering={false}
+          clientSorting={false}
           filterSchema={{
             flow: {
               type: TbleFilterType.Composite,
               filters: {
-                sold: { type: TbleFilterType.Select, field: "soldSymbol" },
-                bought: { type: TbleFilterType.Select, field: "boughtSymbol" },
+                sold: { type: TbleFilterType.Select, field: "soldTokenAddress", options: swapSoldOptions },
+                bought: { type: TbleFilterType.Select, field: "boughtTokenAddress", options: swapBoughtOptions },
               },
             },
             value: { type: TbleFilterType.Range, field: "totalValueUsd", min: 0, max: 1_000_000, step: 1 },
@@ -448,47 +573,6 @@ export function WalletTransactionActivity({ address }: { address: string }) {
               </button>
             ),
           }}
-          onRowClick={(row) => {
-            const transaction = swapResp.data?.transactions.find(
-              (tx, index) =>
-                (tx.transactionHash || `swap-${index}`) == row.id,
-            );
-            if (!transaction) return;
-
-            const soldPriceUsd = transaction.sold.priceUsd ?? 0;
-            const boughtPriceUsd = transaction.bought.priceUsd ?? 0;
-            setSelectedSwap({
-              transactionHash: transaction.transactionHash,
-              transactionType: "swap",
-              blockTimestampIso: new Date(
-                transaction.blockTimestampMs,
-              ).toISOString(),
-              subcategory: null,
-              walletAddress: address,
-              pairAddress: "",
-              tokensInvolved: `${transaction.sold.symbol ?? transaction.sold.address},${transaction.bought.symbol ?? transaction.bought.address}`,
-              sold: {
-                address: transaction.sold.address,
-                amount: transaction.sold.amount,
-                symbol: transaction.sold.symbol,
-                name: transaction.sold.name,
-                logoUri: transaction.sold.logoUri,
-                priceUsd: soldPriceUsd,
-                valueUsd: transaction.sold.amount * soldPriceUsd,
-              },
-              bought: {
-                address: transaction.bought.address,
-                amount: transaction.bought.amount,
-                symbol: transaction.bought.symbol,
-                name: transaction.bought.name,
-                logoUri: transaction.bought.logoUri,
-                priceUsd: boughtPriceUsd,
-                valueUsd: transaction.bought.amount * boughtPriceUsd,
-              },
-              totalValueUsd: transaction.totalValueUsd,
-              baseQuotePrice: null,
-            });
-          }}
         />
       ) : (
         <Tble
@@ -503,18 +587,26 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           pageUnknown
           enableSearch
           searchFields={["_searchText"]}
+          searchValue={transferSearch}
+          onSearchChange={setTransferSearch}
+          filterValues={transferFilters}
+          onFilterValuesChange={setTransferFilters}
+          sortValue={transferSort}
+          onSortChange={setTransferSort}
+          clientFiltering={false}
+          clientSorting={false}
           filterSchema={{
             flow: {
               type: TbleFilterType.Composite,
               filters: {
                 direction: { type: TbleFilterType.Select, field: "direction" },
-                counterparty: { type: TbleFilterType.Select, field: "counterpartyAddress" },
+                counterparty: { type: TbleFilterType.Select, field: "counterpartyAddress", options: transferCounterpartyOptions },
               },
             },
             token: {
               type: TbleFilterType.Composite,
               filters: {
-                symbol: { type: TbleFilterType.Select, field: "tokenSymbol" },
+                symbol: { type: TbleFilterType.Select, field: "tokenAddress", options: transferTokenOptions },
                 amount: { type: TbleFilterType.Range, field: "tokenAmount", min: 0, max: 1_000_000, step: 0.01 },
               },
             },
@@ -536,50 +628,8 @@ export function WalletTransactionActivity({ address }: { address: string }) {
               </button>
             ),
           }}
-          onRowClick={(row) => {
-            const transaction = transferResp.data?.transactions.find(
-              (tx, index) =>
-                (tx.transactionHash || `transfer-${index}`) == row.id,
-            );
-            if (!transaction) return;
-
-            setSelectedTransfer({
-              from:
-                transaction.direction == "send"
-                  ? address
-                  : transaction.counterpartyAddress,
-              to:
-                transaction.direction == "send"
-                  ? transaction.counterpartyAddress
-                  : address,
-              amount: transaction.token.amount,
-              amountUsd: transaction.valueUsd,
-              timestamp: new Date(
-                transaction.blockTimestampMs,
-              ).toISOString(),
-              tokenAddress: transaction.token.address,
-              tokenSymbol: transaction.token.symbol ?? "Unknown",
-              tokenName: transaction.token.name ?? undefined,
-              tokenLogoUri: transaction.token.logoUri ?? undefined,
-              priceUsd: transaction.token.priceUsd ?? undefined,
-              transactionSignature: transaction.transactionHash,
-              instructionIndex: 0,
-            });
-          }}
         />
       )}
-      <SwapDetailModal
-        isOpen={selectedSwap != null}
-        onClose={() => setSelectedSwap(null)}
-        swap={selectedSwap}
-        walletAddress={address}
-      />
-      <TransferDetailModal
-        isOpen={selectedTransfer != null}
-        onClose={() => setSelectedTransfer(null)}
-        transfer={selectedTransfer}
-        walletAddress={address}
-      />
     </div>
   );
 }

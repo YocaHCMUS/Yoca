@@ -1,32 +1,28 @@
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/theme' as *;
-@use '@carbon/react/scss/type' as *;
-
 .selector {
   display: flex;
-  gap: $spacing-02;
+  gap: 0.25rem;
   flex-wrap: wrap;
 }
 
 .tab {
-  @include type-style('body-compact-01');
-  font-family: 'IBM Plex Mono', monospace;
-  padding: $spacing-02 $spacing-04;
-  border-radius: 4px;
-  border: 1px solid $border-subtle;
-  background-color: transparent;
-  color: $text-secondary;
+  font-size: 0.875rem;
+  font-family: "IBM Plex Mono", monospace;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--yoca-border);
+  background: transparent;
+  color: var(--yoca-text-muted);
   cursor: pointer;
   transition: all 0.15s;
 
   &:hover {
-    background-color: $layer-hover-01;
-    color: $text-primary;
+    background: var(--yoca-surface-hover);
+    color: var(--yoca-text-main);
   }
 
   &.active {
-    background-color: $layer-accent-01;
-    color: $text-inverse;
-    border-color: $layer-accent-01;
+    background: var(--yoca-primary);
+    color: #fff;
+    border-color: var(--yoca-primary);
   }
 }

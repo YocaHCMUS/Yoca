@@ -53,8 +53,6 @@ import {
   TokenDetailsDemo,
 } from "./TokenDetailsDemo.tsx";
 // import { BalanceChart } from "@/components/charts/BalanceChart/BalanceChart.tsx";
-import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal.tsx";
-import { TransferDetailModal } from "@/components/wallet/TransferDetailModal/TransferDetailModal.tsx";
 import { DayActivityPopup } from "@/components/wallet/DayActivityPopup/DayActivityPopup.tsx";
 import { AiSwapSummaryModal } from "@/components/wallet/AiSwapSummaryModal";
 import { BalanceChartV2 } from "@/components/charts/BalanceChartV2/BalanceChartV2.tsx";
@@ -189,13 +187,6 @@ export default function WalletPage() {
     { param: { addresses: tokenAddresses || "" } },
     { enabled: !!tokenAddresses },
   );
-
-  const [swapModalOpen, setSwapModalOpen] = useState(false);
-  const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
-
-  const [transferModalOpen, setTransferModalOpen] = useState(false);
-  const [selectedTransfer, setSelectedTransfer] =
-    useState<WalletTransfer | null>(null);
 
   const [dayPopupOpen, setDayPopupOpen] = useState(false);
   const [dayPopupTimestamp, setDayPopupTimestamp] = useState(0);
@@ -634,20 +625,6 @@ export default function WalletPage() {
           </div>
         )}
       </div>
-
-      <SwapDetailModal
-        isOpen={swapModalOpen}
-        onClose={() => setSwapModalOpen(false)}
-        swap={selectedSwap}
-        walletAddress={walletAddress}
-      />
-
-      <TransferDetailModal
-        isOpen={transferModalOpen}
-        onClose={() => setTransferModalOpen(false)}
-        transfer={selectedTransfer}
-        walletAddress={walletAddress}
-      />
 
       <DayActivityPopup
         isOpen={dayPopupOpen}

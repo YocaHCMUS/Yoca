@@ -1,4 +1,4 @@
-﻿import { ChartTag, SearchBox } from "@/components/charts/shared/ChartControls";
+import { ChartTag, SearchBox } from "@/components/charts/shared/ChartControls";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import {
   ChevronDown,
@@ -37,8 +37,13 @@ export interface TbleSortConfig {
   field?: string;
 }
 
+export type TbleSelectFilterOption = {
+  label: string;
+  value: string;
+};
+
 export type TbleFilterConfig =
-  | { type: TbleFilterType.Select; field?: string }
+  | { type: TbleFilterType.Select; field?: string; options?: TbleSelectFilterOption[] }
   | { type: TbleFilterType.Range; field?: string; min?: number; max?: number; step?: number }
   | { type: TbleFilterType.Composite; filters: Record<string, TbleFilterConfig | null> };
 
@@ -46,8 +51,10 @@ type RangeFilterValue = { min?: number; max?: number };
 interface CompositeFilterValue {
   [key: string]: FilterValue;
 }
-type FilterValue = string[] | RangeFilterValue | CompositeFilterValue | null;
-type SortDirection = "asc" | "desc";
+export type TbleFilterValue = string[] | RangeFilterValue | CompositeFilterValue | null;
+type FilterValue = TbleFilterValue;
+export type TbleSortDirection = "asc" | "desc";
+export type TbleSortValue = { key: string; direction: TbleSortDirection } | null;
 
 interface TblHdr {
   header: string;
@@ -85,6 +92,12 @@ interface TblProps {
   onRowClick?: (row: TblRw, rowIndex: number) => void;
   sortConfigs?: Record<string, TbleSortConfig>;
   filterSchema?: Record<string, TbleFilterConfig | null>;
+  filterValues?: Record<string, TbleFilterValue>;
+  onFilterValuesChange?: (values: Record<string, TbleFilterValue>) => void;
+  sortValue?: TbleSortValue;
+  onSortChange?: (value: TbleSortValue) => void;
+  clientFiltering?: boolean;
+  clientSorting?: boolean;
   cellRenderers?: Record<string, CellRenderer>;
   headerActions?: Record<string, ReactNode>;
   enableSearch?: boolean;
@@ -234,6 +247,12 @@ export default function Tble({
   onRowClick,
   sortConfigs,
   filterSchema,
+  filterValues,
+  onFilterValuesChange,
+  sortValue,
+  onSortChange,
+  clientFiltering = true,
+  clientSorting = true,
   cellRenderers,
   headerActions,
   enableSearch = false,
@@ -250,8 +269,8 @@ export default function Tble({
   const rootRef = useRef<HTMLDivElement>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageSize, setCurrentPageSize] = useState(Math.max(1, pageSize));
-  const [sortState, setSortState] = useState<{ key: string; direction: SortDirection } | null>(null);
-  const [filters, setFilters] = useState<Record<string, FilterValue>>({});
+  const [internalSortState, setInternalSortState] = useState<TbleSortValue>(null);
+  const [internalFilters, setInternalFilters] = useState<Record<string, TbleFilterValue>>({});
   const [openFilterKey, setOpenFilterKey] = useState<string | null>(null);
   const [draftFilterValue, setDraftFilterValue] = useState<FilterValue>(null);
   const [internalSearchValue, setInternalSearchValue] = useState("");
@@ -267,6 +286,8 @@ export default function Tble({
 
   const resolvedSearchValue = searchValue ?? internalSearchValue;
   const resolvedSearchPlaceholder = searchPlaceholder ?? tr("table.searchPlaceholder");
+  const resolvedFilters = filterValues ?? internalFilters;
+  const resolvedSortState = sortValue ?? internalSortState;
 
   useEffect(() => {
     if (!openFilterKey) return;
@@ -317,32 +338,33 @@ export default function Tble({
     return rows.filter((row) =>
       fields.some((field) => toComparableString(row[field]).toLowerCase().includes(query)),
     );
-  }, [enableSearch, headers, resolvedSearchValue, rows, searchFields]);
+  }, [clientFiltering, enableSearch, headers, resolvedSearchValue, rows, searchFields]);
 
   const filteredRows = useMemo(() => {
+    if (!clientFiltering) return searchedRows;
     return searchedRows.filter((row) => {
-      for (const [key, value] of Object.entries(filters)) {
+      for (const [key, value] of Object.entries(resolvedFilters)) {
         const schema = filterSchema?.[key];
         if (!matchesFilterSchema(row, key, schema, value)) return false;
       }
       return true;
     });
-  }, [filterSchema, filters, searchedRows]);
+  }, [clientFiltering, filterSchema, resolvedFilters, searchedRows]);
 
   const sortedRows = useMemo(() => {
-    if (!sortState) return filteredRows;
-    const config = sortConfigs?.[sortState.key];
+    if (!clientSorting || !resolvedSortState) return filteredRows;
+    const config = sortConfigs?.[resolvedSortState.key];
     if (!config) return filteredRows;
-    const directionMultiplier = sortState.direction === "asc" ? 1 : -1;
+    const directionMultiplier = resolvedSortState.direction === "asc" ? 1 : -1;
     return [...filteredRows].sort((left, right) => {
-      const leftValue = getFieldValue(left, sortState.key, config.field);
-      const rightValue = getFieldValue(right, sortState.key, config.field);
+      const leftValue = getFieldValue(left, resolvedSortState.key, config.field);
+      const rightValue = getFieldValue(right, resolvedSortState.key, config.field);
       const comparison = config.type === TbleSortType.Number
         ? toNumber(leftValue) - toNumber(rightValue)
         : toComparableString(leftValue).localeCompare(toComparableString(rightValue));
       return comparison * directionMultiplier;
     });
-  }, [filteredRows, sortConfigs, sortState]);
+  }, [clientSorting, filteredRows, resolvedSortState, sortConfigs]);
 
   const totalPages = useMemo(
     () => enablePagination ? Math.max(1, Math.ceil(sortedRows.length / currentPageSize)) : 1,
@@ -355,7 +377,7 @@ export default function Tble({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters, resolvedSearchValue, sortState]);
+  }, [resolvedFilters, resolvedSearchValue, resolvedSortState]);
 
   const rowsToRender = useMemo(() => {
     if (!enablePagination) return sortedRows;
@@ -364,12 +386,14 @@ export default function Tble({
   }, [currentPage, currentPageSize, enablePagination, sortedRows]);
 
   const filterCandidateValues = useMemo(() => {
-    const collect = (schema: TbleFilterConfig | null | undefined, fallbackKey: string, path: string, out: Record<string, string[]>) => {
+    const collect = (schema: TbleFilterConfig | null | undefined, fallbackKey: string, path: string, out: Record<string, TbleSelectFilterOption[]>) => {
       if (!schema) return;
       if (schema.type === TbleFilterType.Select) {
-        out[path] = Array.from(
+        out[path] = schema.options ?? Array.from(
           new Set(rows.map((row) => toComparableString(getFieldValue(row, fallbackKey, schema.field))).filter(Boolean)),
-        ).sort((left, right) => left.localeCompare(right));
+        )
+          .sort((left, right) => left.localeCompare(right))
+          .map((value) => ({ label: value, value }));
         return;
       }
       if (schema.type === TbleFilterType.Composite) {
@@ -379,14 +403,14 @@ export default function Tble({
       }
     };
 
-    const candidates: Record<string, string[]> = {};
+    const candidates: Record<string, TbleSelectFilterOption[]> = {};
     for (const [key, schema] of Object.entries(filterSchema ?? {})) {
       collect(schema, key, key, candidates);
     }
     return candidates;
   }, [filterSchema, rows]);
 
-  const activeFilters = Object.entries(filters)
+  const activeFilters = Object.entries(resolvedFilters)
     .filter(([key, value]) => isFilterActive(filterSchema?.[key], value))
     .map(([key, value]) => ({
       key,
@@ -424,7 +448,7 @@ export default function Tble({
       setOpenFilterKey(null);
       return;
     }
-    setDraftFilterValue(filters[key] ?? getDefaultFilterState(schema));
+    setDraftFilterValue(resolvedFilters[key] ?? getDefaultFilterState(schema));
     setFilterSearches({});
     setOpenFilterKey(key);
     const btn = filterButtonRefs.current[key];
@@ -443,30 +467,31 @@ export default function Tble({
   const applyFilter = () => {
     if (!openFilterKey) return;
     const schema = filterSchema?.[openFilterKey];
-    setFilters((prev) => {
-      const next = { ...prev };
-      if (isFilterActive(schema, draftFilterValue)) next[openFilterKey] = draftFilterValue;
-      else delete next[openFilterKey];
-      return next;
-    });
+    const next = { ...resolvedFilters };
+    if (isFilterActive(schema, draftFilterValue)) next[openFilterKey] = draftFilterValue;
+    else delete next[openFilterKey];
+    if (onFilterValuesChange) onFilterValuesChange(next);
+    else setInternalFilters(next);
     setOpenFilterKey(null);
   };
 
   const removeFilter = (key: string) => {
-    setFilters((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
+    const next = { ...resolvedFilters };
+    delete next[key];
+    if (onFilterValuesChange) onFilterValuesChange(next);
+    else setInternalFilters(next);
   };
 
   const toggleSort = (key: string) => {
     if (!sortConfigs?.[key]) return;
-    setSortState((prev) => {
-      if (!prev || prev.key !== key) return { key, direction: "desc" };
-      if (prev.direction === "desc") return { key, direction: "asc" };
-      return null;
-    });
+    const next =
+      !resolvedSortState || resolvedSortState.key !== key
+        ? { key, direction: "desc" as const }
+        : resolvedSortState.direction === "desc"
+          ? { key, direction: "asc" as const }
+          : null;
+    if (onSortChange) onSortChange(next);
+    else setInternalSortState(next);
   };
 
 
@@ -594,7 +619,7 @@ export default function Tble({
     const selectedValues = Array.isArray(value) ? value : [];
     const query = filterSearches[pathKey] ?? "";
     const candidates = (filterCandidateValues[pathKey] ?? [])
-      .filter((candidate) => candidate.toLowerCase().includes(query.trim().toLowerCase()));
+      .filter((candidate) => candidate.label.toLowerCase().includes(query.trim().toLowerCase()));
     const filterColumnLabel = headers.find((h) => h.key === fallbackKey)?.header ?? fallbackKey;
 
     return (
@@ -609,19 +634,19 @@ export default function Tble({
         </label>
         <div className={styles.checkboxList}>
           {candidates.map((candidate) => (
-            <label key={`${pathKey}-${candidate}`} className={styles.checkboxRow}>
+            <label key={`${pathKey}-${candidate.value}`} className={styles.checkboxRow}>
               <input
                 type="checkbox"
-                checked={selectedValues.includes(candidate)}
+                checked={selectedValues.includes(candidate.value)}
                 onChange={(event) => {
                   setValue(
                     event.target.checked
-                      ? [...selectedValues, candidate]
-                      : selectedValues.filter((entry) => entry !== candidate),
+                      ? [...selectedValues, candidate.value]
+                      : selectedValues.filter((entry) => entry !== candidate.value),
                   );
                 }}
               />
-              <span>{candidate}</span>
+              <span>{candidate.label}</span>
             </label>
           ))}
           {candidates.length === 0 && <div className={styles.emptyFilter}>{tr("table.noResults")}</div>}
@@ -721,7 +746,7 @@ export default function Tble({
                   const config = getCellConfiguration(header.key);
                   const sortable = Boolean(sortConfigs?.[header.key]);
                   const filterable = Boolean(filterSchema?.[header.key]);
-                  const sortActive = sortState?.key === header.key;
+                  const sortActive = resolvedSortState?.key === header.key;
                   const headerAction = headerActions?.[header.key];
                   return (
                     <th key={header.key} className={`${config.className} ${styles.headerCell}`} style={config.style} scope="col">
@@ -735,7 +760,7 @@ export default function Tble({
                           {header.header}
                         </button>
                         {sortable && sortActive && (
-                          sortState.direction === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />
+                          resolvedSortState.direction === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />
                         )}
                         {filterable && (
                           <button
@@ -874,7 +899,7 @@ function TbleHeader({
   searchPlaceholder: string;
   onSearchChange: (value: string) => void;
   toolBar?: ReactNode;
-  activeFilters: Array<{ key: string; label: string; schema: TbleFilterConfig | null | undefined; value: FilterValue }>;
+  activeFilters: Array<{ key: string; label: string; schema: TbleFilterConfig | null | undefined; value: TbleFilterValue }>;
   removeFilter: (key: string) => void;
 }) {
   const { tr } = useLocalization();

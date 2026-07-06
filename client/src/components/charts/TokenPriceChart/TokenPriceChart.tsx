@@ -2,12 +2,12 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import { fetchTokenPriceChartForDay, type TokenPriceChartPoint } from "@/services/wallet/walletApi";
 import { useCarbonChartBaseOption, CHART_COLOR_PALETTE } from "@/util/carbon-chart-base";
 import { Close } from "@carbon/icons-react";
-import { InlineLoading } from "@carbon/react";
 import type { EChartsOption } from "echarts";
 import ReactECharts from "echarts-for-react";
 import { useEffect, useMemo, useState } from "react";
 import styles from "./TokenPriceChart.module.scss";
-import { da } from "date-fns/locale";
+import { Flex } from "@/components/Flex";
+import { Txt } from "@/components/Txt";
 
 export interface TradeIndicator {
   timestampMs: number;
@@ -33,6 +33,7 @@ interface TokenPriceChartProps {
   dayMs: number;
   trades: TradeIndicator[];
   onRemove: () => void;
+  priceHistory?: TokenPriceChartPoint[];
 }
 
 function formatUtcTime(val: number): string {
@@ -49,15 +50,22 @@ export function TokenPriceChart({
   dayMs,
   trades,
   onRemove,
+  priceHistory: priceHistoryProp,
 }: TokenPriceChartProps) {
   const { fmt, tr } = useLocalization();
   const baseOption = useCarbonChartBaseOption();
 
-  const [priceData, setPriceData] = useState<TokenPriceChartPoint[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [priceData, setPriceData] = useState<TokenPriceChartPoint[]>(priceHistoryProp ?? []);
+  const [loading, setLoading] = useState(!priceHistoryProp);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (priceHistoryProp) {
+      setPriceData(priceHistoryProp);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -79,7 +87,7 @@ export function TokenPriceChart({
     return () => {
       cancelled = true;
     };
-  }, [tokenAddress, dayMs]);
+  }, [tokenAddress, dayMs, priceHistoryProp]);
 
   const chartOption = useMemo((): EChartsOption => {
     if (priceData.length === 0) return {};
@@ -115,7 +123,6 @@ export function TokenPriceChart({
     const bucketMap = new Map<number, AggregatedTradeBucket>();
 
     for (const t of trades) {
-      // if (t.timestampMs < startTime || t.timestampMs > endTime) continue;
       const bucketIdx = Math.floor((t.timestampMs - startTime) / bucketSizeMs);
       const existing = bucketMap.get(bucketIdx);
       if (existing) {
@@ -138,10 +145,6 @@ export function TokenPriceChart({
         });
       }
     }
-
-    console.log("Bucketed trades for chart:", Array.from(bucketMap.values()));
-    console.log("trades:", trades);
-    console.log("startTime:", new Date(startTime).toISOString(), "endTime:", new Date(endTime).toISOString());
 
     const offset = priceRange * 0.06;
     const highThreshold = maxPrice - priceRange * 0.2;
@@ -313,7 +316,9 @@ export function TokenPriceChart({
           </div>
         </div>
         <div className={styles.chartContent}>
-          <InlineLoading description={tr("common.loading")} />
+          <Flex justify="center" align="center" p={2}>
+            <Txt size="sm" secondary>{tr("common.loading")}</Txt>
+          </Flex>
         </div>
       </div>
     );
@@ -334,7 +339,9 @@ export function TokenPriceChart({
           </button>
         </div>
         <div className={styles.chartContent}>
-          <span className={styles.emptyText}>{error ?? tr("common.noData")}</span>
+          <Flex justify="center" align="center" p={3}>
+            <Txt size="sm" secondary>{error ?? tr("common.noData")}</Txt>
+          </Flex>
         </div>
       </div>
     );
