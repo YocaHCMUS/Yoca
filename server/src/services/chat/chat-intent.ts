@@ -60,7 +60,6 @@ export function toolNameToEvidenceType(name: string): WalletChatEvidence["type"]
     get_balance_history: "balance",
     get_trading_volume: "volume",
     get_wallet_portfolio: "portfolio",
-    get_historical_portfolio: "portfolio",
     get_token_price: "market",
   };
   return map[name] ?? "overview";

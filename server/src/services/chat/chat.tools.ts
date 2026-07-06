@@ -8,7 +8,7 @@ import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
 import { getTokenMeta, getTokenDetails } from "@sv/services/tokens/token-info.js";
 import { searchToken } from "./chat-token-search.js";
 import { searchNews, searchWeb } from "./chat-web-search.js";
-import { getBirdeyeChartData } from "@sv/services/wallet/providers/birdeye-chart-data.js";
+import { getMobulaChartData, type MobulaTimeframe } from "@sv/services/tokens/mobula-chart-data.js";
 import type { ChatToolDefinition, ToolCachePolicy } from "./chat.types.js";
 import { compactWalletSwaps, compactWalletTransfers } from "@sv/services/wallet/walletTxCompaction.service.js";
 import { washTradingService } from "@sv/services/wash-trading.service.js";
@@ -194,24 +194,6 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
       required: ["address"],
     },
   },
-  // {
-  //   name: "get_wallet_pnl_compact",
-  //   description:
-  //     "Fetch up to 500 wallet swaps and return a compact realized, trade-derived PnL overview by token. Includes total realized PnL, win rate, top gainer/loser, coverage, and per-token breakdowns. This can be sampled/limited by swap coverage, so cross-check with get_wallet_overview period PnL for broad performance questions.",
-  //   input_schema: {
-  //     type: "object",
-  //     properties: {
-  //       address: { type: "string", description: "Solana wallet address (base58)" },
-  //       limit: { type: "number", description: "Max number of swaps to analyze for PnL (default 500, max 500)" },
-  //       fromMs: { type: "number", description: "Start time (epoch ms)" },
-  //       toMs: { type: "number", description: "End time (epoch ms)" },
-  //       tokenAddress: { type: "string", description: "Token mint address (base58) to filter PnL. Call search_token first if you only have a symbol." },
-  //       minAmountUsd: { type: "number", description: "Minimum USD value per swap to include" },
-  //       maxAmountUsd: { type: "number", description: "Maximum USD value per swap to include" },
-  //     },
-  //     required: ["address"],
-  //   },
-  // },
   {
     name: "get_wallet_winrate",
     description:
@@ -257,19 +239,6 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
     },
   },
   {
-    name: "get_historical_portfolio",
-    description:
-      "Fetch historical token holdings for a wallet. Returns list of tokens with amount, USD value, and token metadata at a past date.",
-    input_schema: {
-      type: "object",
-      properties: {
-        address: { type: "string", description: "Solana wallet address (base58)" },
-        date: { type: "string", description: "Historical date for portfolio snapshot (YYYY-MM-DD)" },
-      },
-      required: ["address", "date"],
-    },
-  },
-  {
     name: "get_token_price",
     description:
       "Fetch available market data for a token: price in USD, 24h change percentage, market cap, 24h volume, and market cap rank. If current price data is unavailable, return an unavailable result rather than estimating it. When showing this data in a chart spec, PREFER type 'geckoterminal' over 'line'/'area'.",
@@ -284,7 +253,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_token_price_24h",
     description:
-      "Fetch 24-hour intra-day price chart for a token. Returns timestamp-price points. In the chart spec, ALWAYS use type 'geckoterminal' (not 'line'/'area') — set tokenAddress to show an interactive iframe. Covers all Solana tokens via Birdeye (primary) + CoinGecko (fallback).",
+      "Fetch 24-hour intra-day price chart for a token. Returns timestamp-price points. In the chart spec, ALWAYS use type 'geckoterminal' (not 'line'/'area') — set tokenAddress to show an interactive iframe. Powered by Mobula.",
     input_schema: {
       type: "object",
       properties: {
@@ -296,7 +265,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_token_price_hourly",
     description:
-      "Fetch hourly price chart for a token over a number of days (max 90). Returns hourly timestamp-price points. In the chart spec, ALWAYS use type 'geckoterminal' (not 'line'/'area') — set tokenAddress to show an interactive iframe. Covers all Solana tokens via Birdeye (primary) + CoinGecko (fallback).",
+      "Fetch hourly price chart for a token over a number of days (max 90). Returns hourly timestamp-price points. In the chart spec, ALWAYS use type 'geckoterminal' (not 'line'/'area') — set tokenAddress to show an interactive iframe. Powered by Mobula.",
     input_schema: {
       type: "object",
       properties: {
@@ -309,7 +278,7 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
   {
     name: "get_token_price_daily",
     description:
-      "Fetch daily price chart for a token over a number of days (max 365). Returns daily timestamp-price points. In the chart spec, ALWAYS use type 'geckoterminal' (not 'line'/'area') — set tokenAddress to show an interactive iframe. Covers all Solana tokens via Birdeye (primary) + CoinGecko (fallback).",
+      "Fetch daily price chart for a token over a number of days (max 365). Returns daily timestamp-price points. In the chart spec, ALWAYS use type 'geckoterminal' (not 'line'/'area') — set tokenAddress to show an interactive iframe. Powered by Mobula.",
     input_schema: {
       type: "object",
       properties: {
@@ -446,7 +415,7 @@ const MULTI_ADDRESS_TOOLS = new Set([
   "get_wallet_swaps_compact", "get_wallet_transfers_compact",
   "get_balance_history", "get_drawdown_chart",
   "get_wallet_pnl", "get_wallet_winrate", "get_pnl_chart",
-  "get_wallet_portfolio", "get_historical_portfolio",
+  "get_wallet_portfolio",
   "get_wallet_intelligence",
 ]);
 
@@ -1085,18 +1054,6 @@ export const TOOL_HANDLERS: Record<
     return { data, llmData: extractPortfolioForLLM(data, { minValueUsd, search }) };
   },
 
-  get_historical_portfolio: async (input) => {
-    const { address, date } = z.object({
-      address: z.string().min(1),
-      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    }).parse(input);
-    const { getHistoricalPortfolio } = await import(
-      "@sv/services/wallet/walletHistoricalPortfolio.service.js"
-    );
-    const data = await getHistoricalPortfolio(address, date);
-    return { data, llmData: extractPortfolioForLLM(data) };
-  },
-
   get_token_price: async (input) => {
     const { tokenAddress } = tokenAddressSchema.parse(input);
     const data = await getTokenMarketData([tokenAddress]);
@@ -1105,19 +1062,21 @@ export const TOOL_HANDLERS: Record<
 
   get_token_price_24h: async (input) => {
     const { tokenAddress } = tokenAddressSchema.parse(input);
-    const data = await getBirdeyeChartData(tokenAddress, "15m", 1);
+    const data = await getMobulaChartData(tokenAddress, "24h");
     return { data, llmData: extractChartForLLM(data, tokenAddress) };
   },
 
   get_token_price_hourly: async (input) => {
     const { tokenAddress, days } = tokenAddressDaysSchema.parse(input);
-    const data = await getBirdeyeChartData(tokenAddress, "1H", days);
+    const tf: MobulaTimeframe = days <= 7 ? "7d" : days <= 30 ? "30d" : "1y";
+    const data = await getMobulaChartData(tokenAddress, tf);
     return { data, llmData: extractChartForLLM(data, tokenAddress) };
   },
 
   get_token_price_daily: async (input) => {
     const { tokenAddress, days } = tokenAddressDaysSchema.parse(input);
-    const data = await getBirdeyeChartData(tokenAddress, "1D", days);
+    const tf: MobulaTimeframe = days <= 30 ? "30d" : "1y";
+    const data = await getMobulaChartData(tokenAddress, tf);
     return { data, llmData: extractChartForLLM(data, tokenAddress) };
   },
 
@@ -1201,9 +1160,8 @@ export const TOOL_CACHE_POLICY: Record<string, ToolCachePolicy> = {
   // get_wallet_pnl_compact: { ttlMs: 300_000, cacheable: true },
   get_wallet_winrate: { ttlMs: 300_000, cacheable: true },
   get_pnl_chart: { ttlMs: 300_000, cacheable: true },
-  get_historical_portfolio: { ttlMs: 300_000, cacheable: true },
   get_wallet_audit: { ttlMs: 300_000, cacheable: true },
-  // Birdeye-sourced — short TTL
+  // Wallet data — short TTL
   get_wallet_overview: { ttlMs: 60_000, cacheable: true },
   get_balance_history: { ttlMs: 60_000, cacheable: true },
   get_wallet_portfolio: { ttlMs: 30_000, cacheable: true },
@@ -1267,7 +1225,6 @@ const WALLET_SCOPED_TOOLS = new Set([
   "get_wallet_winrate",
   "get_pnl_chart",
   "get_wallet_portfolio",
-  "get_historical_portfolio",
   "get_wallet_audit",
   "get_wallet_intelligence",
 ]);

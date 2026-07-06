@@ -245,6 +245,7 @@
 /* ── Side Panel ──────────────────────────────── */
 .sidePanel {
   flex-shrink: 0;
+  width: 360px;
   padding: 1rem;
   overflow-y: auto;
   display: flex;

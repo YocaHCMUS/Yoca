@@ -580,6 +580,7 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
                           tokenLogoUri={token.logoUri}
                           dayMs={dayTimestamp}
                           trades={getTradesForToken(token)}
+                          priceHistory={token.priceHistory}
                           onRemove={() => removeChart(token.address)}
                         />
                       ))
@@ -615,6 +616,7 @@ export const DayActivityPopup: React.FC<DayActivityPopupProps> = ({
                       tokenLogoUri={token.logoUri}
                       dayMs={dayTimestamp}
                       trades={getTradesForToken(token)}
+                      priceHistory={token.priceHistory}
                       onRemove={() => removeChart(token.address)}
                     />
                   ))}

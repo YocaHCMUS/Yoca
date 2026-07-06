@@ -82,6 +82,7 @@ export interface WalletDayToken {
   sellAmount: number;
   totalVolumeUsd: number;
   hourlyVolumes: TokenHourlyVolume[];
+  priceHistory?: { timestampMs: number; price: number }[];
 }
 
 export interface WalletDaySwapSummary {

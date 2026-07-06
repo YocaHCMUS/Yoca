@@ -10,6 +10,7 @@ import type {
 import { getWalletSwaps } from "./walletTransfersSwaps.service.js";
 import { resolveEnhancedTransactions } from "./providers/walletEnhancedTx.service.js";
 import { roundUsd } from "./walletNormalization.utils.js";
+import { getMobulaChartData } from "@sv/services/tokens/mobula-chart-data.js";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -169,6 +170,24 @@ export async function getWalletDayActivitySummary(
             .sort((a, b) => b.totalVolumeUsd - a.totalVolumeUsd);
 
         swapsSummary.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
+
+        const uniqueAddrs = [...new Set(allTokens.map((t) => t.address))];
+        const priceResults = await Promise.allSettled(
+            uniqueAddrs.map((addr) => getMobulaChartData(addr, "24h")),
+        );
+        const priceMap = new Map<string, { timestampMs: number; price: number }[]>();
+        for (let i = 0; i < uniqueAddrs.length; i++) {
+            const res = priceResults[i];
+            if (res?.status === "fulfilled" && res.value.length > 0) {
+                priceMap.set(
+                    uniqueAddrs[i],
+                    res.value.map((p) => ({ timestampMs: p.unixTimestampMs, price: p.price })),
+                );
+            }
+        }
+        for (const token of allTokens) {
+            token.priceHistory = priceMap.get(token.address);
+        }
 
         return {
             walletAddress: address,
