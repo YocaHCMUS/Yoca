@@ -1,7 +1,3 @@
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/theme' as *;
-@use '@carbon/react/scss/type' as *;
-
 .stackContainer {
   position: relative;
   display: inline-block;
@@ -15,15 +11,15 @@
 
 .emptySpace {
   width: 100%;
-  flex: 1
+  flex: 1;
 }
 
 .tokenIcon {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 2px solid $layer-01;
-  background-color: $layer-02;
+  border: 2px solid var(--yoca-surface);
+  background: var(--yoca-bg-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -41,9 +37,9 @@
   }
 
   span {
-    @include type-style('body-compact-01');
+    font-size: 0.875rem;
     font-weight: 600;
-    color: $text-primary;
+    color: var(--yoca-text-main);
   }
 }
 
@@ -51,41 +47,44 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: $layer-03;
-  color: $text-secondary;
+  background: var(--yoca-surface-hover);
+  color: var(--yoca-text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  @include type-style('label-01');
+  font-size: 0.75rem;
   font-weight: 600;
   flex-shrink: 0;
   margin-left: 0;
 }
 
-.tooltip {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  margin-top: $spacing-02;
-  background-color: $layer-01;
-  border: 1px solid $border-subtle;
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-  z-index: 10;
-  width: 300px;
-  max-width: calc(100vw - #{$spacing-09});
+.tokenListPanel {
+  margin-top: 0.5rem;
+  border: 1px solid var(--yoca-border);
+  border-radius: 8px;
   overflow: hidden;
 }
 
-.tooltipHeader {
-  @include type-style('label-01');
-  color: $text-secondary;
-  padding: $spacing-03 $spacing-04;
-  border-bottom: 1px solid $border-subtle;
-  font-weight: 600;
+.tokenSearch {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  border: none;
+  border-bottom: 1px solid var(--yoca-border);
+  background: var(--yoca-surface);
+  color: var(--yoca-text-main);
+  outline: none;
+
+  &:focus {
+    border-bottom-color: var(--yoca-primary);
+  }
+
+  &::placeholder {
+    color: var(--yoca-text-muted);
+  }
 }
 
-.tooltipList {
+.tokenList {
   max-height: 320px;
   overflow-y: auto;
 }
@@ -93,10 +92,10 @@
 .tokenRow {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: $spacing-03;
+  gap: 0.5rem;
   align-items: center;
-  padding: $spacing-03 $spacing-04;
-  border-bottom: 1px solid $border-subtle-00;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--yoca-border);
   cursor: pointer;
   transition: background-color 0.15s;
 
@@ -105,14 +104,14 @@
   }
 
   &:hover {
-    background-color: $layer-hover-01;
+    background: var(--yoca-surface-hover);
   }
 }
 
 .tokenInfo {
   display: flex;
   align-items: center;
-  gap: $spacing-02;
+  gap: 0.25rem;
   min-width: 0;
 }
 
@@ -120,7 +119,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background-color: $layer-02;
+  background: var(--yoca-bg-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -134,16 +133,16 @@
   }
 
   span {
-    @include type-style('label-01');
+    font-size: 0.75rem;
     font-weight: 600;
-    color: $text-primary;
+    color: var(--yoca-text-main);
   }
 }
 
 .tokenSymbol {
-  @include type-style('body-compact-01');
+  font-size: 0.875rem;
   font-weight: 600;
-  color: $text-primary;
+  color: var(--yoca-text-main);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -152,33 +151,32 @@
 .tokenMeta {
   display: inline-flex;
   align-items: center;
-  gap: $spacing-02;
+  gap: 0.25rem;
   min-width: 0;
 }
 
 .tokenChange {
-  @include type-style('label-01');
   font-size: 0.825rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .positive {
-  color: #24a148;
+  color: var(--yoca-success);
 }
 
 .negative {
-  color: #da1e28;
+  color: var(--yoca-danger);
 }
 
 .neutral {
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
 }
 
 .tokenVolumes {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, max-content));
-  gap: 2px $spacing-03;
+  gap: 2px 0.5rem;
   justify-content: end;
   justify-items: end;
   min-width: 0;
@@ -189,34 +187,46 @@
 }
 
 .buyVol {
-  @include type-style('body-compact-01');
-  color: #24a148;
+  font-size: 0.875rem;
+  color: var(--yoca-success);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
 }
 
 .buyAmt {
-  @include type-style('label-01');
-  color: $text-secondary;
+  font-size: 0.75rem;
+  color: var(--yoca-text-muted);
   font-variant-numeric: tabular-nums;
 }
 
 .sellVol {
-  @include type-style('body-compact-01');
-  color: #da1e28;
+  font-size: 0.875rem;
+  color: var(--yoca-danger);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
 }
 
 .sellAmt {
-  @include type-style('label-01');
-  color: $text-secondary;
+  font-size: 0.75rem;
+  color: var(--yoca-text-muted);
   font-variant-numeric: tabular-nums;
 }
 
-.tooltipMore {
-  @include type-style('label-01');
-  color: $text-secondary;
-  padding: $spacing-03 $spacing-04;
-  border-top: 1px solid $border-subtle;
+.showMoreBtn {
+  display: block;
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--yoca-text-muted);
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--yoca-border);
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: var(--yoca-surface-hover);
+    color: var(--yoca-primary);
+  }
 }

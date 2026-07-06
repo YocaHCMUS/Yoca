@@ -10,7 +10,6 @@ import { searchToken } from "./chat-token-search.js";
 import { searchNews, searchWeb } from "./chat-web-search.js";
 import { getBirdeyeChartData } from "@sv/services/wallet/providers/birdeye-chart-data.js";
 import type { ChatToolDefinition, ToolCachePolicy } from "./chat.types.js";
-import { getWalletTxDetail } from "@sv/services/wallet/walletDayActivity.service.js";
 import { compactWalletSwaps, compactWalletTransfers } from "@sv/services/wallet/walletTxCompaction.service.js";
 import { washTradingService } from "@sv/services/wash-trading.service.js";
 import { composeWalletIntelligence } from "@sv/services/wallet/walletIntelligence.service.js";
@@ -409,19 +408,6 @@ export const TOOL_DEFINITIONS: ChatToolDefinition[] = [
     },
   },
   {
-    name: "get_tx_detail",
-    description:
-      "Fetch full detail for a specific transaction by signature: all token transfers within the tx, fee breakdown (base + priority), fee payer, and fee receivers. Use this when the user asks about a specific swap or transfer they saw in a table, or wants to drill into a transaction. NOT for listing — use get_wallet_swaps or get_wallet_transfers for lists.",
-    input_schema: {
-      type: "object",
-      properties: {
-        address: { type: "string", description: "Solana wallet address (base58)" },
-        signature: { type: "string", description: "Transaction signature (base58) from a swap or transfer entry" },
-      },
-      required: ["address", "signature"],
-    },
-  },
-  {
     name: "get_token_wash_trade_risk",
     description:
       "Detect wash trading patterns for a token: circular trades (A\u2192B\u2192C\u2192A), same-amount transaction clusters, star-topology hub wallets, and volume anomalies (z-score outliers). Returns a risk score (0\u2013100), pattern flags, and GNN-based suspicious wallet scores. Use this when the user asks if a token\u2019s volume is organic, whether wash trading is happening, or to assess token market manipulation risk.",
@@ -461,7 +447,6 @@ const MULTI_ADDRESS_TOOLS = new Set([
   "get_balance_history", "get_drawdown_chart",
   "get_wallet_pnl", "get_wallet_winrate", "get_pnl_chart",
   "get_wallet_portfolio", "get_historical_portfolio",
-  "get_tx_detail",
   "get_wallet_intelligence",
 ]);
 
@@ -773,61 +758,6 @@ function extractNavigationForLLM(data: unknown): unknown {
   return { path: d.path ?? "", label: d.label ?? "" };
 }
 
-function extractTxDetailForLLM(data: unknown, walletAddress: string): unknown {
-  if (!data || typeof data !== "object") return null;
-  const d = data as {
-    transactionHash?: string;
-    timestamp?: string;
-    pair?: string;
-    action?: string;
-    transfers?: Array<Record<string, unknown>>;
-    feePaid?: number;
-    feePayer?: string;
-    feeReceivers?: Array<Record<string, unknown>>;
-  };
-  if (!d.transactionHash) return null;
-
-  const transfers = (d.transfers ?? []).map((t) => {
-    const from = String(t.from ?? "");
-    const to = String(t.to ?? "");
-    const isOut = from === walletAddress;
-    const isIn = to === walletAddress;
-    let direction = "internal";
-    if (isOut && !isIn) direction = "out";
-    else if (isIn && !isOut) direction = "in";
-    return {
-      from,
-      to,
-      mint: t.mint,
-      symbol: t.symbol,
-      amount: t.amount,
-      direction,
-    };
-  });
-
-  const feeLamports = Number(d.feePaid ?? 0);
-  const BASE_FEE = 5_000;
-  const priorityFee = Math.max(0, feeLamports - BASE_FEE);
-
-  return {
-    txHash: d.transactionHash,
-    timestamp: d.timestamp,
-    pair: d.pair,
-    action: d.action,
-    tokenTransfers: transfers,
-    fees: {
-      feePaidSol: feeLamports / 1e9,
-      baseFeeSol: BASE_FEE / 1e9,
-      priorityFeeSol: priorityFee / 1e9,
-    },
-    feePayer: d.feePayer,
-    feeReceivers: (d.feeReceivers ?? []).map((r) => ({
-      address: r.address,
-      amount: r.amount,
-    })),
-  };
-}
-
 function extractTokenMetaForLLM(data: unknown): unknown {
   if (!Array.isArray(data)) return [];
   return data.map((m: Record<string, unknown>) => ({
@@ -984,11 +914,6 @@ const tokenAddressSchema = z.object({
 const tokenAddressDaysSchema = z.object({
   tokenAddress: z.string().regex(BASE58_REGEX, "Must be a valid base58 token mint address"),
   days: z.number().int().positive().max(365).optional().default(7),
-});
-
-const txDetailSchema = z.object({
-  address: z.string().min(1),
-  signature: z.string().min(1),
 });
 
 const navigatePageSchema = z.object({
@@ -1239,12 +1164,6 @@ export const TOOL_HANDLERS: Record<
     const resolved = ROUTE_MAP[page](params);
     return { data: resolved, llmData: extractNavigationForLLM(resolved) };
   },
-  get_tx_detail: async (input) => {
-    const { address, signature } = txDetailSchema.parse(input);
-    const data = await getWalletTxDetail(address, signature);
-    return { data, llmData: extractTxDetailForLLM(data, address) };
-  },
-
   get_token_wash_trade_risk: async (input) => {
     const { tokenAddress } = tokenAddressSchema.parse(input);
     const data = await washTradingService.analyzeWashTrading(tokenAddress);
@@ -1294,8 +1213,6 @@ export const TOOL_CACHE_POLICY: Record<string, ToolCachePolicy> = {
   search_token: { ttlMs: 600_000, cacheable: true },
   // Navigation — static
   navigate_to_page: { ttlMs: 600_000, cacheable: true },
-  // Tx detail — fairly stable per tx
-  get_tx_detail: { ttlMs: 300_000, cacheable: true },
   // On-chain + wash trading analysis — medium TTL
   get_token_wash_trade_risk: { ttlMs: 300_000, cacheable: true },
   // Wallet intelligence — medium TTL (identity data changes slowly)

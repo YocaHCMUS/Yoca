@@ -1,16 +1,14 @@
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import ProfileLoadingState from "@/components/profile/shared/ProfileLoadingState";
 import { FilterType, SortType, Table } from "@/components/tables/Table";
-import { SwapDetailModal } from "@/components/wallet/SwapDetailModal/SwapDetailModal";
 import WalletOverviewPnLSection from "@/components/wallet/WalletOverview/WalletOverviewPnLSection";
 import WalletOverviewTradingSection from "@/components/wallet/WalletOverview/WalletOverviewTradingSection";
 import WalletOverviewValueSection from "@/components/wallet/WalletOverview/WalletOverviewValueSection";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useProfileActivityTabData } from "@/hooks/profile/useProfileActivityTabData";
-import type { WalletSwap } from "@/services/wallet/walletApi";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import { Copy, Link } from "@carbon/react/icons";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import styles from "@/components/profile/shared/profile.module.scss";
 
 interface ProfileActivityTabProps {
@@ -27,8 +25,6 @@ export function ProfileActivityTab({
     walletAddresses,
     period,
   });
-  const [swapModalOpen, setSwapModalOpen] = useState(false);
-  const [selectedSwap, setSelectedSwap] = useState<WalletSwap | null>(null);
   const linkedWalletAddressSet = useMemo(
     () => new Set(walletAddresses.map((address) => address.toLowerCase())),
     [walletAddresses],
@@ -50,8 +46,6 @@ export function ProfileActivityTab({
     () => visibleRows.filter((row) => row.type === "transfer"),
     [visibleRows],
   );
-
-  const swapsRaw = useMemo(() => data.swapsRaw ?? [], [data.swapsRaw]);
 
   if (loading) {
     return <ProfileLoadingState />;
@@ -139,15 +133,6 @@ export function ProfileActivityTab({
           sortConfigs={{
             1: { type: SortType.Date },
             4: { type: SortType.Number },
-          }}
-          onRowClick={(_, rowIndex) => {
-            const swap = swapsRaw[rowIndex >= 0 ? rowIndex : -1];
-            if (!swap) {
-              return;
-            }
-
-            setSelectedSwap(swap);
-            setSwapModalOpen(true);
           }}
           loading={loading}
           wrapperClassName={styles.activityTableSurface}
@@ -308,12 +293,6 @@ export function ProfileActivityTab({
                 />
             </div> */}
 
-      <SwapDetailModal
-        isOpen={swapModalOpen}
-        onClose={() => setSwapModalOpen(false)}
-        swap={selectedSwap}
-        walletAddress={selectedSwap?.walletAddress ?? walletAddresses[0] ?? ""}
-      />
     </section>
   );
 }

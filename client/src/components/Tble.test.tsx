@@ -1,4 +1,4 @@
-﻿import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import Tble, { TbleFilterType, TbleSortType } from "./Tble";
 
@@ -205,6 +205,57 @@ describe("Tble native sort, search, and filters", () => {
     fireEvent.click(screen.getByText("Token Bravo"));
 
     expect(onRowClick).toHaveBeenCalledWith(rows[0], 0);
+  });
+  it("keeps rows visible and emits search changes in server filtering mode", () => {
+    const onSearchChange = vi.fn();
+    renderTable({
+      enableSearch: true,
+      searchFields: ["address"],
+      searchValue: "charlie",
+      onSearchChange,
+      clientFiltering: false,
+    });
+
+    expect(screen.getByText("Alpha")).toBeInTheDocument();
+    expect(screen.getByText("Bravo")).toBeInTheDocument();
+    expect(screen.getByText("Charlie")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Search table" }), {
+      target: { value: "alpha" },
+    });
+
+    expect(onSearchChange).toHaveBeenCalledWith("alpha");
+  });
+
+  it("emits controlled filter changes without local filtering in server mode", () => {
+    const onFilterValuesChange = vi.fn();
+    renderTable({
+      clientFiltering: false,
+      filterValues: {},
+      onFilterValuesChange,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Filter: Token" }));
+    const dialog = screen.getByRole("dialog", { name: "Filter: Token" });
+    fireEvent.click(within(dialog).getByLabelText("Alpha"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Apply" }));
+
+    expect(onFilterValuesChange).toHaveBeenCalledWith({ token: ["Alpha"] });
+    expect(screen.getByText("Bravo")).toBeInTheDocument();
+  });
+
+  it("emits controlled sort changes without local sorting in server mode", () => {
+    const onSortChange = vi.fn();
+    renderTable({
+      clientSorting: false,
+      sortValue: null,
+      onSortChange,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Value" }));
+
+    expect(onSortChange).toHaveBeenCalledWith({ key: "value", direction: "desc" });
+    expect(screen.getByText("Bravo").compareDocumentPosition(screen.getByText("Alpha"))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 });
 

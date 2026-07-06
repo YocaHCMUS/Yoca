@@ -176,12 +176,7 @@ query: {address, chain?, limit?, cursor?, before?}
 - Click handler passes rawSwap to modal as TransferRecord[] via balanceChanges mapping
 **Gap**: Infers sold/bought from sign heuristic; cannot render exchange, pair, or USD value; no type safety on swap object
 
-### File: `client/src/components/wallet/SwapDetailModal/SwapDetailModal.tsx`
-**Purpose**: Modal detail view for swap transactions  
-**Current State**: Renders sold/bought tokens with arrow, transaction metadata  
-**Input**: `transfers?: TransferRecord[] | null; fee, slot, feePayer` (manual props)
-- TransferRecord = {signature, timestamp, direction, counterparty, mint, symbol, amount, amountRaw, decimals}
-- Derived from balanceChanges array by page component
+
 **Rendering**:
 - Sold token card (outflow direction)
 - Arrow icon
@@ -222,7 +217,7 @@ query: {address, chain?, limit?, cursor?, before?}
    - **Investigation**: Examined schema.ts; confirmed swapBalanceChanges and feeBalanceChanges as JSONB with no exchange, pair, or side fields.
 
 3. **Weak Client Typing**: fetchWalletSwaps returns untyped any[]; swap page component infers sold/bought from sign heuristic on balanceChanges.find(); modal receives derived TransferRecord[] instead of native swap shape.
-   - **Investigation**: Read walletApi.ts (no explicit WalletSwap interface), wallet/index.tsx (any[] swap state), SwapDetailModal.tsx (TransferRecord input interface).
+   - **Investigation**: Read walletApi.ts (no explicit WalletSwap interface), wallet/index.tsx (any[] swap state).
 
 4. **No Moralis Endpoint Builder**: util-moralis.ts has generic HTTP wrapper but no solana-gateway URL customization or wallet-swaps-specific pagination mapping.
    - **Investigation**: Read util-moralis.ts; confirmed only default deep-index base URL and generic endpoint builder.
@@ -257,7 +252,7 @@ query: {address, chain?, limit?, cursor?, before?}
 - ✅ Route endpoint definition (GET /swap with OpenAPI doc)
 - ✅ Service orchestration (getWalletSwaps with cache-first fallback, Solana gate, error handling)
 - ✅ Basic frontend fetch & render (fetchWalletSwaps, swap table with balanceChanges inference)
-- ✅ Modal detail view (SwapDetailModal with sold/bought cards, tx metadata)
+
 - ✅ Test mocking infrastructure (mocked fetch/cache/retriever in multiple test files)
 
 ### Partially Complete Work

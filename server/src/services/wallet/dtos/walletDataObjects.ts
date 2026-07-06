@@ -603,39 +603,6 @@ export interface WalletDaySwapSummary {
 
 }
 
-export interface WalletTxTransfer {
-    from: string;
-    to: string;
-    mint: string;
-    symbol: string | null;
-    name: string | null;
-    logoUri: string | null;
-    amount: number;
-    amountUsd: number | null;
-    fromTokenAccount?: string;
-    toTokenAccount?: string;
-}
-
-export interface WalletFeeReceiver {
-    address: string;
-    amount: number;
-    amountUsd: number | null;
-    label: string | null;
-}
-
-export interface WalletTxDetail {
-    transactionHash: string;
-    timestamp: string;
-    pair: string;
-    valueUsd: number;
-    action: "buy" | "sell";
-    transfers: WalletTxTransfer[];
-    feePaid: number;
-    feePaidUsd: number | null;
-    feePayer: string;
-    feeReceivers: WalletFeeReceiver[];
-}
-
 export interface WalletInnerInstruction {
     index: number;
     programId: string;
