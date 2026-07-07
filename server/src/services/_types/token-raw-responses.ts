@@ -188,8 +188,8 @@ const cg_PoolResourceSchema = z.object({
     base_token_price_native_currency: z.string(),
     quote_token_price_usd: z.string(),
     quote_token_price_native_currency: z.string(),
-    base_token_price_quote_token: z.string(),
-    quote_token_price_base_token: z.string(),
+    base_token_price_quote_token: z.string().nullable(),
+    quote_token_price_base_token: z.string().nullable(),
     address: z.string(),
     name: z.string(),
     pool_created_at: z.string(),
@@ -199,7 +199,7 @@ const cg_PoolResourceSchema = z.object({
     price_change_percentage: cg_PoolTimeframeStatsSchema,
     transactions: cg_PoolTransactionsSchema,
     volume_usd: cg_PoolTimeframeStatsSchema,
-    reserve_in_usd: z.string(),
+    reserve_in_usd: z.string().nullable(),
     sentiment_vote_positive_percentage: z.number().optional(),
     sentiment_vote_negative_percentage: z.number().optional(),
     community_sus_report: z.number().optional(),
@@ -768,6 +768,71 @@ export const dex_TopPoolsSchema = z.object({
 });
 
 export type DEX_TopPools = z.infer<typeof dex_TopPoolsSchema>;
+
+export const cmc_SpotPairQuoteSchema = z.strictObject({
+  price: z.number().nullable().optional(),
+  liquidity: z.number().nullable().optional(),
+  convert_id: z.union([z.string(), z.number()]).nullable().optional(),
+  price_by_quote_asset: z.number().nullable().optional(),
+  last_updated: z.string().nullable().optional(),
+  volume_24h: z.number().nullable().optional(),
+  percent_change_price_1h: z.number().nullable().optional(),
+  percent_change_price_24h: z.number().nullable().optional(),
+  fully_diluted_value: z.number().nullable().optional(),
+  "24h_buy_volume": z.number().nullable().optional(),
+  "24h_sell_volume": z.number().nullable().optional(),
+});
+
+export const cmc_SpotPairSchema = z.strictObject({
+  quote: z.array(cmc_SpotPairQuoteSchema).optional(),
+  contract_address: z.string(),
+  name: z.string(),
+  base_asset_id: z.union([z.string(), z.number()]).nullable().optional(),
+  base_asset_ucid: z.union([z.string(), z.number()]).nullable().optional(),
+  base_asset_name: z.string().nullable().optional(),
+  base_asset_symbol: z.string().nullable().optional(),
+  base_asset_contract_address: z.string().nullable().optional(),
+  quote_asset_id: z.union([z.string(), z.number()]).nullable().optional(),
+  quote_asset_ucid: z.union([z.string(), z.number()]).nullable().optional(),
+  quote_asset_name: z.string().nullable().optional(),
+  quote_asset_symbol: z.string().nullable().optional(),
+  quote_asset_contract_address: z.string().nullable().optional(),
+  dex_id: z.union([z.string(), z.number()]).nullable().optional(),
+  dex_slug: z.string().nullable().optional(),
+  network_id: z.union([z.string(), z.number()]).nullable().optional(),
+  network_slug: z.string().nullable().optional(),
+  last_updated: z.string().nullable().optional(),
+  created_at: z.string().nullable().optional(),
+  num_transactions_24h: z.number().nullable().optional(),
+  holders: z.number().nullable().optional(),
+  "24h_no_of_buys": z.number().nullable().optional(),
+  "24h_no_of_sells": z.number().nullable().optional(),
+  pool_created: z.string().nullable().optional(),
+  buy_tax: z.number().nullable().optional(),
+  sell_tax: z.number().nullable().optional(),
+  security_scan: z.array(z.unknown()).nullable().optional(),
+  pool_base_asset: z.number().nullable().optional(),
+  pool_quote_asset: z.number().nullable().optional(),
+  percent_pooled_base_asset: z.number().nullable().optional(),
+  "24h_volume_quote_asset": z.number().nullable().optional(),
+  total_supply_quote_asset: z.number().nullable().optional(),
+  total_supply_base_asset: z.number().nullable().optional(),
+  date_launched: z.string().nullable().optional(),
+  scroll_id: z.string().nullable().optional(),
+});
+
+export const cmc_SpotPairsLatestSchema = z.union([
+  z.array(cmc_SpotPairSchema),
+  z.strictObject({
+    data: z.array(cmc_SpotPairSchema),
+    status: z.unknown().optional(),
+  }),
+]);
+
+export type CMC_SpotPair = z.infer<typeof cmc_SpotPairSchema>;
+export type CMC_SpotPairsLatest = z.infer<
+  typeof cmc_SpotPairsLatestSchema
+>;
 
 export const mrl_WalletSwapsSchema = z.object({
   result: z.array(

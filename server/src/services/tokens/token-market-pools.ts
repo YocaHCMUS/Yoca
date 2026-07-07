@@ -1,26 +1,19 @@
 import { validateApiResult } from "@sv/middlewares/validation.js";
 import {
-  cg_PoolDataSchema,
-  cg_TopPoolDataSchema,
-  type CG_TopPoolData,
+    cmc_SpotPairsLatestSchema,
+    cg_TopPoolDataSchema,
+    type CG_TopPoolData,
+    type CMC_SpotPair,
+    type CMC_SpotPairsLatest,
 } from "@sv/services/_types/token-raw-responses.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
 import * as cg from "@sv/util/util-coingecko.js";
-import Bottleneck from "bottleneck";
-import { z } from "zod";
+import * as cmc from "@sv/util/util-coinmarketcap.js";
 
 const INCLUDE = "base_token,quote_token,dex";
 const TARGET_POOL_COUNT = 100;
 const MAX_PAGE_ROUNDS = 12;
-const VALIDATION_CONCURRENCY = 8;
-const VALIDATION_CACHE_TTL_MS = 10 * 60 * 1000;
-const DETAIL_ENRICH_CONCURRENCY = 6;
-// Pool phải có liquidity tối thiểu để lọc bỏ meme pool rác không có thanh khoản
 const MIN_LIQUIDITY_USD = 500;
-const dexPaprikaLimiter = new Bottleneck({
-  maxConcurrent: 2,
-  minTime: 250,
-});
 
 export type PoolDuration = "5m" | "1h" | "6h" | "24h";
 export type PoolTopSort = "volume" | "txns" | "marketCap";
@@ -52,56 +45,6 @@ export interface MarketPoolItem {
   poolCreatedAt: string | null;
 }
 
-type ValidationCacheEntry = {
-  exists: boolean;
-  checkedAt: number;
-};
-
-const dexPaprikaPoolsResponseSchema = z.strictObject({
-  pools: z.array(
-    z.strictObject({
-      id: z.string(),
-      dex_id: z.string(),
-      dex_name: z.string(),
-      chain: z.string(),
-      volume_usd: z.number(),
-      created_at: z.string(),
-      transactions: z.number(),
-      price_usd: z.number(),
-      last_price_change_usd_5m: z.number().nullable(),
-      last_price_change_usd_1h: z.number().nullable(),
-      last_price_change_usd_24h: z.number().nullable(),
-      tokens: z.array(
-        z.strictObject({
-          id: z.string(),
-          name: z.string(),
-          symbol: z.string(),
-          chain: z.string(),
-          has_image: z.boolean(),
-          fdv: z.number().optional(),
-        }),
-      ),
-    }),
-  ),
-  page_info: z.strictObject({
-    limit: z.number(),
-    page: z.number(),
-    total_items: z.number(),
-    total_pages: z.number(),
-  }),
-});
-
-const poolValidationCache = new Map<string, ValidationCacheEntry>();
-
-/** Xóa toàn bộ cache validation — dùng khi cần force refresh data */
-export function clearPoolValidationCache(): void {
-  poolValidationCache.clear();
-}
-
-function isNotFoundStatus(status: number): boolean {
-  return status === 404;
-}
-
 function toNumber(input: string | number | null | undefined): number | null {
   if (input == null) {
     return null;
@@ -115,10 +58,9 @@ function trimIdPrefix(id: string, prefix: string = "solana_"): string {
   return id.startsWith(prefix) ? id.slice(prefix.length) : id;
 }
 
-async function fetchPools(
+async function fetchCgPools(
   path: string,
   query: Record<string, string>,
-  functionName: string,
 ): Promise<MarketPoolItem[]> {
   const candidates: MarketPoolItem[] = [];
   const seenPools = new Set<string>();
@@ -138,7 +80,9 @@ async function fetchPools(
     });
 
     if (!resp.ok) {
-      console.error(`[fetchPools] Error ${resp.status} for URL: ${cgEndpoint.toString()}`);
+      console.error(
+        `FetchPools: Error ${resp.status} for URL: ${cgEndpoint.toString()}`,
+      );
       break;
     }
 
@@ -147,11 +91,13 @@ async function fetchPools(
       // TODO: Consider more robust error handling
       break;
     }
-    const pageItems = mapPools(res);
-    
-    if (pageItems.length === 0) {
+    const pageItems = mapCgPools(res);
+
+    if (pageItems.length == 0) {
       // Log for debugging empty responses
-      console.warn(`[fetchPools] Warning: Page ${page} returned 0 items for URL: ${cgEndpoint.toString()}`);
+      console.warn(
+        `FetchPools: Page ${page} returned 0 items for URL: ${cgEndpoint.toString()}`,
+      );
       // Don't break immediately on page 1, try a few more if it's a list fetch
       if (page > 3) break;
       continue;
@@ -171,7 +117,7 @@ async function fetchPools(
     }
   }
 
-  if (candidates.length === 0) {
+  if (candidates.length == 0) {
     return [];
   }
 
@@ -180,8 +126,7 @@ async function fetchPools(
   return candidates.slice(0, TARGET_POOL_COUNT);
 }
 
-function mapPools(res: CG_TopPoolData): MarketPoolItem[] {
-
+function mapCgPools(res: CG_TopPoolData): MarketPoolItem[] {
   const tokenLookup = new Map<
     string,
     { address: string; name: string; symbol: string; imageUrl: string | null }
@@ -189,7 +134,7 @@ function mapPools(res: CG_TopPoolData): MarketPoolItem[] {
   const dexLookup = new Map<string, { name: string }>();
 
   for (const item of res.included ?? []) {
-    if (item.type === "token") {
+    if (item.type == "token") {
       tokenLookup.set(item.id, {
         address: item.attributes.address ?? "",
         name: item.attributes.name,
@@ -199,7 +144,7 @@ function mapPools(res: CG_TopPoolData): MarketPoolItem[] {
       continue;
     }
 
-    if (item.type === "dex") {
+    if (item.type == "dex") {
       dexLookup.set(item.id, {
         name: item.attributes.name,
       });
@@ -233,9 +178,11 @@ function mapPools(res: CG_TopPoolData): MarketPoolItem[] {
       quoteSymbol: quoteToken?.symbol ?? "",
       quoteImageUrl: quoteToken?.imageUrl ?? null,
       priceUsd: toNumber(pool.attributes.base_token_price_usd),
-      marketCapUsd: toNumber(pool.attributes.market_cap_usd && pool.attributes.market_cap_usd !== "0" 
-        ? pool.attributes.market_cap_usd 
-        : pool.attributes.fdv_usd),
+      marketCapUsd: toNumber(
+        pool.attributes.market_cap_usd && pool.attributes.market_cap_usd !== "0"
+          ? pool.attributes.market_cap_usd
+          : pool.attributes.fdv_usd,
+      ),
       fdvUsd: toNumber(pool.attributes.fdv_usd),
       txns24h: buys24h + sells24h,
       volume24h: toNumber(pool.attributes.volume_usd?.h24),
@@ -249,92 +196,19 @@ function mapPools(res: CG_TopPoolData): MarketPoolItem[] {
   });
 }
 
-async function fetchMultiPoolsFromCoinGecko(
-  addresses: string[],
-  functionName: string,
-): Promise<MarketPoolItem[]> {
-  if (addresses.length === 0) return [];
-  const result: MarketPoolItem[] = [];
-
-  // CoinGecko allows max 30 addresses per multi-pool request
-  for (let i = 0; i < addresses.length; i += 30) {
-    const chunk = addresses.slice(i, i + 30);
-    const endpoint = cg.getOnchainEndpoint(
-      `/networks/solana/pools/multi/${chunk.join(",")}`,
-    );
-    endpoint.search = new URLSearchParams({
-      include: INCLUDE,
-    }).toString();
-
-    const resp = await rlFetch(endpoint, {
-      method: "GET",
-      headers: cg.getRequiredHeaders(),
-      rlLimiter: cg.limiter,
-    });
-
-    if (resp.ok) {
-      const payload = await validateApiResult(cg_TopPoolDataSchema, resp);
-      if (payload) {
-        result.push(...mapPools(payload));
-      }
-    }
-  }
-
-  return result;
-}
-
-/** Lấy data chi tiết cho 1 pool duy nhất - ổn định nhất cho pool mới */
-async function fetchSinglePoolFromCoinGecko(
-  poolAddress: string,
-  functionName: string,
-): Promise<MarketPoolItem | null> {
-  const endpoint = cg.getOnchainEndpoint(`/networks/solana/pools/${poolAddress}`);
-  endpoint.search = new URLSearchParams({ include: INCLUDE }).toString();
-
-  const resp = await rlFetch(endpoint, {
-    method: "GET",
-    headers: cg.getRequiredHeaders(),
-    rlLimiter: cg.limiter,
+export async function getTrendingMarketPools(duration: PoolDuration) {
+  const result = await fetchCgPools("/networks/solana/trending_pools", {
+    duration,
   });
 
-  if (!resp.ok) return null;
-
-  try {
-    const payload = await validateApiResult(cg_PoolDataSchema, resp);
-    if (!payload) {
-      // TODO: Consider more robust error handling
-      return null;
-    }
-    // API single pool trả về { data: { id, attributes... } }
-    // Chúng ta wrap vào mảng để dùng chung hàm mapPools
-    const wrappedPayload: CG_TopPoolData = {
-      data: [payload.data],
-      included: payload.included,
-    };
-    const results = mapPools(wrappedPayload);
-    return results[0] || null;
-  } catch (err) {
-    return null;
-  }
-}
-
-export async function getTrendingMarketPools(duration: PoolDuration) {
-  const result = await fetchPools(
-    "/networks/solana/trending_pools",
-    { duration },
-    "getTrendingMarketPools",
-  );
-
-  if (result.length > 0 || duration === "5m") {
+  if (result.length > 0 || duration == "5m") {
     return result;
   }
 
   // Fallback for demo-tier data sparsity on longer durations.
-  return await fetchPools(
-    "/networks/solana/trending_pools",
-    { duration: "5m" },
-    "getTrendingMarketPools:fallback5m",
-  );
+  return await fetchCgPools("/networks/solana/trending_pools", {
+    duration: "5m",
+  });
 }
 
 export async function getNewMarketPools() {
@@ -358,7 +232,7 @@ export async function getNewMarketPools() {
     if (resp.ok) {
       const res = await validateApiResult(cg_TopPoolDataSchema, resp);
       if (res) {
-        allResults.push(...mapPools(res));
+        allResults.push(...mapCgPools(res));
       }
     } else {
       break;
@@ -381,11 +255,7 @@ export async function getTopMarketPools(sortBy: PoolTopSort) {
   };
 
   for (const sort of sortCandidates[sortBy]) {
-    const result = await fetchPools(
-      "/networks/solana/pools",
-      { sort },
-      `getTopMarketPools:${sortBy}:${sort}`,
-    );
+    const result = await fetchCgPools("/networks/solana/pools", { sort });
 
     if (result.length > 0) {
       return result;
@@ -395,184 +265,94 @@ export async function getTopMarketPools(sortBy: PoolTopSort) {
   return [];
 }
 
-// ─── DexPaprika – Top Gainers ────────────────────────────────────────────────
-
-const DEXPAPRIKA_BASE = "https://api.dexpaprika.com";
-
-interface DexPaprikaToken {
-  id: string;
-  name: string;
-  symbol: string;
-  chain: string;
-  has_image: boolean;
-  fdv?: number;
+// CoinMarketCap – Top Gainers
+function getCmcSpotPairRows(payload: CMC_SpotPairsLatest) {
+  return Array.isArray(payload) ? payload : payload.data;
 }
 
-interface DexPaprikaPool {
-  id: string;
-  dex_id: string;
-  dex_name: string;
-  chain: string;
-  volume_usd: number;
-  created_at: string;
-  transactions: number;
-  price_usd: number;
-  last_price_change_usd_5m: number | null;
-  last_price_change_usd_1h: number | null;
-  last_price_change_usd_24h: number | null;
-  tokens: DexPaprikaToken[];
-}
-
-interface DexPaprikaPoolsResponse {
-  pools: DexPaprikaPool[];
-  page_info: {
-    limit: number;
-    page: number;
-    total_items: number;
-    total_pages: number;
-  };
-}
-
-function getDexPaprikaImageUrl(tokenId: string, hasImage: boolean): string | null {
-  if (!hasImage) return null;
-  return `https://assets.dexpaprika.com/tokens/solana/${tokenId}/logo.png`;
-}
-
-function mapDexPaprikaPools(pools: DexPaprikaPool[]): MarketPoolItem[] {
-  return pools.map((pool) => {
-    const baseToken = pool.tokens[0];
-    const quoteToken = pool.tokens[1];
+function mapCmcSpotPairs(pairs: CMC_SpotPair[]): MarketPoolItem[] {
+  return pairs.map((pair) => {
+    const quote = pair.quote?.[0];
+    const poolCreatedAt = pair.pool_created ?? pair.created_at ?? null;
 
     return {
-      id: pool.id,
-      poolAddress: pool.id,
-      poolName: baseToken
-        ? `${baseToken.symbol}/${quoteToken?.symbol ?? "???"}`
-        : pool.id,
-      dexId: pool.dex_id,
-      dexName: pool.dex_name,
-      baseAddress: baseToken?.id ?? "",
-      baseName: baseToken?.name ?? "",
-      baseSymbol: baseToken?.symbol ?? "",
-      baseImageUrl: baseToken
-        ? getDexPaprikaImageUrl(baseToken.id, baseToken.has_image)
-        : null,
-      quoteAddress: quoteToken?.id ?? "",
-      quoteName: quoteToken?.name ?? "",
-      quoteSymbol: quoteToken?.symbol ?? "",
-      quoteImageUrl: quoteToken 
-        ? getDexPaprikaImageUrl(quoteToken.id, quoteToken.has_image)
-        : null,
-      priceUsd: toNumber(pool.price_usd),
-      marketCapUsd: toNumber(baseToken?.fdv),
-      fdvUsd: toNumber(baseToken?.fdv),
-      txns24h: toNumber(pool.transactions),
-      volume24h: toNumber(pool.volume_usd),
-      priceChange5m: null, // USD delta, not %, needs CoinGecko enrichment
-      priceChange1h: null, // USD delta, not %, needs CoinGecko enrichment
+      id: pair.contract_address,
+      poolAddress: pair.contract_address,
+      poolName: pair.name,
+      dexId: String(pair.dex_id ?? pair.dex_slug ?? ""),
+      dexName: pair.dex_slug ?? String(pair.dex_id ?? ""),
+      baseAddress:
+        pair.base_asset_contract_address ?? String(pair.base_asset_id ?? ""),
+      baseName: pair.base_asset_name ?? "",
+      baseSymbol: pair.base_asset_symbol ?? "",
+      baseImageUrl: null,
+      quoteAddress:
+        pair.quote_asset_contract_address ?? String(pair.quote_asset_id ?? ""),
+      quoteName: pair.quote_asset_name ?? "",
+      quoteSymbol: pair.quote_asset_symbol ?? "",
+      quoteImageUrl: null,
+      priceUsd: toNumber(quote?.price),
+      marketCapUsd: null,
+      fdvUsd: toNumber(quote?.fully_diluted_value),
+      txns24h: toNumber(pair.num_transactions_24h),
+      volume24h: toNumber(quote?.volume_24h),
+      priceChange5m: null,
+      priceChange1h: toNumber(quote?.percent_change_price_1h),
       priceChange6h: null,
-      priceChange24h: null, // USD delta, not %, needs CoinGecko enrichment
-      liquidityUsd: null, // DexPaprika list không trả về liquidity (phải lấy từ CoinGecko)
-      poolCreatedAt: pool.created_at ?? null,
+      priceChange24h: toNumber(quote?.percent_change_price_24h),
+      liquidityUsd: toNumber(quote?.liquidity),
+      poolCreatedAt,
     };
   });
 }
 
-async function fetchDexPaprikaGainers(
-  limit: number = 100,
-  pages: number = 1,
-): Promise<MarketPoolItem[]> {
-  const allPools: DexPaprikaPool[] = [];
+async function fetchCmcTopGainerMarketPools(): Promise<MarketPoolItem[]> {
+  const endpoint = cmc.getEndpoint("/v4/dex/spot-pairs/latest");
+  endpoint.search = new URLSearchParams({
+    network_slug: "solana",
+    limit: String(TARGET_POOL_COUNT),
+    sort: "percent_change_24h",
+    sort_dir: "desc",
+    aux: [
+      "pool_created",
+      "num_transactions_24h",
+      "24h_no_of_buys",
+      "24h_no_of_sells",
+      "24h_buy_volume",
+      "24h_sell_volume",
+    ].join(","),
+  }).toString();
 
-  for (let page = 0; page < pages; page++) {
-    const url = new URL(`${DEXPAPRIKA_BASE}/networks/solana/pools`);
-    url.searchParams.set("limit", String(limit));
-    url.searchParams.set("page", String(page));
-    url.searchParams.set("sort", "desc");
-    url.searchParams.set("order_by", "last_price_change_usd_24h");
+  const resp = await rlFetch(endpoint, {
+    method: "GET",
+    headers: cmc.getRequiredHeaders(),
+    rlLimiter: cmc.limiter,
+  });
 
-    const resp = await rlFetch(url, {
-      method: "GET",
-      rlLimiter: dexPaprikaLimiter,
-    });
-
-    if (!resp.ok) {
-      console.error(
-        `[DexPaprika] fetchDexPaprikaGainers page ${page} failed: ${resp.status}`,
-      );
-      break;
-    }
-
-    const data = await validateApiResult(dexPaprikaPoolsResponseSchema, resp);
-    if (!data) {
-      // TODO: Consider more robust error handling
-      break;
-    }
-    if (!data.pools || data.pools.length === 0) break;
-
-    allPools.push(...data.pools);
+  if (!resp.ok) {
+    throw new Error(
+      `CoinMarketCap top gainers request failed: ${resp.status}`,
+    );
   }
 
-  // Map raw DexPaprika pools thành MarketPoolItem (dùng pool.id làm address)
-  return mapDexPaprikaPools(allPools);
+  const payload = await validateApiResult(cmc_SpotPairsLatestSchema, resp);
+  if (!payload) {
+    throw new Error("CoinMarketCap top gainers response validation failed");
+  }
+
+  const seen = new Set<string>();
+  return mapCmcSpotPairs(getCmcSpotPairRows(payload))
+    .filter((pool) => {
+      if (!pool.poolAddress || seen.has(pool.poolAddress)) {
+        return false;
+      }
+      seen.add(pool.poolAddress);
+      return true;
+    })
+    .sort((a, b) => (b.priceChange24h ?? 0) - (a.priceChange24h ?? 0));
 }
 
 export async function getTopGainerMarketPools(): Promise<MarketPoolItem[]> {
-  try {
-    // Bước 1: Lấy 150 địa chỉ pool từ DexPaprika (discovery)
-    const candidates = await fetchDexPaprikaGainers(150, 1);
-
-    if (candidates.length > 0) {
-      // Ưu tiên 10 cái đầu tiên dùng API Detail đơn lẻ (chính xác nhất)
-      const topPriority = candidates.slice(0, 10);
-      const others = candidates.slice(10);
-      
-      const enriched: MarketPoolItem[] = [];
-      
-      // Fetch 10 cái ưu tiên (batch of 5)
-      for (let i = 0; i < topPriority.length; i += 5) {
-        const chunk = topPriority.slice(i, i + 5);
-        const results = await Promise.all(
-          chunk.map(p => fetchSinglePoolFromCoinGecko(p.poolAddress, "getTopGainerMarketPools:priority"))
-        );
-        for (let j = 0; j < results.length; j++) { enriched.push(results[j] ?? chunk[j]); }
-      }
-
-      // Còn lại dùng MULTI-POOL endpoint (30 address/request) để lấy sll cho nhanh
-      const otherAddresses = others.map(p => p.poolAddress);
-      if (otherAddresses.length > 0) {
-        const otherEnriched = await fetchMultiPoolsFromCoinGecko(
-          otherAddresses,
-          "getTopGainerMarketPools:others"
-        );
-        const cgMap = new Map<string, MarketPoolItem>(); for (const p of otherEnriched) cgMap.set(p.poolAddress, p); for (const original of others) { enriched.push(cgMap.get(original.poolAddress) ?? original); }
-      }
-
-      // Xóa trùng nếu có (đề phòng)
-      const seen = new Set<string>();
-      const final = enriched.filter(p => {
-        if (seen.has(p.poolAddress)) return false;
-        seen.add(p.poolAddress);
-        return true;
-      });
-
-      // CoinGecko-enriched (real % change) lên đầu; DexPaprika-only giữ nguyên thứ tự discovery
-      return final.sort((a, b) => {
-        const aHas = a.priceChange24h != null;
-        const bHas = b.priceChange24h != null;
-        if (aHas && !bHas) return -1;
-        if (!aHas && bHas) return 1;
-        return (b.priceChange24h ?? 0) - (a.priceChange24h ?? 0);
-      });
-    }
-  } catch (err) {
-    console.error("[DexPaprika] getTopGainerMarketPools failed:", err);
-  }
-
-  // Fallback
-  return fetchPools(
-    "/networks/solana/pools",
-    { sort: "h24_price_change_percentage_desc" },
-    "getTopGainerMarketPools:fallback"
-  );
+  const cmcPools = await fetchCmcTopGainerMarketPools();
+  return cmcPools;
 }

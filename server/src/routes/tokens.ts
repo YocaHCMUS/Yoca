@@ -355,13 +355,6 @@ const app = new Hono()
       );
     }
   })
-  .delete("/market-pools/cache", async (c) => {
-    tokenService.clearPoolValidationCache();
-    return c.json(
-      { ok: true, message: "Pool validation cache cleared" },
-      statusCode.Ok,
-    );
-  })
   .get("/market-pools/new-pairs", async (c) => {
     try {
       const pools = await tokenService.getNewMarketPools();

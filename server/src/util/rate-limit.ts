@@ -43,6 +43,24 @@ function computeBackoff(attempt: number, baseDelay: number) {
   return baseDelay * Math.pow(2, attempt) + Math.floor(Math.random() * 250);
 }
 
+async function readResponsePreview(resp: Response): Promise<string | null> {
+  try {
+    const text = await resp.clone().text();
+    if (!text) {
+      return null;
+    }
+
+    const maxLog = 1000;
+    if (text.length > maxLog) {
+      return `${text.slice(0, maxLog)}\n... (truncated ${text.length - maxLog} chars)`;
+    }
+
+    return text;
+  } catch (e) {
+    return `Unable to read response body: ${e instanceof Error ? e.message : String(e)}`;
+  }
+}
+
 export async function rlFetch(
   url: URL,
   options: RateLimitedFetchOptions,
@@ -71,6 +89,7 @@ export async function rlFetch(
           const retryAfter = resp.headers.get("Retry-After");
 
           if (attempt == rlRetries) {
+            const responseBody = await readResponsePreview(resp);
             console.error(
               "Outbound request returned retryable status after retries",
               {
@@ -80,6 +99,7 @@ export async function rlFetch(
                 attempt: attempt + 1,
                 retriesRemaining: 0,
                 retryAfter,
+                responseBody,
                 attemptDurationMs: Date.now() - attemptStartedAtMs,
                 totalDurationMs: Date.now() - requestStartedAtMs,
               },
@@ -129,6 +149,20 @@ export async function rlFetch(
 
           await sleep(waitMs);
           continue;
+        }
+
+        if (!resp.ok) {
+          const responseBody = await readResponsePreview(resp);
+          console.info("Outbound request completed", {
+            url: requestUrl,
+            method: requestMethod,
+            status: resp.status,
+            attempt: attempt + 1,
+            responseBody,
+            attemptDurationMs: Date.now() - attemptStartedAtMs,
+            totalDurationMs: Date.now() - requestStartedAtMs,
+          });
+          return resp;
         }
 
         console.info("Outbound request completed", {

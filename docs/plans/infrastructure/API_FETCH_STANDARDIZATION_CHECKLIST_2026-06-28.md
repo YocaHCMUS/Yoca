@@ -96,11 +96,11 @@ For each provider endpoint:
 | Enhanced transaction fetch | `transactions.ts` | Helius enhanced-transactions endpoint | Not previously tracked | ✓ helius_EnhancedTransactionsSchema | ✓ MIGRATED (rlFetch + validateApiResult) | Direct `heliusFetch` use and response cast removed; schema is strict at the provider boundary. |
 | Wallet identity | `walletIdentity.service.ts` | Helius wallet identity/batch-identity endpoints | Not previously tracked | ✓ hls_WalletIdentitySchema, hls_WalletIdentityBatchSchema | ✓ MIGRATED (rlFetch + validateApiResult) | Direct `heliusFetch` use removed. Batch normalization still preserves flexible provider response shapes. |
 
-### DexPaprika
+### CoinMarketCap
 
 | Area | Current use | REST endpoint | Verification | Schema status | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Top pools on network | `token-market-pools.ts` DexPaprika fallback | `GET /networks/{network}/pools` | ✓ Verified | ✓ local dexPaprikaPoolsResponseSchema | ✓ MIGRATED (rlFetch + validateApiResult) | Added local limiter and validated the actual DexPaprika pool-list response shape used by the mapper. |
+| Top gainer pools | `token-market-pools.ts` CMC top-gainer discovery | `GET /v4/dex/spot-pairs/latest` | ✓ Verified | ✓ local cmcSpotPairsLatestSchema | ✓ MIGRATED (rlFetch + validateApiResult) | Replaced removed DexPaprika endpoint with CoinMarketCap `network_slug=solana`, `sort=percent_change_24h`, `sort_dir=desc`, with CoinGecko fallback retained. |
 
 ### Legacy / Lower Priority Provider Fetches
 
@@ -125,9 +125,9 @@ These are visible in fetch audits but should not block provider API standardizat
 ## Open Questions
 
 - [ ] Should the old tracker internals be revived inside `rlFetch`? Current standard names are `rlFetch` and `validateApiResult`; `trackedFetch` has no active consumers.
-- [ ] Should provider utilities expose limiters for all providers? CoinGecko, Birdeye, Mobula, Moralis, Helius, and Zerion already expose limiters; DexPaprika and SIM/Bitquery legacy paths do not.
+- [ ] Should provider utilities expose limiters for all providers? CoinGecko, Birdeye, Mobula, Moralis, Helius, Zerion, and CoinMarketCap already expose limiters.
 - [ ] Should legacy Helius/Moralis wallet activity paths be deleted once Mobula activity is stable?
-- [ ] For DexPaprika, is sorting top pools by `last_price_change_usd_24h` an acceptable approximation for gainers/losers, or should this feature use another endpoint/provider?
+- [x] Replace removed DexPaprika top-gainer discovery with CoinMarketCap `percent_change_24h` sorting.
 - [ ] Should `token_holder_stats` remain as the long-term Mobula holder snapshot stats cache, or should holder count/distribution move into a dedicated holder snapshot metadata table?
 
 ## Suggested Small Batches
@@ -167,5 +167,5 @@ These are visible in fetch audits but should not block provider API standardizat
 - [x] Add Birdeye trending schema.
 - [x] Move token holder rows and distribution from Moralis/CoinGecko to Mobula holder positions.
 - [ ] Remove or archive legacy Moralis holder response type if no other code uses it.
-- [x] Add DexPaprika pools schema.
-- [ ] Wire DexPaprika pools schema into `token-market-pools.ts` and review the gainer/loser approximation.
+- [x] Add CoinMarketCap spot-pairs schema.
+- [x] Wire CoinMarketCap top-gainer discovery into `token-market-pools.ts`.

@@ -1,14 +1,13 @@
 import {
-  TOKEN_POOL_DATA_TTL_MS,
-  TOKEN_DEX_LOGOS_TTL_MS,
-  TOKEN_POOLS_TTL_MS as TOKEN_TOP_POOLS_TTL_MS,
+    TOKEN_POOL_DATA_TTL_MS,
+    TOKEN_POOLS_TTL_MS as TOKEN_TOP_POOLS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-  tokenPoolData,
-  tokenTopPools,
-  type TokenPoolDataInsert,
-  type TokenTopPoolInsert,
+    tokenPoolData,
+    tokenTopPools,
+    type TokenPoolDataInsert,
+    type TokenTopPoolInsert,
 } from "@sv/db/schema.js";
 import { validateApiResult } from "@sv/middlewares/validation.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
@@ -16,9 +15,9 @@ import { excludedAuto, excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, eq, gt } from "drizzle-orm";
 import {
-  cg_ExchangeListSchema,
-  cg_PoolDataSchema,
-  cg_TopPoolDataSchema,
+    cg_ExchangeListSchema,
+    cg_PoolDataSchema,
+    cg_TopPoolDataSchema,
 } from "../_types/token-raw-responses.js";
 
 const DEX_ID_ALIASES: Record<string, string> = {
@@ -29,10 +28,6 @@ const DEX_ID_ALIASES: Record<string, string> = {
   orca_whirlpools: "orca",
   meteora_dlmm: "meteora",
 };
-
-let cachedDexLogos: Map<string, string> | null = null;
-let dexLogosFetchedAt = 0;
-let inFlightDexLogosPromise: Promise<Map<string, string>> | null = null;
 
 function resolveDexLogo(
   dexId: string | null | undefined,
@@ -51,7 +46,7 @@ function resolveDexLogo(
   while (DEX_ID_ALIASES[resolvedId] && DEX_ID_ALIASES[resolvedId] !== resolvedId) {
     resolvedId = DEX_ID_ALIASES[resolvedId];
   }
-  // Try to find in logos cache
+  // Try to find in the fetched logos map.
   return dexLogos.get(resolvedId) ?? null;
 }
 
@@ -96,27 +91,6 @@ async function fetchDexLogos(): Promise<Map<string, string>> {
   return result;
 }
 
-async function getDexLogos(): Promise<Map<string, string>> {
-  const now = Date.now();
-  if (
-    cachedDexLogos &&
-    now - dexLogosFetchedAt < TOKEN_DEX_LOGOS_TTL_MS
-  ) {
-    return cachedDexLogos;
-  }
-
-  if (!inFlightDexLogosPromise) {
-    inFlightDexLogosPromise = fetchDexLogos().then((logos) => {
-      cachedDexLogos = logos;
-      dexLogosFetchedAt = Date.now();
-      inFlightDexLogosPromise = null;
-      return logos;
-    });
-  }
-
-  return inFlightDexLogosPromise;
-}
-
 function trimIdPrefix(id: string, prefix: string = "solana_"): string {
   return id.startsWith(prefix) ? id.slice(prefix.length) : id;
 }
@@ -150,10 +124,10 @@ async function fetchTokenTopPools(tokenAddress: string) {
     return [];
   }
 
-  const dexLogos = await getDexLogos();
+  const dexLogos = await fetchDexLogos();
   const tokenLookup = new Map<string, string | null>();
   for (const item of res.included ?? []) {
-    if (item.type === "token") {
+    if (item.type == "token") {
       tokenLookup.set(item.id, item.attributes.image_url ?? null);
     }
   }
@@ -178,7 +152,7 @@ async function fetchTokenTopPools(tokenAddress: string) {
         quoteImageUrl: tokenLookup.get(raw.relationships.quote_token.data.id) ?? null,
 
         dexId: raw.relationships.dex.data.id,
-  dexImageUrl: resolveDexLogo(raw.relationships.dex.data.id, dexLogos),
+        dexImageUrl: resolveDexLogo(raw.relationships.dex.data.id, dexLogos),
 
         poolCreatedAt: new Date(raw.attributes.pool_created_at),
         liquidityUsd: Number(raw.attributes.reserve_in_usd),
@@ -304,7 +278,7 @@ export async function getTokenTopPools(tokenAddress: string) {
     )
     .limit(1);
 
-  if (freshCheck.length === 0) {
+  if (freshCheck.length == 0) {
     return await fetchTokenTopPools(tokenAddress);
   }
 
@@ -358,10 +332,10 @@ async function fetchPoolData(poolAddress: string) {
     return null;
   }
 
-  const dexLogos = await getDexLogos();
+  const dexLogos = await fetchDexLogos();
   const tokenLookup = new Map<string, string | null>();
   for (const item of res.included ?? []) {
-    if (item.type === "token") {
+    if (item.type == "token") {
       tokenLookup.set(item.id, item.attributes.image_url ?? null);
     }
   }
@@ -377,7 +351,7 @@ async function fetchPoolData(poolAddress: string) {
     quoteImageUrl: tokenLookup.get(raw.relationships.quote_token.data.id) ?? null,
 
     dexId: raw.relationships.dex.data.id,
-  dexImageUrl: resolveDexLogo(raw.relationships.dex.data.id, dexLogos),
+    dexImageUrl: resolveDexLogo(raw.relationships.dex.data.id, dexLogos),
 
     poolCreatedAt: new Date(raw.attributes.pool_created_at),
     liquidityUsd: Number(raw.attributes.reserve_in_usd),
