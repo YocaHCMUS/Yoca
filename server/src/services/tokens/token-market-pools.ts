@@ -1,6 +1,13 @@
-import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
+import {
+  cg_PoolDataSchema,
+  cg_TopPoolDataSchema,
+  type CG_TopPoolData,
+} from "@sv/services/_types/token-raw-responses.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 import * as cg from "@sv/util/util-coingecko.js";
-import type { CG_TopPoolData } from "../_types/token-raw-responses.js";
+import Bottleneck from "bottleneck";
+import { z } from "zod";
 
 const INCLUDE = "base_token,quote_token,dex";
 const TARGET_POOL_COUNT = 100;
@@ -10,6 +17,10 @@ const VALIDATION_CACHE_TTL_MS = 10 * 60 * 1000;
 const DETAIL_ENRICH_CONCURRENCY = 6;
 // Pool phải có liquidity tối thiểu để lọc bỏ meme pool rác không có thanh khoản
 const MIN_LIQUIDITY_USD = 500;
+const dexPaprikaLimiter = new Bottleneck({
+  maxConcurrent: 2,
+  minTime: 250,
+});
 
 export type PoolDuration = "5m" | "1h" | "6h" | "24h";
 export type PoolTopSort = "volume" | "txns" | "marketCap";
@@ -45,6 +56,40 @@ type ValidationCacheEntry = {
   exists: boolean;
   checkedAt: number;
 };
+
+const dexPaprikaPoolsResponseSchema = z.strictObject({
+  pools: z.array(
+    z.strictObject({
+      id: z.string(),
+      dex_id: z.string(),
+      dex_name: z.string(),
+      chain: z.string(),
+      volume_usd: z.number(),
+      created_at: z.string(),
+      transactions: z.number(),
+      price_usd: z.number(),
+      last_price_change_usd_5m: z.number().nullable(),
+      last_price_change_usd_1h: z.number().nullable(),
+      last_price_change_usd_24h: z.number().nullable(),
+      tokens: z.array(
+        z.strictObject({
+          id: z.string(),
+          name: z.string(),
+          symbol: z.string(),
+          chain: z.string(),
+          has_image: z.boolean(),
+          fdv: z.number().optional(),
+        }),
+      ),
+    }),
+  ),
+  page_info: z.strictObject({
+    limit: z.number(),
+    page: z.number(),
+    total_items: z.number(),
+    total_pages: z.number(),
+  }),
+});
 
 const poolValidationCache = new Map<string, ValidationCacheEntry>();
 
@@ -86,15 +131,10 @@ async function fetchPools(
       ...query,
     }).toString();
 
-    const resp = await trackedFetch({
-      provider: "unknown",
-      url: cgEndpoint,
-      init: {
-        method: "GET",
-        headers: cg.getRequiredHeaders(),
-      },
-      serviceFile: "server/src/services/tokens/token-market-pools.ts",
-      functionName,
+    const resp = await rlFetch(cgEndpoint, {
+      method: "GET",
+      headers: cg.getRequiredHeaders(),
+      rlLimiter: cg.limiter,
     });
 
     if (!resp.ok) {
@@ -102,7 +142,11 @@ async function fetchPools(
       break;
     }
 
-    const res = (await resp.json()) as CG_TopPoolData;
+    const res = await validateApiResult(cg_TopPoolDataSchema, resp);
+    if (!res) {
+      // TODO: Consider more robust error handling
+      break;
+    }
     const pageItems = mapPools(res);
     
     if (pageItems.length === 0) {
@@ -191,8 +235,8 @@ function mapPools(res: CG_TopPoolData): MarketPoolItem[] {
       priceUsd: toNumber(pool.attributes.base_token_price_usd),
       marketCapUsd: toNumber(pool.attributes.market_cap_usd && pool.attributes.market_cap_usd !== "0" 
         ? pool.attributes.market_cap_usd 
-        : (pool.attributes as any).fdv_usd),
-      fdvUsd: toNumber((pool.attributes as any).fdv_usd),
+        : pool.attributes.fdv_usd),
+      fdvUsd: toNumber(pool.attributes.fdv_usd),
       txns24h: buys24h + sells24h,
       volume24h: toNumber(pool.attributes.volume_usd?.h24),
       priceChange5m: toNumber(pool.attributes.price_change_percentage?.m5),
@@ -222,20 +266,17 @@ async function fetchMultiPoolsFromCoinGecko(
       include: INCLUDE,
     }).toString();
 
-    const resp = await trackedFetch({
-      provider: "unknown",
-      url: endpoint,
-      init: {
-        method: "GET",
-        headers: cg.getRequiredHeaders(),
-      },
-      serviceFile: "server/src/services/tokens/token-market-pools.ts",
-      functionName,
+    const resp = await rlFetch(endpoint, {
+      method: "GET",
+      headers: cg.getRequiredHeaders(),
+      rlLimiter: cg.limiter,
     });
 
     if (resp.ok) {
-      const payload = (await resp.json()) as CG_TopPoolData;
-      result.push(...mapPools(payload));
+      const payload = await validateApiResult(cg_TopPoolDataSchema, resp);
+      if (payload) {
+        result.push(...mapPools(payload));
+      }
     }
   }
 
@@ -250,27 +291,27 @@ async function fetchSinglePoolFromCoinGecko(
   const endpoint = cg.getOnchainEndpoint(`/networks/solana/pools/${poolAddress}`);
   endpoint.search = new URLSearchParams({ include: INCLUDE }).toString();
 
-  const resp = await trackedFetch({
-    provider: "unknown",
-    url: endpoint,
-    init: {
-      method: "GET",
-      headers: cg.getRequiredHeaders(),
-    },
-    serviceFile: "server/src/services/tokens/token-market-pools.ts",
-    functionName: `${functionName}:fetchSingle`,
+  const resp = await rlFetch(endpoint, {
+    method: "GET",
+    headers: cg.getRequiredHeaders(),
+    rlLimiter: cg.limiter,
   });
 
   if (!resp.ok) return null;
 
   try {
-    const payload = await resp.json() as any;
+    const payload = await validateApiResult(cg_PoolDataSchema, resp);
+    if (!payload) {
+      // TODO: Consider more robust error handling
+      return null;
+    }
     // API single pool trả về { data: { id, attributes... } }
     // Chúng ta wrap vào mảng để dùng chung hàm mapPools
-    const results = mapPools({
+    const wrappedPayload: CG_TopPoolData = {
       data: [payload.data],
-      included: payload.included
-    } as any);
+      included: payload.included,
+    };
+    const results = mapPools(wrappedPayload);
     return results[0] || null;
   } catch (err) {
     return null;
@@ -308,20 +349,17 @@ export async function getNewMarketPools() {
       page: String(page),
     }).toString();
 
-    const resp = await trackedFetch({
-      provider: "unknown",
-      url: cgEndpoint,
-      init: {
-        method: "GET",
-        headers: cg.getRequiredHeaders(),
-      },
-      serviceFile: "server/src/services/tokens/token-market-pools.ts",
-      functionName: "getNewMarketPools",
+    const resp = await rlFetch(cgEndpoint, {
+      method: "GET",
+      headers: cg.getRequiredHeaders(),
+      rlLimiter: cg.limiter,
     });
 
     if (resp.ok) {
-      const res = (await resp.json()) as CG_TopPoolData;
-      allResults.push(...mapPools(res));
+      const res = await validateApiResult(cg_TopPoolDataSchema, resp);
+      if (res) {
+        allResults.push(...mapPools(res));
+      }
     } else {
       break;
     }
@@ -453,12 +491,9 @@ async function fetchDexPaprikaGainers(
     url.searchParams.set("sort", "desc");
     url.searchParams.set("order_by", "last_price_change_usd_24h");
 
-    const resp = await trackedFetch({
-      provider: "dexpaprika",
-      url,
-      init: { method: "GET" },
-      serviceFile: "server/src/services/tokens/token-market-pools.ts",
-      functionName: "fetchDexPaprikaGainers",
+    const resp = await rlFetch(url, {
+      method: "GET",
+      rlLimiter: dexPaprikaLimiter,
     });
 
     if (!resp.ok) {
@@ -468,7 +503,11 @@ async function fetchDexPaprikaGainers(
       break;
     }
 
-    const data = (await resp.json()) as DexPaprikaPoolsResponse;
+    const data = await validateApiResult(dexPaprikaPoolsResponseSchema, resp);
+    if (!data) {
+      // TODO: Consider more robust error handling
+      break;
+    }
     if (!data.pools || data.pools.length === 0) break;
 
     allPools.push(...data.pools);

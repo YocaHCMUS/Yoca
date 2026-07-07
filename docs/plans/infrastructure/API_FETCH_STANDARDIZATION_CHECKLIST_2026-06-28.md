@@ -26,7 +26,7 @@ For each provider endpoint:
 
 - [x] `rlFetch`: preferred rate-limited fetch path.
 - [x] `validateApiResult`: preferred response parsing and schema validation path.
-- [ ] `trackedFetch`: still active in CoinGecko market pool paths, DexPaprika fallback, legacy `pools.ts`, legacy balance/transfer services, and `routes/misc.ts`. Priority endpoint migrations are incomplete.
+- [x] `trackedFetch`: no active service/route consumers remain; remaining symbol is only the tracker service export for possible future tracker revival.
 - [x] `heliusFetch`: removed after all active Helius REST call sites moved to `rlFetch` + `validateApiResult`.
 - [x] `moralisFetch`: removed after wallet swaps moved to `rlFetch` + `validateApiResult`.
 - [x] `requestProviderJson<T>`: removed after Helius and Birdeye wallet provider wrappers were migrated/removed.
@@ -47,13 +47,13 @@ For each provider endpoint:
 | CoinGecko token search | `search.ts`, `chat-token-search.ts` REST | `GET /api/v3/search` | ✓ Verified | ✓ cg_SearchSchema | ✓ MIGRATED (rlFetch + validateApiResult) | Also removed dead duplicate SDK-based copies of this logic in `routes/search.ts` (unused, route only calls `services/search.ts`). |
 | CoinGecko onchain pool search | `search.ts` REST | `GET /api/v3/onchain/search/pools` | ✓ Verified | ✓ cg_TopPoolDataSchema | ✓ MIGRATED (rlFetch + validateApiResult) | Also removed dead duplicate SDK-based copy in `routes/search.ts`. |
 | CoinGecko exchange logos | `token-pools.ts` rlFetch | `GET /api/v3/exchanges` | Existing implementation | ✓ cg_ExchangeListSchema | ✓ MIGRATED (rlFetch + validateApiResult) | Used to backfill DEX logos for token pools. |
-| CoinGecko top pools by token | `token-pools.ts` rlFetch, `pools.ts` trackedFetch | `GET /api/v3/onchain/networks/{network}/tokens/{address}/pools` | ✓ Verified | ✓ cg_TopPoolDataSchema | Partial | Cache-backed `token-pools.ts` migrated; duplicate legacy `pools.ts` still uses `trackedFetch` and local interfaces. |
-| CoinGecko pool detail | `token-pools.ts` rlFetch, `pools.ts` trackedFetch | `GET /api/v3/onchain/networks/{network}/pools/{address}` | ✓ Verified | ✓ cg_PoolDataSchema | Partial | Cache-backed `token-pools.ts` migrated; duplicate legacy `pools.ts` still uses `trackedFetch` and local interfaces. |
-| CoinGecko pool trades | `token-trades.ts` rlFetch, `pools.ts` trackedFetch | `GET /api/v3/onchain/networks/{network}/pools/{address}/trades` | ✓ Verified | ✓ cg_24hPoolTradesSchema | Partial | Cache-backed `token-trades.ts` migrated; duplicate legacy `pools.ts` still uses `trackedFetch` and direct JSON casts. |
+| CoinGecko top pools by token | `token-pools.ts` rlFetch | `GET /api/v3/onchain/networks/{network}/tokens/{address}/pools` | ✓ Verified | ✓ cg_TopPoolDataSchema | ✓ MIGRATED (rlFetch + validateApiResult) | Removed duplicate legacy `pools.ts`. |
+| CoinGecko pool detail | `token-pools.ts` rlFetch | `GET /api/v3/onchain/networks/{network}/pools/{address}` | ✓ Verified | ✓ cg_PoolDataSchema | ✓ MIGRATED (rlFetch + validateApiResult) | Removed duplicate legacy `pools.ts`. |
+| CoinGecko pool trades | `token-trades.ts` rlFetch | `GET /api/v3/onchain/networks/{network}/pools/{address}/trades` | ✓ Verified | ✓ cg_24hPoolTradesSchema | ✓ MIGRATED (rlFetch + validateApiResult) | Removed duplicate legacy `pools.ts`. |
 | CoinGecko market chart range | `token-chart.ts`, `resolve-token-price.ts` fallback | `GET /api/v3/coins/{id}/market_chart/range` | ✓ Verified | ✓ cg_TokenMarketChartSchema | ✓ MIGRATED (rlFetch + validateApiResult) | Replaced trackedFetch/plain fetch with rlFetch. |
 | CoinGecko market chart | `token-history.ts` trackedFetch | `GET /api/v3/coins/{id}/market_chart` | ✓ Verified | ✓ cg_TokenMarketChartSchema | ✓ MIGRATED (rlFetch + validateApiResult) | Replaced trackedFetch with rlFetch. |
-| CoinGecko market pools | `token-market-pools.ts` trackedFetch | `GET /api/v3/onchain/networks/solana/{trending_pools,new_pools,pools,multi pools}` | Existing implementation | Partial: ✓ cg_TopPoolDataSchema, ✓ cg_PoolDataSchema | Pending | Multiple onchain pool list/detail helpers still use `trackedFetch`; single-pool path currently wraps raw JSON with `any`. |
-| CoinGecko exchange rates | `routes/misc.ts` trackedFetch | `GET /api/v3/exchange_rates` | Existing implementation | Missing | Defer / low priority | Route-level utility with small in-memory response cache; not part of token/provider service standardization unless routes are included. |
+| CoinGecko market pools | `token-market-pools.ts` rlFetch | `GET /api/v3/onchain/networks/solana/{trending_pools,new_pools,pools,multi pools}` | Existing implementation | ✓ cg_TopPoolDataSchema, ✓ cg_PoolDataSchema | ✓ MIGRATED (rlFetch + validateApiResult) | All active market-pool CoinGecko calls now use schema validation. |
+| CoinGecko exchange rates | `routes/misc.ts` rlFetch | `GET /api/v3/exchange_rates` | Existing implementation | ✓ local exchangeRatesResponseSchema | ✓ MIGRATED (rlFetch + validateApiResult) | Kept route-level stale-cache fallback behavior. |
 
 ### Birdeye
 
@@ -100,15 +100,15 @@ For each provider endpoint:
 
 | Area | Current use | REST endpoint | Verification | Schema status | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Top pools on network | `token-market-pools.ts` DexPaprika fallback | `GET /networks/{network}/pools` | ✓ Verified | ✓ dex_TopPoolsSchema | Pending | Uses `trackedFetch`, no DexPaprika provider utility/limiter yet; schema created but not wired into service. |
+| Top pools on network | `token-market-pools.ts` DexPaprika fallback | `GET /networks/{network}/pools` | ✓ Verified | ✓ local dexPaprikaPoolsResponseSchema | ✓ MIGRATED (rlFetch + validateApiResult) | Added local limiter and validated the actual DexPaprika pool-list response shape used by the mapper. |
 
 ### Legacy / Lower Priority Provider Fetches
 
 | Area | Current use | Provider | Current path | Schema status | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Legacy balances service | `balances.ts` trackedFetch | SIM | `GET /balances/{wallet}` | Missing | Remove candidate | Appears separate from newer wallet balance paths; direct JSON cast and local interface. |
-| Legacy transfers service | `transfers.ts`, `transfers.deprecated.ts` trackedFetch | Bitquery | GraphQL POST | Missing | Remove candidate | Both files still use `trackedFetch`; confirm routing before any migration investment. |
-| Legacy duplicate pool service | `pools.ts` trackedFetch | CoinGecko | Onchain pools and pool trades | Local interfaces only | Remove candidate | Duplicate surface beside cache-backed token pool services; do not migrate unless confirmed active. |
+| Legacy balances service | `balances.ts`, `routes/balances.ts`, `util-sim.ts` | SIM | `GET /balances/{wallet}` | Removed | Removed | SIM provider and route were fully deprecated. |
+| Legacy transfers service | `transfers.ts`, `transfers.deprecated.ts`, `routes/transfers.ts`, `util-bitquery.ts` | Bitquery | GraphQL POST | Removed | Removed | Bitquery provider and route were fully deprecated. |
+| Legacy duplicate pool service | `pools.ts` | CoinGecko | Onchain pools and pool trades | Local interfaces only | Removed | Duplicate surface beside cache-backed token pool services; no active imports found. |
 | Zerion fungible ID lookup | `walletTokenBalance.service.ts` rlFetch | Zerion | `GET /fungibles/` | ✓ zrn_FungiblesResponseSchema | ✓ MIGRATED (rlFetch + validateApiResult) | Nearby wallet chart path already used `rlFetch` with `zrn.limiter`; fungible lookup now does too. |
 
 ### Explicitly Deferred Plain Fetches
@@ -124,7 +124,7 @@ These are visible in fetch audits but should not block provider API standardizat
 
 ## Open Questions
 
-- [ ] Should `trackedFetch` become internal to `rlFetch`, or should `rlFetch` call tracking directly? Current standard names are `rlFetch` and `validateApiResult`, but call tracking also exists separately.
+- [ ] Should the old tracker internals be revived inside `rlFetch`? Current standard names are `rlFetch` and `validateApiResult`; `trackedFetch` has no active consumers.
 - [ ] Should provider utilities expose limiters for all providers? CoinGecko, Birdeye, Mobula, Moralis, Helius, and Zerion already expose limiters; DexPaprika and SIM/Bitquery legacy paths do not.
 - [ ] Should legacy Helius/Moralis wallet activity paths be deleted once Mobula activity is stable?
 - [ ] For DexPaprika, is sorting top pools by `last_price_change_usd_24h` an acceptable approximation for gainers/losers, or should this feature use another endpoint/provider?
@@ -152,7 +152,7 @@ These are visible in fetch audits but should not block provider API standardizat
 - [x] Verify CoinGecko onchain pool search shape.
 - [x] Add/reuse schemas for cache-backed top pools, pool detail, pool trades, and exchange logos.
 - [x] Replace search/pool-search casts (done for `search.ts`/`chat-token-search.ts`). Cache-backed pool-detail/top-pools casts in `token-pools.ts` and pool-trades casts in `token-trades.ts` are also migrated.
-- [ ] Migrate broader market pools and legacy duplicate pool surfaces (`token-market-pools.ts`, `pools.ts`) separately.
+- [x] Migrate broader market pools and remove legacy duplicate pool surface (`token-market-pools.ts`, `pools.ts`).
 
 ### Batch 4: Legacy provider wrappers
 

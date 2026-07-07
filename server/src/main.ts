@@ -6,7 +6,6 @@ import { requestContextMiddleware } from "@sv/middlewares/request-context.js";
 import users from "@sv/routes/users.js";
 import auth from "@sv/routes/auth.js";
 import tokens from "@sv/routes/tokens.js";
-import balances from "@sv/routes/balances.js";
 import alerts from "@sv/routes/alerts.route.js";
 import alertsHp from "@sv/routes/alerts.js";
 import chartRoutes from "@sv/routes/chart.route.js";
@@ -21,7 +20,6 @@ import profile from "@sv/routes/profile.js";
 import search from "@sv/routes/search.js";
 import trades from "@sv/routes/trades.js";
 import transactions from "@sv/routes/transactions.js";
-import transfers from "@sv/routes/transfers.js";
 import wallets from "@sv/routes/wallets.js";
 import walletTags from "@sv/routes/wallets/wallet-tags.js";
 import walletAnalysis from "@sv/modules/wallet-analysis/routes/walletAnalysis.routes.js";
@@ -53,8 +51,6 @@ const app = new Hono()
   .route("/api/misc", misc)
   .route("/api/search", search)
   .route("/api/transactions", transactions)
-  .route("/api/balances", balances)
-  .route("/api/transfers", transfers)
   .route("/api/charts", chartRoutes)
   .route("/api/profile", profile)
   .route("/api/wallets", wallets)

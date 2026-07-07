@@ -1,6 +1,8 @@
 import * as cg from "@sv/util/util-coingecko.js";
-import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 import { Hono } from "hono";
+import { z } from "zod";
 
 type ExchangeRateEntry = {
   name: string;
@@ -12,6 +14,18 @@ type ExchangeRateEntry = {
 export type ExchangeRatesResponse = {
   rates: Record<string, ExchangeRateEntry>;
 };
+
+const exchangeRatesResponseSchema = z.strictObject({
+  rates: z.record(
+    z.string(),
+    z.strictObject({
+      name: z.string(),
+      unit: z.string(),
+      value: z.number(),
+      type: z.enum(["crypto", "fiat", "commodity"]),
+    }),
+  ),
+});
 
 let cachedRates: ExchangeRatesResponse | null = null;
 let cachedAt = 0;
@@ -59,22 +73,23 @@ const app = new Hono()
 
     try {
       const endpoint = cg.getEndpoint("/exchange_rates");
-      const resp = await trackedFetch({
-        provider: "unknown",
-        url: endpoint,
-        init: {
-          method: "GET",
-          headers: cg.getRequiredHeaders(),
-        },
-        serviceFile: "server/src/routes/misc.ts",
-        functionName: "GET /exchange-rates",
+      const resp = await rlFetch(endpoint, {
+        method: "GET",
+        headers: cg.getRequiredHeaders(),
+        rlLimiter: cg.limiter,
       });
       if (!resp.ok) {
         if (cachedRates) return c.json(cachedRates); // serve stale on error
         return c.json({ error: "Failed to fetch exchange rates" }, 502);
       }
 
-      cachedRates = (await resp.json()) as ExchangeRatesResponse;
+      const payload = await validateApiResult(exchangeRatesResponseSchema, resp);
+      if (!payload) {
+        if (cachedRates) return c.json(cachedRates);
+        return c.json({ error: "Failed to validate exchange rates" }, 502);
+      }
+
+      cachedRates = payload;
       cachedAt = now;
       return c.json(cachedRates);
     } catch (err) {
