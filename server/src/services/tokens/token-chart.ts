@@ -16,7 +16,7 @@ import {
     type TokenMarketChartDailyInsert,
     type TokenMarketChartHourlyInsert,
 } from "@sv/db/schema.js";
-import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import { excluded } from "@sv/util/orm-sql.js";
 import * as bds from "@sv/util/util-birdeye.js";
 import * as cg from "@sv/util/util-coingecko.js";
@@ -105,7 +105,7 @@ export async function fetch24hTokenMarketChart(
     return [];
   }
 
-  const res = await getTrackedApiResult(cg_TokenMarketChartSchema, resp);
+  const res = await validateApiResult(cg_TokenMarketChartSchema, resp);
 
   if (!res) {
     return [];
@@ -208,7 +208,7 @@ async function fetchAndCacheChartRange(
     return;
   }
 
-  const res = await getTrackedApiResult(cg_TokenMarketChartSchema, resp);
+  const res = await validateApiResult(cg_TokenMarketChartSchema, resp);
 
   if (!res || res.prices.length == 0) {
     return;
@@ -398,7 +398,7 @@ async function fetchHistoricalRange(
     rlLimiter: bds.limiter,
   });
 
-  const res = await getTrackedApiResult(bds_HistoryPriceSchema, resp);
+  const res = await validateApiResult(bds_HistoryPriceSchema, resp);
 
   if (!res) return;
 

@@ -1,15 +1,15 @@
 import { TOP_TOKEN_HOLDERS_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
-import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import {
-  tokenHolderStats,
-  topTokenHolders,
-  type TokenHolderStatsInsert,
-  type TokenTopHolderInsert,
+    tokenHolderStats,
+    topTokenHolders,
+    type TokenHolderStatsInsert,
+    type TokenTopHolderInsert,
 } from "@sv/db/schema.js";
 import {
-  mbl_TokenTopHoldersSchema,
-  type MBL_TokenTopHolderSchema,
+    mbl_TokenTopHoldersSchema,
+    type MBL_TokenTopHolderSchema,
 } from "@sv/services/_types/token-raw-responses.js";
 import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
@@ -35,7 +35,7 @@ export async function fetchTokenHolderPositions(
   if (!resp.ok) {
     return null;
   }
-  const res = await getTrackedApiResult(mbl_TokenTopHoldersSchema, resp);
+  const res = await validateApiResult(mbl_TokenTopHoldersSchema, resp);
 
   if (!res) {
     return null;

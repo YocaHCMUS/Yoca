@@ -1,44 +1,44 @@
 import type {
-  WalletTransfersResponse,
-  WalletSwapsResponse,
-  WalletSwap,
-  WalletTransfer,
+    WalletTransfersResponse,
+    WalletSwapsResponse,
+    WalletSwap,
+    WalletTransfer,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { toWalletPageInfo } from "@sv/services/wallet/walletData.core.js";
 import { resolveRequestedRange } from "@sv/services/wallet/walletRange.utils.js";
 import * as mobula from "@sv/util/util-mobula";
 import { rlFetch } from "@sv/util/rate-limit";
-import { getTrackedApiResult } from "@sv/middlewares/validation";
+import { validateApiResult } from "@sv/middlewares/validation";
 import {
-  excludedAutoFromInsert,
-  excludedAutoNonNullFromInsert,
+    excludedAutoFromInsert,
+    excludedAutoNonNullFromInsert,
 } from "@sv/util/orm-sql.js";
 import {
-  mbl_WalletActivitySchema,
-  type MBL_WalletActivity,
+    mbl_WalletActivitySchema,
+    type MBL_WalletActivity,
 } from "../_types/wallet-raw-responses";
 import {
-  tokenMeta,
-  TokenMetaInsert,
-  walletTransferHistory,
-  walletTransferHistoryMeta,
-  walletSwapHistory,
-  walletSwapHistoryMeta,
+    tokenMeta,
+    TokenMetaInsert,
+    walletTransferHistory,
+    walletTransferHistoryMeta,
+    walletSwapHistory,
+    walletSwapHistoryMeta,
 } from "@sv/db/schema";
 import dayjs from "dayjs";
 import { z } from "zod";
 import { db } from "@sv/db";
 import {
-  WSOL_MINT,
-  WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
-  WALLET_SWAP_HISTORY_LATEST_TOLERANCE_MS,
-  WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
-  WALLET_TRANSFER_HISTORY_LATEST_TOLERANCE_MS,
-  MONTH_MS,
-  MOBULA_WALLET_ACTIVITY_MAX_PAGES,
-  MOBULA_WALLET_ACTIVITY_PAGE_SIZE,
-  MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS,
-  MOUBAL_SOL_CONTRACT,
+    WSOL_MINT,
+    WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
+    WALLET_SWAP_HISTORY_LATEST_TOLERANCE_MS,
+    WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
+    WALLET_TRANSFER_HISTORY_LATEST_TOLERANCE_MS,
+    MONTH_MS,
+    MOBULA_WALLET_ACTIVITY_MAX_PAGES,
+    MOBULA_WALLET_ACTIVITY_PAGE_SIZE,
+    MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS,
+    MOUBAL_SOL_CONTRACT,
 } from "@sv/config/constants";
 import { isBaseAsset } from "./walletDayActivity.service.js";
 import { and, desc, eq, gt, gte, inArray, lt, lte, max, or } from "drizzle-orm";
@@ -810,7 +810,7 @@ async function mbl_fetchWalletActivityRange({
       headers: mobula.getRequiredHeaders(),
       rlLimiter: mobula.limiter,
     });
-    const result = await getTrackedApiResult(
+    const result = await validateApiResult(
       mbl_WalletActivitySchema,
       response,
     );

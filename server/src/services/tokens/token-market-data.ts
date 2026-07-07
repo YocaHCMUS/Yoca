@@ -3,7 +3,7 @@ import { db } from "@sv/db/index.js";
 import { tokenMarketData, type TokenMarketDataInsert } from "@sv/db/schema.js";
 import { excludedAuto } from "@sv/util/orm-sql.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
-import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import {
     cg_CoinMarketsSchema,
@@ -57,7 +57,7 @@ export async function fetchCgMarketDataBatched(
           return [];
         }
 
-        const data = await getTrackedApiResult(cg_CoinMarketsSchema, resp);
+        const data = await validateApiResult(cg_CoinMarketsSchema, resp);
         return data || [];
       }
     ),

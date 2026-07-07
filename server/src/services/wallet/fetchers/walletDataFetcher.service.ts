@@ -23,7 +23,7 @@ import {
     toIsoTimestamp,
     toOptionalNumber,
 } from "@sv/services/wallet/fetchers/walletProviderMappers.js";
-import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import { hls_WalletBalancesSchema } from "@sv/services/_types/wallet-raw-responses.js";
 import { callBirdeye } from "@sv/services/wallet/providers/adapters/birdeye.adapter.js";
 import {
@@ -331,7 +331,7 @@ export async function fetchHeliusSolanaPortfolio(
         break;
       }
 
-      const json = await getTrackedApiResult(hls_WalletBalancesSchema, resp);
+      const json = await validateApiResult(hls_WalletBalancesSchema, resp);
       if (!json) {
         break;
       }

@@ -313,7 +313,7 @@ export const honoJwt = async (c: Context, next: Next) => {
 };
 
 // Check if result schema was like expected. Useful for debugging
-export async function getTrackedApiResult<T extends z.ZodType>(
+export async function validateApiResult<T extends z.ZodType>(
   schema: T,
   resp: Response,
   logSuccessResponse: boolean = false,

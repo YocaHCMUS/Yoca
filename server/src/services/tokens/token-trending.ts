@@ -6,7 +6,7 @@ import {
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import { trendingTokens } from "@sv/db/schema.js";
-import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
 import * as bds from "@sv/util/util-birdeye.js";
 import {
@@ -40,7 +40,7 @@ async function fetchTrendingPage(params: {
     return null;
   }
 
-  const res = await getTrackedApiResult(bds_TrendingListSchema, resp);
+  const res = await validateApiResult(bds_TrendingListSchema, resp);
 
   if (!res || !res.success) {
     return null;

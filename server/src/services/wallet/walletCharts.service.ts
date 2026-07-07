@@ -13,7 +13,7 @@ import { walletBalanceHistory } from "@sv/db/schema.js";
 import { and, between, eq } from "drizzle-orm";
 import * as mobula from "@sv/util/util-mobula.js";
 import { mbl_WalletHistorySchema } from "../_types/wallet-raw-responses.js";
-import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import dayjs from "dayjs";
 import {
     DAY_MS,
@@ -239,7 +239,7 @@ async function fetchWalletBalanceHistory(
     rlTimeoutMs: WALLET_BALANCE_HISTORY_FETCH_TIMEOUT_MS,
   });
 
-  const res = await getTrackedApiResult(mbl_WalletHistorySchema, resp);
+  const res = await validateApiResult(mbl_WalletHistorySchema, resp);
   if (!res) {
     return null;
   }
