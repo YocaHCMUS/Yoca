@@ -80,14 +80,16 @@ async function fetchZerionId(
       .join(","),
   }).toString();
 
-  const resp = await fetch(req, {
+  const resp = await rlFetch(req, {
     method: "GET",
     headers: zrn.getRequiredHeaders(),
+    rlLimiter: zrn.limiter,
   });
 
   const res = await validateApiResult(zrn_FungiblesResponseSchema, resp);
 
   if (!res) {
+    // TODO: Consider more robust error handling
     return {};
   }
 

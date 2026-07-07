@@ -10,19 +10,16 @@ import {
   type TokenPoolDataInsert,
   type TokenTopPoolInsert,
 } from "@sv/db/schema.js";
-import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 import { excludedAuto, excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, eq, gt } from "drizzle-orm";
-import type {
-  CG_PoolData,
-  CG_TopPoolData,
+import {
+  cg_ExchangeListSchema,
+  cg_PoolDataSchema,
+  cg_TopPoolDataSchema,
 } from "../_types/token-raw-responses.js";
-
-type CG_ExchangeListItem = {
-  id: string;
-  image?: string;
-};
 
 const DEX_ID_ALIASES: Record<string, string> = {
   raydium: "raydium2",
@@ -69,22 +66,22 @@ async function fetchDexLogos(): Promise<Map<string, string>> {
       page: String(page),
     }).toString();
 
-    const resp = await trackedFetch({
-      provider: "unknown",
-      url: cgEndpoint,
-      init: {
-        method: "GET",
-        headers: cg.getRequiredHeaders(),
-      },
-      serviceFile: "server/src/services/tokens/token-pools.ts",
-      functionName: "fetchDexLogos",
+    const resp = await rlFetch(cgEndpoint, {
+      method: "GET",
+      headers: cg.getRequiredHeaders(),
+      rlLimiter: cg.limiter,
     });
 
     if (!resp.ok) {
       break;
     }
 
-    const exchanges = (await resp.json()) as CG_ExchangeListItem[];
+    const exchanges = await validateApiResult(cg_ExchangeListSchema, resp);
+    if (!exchanges) {
+      // TODO: Consider more robust error handling
+      break;
+    }
+
     for (const exchange of exchanges) {
       if (exchange.id && exchange.image) {
         result.set(exchange.id, exchange.image);
@@ -136,15 +133,10 @@ async function fetchTokenTopPools(tokenAddress: string) {
     page: "1",
   }).toString();
 
-  const resp = await trackedFetch({
-    provider: "unknown",
-    url: cgEndpoint,
-    init: {
-      method: "GET",
-      headers: cg.getRequiredHeaders(),
-    },
-    serviceFile: "server/src/services/tokens/token-pools.ts",
-    functionName: "fetchTokenTopPools",
+  const resp = await rlFetch(cgEndpoint, {
+    method: "GET",
+    headers: cg.getRequiredHeaders(),
+    rlLimiter: cg.limiter,
   });
 
   if (!resp.ok) {
@@ -152,7 +144,12 @@ async function fetchTokenTopPools(tokenAddress: string) {
     return [];
   }
 
-  const res = (await resp.json()) as CG_TopPoolData;
+  const res = await validateApiResult(cg_TopPoolDataSchema, resp);
+  if (!res) {
+    // TODO: Consider more robust error handling
+    return [];
+  }
+
   const dexLogos = await getDexLogos();
   const tokenLookup = new Map<string, string | null>();
   for (const item of res.included ?? []) {
@@ -344,15 +341,10 @@ async function fetchPoolData(poolAddress: string) {
     include_composition: "true",
   }).toString();
 
-  const resp = await trackedFetch({
-    provider: "unknown",
-    url: cgEndpoint,
-    init: {
-      method: "GET",
-      headers: cg.getRequiredHeaders(),
-    },
-    serviceFile: "server/src/services/tokens/token-pools.ts",
-    functionName: "fetchPoolData",
+  const resp = await rlFetch(cgEndpoint, {
+    method: "GET",
+    headers: cg.getRequiredHeaders(),
+    rlLimiter: cg.limiter,
   });
 
   if (!resp.ok) {
@@ -360,7 +352,12 @@ async function fetchPoolData(poolAddress: string) {
     return null;
   }
 
-  const res = (await resp.json()) as CG_PoolData;
+  const res = await validateApiResult(cg_PoolDataSchema, resp);
+  if (!res) {
+    // TODO: Consider more robust error handling
+    return null;
+  }
+
   const dexLogos = await getDexLogos();
   const tokenLookup = new Map<string, string | null>();
   for (const item of res.included ?? []) {

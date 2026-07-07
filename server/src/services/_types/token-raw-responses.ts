@@ -70,6 +70,14 @@ export const cg_CoinMarketSchema = z.object({
 export const cg_CoinMarketsSchema = z.array(cg_CoinMarketSchema);
 export type CG_CoinMarkets = z.infer<typeof cg_CoinMarketsSchema>;
 
+export const cg_ExchangeListSchema = z.array(
+  z.object({
+    id: z.string(),
+    image: z.string().optional(),
+  }),
+);
+export type CG_ExchangeList = z.infer<typeof cg_ExchangeListSchema>;
+
 export const cg_CoinDetailSchema = z.object({
   id: z.string(),
   symbol: z.string(),
@@ -360,6 +368,28 @@ export const bds_HistoryPriceSchema = z.object({
 
 export type BDS_HistoryPrice = z.infer<typeof bds_HistoryPriceSchema>;
 
+export const bds_PriceAtTimestampSchema = z.strictObject({
+  success: z.boolean().optional(),
+  data: z.strictObject({
+    value: z.number().optional(),
+    price: z.number().optional(),
+    updateUnixTime: z.number().optional(),
+    updateHumanTime: z.string().optional(),
+    priceChange24h: z.number().optional(),
+    items: z.array(
+      z.strictObject({
+        value: z.number().optional(),
+        price: z.number().optional(),
+        unixTime: z.number().optional(),
+        time: z.number().optional(),
+      }),
+    ).optional(),
+  }).optional(),
+});
+export type BDS_PriceAtTimestamp = z.infer<
+  typeof bds_PriceAtTimestampSchema
+>;
+
 export const zrn_FungiblesResponseSchema = z.object({
   links: z.object({ self: z.string() }).optional(),
   data: z.array(
@@ -487,56 +517,224 @@ export const bds_TrendingListSchema = z.object({
 
 export type BDS_TrendingListSchema = z.infer<typeof bds_TrendingListSchema>;
 
-export const helius_WalletTransfersSchema = z.object({
-  result: z.array(
-    z.object({
+const helius_WalletPaginationSchema = z.strictObject({
+  nextCursor: z.string().nullish(),
+  hasMore: z.boolean().nullish(),
+});
+
+const helius_WalletHistoryBalanceChangeSchema = z.strictObject({
+  mint: z.string().nullish(),
+  amount: z.coerce.number().nullish(),
+  decimals: z.coerce.number().nullish(),
+});
+
+export const helius_WalletHistorySchema = z.strictObject({
+  data: z.array(
+    z.strictObject({
       signature: z.string(),
-      description: z.string().nullable().optional(),
-      type: z.string(),
-      source: z.string().nullable(),
-      fee: z.number(),
-      feePayer: z.string().nullable(),
+      slot: z.coerce.number().nullish(),
+      fee: z.coerce.number().nullish(),
+      feePayer: z.string().nullish(),
       timestamp: z.number(),
-      tokenTransfers: z.array(
-        z.object({
-          fromTokenAccount: z.string(),
-          toTokenAccount: z.string(),
-          fromUserAccount: z.string().nullable(),
-          toUserAccount: z.string().nullable(),
-          tokenAmount: z.number().nullable(),
-          tokenMint: z.string(),
-          tokenStandard: z.string().nullable(),
-        }),
-      ).optional(),
-      nativeTransfers: z.array(
-        z.object({
-          fromUserAccount: z.string(),
-          toUserAccount: z.string(),
-          lamports: z.number(),
-        }),
-      ).optional(),
+      type: z.string().nullish(),
+      source: z.string().nullish(),
+      description: z.string().nullish(),
+      balanceChanges: z.array(helius_WalletHistoryBalanceChangeSchema).nullish(),
+      tokenTransfers: z.array(z.unknown()).nullish(),
+      nativeTransfers: z.array(z.unknown()).nullish(),
+      accountData: z.array(z.unknown()).nullish(),
+      instructions: z.array(z.unknown()).nullish(),
+      events: z.unknown().nullish(),
+      transactionError: z.unknown().nullish(),
     }),
   ),
-  nativeBalanceChange: z.number().optional(),
+  pagination: helius_WalletPaginationSchema.nullish(),
+});
+
+export type HL_WalletHistory = z.infer<typeof helius_WalletHistorySchema>;
+
+export const helius_WalletTransfersSchema = z.strictObject({
+  data: z.array(
+    z.strictObject({
+      signature: z.string(),
+      timestamp: z.number(),
+      direction: z.string().nullish(),
+      counterparty: z.string().nullish(),
+      amountRaw: z.union([z.string(), z.number()]).nullish(),
+      amount: z.union([z.string(), z.number()]).nullish(),
+      decimal: z.union([z.string(), z.number()]).nullish(),
+      decimals: z.union([z.string(), z.number()]).nullish(),
+      mint: z.string().nullish(),
+      symbol: z.string().nullish(),
+      type: z.string().nullish(),
+      source: z.string().nullish(),
+      description: z.string().nullish(),
+      fee: z.union([z.string(), z.number()]).nullish(),
+      feePayer: z.string().nullish(),
+      slot: z.union([z.string(), z.number()]).nullish(),
+      from: z.string().nullish(),
+      to: z.string().nullish(),
+      fromUserAccount: z.string().nullish(),
+      toUserAccount: z.string().nullish(),
+      tokenTransfers: z.array(z.unknown()).nullish(),
+      nativeTransfers: z.array(z.unknown()).nullish(),
+    }),
+  ),
+  pagination: helius_WalletPaginationSchema.nullish(),
 });
 
 export type HL_WalletTransfers = z.infer<typeof helius_WalletTransfersSchema>;
 
-export const helius_WalletFundedBySchema = z.object({
-  result: z.object({
-    fundedBy: z.array(
-      z.object({
-        address: z.string(),
-        amount: z.number(),
-        percentage: z.number(),
-        source: z.string().nullable().optional(),
-      }),
-    ),
-    totalAmount: z.number(),
-  }).nullable(),
+export const helius_WalletFundedBySchema = z.strictObject({
+  funder: z.string(),
+  funderName: z.string().nullable(),
+  funderType: z.string().nullable(),
+  mint: z.string(),
+  symbol: z.string(),
+  amount: z.number(),
+  amountRaw: z.string(),
+  decimals: z.number(),
+  date: z.string(),
+  signature: z.string(),
+  timestamp: z.number(),
+  slot: z.number(),
+  explorerUrl: z.string(),
 });
 
 export type HL_WalletFundedBy = z.infer<typeof helius_WalletFundedBySchema>;
+
+const helius_EnhancedRawTokenAmountSchema = z.strictObject({
+  tokenAmount: z.string().optional(),
+  decimals: z.number().optional(),
+});
+
+const helius_EnhancedSwapLegSchema = z.strictObject({
+  mint: z.string().optional(),
+  tokenAmount: z.coerce.number().optional(),
+  amount: z.coerce.number().optional(),
+  userAccount: z.string().optional(),
+  tokenAccount: z.string().optional(),
+  fromUserAccount: z.string().optional(),
+  toUserAccount: z.string().optional(),
+  fromTokenAccount: z.string().optional(),
+  toTokenAccount: z.string().optional(),
+  source: z.string().optional(),
+  destination: z.string().optional(),
+  sourceTokenAccount: z.string().optional(),
+  destinationTokenAccount: z.string().optional(),
+  rawTokenAmount: helius_EnhancedRawTokenAmountSchema.optional(),
+});
+
+const helius_EnhancedSwapNativeLegSchema = z.strictObject({
+  amount: z.coerce.number().optional(),
+  userAccount: z.string().optional(),
+  account: z.string().optional(),
+  source: z.string().optional(),
+  destination: z.string().optional(),
+});
+
+const helius_EnhancedSwapEventSchema = z.strictObject({
+  user: z.string().optional(),
+  userAccount: z.string().optional(),
+  tokenInputs: z.array(helius_EnhancedSwapLegSchema).optional(),
+  tokenOutputs: z.array(helius_EnhancedSwapLegSchema).optional(),
+  nativeInput: helius_EnhancedSwapNativeLegSchema.optional(),
+  nativeOutput: helius_EnhancedSwapNativeLegSchema.optional(),
+  source: z.string().optional(),
+  destination: z.string().optional(),
+  programId: z.string().optional(),
+  innerSwaps: z.array(
+    z.strictObject({
+      user: z.string().optional(),
+      userAccount: z.string().optional(),
+      tokenInputs: z.array(helius_EnhancedSwapLegSchema).optional(),
+      tokenOutputs: z.array(helius_EnhancedSwapLegSchema).optional(),
+      nativeInput: helius_EnhancedSwapNativeLegSchema.optional(),
+      nativeOutput: helius_EnhancedSwapNativeLegSchema.optional(),
+      source: z.string().optional(),
+      destination: z.string().optional(),
+      programId: z.string().optional(),
+    }),
+  ).optional(),
+});
+
+const helius_EnhancedInstructionSchema = z.strictObject({
+  accounts: z.array(z.string()).optional(),
+  data: z.string().optional(),
+  programId: z.string().optional(),
+  innerInstructions: z.array(
+    z.strictObject({
+      accounts: z.array(z.string()).optional(),
+      data: z.string().optional(),
+      programId: z.string().optional(),
+    }),
+  ).optional(),
+});
+
+const helius_EnhancedTokenTransferSchema = z.strictObject({
+  mint: z.string().optional(),
+  tokenMint: z.string().optional(),
+  tokenAmount: z.coerce.number().optional(),
+  amount: z.coerce.number().optional(),
+  rawAmount: z.union([z.string(), helius_EnhancedRawTokenAmountSchema]).optional(),
+  rawTokenAmount: helius_EnhancedRawTokenAmountSchema.optional(),
+  decimals: z.number().optional(),
+  fromUserAccount: z.string().optional(),
+  toUserAccount: z.string().optional(),
+  fromTokenAccount: z.string().optional(),
+  toTokenAccount: z.string().optional(),
+  symbol: z.string().optional(),
+  tokenSymbol: z.string().optional(),
+  tokenName: z.string().optional(),
+  tokenStandard: z.string().nullable().optional(),
+});
+
+const helius_EnhancedNativeTransferSchema = z.strictObject({
+  amount: z.coerce.number().optional(),
+  fromUserAccount: z.string().optional(),
+  toUserAccount: z.string().optional(),
+  fromWallet: z.string().optional(),
+  toWallet: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+});
+
+export const helius_EnhancedTransactionsSchema = z.array(
+  z.strictObject({
+    signature: z.string(),
+    feePayer: z.string().optional(),
+    fee: z.number().optional(),
+    slot: z.number().optional(),
+    timestamp: z.number().optional(),
+    source: z.string().optional(),
+    type: z.string().optional(),
+    description: z.string().optional(),
+    programName: z.string().optional(),
+    instructions: z.array(helius_EnhancedInstructionSchema).optional(),
+    events: z.strictObject({
+      swap: helius_EnhancedSwapEventSchema.optional(),
+      nft: z.unknown().optional(),
+      compressed: z.unknown().optional(),
+    }).optional(),
+    transactionEvents: z.strictObject({
+      swap: helius_EnhancedSwapEventSchema.optional(),
+    }).optional(),
+    accountData: z.array(z.unknown()).optional(),
+    transactionError: z.unknown().optional(),
+    info: z.strictObject({
+      feePayer: z.string().optional(),
+      fee: z.number().optional(),
+      slot: z.number().optional(),
+      timestamp: z.number().optional(),
+    }).optional(),
+    tokenTransfers: z.array(helius_EnhancedTokenTransferSchema).optional(),
+    nativeTransfers: z.array(helius_EnhancedNativeTransferSchema).optional(),
+  }),
+);
+
+export type HL_EnhancedTransactions = z.infer<
+  typeof helius_EnhancedTransactionsSchema
+>;
 
 export const dex_TopPoolsSchema = z.object({
   data: z.array(

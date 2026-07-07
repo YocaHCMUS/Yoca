@@ -1,13 +1,20 @@
 import {
   getEndpoint as getBirdeyeEndpoint,
   getRequiredHeaders as getBirdeyeHeaders,
+  limiter as birdeyeLimiter,
 } from "@sv/util/util-birdeye.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import { db } from "@sv/db/index.js";
 import { tokenPriceCache } from "@sv/db/schema.js";
 import { excluded } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { getCoinGeckoIdsByAddresses } from "@sv/services/tokens/token-list.js";
-import type { CG_TokenMarketChart } from "@sv/services/_types/token-raw-responses.js";
+import {
+  bds_PriceAtTimestampSchema,
+  cg_TokenMarketChartSchema,
+  type BDS_PriceAtTimestamp,
+} from "@sv/services/_types/token-raw-responses.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 
 const STABLE_MINTS = new Set([
@@ -31,15 +38,10 @@ function fiveMinBucketSec(timestampSec: number): number {
 
 const priceCache = new Map<PriceCacheKey, number>();
 
-function extractBirdeyePriceValue(payload: unknown): number | undefined {
-  const root = payload as {
-    success?: boolean;
-    data?: { value?: number; price?: number };
-  };
-
+function extractBirdeyePriceValue(payload: BDS_PriceAtTimestamp): number | undefined {
   const candidates = [
-    Number(root?.data?.value ?? 0),
-    Number(root?.data?.price ?? 0),
+    Number(payload.data?.value ?? 0),
+    Number(payload.data?.price ?? 0),
   ];
   for (const value of candidates) {
     if (Number.isFinite(value) && value > 0) return value;
@@ -61,16 +63,26 @@ async function fetchBirdeyePriceAtTimestampUsd(
     endpoint.searchParams.set("address_type", "token");
     endpoint.searchParams.set("time", String(timestampSec));
 
-    const response = await fetch(endpoint, {
+    const response = await rlFetch(endpoint, {
       method: "GET",
       headers: getBirdeyeHeaders(),
+      rlLimiter: birdeyeLimiter,
     });
 
-    if (!response.ok) return undefined;
+    if (!response.ok) {
+      // TODO: Consider more robust error handling
+      return undefined;
+    }
 
-    const payload = (await response.json()) as unknown;
+    const payload = await validateApiResult(bds_PriceAtTimestampSchema, response);
+    if (!payload) {
+      // TODO: Consider more robust error handling
+      return undefined;
+    }
+
     return extractBirdeyePriceValue(payload);
   } catch {
+    // TODO: Consider more robust error handling
     return undefined;
   }
 }
@@ -96,14 +108,21 @@ async function fetchCoinGeckoPriceAtTimestamp(
       to: String(bucketSec + windowSec),
     }).toString();
 
-    const response = await fetch(cgEndpoint, {
+    const response = await rlFetch(cgEndpoint, {
       method: "GET",
       headers: cg.getRequiredHeaders(),
+      rlLimiter: cg.limiter,
     });
-    if (!response.ok) return undefined;
+    if (!response.ok) {
+      // TODO: Consider more robust error handling
+      return undefined;
+    }
 
-    const data = (await response.json()) as CG_TokenMarketChart;
-    if (!data.prices?.length) return undefined;
+    const data = await validateApiResult(cg_TokenMarketChartSchema, response);
+    if (!data || data.prices.length == 0) {
+      // TODO: Consider more robust error handling
+      return undefined;
+    }
 
     const targetMs = bucketSec * 1000;
     const closest = data.prices.reduce((a, b) =>
@@ -111,6 +130,7 @@ async function fetchCoinGeckoPriceAtTimestamp(
     );
     return closest[1];
   } catch {
+    // TODO: Consider more robust error handling
     return undefined;
   }
 }

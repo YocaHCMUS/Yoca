@@ -1,9 +1,20 @@
 import { getTokenMeta } from "@sv/services/tokens/token-info.js";
 import {
+  bds_PriceAtTimestampSchema,
+  helius_EnhancedTransactionsSchema,
+  type BDS_PriceAtTimestamp,
+} from "@sv/services/_types/token-raw-responses.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
+import {
     getEndpoint as getBirdeyeEndpoint,
     getRequiredHeaders as getBirdeyeHeaders,
+    limiter as birdeyeLimiter,
 } from "@sv/util/util-birdeye.js";
-import { getRequiredHeaders, heliusFetch } from "@sv/util/util-helius.js";
+import {
+    getRequiredHeaders,
+    limiter as heliusLimiter,
+} from "@sv/util/util-helius.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 
 export type HeliusEnhancedTokenTransfer = {
   mint?: string;
@@ -219,25 +230,11 @@ function deriveMintPricesUsd(tx: HeliusEnhancedTransaction): Map<string, number>
 }
 
 function extractBirdeyePriceValue(
-  payload: unknown,
+  payload: BDS_PriceAtTimestamp,
 ): number | undefined {
-  const root = payload as {
-    success?: boolean;
-    data?: {
-      value?: number;
-      price?: number;
-      items?: Array<{
-        value?: number;
-        price?: number;
-        unixTime?: number;
-        time?: number;
-      }>;
-    };
-  };
-
   const directCandidates = [
-    Number(root?.data?.value ?? 0),
-    Number(root?.data?.price ?? 0),
+    Number(payload.data?.value ?? 0),
+    Number(payload.data?.price ?? 0),
   ];
   for (const directValue of directCandidates) {
     if (Number.isFinite(directValue) && directValue > 0) {
@@ -246,8 +243,8 @@ function extractBirdeyePriceValue(
   }
 
   // Fallback parser for providers that still return item arrays.
-  const items = root?.data?.items;
-  if (!Array.isArray(items) || items.length === 0) {
+  const items = payload.data?.items;
+  if (!Array.isArray(items) || items.length == 0) {
     return undefined;
   }
 
@@ -275,18 +272,26 @@ async function fetchBirdeyePriceAtTimestampUsd(
     endpoint.searchParams.set("address_type", "token");
     endpoint.searchParams.set("time", String(timestampSec));
 
-    const response = await fetch(endpoint, {
+    const response = await rlFetch(endpoint, {
       method: "GET",
       headers: getBirdeyeHeaders(),
+      rlLimiter: birdeyeLimiter,
     });
 
     if (!response.ok) {
+      // TODO: Consider more robust error handling
       return undefined;
     }
 
-    const payload = (await response.json()) as unknown;
+    const payload = await validateApiResult(bds_PriceAtTimestampSchema, response);
+    if (!payload) {
+      // TODO: Consider more robust error handling
+      return undefined;
+    }
+
     return extractBirdeyePriceValue(payload);
   } catch {
+    // TODO: Consider more robust error handling
     return undefined;
   }
 }
@@ -411,21 +416,22 @@ async function fetchEnhancedTransactionRaw(signature: string): Promise<HeliusEnh
   );
 
   const makeRequest = (body: unknown) =>
-    heliusFetch(endpoint, {
+    rlFetch(endpoint, {
       method: "POST",
       headers: getRequiredHeaders(),
       body: JSON.stringify(body),
+      rlLimiter: heliusLimiter,
     });
 
   let response = await makeRequest({ transactions: [signature] });
 
   // Some Helius plans/versions accept a plain string array request body.
-  if (response.status === 400) {
+  if (response.status == 400) {
     response = await makeRequest([signature]);
   }
 
   if (!response.ok) {
-    if (response.status === 404) {
+    if (response.status == 404) {
       return null;
     }
 
@@ -435,12 +441,13 @@ async function fetchEnhancedTransactionRaw(signature: string): Promise<HeliusEnh
     );
   }
 
-  const payload = (await response.json()) as unknown;
-  if (!Array.isArray(payload) || payload.length === 0) {
+  const payload = await validateApiResult(helius_EnhancedTransactionsSchema, response);
+  const firstTransaction = payload?.[0];
+  if (!firstTransaction) {
     return null;
   }
 
-  return payload[0] as HeliusEnhancedTransaction;
+  return firstTransaction;
 }
 
 export async function getTransactionBySignature(signature: string): Promise<HeliusEnhancedTransaction | null> {
