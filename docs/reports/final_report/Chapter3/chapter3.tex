@@ -256,6 +256,8 @@ Sơ đồ ERD của Yoca cần thể hiện các nhóm thực thể chính thay 
 
 \subsection{Thiết kế chi tiết các bảng trọng tâm}
 % Trình bày các bảng chính phục vụ caching như wallet_history, token_metadata...
+% TODO(runtime): Hoàn thiện ghi alert_history sau khi gửi cảnh báo thành công.
+% TODO(runtime): Bổ sung API xem lịch sử, đánh dấu đã đọc và cơ chế chống gửi trùng.
 
 Nhóm bảng người dùng và xác thực lưu trữ thông tin tài khoản, phương thức đăng nhập, ví liên kết và các dữ liệu cá nhân hóa. Đây là nhóm bảng làm nền cho các chức năng yêu cầu xác thực như quản lý watchlist, tag ví, cảnh báo, hồ sơ cá nhân và thanh toán. Việc tách dữ liệu xác thực khỏi dữ liệu phân tích giúp hệ thống dễ kiểm soát quyền truy cập và tránh trộn lẫn dữ liệu cá nhân với dữ liệu blockchain công khai.
 

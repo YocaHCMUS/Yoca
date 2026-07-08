@@ -183,13 +183,15 @@ Recommendation: do not delete either alert system blindly. First decide product 
 | `wallet_token_balance_history` | Unused unified token-balance history table; active code uses week/month tables. |
 | `wallet_recent_swaps`, `wallet_recent_transfers` | Superseded recent caches; active history uses the paginated swap/transfer history tables. |
 | `user_sources` | Unused user-source preference table and inferred schema type. |
-| `alert_history`, `trading_alert_webhooks` | Unused generic-alert history and webhook tables, including the `alerts_sent` alias. |
+| `trading_alert_webhooks` | Unused generic-alert webhook table. |
 | Trading strategy and wallet-category dictionary tables | Seven seed-only tables, their dedicated seed file, and `db:seed` scripts. |
 | `wallet_balances` | Unused legacy wallet balance table removed before this cleanup batch. |
 
 ## Runtime-Unused Or Cleanup Candidate Tables
 
 The previously confirmed candidates are recorded under Completed Cleanup. `wallet_metrics_1m` remains pending a separate symbol-level audit because its reported consumers are themselves unreachable.
+
+`alert_history` has been restored as part of the target database design. Runtime insertion, authenticated history retrieval, mark-as-read behavior, and duplicate-suppression integration remain TODO.
 
 ## Deprecated Or Overlapping Areas
 

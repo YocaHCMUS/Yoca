@@ -162,6 +162,27 @@ export const walletMetrics1m = pgTable(
   ],
 );
 
+/**
+ * Persisted alert events shown to users after a matching alert is delivered.
+ *
+ * TODO: Insert a row after a delivery succeeds.
+ * TODO: Add authenticated list/mark-as-read endpoints scoped by userId.
+ * TODO: Use alertId and delivery outcome when implementing duplicate suppression.
+ */
+export const alertHistory = pgTable("alert_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  alertId: uuid("alert_id").references(() => alerts.id, {
+    onDelete: "set null",
+  }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  alertName: varchar("alert_name", { length: 255 }).notNull(),
+  message: varchar("message", { length: 1000 }).notNull(),
+  sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+  readAt: timestamp("read_at"),
+});
+
 export const userAlerts = alerts;
 export const userAlertState = alertState;
 export const userAlertConditions = tokenAlertConditions;
@@ -170,6 +191,8 @@ export type AlertInsert = typeof alerts.$inferInsert;
 export type AlertSelect = typeof alerts.$inferSelect;
 export type AlertStateSelect = typeof alertState.$inferSelect;
 export type AlertDeliveryInsert = typeof alertDelivery.$inferInsert;
+export type AlertHistoryInsert = typeof alertHistory.$inferInsert;
+export type AlertHistorySelect = typeof alertHistory.$inferSelect;
 export type TokenAlertConditionInsert =
   typeof tokenAlertConditions.$inferInsert;
 export type TokenAlertConditionSelect =
