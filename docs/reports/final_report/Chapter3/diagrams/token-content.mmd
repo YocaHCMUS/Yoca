@@ -1,0 +1,52 @@
+---
+config:
+  layout: elk
+---
+erDiagram
+    direction TB
+
+    TOKEN_META {
+        varchar address PK
+        varchar name
+        varchar symbol
+    }
+    TOKEN_AI_CHAT_CACHE {
+        serial id PK
+        varchar token_address
+        varchar normalized_question_hash
+        varchar timeframe
+        jsonb response_json
+        timestamp expires_at
+    }
+    TOKEN_VOLATILITY_NEWS_CACHE {
+        serial id PK
+        varchar token_address
+        varchar timeframe
+        jsonb response_json
+        timestamp expires_at
+    }
+    TOKEN_CHART_NEWS_EVENTS_CACHE {
+        serial id PK
+        varchar token_address
+        varchar timeframe
+        jsonb response_json
+        timestamp expires_at
+    }
+    NEWS_BATCHES {
+        serial id PK
+        varchar address
+        varchar symbol
+        timestamp created_at
+    }
+    NEWS_ARTICLES {
+        serial id PK
+        integer batch_id FK
+        varchar title
+        varchar content_hash
+    }
+
+    TOKEN_META ||..o{ TOKEN_AI_CHAT_CACHE : contextualizes
+    TOKEN_META ||..o{ TOKEN_VOLATILITY_NEWS_CACHE : explains
+    TOKEN_META ||..o{ TOKEN_CHART_NEWS_EVENTS_CACHE : annotates
+    TOKEN_META ||..o{ NEWS_BATCHES : expands
+    NEWS_BATCHES ||--o{ NEWS_ARTICLES : contains

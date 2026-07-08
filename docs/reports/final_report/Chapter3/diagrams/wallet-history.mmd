@@ -1,0 +1,43 @@
+---
+config:
+  layout: elk
+---
+erDiagram
+    direction TB
+
+    WALLET_ADDRESS {
+        varchar address PK
+    }
+    WALLET_TRANSFER_HISTORY {
+        varchar address PK
+        varchar transaction_hash PK
+        varchar act_id PK
+        bigint block_timestamp_ms
+        decimal value_usd
+    }
+    WALLET_TRANSFER_HISTORY_META {
+        varchar address PK
+        bigint to_inclusive_ms PK
+        bigint from_exclusive_ms
+        bigint fetched_at_ms
+    }
+    WALLET_SWAP_HISTORY {
+        varchar address PK
+        varchar transaction_hash PK
+        varchar act_id PK
+        bigint block_timestamp_ms
+        decimal value_usd
+    }
+    WALLET_SWAP_HISTORY_META {
+        varchar address PK
+        bigint to_inclusive_ms PK
+        bigint from_exclusive_ms
+        bigint fetched_at_ms
+    }
+
+    WALLET_ADDRESS ||..o{ WALLET_TRANSFER_HISTORY : transfers
+    WALLET_ADDRESS ||..o{ WALLET_TRANSFER_HISTORY_META : covers
+    WALLET_ADDRESS ||..o{ WALLET_SWAP_HISTORY : swaps
+    WALLET_ADDRESS ||..o{ WALLET_SWAP_HISTORY_META : covers
+    WALLET_TRANSFER_HISTORY_META ||..o{ WALLET_TRANSFER_HISTORY : bounds
+    WALLET_SWAP_HISTORY_META ||..o{ WALLET_SWAP_HISTORY : bounds

@@ -225,57 +225,7 @@ Mô hình AI sử dụng ngữ cảnh đã chuẩn bị để tạo câu trả l
 % Hình~\ref{fig} nên thể hiện các thành phần gồm User, Chat Component, Hono Route, Wallet Chat Service, PostgreSQL, AI Provider và giao diện trả kết quả. Điểm quan trọng cần thể hiện là AI chỉ nhận dữ liệu đã được backend chuẩn hóa và tóm tắt, thay vì truy cập trực tiếp vào dữ liệu thô hoặc tự tạo ra số liệu.
 
 
-\section{Thiết kế Cơ sở dữ liệu}
-\label{sec:thiet_ke_csdl}
-
-Cơ sở dữ liệu của Yoca được thiết kế nhằm phục vụ ba mục tiêu chính. Mục tiêu thứ nhất là lưu trữ dữ liệu người dùng và các thông tin cá nhân hóa như tài khoản, ví liên kết, watchlist, nhãn ví, cảnh báo và gói đăng ký. Mục tiêu thứ hai là lưu trữ dữ liệu cache phục vụ phân tích ví, token, biểu đồ và kết quả AI. Mục tiêu thứ ba là lưu trữ metadata để quản lý độ mới, khoảng dữ liệu đã đồng bộ và trạng thái xử lý của các luồng dữ liệu phụ thuộc provider bên ngoài.
-
-Thiết kế cơ sở dữ liệu của hệ thống không nên được trình bày bằng cách giải thích toàn bộ từng bảng, từng cột, vì điều đó dễ biến báo cáo thành tài liệu kỹ thuật chi tiết. Thay vào đó, phần này tập trung vào các nhóm bảng trọng tâm và vai trò của chúng trong kiến trúc tổng thể. Các chi tiết cụ thể như tên cột, kiểu dữ liệu và ràng buộc có thể được trình bày trong phụ lục nếu cần.
-
-\subsection{Sơ đồ thực thể mối quan hệ (ERD)}
-
-Sơ đồ ERD của Yoca cần thể hiện các nhóm thực thể chính thay vì liệt kê quá chi tiết mọi cột. Ở mức tổng quan, cơ sở dữ liệu có thể được chia thành các nhóm: nhóm người dùng và xác thực, nhóm ví và dữ liệu ví, nhóm token và dữ liệu thị trường, nhóm biểu đồ và cache, nhóm cảnh báo, nhóm AI/chat, nhóm thanh toán và nhóm tin tức hoặc ngữ cảnh token.
-
-% % TODO: Bổ sung ERD thật từ Drizzle schema.
-% \begin{figure}[htbp]
-% \centering
-% \fbox{
-% \begin{minipage}{0.85\textwidth}
-% \centering
-% \vspace{1.2cm}
-% Sơ đồ ERD tổng quan của hệ thống Yoca \
-% \textit{TODO: Chèn ERD tại đây.}
-% \vspace{1.2cm}
-% \end{minipage}
-% }
-% \caption{Sơ đồ thực thể mối quan hệ tổng quan của hệ thống Yoca}
-% \label{fig}
-% \end{figure}
-
-% Hình~\ref{fig} nên ưu tiên thể hiện mối quan hệ giữa các nhóm bảng trọng tâm. Nhóm người dùng liên kết với các bảng hồ sơ, ví liên kết, watchlist, nhãn ví, cảnh báo và gói đăng ký. Nhóm ví liên kết với các bảng cache về tổng quan ví, danh mục, giao dịch, chuyển token, swap, số dư và phân tích AI. Nhóm token liên kết với dữ liệu thị trường, dữ liệu lịch sử và dữ liệu biểu đồ. Nhóm cảnh báo liên kết với điều kiện cảnh báo, lịch sử gửi và trạng thái xử lý. Nhóm AI/chat liên kết với phiên chat, tin nhắn và kết quả phân tích đã lưu.
-
-\subsection{Thiết kế chi tiết các bảng trọng tâm}
-% Trình bày các bảng chính phục vụ caching như wallet_history, token_metadata...
-% TODO(runtime): Hoàn thiện ghi alert_history sau khi gửi cảnh báo thành công.
-% TODO(runtime): Bổ sung API xem lịch sử, đánh dấu đã đọc và cơ chế chống gửi trùng.
-
-Nhóm bảng người dùng và xác thực lưu trữ thông tin tài khoản, phương thức đăng nhập, ví liên kết và các dữ liệu cá nhân hóa. Đây là nhóm bảng làm nền cho các chức năng yêu cầu xác thực như quản lý watchlist, tag ví, cảnh báo, hồ sơ cá nhân và thanh toán. Việc tách dữ liệu xác thực khỏi dữ liệu phân tích giúp hệ thống dễ kiểm soát quyền truy cập và tránh trộn lẫn dữ liệu cá nhân với dữ liệu blockchain công khai.
-
-Nhóm bảng ví là nhóm bảng quan trọng nhất đối với chức năng wallet intelligence. Nhóm này lưu các dữ liệu như tổng quan ví, danh mục token, giao dịch, chuyển token, swap, lịch sử số dư, PnL hoặc kết quả phân tích. Một số bảng trong nhóm này đóng vai trò cache dữ liệu lấy từ provider, trong khi một số bảng khác đóng vai trò metadata để xác định dữ liệu đã được đồng bộ đến đâu. Nhờ đó, hệ thống có thể tái sử dụng dữ liệu đã có và chỉ truy xuất thêm phần còn thiếu khi người dùng yêu cầu.
-
-Nhóm bảng token và thị trường lưu trữ dữ liệu liên quan đến token, ánh xạ token address với định danh bên ngoài, dữ liệu giá hiện tại, dữ liệu lịch sử và các thông tin hỗ trợ biểu đồ. Nhóm bảng này giúp hệ thống giảm phụ thuộc vào việc gọi API thị trường trong mỗi lần người dùng mở trang token hoặc biểu đồ. Đối với dữ liệu gần thời gian thực, hệ thống có thể áp dụng TTL để quyết định khi nào cần cập nhật lại.
-
-Nhóm bảng biểu đồ và cache lưu trữ các chuỗi dữ liệu đã được tính toán hoặc chuẩn hóa để frontend có thể hiển thị nhanh hơn. Trong một số trường hợp, dữ liệu biểu đồ có thể được tính từ dữ liệu ví, dữ liệu token và dữ liệu giá lịch sử. Việc lưu lại kết quả trung gian giúp giảm chi phí xử lý lại, đặc biệt với các biểu đồ được truy cập nhiều lần hoặc yêu cầu tính toán trên khoảng thời gian dài.
-
-Nhóm bảng cảnh báo lưu trữ định nghĩa cảnh báo, điều kiện kích hoạt, trạng thái, lịch sử xử lý và lịch sử gửi thông báo. Đối với các cảnh báo liên quan đến ví, hệ thống có thể kết hợp dữ liệu webhook hoặc dữ liệu đồng bộ theo chu kỳ để phát hiện sự kiện mới. Việc lưu lịch sử cảnh báo giúp người dùng xem lại các sự kiện đã xảy ra và giúp hệ thống tránh gửi trùng thông báo.
-
-Nhóm bảng AI và chat lưu trữ phiên chat, tin nhắn, ngữ cảnh phân tích và kết quả phản hồi từ mô hình AI. Do các tác vụ AI có thể tốn chi phí và phụ thuộc vào provider bên ngoài, việc lưu lại kết quả trong một số trường hợp giúp hệ thống giảm số lần gọi lặp lại. Đồng thời, dữ liệu đã lưu cũng giúp người dùng tiếp tục phiên phân tích trước đó thay vì phải bắt đầu lại từ đầu.
-
-Nhóm bảng thanh toán và gói đăng ký lưu trữ thông tin về gói dịch vụ, lịch sử thanh toán và trạng thái subscription. Hệ thống có thể hỗ trợ cả luồng thanh toán thông qua nhà cung cấp thanh toán truyền thống và luồng xác minh thanh toán on-chain. Vì các dữ liệu này liên quan đến quyền sử dụng chức năng và lịch sử tài chính của người dùng, chúng cần được xử lý cẩn trọng và chỉ truy cập thông qua các API đã xác thực.
-
-Nhóm bảng tin tức và ngữ cảnh token lưu trữ các bài viết, nguồn tin, batch tin tức và các dữ liệu ngữ cảnh hỗ trợ phân tích token hoặc biến động thị trường. Dữ liệu tin tức không phải là thành phần cốt lõi như dữ liệu ví hoặc dữ liệu token, nhưng đóng vai trò bổ sung để người dùng hiểu bối cảnh bên ngoài của các biến động giá hoặc hoạt động thị trường.
-
-Nhìn chung, thiết kế cơ sở dữ liệu của Yoca được định hướng theo các miền nghiệp vụ thay vì gom tất cả dữ liệu vào một số bảng lớn. Cách tổ chức này giúp hệ thống dễ mở rộng, dễ kiểm soát dữ liệu cache và phù hợp với cấu trúc service ở backend. Khi triển khai thực tế, các bảng chi tiết có thể thay đổi theo quá trình phát triển, nhưng các nhóm dữ liệu trọng tâm nêu trên vẫn là nền tảng chính cho kiến trúc lưu trữ của hệ thống.
+\input{Chapter3/database/database}
 
 \section{Kế hoạch kiểm thử và tiêu chí chấp nhận}
 \subsection{Phạm vi và các mức kiểm thử}

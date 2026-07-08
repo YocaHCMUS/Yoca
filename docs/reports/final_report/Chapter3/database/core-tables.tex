@@ -1,0 +1,51 @@
+\subsection{Các bảng trọng tâm}
+\label{subsec:db_bang_trong_tam}
+
+Bảng~\ref{tab:db_core_tables} tóm tắt các bảng đại diện cho từng miền. Các bảng cache phụ có cùng cách tổ chức không được liệt kê lại để tránh lặp nội dung.
+
+\begin{longtable}{|L{0.27\textwidth}|L{0.25\textwidth}|L{0.38\textwidth}|}
+\caption{Các bảng dữ liệu trọng tâm của Yoca}
+\label{tab:db_core_tables}\\
+\hline
+\textbf{Bảng} & \textbf{Khóa chính} & \textbf{Vai trò} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Bảng} & \textbf{Khóa chính} & \textbf{Vai trò} \\
+\hline
+\endhead
+\texttt{users} & \texttt{id} & Thông tin tài khoản, cấu hình nhận cảnh báo và Stripe customer. \\
+\hline
+\texttt{auth\_accounts} & \texttt{provider, provider\_user\_id} & Danh tính đăng nhập bằng password, OAuth hoặc ví Solana. \\
+\hline
+\texttt{subscriptions} & \texttt{id} & Trạng thái gói dịch vụ và chu kỳ thanh toán. \\
+\hline
+\texttt{alerts} & \texttt{id} & Định nghĩa cảnh báo, loại cảnh báo, chế độ kích hoạt và thời hạn. \\
+\hline
+\texttt{alert\_history} & \texttt{id} & Lịch sử cảnh báo đã phát sinh và trạng thái đã đọc. \\
+\hline
+\texttt{token\_meta} & \texttt{address} & Tên, symbol và hình ảnh cơ bản của token. \\
+\hline
+\texttt{token\_market\_data} & \texttt{address} & Market snapshot gần nhất, gồm giá, vốn hóa và volume. \\
+\hline
+\texttt{token\_market\_chart\_*} & \texttt{address, timestamp} & Chuỗi giá 24 giờ, hourly và daily cho biểu đồ. \\
+\hline
+\texttt{wallet\_overview\_cache} & \texttt{address} & Read model tổng hợp tài sản, volume, PnL và hoạt động của ví. \\
+\hline
+\texttt{wallet\_analyses} & \texttt{wallet\_address, period} & Kết quả Mobula gồm win rate, PnL, phân phối giao dịch và calendar breakdown. \\
+\hline
+\texttt{wallet\_transfer\_history} & \texttt{address, transaction\_hash, act\_id} & Lịch sử chuyển token đã chuẩn hóa và hỗ trợ phân trang. \\
+\hline
+\texttt{wallet\_swap\_history} & \texttt{address, transaction\_hash, act\_id} & Lịch sử swap đã chuẩn hóa theo ví. \\
+\hline
+\texttt{wallet\_enhanced\_transactions} & \texttt{address, signature} & Transaction cha cho dữ liệu chi tiết từ Helius. \\
+\hline
+\texttt{chat\_sessions} & \texttt{id} & Phiên chat, context ví và danh sách message. \\
+\hline
+\texttt{news\_batches} & \texttt{id} & Nhóm bài viết thu thập theo token và thời điểm. \\
+\hline
+\end{longtable}
+
+\texttt{wallet\_analyses} là read model có kích thước tương đối lớn do lưu cả chỉ số tổng hợp và hai cấu trúc JSONB là \texttt{period\_timeframes} và \texttt{calendar\_breakdown}. Mỗi ví chỉ có một bản ghi cho mỗi kỳ phân tích, nhờ đó dữ liệu Mobula có thể được dùng lại trong thời gian TTL mà không cần gọi provider cho mọi request.
+
+Các bảng \texttt{wallet\_enhanced\_*} lưu chi tiết giao dịch ở mức thấp hơn transfer/swap history. Instruction, inner instruction, fee payer, program ID và native transfer cần thiết cho transaction detail và phân tích hành vi, trong khi history tables ưu tiên danh sách đã chuẩn hóa và phân trang.

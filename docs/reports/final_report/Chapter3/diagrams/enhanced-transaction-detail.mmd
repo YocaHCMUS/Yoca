@@ -1,0 +1,57 @@
+---
+config:
+  layout: elk
+---
+erDiagram
+    direction LR
+
+    WALLET_ENHANCED_TRANSACTIONS {
+        varchar address PK
+        text signature PK
+        bigint block_timestamp_ms
+        bigint slot
+        varchar fee_payer
+        varchar program_id
+    }
+    WALLET_ENHANCED_TOKEN_TRANSFERS {
+        serial id PK
+        varchar address
+        text signature
+        varchar mint
+        decimal token_amount
+        integer instruction_index
+    }
+    WALLET_ENHANCED_NATIVE_TRANSFERS {
+        serial id PK
+        varchar address
+        text signature
+        decimal amount
+        integer transfer_index
+    }
+    WALLET_ENHANCED_INSTRUCTIONS {
+        serial id PK
+        varchar address
+        text signature
+        integer instruction_index
+        varchar program_id
+    }
+    WALLET_ENHANCED_INNER_INSTRUCTIONS {
+        serial id PK
+        varchar address
+        text signature
+        integer instruction_index
+        integer inner_index
+        varchar program_id
+    }
+    WALLET_ENHANCED_TX_META {
+        varchar address PK
+        timestamp fetched_at
+        bigint covered_from_ms
+        bigint covered_to_ms
+    }
+
+    WALLET_ENHANCED_TRANSACTIONS ||..o{ WALLET_ENHANCED_TOKEN_TRANSFERS : contains
+    WALLET_ENHANCED_TRANSACTIONS ||..o{ WALLET_ENHANCED_NATIVE_TRANSFERS : contains
+    WALLET_ENHANCED_TRANSACTIONS ||..o{ WALLET_ENHANCED_INSTRUCTIONS : contains
+    WALLET_ENHANCED_INSTRUCTIONS ||..o{ WALLET_ENHANCED_INNER_INSTRUCTIONS : nests
+    WALLET_ENHANCED_TX_META ||..o{ WALLET_ENHANCED_TRANSACTIONS : covers

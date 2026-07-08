@@ -1,0 +1,67 @@
+---
+config:
+  layout: elk
+---
+erDiagram
+    direction TB
+
+    USERS {
+        uuid id PK
+        varchar email
+    }
+    ALERTS {
+        uuid id PK
+        uuid user_id FK
+        enum alert_type
+        enum trigger_mode
+        timestamp expires_at
+    }
+    ALERT_STATE {
+        uuid alert_id PK, FK
+        enum status
+        timestamp updated_at
+    }
+    ALERT_DELIVERY {
+        uuid id PK
+        uuid alert_id FK
+        varchar email
+    }
+    TOKEN_ALERT_TARGETS {
+        uuid alert_id PK, FK
+        varchar token_address PK
+    }
+    TOKEN_ALERT_CONDITIONS {
+        uuid id PK
+        uuid alert_id FK
+        enum metric
+        decimal value
+    }
+    TRADING_ALERT_SCOPES {
+        uuid alert_id PK, FK
+        varchar wallet_address PK
+        varchar token_address
+        enum direction
+    }
+    TRADING_ALERT_CONDITIONS {
+        uuid id PK
+        uuid alert_id FK
+        enum aggregation
+        decimal value
+    }
+    ALERT_HISTORY {
+        uuid id PK
+        uuid alert_id FK
+        uuid user_id FK
+        timestamp sent_at
+        timestamp read_at
+    }
+
+    USERS ||--o{ ALERTS : configures
+    ALERTS ||--|| ALERT_STATE : tracks
+    ALERTS ||--o{ ALERT_DELIVERY : delivers
+    ALERTS ||--o{ TOKEN_ALERT_TARGETS : targets
+    ALERTS ||--o{ TOKEN_ALERT_CONDITIONS : evaluates
+    ALERTS ||--o{ TRADING_ALERT_SCOPES : scopes
+    ALERTS ||--o{ TRADING_ALERT_CONDITIONS : evaluates
+    ALERTS o|--o{ ALERT_HISTORY : produces
+    USERS ||--o{ ALERT_HISTORY : receives

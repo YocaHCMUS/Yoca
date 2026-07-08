@@ -1,0 +1,25 @@
+\subsection{Mục tiêu và đặc điểm dữ liệu}
+\label{subsec:db_muc_tieu}
+
+Cơ sở dữ liệu PostgreSQL phục vụ ba mục tiêu chính. Thứ nhất, hệ thống lưu dữ liệu có tính sở hữu như tài khoản, phương thức xác thực, watchlist, nhãn ví, cảnh báo và gói dịch vụ. Thứ hai, hệ thống lưu các read model đã chuẩn hóa cho token, ví, giao dịch và kết quả phân tích. Thứ ba, các bảng metadata ghi nhận thời điểm cập nhật hoặc khoảng dữ liệu đã đồng bộ để backend quyết định khi nào có thể dùng cache.
+
+Dữ liệu trong Yoca có hai đặc điểm. Dữ liệu tài khoản và thanh toán cần quan hệ rõ ràng, ràng buộc khóa ngoại và quy tắc xóa nhất quán. Ngược lại, phần lớn dữ liệu blockchain là dữ liệu công khai được định danh bằng token address, wallet address hoặc transaction signature. Các bảng này thường không phụ thuộc vào một bảng gốc duy nhất mà được liên kết theo khóa nghiệp vụ.
+
+Schema được định nghĩa bằng Drizzle ORM. Kiểu dữ liệu, primary key, unique constraint và foreign key được đặt trong mã TypeScript. Cách này giúp truy vấn backend và cấu trúc PostgreSQL dùng chung một định nghĩa.
+
+\subsection{Phân nhóm dữ liệu theo miền nghiệp vụ}
+\label{subsec:db_phan_nhom}
+
+Cấu trúc lưu trữ được chia theo các miền sau:
+
+\begin{itemize}
+    \item \textbf{Identity and profile}: tài khoản, phương thức đăng nhập, ví liên kết, watchlist và nhãn ví.
+    \item \textbf{Payment}: subscription và lịch sử thanh toán từ Stripe.
+    \item \textbf{Token and market}: metadata, market snapshot, chart, pool, holder và dữ liệu xếp hạng.
+    \item \textbf{Wallet analytics}: overview, portfolio, balance history, kết quả Mobula và lịch sử transfer/swap.
+    \item \textbf{Transaction detail}: transaction Helius, token/native transfer, instruction và inner instruction.
+    \item \textbf{Alert}: định nghĩa cảnh báo, điều kiện, trạng thái, delivery target và lịch sử kích hoạt.
+    \item \textbf{AI, chat and content}: phiên chat, prompt, kết quả AI cache và nội dung tin tức.
+\end{itemize}
+
+Các nhóm trên là các read model phục vụ nhu cầu truy vấn khác nhau. Vì vậy, dữ liệu có thể giao nhau về wallet address, token address hoặc transaction signature nhưng không đồng nghĩa các bảng có thể thay thế trực tiếp cho nhau.
