@@ -1,23 +1,23 @@
 import { sql } from "drizzle-orm";
 import {
-  bigint,
-  boolean,
-  date,
-  decimal as dec,
-  index,
-  integer,
-  jsonb,
-  pgEnum,
-  pgTable,
-  primaryKey,
-  serial,
-  smallint,
-  text,
-  timestamp,
-  unique,
-  uniqueIndex,
-  uuid,
-  varchar,
+    bigint,
+    boolean,
+    date,
+    decimal as dec,
+    index,
+    integer,
+    jsonb,
+    pgEnum,
+    pgTable,
+    primaryKey,
+    serial,
+    smallint,
+    text,
+    timestamp,
+    unique,
+    uniqueIndex,
+    uuid,
+    varchar,
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import dayjs from "dayjs";
@@ -274,29 +274,6 @@ export const tokenMarketChartDaily = pgTable(
   ],
 );
 
-/**
- * Token price cache for timestamp-aware enrichment.
- *
- * Stores price-at-timestamp lookups bucketed to 5-min intervals.
- * Composite PK prevents duplicate (mint, bucket) entries.
- * Populated by resolve-token-price.ts cache-first flow.
- */
-export const tokenPriceCache = pgTable(
-  "token_price_cache",
-  {
-    mint: varchar("mint", { length: 44 }).notNull(),
-    timestampSec: bigint("timestamp_sec", { mode: "number" }).notNull(),
-    priceUsd: decimal("price_usd").notNull(),
-    source: varchar("source", { length: 20 }).notNull(),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at")
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => [primaryKey({ columns: [table.mint, table.timestampSec] })],
-);
-
 export const tokenVolatilityNewsCache = pgTable(
   "token_volatility_news_cache",
   {
@@ -421,17 +398,6 @@ export const aiDailyUsage = pgTable(
   ],
 );
 
-// {
-//     "signature": "5wHu1qwD7Jsj3xqWjdSEJmYr3Q5f5RjXqjqQJ7jqEj7jqEj7jqEj7jqEj7jqEj7jqE",
-//     "timestamp": 1704067200,
-//     "direction": "in",
-//     "counterparty": "HXsKP7wrBWaQ8T2Vtjry3Nj3oUgwYcqq9vrHDM12G664",
-//     "mint": "So11111111111111111111111111111111111111112",
-//     "symbol": "SOL",
-//     "amount": 1.5,
-//     "amountRaw": "1500000000",
-//     "decimals": 9
-//   },
 export const tokenTransfers = pgTable(
   "token_transfers",
   {
@@ -495,23 +461,6 @@ export const wallets = pgTable("wallets", {
     .notNull()
     .$onUpdate(() => new Date()),
 });
-
-export const walletBalances = pgTable(
-  "wallet_balances",
-  {
-    address: varchar("address", { length: 44 }).notNull(),
-    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
-    totalValueUsd: decimal("total_value_usd").notNull(),
-    // In the according token units
-    amount: decimal("amount").notNull(),
-    valueUsd: decimal("value_usd").notNull(),
-
-    updatedAt: timestamp("updated_at")
-      .notNull()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => [primaryKey({ columns: [table.address, table.tokenAddress] })],
-);
 
 // Trending tokens
 export const trendingTokens = pgTable("trending_tokens", {
@@ -1410,7 +1359,6 @@ export type TokenMetaSelect = typeof tokenMeta.$inferSelect;
 export type TokenDetailedInfoInsert = typeof tokenDetails.$inferInsert;
 export type TokenDetailedInfoSelect = typeof tokenDetails.$inferSelect;
 export type TokenMarketDataInsert = typeof tokenMarketData.$inferInsert;
-export type WalletBalanceInsert = typeof walletBalances.$inferInsert;
 export type TokenTransferInsert = typeof tokenTransfers.$inferInsert;
 export type PoolTrade24hInsert = typeof poolTrades24h.$inferInsert;
 export type TokenMarketChart24hInsert = typeof tokenMarketChart24h.$inferInsert;
@@ -1420,8 +1368,6 @@ export type TokenMarketChartDailyInsert =
   typeof tokenMarketChartDaily.$inferInsert;
 export type TokenTopPoolInsert = typeof tokenTopPools.$inferInsert;
 export type TrendingTokenInsert = typeof trendingTokens.$inferInsert;
-export type TokenPriceCacheInsert = typeof tokenPriceCache.$inferInsert;
-export type TokenPriceCacheRow = typeof tokenPriceCache.$inferSelect;
 export type TokenHolderStatsInsert = typeof tokenHolderStats.$inferInsert;
 export type RecentTradeInsert = typeof recentTrades.$inferInsert;
 export type TokenPoolDataInsert = typeof tokenPoolData.$inferInsert;

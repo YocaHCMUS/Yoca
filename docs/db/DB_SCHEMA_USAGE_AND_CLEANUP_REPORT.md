@@ -99,7 +99,6 @@ Notes:
 | `token_market_chart_24h` | `token-chart.ts` | `/api/tokens/markets/chart/:address` | 24h chart cache. |
 | `token_market_chart_hourly` | `token-chart.ts` | `/api/tokens/markets/chart/:address/hourly` | Hourly chart cache up to 90 days. |
 | `token_market_chart_daily` | `token-chart.ts`, `news.service.ts` | `/api/tokens/markets/chart/:address/daily`, `/api/tokens/history/:address`, news expansion | Daily chart cache; also used as news context. |
-| `token_price_cache` | `wallet/providers/resolve-token-price.ts` | wallet transaction enrichment internals | Timestamp-aware token price cache. |
 | `token_pool_data`, `token_tops_pool` | `token-pools.ts` | `/api/tokens/:address/pools`, `/api/tokens/pools/:addresses` | Token pool cache and top-pool ranking. |
 | `pool_trades_24h` | `token-trades.ts` | `/api/tokens/pools/trades/:address` | Pool trade cache. |
 | `trending_tokens` | `token-trending.ts` | `/api/tokens/trending` | Trending token cache. |
@@ -331,7 +330,7 @@ erDiagram
   users ||--o{ user_wallet_watch_list : watches
   users ||--o{ user_wallet_labels : labels
   users ||--o{ subscriptions : pays
-  subscriptions ||--o{ payment_history : invoices
+  subscriptions ||--o{ payment_history : invoices 
   users ||--o{ ai_daily_usage : consumes
 
   users ||--o{ followed_wallets : follows
