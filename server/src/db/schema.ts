@@ -223,23 +223,6 @@ export const tokenMarketChart24h = pgTable(
   ],
 );
 
-export const tokenMarketChart30d = pgTable(
-  "token_market_chart_30d",
-  {
-    address: varchar("address", { length: 44 }).notNull(),
-    unixTimestampMs: bigint("unix_timestamp_ms", { mode: "number" }).notNull(),
-    price: decimal("price").notNull(),
-    marketCap: decimal("market_cap").notNull(),
-    totalVolume: decimal("total_volume").notNull(),
-    unixUpdatedAtMs: bigint("unix_updated_at_ms", { mode: "number" }).notNull(),
-  },
-  (table) => [
-    primaryKey({
-      columns: [table.address, table.unixTimestampMs],
-    }),
-  ],
-);
-
 export const tokenMarketChartHourly = pgTable(
   "token_market_chart_hourly",
   {
@@ -398,30 +381,6 @@ export const aiDailyUsage = pgTable(
   ],
 );
 
-export const tokenTransfers = pgTable(
-  "token_transfers",
-  {
-    address: varchar("address", { length: 66 }).notNull(),
-    fromOwner: varchar("from_address", { length: 44 }).notNull(),
-    toOwner: varchar("to_address", { length: 44 }).notNull(),
-    // In the according token units
-    amount: decimal("amount").notNull(),
-    amountUsd: decimal("amount_usd").notNull(),
-    blockTime: timestamp("block_time").notNull(),
-    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
-    tokenSymbol: varchar("token_symbol", { length: 64 }).notNull(),
-    transactionSignature: varchar("transaction_signature", {
-      length: 88,
-    }).notNull(),
-    instructionIndex: integer("instruction_index").notNull(),
-  },
-  (table) => [
-    primaryKey({
-      columns: [table.transactionSignature, table.instructionIndex],
-    }),
-  ],
-);
-
 // Token holders info
 export const tokenHolderStats = pgTable("token_holder_stats", {
   address: varchar("address", { length: 44 }).primaryKey(),
@@ -453,14 +412,6 @@ export const topTokenHolders = pgTable(
     }),
   ],
 );
-
-export const wallets = pgTable("wallets", {
-  address: varchar("address", { length: 44 }).primaryKey(),
-  balanceCount: integer("balance_count").notNull().default(0),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
 
 // Trending tokens
 export const trendingTokens = pgTable("trending_tokens", {
@@ -698,19 +649,6 @@ export const walletSwapMeta = pgTable(
     fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
     coveredFromSec: integer("covered_from_sec"),
     coveredToSec: integer("covered_to_sec"),
-  },
-  (t) => [primaryKey({ columns: [t.address] })],
-);
-
-export const walletTransferMeta = pgTable(
-  "wallet_transfer_meta",
-  {
-    address: varchar("address", { length: 66 }).notNull(),
-    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
-    coveredFromSec: integer("covered_from_sec"),
-    coveredToSec: integer("covered_to_sec"),
-    coveredFromCursor: varchar("last_wallet_address", { length: 66 }),
-    coveredToCursor: varchar("first_wallet_address", { length: 66 }),
   },
   (t) => [primaryKey({ columns: [t.address] })],
 );
@@ -1096,74 +1034,6 @@ export const walletFirstFund = pgTable(
   (t) => [primaryKey({ columns: [t.reciepient] })],
 );
 
-// for AI agent workflow, and to easily access strategy to reduce token usage in the workflow
-export const tradingStrategyDictionary = pgTable(
-  "trading_strategy_dictionary",
-  {
-    id: varchar("id", { length: 20 }).primaryKey(),
-    name: varchar("name", { length: 100 }).notNull(), // for AI agent workflow
-    description: text("description").notNull(), // for AI agent workflow
-    name_key: varchar("name_key", { length: 100 }).notNull(), // for frontend display, use localization key to support localization context
-    description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
-  },
-);
-
-// a trading strategy can have multiple benefits and risks, we store them in separate tables with foreign key reference to the strategy dictionary
-export const tradingStrategyBenefit = pgTable("trading_strategy_benefit", {
-  id: serial("id").primaryKey(),
-  strategyId: varchar("strategy_id", { length: 20 })
-    .notNull()
-    .references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
-  benefit_key: text("benefit_key").notNull(),
-});
-
-export const tradingStrategyRisk = pgTable("trading_strategy_risk", {
-  id: serial("id").primaryKey(),
-  strategyId: varchar("strategy_id", { length: 20 })
-    .notNull()
-    .references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
-  risk_key: text("risk_key").notNull(),
-});
-
-// to store the weight of each metric for a trading strategy, which can be used in the AI agent workflow to calculate the score of a strategy based on the metrics of a wallet
-export const tradingStrategyWeight = pgTable("trading_strategy_weight", {
-  id: serial("id").primaryKey(),
-  strategyId: varchar("strategy_id", { length: 20 })
-    .notNull()
-    .references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
-  metric_name: varchar("metric_name", { length: 100 }).notNull(),
-  weight: decimal("weight").notNull(),
-});
-
-// to store any other rules for a trading strategy that are not covered by the benefits, risks and weights, such as if a strategy requires a certain token holding or trading volume, we can store them in this table with a key-value pair format
-export const tradingStrategyRule = pgTable("trading_strategy_rule", {
-  id: serial("id").primaryKey(),
-  strategyId: varchar("strategy_id", { length: 20 })
-    .notNull()
-    .references(() => tradingStrategyDictionary.id, { onDelete: "cascade" }),
-  rule_key: text("rule_key").notNull(),
-  value: decimal("value").notNull(),
-});
-
-export const walletCategoryDictionary = pgTable("wallet_category_dictionary", {
-  id: varchar("id", { length: 20 }).primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(), // for AI agent workflow
-  description: text("description").notNull(), // for AI agent workflow
-  name_key: varchar("name_key", { length: 100 }).notNull(), // for frontend display, use localization key to support localization context
-  description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
-});
-
-export const firstFunderCategoryDictionary = pgTable(
-  "first_funder_category_dictionary",
-  {
-    id: varchar("id", { length: 20 }).primaryKey(),
-    name: varchar("name", { length: 100 }).notNull(), // for AI agent workflow
-    description: text("description").notNull(), // for AI agent workflow
-    name_key: varchar("name_key", { length: 100 }).notNull(), // for frontend display, use localization key to support localization context
-    description_key: text("description_key").notNull(), // for frontend display, use localization key to support localization context
-  },
-);
-
 // --- Wallet PnL Cache tables ---
 
 /**
@@ -1340,17 +1210,6 @@ export const newsArticles = pgTable(
   ],
 );
 
-export const userSources = pgTable(
-  "user_sources",
-  {
-    id: serial("id").primaryKey(),
-    address: varchar("address", { length: 44 }).notNull(),
-    sourceName: varchar("source_name").notNull(),
-    isEnabled: boolean("is_enabled").notNull().default(true),
-  },
-  (t) => [unique().on(t.address, t.sourceName)],
-);
-
 // #endregion
 
 // #region Types
@@ -1359,7 +1218,6 @@ export type TokenMetaSelect = typeof tokenMeta.$inferSelect;
 export type TokenDetailedInfoInsert = typeof tokenDetails.$inferInsert;
 export type TokenDetailedInfoSelect = typeof tokenDetails.$inferSelect;
 export type TokenMarketDataInsert = typeof tokenMarketData.$inferInsert;
-export type TokenTransferInsert = typeof tokenTransfers.$inferInsert;
 export type PoolTrade24hInsert = typeof poolTrades24h.$inferInsert;
 export type TokenMarketChart24hInsert = typeof tokenMarketChart24h.$inferInsert;
 export type TokenMarketChartHourlyInsert =
@@ -1403,7 +1261,6 @@ export type WalletEnhancedTxMetaInsert =
   typeof walletEnhancedTxMeta.$inferInsert;
 export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
 export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
-export type walletTransferMetaInsert = typeof walletTransferMeta.$inferInsert;
 export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
 export type WalletTokenDetailsSelect = typeof walletTokenDetails.$inferSelect;
 export type WalletFirstFundInsert = typeof walletFirstFund.$inferInsert;
@@ -1425,7 +1282,6 @@ export type WalletPnlDataMetaInsert = typeof walletPnlDataMeta.$inferInsert;
 export type WalletPnlDataMetaRow = typeof walletPnlDataMeta.$inferSelect;
 export type NewsBatchInsert = typeof newsBatches.$inferInsert;
 export type NewsArticleInsert = typeof newsArticles.$inferInsert;
-export type UserSourceInsert = typeof userSources.$inferInsert;
 
 // #region Chatbot
 export const chatAnalysisCache = pgTable(

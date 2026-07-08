@@ -136,13 +136,6 @@ export const tradingAlertScopes = pgTable(
   ],
 );
 
-export const tradingAlertWebhooks = pgTable("trading_alert_webhooks", {
-  alertId: uuid("alert_id")
-    .notNull()
-    .references(() => alerts.id, { onDelete: "cascade" }),
-  webhook_id: uuid("webhook_id").notNull(),
-});
-
 export const tradingAlertConditions = pgTable("trading_alert_conditions", {
   id: uuid("id").primaryKey().defaultRandom(),
   alertId: uuid("alert_id")
@@ -169,24 +162,9 @@ export const walletMetrics1m = pgTable(
   ],
 );
 
-export const alertHistory = pgTable("alert_history", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  alertId: uuid("alert_id").references(() => alerts.id, {
-    onDelete: "set null",
-  }),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  alertName: varchar("alert_name", { length: 255 }).notNull(),
-  message: varchar("message", { length: 1000 }).notNull(),
-  sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
-  readAt: timestamp("read_at"),
-});
-
 export const userAlerts = alerts;
 export const userAlertState = alertState;
 export const userAlertConditions = tokenAlertConditions;
-export const alertsSent = alertHistory;
 
 export type AlertInsert = typeof alerts.$inferInsert;
 export type AlertSelect = typeof alerts.$inferSelect;

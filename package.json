@@ -32,7 +32,6 @@
     "db:migrate": "npm run db:migrate -w=server",
     "db:push": "npm run db:push -w=server",
     "db:push-force": "npm run db:push-force -w=server",
-    "db:seed": "npm run db:seed -w=server",
     "db:studio": "npm run db:studio -w server",
     "db:clear": "npm run db:clear -w server",
     "db:reset": "npm run db:reset -w server",

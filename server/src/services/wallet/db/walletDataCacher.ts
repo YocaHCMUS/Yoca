@@ -1,7 +1,7 @@
 import { db } from "@sv/db/index.js";
-import { walletSwap, walletTransactionsMeta, walletOverviewCache, tokenTransfers, walletHeliusTransactions, walletSwapMeta, walletTransferMeta, walletFirstFund, walletPnlDataCache, walletPnlDataMeta } from "@sv/db/schema.js";
+import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletHeliusTransactions, walletSwapMeta, walletFirstFund, walletPnlDataCache, walletPnlDataMeta } from "@sv/db/schema.js";
 import { sql } from "drizzle-orm";
-import type { WalletSwap, WalletOverview, WalletTransfer, WalletTransactionHelius, HeliusWalletFirstFund } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { WalletSwap, WalletOverview, WalletTransactionHelius, HeliusWalletFirstFund } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 export async function saveSwapsCache(
   address: string,
@@ -295,101 +295,6 @@ export async function saveTransactionsHeliusCache(
     }
   } catch (err) {
     console.error("Failed to save wallet transactions cache", err);
-  }
-}
-
-export async function saveTransfersCache(
-  address: string,
-  transfers: WalletTransfer[],
-  from: number,
-  to: number
-): Promise<void> {
-  try {
-    // let coverageFromMs: number | undefined;
-    // let coverageToMs: number | undefined;
-    let firstAddress: string | undefined;
-    let lastAddress: string | undefined;
-
-
-    if (transfers.length > 0) {
-      // Deduplicate by transaction signature + instruction index to avoid multiple rows
-      // with the same primary key when providers return duplicate transfer records.
-      const uniqueKey = (t: WalletTransfer) => `${t.transactionSignature}-${t.instructionIndex}`;
-      const uniqueByKey = new Map<string, WalletTransfer>();
-      for (const transfer of transfers) {
-        const key = uniqueKey(transfer);
-        if (!uniqueByKey.has(key)) {
-          uniqueByKey.set(key, transfer);
-        }
-      }
-
-      const uniqueTransfers = Array.from(uniqueByKey.values());
-
-      const rows = uniqueTransfers.map((t) => ({
-        address,
-        fromOwner: t.from,
-        toOwner: t.to,
-        amount: t.amount,
-        amountUsd: t.amountUsd ?? 0,
-        blockTime: new Date(Date.parse(t.timestamp) || Date.now()),
-        tokenAddress: t.tokenAddress,
-        tokenSymbol: t.tokenSymbol,
-        transactionSignature: t.transactionSignature,
-        instructionIndex: t.instructionIndex,
-      }));
-
-      const coverageBounds = rows.length > 0
-        ? rows.reduce(
-          (bounds, row) => (
-            {
-              fromMs: Math.min(bounds.fromMs, row.blockTime.getTime()),
-              toMs: Math.max(bounds.toMs, row.blockTime.getTime()),
-              lastAddress: bounds.fromMs < row.blockTime.getTime() ? bounds.lastAddress : row.address,
-              firstAddress: bounds.toMs < row.blockTime.getTime() ? row.address : bounds.firstAddress
-            }),
-          {
-            fromMs: Number.POSITIVE_INFINITY,
-            toMs: Number.NEGATIVE_INFINITY,
-            lastAddress: "",
-            firstAddress: ""
-          },
-        )
-        : null;
-
-      // coverageFromMs = coverageBounds
-      //   ? coverageBounds.fromMs
-      //   : undefined;
-      // coverageToMs = coverageBounds
-      //   ? coverageBounds.toMs
-      //   : undefined;
-
-      firstAddress = coverageBounds
-        ? coverageBounds.firstAddress
-        : undefined;
-
-      lastAddress = coverageBounds
-        ? coverageBounds.lastAddress
-        : undefined;
-
-
-      await db.insert(tokenTransfers).values(rows).onConflictDoNothing();
-    }
-
-    await db
-      .insert(walletTransferMeta)
-      .values({ address })
-      .onConflictDoUpdate({
-        target: [walletTransferMeta.address],
-        set: {
-          fetchedAt: new Date(),
-          coveredFromSec: Math.floor(from / 1000),
-          coveredToSec: Math.floor(to / 1000),
-          coveredFromCursor: lastAddress,
-          coveredToCursor: firstAddress
-        },
-      });
-  } catch (err) {
-    console.error("Failed to save wallet transfers cache", err);
   }
 }
 

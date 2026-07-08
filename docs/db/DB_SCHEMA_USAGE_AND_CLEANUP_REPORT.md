@@ -23,10 +23,7 @@ The active schema has these major areas:
 
 Main cleanup findings:
 
-- `wallet_recent_swaps` and `wallet_recent_transfers` are not used by runtime code. Current wallet history uses `wallet_swap_history`, `wallet_swap_history_meta`, `wallet_transfer_history`, and `wallet_transfer_history_meta`.
-- Several tables are only declared or seeded, not used by runtime code: strategy/category dictionaries, `wallet_balances`, `user_sources`, `token_market_chart_30d`, `trading_alert_webhooks`, `alert_history`.
-- `wallet_token_balance_history` is unused; the active token balance history code uses week/month tables.
-- `wallets` is likely obsolete as a standalone root table; runtime cache code uses wallet address fields directly in cache tables instead of referencing `wallets`.
+- The confirmed runtime-unused and seed-only tables identified during this audit have been removed.
 - The schema split is incomplete: `schema.ts` still owns most token, wallet, news, alert-rule, and chat tables.
 
 ## Runtime DB Map
@@ -121,7 +118,6 @@ Notes:
 | `wallet_swap_history`, `wallet_swap_history_meta` | `walletTransfersSwaps.service.ts` | `/api/wallets/swaps/history/:address` | Current paginated swap history cache and range coverage. |
 | `wallet_transfer_history`, `wallet_transfer_history_meta` | `walletTransfersSwaps.service.ts` | `/api/wallets/transfers/history/:address` | Current paginated transfer history cache and range coverage. |
 | `wallet_swap`, `wallet_swap_meta` | `walletDataCacher.ts`, `walletDataRetriever.ts`, wallet transfer/swap service | `/api/wallets/swap`, wallet AI/chat flows | Older/current short-window swap cache. Still active. |
-| `token_transfers`, `wallet_transfer_meta` | `walletDataCacher.ts`, `walletDataRetriever.ts`, chart/PnL flows | `/api/wallets/transfers`, PnL chart flows | Transfer cache and coverage metadata. |
 | `wallet_transactions`, `wallet_transactions_meta` | `walletDataRetriever.ts`, `wash-trading.service.ts`, transaction distribution | chart/transaction/wash-trading flows | Transaction cache. Still referenced. |
 | `wallet_helius_transactions` | `walletDataCacher.ts`, `walletDataRetriever.ts`, `walletHistory.service.ts` | wallet history/internal Helius cache | Helius raw transaction history cache. |
 | `wallet_enhanced_transactions`, `wallet_enhanced_token_transfers`, `wallet_enhanced_native_transfers`, `wallet_enhanced_instructions`, `wallet_enhanced_inner_instructions`, `wallet_enhanced_tx_meta` | `wallet/providers/walletEnhancedTx.service.ts`, day activity/detail services | `/api/wallets/day-activity`, `/api/wallets/tx-detail`, `/api/wallets/tx-instructions` | Helius enhanced transaction detail cache. |
@@ -145,7 +141,6 @@ flowchart TD
   CurrentHistory --> TransferHistory[wallet_transfer_history + meta]
 
   ShortWindow[Short-window / older cache] --> WalletSwap[wallet_swap + wallet_swap_meta]
-  ShortWindow --> TokenTransfers[token_transfers + wallet_transfer_meta]
   ShortWindow --> Helius[wallet_helius_transactions + wallet_transactions_meta]
 
   Detail[Transaction detail cache] --> Enhanced[wallet_enhanced_* tables + wallet_enhanced_tx_meta]
@@ -179,23 +174,25 @@ Recommendation: do not delete either alert system blindly. First decide product 
 | `chat_analysis_cache` | `chat.cache.ts` | `/api/chat` | Wallet chat response cache. |
 | `news_batches`, `news_articles` | `news.service.ts` | `/api/news/webhook`, `/api/news/articles/:contentHash/expand` | n8n/news ingestion and article expansion. |
 
+## Completed Cleanup
+
+| Removed table | Removed code |
+| --- | --- |
+| `token_price_cache` | Unreachable `wallet/providers/resolve-token-price.ts`, its unused post-enrichment callers, and related schema types. |
+| `token_market_chart_30d` | Unused schema declaration. Active chart code continues to use the 24h, hourly, and daily caches. |
+| `token_transfers` | Unused transfer-cache writer/readers and related schema type. Current wallet history uses the paginated transfer-history tables. |
+| `wallets` | Unused standalone root table; active wallet tables store wallet addresses directly. |
+| `wallet_transfer_meta` | Obsolete metadata companion for `token_transfers`, including unused metadata helpers and freshness branch. |
+| `wallet_token_balance_history` | Unused unified token-balance history table; active code uses week/month tables. |
+| `wallet_recent_swaps`, `wallet_recent_transfers` | Superseded recent caches; active history uses the paginated swap/transfer history tables. |
+| `user_sources` | Unused user-source preference table and inferred schema type. |
+| `alert_history`, `trading_alert_webhooks` | Unused generic-alert history and webhook tables, including the `alerts_sent` alias. |
+| Trading strategy and wallet-category dictionary tables | Seven seed-only tables, their dedicated seed file, and `db:seed` scripts. |
+| `wallet_balances` | Unused legacy wallet balance table removed before this cleanup batch. |
+
 ## Runtime-Unused Or Cleanup Candidate Tables
 
-These tables had no runtime references outside DB schema/type declarations after excluding tests/scripts/seed.
-
-| Table | Current status | Cleanup recommendation |
-| --- | --- | --- |
-| `wallet_recent_swaps` | No runtime usage found. Superseded by `wallet_swap_history`. | Remove after confirming frontend no longer calls old recent endpoint or old cache. |
-| `wallet_recent_transfers` | No runtime usage found. Superseded by `wallet_transfer_history`. | Remove with `wallet_recent_swaps`. |
-| `wallet_token_balance_history` | No runtime usage found. Active code uses week/month token balance history tables. | Remove or keep only if a future unified history table is planned. |
-| `wallet_balances` | No runtime usage found. Current portfolio cache is `wallet_portfolio_cache`; balance history is `wallet_balance_history`. | Remove unless a current portfolio-normalization feature needs it. |
-| `wallets` | Name appears frequently as text, but no clear runtime query as a root table. Other wallet tables use address directly. | Treat as likely obsolete; verify DB contents and remove if empty or unused by external tools. |
-| `token_market_chart_30d` | No runtime usage found. Active chart code uses 24h/hourly/daily. | Remove after checking no frontend endpoint expects a 30d table-backed cache. |
-| `user_sources` | No runtime usage found. | Remove unless news-source preferences are planned soon. |
-| `alert_history` / alias `alerts_sent` | No runtime usage found. | Remove, or implement actual alert notification history if product needs read/unread history. |
-| `trading_alert_webhooks` | No runtime usage found. | Remove unless generic alert system will directly own webhook ids. |
-| `trading_strategy_dictionary`, `trading_strategy_benefit`, `trading_strategy_risk`, `trading_strategy_weight`, `trading_strategy_rule` | Only seed-related usage found, no runtime reads. | Remove from runtime schema or move to future/seed-only schema until AI workflow actually reads it. |
-| `wallet_category_dictionary`, `first_funder_category_dictionary` | Only seed-related usage found, no runtime reads. | Same as strategy dictionaries. |
+The previously confirmed candidates are recorded under Completed Cleanup. `wallet_metrics_1m` remains pending a separate symbol-level audit because its reported consumers are themselves unreachable.
 
 ## Deprecated Or Overlapping Areas
 
@@ -213,17 +210,7 @@ Current active history tables:
 - `wallet_transfer_history`
 - `wallet_transfer_history_meta`
 
-Deprecated/unreferenced tables:
-
-- `wallet_recent_swaps`
-- `wallet_recent_transfers`
-
-Cleanup:
-
-1. Confirm frontend does not call old recent swap/transfer routes or expect recent-cache semantics.
-2. Remove schema exports/types for recent tables.
-3. Rebuild dev DB.
-4. Keep history tables and meta tables.
+The deprecated recent swap/transfer tables have been removed. Keep the active history tables and their metadata tables.
 
 ### Alerts
 
@@ -235,22 +222,15 @@ Cleanup should wait for a product decision. Removing one without endpoint consol
 
 There is overlap between:
 
-- `wallet_swap` / `token_transfers` short-window caches.
+- `wallet_swap` short-window cache.
 - `wallet_swap_history` / `wallet_transfer_history` paginated history caches.
 - `wallet_helius_transactions` and `wallet_enhanced_*` transaction detail caches.
 
-Do not remove the older active short-window caches yet. They are still referenced by wallet data retriever/cacher and chat/AI fingerprint paths. A later refactor can unify reads on the history/enhanced tables.
+Do not remove the older active swap cache yet. It is still referenced by wallet data retriever/cacher and chat/AI fingerprint paths. A later refactor can unify reads on the history/enhanced tables.
 
 ## Cleanup Plan
 
-Phase 1: mark and remove obvious unused tables from schema.
-
-- Remove `wallet_recent_swaps`, `wallet_recent_transfers`.
-- Remove `wallet_token_balance_history` if no future unified balance-history plan exists.
-- Remove `token_market_chart_30d`.
-- Remove `user_sources`.
-- Remove `wallet_balances`.
-- Remove `alert_history`, `trading_alert_webhooks` if no alert-history/webhook-id feature is planned.
+Phase 1 is complete: confirmed unused tables and seed-only dictionaries were removed from the schema.
 
 Phase 2: decide alert system direction.
 
@@ -258,15 +238,10 @@ Phase 2: decide alert system direction.
 - Migrate any required behavior.
 - Remove the losing endpoint group and its tables.
 
-Phase 3: decide dictionary table fate.
-
-- If AI workflow will not read strategy/category dictionaries soon, remove them from runtime schema.
-- If they are future data, move them into a clearly named `future` or `dictionary` schema module and document that there is no runtime consumer yet.
-
-Phase 4: simplify wallet cache generations.
+Phase 3: simplify wallet cache generations.
 
 - Keep current history tables as the canonical transfer/swap history store.
-- Audit `wallet_swap`, `token_transfers`, and `wallet_helius_transactions` call paths.
+- Audit `wallet_swap` and `wallet_helius_transactions` call paths.
 - Move remaining consumers to the canonical history/enhanced transaction tables before deleting older caches.
 
 ## Recommended DB Schema File Split
@@ -304,7 +279,7 @@ Suggested ownership after cleanup:
 | `token-ai.ts` | `token_ai_chat_cache`, `token_volatility_news_cache`, `token_chart_news_events_cache`, `ai_daily_usage` if AI usage is not moved to `users.ts` |
 | `wallets.ts` | `wallet_balance_history`, token balance week/month, wallet analyses, swap/transfer history and meta |
 | `wallet-cache.ts` | overview, portfolio, historical portfolio, PnL cache/meta |
-| `wallet-transactions.ts` | `wallet_transactions`, `wallet_transactions_meta`, `wallet_helius_transactions`, `wallet_enhanced_*`, `token_transfers`, `wallet_transfer_meta`, `wallet_swap`, `wallet_swap_meta` |
+| `wallet-transactions.ts` | `wallet_transactions`, `wallet_transactions_meta`, `wallet_helius_transactions`, `wallet_enhanced_*`, `wallet_swap`, `wallet_swap_meta` |
 | `wallet-ai.ts` | identity cache, AI analysis cache, audit cache, AI swap summary cache, token details, first fund, user tags |
 | `alert-rules.ts` | `followed_wallets`, `alert_rules`, `helius_webhooks`, `helius_webhook_addresses` |
 | `alerts.ts` | generic alerts tables only |

@@ -1,17 +1,14 @@
 import {
     WALLET_SWAPS_TTL_MS,
-    WALLET_TRANSACTIONS_TTL_MS,
-    WALLET_TRANSFERS_TTL_MS
+    WALLET_TRANSACTIONS_TTL_MS
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-    tokenTransfers,
     walletHeliusTransactions,
     walletSwap,
     walletSwapMeta,
     walletTransactions,
     walletTransactionsMeta,
-    walletTransferMeta,
     walletFirstFund,
     walletPnlDataCache,
     walletPnlDataMeta
@@ -20,8 +17,7 @@ import { and, desc, eq, gte, lt, lte, or } from "drizzle-orm";
 import type {
     WalletSwap,
     WalletTransaction,
-    WalletTransactionHelius,
-    WalletTransfer
+    WalletTransactionHelius
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 export type CachedRange = {
@@ -125,16 +121,6 @@ async function getTransactionMetaRows(address: string) {
 		.limit(1);
 }
 
-async function getTransferMetaRows(address: string) {
-	return await db
-		.select()
-		.from(walletTransferMeta)
-		.where(
-			eq(walletTransferMeta.address, address)
-		)
-		.limit(1);
-}
-
 async function getSwapMetaRows(address: string) {
 	return await db
 		.select()
@@ -148,12 +134,9 @@ async function getSwapMetaRows(address: string) {
 async function hasFreshWalletMeta(
 	address: string,
 	threshold: Date,
-	type: "transfers" | "swaps" | "transactions"
+	type: "swaps" | "transactions"
 ): Promise<boolean> {
-	if (type === "transfers") {
-		const metaRows = await getTransferMetaRows(address);
-		return metaRows.length > 0 && metaRows[0].fetchedAt >= threshold;
-	} else if (type === "swaps") {
+	if (type === "swaps") {
 		const metaRows = await getSwapMetaRows(address);
 		return metaRows.length > 0 && metaRows[0].fetchedAt >= threshold;
 	} else if (type === "transactions") {
@@ -283,67 +266,6 @@ export async function getCachedWalletTransactionsHelius(
 	};
 }
 
-export async function getCachedWalletTransfersMeta(address: string) {
-	return await db
-		.select()
-		.from(walletTransferMeta)
-		.where(eq(walletTransferMeta.address, address))
-		.limit(1)
-}
-
-export async function getCachedWalletTransfers(
-	address: string,
-	from?: number, //ms
-	to?: number,
-	tokenAddress?: string,
-	direction?: "in" | "out",
-	minAmountUsd?: number
-): Promise<WalletTransfer[] | null> {
-	const predicates = [eq(tokenTransfers.address, address)];
-
-	if (from != null && to != null) {
-		predicates.push(gte(tokenTransfers.blockTime, new Date(from)));
-		predicates.push(lte(tokenTransfers.blockTime, new Date(to)));
-	}
-
-	if (tokenAddress != null) {
-		predicates.push(eq(tokenTransfers.tokenAddress, tokenAddress));
-	}
-
-	if (direction === "in") {
-		predicates.push(eq(tokenTransfers.toOwner, address));
-	} else if (direction === "out") {
-		predicates.push(eq(tokenTransfers.fromOwner, address));
-	}
-
-	if (minAmountUsd != null) {
-		predicates.push(gte(tokenTransfers.amountUsd, minAmountUsd));
-	}
-
-	const rows = await db
-		.select()
-		.from(tokenTransfers)
-		.where(and(...predicates))
-		.orderBy(desc(tokenTransfers.blockTime));
-
-	if (rows.length === 0) {
-		return null;
-	}
-
-	return rows.map((r) => ({
-		from: r.fromOwner,
-		to: r.toOwner,
-		amount: r.amount,
-		amountUsd: Number(r.amountUsd) || undefined,
-		priceUsd: undefined,
-		timestamp: toIsoTimestamp(r.blockTime),
-		tokenAddress: r.tokenAddress,
-		tokenSymbol: r.tokenSymbol,
-		transactionSignature: r.transactionSignature,
-		instructionIndex: r.instructionIndex,
-	}));
-}
-
 export async function getCachedWalletSwapsMeta(address: string) {
 	return await db
 		.select()
@@ -419,130 +341,6 @@ export async function getCachedWalletSwaps(
 	}));
 }
 
-
-export async function getCachedWalletTransfersChunk(
-	address: string,
-	options?: { cursor?: string; limit?: number },
-): Promise<CachedWalletChunkResult<WalletTransfer>> {
-	const transferThreshold = new Date(Date.now() - WALLET_TRANSFERS_TTL_MS);
-	const isFresh = await hasFreshWalletMeta(address, transferThreshold, "transfers");
-	if (!isFresh) {
-		return {
-			available: false,
-			cursorMatched: false,
-			items: [],
-			nextCursor: null,
-			hasMore: false,
-		};
-	}
-
-	const limit = Math.min(Math.max(Math.floor(options?.limit ?? 100), 1), 100);
-	const addressPredicate = or(
-		eq(tokenTransfers.fromOwner, address),
-		eq(tokenTransfers.toOwner, address),
-	);
-
-	const cursor = String(options?.cursor ?? "").trim();
-	let pagePredicate = addressPredicate;
-
-	if (cursor) {
-		const [cursorSignatureRaw, cursorInstructionRaw] = cursor.split(":");
-		const cursorSignature = String(cursorSignatureRaw ?? "").trim();
-		const cursorInstructionIndex =
-			cursorInstructionRaw != null && Number.isFinite(Number(cursorInstructionRaw))
-				? Math.floor(Number(cursorInstructionRaw))
-				: null;
-
-		const cursorPredicate = cursorInstructionIndex == null
-			? and(
-				addressPredicate,
-				eq(tokenTransfers.transactionSignature, cursorSignature),
-			)
-			: and(
-				addressPredicate,
-				eq(tokenTransfers.transactionSignature, cursorSignature),
-				eq(tokenTransfers.instructionIndex, cursorInstructionIndex),
-			);
-
-		const cursorRows = await db
-			.select({
-				blockTime: tokenTransfers.blockTime,
-				transactionSignature: tokenTransfers.transactionSignature,
-				instructionIndex: tokenTransfers.instructionIndex,
-			})
-			.from(tokenTransfers)
-			.where(cursorPredicate)
-			.orderBy(
-				desc(tokenTransfers.blockTime),
-				desc(tokenTransfers.transactionSignature),
-				desc(tokenTransfers.instructionIndex),
-			)
-			.limit(1);
-
-		if (cursorRows.length === 0) {
-			return {
-				available: true,
-				cursorMatched: false,
-				items: [],
-				nextCursor: null,
-				hasMore: false,
-			};
-		}
-
-		const anchor = cursorRows[0];
-		pagePredicate = and(
-			addressPredicate,
-			or(
-				lt(tokenTransfers.blockTime, anchor.blockTime),
-				and(
-					eq(tokenTransfers.blockTime, anchor.blockTime),
-					lt(tokenTransfers.transactionSignature, anchor.transactionSignature),
-				),
-				and(
-					eq(tokenTransfers.blockTime, anchor.blockTime),
-					eq(tokenTransfers.transactionSignature, anchor.transactionSignature),
-					lt(tokenTransfers.instructionIndex, anchor.instructionIndex),
-				),
-			),
-		);
-	}
-
-	const rows = await db
-		.select()
-		.from(tokenTransfers)
-		.where(pagePredicate)
-		.orderBy(
-			desc(tokenTransfers.blockTime),
-			desc(tokenTransfers.transactionSignature),
-			desc(tokenTransfers.instructionIndex),
-		)
-		.limit(limit + 1);
-
-	const pageRows = rows.slice(0, limit);
-	const pageItems = pageRows.map((r) => ({
-		from: r.fromOwner,
-		to: r.toOwner,
-		amount: r.amount,
-		timestamp: toIsoTimestamp(r.blockTime),
-		tokenAddress: r.tokenAddress,
-		tokenSymbol: r.tokenSymbol,
-		transactionSignature: r.transactionSignature,
-		instructionIndex: r.instructionIndex,
-	}));
-	const hasMore = rows.length > limit;
-	const nextCursor =
-		hasMore && pageItems.length > 0
-			? `${pageItems[pageItems.length - 1].transactionSignature}:${pageItems[pageItems.length - 1].instructionIndex}`
-			: null;
-
-	return {
-		available: true,
-		cursorMatched: true,
-		items: pageItems,
-		nextCursor,
-		hasMore,
-	};
-}
 
 export async function getCachedWalletSwapsChunk(
 	address: string,
