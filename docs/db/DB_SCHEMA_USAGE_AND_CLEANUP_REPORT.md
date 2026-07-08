@@ -30,16 +30,16 @@ Main cleanup findings:
 
 ```mermaid
 flowchart LR
-  Main[server/src/main.ts]
-  Main --> Users[/api/users + /api/auth]
-  Main --> Profile[/api/profile]
-  Main --> Payment[/api/payment]
-  Main --> Tokens[/api/tokens + token AI/news routes]
-  Main --> Wallets[/api/wallets + /api/wallet-analysis]
-  Main --> Alerts[/api/alerts + /api/alertsHp]
-  Main --> Chat[/api/chat]
-  Main --> News[/api/news]
-  Main --> Webhook[/webhook]
+  Main["server/src/main.ts"]
+  Main --> Users["/api/users + /api/auth"]
+  Main --> Profile["/api/profile"]
+  Main --> Payment["/api/payment"]
+  Main --> Tokens["/api/tokens + token AI/news routes"]
+  Main --> Wallets["/api/wallets + /api/wallet-analysis"]
+  Main --> Alerts["/api/alerts + /api/alertsHp"]
+  Main --> Chat["/api/chat"]
+  Main --> News["/api/news"]
+  Main --> Webhook["/webhook"]
 
   Users --> UserTables[(users/auth_accounts/password_reset_codes/user_linked_wallets)]
   Profile --> UserTables
