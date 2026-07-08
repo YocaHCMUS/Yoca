@@ -1,0 +1,453 @@
+%Đây là template dùng cho đề cương đề tài tốt nghiệp
+%Khoa Công nghệ Thông tin
+%Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM
+
+%Liên hệ về mẫu LaTEX này: Thầy Bùi Huy Thông (bhthong@fit.hcmus.edu.vn)
+
+\documentclass{article}[14pt]
+\usepackage[utf8]{vietnam}
+\usepackage{enumerate}
+\usepackage{enumitem}
+\usepackage{multicol}
+\usepackage{listings}
+\usepackage[left=2cm,right=2cm,top=2.5cm,bottom=2.5cm]{geometry}
+\usepackage{verbatim}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{fancyhdr}
+\usepackage{titlesec} % For \subsubsubsection
+\usepackage{fancybox,framed}
+\linespread{1.3}
+\usepackage{lastpage}
+\usepackage{floatrow}
+\usepackage{floatrow}
+\pagenumbering{arabic}
+%\pagestyle{fancy}
+\newfloatcommand{capbtabbox}{table}[][\FBwidth]
+
+\usepackage{blindtext}
+\usepackage{titlesec}
+\usepackage[nottoc]{tocbibind}
+
+\titleformat*{\section}{\LARGE\bfseries}
+\titleformat*{\subsection}{\Large\bfseries}
+\titleformat*{\subsubsection}{\large\bfseries}
+%\addbibresource{ref.bib}
+
+\usepackage{tabularx}
+\usepackage{xltabular}
+\usepackage{ragged2e}
+
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    filecolor=magenta,      
+    urlcolor=black,
+    pdftitle={Overleaf Example},
+    pdfpagemode=FullScreen,
+    citecolor=black,
+}
+
+\usepackage[vietnamese]{babel}
+
+\begin{document}
+    \begin{figure}[h]
+        \begin{floatrow}
+        \ffigbox{\includegraphics[scale = .4]{logo.png}}  
+        {%
+    
+        }
+        \capbtabbox{
+            \begin{tabular}{l}
+            \multicolumn{1}{c}{\textbf{\begin{tabular}[c]{@{}c@{}}TRƯỜNG ĐẠI HỌC KHOA HỌC TỰ NHIÊN\\KHOA CÔNG NGHỆ THÔNG TIN\end{tabular}}} \\ \\ \\
+            \end{tabular}
+        }
+        {%
+    
+        }
+        \end{floatrow}
+    \end{figure}
+    
+    \begin{center}
+        
+        %Xác định loại đề tài tốt nghiệp tương ứng: Khóa luận, Thực tập, Đồ án
+        \textbf{\Large ĐỀ CƯƠNG THỰC TẬP DỰ ÁN TỐT NGHIỆP} \\ 
+    \end{center}
+    
+    %\vspace{.5cm}
+    
+    \begin{center}
+    %Tên đề tài phải VIẾT HOA
+        
+        \textbf{\huge XÂY DỰNG HỆ THỐNG PHÂN TÍCH DỮ LIỆU ON-CHAIN SOLANA VÀ TRỰC QUAN HÓA HÀNH VI VÍ BLOCKCHAIN} 
+        
+    %Tên đề tài bằng tiếng Anh (nếu có)
+    \vspace{.5cm}
+        % \textit{\textbf{\Large (\textbf{Building a Web Application for On-Chain Data Analytics})}}
+
+        \textit{\textbf{\Large (\textbf{Design and Implementation of an On-Chain Data Analytics System for Solana and Visualization of Blockchain Wallet Behavior})}}
+    \end{center}
+    
+    \vspace{-0.5cm}
+    
+    \Large
+    \section{THÔNG TIN CHUNG}
+    \begin{itemize}[label = {}]
+        
+        \item \textbf{Người hướng dẫn:} 
+        %Thể hiện dạng: <Chức danh> <Họ và tên> (<Đơn vị công tác>)
+        \begin{itemize}
+            \item ThS. Phạm Nguyễn Sơn Tùng (Khoa Công nghệ Thông tin)
+            \item ThS. Hồ Tuấn Thanh (Khoa Công nghệ Thông tin)
+        \end{itemize}{}
+    
+        
+        \item \textbf{[Nhóm] Sinh viên thực hiện:}
+        
+        %Thể hiện dạng: <Họ và tên sinh viên> (MSSV: )
+        \begin{enumerate}
+        
+            \item Dương Hoàng Hồng Phúc (MSSV: 22120271)
+            \item Lê Võ Minh Phương (MSSV: 22120286)
+            \item Nguyễn Mạnh Phương (MSSV: 22120287)
+            \item Lê Minh Quân (MSSV: 22120290)
+            \item Võ Hoàng Anh Quân (MSSV: 22120293)
+            \item Nguyễn Minh Thiện (MSSV: 22120344)
+        \end{enumerate}
+
+       %Chọn loại thích hợp
+        \item \textbf{Loại đề tài:} Ứng dụng
+        
+        \item \textbf{Thời gian thực hiện:} Từ \textit{9/2025} đến \textit{7/2026}
+        
+        
+    \end{itemize}
+    
+    \pagebreak 
+    
+    \section{NỘI DUNG THỰC HIỆN}
+    {
+
+    %Mỗi mục dưới đây phải viết ít nhất là 5 câu mô tả/giới thiệu.
+    
+    \subsection{Giới thiệu về đề tài}
+    \hspace{0.3cm} Trong những năm gần đây, cùng với sự phát triển mạnh mẽ của công nghệ blockchain, các lĩnh vực liên quan như tài chính phi tập trung (DeFi) và ứng dụng Web3 đang dần trở thành xu hướng công nghệ toàn cầu. Sự bùng nổ của các hoạt động trên blockchain đã làm tăng thêm nhu cầu về việc theo dõi, đánh giá và phân tích dữ liệu để hiểu rõ hơn về thị trường, hành vi người dùng và xu hướng phát triển của hệ sinh thái tiền mã hóa.\\
+
+    Dữ liệu on-chain là nguồn thông tin quan trọng phản ánh toàn bộ hoạt động giao dịch, luân chuyển tài sản và các hành vi tương tác của người dùng trên blockchain. Việc phân tích dữ liệu này giúp phát hiện dòng tiền, đánh giá biến động giá, nhận diện ví lớn cũng như đo lường sức khỏe của thị trường. Tuy nhiên, do khối lượng dữ liệu on-chain rất lớn, biến động liên tục và có cấu trúc phức tạp, việc xử lý và khai thác dữ liệu thủ công gặp nhiều khó khăn, tốn thời gian và đòi hỏi kiến thức chuyên môn cao.\\
+    
+    Xuất phát từ thực tế đó, nhóm lựa chọn thực hiện đề tài “Xây dựng ứng dụng web phân tích dữ liệu on-chain” với mong muốn phát triển một giải pháp có khả năng thu thập, xử lý và hiển thị dữ liệu blockchain một cách trực quan, dễ hiểu và hiệu quả. Đề tài hướng đến việc phát triển một sản phẩm vừa mang tính học thuật, vừa có giá trị thực tiễn trong việc hỗ trợ người dùng nắm bắt thông tin và xu hướng của thị trường blockchain.
+    
+    
+    %\textbf{Ghi chú:} Cần đăng ký tài khoản trên Overleaf\footnote{https://www.overleaf.com} và đọc cách sử dụng LaTeX tại hướng dẫn này \footnote{https://www.overleaf.com/learn/latex/Learn\_LaTeX\_in\_30\_minutes}% \cite{overleaf}.
+    
+    \subsection{Mục tiêu đề tài}
+    
+    %Phần này mô tả về động lực để giải quyết vấn đề. 
+   \hspace{0.3cm} Trước nhu cầu ngày càng tăng về việc khai thác và phân tích dữ liệu on-chain trong hệ sinh thái blockchain, đề tài được thực hiện nhằm phát triển một ứng dụng web hỗ trợ người dùng tiếp cận, hiểu và khai thác thông tin một cách hiệu quả. Hệ thống hướng đến việc cung cấp cho người dùng một công cụ phân tích trực quan, dễ sử dụng, giúp việc theo dõi thị trường và đưa ra quyết định đầu tư trở nên thuận tiện hơn.\\
+
+    Đề tài tập trung phát triển nền tảng web có khả năng thu thập, xử lý và trực quan hóa dữ liệu on-chain theo thời gian thực, đảm bảo thông tin được hiển thị một cách trực quan, chính xác và dễ hiểu. Bên cạnh đó, hệ thống được định hướng mở rộng trong tương lai, cho phép tích hợp thêm nhiều nguồn dữ liệu và giao thức khác nhau để đáp ứng nhu cầu phân tích ngày càng đa dạng của người dùng trong lĩnh vực blockchain.\\
+    
+    Với những mục tiêu đã đề ra, nhóm kỳ vọng sản phẩm sẽ là sự kết hợp giữa tính hoàn thiện về kỹ thuật và tính ứng dụng thực tiễn, có thể thu hút và hình thành một cộng đồng người dùng đủ lớn, qua đó góp phần thúc đẩy nghiên cứu, phổ biến kiến thức và nâng cao hiệu quả trong việc phân tích dữ liệu on-chain.
+    
+    \subsection{Phạm vi của đề tài}
+
+    % \hspace{0.3cm}Về công nghệ: Xây dựng ứng dụng web dựa trên hệ sinh thái Javascript/Typescript với nền tảng React cho Frontend và Hono cho Backend. Sử dụng cơ sở dữ liệu PostgreSQL kết hợp Drizzle ORM.\\
+    
+    % Về giao diện và trực quan hóa: Áp dụng tiêu chuẩn thiết kế từ Carbon Design System và thư viện ECharts để biểu diễn thông tin.\\
+    
+    % Về chức năng: Tập trung phát triển ba phân hệ chính gồm: Tổng quan thị trường, Phân tích chi tiết Token và Phân tích hành vi Ví.\\
+    
+    % Về phạm vi triển khai: Ứng dụng tập trung khai thác dữ liệu trên mạng lưới Solana, hướng đến người dùng tại thị trường Việt Nam với quy mô thử nghiệm khoảng 50 người dùng đồng thời.
+
+    \hspace{0.3cm}Về công nghệ: Xây dựng một ứng dụng web dựa trên nền tảng React và Hono; áp dụng thư viện Carbon Design System và ECharts để biểu diễn giao diện và thông tin. Kết nối và làm việc với cơ sở dữ liệu PostgreSQL bằng Drizzle ORM.Trang web phục vụ người dùng dựa trên các nguồn thông tin blockchain công khai: CoinGecko, Birdeye, Moralis.\\
+
+    Về chức năng: Thiết kế và phát triển các mô-đun phân tích chính gồm: tổng quan và phân tích thị trường, phân tích token và phân tích ví. Đồng thời bổ sung các chức năng cảnh báo các biến động và biểu đồ trực quan hỗ trợ người dùng ra quyết định.\\
+
+    Về phạm vi triển khai: Ứng dụng được xây dựng và thử nghiệm trong phạm vi mạng Solana, hướng đến người dùng tại Việt Nam có nhu cầu tìm hiểu và phân tích dữ liệu blockchain, tập trung vào khả năng truy cập qua nền tảng web.\\
+
+    \subsection{Cách tiếp cận dự kiến}
+    
+    \subsubsection{Một số ứng dụng đã tiếp cận}
+
+    \textbf{Arkham (ARKM)} \cite{arkham}
+    %Có thể bổ sung hình ảnh vào để làm rõ phương pháp hoặc cách tiếp cận dự kiến.
+    \begin{itemize}
+        \item Arkham là nền tảng phân tích dữ liệu on-chain ứng dụng học máy và trí tuệ nhân tạo để phân tích hành vi và dòng tiền trên blockchain. Nền tảng hướng đến mục tiêu tăng tính minh bạch của thị trường bằng cách cung cấp thông tin chuyên sâu về các ví, giao dịch và tổ chức lớn trong hệ sinh thái tiền mã hóa.
+
+        \item Những điểm nổi bật của Arkham:
+        \begin{itemize}
+            \item Ứng dụng học máy và trí tuệ nhân tạo để xác định chủ sở hữu ví, phân loại thực thể và truy vết các mối liên kết giữa ví.
+            \item Cung cấp biểu đồ trực quan thể hiện mạng lưới giao dịch, dòng tiền và mức độ tương tác giữa các thực thể.
+            \item Cho phép người dùng theo dõi hoạt động của các tổ chức, quỹ đầu tư và cá nhân có ảnh hưởng lớn trên thị trường.
+            \item Hỗ trợ nhiều blockchain lớn như Bitcoin, Ethereum, Solana và BNB Chain.
+        \end{itemize}
+    \end{itemize}
+
+    \begin{itemize}
+        \item Những điểm hạn chế của Arkham:
+        \begin{itemize}
+            \item Vấn đề bảo mật và quyền riêng tư gây tranh cãi do việc định danh ví.
+            \item Giao diện và tính năng vẫn đang trong quá trình hoàn thiện, chưa ổn định.
+        \end{itemize}
+    \end{itemize}
+
+\textbf{Birdeye} \cite{birdeye}
+    
+\begin{itemize}
+    \item Birdeye là nền tảng phân tích dữ liệu thị trường và on-chain tập trung mạnh vào hệ sinh thái Solana và các blockchain hiệu suất cao. Nền tảng cung cấp dữ liệu thời gian thực về giá, thanh khoản, khối lượng giao dịch và hoạt động token, đặc biệt hữu ích cho các nhà giao dịch và người dùng DeFi.
+
+    \item Những điểm nổi bật của Birdeye:
+    \begin{itemize}
+        \item Cung cấp dữ liệu token theo thời gian thực với độ trễ thấp, phù hợp cho giao dịch ngắn hạn.
+        \item Hỗ trợ theo dõi ví, dòng tiền và lịch sử giao dịch chi tiết.
+        \item Có tính năng phát hiện token mới, token trending và biến động mạnh.
+        \item Cung cấp API cho nhà phát triển tích hợp dữ liệu vào ứng dụng bên ngoài.
+        \item Giao diện trực quan, tối ưu cho trader trong hệ Solana.
+    \end{itemize}
+\end{itemize}
+
+\begin{itemize}
+    \item Những điểm hạn chế của Birdeye:
+    \begin{itemize}
+        \item Tập trung nhiều vào dữ liệu giao dịch ngắn hạn, chưa đi sâu vào phân tích hành vi dài hạn.
+        \item Một số tính năng nâng cao yêu cầu sử dụng API hoặc gói dịch vụ riêng.
+    \end{itemize}
+\end{itemize}
+
+    \textbf{CoinGecko} \cite{coingecko}
+
+    \begin{itemize}
+        \item CoinGecko là một trong những trang web tổng hợp dữ liệu thị trường tiền mã hóa lớn nhất thế giới. Nền tảng này cung cấp thông tin về giá, khối lượng, vốn hóa và dữ liệu cơ bản của hơn 10.000 loại tiền điện tử.
+
+        \item Những điểm nổi bật của CoinGecko:
+        \begin{itemize}
+            \item Cập nhật giá và dữ liệu thị trường theo thời gian thực từ hàng trăm sàn giao dịch.
+            \item Cung cấp danh sách trending tokens giúp người dùng nhanh chóng nhận biết các token đang được quan tâm nhiều nhất trên thị trường.
+            \item Có ứng dụng di động tiện lợi, dễ truy cập cho người dùng phổ thông.
+            \item Giao diện rõ ràng, thân thiện và phù hợp cho cả người mới bắt đầu lẫn nhà đầu tư chuyên nghiệp.
+        \end{itemize}
+    \end{itemize}
+
+    \begin{itemize}
+        \item Những điểm hạn chế của CoinGecko:
+        \begin{itemize}
+            \item Dữ liệu mang tính tổng hợp, chưa đi sâu vào phân tích on-chain.
+            \item Không hỗ trợ theo dõi ví hoặc dòng tiền cụ thể trên blockchain.
+        \end{itemize}
+    \end{itemize}
+
+    \textbf{Dune} \cite{dune}
+    
+    \begin{itemize}
+        \item Dune là nền tảng phân tích dữ liệu on-chain mã nguồn mở, cho phép người dùng trực tiếp truy vấn, xử lý và trực quan hóa dữ liệu blockchain thông qua ngôn ngữ SQL. Điểm mạnh của Dune nằm ở khả năng cộng tác và chia sẻ dashboard, giúp cộng đồng nhà phân tích và nhà phát triển cùng nhau xây dựng hệ thống dữ liệu minh bạch và mở.
+    
+        \item \textbf{Những điểm nổi bật của Dune:}
+        \begin{itemize}
+            \item Cho phép người dùng viết truy vấn SQL trực tiếp trên dữ liệu blockchain để tạo dashboard tùy chỉnh.
+            \item Có thư viện cộng đồng với hàng nghìn dashboard và truy vấn sẵn có, dễ dàng tái sử dụng và chỉnh sửa.
+            \item Giao diện trực quan, hỗ trợ biểu đồ đa dạng như line chart, bar chart, pie chart và heatmap.
+            \item Dữ liệu được cập nhật liên tục, đảm bảo tính chính xác và độ tin cậy cao cho phân tích thị trường.
+            \item Hỗ trợ nhiều mạng lưới lớn như Ethereum, BNB Chain, Optimism, Arbitrum, Solana, Polygon, v.v.
+        \end{itemize}
+    \end{itemize}
+    
+    \begin{itemize}
+        \item \textbf{Những điểm hạn chế của Dune:}
+        \begin{itemize}
+            \item Cần kiến thức SQL và hiểu biết về cấu trúc dữ liệu blockchain để khai thác hiệu quả.
+            \item Một số mạng lưới hoặc bảng dữ liệu có thể bị giới hạn trong gói miễn phí.
+            \item Việc hiển thị và tải dữ liệu lớn có thể chậm trong các dashboard phức tạp.
+        \end{itemize}
+    \end{itemize}
+
+    \textbf{Glassnode} \cite{glassnode}
+    
+    %Có thể bổ sung hình ảnh vào để làm rõ phương pháp hoặc cách tiếp cận dự kiến.
+    \begin{itemize}
+        \item Glassnode là nền tảng phân tích dữ liệu on-chain chuyên sâu, được nhiều nhà đầu tư tổ chức và cá nhân tin dùng để đánh giá xu hướng thị trường Bitcoin và các đồng tiền lớn. Glassnode tập trung vào việc cung cấp chỉ số thống kê và mô hình phân tích on-chain mang tính kỹ thuật cao.
+
+        \item Những điểm nổi bật của Glassnode:
+        \begin{itemize}
+            \item Cung cấp hàng trăm chỉ số on-chain như số lượng ví hoạt động, khối lượng giao dịch, tuổi coin, MVRV ratio,...
+            \item Có các dashboard trực quan giúp theo dõi xu hướng thị trường và hành vi nhà đầu tư.
+            \item Dữ liệu được cập nhật đều đặn, có thể xuất biểu đồ và tải xuống báo cáo.
+            \item Có chế độ so sánh dữ liệu giữa nhiều loại tài sản khác nhau.
+        \end{itemize}
+    \end{itemize}
+
+    \begin{itemize}
+        \item Những điểm hạn chế của Glassnode:
+        \begin{itemize}
+            \item Giao diện chuyên sâu, khó sử dụng đối với người mới bắt đầu.
+            \item Nhiều chỉ số nâng cao chỉ khả dụng trong gói trả phí cao cấp.
+        \end{itemize}
+    \end{itemize}
+
+    \textbf{Nansen.ai} \cite{nansenai}
+    
+    %Có thể bổ sung hình ảnh vào để làm rõ phương pháp hoặc cách tiếp cận dự kiến.
+    \begin{itemize}
+    \item Nansen là một nền tảng phân tích dữ liệu on-chain chuyên cung cấp các công cụ theo dõi ví, dòng tiền và hành vi của nhà đầu tư trên nhiều blockchain khác nhau. Với khả năng gán nhãn hơn 100 triệu địa chỉ ví, Nansen được xem là một trong những nền tảng hàng đầu trong lĩnh vực phân tích blockchain dành cho nhà đầu tư chuyên nghiệp.
+
+    \item Những điểm nổi bật của Nansen:
+        \begin{itemize}
+            \item Cung cấp dữ liệu on-chain chi tiết, hỗ trợ phân tích ví, token và dòng tiền theo thời gian thực.
+            \item Cho phép người dùng theo dõi hoạt động của “smart money” – các ví có ảnh hưởng lớn trên thị trường.
+            \item Giao diện trực quan, có nhiều biểu đồ và công cụ lọc dữ liệu linh hoạt.
+            \item Hỗ trợ nhiều mạng lưới blockchain như Ethereum, BNB Chain, Solana, Arbitrum, Optimism, ...
+        \end{itemize}
+    \end{itemize}
+    
+        \begin{itemize}
+        \item Những điểm hạn chế của Nansen:
+        \begin{itemize}
+        \item Chi phí sử dụng cao, chưa phù hợp với người dùng phổ thông.
+        \item Giao diện và hệ thống chỉ số chuyên sâu có thể gây khó khăn cho người mới bắt đầu.
+    \end{itemize}
+    \end{itemize}
+
+\subsubsection{Hướng xây dựng đề tài}
+    \hspace{0.3cm} Đề tài "Xây dựng hệ thống phân tích dữ liệu on-chain Solana và trực quan hoá hành vi ví blockchain" tập trung hướng đến việc cung cấp một công cụ hiệu quả, dễ tiếp cận cho người dùng. Trên cơ sở đó, ứng dụng được định hướng phát triển cụ thể như sau:
+    
+    \begin{itemize}
+        \item Xây dựng giao diện web trực quan, thân thiện, hỗ trợ người dùng dễ dàng tra cứu và phân tích dữ liệu on-chain mà không cần kiến thức kỹ thuật chuyên sâu.
+        \item Phát triển các mô-đun phân tích chuyên biệt cho từng nhóm dữ liệu như tổng quan thị trường, phân tích token và phân tích ví, kèm theo các biểu đồ thống kê và công cụ lọc linh hoạt.
+        \item Tích hợp trí tuệ nhân tạo để nhận diện hành vi ví, phân loại người dùng và dự đoán xu hướng dòng tiền, giúp nâng cao độ chính xác và khả năng phân tích của hệ thống.
+    \end{itemize}
+
+    Để hiện thực hóa các mục tiêu trên trong điều kiện sử dụng nguồn dữ liệu từ bên thứ ba (CoinGecko, Birdeye, Dune, Moralis) qua các gói miễn phí ({\it Free Tier}) vốn bị giới hạn về số lượng lượt gọi, tốc độ và tần suất truy cập ({\it rate-limit}) API, nhóm tập trung triển khai các giải pháp kỹ thuật trọng tâm:
+
+\textbf {Về hạ tầng và lưu trữ dữ liệu:}
+    \begin{itemize}
+      \item   Áp dụng mô hình monolith với kiến trúc chia lớp rõ ràng nhằm đảm bảo tính nhất quán ({\it single source of truth}) và an toàn dữ liệu đầu cuối.
+
+\item Sử dụng kỹ thuật tải dữ liệu theo nhu cầu ({\it lazy loading}) để tối ưu tài nguyên; hệ thống chỉ gọi API khi có yêu cầu thực tế từ người dùng thay vì thu thập thụ động toàn bộ blockchain.
+
+\item Tổng hợp dữ liệu đa nguồn về cấu trúc cơ sở dữ liệu quan hệ chuẩn hóa ({\it normalized relational schema}) trên PostgreSQL để loại bỏ trùng lặp và tăng tính nhất quán của dữ liệu.
+
+\item Triển khai cơ chế lưu trữ đệm ({\it caching}) đa tầng: dữ liệu biến động cao (giá, giao dịch) được lưu 1-5 phút; dữ liệu ví từ 1-24 giờ; và các thông tin metadata ít thay đổi được lưu từ 3-7 ngày.
+    \end{itemize}
+\textbf {Về quy trình xử lý và phân tích mạng lưới:}
+    \begin{itemize}
+    \item Khai thác cấu trúc các chỉ dẫn ({\it instructions}) và chỉ dẫn nội bộ ({\it inner instructions}) từ dữ liệu thô để xác định chính xác các bên tham gia và giá trị tài sản trao đổi.
+
+% \item Xây dựng đồ thị giao dịch ({\it transaction graph}) để trực quan hóa dòng chảy token bên trong một giao dịch, giúp người dùng hiểu rõ các thao tác phức tạp như hoán đổi tài sản ({\it swap}) hay tương tác hợp đồng thông minh.
+
+\item Phân tích mạng lưới tương tác ví để biểu diễn mối quan hệ giữa các thực thể, từ đó nhận diện các hành vi đặc trưng và dòng tiền luân chuyển trên hệ sinh thái Solana.
+    \end{itemize}
+    
+    Với định hướng này, nhóm mong muốn tạo ra một nền tảng phân tích dữ liệu on-chain mang tính học thuật và thực tiễn, vừa giúp người dùng phổ thông tiếp cận dữ liệu blockchain dễ dàng, vừa tạo tiền đề cho việc mở rộng nghiên cứu chuyên sâu trong lĩnh vực phân tích và trực quan hóa dữ liệu.
+
+    \subsection{Kết quả dự kiến của đề tài}
+    \subsubsection{Công nghệ}
+    Khả năng tương thích của ứng dụng web:
+    \begin{itemize}
+        \item Hỗ trợ các trình duyệt web:
+        \begin{itemize}
+            \item Google Chrome: phiên bản 110.0 trở lên.
+            \item Microsoft Edge: phiên bản 110.0 trở lên.
+            \item Safari: phiên bản 16.0 trở lên.
+            \item Firefox: phiên bản 110.0 trở lên.
+        \end{itemize}
+    
+        \item Hỗ trợ các loại thiết bị:
+        \begin{itemize}
+            \item Máy tính cá nhân, laptop trên các hệ điều hành Windows, Linux, macOS.
+            \item Máy tính bảng có trình duyệt tương thích.
+        \end{itemize}
+    \end{itemize}
+    
+    \hspace{-0.5cm}Yêu cầu về phần cứng:
+    
+    \begin{itemize}
+        \item Thiết bị cần hỗ trợ độ phân giải tối thiểu 1366x768.
+        \item Tốc độ internet tối thiểu: 5 Mbps để tải dữ liệu và biểu đồ thời gian thực.
+        \item Bộ nhớ RAM tối thiểu: 4 GB.
+        \item Bộ nhớ trống tối thiểu: 500 MB.
+    \end{itemize}
+    
+    \hspace{-0.7cm} Các số liệu định lượng:
+    
+    \begin{itemize}
+        \item Tốc độ thực thi:
+        \begin{itemize}
+            \item Thời gian phản hồi giao diện người dùng: không quá 0.5 giây (P95).
+            \item Thời gian tải biểu đồ và dữ liệu thị trường: không quá 3 giây (P95).
+            \item Thời gian xử lý tìm kiếm ví: không quá 5 giây (P95).
+        \end{itemize}
+    
+        \item Số lượng người dùng truy cập tối đa:
+        \begin{itemize}
+            \item Hệ thống có thể phục vụ đồng thời khoảng 50 người dùng truy cập và tra cứu dữ liệu.
+            \item Dữ liệu được tải động để đảm bảo hiệu năng ổn định khi số lượng người dùng tăng.
+        \end{itemize}
+    
+        \item Độ ổn định của hệ thống: Hệ thống duy trì uptime tối thiểu 99\% trong suốt quá trình hoạt động.
+
+        \item Độ chính xác của dữ liệu: Áp dụng chiến lược caching linh hoạt dựa trên tính biến động của dữ liệu:
+            \begin{itemize}
+                \item Dữ liệu biến động cao (Giá, Pool, Giao dịch): từ 1 -- 5 phút.
+                \item Dữ liệu biến động trung bình (Holders, Wallet Portfolio): từ 1 -- 24 giờ.
+                \item Dữ liệu biến động thấp (Token Metadata, Token Social Links): từ 3 -- 7 ngày.
+            \end{itemize}
+        \item Hiệu năng ứng dụng:
+        \begin{itemize}
+            \item Lưu lượng dữ liệu gửi và nhận qua internet không vượt quá 3 MB/s khi hiển thị biểu đồ và dữ liệu on-chain.
+            \item Tối ưu bộ nhớ đệm cache để giảm thiểu thời gian tải lại dữ liệu lặp.
+        \end{itemize}
+    
+        \item Thời gian làm quen với ứng dụng:
+        \begin{itemize}
+            \item Người dùng phổ thông có thể làm quen và sử dụng thành thạo các chức năng cơ bản trong vòng 1 giờ.
+            \item Người dùng có nền tảng công nghệ có thể thao tác thành thạo trong vòng 30 phút.
+        \end{itemize}
+    \end{itemize}
+
+    \subsubsection{Kết quả dự kiến}
+
+    Sau khi hoàn thành, đề tài dự kiến:
+     \begin{itemize}
+        \item Tạo ra một ứng dụng web có khả năng thu thập và trực quan hóa dữ liệu on-chain trên mạng Solana một cách chính xác, ổn định và dễ sử dụng.
+        \item Đáp ứng tốt các tiêu chí về hiệu năng, độ phản hồi và tính mở rộng, đồng thời mang lại trải nghiệm thân thiện cho người dùng khi phân tích thị trường blockchain.
+        \item Sản phẩm có thể được triển khai trực tuyến và làm nền tảng cho các nghiên cứu, phát triển tính năng nâng cao trong tương lai.
+        % \item Ứng dụng AI trong việc truy vấn thị trường thông qua Chatbot và tóm tắt hành vi ví
+        \item Tích hợp Trí tuệ Nhân tạo để xây dựng trợ lý ảo Chatbot hỗ trợ người dùng truy vấn thông tin thị trường, đồng thời tự động hóa quá trình tóm tắt hành vi của các ví.
+    \end{itemize} 
+
+    \subsubsection{Triển khai thực nghiệm}
+
+    \begin{itemize}       
+        \item Hệ thống được vận hành trực tuyến, tương thích với các trình duyệt phổ biến như Google Chrome, Microsoft Edge và Safari.
+
+        \item Ứng dụng web được triển khai thử nghiệm tại thị trường Việt Nam với tên gọi YOCA. 
+        
+        \item Trong giai đoạn thử nghiệm, hệ thống dự kiến giới hạn số lượng người dùng nhằm đánh giá hiệu năng, độ ổn định và khả năng mở rộng của nền tảng.
+    \end{itemize}
+
+    
+    
+    \subsection{Kế hoạch thực hiện}
+        
+    % Phần này mô tả về kế hoạch thực hiện (với các mốc thời gian tương ứng) cùng với việc phân chia công việc cho các thành viên tham gia đề tài. \textit{(Nên thể hiện dưới dạng bảng biểu)}    }
+
+    \include{Chapter2/Plans}
+
+    \pagebreak
+
+    \bibliographystyle{ieeetr} 
+    \bibliography{references}
+
+    \begin{table}[h]
+    \centering
+        \begin{tabular}{p{7cm}p{7cm}}
+        \textbf{\begin{tabular}[c]{@{}c@{}}\\XÁC NHẬN\\CỦA NGƯỜI HƯỚNG DẪN\\ \textit{(Ký và ghi rõ họ tên)}\end{tabular}} & \textbf{\begin{tabular}[c]{@{}c@{}}\textit{TP. Hồ Chí Minh, ngày 16 tháng 03 năm 2026}\\NHÓM SINH VIÊN THỰC HIỆN\\\textit{(Ký và ghi rõ họ tên}) \end{tabular}}
+        \end{tabular}
+    \end{table}
+
+
+    
+    
+\end{document}
+
+
