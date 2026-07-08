@@ -127,7 +127,6 @@ Notes:
 | `wallet_ai_swap_summary_cache` | `walletAiSwapSummary.service.ts` | `/api/wallets/ai-swap-summary` | Wallet swap AI summary cache. |
 | `wallet_token_details` | `wallet-token-details.ts` | `/api/wallets/:address/tokens` | Token-level trading/PnL details per wallet. |
 | `wallet_first_fund` | `walletFirstFund.service.ts`, `walletDataCacher.ts` | `/api/wallets/first-funds/:address`, wallet AI dependency | First funding transaction cache. |
-| `wallet_pnl_data_cache`, `wallet_pnl_data_meta` | `walletDataCacher.ts`, chart/PnL services | wallet chart/PnL flows | Daily PnL cache and coverage metadata. |
 | `wallet_user_tags` | `walletTags.ts` | `/api/wallets/tags` | User tags for wallet addresses. |
 
 Wallet cache generations:
@@ -186,6 +185,7 @@ Recommendation: do not delete either alert system blindly. First decide product 
 | `trading_alert_webhooks` | Unused generic-alert webhook table. |
 | Trading strategy and wallet-category dictionary tables | Seven seed-only tables, their dedicated seed file, and `db:seed` scripts. |
 | `wallet_balances` | Unused legacy wallet balance table removed before this cleanup batch. |
+| `wallet_pnl_data_cache`, `wallet_pnl_data_meta` | Unused daily PnL cache, coverage metadata, and their dead read/write helpers. Active Mobula analysis remains in `wallet_analyses`. |
 
 ## Runtime-Unused Or Cleanup Candidate Tables
 
@@ -277,7 +277,7 @@ Suggested ownership after cleanup:
 | `tokens.ts` | `token_meta`, `token_details`, `token_market_data`, chart tables, pool tables, holder tables, trending/top tables, trade tables |
 | `token-ai.ts` | `token_ai_chat_cache`, `token_volatility_news_cache`, `token_chart_news_events_cache`, `ai_daily_usage` if AI usage is not moved to `users.ts` |
 | `wallets.ts` | `wallet_balance_history`, token balance week/month, wallet analyses, swap/transfer history and meta |
-| `wallet-cache.ts` | overview, portfolio, historical portfolio, PnL cache/meta |
+| `wallet-cache.ts` | overview, portfolio, historical portfolio |
 | `wallet-transactions.ts` | `wallet_transactions`, `wallet_transactions_meta`, `wallet_helius_transactions`, `wallet_enhanced_*`, `wallet_swap`, `wallet_swap_meta` |
 | `wallet-ai.ts` | identity cache, AI analysis cache, audit cache, AI swap summary cache, token details, first fund, user tags |
 | `alert-rules.ts` | `followed_wallets`, `alert_rules`, `helius_webhooks`, `helius_webhook_addresses` |
