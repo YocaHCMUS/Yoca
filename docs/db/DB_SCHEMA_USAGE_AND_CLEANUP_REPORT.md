@@ -134,9 +134,6 @@ Wallet cache generations:
 
 ```mermaid
 flowchart TD
-  Old[Old recent cache] --> Recent[wallet_recent_swaps / wallet_recent_transfers]
-  Recent -. no runtime usage found .-> DropCandidate[cleanup candidate]
-
   CurrentHistory[Current history API] --> SwapHistory[wallet_swap_history + meta]
   CurrentHistory --> TransferHistory[wallet_transfer_history + meta]
 
