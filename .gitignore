@@ -29,6 +29,7 @@ n8n/*.yaml
 # Editor directories and files
 .vscode/*
 .github/*
+!.github/workflows/
 !.vscode/extensions.json
 .idea
 .DS_Store
