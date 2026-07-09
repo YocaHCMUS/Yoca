@@ -69,6 +69,22 @@ Sơ đồ use-case tổng quát mô tả hai tác nhân chính của hệ thốn
     \label{fig:usecase}
 \end{figure}
 
+Hai sơ đồ use-case phụ dưới đây mô tả chi tiết hơn các use-case con trong phạm vi của từng tác nhân. Hình~\ref{fig:usecase_guest} liệt kê các use-case mà Khách có thể thực hiện mà không cần đăng nhập. Hình~\ref{fig:usecase_registered} liệt kê các use-case dành riêng cho Người dùng đã đăng ký, bao gồm cả các use-case liên quan đến webhook của bên thứ ba (Helius, Stripe).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/chapter3/guest-user-diagram-cropped.pdf}
+    \caption{Sơ đồ Use-case phụ --- Khách}
+    \label{fig:usecase_guest}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/chapter3/registered-user-diagram-cropped.pdf}
+    \caption{Sơ đồ Use-case phụ --- Người dùng đã đăng ký}
+    \label{fig:usecase_registered}
+\end{figure}
+
 \section{Kiến trúc hệ thống tổng thể}
 \label{sec:kien_truc_he_thong}
 
