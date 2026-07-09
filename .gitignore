@@ -15,7 +15,7 @@ dist
 dist-ssr
 *.local
 .gitignore
-package-lock.json
+# package-lock.json
 server/postgresdb/*
 !server/postgresdb/migrations/
 server/postgresdb/migrations/*
