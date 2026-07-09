@@ -54,13 +54,19 @@ vi.mock("@/api/main", () => ({
 }));
 
 import { useStripe, useElements } from "@stripe/react-stripe-js";
+import type { Stripe, StripeElements } from "@stripe/stripe-js";
 import client from "@/api/main";
 
 // ---------------------------------------------------------------------------
-// Helper factories
+// Helper types & factories
 // ---------------------------------------------------------------------------
 
-function makeStripeSetupIntentResponse(overrides: Partial<{ setupIntent: any; error: any }> = {}) {
+interface MockResponse<T> {
+  ok: boolean;
+  json: () => Promise<T>;
+}
+
+function makeStripeSetupIntentResponse(overrides: { setupIntent?: Record<string, unknown>; error?: { message: string } } = {}) {
   return {
     setupIntent: { status: "succeeded", payment_method: "pm_test_123", ...overrides.setupIntent },
     error: overrides.error ?? undefined,
@@ -86,8 +92,8 @@ function render(ui: Parameters<typeof rtlRender>[0]) {
 // ---------------------------------------------------------------------------
 
 describe("CheckoutForm Component", () => {
-  let mockStripe: any;
-  let mockElements: any;
+  let mockStripe: { confirmSetup: ReturnType<typeof vi.fn> };
+  let mockElements: { getElement: ReturnType<typeof vi.fn>; submit: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -101,8 +107,8 @@ describe("CheckoutForm Component", () => {
       submit: vi.fn().mockResolvedValue({ error: undefined }),
     };
 
-    vi.mocked(useStripe).mockReturnValue(mockStripe);
-    vi.mocked(useElements).mockReturnValue(mockElements);
+    vi.mocked(useStripe).mockReturnValue(mockStripe as unknown as Stripe);
+    vi.mocked(useElements).mockReturnValue(mockElements as unknown as StripeElements);
 
     // Default: backend setup-intent succeeds
     vi.mocked(client.api.payment["setup-intent"].$post).mockResolvedValue({

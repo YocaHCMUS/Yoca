@@ -531,12 +531,6 @@ function marketRecord(context: TokenAiContext) {
   return (context.market ?? {}) as Record<string, unknown>;
 }
 
-function defaultDisclaimer(language: TokenAiLanguage) {
-  return language === "vi"
-    ? "Chỉ dùng cho mục đích thông tin, không phải lời khuyên tài chính. Hãy tự kiểm chứng dữ liệu và cân nhắc rủi ro trước mọi quyết định."
-    : "For information only, not financial advice. Verify the data and consider your own risk before making decisions.";
-}
-
 function isSecuritySensitiveIntent(intent: TokenAiIntent) {
   return intent === "risk_overview";
 }
@@ -644,28 +638,6 @@ function staleGeminiWarning(language: TokenAiLanguage) {
   return language === "vi"
     ? "Gemini tạm thời không khả dụng, nên Yoca đang hiển thị một phân tích AI gần đây. Hãy kiểm tra lại dữ liệu thị trường trực tiếp trước khi ra quyết định."
     : "Gemini is temporarily unavailable, so Yoca is showing a recent AI analysis. Verify live market data before making decisions.";
-}
-
-function newsBullets(context: TokenAiContext) {
-  return context.latestNews.length > 0
-    ? context.latestNews.map((article) => {
-        const publisher = article.source ? ` (${article.source})` : "";
-        return `${article.title}${publisher}`;
-      })
-    : ["No recent token-specific headlines were available from Yoca news evidence."];
-}
-
-function watchBullets(context: TokenAiContext) {
-  const market = marketRecord(context);
-  const bullets = [
-    `Price and volume around ${compactCurrency(market.priceUsd)} and ${compactCurrency(market.volume24h)} 24h volume.`,
-    `Liquidity and buy/sell activity in top pools, especially ${context.pools.length > 0 ? "the highest-liquidity pool" : "when pool data becomes available"}.`,
-    "New Yoca news markers and volatility events, because timing can add context but does not prove causation.",
-  ];
-  if (context.holderStats) {
-    bullets.push("Holder concentration changes, especially top-holder distribution.");
-  }
-  return bullets;
 }
 
 function finiteNumber(value: unknown) {
@@ -1022,7 +994,7 @@ function viLowDataInterpretation(context: TokenAiContext) {
   return `Dữ liệu còn thiếu hoặc mỏng: ${missing.join(", ")}. Yoca vẫn có thể suy luận rủi ro nhìn thấy được, nhưng độ tin cậy nên thấp hơn.`;
 }
 
-function viWatchSignalBullets(context: TokenAiContext) {
+function viWatchSignalBullets() {
   return [
     "Nếu giá giảm trong khi volume 24h tăng, lực bán, liquidation hoặc rotation có thể vẫn đang hoạt động.",
     "Nếu thanh khoản giảm mạnh, rủi ro trượt giá và biến động tăng lên.",
@@ -1188,7 +1160,7 @@ function buildVietnameseFallbackSections(
       {
         title: "Cần Theo Dõi",
         kind: "what_to_watch",
-        bullets: viWatchSignalBullets(context),
+        bullets: viWatchSignalBullets(),
       },
     ];
   }
@@ -1220,7 +1192,7 @@ function buildVietnameseFallbackSections(
     {
       title: "Cần Theo Dõi",
       kind: "what_to_watch",
-      bullets: viWatchSignalBullets(context),
+      bullets: viWatchSignalBullets(),
     },
   ];
 }
@@ -1324,7 +1296,7 @@ function buildImprovedFallbackSections(
           bullets: watchSignalBullets(context),
         },
       ];
-    case "risk_overview":
+    case "risk_overview": {
       const securityBullets = securityEvidenceBullets(context);
       return [
         {
@@ -1366,6 +1338,7 @@ function buildImprovedFallbackSections(
           bullets: watchSignalBullets(context).slice(0, 4),
         },
       ];
+    }
     case "simple_explanation":
       return [
         {
@@ -1477,108 +1450,6 @@ function buildImprovedFallbackSections(
   }
 }
 
-function buildFallbackSections(
-  context: TokenAiContext,
-  intent: TokenAiIntent,
-  language: TokenAiLanguage,
-): TokenAiSection[] {
-  const market = marketRecord(context);
-  const priceChange24h = Number(market.priceChangePercentage24h);
-  const label = tokenLabel(context);
-  const snapshot = [
-    `Price: ${compactCurrency(market.priceUsd)}.`,
-    `24h change: ${percent(market.priceChangePercentage24h)}.`,
-    `24h volume: ${compactCurrency(market.volume24h)}.`,
-    `Market cap: ${compactCurrency(market.marketCap)}.`,
-  ];
-  const drivers = [
-    context.chartSummary?.changePercent != null
-      ? `${context.timeframe} chart change is ${percent(context.chartSummary.changePercent)} across ${context.chartSummary.points} points.`
-      : "Chart data is thin for the selected timeframe.",
-    context.volatilityEvents.length > 0
-      ? `${context.volatilityEvents.length} volatility signal(s) were detected.`
-      : "No bounded volatility signal was available in the context.",
-    context.latestNews.length > 0
-      ? `${context.latestNews.length} recent news item(s) were included.`
-      : "No recent news item was included.",
-  ];
-
-  if (language === "vi") {
-    const viWatch = [
-      "Theo dõi giá, khối lượng 24h, thanh khoản pool và các sự kiện biến động mới.",
-      "Đối chiếu tin tức với thời điểm biến động, nhưng không xem đó là bằng chứng nhân quả.",
-      "Không dùng câu trả lời này thay cho kiểm tra bảo mật on-chain.",
-    ];
-    if (intent === "latest_news") {
-      return [
-        { title: "Tin Mới Nhất", kind: "latest_headlines", bullets: newsBullets(context) },
-        { title: "Vì Sao Quan Trọng", kind: "why_it_matters", bullets: drivers },
-        { title: "Cần Theo Dõi", kind: "what_to_watch", bullets: viWatch },
-        { title: "Kết Luận", kind: "conclusion", content: `Bằng chứng hiện tại cho ${label} hữu ích để tạo bối cảnh, nhưng còn hạn chế.` },
-      ];
-    }
-    if (intent === "risk_overview") {
-      return [
-        { title: "Rủi Ro Chính", kind: "risk_factors", bullets: [conciseSecurityLimitation(language), ...drivers] },
-        { title: "Tín Hiệu Có Dữ Liệu", kind: "deep_dive", bullets: snapshot },
-        { title: "Cần Theo Dõi", kind: "what_to_watch", bullets: viWatch },
-        { title: "Kết Luận", kind: "conclusion", content: "Có thể đánh giá rủi ro thị trường và thanh khoản ở mức sơ bộ, nhưng không thể kết luận token an toàn hay lừa đảo từ dữ liệu hiện có." },
-      ];
-    }
-  }
-
-  switch (intent) {
-    case "latest_news":
-      return [
-        { title: "Latest Headlines", kind: "latest_headlines", bullets: newsBullets(context) },
-        { title: "Why It Matters", kind: "why_it_matters", bullets: drivers },
-        { title: "What To Watch Next", kind: "what_to_watch", bullets: watchBullets(context) },
-        { title: "Conclusion", kind: "conclusion", content: `The available headlines provide context for ${label}, but they do not prove why price moved.` },
-      ];
-    case "risk_overview":
-      return [
-        { title: "Main Risk Factors", kind: "risk_factors", bullets: [conciseSecurityLimitation(language), ...drivers] },
-        { title: "Data-Backed Risk Signals", kind: "deep_dive", bullets: snapshot },
-        { title: "What To Watch Next", kind: "what_to_watch", bullets: watchBullets(context) },
-        { title: "Conclusion", kind: "conclusion", content: "This can support a market/liquidity risk overview, but it cannot prove whether the token is safe or unsafe." },
-      ];
-    case "bullish_bearish":
-      return [
-        { title: "Bullish Signals", kind: "bullish_signals", bullets: [Number.isFinite(priceChange24h) && priceChange24h > 0 ? `Positive 24h price change of ${percent(priceChange24h)}.` : "No positive 24h price signal in the current market data.", context.latestNews.length > 0 ? "Recent news context is available." : "No recent news support in the evidence."] },
-        { title: "Bearish Signals", kind: "bearish_signals", bullets: [Number.isFinite(priceChange24h) && priceChange24h < 0 ? `Negative 24h price change of ${percent(priceChange24h)}.` : "No negative 24h price signal in the current market data.", holderInterpretation(context)] },
-        { title: "Balance of Evidence", kind: "conclusion", content: "The evidence is mixed and should be treated as context, not a trading command." },
-        { title: "What To Watch Next", kind: "what_to_watch", bullets: watchBullets(context) },
-      ];
-    case "simple_explanation":
-      return [
-        { title: "What This Token Is", kind: "simple_explanation", content: `${label} is shown on Yoca with available market, chart, news, holder, and pool context. The current backend evidence does not define private team behavior or security authority fields.` },
-        { title: "How It Works / Ecosystem Role", kind: "deep_dive", content: typeof (context.metadata as { description?: unknown } | null)?.description === "string" ? String((context.metadata as { description: string }).description).slice(0, 800) : "Yoca does not currently have enough structured project-description evidence for a deeper ecosystem explanation." },
-        { title: "Why It Matters", kind: "why_it_matters", bullets: snapshot },
-        { title: "One-Line Takeaway", kind: "conclusion", content: `${label} can be reviewed through market movement, liquidity, holders, and news context, but security claims need separate evidence.` },
-      ];
-    case "what_to_watch":
-      return [
-        { title: "Key Items To Watch", kind: "what_to_watch", bullets: watchBullets(context) },
-        { title: "How To Interpret These Signals", kind: "deep_dive", content: "Use agreement across market data, liquidity, holder concentration, volatility, and credible news as stronger context than any single signal." },
-        { title: "Takeaway", kind: "conclusion", content: "Track changes over time; a single snapshot is not enough for high confidence." },
-      ];
-    case "investment_guidance":
-      return [
-        { title: "Market Facts and Why They Matter", kind: "market_snapshot", bullets: snapshot },
-        { title: "Plausible Scenarios", kind: "scenario_analysis", bullets: ["Constructive scenario: price/volume/liquidity improve while news remains supportive.", "Cautious scenario: liquidity thins, volatility increases, or new negative evidence appears."] },
-        { title: "Practical Risk Framework", kind: "practical_framework", bullets: ["Define invalidation conditions before acting.", "Use mint/freeze authority evidence only when it is present.", "Size decisions according to risk tolerance and independent research."] },
-        { title: "What To Watch Next", kind: "what_to_watch", bullets: watchBullets(context) },
-        { title: "Conclusion", kind: "conclusion", content: "Yoca can frame scenarios and risks, but it should not be used as a direct buy, sell, or hold instruction." },
-      ];
-    default:
-      return [
-        { title: "Market Snapshot", kind: "market_snapshot", bullets: snapshot },
-        { title: "Key Context", kind: "deep_dive", bullets: drivers },
-        { title: "What To Watch Next", kind: "what_to_watch", bullets: watchBullets(context) },
-        { title: "Conclusion", kind: "conclusion", content: "The answer is grounded in the available Yoca evidence and avoids unsupported security or trading claims." },
-      ];
-  }
-}
 
 function buildDeterministicAnswer(
   request: TokenAiChatRequest,
@@ -1804,7 +1675,7 @@ function truncateText(
 ) {
   const trimmed = text.trim();
   if (trimmed.length <= maxLength) return trimmed;
-  stats && (stats.truncatedFields += 1);
+  if (stats) stats.truncatedFields += 1;
   if (maxLength <= TRUNCATION_ELLIPSIS.length) {
     return TRUNCATION_ELLIPSIS.slice(0, maxLength);
   }

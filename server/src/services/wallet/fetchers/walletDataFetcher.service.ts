@@ -79,6 +79,43 @@ export type FetchAllTransactionHistoryChunkResult = {
   | "empty-page";
 };
 
+type HeliusPagination = {
+  hasMore?: unknown;
+  page?: unknown;
+  next?: unknown;
+  before?: unknown;
+};
+
+type HeliusWalletHistoryEntry = {
+  timestamp?: unknown;
+  signature?: unknown;
+  balanceChanges?: unknown;
+  slot?: unknown;
+  fee?: unknown;
+  feePayer?: unknown;
+};
+
+type HeliusBalanceChangeEntry = {
+  mint?: unknown;
+  amount?: unknown;
+  decimals?: unknown;
+};
+
+type BirdeyeNetworthHistoryEntry = {
+  timestamp?: unknown;
+  net_worth?: unknown;
+  net_worth_change?: unknown;
+  net_worth_change_percent?: unknown;
+};
+
+type BirdeyeNetAssetEntry = {
+  symbol?: unknown;
+  token_address?: unknown;
+  decimal?: unknown;
+  balance?: unknown;
+  price?: unknown;
+  value?: unknown;
+};
 const HELIUS_HISTORY_PAGE_LIMIT = 100;
 const DEFAULT_HELIUS_HISTORY_CHUNK_MAX_PAGES = 5;
 const MAX_HELIUS_HISTORY_CHUNK_MAX_PAGES = 50;
@@ -156,9 +193,9 @@ export async function fetchAllTransactionHistoryChunk(
   while (pagesFetched < maxPages && transactions.length < maxTransactions) {
     pagesFetched += 1;
 
-    let json: any = null;
+    let json: { data?: HeliusWalletHistoryEntry[]; pagination?: HeliusPagination } | null = null;
     try {
-      json = await heliusGetJson<any>(
+      json = await heliusGetJson<{ data?: HeliusWalletHistoryEntry[]; pagination?: HeliusPagination }>(
         `/v1/wallet/${address}/history?tokenAccounts=balanceChanged`,
         {
           limit: HELIUS_HISTORY_PAGE_LIMIT,
@@ -170,7 +207,7 @@ export async function fetchAllTransactionHistoryChunk(
       break;
     }
 
-    const data: any[] = Array.isArray(json?.data) ? json.data : [];
+    const data: HeliusWalletHistoryEntry[] = Array.isArray(json?.data) ? json.data : [];
     if (data.length === 0) {
       stopReason = "empty-page";
       hasMoreFromProvider = false;
@@ -212,7 +249,7 @@ export async function fetchAllTransactionHistoryChunk(
 
       const mappedBalanceChanges = Array.isArray(entry.balanceChanges)
         ? entry.balanceChanges
-          .map((change: any) => ({
+          .map((change: HeliusBalanceChangeEntry) => ({
             mint: String(change?.mint ?? ""),
             amount: Number(change?.amount ?? 0),
             decimals: Number(change?.decimals ?? 0),
@@ -454,10 +491,10 @@ export async function fetchHeliusSolanaTransfers(
     initialCursor: startCursor,
     maxPages: 50,
     maxItems: Number.MAX_SAFE_INTEGER,
-    fetchPage: async (cursor, page) => {
-      let json: any = null;
+    fetchPage: async (cursor) => {
+      let json: { data?: HeliusWalletHistoryEntry[]; pagination?: HeliusPagination } | null = null;
       try {
-        json = await heliusGetJson<any>(`/v1/wallet/${address}/transfers`, {
+        json = await heliusGetJson<{ data?: HeliusWalletHistoryEntry[]; pagination?: HeliusPagination }>(`/v1/wallet/${address}/transfers`, {
           limit: 100,
           ...(cursor ? { cursor } : {}),
         });
@@ -470,7 +507,7 @@ export async function fetchHeliusSolanaTransfers(
         }
       }
 
-      const data: any[] = Array.isArray(json?.data) ? json.data : [];
+      const data: HeliusWalletHistoryEntry[] = Array.isArray(json?.data) ? json.data : [];
       if (data.length === 0) {
         return {
           pageItems: [],
@@ -481,7 +518,6 @@ export async function fetchHeliusSolanaTransfers(
 
       const transactions = []
 
-      let reachedRangeCutoff = false;
       for (const entry of data) {
         const mapped = mapHeliusTransferEntry(entry, address);
         if (!mapped) {
@@ -498,7 +534,6 @@ export async function fetchHeliusSolanaTransfers(
         }
 
         if (tsMs < rangeFromMs || mapped.transactionSignature == endCursor) {
-          reachedRangeCutoff = true;
           break;
         }
 
@@ -537,7 +572,7 @@ export async function fetchMoralisSolanaSwap(
     initialCursor: null,
     maxPages: 50,
     maxItems: Number.MAX_SAFE_INTEGER,
-    fetchPage: async (cursor, page) => {
+    fetchPage: async (cursor) => {
       const url = moralis.getEndpoint(`/account/mainnet/${address}/swaps`);
       url.searchParams.set("limit", "100");
       url.searchParams.set("fromDate", fromDateIso);
@@ -669,9 +704,9 @@ export async function fetchAllTransactionHistory(
     maxPages: MAX_HELIUS_HISTORY_CHUNK_MAX_PAGES,
     maxItems: MAX_HELIUS_HISTORY_CHUNK_MAX_TRANSACTIONS,
     fetchPage: async (cursor, page) => {
-      let json: any = null;
+      let json: { data?: HeliusWalletHistoryEntry[]; pagination?: HeliusPagination } | null = null;
       try {
-        json = await heliusGetJson<any>(
+        json = await heliusGetJson<{ data?: HeliusWalletHistoryEntry[]; pagination?: HeliusPagination }>(
           `/v1/wallet/${address}/history?tokenAccounts=balanceChanged`,
           {
             limit: HELIUS_HISTORY_PAGE_LIMIT,
@@ -687,7 +722,7 @@ export async function fetchAllTransactionHistory(
         };
       }
 
-      const data: any[] = Array.isArray(json?.data) ? json.data : [];
+      const data: HeliusWalletHistoryEntry[] = Array.isArray(json?.data) ? json.data : [];
       const pageItems: WalletTransactionHelius[] = [];
       let stopByRange = false;
       let stopByKnownSignature = false;
@@ -724,7 +759,7 @@ export async function fetchAllTransactionHistory(
 
         const mappedBalanceChanges = Array.isArray(entry.balanceChanges)
           ? entry.balanceChanges
-            .map((change: any) => ({
+            .map((change: HeliusBalanceChangeEntry) => ({
               mint: String(change?.mint ?? ""),
               amount: Number(change?.amount ?? 0),
               decimals: Number(change?.decimals ?? 0),
@@ -820,7 +855,7 @@ export async function fetchBirdeyeNetworthHistory(
     },
   });
   const data = json?.data ?? {};
-  const rows: any[] = Array.isArray(data?.history) ? data.history : [];
+  const rows: BirdeyeNetworthHistoryEntry[] = Array.isArray(data?.history) ? data.history : [];
   const currentTimestamp = toIsoTimestamp(data?.current_timestamp);
   const pastTimestamp = toIsoTimestamp(data?.past_timestamp);
 
@@ -891,7 +926,7 @@ export async function fetchBirdeyePortfolioSnapshot(
     },
   });
   const data = json?.data ?? {};
-  const rows: any[] = Array.isArray(data?.net_assets) ? data.net_assets : [];
+  const rows: BirdeyeNetAssetEntry[] = Array.isArray(data?.net_assets) ? data.net_assets : [];
 
   return {
     address: String(data?.wallet_address ?? address),
@@ -911,7 +946,7 @@ export async function fetchBirdeyePortfolioSnapshot(
 }
 
 export async function fetchHeliusWalletFirstFund(address: string) {
-  const json = await heliusGetJson<any>(`/v1/wallet/${address}/funded-by`);
+  const json = await heliusGetJson<{ data?: HeliusWalletHistoryEntry[]; pagination?: HeliusPagination }>(`/v1/wallet/${address}/funded-by`);
 
   if ("error" in json) {
     throw new Error(`Helius API error: ${json.error}`);

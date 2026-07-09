@@ -2,7 +2,6 @@ import type {
     WalletEventClassification,
     WalletEventDirection,
     WalletEventDraft,
-    WalletEventType,
 } from "../types/normalizedWalletEvent";
 
 function includesText(haystack: string | null | undefined, needle: string): boolean {

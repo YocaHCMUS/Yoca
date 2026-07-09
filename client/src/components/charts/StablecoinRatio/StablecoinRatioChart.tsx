@@ -35,7 +35,6 @@ export function StablecoinRatioChart({
   autoRefresh = true,
   refreshInterval = 30000,
   fetchEnabled = true,
-  className,
   actions,
 }: ChartProps) {
   const { tr } = useLocalization();

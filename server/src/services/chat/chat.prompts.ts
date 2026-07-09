@@ -2,7 +2,7 @@
 
 const MAX_HISTORY_TURNS = 10;
 const MAX_HISTORY_CHARS = 4000;
-const MAX_RESULT_CHARS = 6000;
+const MAX_RESULT_CHARS = 5000;
 
 export const CHAT_SYSTEM_INSTRUCTION =
   "You are a blockchain data analyst assistant. You provide concise, data-driven answers " +

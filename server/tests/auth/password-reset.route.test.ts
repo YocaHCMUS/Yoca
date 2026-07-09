@@ -119,13 +119,12 @@ describe("Password reset auth routes", () => {
 
   it("allows login with the new password after reset", async () => {
     vi.mocked(userService.resetPasswordWithCode).mockResolvedValue(undefined);
-    vi.mocked(userService.verifyUserPassword).mockResolvedValue({
-      userId: "user-id-123",
-    } as any);
-    vi.mocked(userService.getUserById).mockResolvedValue({
-      id: "user-id-123",
-      displayName: "Test User",
-    } as any);
+    vi.mocked(userService.verifyUserPassword).mockResolvedValue(
+      { userId: "user-id-123" } as Awaited<ReturnType<typeof userService.verifyUserPassword>>
+    );
+    vi.mocked(userService.getUserById).mockResolvedValue(
+      { id: "user-id-123", displayName: "Test User" } as Awaited<ReturnType<typeof userService.getUserById>>
+    );
 
     const resetResponse = await authApp.request("/reset-password", {
       method: "POST",
@@ -149,7 +148,7 @@ describe("Password reset auth routes", () => {
     });
 
     expect(loginResponse.status).toBe(200);
-    const loginData = (await loginResponse.json()) as any;
+    const loginData = (await loginResponse.json()) as Record<string, unknown>;
     expect(loginData).toHaveProperty("token");
     expect(loginData.userId).toBe("user-id-123");
   });

@@ -41,7 +41,6 @@ export function WalletNode({ data }: NodeProps<WalletNodeData>) {
     : "#e5e7eb";
 
   const bgColor = isDimmed ? "#fafbfc" : "#ffffff";
-  const labelTextColor = isDimmed ? "#d1d5db" : "#6b7280";
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();

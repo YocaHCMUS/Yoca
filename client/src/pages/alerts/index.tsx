@@ -305,7 +305,7 @@ export default function AlertsPage() {
   const loadRules = useCallback(async () => {
     setRulesLoading(true);
     try {
-      const api = client.api.alerts as unknown as {
+      const api = client.api.alerts as {
         rules: { $get: () => Promise<Response> };
       };
       const res = await api.rules.$get();

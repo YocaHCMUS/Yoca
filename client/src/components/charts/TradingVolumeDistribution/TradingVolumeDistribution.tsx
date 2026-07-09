@@ -88,7 +88,6 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
         data.wallets.forEach((wallet: any) => {
           const buy = wallet.buyVolume ?? 0;
           const sell = wallet.sellVolume ?? 0;
-          const total = wallet.totalVolume ?? (buy + sell);
           csv.push({
             id: `trading-volume-distribution-${wallet.wallet}`,
             name: `Trading Volume Distribution - ${wallet.wallet}`,

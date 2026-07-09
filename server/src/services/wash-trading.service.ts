@@ -1,7 +1,31 @@
 import { db } from '../db';
 import { walletTransactions } from '../db/schema';
-import { eq, and, gte, lte, inArray, desc } from 'drizzle-orm';
+import { eq, gte } from 'drizzle-orm';
 
+type WalletTransactionRow = typeof walletTransactions.$inferSelect;
+
+interface CircularTradePattern {
+  cycle: string[];
+  amounts: Array<number | null>;
+  timestamps: Date[];
+  avgTime: number;
+  confidence: number;
+}
+
+interface StarHub {
+  wallet: string;
+  inDegree: number;
+  outDegree: number;
+  totalDegree: number;
+  isHub: boolean;
+}
+
+interface VolumeAnomaly {
+  hash: string;
+  amount: number;
+  zScore: number;
+  anomalyScore: number;
+}
 export interface WashTradePattern {
   circularTrades: number;
   sameAmountTransactions: number;
@@ -21,7 +45,7 @@ export interface WalletSuspicion {
 export interface WashTradeAnalysis {
   riskScore: number;
   suspiciousWallets: WalletSuspicion[];
-  transactions: any[];
+  transactions: unknown[];
   summary: {
     totalVolume: number;
     volumeAnomalies: number;
@@ -44,7 +68,7 @@ class WashTradingService {
   async detectCircularTrades(
     mint: string,
     timeWindow: number = 3600000 // 1 hour in ms
-  ): Promise<any[]> {
+  ): Promise<CircularTradePattern[]> {
     try {
       // Query transactions for the token within time window
       const recentTxs = await db
@@ -55,7 +79,7 @@ class WashTradingService {
         )
         .limit(1000);
 
-      const circularPatterns: any[] = [];
+      const circularPatterns: CircularTradePattern[] = [];
       
       // Find 3-step cycles
       for (let i = 0; i < recentTxs.length; i++) {
@@ -102,7 +126,7 @@ class WashTradingService {
   async detectSameAmountPatterns(
     mint: string,
     tolerance: number = 0.02 // 2%
-  ): Promise<Map<number, any[]>> {
+  ): Promise<Map<number, WalletTransactionRow[]>> {
     try {
       const txs = await db
         .select()
@@ -110,7 +134,7 @@ class WashTradingService {
         .where(eq(walletTransactions.primaryTokenAddress, mint))
         .limit(5000);
 
-      const sameAmountClusters = new Map<number, any[]>();
+      const sameAmountClusters = new Map<number, WalletTransactionRow[]>();
       
       for (const tx of txs) {
         const amount = tx.primaryTokenAmount || 0;
@@ -122,7 +146,7 @@ class WashTradingService {
       }
 
       // Filter: only keep clusters with anomalous frequency
-      const anomalous = new Map<number, any[]>();
+      const anomalous = new Map<number, WalletTransactionRow[]>();
       for (const [key, cluster] of sameAmountClusters.entries()) {
         if (cluster.length > 5) { // Threshold
           anomalous.set(key, cluster);
@@ -139,7 +163,7 @@ class WashTradingService {
   /**
    * Detect star topology: one hub wallet connecting many spokes
    */
-  async detectStarTopology(mint: string): Promise<any> {
+  async detectStarTopology(mint: string): Promise<StarHub[]> {
     try {
       const txs = await db
         .select()
@@ -163,7 +187,7 @@ class WashTradingService {
       }
 
       // Find hubs (high in + out degree)
-      const hubs: any[] = [];
+      const hubs: StarHub[] = [];
       for (const [wallet, degrees] of walletDegrees.entries()) {
         const totalDegree = degrees.in + degrees.out;
         if (totalDegree > 50) { // Threshold
@@ -187,7 +211,7 @@ class WashTradingService {
   /**
    * Detect volume anomalies using statistical methods
    */
-  async detectVolumeAnomalies(mint: string): Promise<any[]> {
+  async detectVolumeAnomalies(mint: string): Promise<VolumeAnomaly[]> {
     try {
       const txs = await db
         .select()
@@ -201,7 +225,7 @@ class WashTradingService {
       const stdDev = Math.sqrt(variance);
 
       // Z-score > 3 is very anomalous
-      const anomalies: any[] = [];
+      const anomalies: VolumeAnomaly[] = [];
       for (const tx of txs) {
         const amount = tx.primaryTokenAmount || 0;
         const zScore = Math.abs((amount - mean) / stdDev);
@@ -311,8 +335,8 @@ class WashTradingService {
 
   private determinePattern(
     wallet: string,
-    circularTrades: any[],
-    starHubs: any[]
+    circularTrades: CircularTradePattern[],
+    starHubs: StarHub[]
   ): string {
     if (circularTrades.some(ct => ct.cycle.includes(wallet))) return 'Circular Trade';
     if (starHubs.some(h => h.wallet === wallet)) return 'Hub Wallet';

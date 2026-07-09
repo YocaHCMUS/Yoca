@@ -1,5 +1,5 @@
 import { useLocalization } from "@/contexts/LocalizationContext";
-import type { PersonaExplanation, RiskFactorExplanation, Severity } from "./types";
+import type { AnalysisProfileLike, PersonaExplanation, RiskFactorExplanation, Severity } from "./types";
 import { formatPercent } from "./utils";
 
 function fallbackTitle(value: string): string {
@@ -287,7 +287,7 @@ export function useAiAnalysisI18n() {
       .replace(/\bscammer\b/gi, "suspicious wallet");
   };
 
-  const dataCompletenessText = (profile: any): string => {
+  const dataCompletenessText = (profile: AnalysisProfileLike): string => {
     const completeness = formatPercent(profile?.dataQuality?.completenessScore);
     const unsupported = Number(profile?.dataQuality?.unsupportedTransactionCount ?? 0);
     const missingPrices = Number(profile?.dataQuality?.missingPriceCount ?? 0);

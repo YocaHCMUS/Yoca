@@ -75,14 +75,6 @@ const CHART_COLORS = {
   tooltipBorder: "rgba(0,0,0,0.08)",
 };
 
-const CHART_PALETTE = [
-  CHART_COLORS.primary,
-  CHART_COLORS.success,
-  CHART_COLORS.accent,
-  CHART_COLORS.warning,
-  CHART_COLORS.danger,
-];
-
 const DONUT_COLORS = [
   CHART_COLORS.primary,
   CHART_COLORS.success,
@@ -119,7 +111,7 @@ interface WalletDashboardData {
   portfolio: WalletPortfolioItem[];
   distribution: DistributionItem[];
   intelligence: WalletIntelligenceResponse | null;
-  balanceTrend: any | null;
+  balanceTrend: unknown | null;
 }
 
 interface ProfileDashboardTabProps {
@@ -204,14 +196,6 @@ export default function ProfileDashboardTab({
 
   // ── Aggregated KPIs ──────────────────────────────────────
   const kpis = useMemo(() => {
-    const portfolioTotal = walletData.reduce((sum, w) => {
-      const walletTotal = w.portfolio.reduce(
-        (walletSum, token) => walletSum + (token.valueUsd ?? 0),
-        0,
-      );
-      return sum + walletTotal;
-    }, 0);
-
     const overviewTotal = walletData.reduce(
       (sum, w) =>
         sum +
@@ -325,7 +309,7 @@ export default function ProfileDashboardTab({
         trigger: "axis" as const,
         axisPointer: { type: "shadow" as const },
         ...TOOLTIP_LIGHT,
-        formatter: (params: any) => {
+        formatter: (params: { name: string; value: number; color: string; seriesName?: string; data?: { percentage: number } }[]) => {
           const p = params[0];
           const val = p.value as number;
           const color = val >= 0 ? CHART_COLORS.success : CHART_COLORS.danger;
@@ -387,77 +371,6 @@ export default function ProfileDashboardTab({
   // ── Aggregated KPIs ──────────────────────────────────────
   // (Moved up to support Win Rate logic)
 
-  // ── Per-wallet bar chart ─────────────────────────────────
-
-  const barChartOption = useMemo(() => {
-    const labels = walletData.map((w) => shortAddr(w.address));
-    const assets = walletData.map((w) =>
-      Math.max(1, w.overview?.totalAssetValueUsd ?? 1),
-    );
-    const COLORS = CHART_PALETTE;
-
-    return {
-      backgroundColor: "transparent",
-      tooltip: {
-        trigger: "axis" as const,
-        ...TOOLTIP_LIGHT,
-        formatter: (
-          params: Array<{ name: string; value: number; dataIndex: number }>,
-        ) => {
-          const p = params[0];
-          return `<div style="padding:4px 2px"><span style="font-size:13px;font-weight:700;color:${CHART_COLORS.text}">${p.name}</span><br/><span style="color:${CHART_COLORS.textSub}">Asset Value</span>  <span style="font-weight:600;color:${CHART_COLORS.primary}">${fmtUsd(p.value)}</span></div>`;
-        },
-      },
-      grid: { left: 72, right: 24, top: 12, bottom: 44 },
-      xAxis: {
-        type: "category" as const,
-        data: labels,
-        axisLabel: {
-          color: CHART_COLORS.neutral,
-          fontSize: 11,
-          fontFamily: "inherit",
-        },
-        axisLine: { lineStyle: { color: CHART_COLORS.axis } },
-        axisTick: { show: false },
-      },
-      yAxis: {
-        type: "log" as const,
-        logBase: 10,
-        axisLabel: {
-          color: CHART_COLORS.neutral,
-          fontSize: 11,
-          formatter: (v: number) => fmtUsd(v),
-        },
-        splitLine: { lineStyle: { color: CHART_COLORS.grid, type: "dashed" } },
-        axisLine: { show: false },
-        axisTick: { show: false },
-        min: 1,
-      },
-      series: [
-        {
-          type: "bar" as const,
-          data: assets.map((v, i) => ({
-            value: v,
-            itemStyle: {
-              borderRadius: 0,
-              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: COLORS[i % COLORS.length] },
-                { offset: 1, color: COLORS[i % COLORS.length] + "55" },
-              ]),
-            },
-          })),
-          barMaxWidth: 48,
-          emphasis: {
-            itemStyle: {
-              shadowBlur: 12,
-              shadowColor: "rgba(15,98,254,0.3)",
-            },
-          },
-        },
-      ],
-    };
-  }, [walletData]);
-
   // ── Aggregated distribution pie ──────────────────────────
 
   // ── Asset Composition Intelligence (Power BI Matrix Table) ─
@@ -505,183 +418,6 @@ export default function ProfileDashboardTab({
     };
   }, [walletData]);
 
-  // ── Trading activity bar (buy vs sell volume) ────────────
-
-  const tradingBarOption = useMemo(() => {
-    const labels = walletData.map((w) => shortAddr(w.address));
-    const buyVols = walletData.map(
-      (w) => w.overview?.periods?.[period]?.buy?.volumeUsd ?? 0,
-    );
-    const sellVols = walletData.map(
-      (w) => w.overview?.periods?.[period]?.sell?.volumeUsd ?? 0,
-    );
-
-    return {
-      backgroundColor: "transparent",
-      tooltip: {
-        trigger: "axis" as const,
-        ...TOOLTIP_LIGHT,
-      },
-      legend: {
-        data: ["Buy Volume", "Sell Volume"],
-        textStyle: { color: CHART_COLORS.neutral, fontSize: 11 },
-        top: 0,
-      },
-      grid: { left: 72, right: 24, top: 36, bottom: 44 },
-      xAxis: {
-        type: "category" as const,
-        data: labels,
-        axisLabel: { color: CHART_COLORS.neutral, fontSize: 11 },
-        axisLine: { lineStyle: { color: CHART_COLORS.axis } },
-        axisTick: { show: false },
-      },
-      yAxis: {
-        type: "value" as const,
-        axisLabel: {
-          color: CHART_COLORS.neutral,
-          fontSize: 11,
-          formatter: (v: number) => fmtUsd(v),
-        },
-        splitLine: { lineStyle: { color: CHART_COLORS.grid, type: "dashed" } },
-        axisLine: { show: false },
-        axisTick: { show: false },
-      },
-      series: [
-        {
-          name: "Buy Volume",
-          type: "bar" as const,
-          stack: "vol",
-          data: buyVols,
-          itemStyle: {
-            color: CHART_COLORS.success,
-            borderRadius: 0,
-          },
-          barWidth: "40%",
-        },
-        {
-          name: "Sell Volume",
-          type: "bar" as const,
-          stack: "vol",
-          data: sellVols,
-          itemStyle: {
-            color: CHART_COLORS.danger,
-            borderRadius: 0,
-          },
-          barWidth: "40%",
-        },
-      ],
-    };
-  }, [walletData, period]);
-
-  // ── Top tokens across all wallets ────────────────────────
-
-  const topTokens = useMemo(() => {
-    const map = new Map<
-      string,
-      { symbol: string; valueUsd: number; logoUri?: string }
-    >();
-
-    for (const w of walletData) {
-      for (const token of w.portfolio) {
-        const key = token.tokenAddress;
-        if (!key) continue;
-        const existing = map.get(key);
-        map.set(key, {
-          symbol: token.symbol || "???",
-          valueUsd: (existing?.valueUsd ?? 0) + (token.valueUsd ?? 0),
-          logoUri: existing?.logoUri || token.logoUri,
-        });
-      }
-    }
-
-    return [...map.values()]
-      .sort((a, b) => b.valueUsd - a.valueUsd)
-      .slice(0, 8);
-  }, [walletData]);
-
-  // ── PnL: realized + unrealized grouped, square-root scale ──
-  const pnlChartOption = useMemo(() => {
-    const labels = walletData.map((w) => shortAddr(w.address));
-    const realizedRaw = walletData.map(
-      (w) => w.overview?.periods?.[period]?.pnl?.realizedUsd ?? 0,
-    );
-    const unrealizedRaw = walletData.map(
-      (w) => w.overview?.periods?.[period]?.pnl?.unrealizedUsd ?? 0,
-    );
-    const totalRaw = walletData.map(
-      (w) => w.overview?.periods?.[period]?.pnl?.totalUsd ?? 0,
-    );
-
-    // Compress values to handle huge disparities without losing negative direction (Symlog scale)
-    const compress = (v: number) =>
-      Math.sign(v) * Math.log10(Math.max(1, Math.abs(v)));
-    const formatAxis = (v: number) =>
-      fmtUsd(Math.sign(v) * (Math.abs(v) < 1 ? 0 : Math.pow(10, Math.abs(v))));
-
-    return {
-      backgroundColor: "transparent",
-      tooltip: {
-        trigger: "axis" as const,
-        ...TOOLTIP_LIGHT,
-        formatter: (params: any[]) => {
-          const i = labels.indexOf(params[0]?.name ?? "");
-          const tot = totalRaw[i] ?? 0;
-          const col = tot >= 0 ? CHART_COLORS.success : CHART_COLORS.danger;
-          return (
-            `<div style="padding:4px 2px"><strong>${params[0]?.name}</strong><br/>` +
-            `<span style="color:${CHART_COLORS.textSub}">Total</span>  <strong style="color:${col}">${tot >= 0 ? "+" : ""}${fmtUsd(tot)}</strong><br/>` +
-            `<span style="color:${CHART_COLORS.textSub}">Realized</span>  <span style="color:${CHART_COLORS.primary}">${fmtUsd(realizedRaw[i])}</span><br/>` +
-            `<span style="color:${CHART_COLORS.textSub}">Unrealized</span>  <span style="color:${CHART_COLORS.accent}">${fmtUsd(unrealizedRaw[i])}</span></div>`
-          );
-        },
-      },
-      legend: {
-        data: ["Realized", "Unrealized"],
-        textStyle: { color: CHART_COLORS.neutral, fontSize: 11 },
-        top: 0,
-      },
-      grid: { left: 76, right: 24, top: 32, bottom: 44 },
-      xAxis: {
-        type: "category" as const,
-        data: labels,
-        axisLabel: { color: CHART_COLORS.neutral, fontSize: 11 },
-        axisLine: { lineStyle: { color: CHART_COLORS.axis } },
-        axisTick: { show: false },
-      },
-      yAxis: {
-        type: "value" as const,
-        axisLabel: {
-          color: CHART_COLORS.neutral,
-          fontSize: 10,
-          formatter: formatAxis,
-        },
-        splitLine: { lineStyle: { color: CHART_COLORS.grid, type: "dashed" } },
-        axisLine: { show: false },
-        axisTick: { show: false },
-      },
-      series: [
-        {
-          name: "Realized",
-          type: "bar" as const,
-          barMaxWidth: 28,
-          data: realizedRaw.map((v) => ({
-            value: compress(v),
-            itemStyle: { color: CHART_COLORS.primary, borderRadius: 0 },
-          })),
-        },
-        {
-          name: "Unrealized",
-          type: "bar" as const,
-          barMaxWidth: 28,
-          data: unrealizedRaw.map((v) => ({
-            value: compress(v),
-            itemStyle: { color: CHART_COLORS.accent, borderRadius: 0 },
-          })),
-        },
-      ],
-    };
-  }, [walletData, period]);
-
   // ── Net flow: Pie chart of Buy vs Sell volume ──────────────
   const netFlowChartOption = useMemo(() => {
     let totalBuy = 0;
@@ -705,7 +441,7 @@ export default function ProfileDashboardTab({
       tooltip: {
         trigger: "item" as const,
         ...TOOLTIP_LIGHT,
-        formatter: (params: any) => {
+        formatter: (params: { name: string; value: number; color: string; percent?: number }) => {
           const txs = params.name == "Buy" ? totalBuyTx : totalSellTx;
           const pct =
             total > 0 ? ((params.value / total) * 100).toFixed(1) : "0";
@@ -731,7 +467,7 @@ export default function ProfileDashboardTab({
           padAngle: 4,
           itemStyle: { borderRadius: 0, borderWidth: 0 },
           label: { show: false },
-          emphasis: {
+            emphasis: {
             scale: true,
             scaleSize: 8,
             label: {
@@ -739,7 +475,7 @@ export default function ProfileDashboardTab({
               fontSize: 14,
               fontWeight: "bold" as const,
               color: CHART_COLORS.text,
-              formatter: (p: any) => `${p.name}\n${p.percent}%`,
+              formatter: (p: { name: string; percent: number; value: number }) => `${p.name}\n${p.percent}%`,
             },
           },
           data: [
@@ -766,121 +502,6 @@ export default function ProfileDashboardTab({
     };
   }, [walletData, period]);
 
-  // ── Trading Volume & Cumulative % (Pareto Style) ────────────
-  const tradingVolumeOption = useMemo(() => {
-    // 1. Prepare raw data combined with labels
-    const rawData = walletData.map((w) => {
-      const b = w.overview?.periods?.[period]?.buy?.volumeUsd ?? 0;
-      const s = w.overview?.periods?.[period]?.sell?.volumeUsd ?? 0;
-      return {
-        label: shortAddr(w.address),
-        volume: b + s,
-      };
-    });
-
-    // 2. Sort from largest to smallest volume
-    rawData.sort((a, b) => b.volume - a.volume);
-
-    const labels = rawData.map((d) => d.label);
-    const volumeData = rawData.map((d) => d.volume);
-
-    // 3. Calculate cumulative percentage
-    const totalVolume = volumeData.reduce((acc, val) => acc + val, 0);
-    let cumulative = 0;
-    const cumulativePcts = volumeData.map((v) => {
-      cumulative += v;
-      return totalVolume > 0
-        ? Number(((cumulative / totalVolume) * 100).toFixed(1))
-        : 0;
-    });
-
-    return {
-      backgroundColor: "transparent",
-      tooltip: {
-        trigger: "axis" as const,
-        ...TOOLTIP_LIGHT,
-        formatter: (params: any[]) => {
-          const i = params[0]?.dataIndex ?? 0;
-          return (
-            `<div style="padding:4px 2px"><strong>${labels[i]}</strong><br/>` +
-            `<span style="color:${CHART_COLORS.textSub}">Volume</span>  <strong style="color:${CHART_COLORS.primary}">${fmtUsd(volumeData[i])}</strong><br/>` +
-            `<span style="color:${CHART_COLORS.textSub}">Cumulative %</span>  <strong style="color:${CHART_COLORS.warning}">${cumulativePcts[i]}%</strong></div>`
-          );
-        },
-      },
-      legend: {
-        data: ["Volume", "Cumulative %"],
-        textStyle: { color: CHART_COLORS.neutral, fontSize: 11 },
-        top: 0,
-        right: 0,
-      },
-      grid: { left: 76, right: 60, top: 32, bottom: 44 },
-      xAxis: {
-        type: "category" as const,
-        data: labels,
-        axisLabel: { color: CHART_COLORS.neutral, fontSize: 11 },
-        axisLine: { lineStyle: { color: CHART_COLORS.axis } },
-        axisTick: { show: false },
-      },
-      yAxis: [
-        {
-          type: "log" as const,
-          logBase: 10,
-          min: 1,
-          name: "Volume",
-          nameTextStyle: { color: CHART_COLORS.neutral, fontSize: 10 },
-          axisLabel: {
-            color: CHART_COLORS.neutral,
-            fontSize: 10,
-            formatter: (v: number) => fmtUsd(v),
-          },
-          splitLine: {
-            lineStyle: { color: CHART_COLORS.grid, type: "dashed" },
-          },
-          axisLine: { show: false },
-          axisTick: { show: false },
-        },
-        {
-          type: "value" as const,
-          name: "Cumul %",
-          max: 100,
-          nameTextStyle: { color: CHART_COLORS.neutral, fontSize: 10 },
-          axisLabel: {
-            color: CHART_COLORS.neutral,
-            fontSize: 10,
-            formatter: (v: number) => `${v}%`,
-          },
-          splitLine: { show: false },
-          axisLine: { show: false },
-          axisTick: { show: false },
-        },
-      ],
-      series: [
-        {
-          name: "Volume",
-          type: "bar" as const,
-          yAxisIndex: 0,
-          barMaxWidth: 44,
-          data: volumeData.map((v) => ({
-            value: Math.max(1, v),
-            itemStyle: { color: CHART_COLORS.primary, borderRadius: 0 },
-          })),
-        },
-        {
-          name: "Cumulative %",
-          type: "line" as const,
-          yAxisIndex: 1,
-          data: cumulativePcts,
-          smooth: true,
-          lineStyle: { color: CHART_COLORS.warning, width: 2 },
-          itemStyle: { color: CHART_COLORS.warning },
-          symbol: "circle",
-          symbolSize: 8,
-        },
-      ],
-    };
-  }, [walletData, period]);
-
   // ── Trading Activity Momentum (Inspired by reference) ────────────
   const activityTrendOption = useMemo(() => {
     const daysLimit =
@@ -902,7 +523,7 @@ export default function ProfileDashboardTab({
 
     walletData.forEach((w) => {
       // Get totals for this period
-      let totalTx = w.overview?.periods?.[period]?.transactionCount ?? 0;
+      const totalTx = w.overview?.periods?.[period]?.transactionCount ?? 0;
 
       // If no txs, skip
       if (totalTx == 0) return;
@@ -1012,7 +633,7 @@ export default function ProfileDashboardTab({
       tooltip: {
         trigger: "item" as const,
         ...TOOLTIP_LIGHT,
-        formatter: (params: any) => {
+        formatter: (params: { name: string; value: number; color: string }) => {
           const pct =
             total > 0 ? ((params.value / total) * 100).toFixed(1) : "0";
           return `<div style="padding:4px 2px"><span style="font-size:13px;font-weight:700;color:${CHART_COLORS.text}">${params.name}</span><br/><span style="color:${CHART_COLORS.textSub}">Share</span>  <span style="font-weight:700;color:${params.color}">${pct}%</span><br/><span style="color:${CHART_COLORS.textSub}">Value</span>  <span style="font-weight:600;color:${CHART_COLORS.text}">${fmtUsd(params.value)}</span></div>`;
@@ -1037,7 +658,7 @@ export default function ProfileDashboardTab({
           padAngle: 3,
           itemStyle: { borderRadius: 0, borderWidth: 0 },
           label: { show: false },
-          emphasis: {
+            emphasis: {
             scale: true,
             scaleSize: 6,
             label: {
@@ -1045,7 +666,7 @@ export default function ProfileDashboardTab({
               fontSize: 13,
               fontWeight: "bold" as const,
               color: CHART_COLORS.text,
-              formatter: (p: any) => `${p.name}\n${p.percent}%`,
+              formatter: (p: { name: string; percent: number }) => `${p.name}\n${p.percent}%`,
             },
           },
           data,
@@ -1053,185 +674,6 @@ export default function ProfileDashboardTab({
       ],
     };
   }, [walletData]);
-
-  // ── Total Balance Trend Area Chart ───────────────────────
-  const totalBalanceOption = useMemo(() => {
-    // 1. Group daily balances per wallet, forward-filling missing days
-    const dailyBalancePerWallet = new Map<string, Map<number, number>>();
-    const allDays = new Set<number>();
-
-    for (const w of walletData) {
-      if (!w.balanceTrend) continue;
-
-      const trendData = w.balanceTrend[w.address] || w.balanceTrend;
-
-      let dataPoints: any[] = [];
-      if (Array.isArray(trendData)) {
-        dataPoints = trendData;
-      } else if (trendData.series) {
-        const series =
-          trendData.series.find(
-            (s: any) => s.unit == "USD" || s.name == "Total Balance (USD)",
-          ) || trendData.series[0];
-        if (series && series.data) {
-          dataPoints = series.data;
-        }
-      }
-
-      if (!dataPoints || dataPoints.length == 0) continue;
-
-      const walletDays = new Map<number, number>();
-      for (const pt of dataPoints) {
-        const t = Number(pt.timestamp || pt.timestampMs);
-        const v = Number(pt.value || pt.usdValue) || 0;
-        if (!isNaN(t) && !isNaN(v)) {
-          const d = new Date(t);
-          d.setHours(0, 0, 0, 0);
-          const tDay = d.getTime();
-          walletDays.set(tDay, v);
-          allDays.add(tDay);
-        }
-      }
-      dailyBalancePerWallet.set(w.address, walletDays);
-    }
-
-    const sortedDays = Array.from(allDays).sort((a, b) => a - b);
-    const dataArr: [number, number][] = [];
-    const lastKnownBalance = new Map<string, number>();
-
-    for (const tDay of sortedDays) {
-      let dailyTotal = 0;
-      for (const w of walletData) {
-        const walletDays = dailyBalancePerWallet.get(w.address);
-        if (walletDays && walletDays.has(tDay)) {
-          lastKnownBalance.set(w.address, walletDays.get(tDay)!);
-        }
-        dailyTotal += lastKnownBalance.get(w.address) || 0;
-      }
-      dataArr.push([tDay, dailyTotal]);
-    }
-
-    // Apply time filtering based on period
-    const days =
-      period == "90D" ? 90 : period == "30D" ? 30 : period == "7D" ? 7 : 1;
-    const now = Date.now();
-    const cutoff = now - days * 24 * 60 * 60 * 1000;
-    const filteredData = dataArr.filter((pt) => pt[0] >= cutoff);
-
-    // Real-time current balance từ overview (đồng bộ với KPI card)
-    const currentTotalAssets = walletData.reduce(
-      (sum, w) =>
-        sum +
-        (w.overview?.totalAssetValueUsd ??
-          w.overview?.holdings?.totalAssetValueUsd ??
-          0),
-      0,
-    );
-
-    // Fallback: nếu không có data nào, vẽ flat line tại giá trị hiện tại
-    if (filteredData.length == 0) {
-      filteredData.push([cutoff, currentTotalAssets]);
-      filteredData.push([now, currentTotalAssets]);
-    }
-
-    // If there is only 1 point, duplicate it to the start of the period to form a flat line
-    if (filteredData.length == 1) {
-      filteredData.unshift([cutoff, filteredData[0][1]]);
-    }
-
-    // Upsert điểm hôm nay = real-time balance để đồng bộ với KPI card
-    if (currentTotalAssets > 0) {
-      const todayStart = new Date(now);
-      todayStart.setHours(0, 0, 0, 0);
-      const todayMs = todayStart.getTime();
-      const lastPt = filteredData[filteredData.length - 1];
-      if (lastPt && lastPt[0] == todayMs) {
-        // Replace điểm hôm nay nếu đã tồn tại
-        lastPt[1] = currentTotalAssets;
-      } else {
-        // Thêm điểm hôm nay nếu chưa có
-        filteredData.push([todayMs, currentTotalAssets]);
-      }
-    }
-
-    // Compute y-axis bounds with ~8% padding, let ECharts pick nice intervals
-    const values = filteredData.map((pt) => pt[1]);
-    const dataMin = Math.min(...values);
-    const dataMax = Math.max(...values);
-    const range = dataMax - dataMin || dataMax * 0.1 || 1;
-    const yMin = Math.max(0, dataMin - range * 0.08);
-    const yMax = dataMax + range * 0.08;
-
-    return {
-      backgroundColor: "transparent",
-      tooltip: {
-        trigger: "axis",
-        ...TOOLTIP_LIGHT,
-        formatter: (params: any) => {
-          const pt = Array.isArray(params) ? params[0] : params;
-          const dateStr = new Date(pt.value[0]).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          });
-          return (
-            `<div style="padding:4px 2px"><strong>${dateStr}</strong><br/>` +
-            `<span style="color:${CHART_COLORS.textSub}">Total Balance</span>  <strong style="color:${CHART_COLORS.primary}">${fmtUsd(pt.value[1])}</strong></div>`
-          );
-        },
-      },
-      grid: { left: 72, right: 24, top: 24, bottom: 36 },
-      xAxis: {
-        type: "time",
-        min: cutoff,
-        max: now,
-        minInterval: 3600 * 24 * 1000, // 1 day
-        axisLabel: {
-          color: CHART_COLORS.neutral,
-          fontSize: 11,
-          formatter: "{MMM} {d}",
-          hideOverlap: true,
-          margin: 12,
-          showMinLabel: true,
-          showMaxLabel: true,
-        },
-        axisLine: { lineStyle: { color: CHART_COLORS.axis } },
-        splitLine: { show: false },
-        axisTick: { show: false },
-      },
-      yAxis: {
-        type: "value",
-        min: yMin,
-        max: yMax,
-        splitNumber: 5,
-        axisLabel: {
-          color: CHART_COLORS.neutral,
-          fontSize: 11,
-          formatter: (v: number) => fmtUsd(v),
-        },
-        splitLine: { lineStyle: { color: CHART_COLORS.grid, type: "dashed" } },
-        axisLine: { show: false },
-        axisTick: { show: false },
-      },
-      series: [
-        {
-          name: "Total Balance",
-          type: "line",
-          smooth: true,
-          showSymbol: false,
-          areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: "rgba(15,98,254,0.3)" },
-              { offset: 1, color: "rgba(15,98,254,0.05)" },
-            ]),
-          },
-          lineStyle: { color: CHART_COLORS.primary, width: 2 },
-          itemStyle: { color: CHART_COLORS.primary },
-          data: filteredData,
-        },
-      ],
-    };
-  }, [walletData, period]);
 
   // ── Render ───────────────────────────────────────────────
 

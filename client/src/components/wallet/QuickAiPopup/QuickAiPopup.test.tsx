@@ -11,9 +11,7 @@ vi.mock("@/api/main", () => ({
   default: {
     api: {
       chat: {
-        index: {
-          $post: mockPost,
-        },
+        $post: mockPost,
       },
     },
   },

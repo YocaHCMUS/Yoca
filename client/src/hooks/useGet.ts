@@ -6,7 +6,7 @@ import type {
 import useSWR from "swr";
 
 type GetInput<T> =
-  T extends { $get: (args: infer A, options?: ClientRequestOptions) => any }
+  T extends { $get: (args: infer A, options?: ClientRequestOptions) => unknown }
     ? NonNullable<A>
     : {};
     
@@ -36,8 +36,8 @@ type UseGetConfig<Success, Transformed> = {
 
 export function useGet<
   T extends {
-    $get: (...params: any[]) => Promise<ClientResponse<any, any, any>>;
-    $url: (...params: any[]) => any;
+    $get: (...params: never[]) => Promise<ClientResponse<unknown, number, string>>;
+    $url: (...params: never[]) => URL;
   },
   SuccessStatus extends number,
   Response = Awaited<ReturnType<T["$get"]>>,
@@ -54,11 +54,18 @@ export function useGet<
 ) : UseGetResp<NoInfer<Transformed>, Error>{
   const [args, config] = params;
   const { options, select, enabled = true } = config ?? {};
+  type RequestArgs = GetInput<T> | undefined;
+  const requestArgs = args as RequestArgs;
+  const get = request.$get as (
+    args: RequestArgs,
+    options?: ClientRequestOptions,
+  ) => Promise<ClientResponse<unknown, number, string>>;
+  const url = request.$url as (args: RequestArgs) => URL;
 
   return useSWR<Transformed, Error>(
-    enabled ? request.$url(args).href : null,
+    enabled ? url(requestArgs).href : null,
     async () => {
-      const res = await (request.$get as any)(args, options);
+      const res = await get(requestArgs, options);
       if (res.status != successStatus) {
         throw res;
       }
@@ -76,7 +83,7 @@ export function useGet<
   );
 }
 
-export type UseGetResp<Data, Error = any> = {
+export type UseGetResp<Data, Error = unknown> = {
   isLoading: boolean;
   isValidating: boolean;
   data: Data | undefined;

@@ -33,7 +33,7 @@ export default function UnauthorizedPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSignInOpen, setIsSignInOpen] = useState(false);
-  const { tr, fmt } = useLocalization();
+  const { tr } = useLocalization();
 
   const requestedPath = getRequestedPath(location.state);
 

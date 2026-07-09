@@ -78,7 +78,7 @@ vi.mock("@solana/web3.js", () => {
       mockLegacyTransactionConstructor(this);
     }
 
-    add(...instructions: any[]) {
+    add(...instructions: unknown[]) {
       mockLegacyTransactionAdd(...instructions);
       return this;
     }

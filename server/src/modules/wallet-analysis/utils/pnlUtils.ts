@@ -1,6 +1,6 @@
 import type { NormalizedSwap } from "../types/normalizedWalletEvent";
 import { isSolLikeMint, isStablecoinMint } from "./tokenUtils";
-import { average, median, safeDivide, sum } from "./mathUtils";
+import { average, safeDivide, sum } from "./mathUtils";
 
 type PnlLot = {
     token: string;

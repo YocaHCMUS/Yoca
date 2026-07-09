@@ -23,7 +23,6 @@ import trades from "@sv/routes/trades.js";
 import transactions from "@sv/routes/transactions.js";
 import transfers from "@sv/routes/transfers.js";
 import wallets from "@sv/routes/wallets.js";
-import walletTags from "@sv/routes/wallets/wallet-tags.js";
 import walletAnalysis from "@sv/modules/wallet-analysis/routes/walletAnalysis.routes.js";
 import webhook from "@sv/routes/webhook.js";
 import chat from "@sv/routes/chat.route.js";

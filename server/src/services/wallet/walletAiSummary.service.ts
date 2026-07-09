@@ -395,7 +395,7 @@ function createDefaultGeminiClient(): WalletAiGeminiClientLike | null {
         return null;
     }
 
-    return new GoogleGenAI({ apiKey }) as unknown as WalletAiGeminiClientLike;
+    return new GoogleGenAI({ apiKey }) as WalletAiGeminiClientLike;
 }
 
 function extractJsonObject(text: string): unknown {

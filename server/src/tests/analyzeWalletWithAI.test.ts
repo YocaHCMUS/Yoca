@@ -71,8 +71,15 @@ vi.mock("../modules/wallet-analysis/analyzers/buildWalletBehaviorProfile.js", ()
     }),
 }));
 
+interface MockProfile {
+    persona: Record<string, unknown>;
+    risk: Record<string, unknown>;
+    evidence: Array<Record<string, unknown>>;
+    [key: string]: unknown;
+}
+
 vi.mock("../modules/wallet-analysis/analyzers/enrichProfileWithPersona.js", () => ({
-    enrichProfileWithPersona: vi.fn(({ profile }: { profile: any }) => {
+    enrichProfileWithPersona: vi.fn(({ profile }: { profile: MockProfile }) => {
         callOrder.push("enrichProfileWithPersona");
         return {
             ...profile,
@@ -95,7 +102,7 @@ vi.mock("../modules/wallet-analysis/analyzers/enrichProfileWithPersona.js", () =
 }));
 
 vi.mock("../modules/wallet-analysis/analyzers/enrichProfileWithRisk.js", () => ({
-    enrichProfileWithRisk: vi.fn(({ profile }: { profile: any }) => {
+    enrichProfileWithRisk: vi.fn(({ profile }: { profile: MockProfile }) => {
         callOrder.push("enrichProfileWithRisk");
         return {
             ...profile,
@@ -121,7 +128,7 @@ vi.mock("../modules/wallet-analysis/analyzers/enrichProfileWithRisk.js", () => (
 }));
 
 vi.mock("../services/wallet/walletAiSummary.service.js", () => ({
-    summarizeWalletWithGemini: vi.fn(async ({ profile }: { profile: any }) => {
+    summarizeWalletWithGemini: vi.fn(async ({ profile }: { profile: MockProfile }) => {
         callOrder.push("summarizeWalletWithGemini");
 
         return {

@@ -48,7 +48,7 @@ function formatMoney(cents: number, currency: string) {
 }
 
 export function ProfileSubscriptionsTab() {
-  const { fmt } = useLocalization();
+  useLocalization();
   const [activeSubtab, setActiveSubtab] =
     useState<SubscriptionSubtab>("subscriptions");
   const [subscription, setSubscription] = useState<Subscription | null>(null);

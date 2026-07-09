@@ -116,21 +116,22 @@ export function createTooltipRow(
  * ```
  */
 export function formatAxisTooltip(
-  params: any,
-  headerFormatter: (param: any) => string,
-  valueFormatter: (param: any, index: number) => string,
+  params: unknown,
+  headerFormatter: (param: { value: number[]; seriesName?: string; color?: string }) => string,
+  valueFormatter: (param: { value: number[]; seriesName?: string; color?: string }, index: number) => string,
   options: { showSeriesIndicator?: boolean } = {}
 ): string {
   if (!Array.isArray(params) || params.length === 0) return '';
 
   const { showSeriesIndicator = true } = options;
+  const tooltipParams = params as { value: number[]; seriesName?: string; color?: string }[];
 
-  let tooltipContent = createTooltipHeader(headerFormatter(params[0]));
+  let tooltipContent = createTooltipHeader(headerFormatter(tooltipParams[0]));
 
-  params.forEach((param: any, index: number) => {
+  tooltipParams.forEach((param, index) => {
     const value = valueFormatter(param, index);
     tooltipContent += createTooltipRow(
-      param.seriesName,
+      param.seriesName ?? "",
       value,
       {
         color: param.color,

@@ -1,5 +1,4 @@
 import client from "@/api/main";
-import { SOLSCAN_ACCOUNT_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { ChevronDown, ChevronUp, Copy } from "@carbon/icons-react";
 import classNames from "classnames";
@@ -17,12 +16,6 @@ type TopHoldersData = InferResponseType<
 interface TopHoldersProps {
   holders: TopHoldersData;
 }
-
-// Rút gọn địa chỉ ví
-const shortenAddress = (address: string) => {
-  if (!address || address.length < 10) return address;
-  return address.slice(0, 10);
-};
 
 export const TopHolders = ({ holders }: TopHoldersProps) => {
   const { tr, fmt } = useLocalization();

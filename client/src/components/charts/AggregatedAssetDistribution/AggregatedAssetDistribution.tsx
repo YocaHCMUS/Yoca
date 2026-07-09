@@ -25,7 +25,6 @@ import { Flex } from '@/components/Flex';
 import { FilterSwitch } from '@/components/FilterSwitch';
 import { FilterType, SortType, Table } from '@/components/tables/Table';
 import type { TableColumnHeader } from '@/components/tables/Table';
-import tableStyles from '@/components/tables/Table.module.scss';
 import styles from './AggregatedAssetDistribution.module.scss';
 import { renderBase } from '@/components/tables/TableCellRenderer';
 
@@ -552,10 +551,10 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
             },
             (value: unknown) => renderBase(value, (text) => fmt.num.compact.currency(Number(text ?? 0))),
             (value: unknown) => <span className={styles.countValue}>{Number(value ?? 0).toLocaleString()}</span>,
-        ] as Array<((value: any, row: any[], rowIndex: number) => React.ReactNode) | null>;
+        ] as Array<((value: any, row: unknown[], rowIndex: number) => React.ReactNode) | null>;
 
         if (mode === 'aggregate') {
-            const selectionRenderer = (_value: unknown, row: any[]) => {
+            const selectionRenderer = (_value: unknown, row: unknown[]) => {
                 const walletAddress = String((row[1] as WalletIdentityCellValue | undefined)?.walletAddress ?? '');
                 const isChecked = selectedWallets.has(walletAddress);
                 const inputId = `agg-wallet-select-${walletAddress.replace(/[^a-zA-Z0-9_-]/g, '')}`;

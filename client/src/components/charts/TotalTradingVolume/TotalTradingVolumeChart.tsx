@@ -32,7 +32,6 @@ export function TotalTradingVolumeChart({
   autoRefresh = true,
   refreshInterval = 30000,
   fetchEnabled = true,
-  className,
 }: ChartProps) {
   const { tr, fmt } = useLocalization();
   const chartTitle = title || tr("charts.totalTradingVolumeChart.title");

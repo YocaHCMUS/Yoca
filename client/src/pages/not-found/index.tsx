@@ -8,7 +8,7 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
-  const {tr, fmt} = useLocalization();
+  const {tr} = useLocalization();
   
   return (
     <PageWrapper>

@@ -66,7 +66,6 @@ export const useTokenPageData = (address: string | undefined) => {
   const [poolsData, setPoolsData] = useState<PoolData[]>([]);
   const [topHolders, setTopHolders] = useState<TopHoldersData>([]);
   const [holdersInfo, setHoldersInfo] = useState<HoldersInfo | null>(null);
-  const [tradesData, setTradesData] = useState<TradesData>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

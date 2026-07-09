@@ -17,16 +17,7 @@ import { StarFilled, Wallet } from "@carbon/react/icons";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useWalletLabels } from "@/hooks/profile/useWalletLabels";
-import styles from "@/components/profile/shared/profile.module.scss";
 import { useProfileOverviewData } from "@/hooks/profile/useProfileOverviewData";
-
-interface LinkedWalletsResponse {
-  userId: string;
-  rows: Array<{
-    walletAddress: string;
-    isAuthWallet: boolean;
-  }>;
-}
 
 export function ProfileWatchlistTab() {
   const { tr, fmt } = useLocalization();

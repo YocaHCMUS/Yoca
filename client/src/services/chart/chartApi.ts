@@ -22,7 +22,7 @@ import { InferRequestType } from "hono";
  * @example
  * type AssetDistData = InferFetcherData<typeof fetchAssetDistribution>;
  */
-export type InferFetcherData<T extends (...args: any[]) => Promise<any>> =
+export type InferFetcherData<T extends (...args: never[]) => Promise<unknown>> =
   Awaited<ReturnType<T>>;
 
 /**

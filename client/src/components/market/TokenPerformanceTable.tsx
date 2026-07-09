@@ -140,8 +140,6 @@ export const TokenPerformanceTable: React.FC<TokenPerformanceTableProps> = ({
   selectedTokenAddress,
 }) => {
   const { tr, fmt } = useLocalization();
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [tokens, setTokens] = useState<TokenPerformance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

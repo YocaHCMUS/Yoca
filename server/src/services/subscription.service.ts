@@ -3,6 +3,42 @@ import { db } from "@sv/db/index.js";
 import { subscriptions, paymentHistory, users } from "@sv/db/schema.js";
 import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 
+type PaymentHistoryRowForStripe = {
+  status?: string | null;
+  stripeInvoiceId?: string | null;
+  planTier?: string | null;
+  [key: string]: unknown;
+};
+
+type StripeInvoiceLineLike = {
+  amount?: number | null;
+  price?: string | { id?: string; product?: string | { name?: string | null } | null } | null;
+  pricing?: {
+    price_details?: {
+      price?: string | { id?: string; product?: string | { name?: string | null } | null } | null;
+      product?: string | { name?: string | null } | null;
+    } | null;
+  } | null;
+};
+
+type StripeInvoiceLike = {
+  lines?: { data?: StripeInvoiceLineLike[] } | null;
+};
+
+function getInvoiceLinePrice(line: StripeInvoiceLineLike | undefined) {
+  return line?.price ?? line?.pricing?.price_details?.price ?? null;
+}
+
+function getInvoicePriceId(line: StripeInvoiceLineLike | undefined): string | undefined {
+  const price = getInvoiceLinePrice(line);
+  return typeof price === "string" ? price : price?.id;
+}
+
+function getInvoiceLineProduct(line: StripeInvoiceLineLike | undefined) {
+  const price = getInvoiceLinePrice(line);
+  if (line?.pricing?.price_details?.product) return line.pricing.price_details.product;
+  return typeof price === "string" ? undefined : price?.product;
+}
 export async function getUserSubscription(userId: string) {
   const [sub] = await db
     .select()
@@ -52,7 +88,7 @@ export async function getUserPaymentHistory(userId: string) {
     .orderBy(desc(paymentHistory.createdAt));
 }
 
-export async function refreshPendingPaymentHistory(historyRows: Array<any>) {
+export async function refreshPendingPaymentHistory(historyRows: PaymentHistoryRowForStripe[]) {
   const pendingInvoiceIds = historyRows
     .filter((row) => row.status === "pending" && row.stripeInvoiceId)
     .map((row) => row.stripeInvoiceId as string);
@@ -68,36 +104,35 @@ export async function refreshPendingPaymentHistory(historyRows: Array<any>) {
   }
 }
 
-export async function enrichPaymentHistoryWithStripeProduct(
-  historyRows: Array<any>,
+export async function enrichPaymentHistoryWithStripeProduct<T extends PaymentHistoryRowForStripe>(
+  historyRows: T[],
 ) {
   if (historyRows.length === 0) return historyRows;
 
   const { getStripe } = await import("@sv/services/stripe.service.js");
   const stripe = getStripe();
 
-  const resolvePlanFromInvoice = async (invoice: any) => {
+  const resolvePlanFromInvoice = async (invoice: StripeInvoiceLike) => {
     const lines = invoice?.lines?.data ?? [];
-    const getPrice = (line: any) =>
+    const getPrice = (line: StripeInvoiceLineLike) =>
       line?.price ?? line?.pricing?.price_details?.price;
     const selectedLine =
       lines.find(
-        (line: any) =>
+        (line: StripeInvoiceLineLike) =>
           line.amount > 0 &&
           mapTierFromPriceId(
             typeof getPrice(line) === "string"
               ? getPrice(line)
               : getPrice(line)?.id,
           ),
-      ) ?? lines.find((line: any) => line.amount > 0);
+      ) ?? lines.find((line: StripeInvoiceLineLike) => line.amount > 0);
     const linePrice = getPrice(selectedLine);
     const linePriceId =
       typeof linePrice === "string" ? linePrice : linePrice?.id;
     const planTier = mapTierFromPriceId(linePriceId);
     if (planTier) return { planName: planTier, planTier };
 
-    const lineProduct =
-      selectedLine?.pricing?.price_details?.product ?? linePrice?.product;
+    const lineProduct = getInvoiceLineProduct(selectedLine);
     if (typeof lineProduct === "object" && lineProduct?.name) {
       return { planName: String(lineProduct.name), planTier: undefined };
     }
@@ -132,7 +167,7 @@ export async function enrichPaymentHistoryWithStripeProduct(
         const invoice = await stripe.invoices.retrieve(row.stripeInvoiceId);
 
         const { planName, planTier } = await resolvePlanFromInvoice(
-          invoice as any,
+          invoice as StripeInvoiceLike,
         );
 
         return {
@@ -344,7 +379,7 @@ export async function recordInvoicePayment(
     : [null];
 
   let userId = sub?.userId;
-  let subscriptionId: string | null = sub?.id ?? null;
+  const subscriptionId: string | null = sub?.id ?? null;
 
   if (!userId && invoice.customer) {
     const stripeCustomerId =
@@ -431,7 +466,7 @@ export async function backfillUserPaymentHistory(userId: string) {
     });
 
     for (const invoice of invoices.data) {
-      const stripeInvoice = invoice as any;
+      const stripeInvoice = invoice as StripeInvoiceLike;
       seenInvoiceIds.add(stripeInvoice.id);
 
       // Ensure corresponding subscription exists/updated in our DB first.
@@ -469,7 +504,7 @@ export async function backfillUserPaymentHistory(userId: string) {
     });
 
     for (const invoice of subInvoices.data) {
-      const stripeInvoice = invoice as any;
+      const stripeInvoice = invoice as StripeInvoiceLike;
       if (seenInvoiceIds.has(stripeInvoice.id)) continue;
 
       const fullInvoice = await stripe.invoices.retrieve(stripeInvoice.id, {

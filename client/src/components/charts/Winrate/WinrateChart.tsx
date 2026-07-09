@@ -44,9 +44,6 @@ export function WinrateChart({
     timePeriod: "30D",
     wallets: [],
   },
-  autoRefresh = false,
-  refreshInterval = 30000,
-  className,
 }: ChartProps) {
   type WinrateTimeRange = "24H" | "7D" | "30D" | "90D";
   const WINRATE_TIME_RANGES: WinrateTimeRange[] = ["24H", "7D", "30D", "90D"];
@@ -63,7 +60,7 @@ export function WinrateChart({
     debounceDelay: 300,
   });
 
-  const query = useMemo<WinrateRequestParams>(
+  useMemo<WinrateRequestParams>(
     () => ({
       period: timeRange,
       wallets: walletsString,

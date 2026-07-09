@@ -42,7 +42,6 @@ export function TransactionDistribution({
   autoRefresh = true,
   refreshInterval = 30000,
   onDataLoaded,
-  className,
 }: TransactionDistributionProps) {
   const { tr } = useLocalization();
   const chartTitle = title || tr('charts.transactionDistributionChart.title');

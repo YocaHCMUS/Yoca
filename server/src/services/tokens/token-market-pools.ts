@@ -5,11 +5,7 @@ import type { CG_TopPoolData } from "../_types/token-raw-responses.js";
 const INCLUDE = "base_token,quote_token,dex";
 const TARGET_POOL_COUNT = 100;
 const MAX_PAGE_ROUNDS = 12;
-const VALIDATION_CONCURRENCY = 8;
-const VALIDATION_CACHE_TTL_MS = 10 * 60 * 1000;
-const DETAIL_ENRICH_CONCURRENCY = 6;
 // Pool phải có liquidity tối thiểu để lọc bỏ meme pool rác không có thanh khoản
-const MIN_LIQUIDITY_USD = 500;
 
 export type PoolDuration = "5m" | "1h" | "6h" | "24h";
 export type PoolTopSort = "volume" | "txns" | "marketCap";
@@ -51,10 +47,6 @@ const poolValidationCache = new Map<string, ValidationCacheEntry>();
 /** Xóa toàn bộ cache validation — dùng khi cần force refresh data */
 export function clearPoolValidationCache(): void {
   poolValidationCache.clear();
-}
-
-function isNotFoundStatus(status: number): boolean {
-  return status === 404;
 }
 
 function toNumber(input: string | number | null | undefined): number | null {
@@ -272,7 +264,7 @@ async function fetchSinglePoolFromCoinGecko(
       included: payload.included
     } as any);
     return results[0] || null;
-  } catch (err) {
+  } catch {
     return null;
   }
 }

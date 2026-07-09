@@ -13,7 +13,7 @@ interface TokenTabsProps {
 
 const TAB_IDS = ["overview", "markets", "news"];
 
-export function TokenTabs({ activeTab, onTabChange, symbol, address }: TokenTabsProps) {
+export function TokenTabs({ activeTab, onTabChange, address }: TokenTabsProps) {
     const { tr } = useLocalization();
     const tabs = [
         { id: "overview", label: tr("token.tabs.overview") },

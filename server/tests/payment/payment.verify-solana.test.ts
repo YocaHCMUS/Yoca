@@ -80,12 +80,12 @@ vi.mock("@sv/middlewares/validation.js", () => ({
     c.set("jwtPayload", { id: "user-123" });
     return next();
   }),
-  validate: vi.fn((_target: string, _schema: any) => async (c: any, next: any) => {
+  validate: vi.fn(() => async (c: any, next: any) => {
     try {
       const body = await c.req.json();
-      c.req.valid = (_: string) => body;
+      c.req.valid = () => body;
     } catch {
-      c.req.valid = (_: string) => ({});
+      c.req.valid = () => ({});
     }
     return next();
   }),

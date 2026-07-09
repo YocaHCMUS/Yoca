@@ -302,7 +302,7 @@ export const honoJwt = async (c: Context, next: Next) => {
   let payload;
   try {
     payload = await verify(token, options.secret, { alg: options.alg });
-  } catch (e) {}
+  } catch { /* verification failed */ }
 
   if (!payload) {
     return c.json(setErr("UNAUTHORIZED"), statusCode.Unauthorized);
@@ -346,7 +346,7 @@ export async function getTrackedApiResult<T extends z.ZodType>(
 
 export async function validateResponseDataSchema<T extends z.ZodType>(
   status: number,
-  jsonResp: any,
+  jsonResp: unknown,
   schema: T,
   logSuccessResponse: boolean,
 ) {

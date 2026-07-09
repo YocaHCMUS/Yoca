@@ -197,7 +197,6 @@ function InsightCard({ question, answer }: { question: string; answer: string })
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function TokenInsightTabs({
-  address,
   meta,
   market,
   holders,

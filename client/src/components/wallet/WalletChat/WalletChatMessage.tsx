@@ -12,7 +12,6 @@ import type {
   ChatSource,
   WalletChatSection,
   WalletSectionKind,
-  WalletConfidence,
 } from "./types";
 import { GeckoTerminalChart } from "@/components/charts/GeckoTerminalChart";
 import { ChartRenderer, TableRenderer } from "./WalletChatChartRenderer";
@@ -307,12 +306,6 @@ function SectionTable({ table }: { table: Array<Record<string, string | number |
 
 // ─── Section Kind → Meta ────────────────────────────────────────────────
 
-const CONFIDENCE_LEVEL_KEYS = {
-  High: "chat.confidenceHigh",
-  Medium: "chat.confidenceMedium",
-  Low: "chat.confidenceLow",
-} as const satisfies Record<WalletConfidence, TranslationKeyPath>;
-
 const SECTION_KIND_META = {
   market_snapshot: { labelKey: "chat.section.market_snapshot" },
   key_findings: { labelKey: "chat.section.key_findings" },
@@ -387,7 +380,6 @@ function WalletChatSectionRenderer({ section, onBulletClick, onCopySection, copi
 function CitedTextBlock({
   ids,
   content,
-  sources,
   hoveredCiteIds,
   onOpenPanel,
   onHoverIds,
@@ -395,7 +387,6 @@ function CitedTextBlock({
 }: {
   ids: string[];
   content: string;
-  sources: ChatSource[];
   hoveredCiteIds: number[];
   onOpenPanel: (key: string, ids: string[], pos: { top: number; left: number }) => void;
   onHoverIds: (ids: string[]) => void;
@@ -462,7 +453,6 @@ function InlineFlow({
                 key={`f-c-${idx}`}
                 ids={part.ids}
                 content={part.content}
-                sources={sources}
                 hoveredCiteIds={hoveredCiteIds}
                 onOpenPanel={onOpenPanel}
                 onHoverIds={onHoverIds}

@@ -38,7 +38,7 @@ const selectLimitMock = vi.fn().mockResolvedValue([]);
 
 vi.mock("@sv/db/index.js", () => {
   const fromMock = vi.fn(() => ({
-    where: vi.fn((...args) => {
+    where: vi.fn(() => {
       // Return limit mock or promise directly depending on use case
       return {
         limit: selectLimitMock,

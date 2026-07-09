@@ -40,7 +40,6 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
   autoRefresh = false,
   refreshInterval = 30000,
   fetchEnabled = true,
-  className,
   actions,
 }) => {
   const { tr, fmt } = useLocalization();
