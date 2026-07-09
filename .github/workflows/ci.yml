@@ -14,7 +14,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
       - run: npm install
       - run: npm run typecheck --workspaces
 
@@ -25,7 +24,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
       - run: npm install
       - run: npm run lint --workspaces
 
@@ -36,7 +34,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
       - run: npm install
       - run: npm run test -w=server
 
@@ -47,7 +44,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
       - run: npm install
       - run: npm run test -w=client -- --run
 
@@ -58,7 +54,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
       - run: npm install
       - run: npm run server:build
   
@@ -69,7 +64,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
       - run: npm install
       - run: npm run client:build
    
