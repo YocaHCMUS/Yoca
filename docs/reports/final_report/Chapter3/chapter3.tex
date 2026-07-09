@@ -66,7 +66,7 @@ Sơ đồ use-case tổng quát mô tả hai tác nhân chính của hệ thốn
     \centering
     \includegraphics[width=0.8\textwidth]{images/usecase.png}
     \caption{Sơ đồ Use-case của hệ thống Yoca}
-    \label{fig}
+    \label{fig:usecase}
 \end{figure}
 
 \section{Kiến trúc hệ thống tổng thể}
@@ -82,10 +82,10 @@ Yoca được tổ chức theo kiến trúc ứng dụng web full-stack, gồm h
     \centering
     \includegraphics[width=1\textwidth]{images/arch.jpg}
     \caption{Kiến trúc tổng thể của hệ thống Yoca}
-    \label{fig}
+    \label{fig:kien_truc_tong_the}
 \end{figure}
 
-% Hình~\ref{fig} nên thể hiện các thành phần chính gồm React frontend, Hono API backend, PostgreSQL, các domain service, các provider bên ngoài như Helius, Moralis, CoinGecko, Birdeye, Google Gemini, Stripe và Solana RPC. Ngoài ra, sơ đồ cũng nên làm rõ hướng dữ liệu đi từ frontend đến backend, từ backend đến cache, từ backend đến provider, sau đó quay lại frontend dưới dạng dữ liệu đã chuẩn hóa.
+% Hình~\ref{fig:kien_truc_tong_the} nên thể hiện các thành phần chính gồm React frontend, Hono API backend, PostgreSQL, các domain service, các provider bên ngoài như Helius, Moralis, CoinGecko, Birdeye, Google Gemini, Stripe và Solana RPC. Ngoài ra, sơ đồ cũng nên làm rõ hướng dữ liệu đi từ frontend đến backend, từ backend đến cache, từ backend đến provider, sau đó quay lại frontend dưới dạng dữ liệu đã chuẩn hóa.
 
 
 \subsection{Kiến trúc Monolith phân lớp và cơ chế Tải dữ liệu động (Lazy Loading)}
@@ -153,10 +153,10 @@ Sau khi dữ liệu đã được chuẩn hóa, backend tổng hợp các thông
 % \end{minipage}
 % }
 % \caption{Luồng truy xuất và tổng hợp lịch sử giao dịch ví}
-% \label{fig}
+% \label{fig:lich_su_giao_dich}
 % \end{figure}
 
-% Hình~\ref{fig} nên thể hiện các thành phần chính gồm User, React Frontend, Hono Route, Wallet Service, Cache Retriever, Provider Fetcher, PostgreSQL và Helius. Điểm cần nhấn mạnh trong sơ đồ là backend không gọi provider ngay lập tức trong mọi trường hợp, mà kiểm tra cache trước, sau đó chỉ gọi provider khi dữ liệu thiếu hoặc đã hết hạn.
+% Hình~\ref{fig:lich_su_giao_dich} nên thể hiện các thành phần chính gồm User, React Frontend, Hono Route, Wallet Service, Cache Retriever, Provider Fetcher, PostgreSQL và Helius. Điểm cần nhấn mạnh trong sơ đồ là backend không gọi provider ngay lập tức trong mọi trường hợp, mà kiểm tra cache trước, sau đó chỉ gọi provider khi dữ liệu thiếu hoặc đã hết hạn.
 
 
 
@@ -183,10 +183,10 @@ Frontend nhận dữ liệu đã chuẩn hóa và truyền vào các component b
 % \end{minipage}
 % }
 % \caption{Luồng truy vấn và trực quan hóa dữ liệu biểu đồ}
-% \label{fig}
+% \label{fig:chart_data_flow}
 % \end{figure}
 
-% Hình~\ref{fig} nên thể hiện các thành phần gồm Chart Component, Chart API Client, Hono Chart Route, Chart Service, Token hoặc Wallet Service, PostgreSQL Cache và provider như CoinGecko hoặc Helius. Điểm cốt lõi của luồng là dữ liệu biểu đồ phải được chuẩn hóa trước khi trả về frontend để đảm bảo các component biểu đồ có thể tái sử dụng.
+% Hình~\ref{fig:chart_data_flow} nên thể hiện các thành phần gồm Chart Component, Chart API Client, Hono Chart Route, Chart Service, Token hoặc Wallet Service, PostgreSQL Cache và provider như CoinGecko hoặc Helius. Điểm cốt lõi của luồng là dữ liệu biểu đồ phải được chuẩn hóa trước khi trả về frontend để đảm bảo các component biểu đồ có thể tái sử dụng.
 
 \subsection{Luồng vấn đáp dữ liệu thông qua AI Assistant}
 
@@ -209,10 +209,10 @@ Mô hình AI sử dụng ngữ cảnh đã chuẩn bị để tạo câu trả l
 % \end{minipage}
 % }
 % \caption{Luồng vấn đáp dữ liệu thông qua AI Assistant}
-% \label{fig}
+% \label{fig:ai_assistant}
 % \end{figure}
 
-% Hình~\ref{fig} nên thể hiện các thành phần gồm User, Chat Component, Hono Route, Wallet Chat Service, PostgreSQL, AI Provider và giao diện trả kết quả. Điểm quan trọng cần thể hiện là AI chỉ nhận dữ liệu đã được backend chuẩn hóa và tóm tắt, thay vì truy cập trực tiếp vào dữ liệu thô hoặc tự tạo ra số liệu.
+% Hình~\ref{fig:ai_assistant} nên thể hiện các thành phần gồm User, Chat Component, Hono Route, Wallet Chat Service, PostgreSQL, AI Provider và giao diện trả kết quả. Điểm quan trọng cần thể hiện là AI chỉ nhận dữ liệu đã được backend chuẩn hóa và tóm tắt, thay vì truy cập trực tiếp vào dữ liệu thô hoặc tự tạo ra số liệu.
 
 
 \input{Chapter3/database/database}

@@ -19,11 +19,15 @@
 	backend=bibtex,
 	defernumbers=true]{biblatex}
 \usepackage[unicode]{hyperref} % Bookmark tiếng Việt
+\usepackage{xurl} % Cho phép URL dài trong tài liệu tham khảo tự xuống dòng, tránh overfull hbox
 \addbibresource{References/references.bib}
 
 \makeatletter
 \def\blx@maxline{77}
 \makeatother
+
+% Giảm cảnh báo Overfull \hbox nhỏ do LaTeX không tìm được điểm ngắt dòng đẹp
+\emergencystretch=3em
 
 % Chèn hình, các hình trong luận văn được để trong thư mục Images/
 \usepackage{graphicx}
