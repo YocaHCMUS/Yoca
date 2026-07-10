@@ -211,14 +211,28 @@ export default function MarketPage() {
     client.api.tokens["market-pools"].trending,
     200,
     { query: { duration: trendingDuration } },
+    { enabled: activeTab == "trending" },
   );
 
-  const topPools = useGet(client.api.tokens["market-pools"].top, 200, {
-    query: { sortBy: topSort },
-  });
+  const topPools = useGet(
+    client.api.tokens["market-pools"].top,
+    200,
+    { query: { sortBy: topSort } },
+    { enabled: activeTab == "top" },
+  );
 
-  const topGainerPools = useGet(client.api.tokens["market-pools"].gainers, 200);
-  const newPairs = useGet(client.api.tokens["market-pools"]["new-pairs"], 200);
+  const topGainerPools = useGet(
+    client.api.tokens["market-pools"].gainers,
+    200,
+    undefined,
+    { enabled: activeTab == "gainers" },
+  );
+  const newPairs = useGet(
+    client.api.tokens["market-pools"]["new-pairs"],
+    200,
+    undefined,
+    { enabled: activeTab == "newPairs" },
+  );
 
   const headings = useMemo(() => {
     switch (activeTab) {

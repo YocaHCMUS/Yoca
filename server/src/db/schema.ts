@@ -21,6 +21,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import dayjs from "dayjs";
+import type { MarketPoolItem } from "@sv/types/market-pool.js";
 export * from "./alerts";
 export * from "./users";
 export * from "./payment";
@@ -187,6 +188,16 @@ export const tokenPoolData = pgTable("token_pool_data", {
 
   updatedAt: timestamp("updated_at"),
   topPoolsUpdatedAt: timestamp("top_pools_updated_at"),
+});
+
+export const marketPoolLists = pgTable("market_pool_lists", {
+  listKey: varchar("list_key", { length: 64 }).primaryKey(),
+  responseJson: jsonb("response_json").$type<MarketPoolItem[]>().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
 export const tokenTopPools = pgTable(
