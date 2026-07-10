@@ -2,6 +2,7 @@ import TabContainer from "@/components/tabContainer/tabContainer";
 import { useEffect, useState } from "react";
 import styles from "./profile.module.scss";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
     getUserSubscription,
     getUserSubscriptions,
@@ -49,6 +50,7 @@ function formatMoney(cents: number, currency: string) {
 
 export function ProfileSubscriptionsTab() {
   const { fmt } = useLocalization();
+  const { refreshUser } = useAuth();
   const [activeSubtab, setActiveSubtab] =
     useState<SubscriptionSubtab>("subscriptions");
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -56,7 +58,7 @@ export function ProfileSubscriptionsTab() {
   const [history, setHistory] = useState<PaymentHistory[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = async (showLoading = true) => {
+  const fetchData = async (showLoading = true, refreshSession = false) => {
     try {
       if (showLoading) setLoading(true);
       const [sub, subs, hist] = await Promise.all([
@@ -67,6 +69,9 @@ export function ProfileSubscriptionsTab() {
       setSubscription(sub);
       setSubscriptions(subs);
       setHistory(hist);
+      if (refreshSession) {
+        await refreshUser();
+      }
     } catch (err) {
       console.error("Failed to fetch subscription data", err);
     } finally {
@@ -99,7 +104,7 @@ export function ProfileSubscriptionsTab() {
             key="subscriptions"
             subscription={subscription}
             subscriptions={subscriptions}
-            onUpdate={() => fetchData(false)}
+            onUpdate={() => fetchData(false, true)}
           />,
           <PaymentHistoryPanel
             key="payment-history"

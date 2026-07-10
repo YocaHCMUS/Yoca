@@ -5,7 +5,6 @@ import { PageWrapper } from "@/components/wrapper/PageWrapper";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserTheme } from "@/contexts/ThemeContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { getUserSubscription, type PlanTier } from "@/services/profile/subscriptionApi";
 import styles from "./wash-trading.module.scss";
 import { WashTradingChat } from "@/components/wash-trading/WashTradingChat/WashTradingChat";
 
@@ -131,8 +130,6 @@ const getSeverityColor = (severity: Severity) => {
   if (severity === "success") return "#639922";
   return "var(--text-muted)";
 };
-
-const hasWashTradingTier = (tier: "Free" | PlanTier) => tier === "Plus" || tier === "Pro";
 
 
 const normalizeRiskLevel = (riskLevel: string): RiskLevel => {
@@ -1098,10 +1095,8 @@ const WashTradingPage: React.FC = () => {
   const [selectedWalletAddress, setSelectedWalletAddress] = useState<string | null>(null);
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
   const [isAiVerdictOpen, setIsAiVerdictOpen] = useState(true);
-  const [planTier, setPlanTier] = useState<"Free" | PlanTier>("Free");
-  const [isPlanLoading, setIsPlanLoading] = useState(false);
   const [isPlusGateOpen, setIsPlusGateOpen] = useState(false);
-  const canUseWashTradingAi = hasWashTradingTier(planTier);
+  const canUseWashTradingAi = user?.entitlements.washTradingAi == true;
 
   useEffect(() => {
     setManualMint(mint || "");
@@ -1132,41 +1127,9 @@ const WashTradingPage: React.FC = () => {
   }, [symbolFromUrl]);
 
   useEffect(() => {
-    if (isUserLoading) return;
-    if (!user) {
-      setPlanTier("Free");
-      setIsPlanLoading(false);
-      return;
-    }
-
-    let active = true;
-    setIsPlanLoading(true);
-    getUserSubscription()
-      .then((subscription) => {
-        if (!active) return;
-        const isCurrent =
-          subscription &&
-          (subscription.status === "active" || subscription.status === "trialing") &&
-          (!subscription.currentPeriodEnd || new Date(subscription.currentPeriodEnd).getTime() > Date.now());
-        setPlanTier(isCurrent ? subscription.planTier : "Free");
-      })
-      .catch((err) => {
-        console.error("Failed to fetch subscription for wash trading gate", err);
-        if (active) setPlanTier("Free");
-      })
-      .finally(() => {
-        if (active) setIsPlanLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [user, isUserLoading]);
-
-  useEffect(() => {
-    if (!user || isUserLoading || isPlanLoading || canUseWashTradingAi) return;
+    if (!user || isUserLoading || canUseWashTradingAi) return;
     setIsPlusGateOpen(true);
-  }, [user, isUserLoading, isPlanLoading, canUseWashTradingAi]);
+  }, [user, isUserLoading, canUseWashTradingAi]);
 
   const targetMint = mint || manualMint.trim();
 
@@ -1176,7 +1139,7 @@ const WashTradingPage: React.FC = () => {
       setError(String(tr("washTrading.errors.missingMint")));
       return;
     }
-    if (isUserLoading || isPlanLoading) return;
+    if (isUserLoading) return;
     if (!user) {
       openAuthModal("login");
       setError("Sign in to use Wash Trading AI Analysis.");
@@ -1228,7 +1191,7 @@ const WashTradingPage: React.FC = () => {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [symbol, targetMint, timeframe, algoTab, lang, tr, isUserLoading, isPlanLoading, openAuthModal, user, canUseWashTradingAi]);
+  }, [symbol, targetMint, timeframe, algoTab, lang, tr, isUserLoading, openAuthModal, user, canUseWashTradingAi]);
 
   useEffect(() => {
     if (mint) {
@@ -1366,7 +1329,7 @@ const WashTradingPage: React.FC = () => {
                 <button
                   className={`${styles.btnPrimary} ${isAnalyzing ? styles.loading : ""}`}
                   onClick={handleAnalyze}
-                  disabled={isAnalyzing || isPlanLoading || (!!user && !canUseWashTradingAi)}
+                  disabled={isAnalyzing || isUserLoading || (!!user && !canUseWashTradingAi)}
                 >
                   {isAnalyzing ? tr("washTrading.inputs.analyzing") : tr("washTrading.inputs.runAnalyze")}
                 </button>
@@ -1608,7 +1571,7 @@ const WashTradingPage: React.FC = () => {
               <div className={styles.plusGateIcon}>AI</div>
               <h2 className={styles.plusGateTitle}>Plus plan required</h2>
               <p className={styles.plusGateText}>
-                AI Wash Trading Analysis is available on Plus and Pro. Your current plan is {planTier}.
+                AI Wash Trading Analysis is available on Plus and Pro. Your current plan is {user.planTier}.
               </p>
               <div className={styles.plusGateActions}>
                 <button
