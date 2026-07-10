@@ -84,6 +84,13 @@ function resolveAssetName(symbol: string, name?: string): string {
 
 const DONUT_COLORS = ["#1665C0", "#3D8DF5", "#7BB8F5", "#C4DFF9"];
 
+type DonutTooltipParam = {
+  percent: number;
+  name: string;
+  color: string;
+  value: number;
+};
+
 function buildDonutOption(
   distribution: DistributionData,
   labels: { top10: string; mid1: string; mid2: string; others: string },
@@ -94,8 +101,8 @@ function buildDonutOption(
 
   const entries = [
     { name: labels.top10, value: parseFloat(distribution.top_10 ?? "0") },
-    { name: labels.mid1, value: parseFloat((distribution as any)[mid1Key] ?? "0") },
-    { name: labels.mid2, value: parseFloat((distribution as any)[mid2Key] ?? "0") },
+    { name: labels.mid1, value: parseFloat((distribution as unknown as Record<string, string | undefined>)[mid1Key] ?? "0") },
+    { name: labels.mid2, value: parseFloat((distribution as unknown as Record<string, string | undefined>)[mid2Key] ?? "0") },
     { name: labels.others, value: parseFloat(distribution.rest ?? "0") },
   ].filter((e) => e.value > 0);
 
@@ -107,7 +114,8 @@ function buildDonutOption(
       borderWidth: 1,
       padding: [10, 14],
       textStyle: { color: "#e0e0e0", fontSize: 13 },
-      formatter: (params: any) => {
+      formatter: (param: unknown) => {
+        const params = param as DonutTooltipParam;
         const bar = Math.round(params.percent);
         const filled = Math.round(bar / 5);
         const track = 20;
@@ -197,7 +205,6 @@ function InsightCard({ question, answer }: { question: string; answer: string })
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function TokenInsightTabs({
-  address,
   meta,
   market,
   holders,
@@ -414,3 +421,5 @@ export function TokenInsightTabs({
     </div>
   );
 }
+
+

@@ -222,32 +222,6 @@ function getNonStableNonSolTradeMints(events: NormalizedWalletEvent[]): string[]
     return limitUnique(mints, 8);
 }
 
-function buildFactor(
-    code: RiskFactor["code"],
-    impact: number,
-    description: string,
-    evidenceId: string,
-): { factor: RiskFactor; evidence: EvidenceBundle } {
-    return {
-        factor: {
-            code,
-            severity: severityFromImpact(impact),
-            scoreImpact: impact,
-            description,
-            evidenceIds: [evidenceId],
-        },
-        evidence: createEvidence(
-            evidenceId,
-            code === "NEGATIVE_PNL" || code === "LOW_WIN_RATE" ? "PNL_RESULT" : code === "HIGH_PORTFOLIO_CONCENTRATION" ? "TOKEN_HOLDING" : code === "WASH_TRADING_SUSPECTED" ? "GRAPH_PATTERN" : "METRIC_THRESHOLD",
-            evidenceId,
-            description,
-            impact,
-            null,
-            severityFromImpact(impact),
-        ),
-    };
-}
-
 function evaluateHighFrequencyActivity(profile: WalletBehaviorProfile, events?: NormalizedWalletEvent[]): RiskRuleResult {
     let impact = 0;
 

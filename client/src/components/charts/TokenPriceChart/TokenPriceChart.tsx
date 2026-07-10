@@ -97,7 +97,6 @@ export function TokenPriceChart({
 
 
     const startTime = dayMs;
-    const endTime = startTime + 24 * 60 * 60 * 1000;
 
     const allPrices = chartData.map((d) => d[1] as number);
     const minPrice = Math.min(...allPrices);

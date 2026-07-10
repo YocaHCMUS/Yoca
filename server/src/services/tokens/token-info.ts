@@ -82,12 +82,9 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
       }),
   );
 
-  const rawInfoList = rawInfoSettled
-    .filter(
-      (result): result is PromiseFulfilledResult<any> =>
-        result.status === "fulfilled" && result.value != null,
-    )
-    .map((result) => result.value);
+  const rawInfoList = rawInfoSettled.flatMap((result) =>
+    result.status === "fulfilled" && result.value != null ? [result.value] : [],
+  );
 
   const details = rawInfoList.map(
     (
@@ -105,9 +102,9 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
       },
       detailedInfo: {
         coingeckoId: raw.id,
-        decimals: raw.detail_platforms?.solana?.decimal_place!,
+        decimals: raw.detail_platforms?.solana?.decimal_place ?? 0,
         address: raw.platforms.solana!,
-        description: raw.description?.en!,
+        description: raw.description?.en ?? '',
         categories: raw.categories_details?.map(
           (detail: { id?: string | null }) => detail.id!,
         ),
@@ -121,20 +118,20 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
       },
       market: {
         address: raw.platforms.solana!,
-        fullyDilutedValuation: raw.market_data?.fully_diluted_valuation?.usd!,
-        marketCap: raw.market_data?.market_cap?.usd!,
-        marketCapRank: raw.market_data?.market_cap_rank!,
-        priceUsd: raw.market_data?.current_price?.usd!,
-        volume24h: raw.market_data?.total_volume?.usd!,
-        ath: raw.market_data?.ath?.usd!,
-        athChangePercentage: raw.market_data?.ath_change_percentage?.usd!,
-        athDate: new Date(raw.market_data?.ath_date?.usd!),
-        atl: raw.market_data?.atl?.usd!,
-        atlChangePercentage: raw.market_data?.atl_change_percentage?.usd!,
-        atlDate: new Date(raw.market_data?.atl_date?.usd!),
+        fullyDilutedValuation: raw.market_data?.fully_diluted_valuation?.usd ?? null,
+        marketCap: raw.market_data?.market_cap?.usd ?? 0,
+        marketCapRank: raw.market_data?.market_cap_rank ?? null,
+        priceUsd: raw.market_data?.current_price?.usd ?? 0,
+        volume24h: raw.market_data?.total_volume?.usd ?? 0,
+        ath: raw.market_data?.ath?.usd ?? null,
+        athChangePercentage: raw.market_data?.ath_change_percentage?.usd ?? null,
+        athDate: raw.market_data?.ath_date?.usd ? new Date(raw.market_data.ath_date.usd) : null,
+        atl: raw.market_data?.atl?.usd ?? null,
+        atlChangePercentage: raw.market_data?.atl_change_percentage?.usd ?? null,
+        atlDate: raw.market_data?.atl_date?.usd ? new Date(raw.market_data.atl_date.usd) : null,
         circulatingSupply: raw.market_data?.circulating_supply,
-        high24h: raw.market_data?.high_24h?.usd!,
-        low24h: raw.market_data?.low_24h?.usd!,
+        high24h: raw.market_data?.high_24h?.usd ?? null,
+        low24h: raw.market_data?.low_24h?.usd ?? null,
         priceChangePercentage1h:
           raw.market_data?.price_change_percentage_1h_in_currency?.usd,
         priceChange24h: raw.market_data?.price_change_24h,

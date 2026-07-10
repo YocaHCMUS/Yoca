@@ -10,9 +10,9 @@ vi.mock("@sv/util/rate-limit.js", () => ({
   rlFetch: mocks.rlFetch,
 }));
 
-vi.mock("@sv/util/util-zerion.js", () => ({
-  getEndpoint: (path: string) => new URL(`https://api.zerion.io/v1${path}`),
-  getRequiredHeaders: () => ({}),
+vi.mock("@sv/util/util-mobula.js", () => ({
+  getEndpoint: (path: string) => new URL(`https://api.mobula.io/api${path}`),
+  getRequiredHeaders: () => ({ "Content-Type": "application/json" }),
   limiter: {},
 }));
 
@@ -24,13 +24,7 @@ vi.mock("@sv/db/index.js", () => ({
 }));
 
 import "@sv/util/date.js";
-import { zrn_WalletBalanceChartSchema } from "@sv/services/_types/wallet-raw-responses.js";
-import {
-  getWalletBalanceHistory,
-  ZerionUpstreamError,
-} from "@sv/services/wallet/walletCharts.service.js";
-
-const safeParseSpy = vi.spyOn(zrn_WalletBalanceChartSchema, "safeParse");
+import { getWalletBalanceHistory } from "@sv/services/wallet/walletCharts.service.js";
 
 function configureCacheRows(rows: unknown[]) {
   const orderBy = vi.fn().mockResolvedValue(rows);
@@ -42,61 +36,73 @@ function configureCacheRows(rows: unknown[]) {
 describe("getWalletBalanceHistory", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    configureCacheRows([]);
   });
 
-  it("does not validate a Zerion error envelope with the success schema", async () => {
-    mocks.rlFetch.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          errors: [{ title: "Internal Server Error", detail: "" }],
-        }),
-        { status: 500, statusText: "Internal Server Error" },
-      ),
-    );
+  describe("upstream error handling", () => {
+    it("returns null when upstream returns an error status", async () => {
+      configureCacheRows([]);
+      mocks.rlFetch.mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            errors: [{ title: "Internal Server Error", detail: "" }],
+          }),
+          { status: 500 },
+        ),
+      );
 
-    await expect(
-      getWalletBalanceHistory("SupRAxJybdbv68r1PDXDq9LWKgdzLsmPwiyj41RM5SF", "30D"),
-    ).rejects.toMatchObject({
-      provider: "zerion",
-      upstreamStatus: 500,
-      endpointPath: "/v1/wallets/SupRAxJybdbv68r1PDXDq9LWKgdzLsmPwiyj41RM5SF/charts/month",
-      errorTitle: "Internal Server Error",
-    } satisfies Partial<ZerionUpstreamError>);
+      const result = await getWalletBalanceHistory(
+        "SupRAxJybdbv68r1PDXDq9LWKgdzLsmPwiyj41RM5SF",
+        "30D",
+      );
+      expect(result).toBeNull();
+    });
 
-    expect(safeParseSpy).not.toHaveBeenCalled();
+    it("returns null when upstream returns an empty body", async () => {
+      configureCacheRows([]);
+      mocks.rlFetch.mockResolvedValue(new Response("", { status: 200 }));
+
+      const result = await getWalletBalanceHistory(
+        "SupRAxJybdbv68r1PDXDq9LWKgdzLsmPwiyj41RM5SF",
+        "30D",
+      );
+      expect(result).toBeNull();
+    });
+
+    it("returns null when upstream returns a malformed body", async () => {
+      configureCacheRows([]);
+      mocks.rlFetch.mockResolvedValue(new Response("{", { status: 200 }));
+
+      const result = await getWalletBalanceHistory(
+        "SupRAxJybdbv68r1PDXDq9LWKgdzLsmPwiyj41RM5SF",
+        "30D",
+      );
+      expect(result).toBeNull();
+    });
   });
 
-  it.each([
-    ["empty", ""],
-    ["malformed", "{"],
-  ])("turns a %s successful response into a typed upstream failure", async (_kind, body) => {
-    mocks.rlFetch.mockResolvedValue(new Response(body, { status: 200 }));
+  describe("caching", () => {
+    it("uses valid fresh cached data without calling the upstream API", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-07-09T12:00:00.000Z"));
+      const NOW_MS = Date.now();
+      const DAY_MS = 86_400_000;
+      // 31 daily points covering the full 30-day range
+      const points = Array.from({ length: 31 }, (_, i) => ({
+        timestampMs: NOW_MS - (30 - i) * DAY_MS,
+        usdValue: 100 + i,
+        updatedAtMs: NOW_MS,
+      }));
+      configureCacheRows(points);
 
-    await expect(
-      getWalletBalanceHistory("SupRAxJybdbv68r1PDXDq9LWKgdzLsmPwiyj41RM5SF", "30D"),
-    ).rejects.toMatchObject({
-      provider: "zerion",
-      upstreamStatus: 200,
-      reason: "invalid_response",
-    } satisfies Partial<ZerionUpstreamError>);
-  });
+      const result = await getWalletBalanceHistory(
+        "SupRAxJybdbv68r1PDXDq9LWKgdzLsmPwiyj41RM5SF",
+        "30D",
+      );
 
-  it("uses valid fresh cached data without calling Zerion", async () => {
-    const now = Date.now();
-    configureCacheRows([
-      {
-        timestampMs: now - 1_000,
-        usdValue: 123.45,
-      },
-    ]);
-
-    const result = await getWalletBalanceHistory(
-      "SupRAxJybdbv68r1PDXDq9LWKgdzLsmPwiyj41RM5SF",
-      "30D",
-    );
-
-    expect(result).toEqual([{ timestampMs: now - 1_000, usdValue: 123.45 }]);
-    expect(mocks.rlFetch).not.toHaveBeenCalled();
+      expect(result).not.toBeNull();
+      expect(result!.length).toBeGreaterThanOrEqual(28);
+      expect(mocks.rlFetch).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
   });
 });

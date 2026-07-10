@@ -330,6 +330,7 @@ export default function Tble({
 
   const searchedRows = useMemo(() => {
     if (!enableSearch || !resolvedSearchValue.trim()) return rows;
+    if (!clientFiltering) return rows;
     const query = resolvedSearchValue.trim().toLowerCase();
     const fields = searchFields && searchFields.length > 0
       ? searchFields

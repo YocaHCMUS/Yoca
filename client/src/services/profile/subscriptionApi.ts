@@ -52,7 +52,24 @@ export interface PaymentHistory {
         | null;
   createdAt: string;
 }
+function normalizePaymentMethodDetails(value: unknown): PaymentHistory["paymentMethodDetails"] {
+    if (!value || typeof value !== "object") return null;
 
+    const details = value as Record<string, unknown>;
+    const brand = typeof details.brand === "string" ? details.brand : undefined;
+    const last4 = typeof details.last4 === "string" ? details.last4 : undefined;
+    if (brand || last4) return { brand, last4 };
+
+    const type = typeof details.type === "string" ? details.type : undefined;
+    if (!type) return null;
+
+    return {
+        type,
+        txId: typeof details.txId === "string" ? details.txId : undefined,
+        amount: typeof details.amount === "number" ? details.amount : undefined,
+        merchant: typeof details.merchant === "string" ? details.merchant : undefined,
+    };
+}
 
 export async function confirmPayment(paymentIntentId: string) {
     const resp = await client.api.payment.confirm.$post({
@@ -85,7 +102,11 @@ export async function getUserPaymentHistory(): Promise<PaymentHistory[]> {
     if (!resp.ok) {
         throw new Error(`Failed to fetch payment history: ${resp.status}`);
     }
-    return resp.json();
+    const rows = await resp.json();
+    return rows.map((row) => ({
+        ...row,
+        paymentMethodDetails: normalizePaymentMethodDetails(row.paymentMethodDetails),
+    }));
 }
 
 export async function cancelSubscription(subscriptionId: string) {

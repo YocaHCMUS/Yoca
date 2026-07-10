@@ -5,10 +5,11 @@ import {
   formatPercent,
   uniqueStrings,
 } from "./utils";
+import type { AnalysisProfileLike, AnalysisSummaryLike } from "./types";
 
 type AIBehaviorSummaryCardProps = {
-  aiSummary: any;
-  profile: any;
+  aiSummary: AnalysisSummaryLike;
+  profile: AnalysisProfileLike;
 };
 
 export function AIBehaviorSummaryCard({ aiSummary, profile }: AIBehaviorSummaryCardProps) {

@@ -1,9 +1,9 @@
 // In-Flight Coalescer implementation
-const inFlight = new Map<string, Promise<any>>();
+const inFlight = new Map<string, Promise<unknown>>();
 
 export function coalesce<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
     if (inFlight.has(key)) {
-        return inFlight.get(key)!;
+        return inFlight.get(key)! as Promise<T>;
     }
 
     const promise = fetcher().finally(() => {

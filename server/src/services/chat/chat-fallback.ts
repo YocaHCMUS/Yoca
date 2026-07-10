@@ -355,11 +355,6 @@ function buildPortfolioSections(
     return `${p.token ?? p.symbol ?? "?"}: ${compactCurrency(p.valueUsd)}${p.change24h != null ? ` (${percent(p.change24h)})` : ""}`;
   });
 
-  const totalValue = portfolio.reduce<number>((sum: number, item) => {
-    const v = finiteNumber((item as Record<string, unknown>).valueUsd);
-    return sum + (v ?? 0);
-  }, 0);
-
   return [
     {
       title: language === "vi" ? "Top N?m Gi?" : "Top Holdings",

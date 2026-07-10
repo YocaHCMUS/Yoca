@@ -1,5 +1,6 @@
 import React from "react";
 import ReactECharts from "echarts-for-react";
+import type { EChartsOption } from "echarts";
 import { useUserTheme } from "@/contexts/ThemeContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -16,6 +17,13 @@ interface TokenUnlockScheduleProps {
 }
 
 // ─── Color palette ────────────────────────────────────────────────────────────
+
+type UnlockTooltipParam = {
+  axisValue?: string;
+  value: number;
+  color?: string;
+  seriesName?: string;
+};
 
 const COLORS = [
   "#7C3AED", "#2563EB", "#2DD4BF", "#22C55E",
@@ -101,7 +109,7 @@ function buildChartOption(
   uniqueDates: string[],
   deduped: Record<string, number[]>,
   isDark: boolean,
-): any {
+): EChartsOption {
   const textColor = isDark ? "#CBD5E1" : "#475569";
   const gridColor = isDark
     ? "rgba(148,163,184,0.12)"
@@ -119,11 +127,12 @@ function buildChartOption(
       borderWidth: 1,
       padding: [12, 16],
       textStyle: { color: isDark ? "#e0e0e0" : "#161616", fontSize: 12 },
-      formatter: (params: any) => {
+      formatter: (params: unknown) => {
         if (!Array.isArray(params) || params.length === 0) return "";
-        const date = params[0].axisValue;
-        const total = (params as any[]).reduce((s: number, p: any) => s + (p.value || 0), 0);
-        const rows = (params as any[])
+        const points = Array.isArray(params) ? (params as UnlockTooltipParam[]) : [];
+        const date = points[0]?.axisValue ?? "";
+        const total = points.reduce((s, p) => s + (p.value || 0), 0);
+        const rows = points
           .filter((p) => p.value > 0)
           .sort((a, b) => b.value - a.value)
           .map((p) =>
@@ -304,3 +313,5 @@ export const TokenUnlockSchedule = ({ symbol, schedule }: TokenUnlockSchedulePro
     </div>
   );
 };
+
+

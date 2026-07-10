@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
 
-const numVariables = ["count", "min", "max", "total"] as const;
-
-type NumVariable = (typeof numVariables)[number];
+type NumVariable = "count" | "min" | "max" | "total";
 
 type ParamValue<K extends string> = K extends NumVariable
   ? number

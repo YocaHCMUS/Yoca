@@ -12,11 +12,16 @@ vi.mock("@/contexts/LocalizationContext", () => ({
       if (key === "table.filterLabel") return `Filter: ${params?.column ?? ""}`;
       if (key === "table.apply") return "Apply";
       if (key === "table.searchPlaceholder") return "Search table...";
+      if (key === "table.searchAriaLabel") return "Search table";
+      if (key === "table.filterSearchPlaceholder") return "Search table...";
       if (key === "table.pageRangeText") return `Page ${params?.count} of ${params?.total}`;
       if (key === "table.page") return `Page ${params?.count}`;
       if (key === "table.itemsPerPageText") return "Items per page";
       if (key === "table.previousPage") return "Previous page";
       if (key === "table.nextPage") return "Next page";
+      if (key === "table.from") return "Min";
+      if (key === "table.to") return "Max";
+      if (key === "table.clearFilter") return "Clear filter";
       if (key === "common.cancel") return "Cancel";
       if (key === "common.loading") return "Loading";
       if (key === "common.noData") return "No data";

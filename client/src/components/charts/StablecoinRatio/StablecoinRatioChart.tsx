@@ -23,6 +23,8 @@ import { ChartWrapper, ChartContainer, ChartGridItem, ChartSection, ChartStatsHe
 import type { ChartProps } from "../shared/ChartProp";
 import type { StatCard } from "../shared/ChartStatsHeader";
 
+
+
 type StablecoinRatioData = InferFetcherData<typeof fetchStablecoinRatio>;
 
 export function StablecoinRatioChart({
@@ -35,7 +37,6 @@ export function StablecoinRatioChart({
   autoRefresh = true,
   refreshInterval = 30000,
   fetchEnabled = true,
-  className,
   actions,
 }: ChartProps) {
   const { tr } = useLocalization();
@@ -134,7 +135,7 @@ export function StablecoinRatioChart({
         axisPointer: {
           type: "cross",
         },
-        formatter: (params: any) =>
+        formatter: (params: unknown) =>
           formatAxisTooltip(
             params,
             (p) =>
@@ -201,3 +202,4 @@ export function StablecoinRatioChart({
     </ChartWrapper>
   );
 }
+

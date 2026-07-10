@@ -5,13 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization, type TranslateFunction } from "@/contexts/LocalizationContext";
 import {
   fetchWalletAiAnalysis,
-  fetchWalletIntelligence,
-  fetchWalletPortfolio,
-  fetchWalletSwaps,
   type WalletAiAnalysisResponse,
-  type WalletIntelligenceResponse,
-  type WalletPortfolioItem,
-  type WalletSwap,
   type WalletAiAnalysisLanguage,
   WalletAiApiError,
 } from "@/services/wallet/walletApi";
@@ -165,30 +159,6 @@ export function WalletAiAnalysisPopup({
     setReport(null);
 
     try {
-      // Ensure dependencies are available
-      let intelligence: WalletIntelligenceResponse | null = null;
-      let portfolio: WalletPortfolioItem[] = [];
-      let swaps: WalletSwap[] = [];
-
-      try {
-        const [intelResult, portfolioResult, swapsResult] = await Promise.allSettled([
-          fetchWalletIntelligence(walletAddress, "solana"),
-          fetchWalletPortfolio(walletAddress),
-          fetchWalletSwaps(walletAddress),
-        ]);
-
-        if (intelResult.status === "fulfilled") intelligence = intelResult.value;
-        if (portfolioResult.status === "fulfilled" && Array.isArray(portfolioResult.value)) {
-          portfolio = portfolioResult.value;
-        }
-        if (swapsResult.status === "fulfilled") {
-          const swapsData = swapsResult.value?.swaps;
-          if (Array.isArray(swapsData)) swaps = swapsData;
-        }
-      } catch {
-        // Continue anyway
-      }
-
       const response = await fetchWalletAiAnalysis(walletAddress, apiLanguage);
       setReport(response);
     } catch (err) {

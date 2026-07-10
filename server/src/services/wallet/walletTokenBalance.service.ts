@@ -120,12 +120,12 @@ export async function getWalletTokenBalanceHistory(
   timePeriod: WalletTimePeriod = "30D",
 ): Promise<WalletTokenBalanceHistory> {
   // TODO: enforce this
-  const toZrnChartPeriod: Record<any, "week" | "month"> = {
+  const toZrnChartPeriod: Partial<Record<WalletTimePeriod, "week" | "month">> = {
     "7D": "week",
     "30D": "month",
   };
 
-  const zrnPeriod = toZrnChartPeriod[timePeriod];
+  const zrnPeriod = toZrnChartPeriod[timePeriod] ?? "month";
 
   const nowUtc = dayjs().utc();
   const end = nowUtc.valueOf();

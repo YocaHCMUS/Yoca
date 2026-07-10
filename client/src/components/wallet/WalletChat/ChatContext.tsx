@@ -125,7 +125,7 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
       try {
         const res = await client.api.chat.usage.$get();
         const data = await res.json();
-        if (!cancelled) setUsage(data as unknown as ChatAiUsage);
+        if (!cancelled) setUsage(data as ChatAiUsage);
       } catch { /* ignore */ }
     })();
     return () => { cancelled = true; };

@@ -16,7 +16,7 @@ interface WalletHeroProps {
   winRateLoading: boolean;
 }
 
-function formatCompact(val: number | null | undefined, fmt: any): string {
+function formatCompact(val: number | null | undefined, fmt: ReturnType<typeof useLocalization>["fmt"]): string {
   if (val == null || !Number.isFinite(val)) return "\u2014";
   return fmt.num.compact.currency(val);
 }
@@ -241,3 +241,4 @@ export function WalletHero({
 }
 
 export default WalletHero;
+

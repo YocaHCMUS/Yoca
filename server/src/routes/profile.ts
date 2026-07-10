@@ -46,7 +46,6 @@ import {
 import {
   getUserWalletLabels,
   setUserWalletLabel,
-  deleteUserWalletLabel,
 } from "@sv/services/profile/walletLabels.service.js";
 import {
   backfillUserPaymentHistory,
@@ -882,7 +881,7 @@ const app = new Hono()
       }
 
       const enrichedHistory = await enrichPaymentHistoryWithStripeProduct(
-        history as any[],
+        history,
       );
       return c.json(enrichedHistory, statusCode.Ok);
     } catch (err) {

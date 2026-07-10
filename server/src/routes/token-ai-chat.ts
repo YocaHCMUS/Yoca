@@ -1,8 +1,6 @@
 import {
   askTokenAiChat,
   inferTokenAiLanguage,
-  type TokenAiLanguage,
-  type TokenAiTimeframe,
 } from "@sv/services/tokens/token-ai-chat.service.js";
 import userExtract from "@sv/middlewares/user-extract.js";
 import { honoJwt } from "@sv/middlewares/validation.js";

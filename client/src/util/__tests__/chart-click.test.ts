@@ -88,12 +88,12 @@ describe("attachChartDayClick", () => {
   }
 
   beforeEach(() => {
-    onDayClick = vi.fn() as unknown as (timestamp: number) => void;
+    onDayClick = vi.fn() as (timestamp: number) => void;
   });
 
   it("fires onDayClick for series click with valid dataIndex", () => {
     const chart = createMockChart();
-    const cleanup = attachChartDayClick(chart as unknown as never, timestamps, onDayClick);
+    const cleanup = attachChartDayClick(chart as never, timestamps, onDayClick);
 
     const seriesHandler = chart.handlers.get("click")?.values().next().value;
     seriesHandler!({ componentType: "series", dataIndex: 2 });
@@ -104,7 +104,7 @@ describe("attachChartDayClick", () => {
 
   it("ignores non-series component clicks", () => {
     const chart = createMockChart();
-    const cleanup = attachChartDayClick(chart as unknown as never, timestamps, onDayClick);
+    const cleanup = attachChartDayClick(chart as never, timestamps, onDayClick);
 
     const seriesHandler = chart.handlers.get("click")?.values().next().value;
     seriesHandler!({ componentType: "xAxis", dataIndex: 2 });
@@ -115,7 +115,7 @@ describe("attachChartDayClick", () => {
 
   it("ignores series click with null dataIndex", () => {
     const chart = createMockChart();
-    const cleanup = attachChartDayClick(chart as unknown as never, timestamps, onDayClick);
+    const cleanup = attachChartDayClick(chart as never, timestamps, onDayClick);
 
     const seriesHandler = chart.handlers.get("click")?.values().next().value;
     seriesHandler!({ componentType: "series", dataIndex: null });
@@ -127,7 +127,7 @@ describe("attachChartDayClick", () => {
   it("fires onDayClick for blank area click (category axis)", () => {
     const chart = createMockChart();
     chart.convertFromPixel.mockReturnValue([2, 150]);
-    const cleanup = attachChartDayClick(chart as unknown as never, timestamps, onDayClick);
+    const cleanup = attachChartDayClick(chart as never, timestamps, onDayClick);
 
     const blankHandler = chart.handlers.get("zr:click")?.values().next().value;
     blankHandler!({ offsetX: 100, offsetY: 200, target: undefined });
@@ -143,7 +143,7 @@ describe("attachChartDayClick", () => {
   it("fires onDayClick for blank area click (time axis, snap nearest)", () => {
     const chart = createMockChart();
     chart.convertFromPixel.mockReturnValue([2499, 150]);
-    const cleanup = attachChartDayClick(chart as unknown as never, timestamps, onDayClick, "time");
+    const cleanup = attachChartDayClick(chart as never, timestamps, onDayClick, "time");
 
     const blankHandler = chart.handlers.get("zr:click")?.values().next().value;
     blankHandler!({ offsetX: 100, offsetY: 200, target: undefined });
@@ -154,7 +154,7 @@ describe("attachChartDayClick", () => {
 
   it("ignores blank area click when event.target exists", () => {
     const chart = createMockChart();
-    const cleanup = attachChartDayClick(chart as unknown as never, timestamps, onDayClick);
+    const cleanup = attachChartDayClick(chart as never, timestamps, onDayClick);
 
     const blankHandler = chart.handlers.get("zr:click")?.values().next().value;
     blankHandler!({ offsetX: 100, offsetY: 200, target: { some: "element" } });
@@ -166,7 +166,7 @@ describe("attachChartDayClick", () => {
   it("ignores blank area click when convertFromPixel returns null", () => {
     const chart = createMockChart();
     chart.convertFromPixel.mockReturnValue(null);
-    const cleanup = attachChartDayClick(chart as unknown as never, timestamps, onDayClick);
+    const cleanup = attachChartDayClick(chart as never, timestamps, onDayClick);
 
     const blankHandler = chart.handlers.get("zr:click")?.values().next().value;
     blankHandler!({ offsetX: 100, offsetY: 200, target: undefined });
@@ -177,7 +177,7 @@ describe("attachChartDayClick", () => {
 
   it("returns cleanup function that removes all handlers", () => {
     const chart = createMockChart();
-    const cleanup = attachChartDayClick(chart as unknown as never, timestamps, onDayClick);
+    const cleanup = attachChartDayClick(chart as never, timestamps, onDayClick);
 
     const [seriesHandler] = chart.handlers.get("click")!.values();
     const [blankHandler] = chart.handlers.get("zr:click")!.values();
@@ -190,7 +190,7 @@ describe("attachChartDayClick", () => {
 
   it("does not fire after cleanup", () => {
     const chart = createMockChart();
-    const cleanup = attachChartDayClick(chart as unknown as never, timestamps, onDayClick);
+    const cleanup = attachChartDayClick(chart as never, timestamps, onDayClick);
     cleanup();
 
     const seriesHandlers = chart.handlers.get("click");

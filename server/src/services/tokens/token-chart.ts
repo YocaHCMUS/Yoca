@@ -374,8 +374,6 @@ export async function getDailyTokenMarketChart(
 
 async function fetchMobulaDayRange(
   tokenAddress: string,
-  fromMs: number,
-  toMs: number,
 ): Promise<void> {
   const points = await getMobulaChartData(tokenAddress, "24h");
   if (points.length === 0) return;
@@ -456,11 +454,7 @@ export async function getTokenPriceChartForDay(
 
   // If incomplete or stale, fetch from Mobula for this specific day
   if (existing.length == 0 || isStale) {
-    await fetchMobulaDayRange(
-      tokenAddress,
-      fromMs,
-      toMs,
-    );
+    await fetchMobulaDayRange(tokenAddress);
 
     // Re-query after fetch
     const refreshed = await db

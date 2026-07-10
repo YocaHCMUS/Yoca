@@ -1,5 +1,3 @@
-import type { NewsEntry, NewsWebhookPayload } from "./news.schema.js";
-
 export type {
     NewsArticleExpandParam,
     NewsArticleExpansion,

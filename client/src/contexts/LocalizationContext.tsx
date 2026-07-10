@@ -70,14 +70,13 @@ const LocalizationContext = React.createContext<
   LocalizationContextType | undefined
 >(undefined);
 
-// Safe any because TranslationKeyPath guarantees the leaf exists
 function getTranslationValue(
   translation: TranslationSchema,
   path: TranslationKeyPath,
 ): string {
   return path
     .split(".")
-    .reduce((acc, part) => (acc as any)[part], translation as any) as string;
+    .reduce((acc: unknown, part) => (acc as Record<string, unknown>)[part], translation as unknown) as string;
 }
 
 function reactFromParts(parts: ReactNode[]) {

@@ -50,3 +50,40 @@ export type RiskFactorExplanation = {
   meaning: string;
   whyItMatters: string;
 };
+
+export type AnalysisProfileLike = {
+  risk?: {
+    trustScore?: number | null;
+    riskScore?: number | null;
+    riskLevel?: string | null;
+    riskFactors?: RiskFactorLike[];
+  };
+  persona?: {
+    primaryPersona?: string | null;
+    primaryPersonaScore?: number | null;
+    confidence?: number | null;
+    reasoning?: string[];
+    evidenceIds?: string[];
+  };
+  dataQuality?: {
+    completenessScore?: number | null;
+    unsupportedTransactionCount?: number | null;
+    missingPriceCount?: number | null;
+  };
+  analysisWindow?: {
+    actualTransactionCount?: number | null;
+    transactionLimit?: number | null;
+  };
+  evidence?: EvidenceLike[];
+};
+
+export type AnalysisSummaryLike = {
+  shortSummary?: string | null;
+  riskSummary?: string | null;
+  pnlSummary?: string | null;
+  walletPersona?: string | null;
+  suspiciousFindings?: FindingLike[];
+  behaviorInsights?: FindingLike[];
+  evidenceHighlights?: EvidenceLike[];
+  cautionNotes?: string[];
+};

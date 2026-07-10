@@ -57,8 +57,6 @@ export function hashColor(key: string): string {
   // Multiple hash segments for better independence
   const hash1 = (hash >> 16) & 0xFFFF;
   const hash2 = hash & 0xFFFF;
-  const hash3 = (hash1 ^ hash2) & 0xFFFF;
-  
   // Pleasant saturation range: 45-75% (avoiding extremes)
   // Use sine-like distribution for more variety without oversaturation
   const saturation = 45 + (Math.sin(hash1 / 65535 * Math.PI * 2) * 0.3 + 0.5) * 30;

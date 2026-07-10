@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useTokenPageData, usePoolTrades } from "./useTokenPageData";
-import type { PoolData } from "./useTokenPageData";
+import type { MarketData, MetaData, PoolData } from "./useTokenPageData";
 import client from "@/api/main";
 
 const $getPoolsDetails = client.api.tokens.pools[":addresses"].$get;
@@ -58,7 +58,7 @@ export const useTokenPageLogic = (
           // Add mapped fields for UI components that use camelCase or specific property names provided by the backend response
           priceUsd: fallbackPool.priceUsd || 0,
           // Ensure to matche the shape expected by MarketStats
-        } as any)
+        } as unknown as MarketData)
       : null;
 
   const metaData = hasBackendData
@@ -71,7 +71,7 @@ export const useTokenPageLogic = (
           imageUrl: null,
           description: "Data provided by On-chain Dex",
           coinGeckoId: null,
-        } as any)
+        } as unknown as MetaData)
       : null;
 
   // 2. Local state for selected pool
@@ -194,3 +194,6 @@ export const useTokenPageLogic = (
     handlePoolChange,
   };
 };
+
+
+

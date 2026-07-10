@@ -29,7 +29,7 @@ export function CurvedEdge({
   targetY,
   data,
 }: EdgeProps<CurvedEdgeData>) {
-  const { hoveredToken, setHoveredToken, hoveredPair, setHoveredPair, hoveredAddress } = useContext(HoverContext);
+  const { hoveredToken, setHoveredToken, hoveredPair, hoveredAddress } = useContext(HoverContext);
 
   const seqNo = parseInt(data?.sequenceText ?? "0", 10);
   const playStep = data?.playStep;

@@ -1,15 +1,15 @@
 import type { ECharts } from "echarts";
 
-interface EChartsEventParams {
-  componentType: string;
-  dataIndex?: number;
-  seriesIndex?: number;
-}
-
 interface ZRClickEvent {
   offsetX: number;
   offsetY: number;
   target?: unknown;
+}
+
+interface EChartsEventParams {
+  componentType: string;
+  dataIndex?: number;
+  seriesIndex?: number;
 }
 
 export function snapToNearest(value: number, sorted: number[]): number {
@@ -43,41 +43,38 @@ export function attachChartDayClick(
     if (ts != null) onDayClick(ts);
   };
 
-  // const zr = chart.getZr();
-  // const blankHandler = (event: ZRClickEvent) => {
-  //   if (event.target) return;
+  const zr = chart.getZr();
+  const blankHandler = (event: ZRClickEvent) => {
+    if (event.target) return;
 
-  //   const result = chart.convertFromPixel(
-  //     { xAxisIndex: 0 },
-  //     [event.offsetX, event.offsetY],
-  //   );
+    const result = chart.convertFromPixel(
+      { xAxisIndex: 0 },
+      [event.offsetX, event.offsetY],
+    );
 
-  //   console.log("[chart-click] Blank click at pixel:", event.offsetX, event.offsetY, "converted to:", result);
-  //   if (!result) return;
+    if (!result) return;
 
-  //   const xValue = (Array.isArray(result) ? result[0] : result) as
-  //     | number
-  //     | string
-  //     | undefined;
-  //   if (xValue == null) return;
+    const xValue = (Array.isArray(result) ? result[0] : result) as
+      | number
+      | string
+      | undefined;
+    if (xValue == null) return;
 
-  //   let ts: number | undefined;
-  //   if (typeof xValue === "number" && axisType === "category") {
-  //     ts = timestamps[xValue];
-  //   } else if (typeof xValue === "number") {
-  //     ts = snapToNearest(xValue, timestamps);
-  //   }
+    let ts: number | undefined;
+    if (typeof xValue === "number" && axisType === "category") {
+      ts = timestamps[xValue];
+    } else if (typeof xValue === "number") {
+      ts = snapToNearest(xValue, timestamps);
+    }
 
-  //   console.log("[chart-click] Interpreted xValue:", xValue, "mapped to timestamp:", ts);
-
-  //   if (ts != null) onDayClick(ts);
-  // };
+    if (ts != null) onDayClick(ts);
+  };
 
   chart.on("click", seriesHandler);
-  // zr.on("click", blankHandler);
+  zr.on("click", blankHandler);
 
   return () => {
     chart.off("click", seriesHandler);
-    // zr.off("click", blankHandler);
+    zr.off("click", blankHandler);
   };
 }

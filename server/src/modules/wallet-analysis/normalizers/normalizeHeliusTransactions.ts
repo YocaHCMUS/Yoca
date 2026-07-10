@@ -8,6 +8,9 @@ import {
 import { classifyWalletEvent } from "./classifyWalletEvent";
 import type {
     HeliusEnhancedTransactionLike,
+    HeliusNativeTransfer,
+    HeliusTokenTransfer,
+    HeliusSwapLeg,
     NormalizedNativeTransfer,
     NormalizedNftEvent,
     NormalizedSwap,
@@ -15,8 +18,6 @@ import type {
     NormalizedWalletEvent,
     ProtocolInfo,
     TransactionFeeInfo,
-    WalletEventDraft,
-    WalletEventDirection,
 } from "../types/normalizedWalletEvent";
 
 const LAMPORTS_PER_SOL = 1_000_000_000;
@@ -96,6 +97,14 @@ function resolveStatus(tx: HeliusEnhancedTransactionLike): "SUCCESS" | "FAILED" 
     return "FAILED";
 }
 
+function getRawAmountParts(
+    rawAmount: HeliusTokenTransfer["rawAmount"],
+): { tokenAmount?: string; decimals?: number } {
+    if (rawAmount && typeof rawAmount === "object" && !Array.isArray(rawAmount)) {
+        return rawAmount;
+    }
+    return typeof rawAmount === "string" ? { tokenAmount: rawAmount } : {};
+}
 function resolveTransferDirectionForWallet(
     walletAddress: string,
     from: string,
@@ -116,18 +125,19 @@ function resolveTransferDirectionForWallet(
     return "UNKNOWN";
 }
 
-function pickTokenAmount(transfer: any): { amount: number; rawAmount?: string | null; decimals?: number | null } {
+function pickTokenAmount(transfer: HeliusTokenTransfer): { amount: number; rawAmount?: string | null; decimals?: number | null } {
     const directAmount = toNonNegativeNumber(transfer?.tokenAmount ?? transfer?.amount);
     if (directAmount != null) {
         return {
             amount: directAmount,
-            rawAmount: isNonEmptyString(transfer?.rawAmount) ? String(transfer.rawAmount) : null,
+            rawAmount: isNonEmptyString(getRawAmountParts(transfer.rawAmount).tokenAmount) ? String(getRawAmountParts(transfer.rawAmount).tokenAmount) : null,
             decimals: toFiniteNumber(transfer?.decimals),
         };
     }
 
-    const rawAmount = transfer?.rawTokenAmount?.tokenAmount ?? transfer?.rawAmount?.tokenAmount;
-    const decimals = transfer?.rawTokenAmount?.decimals ?? transfer?.decimals ?? transfer?.rawAmount?.decimals;
+    const rawAmountParts = getRawAmountParts(transfer.rawAmount);
+    const rawAmount = transfer?.rawTokenAmount?.tokenAmount ?? rawAmountParts.tokenAmount;
+    const decimals = transfer?.rawTokenAmount?.decimals ?? transfer?.decimals ?? rawAmountParts.decimals;
     const normalized = toAmountFromRaw(rawAmount, decimals);
 
     return {
@@ -139,7 +149,7 @@ function pickTokenAmount(transfer: any): { amount: number; rawAmount?: string | 
 
 function normalizeNativeTransfers(
     walletAddress: string,
-    transfers: any[] | undefined,
+    transfers: HeliusNativeTransfer[] | undefined,
 ): NormalizedNativeTransfer[] {
     const normalized: NormalizedNativeTransfer[] = [];
 
@@ -166,7 +176,7 @@ function normalizeNativeTransfers(
 
 function normalizeTokenTransfers(
     walletAddress: string,
-    transfers: any[] | undefined,
+    transfers: HeliusTokenTransfer[] | undefined,
 ): NormalizedTokenTransfer[] {
     const normalized: NormalizedTokenTransfer[] = [];
 
@@ -204,7 +214,7 @@ function normalizeTokenTransfers(
 }
 
 function extractSwapLeg(
-    leg: any,
+    leg: HeliusSwapLeg | undefined,
 ): { mint: string; amount: number; decimals: number | null; symbol?: string | null } | null {
     const mint = normalizeAddressLike(leg?.mint, leg?.inputMint, leg?.outputMint);
     if (!mint) {
@@ -233,7 +243,7 @@ function normalizeSwap(tx: HeliusEnhancedTransactionLike, warnings: string[]): N
         return null;
     }
 
-    const swapLegs: Array<{ inputs?: any[]; outputs?: any[]; source?: string; programId?: string }> = [];
+    const swapLegs: Array<{ inputs?: HeliusSwapLeg[]; outputs?: HeliusSwapLeg[]; source?: string; programId?: string }> = [];
     if (Array.isArray(swap.innerSwaps) && swap.innerSwaps.length > 0) {
         for (const innerSwap of swap.innerSwaps) {
             swapLegs.push({

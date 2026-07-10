@@ -16,7 +16,7 @@ export function GoogleAuthButton({
   onError,
 }: GoogleAuthButtonProps) {
   const { tr } = useLocalization();
-  const [googleErr, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const googleButtonContainerRef = useRef<HTMLDivElement>(null);
 
@@ -42,7 +42,7 @@ export function GoogleAuthButton({
         setError(errorMsg);
         onError(errorMsg);
       }
-    } catch (error) {
+    } catch {
       const errorMsg = tr("ERROR.NETWORK_ERR");
       setError(errorMsg);
       onError(errorMsg);

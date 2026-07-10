@@ -24,7 +24,7 @@ beforeAll(async () => {
 });
 
 afterEach(() => {
-  delete process.env.AI_USAGE_LIMIT_ENABLED;
+  vi.unstubAllEnvs();
 });
 
 describe("AI usage policy", () => {
@@ -74,7 +74,7 @@ describe("AI usage policy", () => {
   });
 
   it("can disable AI usage limits and premium locks with env flag", () => {
-    process.env.AI_USAGE_LIMIT_ENABLED = "false";
+    vi.stubEnv("AI_USAGE_LIMIT_ENABLED", "false");
 
     expect(isAiUsageLimitEnabled()).toBe(false);
     expect(isAiFeatureLocked("wallet_ai_analysis", "Free")).toBe(false);

@@ -48,7 +48,7 @@ function resolveDexLogo(
     .toLowerCase()
     .replace(/-/g, "_");
   // Look up through alias chain (may have multiple hops)
-  let currentId = normalizedDexId;
+  const currentId = normalizedDexId;
   let resolvedId = DEX_ID_ALIASES[currentId] ?? currentId;
   // Follow the chain if alias maps to another alias
   while (DEX_ID_ALIASES[resolvedId] && DEX_ID_ALIASES[resolvedId] !== resolvedId) {

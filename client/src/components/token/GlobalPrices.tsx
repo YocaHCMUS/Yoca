@@ -15,6 +15,10 @@ type RateEntry = {
 
 type RatesMap = Record<string, RateEntry>;
 
+type ExchangeRatesApi = {
+  $get: () => Promise<Response>;
+};
+
 const FIAT_ALLOWLIST = [
   "usd", "eur", "gbp", "jpy", "cad", "aud", "cny", "inr",
   "krw", "brl", "rub", "chf", "hkd", "sgd", "mxn", "zar",
@@ -34,11 +38,10 @@ function formatPrice(priceUsd: number, rateVsUsd: number, unit: string): string 
 
 function useExchangeRates() {
   return useSWR<RatesMap | null>("misc/exchange-rates", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const res = await (client.api.misc["exchange-rates"] as any).$get();
+    const res = await (client.api.misc["exchange-rates"] as ExchangeRatesApi).$get();
     if (!res.ok) return null;
     const json = await res.json();
-    return (json as any)?.rates ?? null;
+    return (json as { rates?: RatesMap })?.rates ?? null;
   });
 }
 
@@ -124,5 +127,6 @@ export function GlobalPrices({ priceUsd, symbol }: GlobalPricesProps) {
     </div>
   );
 }
+
 
 

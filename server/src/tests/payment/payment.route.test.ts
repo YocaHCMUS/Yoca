@@ -1,5 +1,39 @@
+import type { Context, Next } from "hono";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { Hono } from "hono";
+
+type TestContext = Context<{
+  Variables: {
+    jwtPayload: Record<string, unknown>;
+    userPayload: Record<string, unknown>;
+  };
+}>;
+
+interface MockUser {
+  id: string;
+  displayName: string | null;
+  email: string | null;
+  avatarUrl: string | null;
+  discordWebhookUrl: string | null;
+  emailAlertsEnabled: boolean;
+  emailAlertsAddress: string | null;
+  stripeCustomerId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+type DbRow = Record<string, unknown>;
+type MockDb = {
+  select: () => MockDb;
+  from: (table: unknown) => MockDb;
+  where: (condition: unknown) => MockDb;
+  limit: (count: number) => Promise<DbRow[]>;
+  insert: (table: unknown) => MockDb;
+  values: (value: unknown) => MockDb;
+  returning: () => Promise<DbRow[]>;
+  update: (table: unknown) => MockDb;
+  set: (value: unknown) => MockDb;
+};
 
 // ---------------------------------------------------------------------------
 // Mock all external dependencies BEFORE importing the route under test.
@@ -68,25 +102,23 @@ vi.mock("@sv/services/users.js", () => ({
 
 // Mock middlewares — bypass JWT and user-extract for route-level tests
 vi.mock("@sv/middlewares/user-extract.js", () => ({
-  default: vi.fn((c: any, next: any) => {
+  default: vi.fn((c: TestContext, next: Next) => {
     c.set("userPayload", { id: "user-123" });
     return next();
   }),
 }));
 
 vi.mock("@sv/middlewares/validation.js", () => ({
-  honoJwt: vi.fn((c: any, next: any) => {
+  honoJwt: vi.fn((c: TestContext, next: Next) => {
     c.set("jwtPayload", { id: "user-123" });
     return next();
   }),
-  validate: vi.fn((_target: string, _schema: any) => async (c: any, next: any) => {
-    // Let the route's own Zod validation run — we just skip JWT here.
-    // We parse c.req.json() ourselves to simulate what validate() does.
+  validate: vi.fn(() => async (c: TestContext, next: Next) => {
     try {
       const body = await c.req.json();
-      c.req.valid = (_t: string) => body;
+      c.req.valid = (() => body) as unknown as typeof c.req.valid;
     } catch {
-      c.req.valid = (_t: string) => ({});
+      c.req.valid = (() => ({})) as unknown as typeof c.req.valid;
     }
     return next();
   }),
@@ -107,7 +139,7 @@ vi.mock("@sv/util/responses.js", () => ({
 }));
 
 vi.mock("drizzle-orm", () => ({
-  eq: vi.fn((field: any, val: any) => ({ field, val })),
+  eq: vi.fn((field: unknown, val: unknown) => ({ field: field as string, val })),
 }));
 
 // ---------------------------------------------------------------------------
@@ -158,9 +190,9 @@ function buildTestApp() {
       return c.json({ errorCode: "INVALID_TOKEN_PAYLOAD" }, 401);
     }
 
-    let body: any;
+    let body: Record<string, unknown>;
     try {
-      body = await c.req.json();
+      body = await c.req.json() as Record<string, unknown>;
     } catch {
       return c.json({ errorCode: "BAD_REQUEST", message: "Invalid JSON body" }, 400);
     }
@@ -175,16 +207,16 @@ function buildTestApp() {
       }, 400);
     }
 
-    const VALID_TIERS = ["Lite", "Plus", "Pro"];
-    if (!tier || !VALID_TIERS.includes(tier)) {
+    const VALID_TIERS = ["Lite", "Plus", "Pro"] as const;
+    if (typeof tier !== "string" || !VALID_TIERS.includes(tier as (typeof VALID_TIERS)[number])) {
       return c.json({
         errorCode: "BAD_REQUEST",
         message: `tier must be one of: ${VALID_TIERS.join(", ")}`,
       }, 400);
     }
 
-    const VALID_NETWORKS = ["devnet", "testnet", "mainnet-beta"];
-    if (network && !VALID_NETWORKS.includes(network)) {
+    const VALID_NETWORKS = ["devnet", "testnet", "mainnet-beta"] as const;
+    if (network !== undefined && (typeof network !== "string" || !VALID_NETWORKS.includes(network as (typeof VALID_NETWORKS)[number]))) {
       return c.json({
         errorCode: "BAD_REQUEST",
         message: `network must be one of: ${VALID_NETWORKS.join(", ")}`,
@@ -193,10 +225,12 @@ function buildTestApp() {
 
     // ── Verification ────────────────────────────────────────────────────
     try {
+      const verifiedTier = tier as (typeof VALID_TIERS)[number];
+      const verifiedNetwork = (network ?? "devnet") as (typeof VALID_NETWORKS)[number];
       const verification = await verifySolanaTransaction(
         txId,
-        tier,
-        network ?? "devnet"
+        verifiedTier,
+        verifiedNetwork
       );
 
       if (!verification.valid) {
@@ -208,21 +242,21 @@ function buildTestApp() {
 
       // ── DB upsert ──────────────────────────────────────────────────────
       const solanaTxKey = `solana-${txId}`;
-      const [existing] = await (db as any)
+      const [existing] = await (db as unknown as MockDb)
         .select()
         .from({})
         .where({})
         .limit(1);
 
-      let result: any;
+      let result: Record<string, unknown> | undefined;
       if (!existing) {
-        const [inserted] = await (db as any)
+        const [inserted] = await (db as unknown as MockDb)
           .insert({})
           .values({
             userId,
             stripeSubscriptionId: solanaTxKey,
             stripeCustomerId: `solana-${userId}`,
-            planTier: tier,
+            planTier: verifiedTier,
             status: "active",
             cancelAtPeriodEnd: false,
           })
@@ -236,10 +270,11 @@ function buildTestApp() {
         status: result?.status ?? "active",
         txId,
       }, 200);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An unknown error occurred.";
       return c.json({
         errorCode: "INTERNAL_SERVER_ERR",
-        message: err.message ?? "An unknown error occurred.",
+        message: msg,
       }, 500);
     }
   });
@@ -252,7 +287,18 @@ function buildTestApp() {
 // ---------------------------------------------------------------------------
 
 const VALID_TX_SIG = "A".repeat(88); // 88-char Solana signature
-const MOCK_USER    = { id: "user-123", email: "test@example.com", stripeCustomerId: null };
+const MOCK_USER: MockUser = {
+  id: "user-123",
+  displayName: "Test User",
+  email: "test@example.com",
+  avatarUrl: null,
+  discordWebhookUrl: null,
+  emailAlertsEnabled: false,
+  emailAlertsAddress: null,
+  stripeCustomerId: null,
+  createdAt: new Date(0),
+  updatedAt: new Date(0),
+};
 
 async function callRoute(
   app: Hono,
@@ -282,7 +328,7 @@ describe("POST /payment/verify-solana — Hono Route Unit Tests", () => {
     vi.clearAllMocks();
     app = buildTestApp();
 
-    vi.mocked(getUserById).mockResolvedValue(MOCK_USER as any);
+    vi.mocked(getUserById).mockResolvedValue(MOCK_USER);
     vi.mocked(verifySolanaTransaction).mockResolvedValue({ valid: true, amountSol: 0.001, amountUsd: 0.1 });
   });
 
@@ -297,7 +343,7 @@ describe("POST /payment/verify-solana — Hono Route Unit Tests", () => {
     it("should return 400 when txId is missing", async () => {
       const res = await callRoute(app, { tier: "Lite", network: "devnet" });
       expect(res.status).toBe(400);
-      const body = await res.json() as any;
+      const body = await res.json() as Record<string, unknown>;
       expect(body.errorCode).toBe("BAD_REQUEST");
       expect(body.message).toMatch(/txId/);
     });
@@ -305,14 +351,14 @@ describe("POST /payment/verify-solana — Hono Route Unit Tests", () => {
     it("should return 400 when txId is shorter than 64 characters", async () => {
       const res = await callRoute(app, { txId: "short", tier: "Lite", network: "devnet" });
       expect(res.status).toBe(400);
-      const body = await res.json() as any;
+      const body = await res.json() as Record<string, unknown>;
       expect(body.message).toMatch(/txId/);
     });
 
     it("should return 400 when tier is missing", async () => {
       const res = await callRoute(app, { txId: VALID_TX_SIG, network: "devnet" });
       expect(res.status).toBe(400);
-      const body = await res.json() as any;
+      const body = await res.json() as Record<string, unknown>;
       expect(body.message).toMatch(/tier/);
     });
 
@@ -327,7 +373,7 @@ describe("POST /payment/verify-solana — Hono Route Unit Tests", () => {
     });
 
     it("should return 401 when user is not found in the database", async () => {
-      vi.mocked(getUserById).mockResolvedValue(null as any);
+      vi.mocked(getUserById).mockResolvedValue(null as never);
 
       const res = await callRoute(app, { txId: VALID_TX_SIG, tier: "Lite", network: "devnet" });
       expect(res.status).toBe(401);
@@ -349,7 +395,7 @@ describe("POST /payment/verify-solana — Hono Route Unit Tests", () => {
 
       // Act
       const res = await callRoute(app, { txId: VALID_TX_SIG, tier: "Lite", network: "devnet" });
-      const body = await res.json() as any;
+      const body = await res.json() as Record<string, unknown>;
 
       // Assert
       expect(res.status).toBe(200);
@@ -384,7 +430,7 @@ describe("POST /payment/verify-solana — Hono Route Unit Tests", () => {
 
       // Act
       const res = await callRoute(app, { txId: VALID_TX_SIG, tier: "Lite", network: "devnet" });
-      const body = await res.json() as any;
+      const body = await res.json() as Record<string, unknown>;
 
       // Assert
       expect(res.status).toBe(400);
@@ -399,7 +445,7 @@ describe("POST /payment/verify-solana — Hono Route Unit Tests", () => {
       });
 
       const res = await callRoute(app, { txId: VALID_TX_SIG, tier: "Lite", network: "devnet" });
-      const body = await res.json() as any;
+      const body = await res.json() as Record<string, unknown>;
 
       expect(res.status).toBe(400);
       expect(body.errorCode).toBe("PAYMENT_VERIFICATION_FAILED");
@@ -412,7 +458,7 @@ describe("POST /payment/verify-solana — Hono Route Unit Tests", () => {
       });
 
       const res = await callRoute(app, { txId: VALID_TX_SIG, tier: "Plus", network: "devnet" });
-      const body = await res.json() as any;
+      const body = await res.json() as Record<string, unknown>;
 
       expect(res.status).toBe(400);
       expect(body.message).toContain("0.005 SOL");
@@ -430,7 +476,7 @@ describe("POST /payment/verify-solana — Hono Route Unit Tests", () => {
         tier: "Lite",
         network: "mainnet-beta",
       });
-      const body = await res.json() as any;
+      const body = await res.json() as Record<string, unknown>;
 
       expect(res.status).toBe(400);
       expect(body.message).toContain("Network mismatch");
@@ -443,7 +489,7 @@ describe("POST /payment/verify-solana — Hono Route Unit Tests", () => {
       });
 
       const res = await callRoute(app, { txId: VALID_TX_SIG, tier: "Lite", network: "devnet" });
-      const body = await res.json() as any;
+      const body = await res.json() as Record<string, unknown>;
 
       expect(res.status).toBe(400);
       expect(body.message).toContain("not found");
@@ -460,7 +506,7 @@ describe("POST /payment/verify-solana — Hono Route Unit Tests", () => {
       );
 
       const res = await callRoute(app, { txId: VALID_TX_SIG, tier: "Lite", network: "devnet" });
-      const body = await res.json() as any;
+      const body = await res.json() as Record<string, unknown>;
 
       expect(res.status).toBe(500);
       expect(body.errorCode).toBe("INTERNAL_SERVER_ERR");
@@ -471,7 +517,7 @@ describe("POST /payment/verify-solana — Hono Route Unit Tests", () => {
       vi.mocked(verifySolanaTransaction).mockRejectedValue({});
 
       const res = await callRoute(app, { txId: VALID_TX_SIG, tier: "Lite", network: "devnet" });
-      const body = await res.json() as any;
+      const body = await res.json() as Record<string, unknown>;
 
       expect(res.status).toBe(500);
       expect(body.message).toBe("An unknown error occurred.");

@@ -1,5 +1,18 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { Hono } from "hono";
+import type { Context, Next } from "hono";
+
+type JsonObject = Record<string, unknown>;
+type DbSelectChain = {
+  from: (table: unknown) => {
+    where: (clause: unknown) => { limit: (count: number) => Promise<unknown[]> };
+  };
+};
+type InsertedSubscription = { stripeSubscriptionId?: string; status?: string };
+
+function errorMessage(err: unknown) {
+  return err instanceof Error ? err.message : "An unknown error occurred.";
+}
 
 // ---------------------------------------------------------------------------
 // Module Mocks — must be hoisted before any imports that transitively use them
@@ -69,23 +82,23 @@ vi.mock("@sv/services/users.js", () => ({
 }));
 
 vi.mock("@sv/middlewares/user-extract.js", () => ({
-  default: vi.fn((c: any, next: any) => {
+  default: vi.fn((c: Context, next: Next) => {
     c.set("userPayload", { id: "user-123" });
     return next();
   }),
 }));
 
 vi.mock("@sv/middlewares/validation.js", () => ({
-  honoJwt: vi.fn((c: any, next: any) => {
+  honoJwt: vi.fn((c: Context, next: Next) => {
     c.set("jwtPayload", { id: "user-123" });
     return next();
   }),
-  validate: vi.fn((_target: string, _schema: any) => async (c: any, next: any) => {
+  validate: vi.fn(() => async (c: Context, next: Next) => {
     try {
-      const body = await c.req.json();
-      c.req.valid = (_: string) => body;
+      const body = (await c.req.json()) as Record<string, unknown>;
+      c.req.valid = () => body;
     } catch {
-      c.req.valid = (_: string) => ({});
+      c.req.valid = () => ({});
     }
     return next();
   }),
@@ -106,7 +119,7 @@ vi.mock("@sv/util/responses.js", () => ({
 }));
 
 vi.mock("drizzle-orm", () => ({
-  eq: vi.fn((field: any, val: any) => ({ field, val })),
+  eq: vi.fn((field: unknown, val: unknown) => ({ field, val })),
 }));
 
 // ---------------------------------------------------------------------------
@@ -147,9 +160,9 @@ function buildTestApp(opts: { userId?: string | null } = {}) {
       return c.json({ errorCode: "INVALID_TOKEN_PAYLOAD" }, 401);
     }
 
-    let body: any;
+    let body: Record<string, unknown>;
     try {
-      body = await c.req.json();
+      body = (await c.req.json()) as Record<string, unknown>;
     } catch {
       return c.json({ errorCode: "BAD_REQUEST", message: "Invalid JSON body" }, 400);
     }
@@ -195,12 +208,12 @@ function buildTestApp(opts: { userId?: string | null } = {}) {
       // DB upsert (simplified — mirrors real route logic)
       const solanaTxKey = `solana-${txId}`;
 
-      const [existing] = await (db.select() as any).from({}).where({}).limit(1);
+      const [existing] = await (db.select() as unknown as DbSelectChain).from({}).where({}).limit(1);
 
-      let result: any;
+      let result: InsertedSubscription | undefined;
       if (!existing) {
         const [inserted] = await db
-          .insert({} as any)
+          .insert({} as never)
           .values({
             userId,
             stripeSubscriptionId: solanaTxKey,
@@ -216,10 +229,10 @@ function buildTestApp(opts: { userId?: string | null } = {}) {
         status: result?.status ?? "active",
         txId,
       }, 200);
-    } catch (err: any) {
+    } catch (err: unknown) {
       return c.json({
         errorCode: "INTERNAL_SERVER_ERR",
-        message: err.message ?? "An unknown error occurred.",
+        message: errorMessage(err),
       }, 500);
     }
   });
@@ -255,7 +268,7 @@ describe("POST /payment/verify-solana — Unit Tests (AAA pattern)", () => {
     vi.clearAllMocks();
     app = buildTestApp();
 
-    vi.mocked(getUserById).mockResolvedValue(MOCK_USER as any);
+    vi.mocked(getUserById).mockResolvedValue(MOCK_USER as never);
     vi.mocked(verifySolanaTransaction).mockResolvedValue({
       valid: true,
       amountSol: 0.001,
@@ -275,7 +288,7 @@ describe("POST /payment/verify-solana — Unit Tests (AAA pattern)", () => {
     it("should return 400 when txId is missing", async () => {
       // Arrange & Act
       const res = await post(app, { tier: "Lite", network: "devnet" });
-      const body = await res.json() as any;
+      const body = await res.json() as JsonObject;
 
       // Assert
       expect(res.status).toBe(400);
@@ -286,7 +299,7 @@ describe("POST /payment/verify-solana — Unit Tests (AAA pattern)", () => {
     it("should return 400 when txId is shorter than 64 characters", async () => {
       const res = await post(app, { txId: "short-sig", tier: "Lite", network: "devnet" });
       expect(res.status).toBe(400);
-      expect((await res.json() as any).message).toMatch(/txId/);
+      expect((await res.json() as JsonObject).message).toMatch(/txId/);
     });
 
     it("should return 400 when txId is exactly 63 characters (boundary)", async () => {
@@ -303,7 +316,7 @@ describe("POST /payment/verify-solana — Unit Tests (AAA pattern)", () => {
     it("should return 400 when tier is missing", async () => {
       const res = await post(app, { txId: VALID_TX_SIG, network: "devnet" });
       expect(res.status).toBe(400);
-      expect((await res.json() as any).message).toMatch(/tier/);
+      expect((await res.json() as JsonObject).message).toMatch(/tier/);
     });
 
     it("should return 400 when tier has an unrecognised value", async () => {
@@ -317,7 +330,7 @@ describe("POST /payment/verify-solana — Unit Tests (AAA pattern)", () => {
     });
 
     it("should return 401 when user is not found in DB", async () => {
-      vi.mocked(getUserById).mockResolvedValue(null as any);
+      vi.mocked(getUserById).mockResolvedValue(null);
       // Re-use the default app (userId is already injected by middleware)
       const res = await post(app, { txId: VALID_TX_SIG, tier: "Lite", network: "devnet" });
       expect(res.status).toBe(401);
@@ -330,7 +343,7 @@ describe("POST /payment/verify-solana — Unit Tests (AAA pattern)", () => {
   describe("Happy Path → 200 OK", () => {
     it("should return 200 with success=true when transaction is verified", async () => {
       const res = await post(app, { txId: VALID_TX_SIG, tier: "Lite", network: "devnet" });
-      const body = await res.json() as any;
+      const body = await res.json() as JsonObject;
 
       expect(res.status).toBe(200);
       expect(body.success).toBe(true);
@@ -368,7 +381,7 @@ describe("POST /payment/verify-solana — Unit Tests (AAA pattern)", () => {
       });
 
       const res = await post(app, { txId: VALID_TX_SIG, tier: "Lite", network: "devnet" });
-      const body = await res.json() as any;
+      const body = await res.json() as JsonObject;
 
       expect(res.status).toBe(400);
       expect(body.errorCode).toBe("PAYMENT_VERIFICATION_FAILED");
@@ -382,7 +395,7 @@ describe("POST /payment/verify-solana — Unit Tests (AAA pattern)", () => {
       });
 
       const res = await post(app, { txId: VALID_TX_SIG, tier: "Lite", network: "devnet" });
-      const body = await res.json() as any;
+      const body = await res.json() as JsonObject;
 
       expect(res.status).toBe(400);
       expect(body.errorCode).toBe("PAYMENT_VERIFICATION_FAILED");
@@ -395,7 +408,7 @@ describe("POST /payment/verify-solana — Unit Tests (AAA pattern)", () => {
       });
 
       const res = await post(app, { txId: VALID_TX_SIG, tier: "Plus", network: "devnet" });
-      const body = await res.json() as any;
+      const body = await res.json() as JsonObject;
 
       expect(res.status).toBe(400);
       expect(body.message).toContain("0.005 SOL");
@@ -408,7 +421,7 @@ describe("POST /payment/verify-solana — Unit Tests (AAA pattern)", () => {
       });
 
       const res = await post(app, { txId: VALID_TX_SIG, tier: "Lite", network: "mainnet-beta" });
-      const body = await res.json() as any;
+      const body = await res.json() as JsonObject;
 
       expect(res.status).toBe(400);
       expect(body.message).toContain("Network mismatch");
@@ -421,7 +434,7 @@ describe("POST /payment/verify-solana — Unit Tests (AAA pattern)", () => {
       });
 
       const res = await post(app, { txId: VALID_TX_SIG, tier: "Lite", network: "devnet" });
-      const body = await res.json() as any;
+      const body = await res.json() as JsonObject;
 
       expect(res.status).toBe(400);
       expect(body.message).toContain("not found");
@@ -449,7 +462,7 @@ describe("POST /payment/verify-solana — Unit Tests (AAA pattern)", () => {
       );
 
       const res = await post(app, { txId: VALID_TX_SIG, tier: "Lite", network: "devnet" });
-      const body = await res.json() as any;
+      const body = await res.json() as JsonObject;
 
       expect(res.status).toBe(500);
       expect(body.errorCode).toBe("INTERNAL_SERVER_ERR");
@@ -460,7 +473,7 @@ describe("POST /payment/verify-solana — Unit Tests (AAA pattern)", () => {
       vi.mocked(verifySolanaTransaction).mockRejectedValue({});
 
       const res = await post(app, { txId: VALID_TX_SIG, tier: "Lite", network: "devnet" });
-      const body = await res.json() as any;
+      const body = await res.json() as JsonObject;
 
       expect(res.status).toBe(500);
       expect(body.message).toBe("An unknown error occurred.");
@@ -472,10 +485,12 @@ describe("POST /payment/verify-solana — Unit Tests (AAA pattern)", () => {
       );
 
       const res = await post(app, { txId: VALID_TX_SIG, tier: "Lite", network: "devnet" });
-      const body = await res.json() as any;
+      const body = await res.json() as JsonObject;
 
       expect(res.status).toBe(500);
       expect(body.message).toContain("HELIUS_API_KEY");
     });
   });
 });
+
+

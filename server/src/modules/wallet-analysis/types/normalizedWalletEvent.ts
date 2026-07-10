@@ -101,6 +101,76 @@ export type TransactionFeeInfo = {
     payer?: string | null;
 };
 
+export type HeliusNativeTransfer = {
+    amount?: number;
+    fromUserAccount?: string;
+    fromWallet?: string;
+    from?: string;
+    toUserAccount?: string;
+    toWallet?: string;
+    to?: string;
+};
+
+export type HeliusTokenTransfer = {
+    mint?: string;
+    tokenAmount?: number;
+    amount?: number;
+    rawAmount?: string | { tokenAmount?: string; decimals?: number };
+    rawTokenAmount?: { tokenAmount?: string; decimals?: number };
+    decimals?: number;
+    fromUserAccount?: string;
+    toUserAccount?: string;
+    fromTokenAccount?: string;
+    toTokenAccount?: string;
+    symbol?: string;
+    tokenSymbol?: string;
+    name?: string;
+    tokenName?: string;
+    valueUsd?: number;
+};
+
+export type HeliusSwapLeg = {
+    mint?: string;
+    inputMint?: string;
+    outputMint?: string;
+    tokenAmount?: number;
+    amount?: number;
+    rawTokenAmount?: { tokenAmount?: string; decimals?: number };
+    decimals?: number;
+    symbol?: string;
+    tokenSymbol?: string;
+};
+
+export type HeliusSwapEvent = {
+    innerSwaps?: Array<{
+        tokenInputs?: HeliusSwapLeg[];
+        tokenOutputs?: HeliusSwapLeg[];
+        source?: string;
+        programId?: string;
+    }>;
+    tokenInputs?: HeliusSwapLeg[];
+    tokenOutputs?: HeliusSwapLeg[];
+    source?: string;
+    programId?: string;
+};
+
+export type HeliusNftEvent = {
+    mint?: string;
+    tokenMint?: string;
+    nftMint?: string;
+    action?: string;
+    type?: string;
+    eventType?: string;
+    name?: string;
+    collection?: string;
+    collectionName?: string;
+    priceUsd?: number;
+    salePriceUsd?: number;
+    amountUsd?: number;
+    marketplace?: string;
+    source?: string;
+};
+
 export type HeliusEnhancedTransactionLike = {
     signature?: string;
     slot?: number;
@@ -110,15 +180,15 @@ export type HeliusEnhancedTransactionLike = {
     description?: string;
     fee?: number;
     feePayer?: string;
-    nativeTransfers?: any[];
-    tokenTransfers?: any[];
-    accountData?: any[];
+    nativeTransfers?: HeliusNativeTransfer[];
+    tokenTransfers?: HeliusTokenTransfer[];
+    accountData?: unknown[];
     events?: {
-        swap?: any;
-        nft?: any;
-        compressed?: any;
+        swap?: HeliusSwapEvent;
+        nft?: HeliusNftEvent;
+        compressed?: unknown;
     };
-    transactionError?: any;
+    transactionError?: unknown;
     info?: {
         feePayer?: string;
         fee?: number;

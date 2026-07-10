@@ -8,6 +8,10 @@ const mocks = vi.hoisted(() => ({
   toggleToken: vi.fn(),
 }));
 
+vi.mock("@/contexts/ThemeContext", () => ({
+  useUserTheme: () => ({ themeRef: { current: null } }),
+}));
+
 vi.mock("react-router", () => ({
   useNavigate: () => mocks.navigate,
 }));
@@ -27,6 +31,11 @@ vi.mock("@/contexts/LocalizationContext", () => ({
         "table.filterLabel": `Filter: ${params?.column ?? ""}`,
         "table.apply": "Apply",
         "table.searchPlaceholder": "Search table...",
+        "table.searchAriaLabel": "Search table",
+        "table.filterSearchPlaceholder": "Search table...",
+        "table.from": "Min",
+        "table.to": "Max",
+        "table.clearFilter": "Clear filter",
         "table.pageRangeText": `Page ${params?.count} of ${params?.total}`,
         "table.page": `Page ${params?.count}`,
         "table.itemsPerPageText": "Items per page",
@@ -130,7 +139,7 @@ describe("WalletHoldingsPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Filter: Holding / Value" }));
     const dialog = screen.getByRole("dialog", { name: "Filter: Holding / Value" });
-    fireEvent.change(within(dialog).getAllByLabelText("Min")[0], { target: { value: "100" } });
+    fireEvent.change(within(dialog).getAllByLabelText("Min")[1], { target: { value: "100" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Apply" }));
 
     expect(screen.getByText("SOL")).toBeInTheDocument();

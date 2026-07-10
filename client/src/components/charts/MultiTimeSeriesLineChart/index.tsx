@@ -101,9 +101,9 @@ export function MultiTimeSeriesLineChart({
               const color = p.color;
               const formatted = valueFormatter ? valueFormatter(val) : val;
               return (
-                `<div style=\"display:flex;gap:8px;align-items:center;margin-bottom:6px\">` +
-                `<span style=\"width:10px;height:10px;border-radius:50%;background:${color};display:inline-block\"></span>` +
-                `<div style=\"color:${tokens.textInverse};font-size:13px\"><strong style=\"display:inline-block;min-width:90px;color:${tokens.textInverse}\">${name}</strong> ${formatted}</div>` +
+                `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">` +
+                `<span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block"></span>` +
+                `<div style="color:${tokens.textInverse};font-size:13px"><strong style="display:inline-block;min-width:90px;color:${tokens.textInverse}">${name}</strong> ${formatted}</div>` +
                 `</div>`
               );
             })

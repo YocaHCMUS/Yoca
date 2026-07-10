@@ -46,8 +46,6 @@ import {
   WALLET_TABLE_PAGE_SIZE,
 } from "@sv/services/wallet/wallet.constants.js";
 
-import { getWalletSwaps } from "./walletTransfersSwaps.service.js";
-
 export type { WalletOverviewTimePeriod, WalletTimePeriod };
 
 export function toWalletPageInfo(input: {
@@ -526,7 +524,7 @@ export async function getLatestOverviewCacheRow(address: string): Promise<Wallet
     return null;
   }
 
-  return cached[0] as unknown as WalletOverviewCacheRow;
+  return cached[0] as WalletOverviewCacheRow;
 }
 
 export function getOverviewFromFreshCache(

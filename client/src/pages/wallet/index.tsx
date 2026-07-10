@@ -1,6 +1,5 @@
 import client from "@/api/main";
 import { Card } from "@/components/common/Card/Card";
-import { PageHeader } from "@/components/common/PageHeader/PageHeader";
 import { PnLChart } from "@/components/charts/PnLChart/index.ts";
 import { WalletTopbar } from "@/components/wallet/WalletTopbar/WalletTopbar.tsx";
 import { WalletHero } from "@/components/wallet/WalletHero/WalletHero.tsx";
@@ -14,7 +13,6 @@ import { AiAnalysisModal } from "@/components/wallet/AiAnalysisModal/AiAnalysisM
 import { useWalletWinrate } from "@/hooks/useWalletWinrate";
 
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
-import { locale } from "@/config/localization/index.ts";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
 import { useGet } from "@/hooks/useGet";
 import {
@@ -37,16 +35,12 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { flushSync } from "react-dom";
 import { useParams } from "react-router";
 
-import {
-  buildPortfolioMetaMap,
-  mapPortfolioItems,
-} from "../../util/wallet-portfolio-mapper.ts";
+import { mapPortfolioItems } from "../../util/wallet-portfolio-mapper.ts";
 import styles from "./index.module.scss";
 import {
   TokenAverageTradePrice,
@@ -75,52 +69,32 @@ function isEditableShortcutTarget(target: EventTarget | null): boolean {
   );
 }
 
-function getMaxLoadedPage<T>(pages: Record<number, T[]>): number {
-  const loadedPages = Object.keys(pages)
-    .map((page) => Number(page))
-    .filter((page) => Number.isInteger(page) && page > 0);
-
-  return loadedPages.length > 0 ? Math.max(...loadedPages) : 0;
-}
-
-function flattenLoadedPages<T>(pages: Record<number, T[]>): T[] {
-  return Object.keys(pages)
-    .map((page) => Number(page))
-    .filter((page) => Number.isInteger(page) && page > 0)
-    .sort((left, right) => left - right)
-    .flatMap((page) => pages[page] ?? []);
-}
-
-
-
 export default function WalletPage() {
-  const { tr, fmt, lang } = useLocalization();
-  const bcp47 = locale[lang].langCode;
+  const { tr, lang } = useLocalization();
   const { address } = useParams<{ address: string }>();
   const walletAddress = address ?? "";
 
-  const [swapPages, setSwapPages] = useState<Record<number, WalletSwap[]>>({});
-  const [swapPageInfoByPage, setSwapPageInfoByPage] = useState<
+  const [, setSwapPages] = useState<Record<number, WalletSwap[]>>({});
+  const [, setSwapPageInfoByPage] = useState<
     Record<number, WalletPageInfo>
   >({});
-  const [swapLoading, setSwapLoading] = useState(false);
+  const [, setSwapLoading] = useState(false);
 
-  const [transferPages, setTransferPages] = useState<
+  const [, setTransferPages] = useState<
     Record<number, WalletTransfer[]>
   >({});
-  const [transferPageInfoByPage, setTransferPageInfoByPage] = useState<
+  const [, setTransferPageInfoByPage] = useState<
     Record<number, WalletPageInfo>
   >({});
-  const [transferLoading, setTransferLoading] = useState(false);
+  const [, setTransferLoading] = useState(false);
   const [portfolioLoading, setPortfolioLoading] = useState(false);
 
   const [portfolio, setPortfolio] = useState<WalletPortfolioItem[]>([]);
   const [overviewReport, setOverviewReport] =
     useState<WalletOverviewMultiPeriodResponse | null>(null);
-  const [intelligenceReport, setIntelligenceReport] =
+  const [, setIntelligenceReport] =
     useState<WalletIntelligenceResponse | null>(null);
-  const [intelligenceLoading, setIntelligenceLoading] = useState(false);
-  const [walletTags, setWalletTags] = useState<string[]>([]);
+  const [, setWalletTags] = useState<string[]>([]);
 
   const [selectedPeriod, setSelectedPeriod] =
     useState<WalletOverviewPeriodKey>("24H");
@@ -197,11 +171,6 @@ export default function WalletPage() {
     () => mapPortfolioItems(portfolio),
     [portfolio],
   );
-  const portfolioMetaMap = useMemo(
-    () => buildPortfolioMetaMap(portfolioMeta),
-    [portfolioMeta],
-  );
-
   const portfolioMetaAsMap = useMemo(() => {
     const map = new Map<
       number,

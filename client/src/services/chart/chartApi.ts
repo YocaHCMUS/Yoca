@@ -15,6 +15,31 @@ import type {
 } from "@/types/chart-api.types";
 import { InferRequestType } from "hono";
 
+type JsonRecord = Record<string, unknown>;
+
+type TradingVolumeDistributionRow = {
+  wallet?: unknown;
+  buy?: { volumeUsd?: unknown; transactionCount?: unknown };
+  sell?: { volumeUsd?: unknown; transactionCount?: unknown };
+};
+
+type RollingReturnRow = JsonRecord & {
+  rollingAnnualReturns?: JsonRecord | null;
+  wallet?: unknown;
+  walletAddress?: unknown;
+  walletName?: unknown;
+  walletLabel?: unknown;
+};
+
+function asRecord(value: unknown): JsonRecord {
+  return value && typeof value === "object" ? (value as JsonRecord) : {};
+}
+
+function toFiniteNumber(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
 /**
  * Utility type to extract the inferred response type from a fetcher function
  * This allows components to get proper typing without manual type annotations
@@ -22,7 +47,7 @@ import { InferRequestType } from "hono";
  * @example
  * type AssetDistData = InferFetcherData<typeof fetchAssetDistribution>;
  */
-export type InferFetcherData<T extends (...args: any[]) => Promise<any>> =
+export type InferFetcherData<T extends (...args: never[]) => Promise<unknown>> =
   Awaited<ReturnType<T>>;
 
 /**
@@ -131,16 +156,16 @@ export async function fetchTradingVolumeDistribution(
 
   // Normalize backend shape to { wallets: [{ walletAddress, data: [{name,value,percentage}], totalVolume }] }
   const wallets = Array.isArray(raw)
-    ? raw.map((r: any) => {
-        const buyVol = r.buy.volumeUsd || 0;
-        const sellVol = r.sell.volumeUsd || 0;
-        const buyTx = r.buy.transactionCount || 0;
-        const sellTx = r.sell.transactionCount || 0;
+    ? raw.map((r: TradingVolumeDistributionRow) => {
+        const buyVol = toFiniteNumber(r.buy?.volumeUsd);
+        const sellVol = toFiniteNumber(r.sell?.volumeUsd);
+        const buyTx = toFiniteNumber(r.buy?.transactionCount);
+        const sellTx = toFiniteNumber(r.sell?.transactionCount);
         const total = buyVol + sellVol;
         const totalTx = buyTx + sellTx;
 
         return {
-          walletAddress: r.wallet,
+          walletAddress: String(r.wallet ?? ""),
           buyVolume: buyVol,
           sellVolume: sellVol,
           totalVolume: total,
@@ -182,7 +207,7 @@ export async function fetchRollingAnnualReturn(
   params?: Parameters<typeof client.api.charts.rollingAnnualReturn.$get>[0],
 ) {
   // Map client-side period values to backend-accepted options
-  const mapPeriod = (p?: any) => {
+  const mapPeriod = (p?: unknown) => {
     if (p == null) return p;
     const s = String(p);
     const allowed = ["7D", "30D", "90D", "All"];
@@ -200,7 +225,7 @@ export async function fetchRollingAnnualReturn(
   };
 
   const safeParams = params
-    ? { ...(params as any), period: mapPeriod((params as any).period) }
+    ? { ...params, period: mapPeriod(asRecord(params).period) }
     : undefined;
   const honoParams = safeParams ? { query: safeParams } : undefined;
   const response = await client.api.charts.rollingAnnualReturn.$get(honoParams);
@@ -208,18 +233,15 @@ export async function fetchRollingAnnualReturn(
   const raw = await response.json();
 
   // Normalize period-based P&L (per-wallet array or aggregated object)
-  const toNumber = (v: any) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-  };
+  const toNumber = toFiniteNumber;
 
   // If backend returns an array of per-wallet metrics
   if (Array.isArray(raw)) {
-    const wallets = raw.map((r: any) => {
+    const wallets = raw.map((r: RollingReturnRow) => {
       const source = r.rollingAnnualReturns ?? r;
       return {
-        walletAddress: r.wallet ?? r.walletAddress ?? "",
-        walletName: r.walletName ?? r.walletLabel ?? undefined,
+        walletAddress: String(r.wallet ?? r.walletAddress ?? ""),
+        walletName: r.walletName != null ? String(r.walletName) : r.walletLabel != null ? String(r.walletLabel) : undefined,
         metrics: {
           total: toNumber(source.totalUsd ?? source.total ?? r.totalUsd ?? 0),
           realized: toNumber(
@@ -379,3 +401,6 @@ export async function fetchStablecoinRatio(
   const data = await response.json();
   return data;
 }
+
+
+

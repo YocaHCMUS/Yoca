@@ -90,12 +90,13 @@ const app = new Hono()
           },
           statusCode.Ok,
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("[payment/setup-intent]", err);
+        const msg = err instanceof Error ? err.message : "An unknown error occurred.";
         return c.json(
           {
             errorCode: "INTERNAL_SERVER_ERR",
-            message: err.message || "An unknown error occurred.",
+            message: msg,
           },
           statusCode.InternalServerError,
         );
@@ -185,10 +186,11 @@ const app = new Hono()
               invoice.id,
             );
           }
-        } catch (invoiceErr: any) {
+        } catch (invoiceErr: unknown) {
+          const invoiceMsg = invoiceErr instanceof Error ? invoiceErr.message : String(invoiceErr);
           console.warn(
             "[payment/activate-subscription] Could not record initial payment:",
-            invoiceErr.message,
+            invoiceMsg,
           );
           // Don't fail the response if we can't record the invoice — the subscription was created successfully
         }
@@ -201,20 +203,21 @@ const app = new Hono()
           },
           statusCode.Ok,
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("[payment/activate-subscription]", err);
 
-        if (err.type === "StripeCardError") {
+        if (err instanceof Error && "type" in err && (err as Record<string, unknown>).type === "StripeCardError") {
           return c.json(
             { errorCode: "PAYMENT_FAILED", message: err.message },
             statusCode.BadRequest,
           );
         }
 
+        const msg2 = err instanceof Error ? err.message : "An unknown error occurred.";
         return c.json(
           {
             errorCode: "INTERNAL_SERVER_ERR",
-            message: err.message || "An unknown error occurred.",
+            message: msg2,
           },
           statusCode.InternalServerError,
         );
@@ -239,17 +242,17 @@ const app = new Hono()
           const { getStripe } = await import("@sv/services/stripe.service.js");
           const stripeClient = getStripe();
 
-          const intentAny = intent as any;
+          const intentAny = intent as { invoice?: string | { id?: string } | null };
           if (intentAny.invoice) {
             const invoiceId =
               typeof intentAny.invoice === "string"
                 ? intentAny.invoice
-                : intentAny.invoice.id;
+                : intentAny.invoice.id ?? "";
             const invoice = await stripeClient.invoices.retrieve(invoiceId, {
               expand: ["payments.data.payment.payment_intent"],
             });
 
-            const invoiceAny = invoice as any;
+            const invoiceAny = invoice as { subscription?: string | { id?: string } | null; parent?: { subscription_details?: { subscription?: string | { id?: string } | null } } };
             const invoiceSubscription =
               invoiceAny.subscription ??
               invoiceAny.parent?.subscription_details?.subscription;
@@ -257,7 +260,7 @@ const app = new Hono()
               const subId =
                 typeof invoiceSubscription === "string"
                   ? invoiceSubscription
-                  : invoiceSubscription.id;
+                  : invoiceSubscription.id ?? "";
               const subscription =
                 await stripeClient.subscriptions.retrieve(subId);
 
@@ -280,7 +283,7 @@ const app = new Hono()
           { success: false, status: intent.status },
           statusCode.BadRequest,
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("[payment/confirm]", err);
         return c.json(
           setErr("INTERNAL_SERVER_ERR"),
@@ -340,7 +343,7 @@ const app = new Hono()
           },
           statusCode.Ok,
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("[payment/cancel]", err);
         return c.json(
           setErr("INTERNAL_SERVER_ERR"),
@@ -396,7 +399,7 @@ const app = new Hono()
           await previewSubscriptionUpgrade(subscriptionId, newTier),
           statusCode.Ok,
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("[payment/upgrade-preview]", err);
         return c.json(setErr("INTERNAL_SERVER_ERR"), statusCode.InternalServerError);
       }
@@ -479,7 +482,7 @@ const app = new Hono()
           },
           statusCode.Ok,
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("[payment/upgrade]", err);
         return c.json(
           setErr("INTERNAL_SERVER_ERR"),
@@ -576,8 +579,8 @@ const app = new Hono()
               userId,
               stripeSubscriptionId: solanaTxKey,
               stripeCustomerId: solanaCustomerKey,
-              planTier: tier as any,
               status: "active",
+              planTier: tier,
               currentPeriodStart: periodStart,
               currentPeriodEnd: periodEnd,
               cancelAtPeriodEnd: false,
@@ -588,8 +591,8 @@ const app = new Hono()
           const [updated] = await db
             .update(subscriptions)
             .set({
-              planTier: tier as any,
               status: "active",
+              planTier: tier,
               currentPeriodStart: periodStart,
               currentPeriodEnd: periodEnd,
               updatedAt: new Date(),
@@ -614,8 +617,9 @@ const app = new Hono()
               merchant: verification.merchantAddress,
             },
           });
-        } catch (histErr: any) {
-          console.warn("[payment/verify-solana] Could not record payment history:", histErr.message);
+        } catch (histErr: unknown) {
+          const histMsg = histErr instanceof Error ? histErr.message : String(histErr);
+          console.warn("[payment/verify-solana] Could not record payment history:", histMsg);
           // Don't fail the response if we can't record history
         }
 
@@ -630,12 +634,13 @@ const app = new Hono()
           },
           statusCode.Ok,
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : "An unknown error occurred.";
         console.error("[payment/verify-solana]", err);
         return c.json(
           {
             errorCode: "INTERNAL_SERVER_ERR",
-            message: err.message || "An unknown error occurred.",
+            message: errMsg,
           },
           statusCode.InternalServerError,
         );

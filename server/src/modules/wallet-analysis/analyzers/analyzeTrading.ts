@@ -1,9 +1,9 @@
 import type { NormalizedWalletEvent } from "../types/normalizedWalletEvent";
 import type { TradingBehaviorProfile, WalletActivityProfile } from "../types/walletBehaviorProfile";
-import { average, median, safeDivide, sum } from "../utils/mathUtils";
+import { average, median, sum } from "../utils/mathUtils";
 import { diffHours, sortEventsByTimestampAsc } from "../utils/timeUtils";
 import { isPositionTokenMint, isSellLikeSwapDirection, isBuyLikeSwapDirection } from "../utils/pnlUtils";
-import { isSolLikeMint, isStablecoinMint } from "../utils/tokenUtils";
+import { isStablecoinMint } from "../utils/tokenUtils";
 
 type TokenLot = {
     amount: number;

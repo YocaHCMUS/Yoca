@@ -1,4 +1,3 @@
-const DEFAULT_HELIUS_API_BASE_URL = "https://api.helius.xyz";
 import { trackApiCallResponse } from "@sv/services/tracking/apiCallTracker.service.js";
 import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.js";
 import { mergeOutboundFetchTimeout } from "@sv/util/outbound-fetch.js";

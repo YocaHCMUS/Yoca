@@ -126,7 +126,7 @@ const SOLANA_TOKEN_ADDRESSES = [
   "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh", // BTC on Solana
 ];
 
-const getHeaders = (tr: any) => [
+const getHeaders = (tr: ReturnType<typeof useLocalization>["tr"]) => [
   { key: "token", header: tr("marketPage.token") },
   { key: "price", header: tr("marketPage.price") },
   { key: "change24h", header: tr("marketPage.change24h") },
@@ -140,8 +140,6 @@ export const TokenPerformanceTable: React.FC<TokenPerformanceTableProps> = ({
   selectedTokenAddress,
 }) => {
   const { tr, fmt } = useLocalization();
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [tokens, setTokens] = useState<TokenPerformance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -417,3 +415,4 @@ export const TokenPerformanceTable: React.FC<TokenPerformanceTableProps> = ({
     </TableWrapper>
   );
 };
+
