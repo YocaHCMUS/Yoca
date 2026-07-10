@@ -1,4 +1,6 @@
 import { validateApiResult } from "@sv/middlewares/validation.js";
+import { db } from "@sv/db/index.js";
+import { marketPoolLists } from "@sv/db/schema.js";
 import {
   bds_TokenListV3Schema,
   cg_MultiTokenTopPoolsSchema,
@@ -7,8 +9,10 @@ import {
   type CG_TopPoolData,
 } from "@sv/services/_types/token-raw-responses.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
+import type { MarketPoolItem } from "@sv/types/market-pool.js";
 import * as bds from "@sv/util/util-birdeye.js";
 import * as cg from "@sv/util/util-coingecko.js";
+import { eq } from "drizzle-orm";
 
 const INCLUDE = "base_token,quote_token,dex";
 const TARGET_POOL_COUNT = 100;
@@ -16,35 +20,62 @@ const GAINER_TOKEN_COUNT = 50;
 const CG_DEMO_BATCH_SIZE = 30;
 const MAX_PAGE_ROUNDS = 12;
 const MIN_LIQUIDITY_USD = 500;
+const MARKET_POOL_LIST_TTL_MS = {
+  trending: 2 * 60 * 1000,
+  top: 5 * 60 * 1000,
+  gainers: 5 * 60 * 1000,
+  newPairs: 1 * 60 * 1000,
+};
 
 export type PoolDuration = "5m" | "1h" | "6h" | "24h";
 export type PoolTopSort = "volume" | "txns" | "marketCap";
 
-export interface MarketPoolItem {
-  id: string;
-  poolAddress: string;
-  poolName: string;
-  dexId: string;
-  dexName: string;
-  baseAddress: string;
-  baseName: string;
-  baseSymbol: string;
-  baseImageUrl: string | null;
-  quoteAddress: string;
-  quoteName: string;
-  quoteSymbol: string;
-  quoteImageUrl: string | null;
-  priceUsd: number | null;
-  marketCapUsd: number | null;
-  fdvUsd: number | null;
-  txns24h: number | null;
-  volume24h: number | null;
-  priceChange5m: number | null;
-  priceChange1h: number | null;
-  priceChange6h: number | null;
-  priceChange24h: number | null;
-  liquidityUsd: number | null;
-  poolCreatedAt: string | null;
+export type { MarketPoolItem } from "@sv/types/market-pool.js";
+
+async function getStoredMarketPools(
+  listKey: string,
+  ttlMs: number,
+  fetchPools: () => Promise<MarketPoolItem[]>,
+): Promise<MarketPoolItem[]> {
+  const [existingList] = await db
+    .select()
+    .from(marketPoolLists)
+    .where(eq(marketPoolLists.listKey, listKey))
+    .limit(1);
+
+  if (existingList && existingList.expiresAt > new Date()) {
+    return existingList.responseJson;
+  }
+
+  try {
+    const fetchedPools = await fetchPools();
+    const now = new Date();
+    await db
+      .insert(marketPoolLists)
+      .values({
+        listKey,
+        responseJson: fetchedPools,
+        expiresAt: new Date(now.getTime() + ttlMs),
+        updatedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: marketPoolLists.listKey,
+        set: {
+          responseJson: fetchedPools,
+          expiresAt: new Date(now.getTime() + ttlMs),
+          updatedAt: now,
+        },
+      });
+    return fetchedPools;
+  } catch (error) {
+    if (existingList) {
+      console.warn(
+        `Using stored market pool list after refresh failure: ${listKey}`,
+      );
+      return existingList.responseJson;
+    }
+    throw error;
+  }
 }
 
 function toNumber(input: string | number | null | undefined): number | null {
@@ -114,7 +145,7 @@ async function fetchCgPools(
       candidates.push(item);
     }
 
-    if (candidates.length >= TARGET_POOL_COUNT * 3) {
+    if (candidates.length >= TARGET_POOL_COUNT) {
       break;
     }
   }
@@ -198,7 +229,7 @@ function mapCgPools(res: CG_TopPoolData): MarketPoolItem[] {
   });
 }
 
-export async function getTrendingMarketPools(duration: PoolDuration) {
+async function fetchTrendingMarketPools(duration: PoolDuration) {
   const result = await fetchCgPools("/networks/solana/trending_pools", {
     duration,
   });
@@ -213,7 +244,15 @@ export async function getTrendingMarketPools(duration: PoolDuration) {
   });
 }
 
-export async function getNewMarketPools() {
+export async function getTrendingMarketPools(duration: PoolDuration) {
+  return await getStoredMarketPools(
+    `trending:${duration}`,
+    MARKET_POOL_LIST_TTL_MS.trending,
+    () => fetchTrendingMarketPools(duration),
+  );
+}
+
+async function fetchNewMarketPools() {
   // Với New Pools, chúng ta chỉ cần fetch 2 trang đầu (40 pools) để đảm bảo độ tươi (freshness)
   // và tránh việc lấy quá nhiều dữ liệu cũ từ các trang sau.
   const cgEndpoint = cg.getOnchainEndpoint("/networks/solana/new_pools");
@@ -249,7 +288,15 @@ export async function getNewMarketPools() {
   });
 }
 
-export async function getTopMarketPools(sortBy: PoolTopSort) {
+export async function getNewMarketPools() {
+  return await getStoredMarketPools(
+    "new-pairs",
+    MARKET_POOL_LIST_TTL_MS.newPairs,
+    fetchNewMarketPools,
+  );
+}
+
+async function fetchTopMarketPools(sortBy: PoolTopSort) {
   const sortCandidates: Record<PoolTopSort, string[]> = {
     volume: ["h24_volume_usd_desc"],
     txns: ["h24_tx_count_desc", "tx_count_desc", "h24_txns_desc"],
@@ -265,6 +312,14 @@ export async function getTopMarketPools(sortBy: PoolTopSort) {
   }
 
   return [];
+}
+
+export async function getTopMarketPools(sortBy: PoolTopSort) {
+  return await getStoredMarketPools(
+    `top:${sortBy}`,
+    MARKET_POOL_LIST_TTL_MS.top,
+    () => fetchTopMarketPools(sortBy),
+  );
 }
 
 function chunkStrings(values: string[], size: number): string[][] {
@@ -306,7 +361,7 @@ async function fetchBirdeyeGainers(): Promise<
   return payload.data.items;
 }
 
-export async function getTopGainerMarketPools(): Promise<MarketPoolItem[]> {
+async function fetchTopGainerMarketPools(): Promise<MarketPoolItem[]> {
   const gainers = await fetchBirdeyeGainers();
   const poolAddressByToken = new Map<string, string>();
 
@@ -389,4 +444,12 @@ export async function getTopGainerMarketPools(): Promise<MarketPoolItem[]> {
     });
   }
   return result;
+}
+
+export async function getTopGainerMarketPools(): Promise<MarketPoolItem[]> {
+  return await getStoredMarketPools(
+    "gainers",
+    MARKET_POOL_LIST_TTL_MS.gainers,
+    fetchTopGainerMarketPools,
+  );
 }
