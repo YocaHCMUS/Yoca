@@ -1,4 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import type { Context, Next } from "hono";
+type JsonObject = Record<string, unknown>;
 import app from "@sv/routes/payment.route.js";
 
 const { selectWhereMock } = vi.hoisted(() => ({
@@ -6,14 +8,14 @@ const { selectWhereMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("@sv/middlewares/user-extract.js", () => ({
-  default: async (c: any, next: any) => {
+  default: async (c: Context, next: Next) => {
     c.set("userPayload", { id: "user-id-123" });
     await next();
   },
 }));
 
 vi.mock("@sv/middlewares/validation.js", () => ({
-  honoJwt: async (c: any, next: any) => {
+  honoJwt: async (c: Context, next: Next) => {
     const cookie = c.req.header("Cookie");
     if (!cookie || !cookie.includes("token=")) {
       return c.json({ error: "UNAUTHORIZED" }, 401);
@@ -21,7 +23,7 @@ vi.mock("@sv/middlewares/validation.js", () => ({
     c.set("jwtPayload", { id: "user-id-123" });
     await next();
   },
-  validate: () => async (c: any, next: any) => {
+  validate: () => async (c: Context, next: Next) => {
     const body = await c.req.json();
     c.req.valid = () => body;
     await next();
@@ -39,7 +41,7 @@ vi.mock("@sv/db/index.js", () => ({
     select: vi.fn(() => ({
       from: vi.fn(() => ({
         where: vi.fn(() => ({
-          then: (onfulfilled: any) => selectWhereMock().then(onfulfilled),
+          then: (onfulfilled: (value: unknown[]) => unknown) => selectWhereMock().then(onfulfilled),
         })),
       })),
     })),
@@ -87,7 +89,7 @@ vi.mock("@sv/services/solana-payment.service.js", () => ({
 }));
 
 vi.mock("drizzle-orm", () => ({
-  eq: vi.fn((field: any, value: any) => ({ field, value })),
+  eq: vi.fn((field: unknown, value: unknown) => ({ field, value })),
 }));
 
 const stripeSubscription = {
@@ -129,7 +131,7 @@ describe("Payment subscription management routes", () => {
     });
 
     expect(response.status).toBe(200);
-    const body = (await response.json()) as any;
+    const body = (await response.json()) as JsonObject;
     expect(body.success).toBe(true);
     expect(body.cancel_at_period_end).toBe(true);
     expect(stripeService.cancelSubscription).toHaveBeenCalledWith("sub_123");
@@ -149,7 +151,7 @@ describe("Payment subscription management routes", () => {
     });
 
     expect(response.status).toBe(400);
-    const body = (await response.json()) as any;
+    const body = (await response.json()) as JsonObject;
     expect(body.errorCode).toBe("UNSUPPORTED_SUBSCRIPTION_PROVIDER");
     expect(stripeService.cancelSubscription).not.toHaveBeenCalled();
   });
@@ -181,7 +183,7 @@ describe("Payment subscription management routes", () => {
     });
 
     expect(response.status).toBe(400);
-    const body = (await response.json()) as any;
+    const body = (await response.json()) as JsonObject;
     expect(body.errorCode).toBe("UNSUPPORTED_SUBSCRIPTION_PROVIDER");
     expect(stripeService.upgradeSubscription).not.toHaveBeenCalled();
   });
@@ -197,7 +199,7 @@ describe("Payment subscription management routes", () => {
       clientSecret: null,
       applied: true,
       processing: true,
-    } as any);
+    } as never);
 
     const response = await app.request("/upgrade", {
       method: "POST",
@@ -209,3 +211,4 @@ describe("Payment subscription management routes", () => {
     expect(subscriptionService.recordInvoicePayment).toHaveBeenCalledWith(invoice);
   });
 });
+

@@ -8,11 +8,11 @@ import useSWR from "swr";
 type GetInput<T> =
   T extends { $get: (args: infer A, options?: ClientRequestOptions) => unknown }
     ? NonNullable<A>
-    : {};
+    : Record<PropertyKey, never>;
     
 type HasRequiredKeys<T> = T extends object
   ? {
-      [K in keyof T]-?: {} extends Pick<T, K> ? never : K;
+      [K in keyof T]-?: Record<PropertyKey, never> extends Pick<T, K> ? never : K;
     }[keyof T] extends never
     ? false
     : true
@@ -90,3 +90,4 @@ export type UseGetResp<Data, Error = unknown> = {
   error: Error | undefined;
   mutate: () => void;
 };
+

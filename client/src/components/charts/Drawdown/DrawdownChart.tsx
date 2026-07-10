@@ -18,6 +18,26 @@ import styles from "./Drawdown.module.scss";
 
 type DrawdownData = InferFetcherData<typeof fetchDrawdown>;
 
+type DrawdownPointRow = {
+  timestamp?: unknown;
+  drawdown?: unknown;
+  value?: unknown;
+  peak?: unknown;
+  trough?: unknown;
+  date?: string;
+};
+
+type DrawdownWalletRow = {
+  walletAddress?: unknown;
+  walletName?: unknown;
+  drawdownResult?: unknown;
+};
+
+type DrawdownTooltipPoint = {
+  value?: [unknown, unknown];
+  seriesName?: string;
+};
+
 type WalletSeriesMeta = {
   walletAddress: string;
   walletName: string;
@@ -96,12 +116,12 @@ export function DrawdownChart({
       return [];
     }
 
-    return data.wallets.map((wallet: any, index: number) => ({
+    return data.wallets.map((wallet: DrawdownWalletRow, index: number) => ({
       walletAddress: String(wallet.walletAddress || ""),
       walletName: String(wallet.walletName || wallet.walletAddress || ""),
       drawdownResult: Array.isArray(wallet.drawdownResult)
         ? wallet.drawdownResult
-          .map((item: any) => ({
+          .map((item: DrawdownPointRow) => ({
             timestamp: Number(item.timestamp),
             drawdown: Number(item.drawdown),
             value: item.value != null ? Number(item.value) : undefined,
@@ -109,7 +129,7 @@ export function DrawdownChart({
             trough: item.trough != null ? Number(item.trough) : undefined,
             date: item.date,
           }))
-          .filter((item: any) => Number.isFinite(item.timestamp) && Number.isFinite(item.drawdown))
+          .filter((item) => Number.isFinite(item.timestamp) && Number.isFinite(item.drawdown))
         : [],
       color: getSeriesColor(index),
     }));
@@ -244,11 +264,11 @@ export function DrawdownChart({
         axisPointer: {
           type: "cross",
         },
-        formatter: (params: any) => {
+        formatter: (params: unknown) => {
           if (!Array.isArray(params)) return "";
           let tooltip = "";
 
-          params.forEach((p: any) => {
+          (params as DrawdownTooltipPoint[]).forEach((p) => {
             const timestamp = Number(p?.value?.[0]);
             const drawdownPct = Number(p?.value?.[1]);
             const wallet = visibleWalletSeriesMeta.find((w) => w.walletName === p.seriesName);
@@ -399,3 +419,4 @@ export function DrawdownChart({
     </ChartWrapper>
   );
 }
+

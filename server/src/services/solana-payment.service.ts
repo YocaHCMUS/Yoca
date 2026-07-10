@@ -47,6 +47,16 @@ function getErrorMessage(error: unknown, fallback: string): string {
 // Convert SOL to lamports
 const LAMPORTS_PER_SOL = 1_000_000_000;
 
+type ParsedSystemTransferInstruction = {
+  program?: unknown;
+  parsed?: {
+    type?: unknown;
+    info?: {
+      destination?: unknown;
+      lamports?: unknown;
+    };
+  };
+};
 interface TransactionVerification {
   valid: boolean;
   reason?: string;
@@ -240,19 +250,21 @@ export async function verifySolanaTransaction(
 
       // Check for SystemProgram transfer in parsed format
       for (const inst of instructions) {
-        const instruction = inst as any;
+        const instruction = inst as ParsedSystemTransferInstruction;
         if (
           instruction.program === "system" &&
           instruction.parsed?.type === "transfer"
         ) {
           const info = instruction.parsed.info;
+          const destination = typeof info?.destination === "string" ? info.destination : "";
+          const lamports = typeof info?.lamports === "number" ? info.lamports : 0;
           if (
-            info.destination === MERCHANT_ADDRESS &&
-            info.lamports >= expectedAmountLamports
+            destination === MERCHANT_ADDRESS &&
+            lamports >= expectedAmountLamports
           ) {
             transferFound = true;
-            actualAmount = info.lamports;
-            recipientAddress = info.destination;
+            actualAmount = lamports;
+            recipientAddress = destination;
             break;
           }
         }
@@ -262,19 +274,21 @@ export async function verifySolanaTransaction(
       if (!transferFound && innerInstructions.length > 0) {
         for (const inner of innerInstructions) {
           for (const inst of inner.instructions || []) {
-            const instruction = inst as any;
+            const instruction = inst as ParsedSystemTransferInstruction;
             if (
               instruction.program === "system" &&
               instruction.parsed?.type === "transfer"
             ) {
               const info = instruction.parsed.info;
-              if (
-                info.destination === MERCHANT_ADDRESS &&
-                info.lamports >= expectedAmountLamports
-              ) {
-                transferFound = true;
-                actualAmount = info.lamports;
-                recipientAddress = info.destination;
+          const destination = typeof info?.destination === "string" ? info.destination : "";
+          const lamports = typeof info?.lamports === "number" ? info.lamports : 0;
+          if (
+            destination === MERCHANT_ADDRESS &&
+            lamports >= expectedAmountLamports
+          ) {
+            transferFound = true;
+            actualAmount = lamports;
+            recipientAddress = destination;
                 break;
               }
             }

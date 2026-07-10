@@ -22,6 +22,8 @@ interface WinrateBin {
   max: number;
 }
 
+type WinrateTooltipParam = { value: number; dataIndex: number; name?: string; seriesName?: string };
+
 type WinrateData = {
   wallets: {
     walletAddress: string;
@@ -128,8 +130,9 @@ export function WinrateChart({
       tooltip: {
         ...baseOption.tooltip,
         trigger: "axis",
-        formatter: (params: any) => {
-          const param = params[0];
+        formatter: (params: unknown) => {
+          const points = params as WinrateTooltipParam[];
+          const param = points[0];
           const wallet = data.wallets[param.dataIndex];
           return formatItemTooltip(fmt.text.address(wallet.walletAddress), [
             { label: "Winrate", value: `${param.value}%` },
@@ -231,11 +234,12 @@ export function WinrateChart({
           axisPointer: {
             type: "shadow",
           },
-          formatter: (params: any) => {
-            const winning = params.find((p: any) => p.seriesName === "Winning");
-            const losing = params.find((p: any) => p.seriesName === "Losing");
+          formatter: (params: unknown) => {
+            const points = params as WinrateTooltipParam[];
+            const winning = points.find((p) => p.seriesName === "Winning");
+            const losing = points.find((p) => p.seriesName === "Losing");
             return `
-              <div style="font-weight: 600; margin-bottom: 8px;">${params[0].name}</div>
+              <div style="font-weight: 600; margin-bottom: 8px;">${points[0]?.name ?? ""}</div>
               ${winning ? `<div style="display: flex; justify-content: space-between; gap: 16px;">
                 <span style="color: ${CHART_COLOR_PALETTE[1]}">● Winning:</span><strong>${winning.value}</strong>
               </div>` : ''}
@@ -332,3 +336,4 @@ export function WinrateChart({
     </ChartWrapper>
   );
 }
+

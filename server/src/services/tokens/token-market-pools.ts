@@ -37,6 +37,13 @@ export interface MarketPoolItem {
   poolCreatedAt: string | null;
 }
 
+type PoolAttributesWithFdv = { fdv_usd?: string | number | null };
+
+type SinglePoolPayload = {
+  data: CG_TopPoolData["data"][number];
+  included?: CG_TopPoolData["included"];
+};
+
 type ValidationCacheEntry = {
   exists: boolean;
   checkedAt: number;
@@ -183,8 +190,8 @@ function mapPools(res: CG_TopPoolData): MarketPoolItem[] {
       priceUsd: toNumber(pool.attributes.base_token_price_usd),
       marketCapUsd: toNumber(pool.attributes.market_cap_usd && pool.attributes.market_cap_usd !== "0" 
         ? pool.attributes.market_cap_usd 
-        : (pool.attributes as any).fdv_usd),
-      fdvUsd: toNumber((pool.attributes as any).fdv_usd),
+        : (pool.attributes as PoolAttributesWithFdv).fdv_usd),
+      fdvUsd: toNumber((pool.attributes as PoolAttributesWithFdv).fdv_usd),
       txns24h: buys24h + sells24h,
       volume24h: toNumber(pool.attributes.volume_usd?.h24),
       priceChange5m: toNumber(pool.attributes.price_change_percentage?.m5),
@@ -256,13 +263,13 @@ async function fetchSinglePoolFromCoinGecko(
   if (!resp.ok) return null;
 
   try {
-    const payload = await resp.json() as any;
+    const payload = await resp.json() as SinglePoolPayload;
     // API single pool trả về { data: { id, attributes... } }
     // Chúng ta wrap vào mảng để dùng chung hàm mapPools
     const results = mapPools({
       data: [payload.data],
-      included: payload.included
-    } as any);
+      included: payload.included ?? []
+    });
     return results[0] || null;
   } catch {
     return null;

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ZodType } from "zod";
 
 const mocks = vi.hoisted(() => ({
   getWalletBalanceHistory: vi.fn(),
@@ -9,7 +10,7 @@ vi.mock("@sv/middlewares/validation", async () => {
   const { z } = await import("zod");
   return {
     solanaBase58Schema: z.string().trim().min(1),
-    validate: (target: "query", schema: any) =>
+    validate: (target: "query", schema: ZodType) =>
       validator(target, (value, c) => {
         const parsed = schema.safeParse(value);
         return parsed.success
@@ -50,3 +51,4 @@ describe("GET /api/charts/balance", () => {
     });
   });
 });
+

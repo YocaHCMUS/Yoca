@@ -2,6 +2,7 @@ import client from "@/api/main";
 import { ProfitableTradersView } from "@/components/market/ProfitableTradersView";
 import {
     DexTable,
+    DexTableItem,
     INITIAL_FILTERS,
     SortKey,
     TableFilters,
@@ -579,7 +580,7 @@ export default function MarketPage() {
                       topPools.isValidating ||
                       newPairs.isLoading
                     }
-                    data={dataToRender as any}
+                    data={dataToRender as DexTableItem[]}
                     sortKey={sortKey}
                     sortDirection={sortDirection}
                     filters={filters}

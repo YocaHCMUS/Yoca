@@ -36,6 +36,30 @@ type ParsedTransfer = {
   programId: string;
 };
 
+type TokenTransferLike = {
+  symbol?: unknown;
+  tokenSymbol?: unknown;
+  tokenName?: unknown;
+  fromWallet?: unknown;
+  fromUserAccount?: unknown;
+  toWallet?: unknown;
+  toUserAccount?: unknown;
+  amount?: unknown;
+  tokenAmount?: unknown;
+  tokenAddress?: unknown;
+  mint?: unknown;
+  valueUsd?: unknown;
+};
+
+type TransactionSummaryLike = RawParsedTransaction & {
+  summary?: unknown;
+  transactionSummary?: unknown;
+  meta?: { summary?: unknown };
+  events?: { summary?: unknown; swap?: { source?: unknown } };
+  source?: unknown;
+  programName?: unknown;
+  tokenTransfers?: TokenTransferLike[];
+};
 type RawParsedTransaction = {
   signature: string;
   slot: number;
@@ -90,7 +114,7 @@ function isAddressLikeSymbol(value: unknown, mint: string): boolean {
   return false;
 }
 
-function resolveDisplaySymbol(transfer: any, mint: string): string {
+function resolveDisplaySymbol(transfer: TokenTransferLike, mint: string): string {
   if (mint === WRAPPED_SOL_MINT) {
     return "WSOL";
   }
@@ -171,7 +195,7 @@ function prettifySourceText(source: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function buildTransactionSummaryText(tx: any, signer: string): string {
+function buildTransactionSummaryText(tx: TransactionSummaryLike, signer: string): string {
   const summaryCandidates = [
     tx?.summary,
     tx?.transactionSummary,
@@ -186,19 +210,19 @@ function buildTransactionSummaryText(tx: any, signer: string): string {
     }
   }
 
-  const tokenTransfers = Array.isArray(tx?.tokenTransfers) ? tx.tokenTransfers : [];
-  const outflows = tokenTransfers.filter((tt: any) => {
+  const tokenTransfers: TokenTransferLike[] = Array.isArray(tx.tokenTransfers) ? tx.tokenTransfers : [];
+  const outflows = tokenTransfers.filter((tt: TokenTransferLike) => {
     const from = String(tt?.fromWallet ?? tt?.fromUserAccount ?? "").trim();
     const amount = Number(tt?.amount ?? tt?.tokenAmount ?? 0);
     return from === signer && Number.isFinite(amount) && amount > 0;
   });
-  const inflows = tokenTransfers.filter((tt: any) => {
+  const inflows = tokenTransfers.filter((tt: TokenTransferLike) => {
     const to = String(tt?.toWallet ?? tt?.toUserAccount ?? "").trim();
     const amount = Number(tt?.amount ?? tt?.tokenAmount ?? 0);
     return to === signer && Number.isFinite(amount) && amount > 0;
   });
 
-  const byLargestAmount = (a: any, b: any) => {
+  const byLargestAmount = (a: TokenTransferLike, b: TokenTransferLike) => {
     const aAmount = Number(a?.amount ?? a?.tokenAmount ?? 0);
     const bAmount = Number(b?.amount ?? b?.tokenAmount ?? 0);
     return bAmount - aAmount;
@@ -496,8 +520,8 @@ export function TransactionGraphPage() {
     return () => controller.abort();
   }, [txHash]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Record<string, unknown>>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Record<string, unknown>>([]);
   const [hoveredToken, setHoveredToken] = useState<string | null>(null);
   const [hoveredPair, setHoveredPair] = useState<string | null>(null);
   const [hoveredAddress, setHoveredAddress] = useState<string | null>(null);
@@ -794,7 +818,7 @@ export function TransactionGraphPage() {
   const txStatus = tx?.err ? "Failed" : "Success";
   const txTimeText = `${formatRelativeMinutes(txTimestamp)} \u2022 ${formatUtcTimestamp(txTimestamp)}`;
   const txFeeText = formatLamportsFee(txFeeLamports);
-  const txSummaryText = tx ? buildTransactionSummaryText(tx as any, txSigner) : "";
+  const txSummaryText = tx ? buildTransactionSummaryText(tx, txSigner) : "";
   const txSummaryFallback = tx?.transfers?.[0]
     ? `${tx.transfers.length} transfer${tx.transfers.length > 1 ? "s" : ""} parsed`
     : "Summary unavailable";
@@ -935,3 +959,5 @@ export function TransactionGraphPage() {
 }
 
 export default TransactionGraphPage;
+
+

@@ -9,7 +9,6 @@ import type { TranslationKeyPath } from "@/config/localization";
 import type {
   ActionSpec,
   ChatMessageItem,
-  ChatSource,
   WalletChatSection,
   WalletSectionKind,
 } from "./types";
@@ -422,14 +421,12 @@ function CitedTextBlock({
 
 function InlineFlow({
   parts,
-  sources,
   hoveredCiteIds,
   onOpenPanel,
   onHoverIds,
   onLeaveIds,
 }: {
   parts: PartType[];
-  sources: ChatSource[];
   hoveredCiteIds: number[];
   onOpenPanel: (key: string, ids: string[], pos: { top: number; left: number }) => void;
   onHoverIds: (ids: string[]) => void;
@@ -695,7 +692,6 @@ export function WalletChatMessage({ message, index, onAction, onRedo, onRevert }
         <InlineFlow
           key={`flow-${elements.length}`}
           parts={group}
-          sources={sources}
           hoveredCiteIds={hoveredCiteIds}
           onOpenPanel={handleOpenPanel}
           onHoverIds={handleHoverCiteIds}
@@ -865,3 +861,4 @@ export function WalletChatMessage({ message, index, onAction, onRedo, onRevert }
     </>
   );
 }
+

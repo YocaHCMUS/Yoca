@@ -23,6 +23,8 @@ export interface HoldersInfo {
   top_10_percent: number;
 }
 
+type PoolApiRow = { data: Record<string, unknown> };
+
 export interface PoolData {
   name: string;
   address: string;
@@ -101,12 +103,12 @@ export const useTokenPageData = (address: string | undefined) => {
           if (poolsResp.ok) {
             const poolsData = await poolsResp.json();
             setPoolsData(
-              poolsData.slice(0, 20).map((pool: any) => {
+              poolsData.slice(0, 20).map((pool: PoolApiRow) => {
                 const p = pool.data;
                 return {
-                  name: p.poolName || "Unknown Pool",
-                  address: p.poolAddress || "",
-                  source: p.dexId || "unknown",
+                  name: String(p.poolName || "Unknown Pool"),
+                  address: String(p.poolAddress || ""),
+                  source: String(p.dexId || "unknown"),
                   volume24h: Number(p.volumeUsd24h || 0),
                   volumeBuy24h: Number(p.buyVolumeUsd24h || 0),
                   volumeSell24h: Number(p.sellVolumeUsd24h || 0),
@@ -122,10 +124,10 @@ export const useTokenPageData = (address: string | undefined) => {
                     h6: Number(p.priceChangePercentage6h || 0),
                     h24: Number(p.priceChangePercentage24h || 0),
                   },
-                  txns24h: Number((p.buys24h || 0) + (p.sells24h || 0)),
+                  txns24h: Number(p.buys24h || 0) + Number(p.sells24h || 0),
                   buys24h: Number(p.buys24h || 0),
                   sells24h: Number(p.sells24h || 0),
-                  traders24h: Number((p.buyers24h || 0) + (p.sellers24h || 0)),
+                  traders24h: Number(p.buyers24h || 0) + Number(p.sellers24h || 0),
                   buyers24h: Number(p.buyers24h || 0),
                   sellers24h: Number(p.sellers24h || 0),
                 };
@@ -192,3 +194,5 @@ export const usePoolTrades = (
 
   return { trades, loading };
 };
+
+

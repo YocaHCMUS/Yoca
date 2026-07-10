@@ -9,6 +9,8 @@ import { eq } from "drizzle-orm";
 
 const WALLET_AI_ANALYSIS_CACHE_TTL_MS = 3 * 60 * 60 * 1000;
 
+type WalletAnalysisCacheRow = typeof walletAiAnalysisCache.$inferSelect;
+
 let warnedMissingWalletAiAnalysisCacheTable = false;
 
 function isMissingWalletAiAnalysisCacheTableError(error: unknown): boolean {
@@ -63,7 +65,7 @@ export function createWalletAiAnalysisCacheKey(input: {
 export async function getCachedWalletAiAnalysis(
     key: string,
 ): Promise<WalletAiAnalysisResponse | null> {
-    let rows: unknown[];
+    let rows: WalletAnalysisCacheRow[];
 
     try {
         rows = await db
@@ -84,7 +86,7 @@ export async function getCachedWalletAiAnalysis(
         return null;
     }
 
-    const row = rows[0] as any;
+    const row = rows[0];
     const fetchedAt =
         row.fetchedAt instanceof Date
             ? row.fetchedAt

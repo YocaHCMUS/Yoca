@@ -1,9 +1,13 @@
-import "@sv/util/load-env.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@sv/util/load-env.js", () => ({
+  default: { JWT_SECRET: "test-secret", GOOGLE_CLIENT_ID: "test-client-id" },
+}));
+
 import authApp from "@sv/routes/auth.js";
 import usersApp from "@sv/routes/users.js";
 import { PasswordResetError } from "@sv/services/password-reset-errors.js";
 import * as userService from "@sv/services/users.js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@sv/services/users.js", () => ({
   requestPasswordReset: vi.fn(),

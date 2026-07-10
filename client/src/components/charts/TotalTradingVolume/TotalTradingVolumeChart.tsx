@@ -22,6 +22,8 @@ type TotalTradingVolumeResponse = InferFetcherData<
   typeof fetchTotalTradingVolume
 >;
 
+type VolumeTooltipParam = { value: number; dataIndex: number };
+
 export function TotalTradingVolumeChart({
   title,
   minHeight = 400,
@@ -115,7 +117,7 @@ export function TotalTradingVolumeChart({
           label: {
             show: true,
             position: "right",
-            formatter: (params: any) => fmt.num.compact.currency(params.value),
+            formatter: (param: unknown) => fmt.num.compact.currency((param as VolumeTooltipParam).value),
             color: baseOption.textStyle.color,
           },
           emphasis: {
@@ -133,9 +135,9 @@ export function TotalTradingVolumeChart({
         axisPointer: {
           type: "shadow",
         },
-        formatter: (params: any) => {
+        formatter: (params: unknown) => {
           if (!Array.isArray(params) || params.length === 0) return "";
-          const wallet = wallets[params[0].dataIndex];
+          const wallet = wallets[(params as VolumeTooltipParam[])[0].dataIndex];
           return formatItemTooltip(wallet.wallet, [
             {
               label: "Total Volume",
@@ -156,7 +158,7 @@ export function TotalTradingVolumeChart({
         !data.wallets ||
         !Array.isArray(data.wallets) ||
         data.wallets.length === 0 ||
-        (data.wallets as any).error
+        Boolean((data.wallets as unknown as { error?: unknown }).error)
       }
       onRetry={() => refetch(false)}
       toolbarLayout="stacked"
@@ -185,3 +187,5 @@ export function TotalTradingVolumeChart({
     </ChartWrapper>
   );
 }
+
+

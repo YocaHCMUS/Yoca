@@ -61,10 +61,6 @@ import client from "@/api/main";
 // Helper types & factories
 // ---------------------------------------------------------------------------
 
-interface MockResponse<T> {
-  ok: boolean;
-  json: () => Promise<T>;
-}
 
 function makeStripeSetupIntentResponse(overrides: { setupIntent?: Record<string, unknown>; error?: { message: string } } = {}) {
   return {
@@ -119,7 +115,7 @@ describe("CheckoutForm Component", () => {
         publishableKey: "pk_test",
         tier: "Plus",
       }),
-    } as any);
+    } as never);
 
     // Default: activate-subscription succeeds
     vi.mocked(client.api.payment["activate-subscription"].$post).mockResolvedValue({
@@ -129,7 +125,7 @@ describe("CheckoutForm Component", () => {
         subscriptionId: "sub_test_123",
         status: "active",
       }),
-    } as any);
+    } as never);
   });
 
   afterEach(() => {
@@ -283,7 +279,7 @@ describe("CheckoutForm Component", () => {
       vi.mocked(client.api.payment["setup-intent"].$post).mockResolvedValue({
         ok: false,
         json: async () => ({ message: "Invalid payment method type." }),
-      } as any);
+      } as never);
 
       render(<CheckoutForm {...defaultProps} />);
       fireEvent.submit(screen.getByTestId("stripe-payment-element-card").closest("form")!);
@@ -300,7 +296,7 @@ describe("CheckoutForm Component", () => {
       vi.mocked(client.api.payment["setup-intent"].$post).mockResolvedValue({
         ok: false,
         json: async () => ({ message: undefined }),
-      } as any);
+      } as never);
 
       render(<CheckoutForm {...defaultProps} />);
       fireEvent.submit(screen.getByTestId("stripe-payment-element-card").closest("form")!);
@@ -317,7 +313,7 @@ describe("CheckoutForm Component", () => {
       vi.mocked(client.api.payment["setup-intent"].$post).mockResolvedValue({
         ok: true,
         json: async () => ({ clientSecret: null, setupIntentId: "seti_1", publishableKey: "pk_test" }),
-      } as any);
+      } as never);
 
       render(<CheckoutForm {...defaultProps} />);
       fireEvent.submit(screen.getByTestId("stripe-payment-element-card").closest("form")!);
@@ -380,7 +376,7 @@ describe("CheckoutForm Component", () => {
       vi.mocked(client.api.payment["activate-subscription"].$post).mockResolvedValue({
         ok: false,
         json: async () => ({ message: "No Stripe customer found." }),
-      } as any);
+      } as never);
 
       render(<CheckoutForm {...defaultProps} />);
       fireEvent.submit(screen.getByTestId("stripe-payment-element-card").closest("form")!);
@@ -452,3 +448,4 @@ describe("CheckoutForm Component", () => {
     });
   });
 });
+

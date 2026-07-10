@@ -2,7 +2,48 @@
 import { db } from "@sv/db/index.js";
 import { subscriptions, paymentHistory, users } from "@sv/db/schema.js";
 import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import type Stripe from "stripe";
 
+type SubscriptionPlanTier = typeof subscriptions.$inferInsert.planTier;
+
+type StripeInvoicePaymentLike = {
+  is_default?: boolean;
+  status?: string | null;
+  payment?: {
+    payment_intent?: string | Stripe.PaymentIntent | null;
+  } | null;
+};
+
+type StripeInvoiceLike = Stripe.Invoice & {
+  payments?: { data?: StripeInvoicePaymentLike[] } | null;
+};
+
+type StripeSubscriptionLike = Stripe.Subscription;
+
+type StripeInvoiceRecordLike = StripeInvoiceLike;
+
+function normalizePlanTier(value: unknown): SubscriptionPlanTier | undefined {
+  return value === "Lite" || value === "Plus" || value === "Pro" ? value : undefined;
+}
+
+function normalizeSubscriptionStatus(value: unknown): typeof subscriptions.$inferInsert.status {
+  switch (value) {
+    case "active":
+    case "past_due":
+    case "canceled":
+    case "incomplete":
+    case "trialing":
+    case "unpaid":
+    case "paused":
+      return value;
+    default:
+      return "incomplete";
+  }
+}
+
+function getObjectProp(value: unknown, key: string): unknown {
+  return value && typeof value === "object" ? (value as Record<string, unknown>)[key] : undefined;
+}
 type PaymentHistoryRowForStripe = {
   status?: string | null;
   stripeInvoiceId?: string | null;
@@ -10,34 +51,19 @@ type PaymentHistoryRowForStripe = {
   [key: string]: unknown;
 };
 
-type StripeInvoiceLineLike = {
-  amount?: number | null;
-  price?: string | { id?: string; product?: string | { name?: string | null } | null } | null;
-  pricing?: {
-    price_details?: {
-      price?: string | { id?: string; product?: string | { name?: string | null } | null } | null;
-      product?: string | { name?: string | null } | null;
-    } | null;
-  } | null;
-};
-
-type StripeInvoiceLike = {
-  lines?: { data?: StripeInvoiceLineLike[] } | null;
-};
-
-function getInvoiceLinePrice(line: StripeInvoiceLineLike | undefined) {
-  return line?.price ?? line?.pricing?.price_details?.price ?? null;
+function getInvoiceLinePrice(line: Stripe.InvoiceLineItem | undefined): unknown {
+  return getObjectProp(line, "price") ?? line?.pricing?.price_details?.price ?? null;
 }
 
-function getInvoicePriceId(line: StripeInvoiceLineLike | undefined): string | undefined {
+function getInvoicePriceId(line: Stripe.InvoiceLineItem | undefined): string | undefined {
   const price = getInvoiceLinePrice(line);
-  return typeof price === "string" ? price : price?.id;
+  return typeof price === "string" ? price : typeof getObjectProp(price, "id") === "string" ? getObjectProp(price, "id") as string : undefined;
 }
 
-function getInvoiceLineProduct(line: StripeInvoiceLineLike | undefined) {
+function getInvoiceLineProduct(line: Stripe.InvoiceLineItem | undefined): unknown {
   const price = getInvoiceLinePrice(line);
-  if (line?.pricing?.price_details?.product) return line.pricing.price_details.product;
-  return typeof price === "string" ? undefined : price?.product;
+  const pricingProduct = line?.pricing?.price_details?.product;
+  return pricingProduct ?? (typeof price === "string" ? undefined : getObjectProp(price, "product"));
 }
 export async function getUserSubscription(userId: string) {
   const [sub] = await db
@@ -114,27 +140,20 @@ export async function enrichPaymentHistoryWithStripeProduct<T extends PaymentHis
 
   const resolvePlanFromInvoice = async (invoice: StripeInvoiceLike) => {
     const lines = invoice?.lines?.data ?? [];
-    const getPrice = (line: StripeInvoiceLineLike) =>
-      line?.price ?? line?.pricing?.price_details?.price;
     const selectedLine =
       lines.find(
-        (line: StripeInvoiceLineLike) =>
-          line.amount > 0 &&
-          mapTierFromPriceId(
-            typeof getPrice(line) === "string"
-              ? getPrice(line)
-              : getPrice(line)?.id,
-          ),
-      ) ?? lines.find((line: StripeInvoiceLineLike) => line.amount > 0);
-    const linePrice = getPrice(selectedLine);
-    const linePriceId =
-      typeof linePrice === "string" ? linePrice : linePrice?.id;
+        (line: Stripe.InvoiceLineItem) =>
+          (line.amount ?? 0) > 0 &&
+          mapTierFromPriceId(getInvoicePriceId(line)),
+      ) ?? lines.find((line: Stripe.InvoiceLineItem) => (line.amount ?? 0) > 0);
+    const linePriceId = getInvoicePriceId(selectedLine);
     const planTier = mapTierFromPriceId(linePriceId);
     if (planTier) return { planName: planTier, planTier };
 
     const lineProduct = getInvoiceLineProduct(selectedLine);
-    if (typeof lineProduct === "object" && lineProduct?.name) {
-      return { planName: String(lineProduct.name), planTier: undefined };
+    const lineProductName = getObjectProp(lineProduct, "name");
+    if (typeof lineProductName === "string") {
+      return { planName: lineProductName, planTier: undefined };
     }
     if (typeof lineProduct === "string") {
       try {
@@ -216,25 +235,27 @@ function mapTierFromPriceId(
   return undefined;
 }
 
-function getInvoiceSubscriptionId(invoice: any): string | undefined {
+function getInvoiceSubscriptionId(invoice: StripeInvoiceRecordLike): string | undefined {
   const subscription =
-    invoice?.subscription ??
-    invoice?.parent?.subscription_details?.subscription;
-  return typeof subscription === "string" ? subscription : subscription?.id;
+    getObjectProp(invoice, "subscription") ??
+    (getObjectProp(getObjectProp(invoice, "parent"), "subscription_details") && getObjectProp(getObjectProp(getObjectProp(invoice, "parent"), "subscription_details"), "subscription"));
+  const subscriptionId = getObjectProp(subscription, "id");
+  return typeof subscription === "string" ? subscription : typeof subscriptionId === "string" ? subscriptionId : undefined;
 }
 
-function resolveSubscriptionPeriodUnix(stripeSub: any): {
+function resolveSubscriptionPeriodUnix(stripeSub: StripeSubscriptionLike): {
   start: number | null;
   end: number | null;
 } {
-  const topLevelStart = stripeSub?.current_period_start;
-  const topLevelEnd = stripeSub?.current_period_end;
+  const topLevelStart = getObjectProp(stripeSub, "current_period_start");
+  const topLevelEnd = getObjectProp(stripeSub, "current_period_end");
 
   const firstItem = stripeSub?.items?.data?.[0];
   const itemLevelStart = firstItem?.current_period_start;
   const itemLevelEnd = firstItem?.current_period_end;
 
-  const firstInvoiceLine = stripeSub?.latest_invoice?.lines?.data?.[0];
+  const latestInvoice = stripeSub.latest_invoice;
+  const firstInvoiceLine = typeof latestInvoice === "object" && latestInvoice !== null ? latestInvoice.lines?.data?.[0] : undefined;
   const invoiceLineStart = firstInvoiceLine?.period?.start;
   const invoiceLineEnd = firstInvoiceLine?.period?.end;
 
@@ -265,12 +286,12 @@ export async function syncUserSubscriptionsFromStripe(userId: string) {
   }
 }
 
-export async function upsertSubscription(stripeSub: any) {
-  const stripeCustomerId = stripeSub.customer as string;
+export async function upsertSubscription(stripeSub: StripeSubscriptionLike) {
+  const stripeCustomerId = typeof stripeSub.customer === "string" ? stripeSub.customer : (stripeSub.customer?.id ?? "");
   const yocaUserIdFromMetadata = stripeSub.metadata?.yocaUserId as
     | string
     | undefined;
-  const tierFromMetadata = stripeSub.metadata?.tier as string | undefined;
+  const tierFromMetadata = normalizePlanTier(stripeSub.metadata?.tier);
 
   let yocaUserId = yocaUserIdFromMetadata;
   if (!yocaUserId && stripeCustomerId) {
@@ -314,8 +335,8 @@ export async function upsertSubscription(stripeSub: any) {
         userId: yocaUserId,
         stripeCustomerId,
         stripeSubscriptionId: stripeSub.id,
-        planTier: tier as any,
-        status: stripeSub.status,
+        planTier: tier,
+        status: normalizeSubscriptionStatus(stripeSub.status),
         currentPeriodStart: mappedCurrentPeriodStart,
         currentPeriodEnd: mappedCurrentPeriodEnd,
         cancelAtPeriodEnd: stripeSub.cancel_at_period_end,
@@ -350,11 +371,11 @@ export async function upsertSubscription(stripeSub: any) {
   const [updated] = await db
     .update(subscriptions)
     .set({
-      status: stripeSub.status,
+      status: normalizeSubscriptionStatus(stripeSub.status),
       currentPeriodStart: mappedCurrentPeriodStart,
       currentPeriodEnd: mappedCurrentPeriodEnd,
       cancelAtPeriodEnd: stripeSub.cancel_at_period_end,
-      planTier: tier as any,
+      planTier: tier,
     })
     .where(eq(subscriptions.stripeSubscriptionId, stripeSub.id))
     .returning();
@@ -363,7 +384,7 @@ export async function upsertSubscription(stripeSub: any) {
 }
 
 export async function recordInvoicePayment(
-  invoice: any,
+  invoice: StripeInvoiceRecordLike,
   statusOverride?: "succeeded" | "failed" | "pending",
 ) {
   if (!invoice.customer) return null;
@@ -397,24 +418,23 @@ export async function recordInvoicePayment(
   if (!userId) return null;
 
   const invoicePayment =
-    invoice.payments?.data?.find((payment: any) => payment.is_default) ??
+    invoice.payments?.data?.find((payment) => payment.is_default) ??
     invoice.payments?.data?.[0];
   const paymentIntent =
-    invoice.payment_intent ?? invoicePayment?.payment?.payment_intent;
-  const paymentIntentId = paymentIntent
-    ? typeof paymentIntent === "string"
+    getObjectProp(invoice, "payment_intent") ?? invoicePayment?.payment?.payment_intent;
+  const paymentIntentId =
+    typeof paymentIntent === "string"
       ? paymentIntent
-      : paymentIntent.id
-    : null;
+      : typeof getObjectProp(paymentIntent, "id") === "string"
+        ? getObjectProp(paymentIntent, "id") as string
+        : null;
 
-  let brand, last4;
-  if (
-    typeof paymentIntent === "object" &&
-    paymentIntent.payment_method_details
-  ) {
-    brand = paymentIntent.payment_method_details?.card?.brand;
-    last4 = paymentIntent.payment_method_details?.card?.last4;
-  }
+  const paymentMethodDetails = getObjectProp(paymentIntent, "payment_method_details");
+  const cardDetails = getObjectProp(paymentMethodDetails, "card");
+  const rawBrand = getObjectProp(cardDetails, "brand");
+  const rawLast4 = getObjectProp(cardDetails, "last4");
+  const brand = typeof rawBrand === "string" ? rawBrand : undefined;
+  const last4 = typeof rawLast4 === "string" ? rawLast4 : undefined;
 
   const paymentStatus =
     statusOverride ??
@@ -467,6 +487,7 @@ export async function backfillUserPaymentHistory(userId: string) {
 
     for (const invoice of invoices.data) {
       const stripeInvoice = invoice as StripeInvoiceLike;
+      if (!stripeInvoice.id) continue;
       seenInvoiceIds.add(stripeInvoice.id);
 
       // Ensure corresponding subscription exists/updated in our DB first.
@@ -505,6 +526,7 @@ export async function backfillUserPaymentHistory(userId: string) {
 
     for (const invoice of subInvoices.data) {
       const stripeInvoice = invoice as StripeInvoiceLike;
+      if (!stripeInvoice.id) continue;
       if (seenInvoiceIds.has(stripeInvoice.id)) continue;
 
       const fullInvoice = await stripe.invoices.retrieve(stripeInvoice.id, {

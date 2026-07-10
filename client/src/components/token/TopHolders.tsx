@@ -13,6 +13,8 @@ type TopHoldersData = InferResponseType<
   200
 >;
 
+type TopHolder = TopHoldersData[number];
+
 interface TopHoldersProps {
   holders: TopHoldersData;
 }
@@ -34,7 +36,7 @@ export const TopHolders = ({ holders }: TopHoldersProps) => {
   // Dùng trực tiếp dữ liệu top 10 từ mảng holders
   const top10Holders = holders.slice(0, 10);
   const totalPercentage = top10Holders.reduce(
-    (acc: number, curr: any) => acc + curr.percentage,
+    (acc: number, curr: TopHolder) => acc + curr.percentage,
     0
   );
 
@@ -84,7 +86,7 @@ export const TopHolders = ({ holders }: TopHoldersProps) => {
             ]}
             loading={false}
             height="auto"
-            rows={top10Holders.map((holder: any, index: number) => ({
+            rows={top10Holders.map((holder: TopHolder, index: number) => ({
               id: holder.holderAddress,
               rank: <span className={styles.rank}>{index + 1}</span>,
               address: (
@@ -127,3 +129,5 @@ export const TopHolders = ({ holders }: TopHoldersProps) => {
     </div>
   );
 };
+
+

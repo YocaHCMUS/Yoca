@@ -82,6 +82,7 @@ export type FetchAllTransactionHistoryChunkResult = {
 type HeliusPagination = {
   hasMore?: unknown;
   page?: unknown;
+  nextCursor?: unknown;
   next?: unknown;
   before?: unknown;
 };
@@ -811,7 +812,7 @@ export async function fetchBirdeyeJson(
     searchParams?: Record<string, string | number | boolean>;
     body?: unknown;
   },
-): Promise<any | null> {
+): Promise<Record<string, unknown> | null> {
   const fetcher = async () => {
     if (method === "GET") {
       return await birdeyeGetJson(path, options?.searchParams);
@@ -821,7 +822,8 @@ export async function fetchBirdeyeJson(
   };
 
   try {
-    return await callBirdeye(path, options ?? {}, fetcher);
+    const result = await callBirdeye(path, options ?? {}, fetcher);
+    return result && typeof result === "object" ? result as Record<string, unknown> : null;
   } catch (err) {
     console.error("Birdeye request failed", { method, path, err });
     return null;
@@ -854,7 +856,7 @@ export async function fetchBirdeyeNetworthHistory(
       ...(time ? { time } : {}),
     },
   });
-  const data = json?.data ?? {};
+  const data = (json?.data && typeof json.data === "object" ? json.data : {}) as Record<string, unknown>;
   const rows: BirdeyeNetworthHistoryEntry[] = Array.isArray(data?.history) ? data.history : [];
   const currentTimestamp = toIsoTimestamp(data?.current_timestamp);
   const pastTimestamp = toIsoTimestamp(data?.past_timestamp);
@@ -925,7 +927,7 @@ export async function fetchBirdeyePortfolioSnapshot(
       ...(time ? { time } : {}),
     },
   });
-  const data = json?.data ?? {};
+  const data = (json?.data && typeof json.data === "object" ? json.data : {}) as Record<string, unknown>;
   const rows: BirdeyeNetAssetEntry[] = Array.isArray(data?.net_assets) ? data.net_assets : [];
 
   return {

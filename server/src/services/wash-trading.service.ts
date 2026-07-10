@@ -291,12 +291,12 @@ class WashTradingService {
     
     circularTrades.forEach(ct => ct.cycle.forEach((w: string) => suspiciousWallets.add(w)));
     sameAmountClusters.forEach(cluster => {
-      cluster.forEach((tx: any) => {
+      cluster.forEach((tx) => {
         suspiciousWallets.add(tx.fromAddress);
         suspiciousWallets.add(tx.toAddress);
       });
     });
-    starHubs.forEach((hub: any) => suspiciousWallets.add(hub.wallet));
+    starHubs.forEach((hub) => suspiciousWallets.add(hub.wallet));
     volumeAnomalies.forEach(va => suspiciousWallets.add(va.hash));
 
     // Get GNN scores

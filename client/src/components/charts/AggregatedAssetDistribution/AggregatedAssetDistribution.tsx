@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useCallback, useState, useEffect } from 'react'
 import ReactECharts from 'echarts-for-react';
 import { Checkbox } from '@carbon/react';
 import type { EChartsOption } from 'echarts';
+import type { EChartsInstance } from '@/util/echarts-setup';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import {
@@ -49,6 +50,14 @@ interface WalletRow {
     uniqueTokenCount: number;
     data: AssetItem[];
 }
+
+type AssetTooltipParam = {
+    name: string;
+    value?: unknown;
+    data: { percentage: number; logoUri?: string; hiddenNames?: string[] };
+};
+
+type WalletTableRow = Array<boolean | number | WalletIdentityCellValue>;
 
 interface WalletIdentityCellValue {
     label: string;
@@ -327,7 +336,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
             {
                 format,
                 filters,
-                chartInstance: instance as any,
+                chartInstance: instance as EChartsInstance | null,
                 csvData: csv,
                 csvFilters: { ...filters, wallets: [] },
                 extraFilters: {
@@ -371,7 +380,8 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
             tooltip: {
                 ...baseOption.tooltip,
                 trigger: 'item',
-                formatter: (p: any) => {
+                formatter: (param: unknown) => {
+                    const p = param as AssetTooltipParam;
                     const isOthers = p.name === othersLabel;
                     const logoUri: string | undefined = p.data.logoUri;
                     const logoHtml = logoUri
@@ -379,7 +389,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                         : '';
 
                     let html = createTooltipHeader(`${logoHtml}${p.name}`);
-                    if (isOthers && p.data.hiddenNames?.length > 0) {
+                    if (isOthers && (p.data.hiddenNames?.length ?? 0) > 0) {
                         html += `<div style="max-height:160px;overflow-y:auto;margin-bottom:4px;">`;
                         html += (p.data.hiddenNames as string[])
                             .map((n) => `<div style="padding:1px 0;font-size:11px;color:var(--cds-text-secondary)">• ${n}</div>`)
@@ -397,28 +407,6 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                     return html;
                 },
             },
-            // legend: {
-            //     show: true,
-            //     orient: 'horizontal',
-            //     bottom: 0,
-            //     left: 'center',
-            //     data: groupedTokens.map(token => token.name),
-            //     icon: 'circle',
-            //     textStyle: { color: baseOption.textStyle.color, fontSize: 12 },
-            //     tooltip: {
-            //         show: true,
-            //         formatter: (params: any) => {
-            //             const name = params.name ?? params;
-            //             const item = groupedTokens.find(g => g.name === name);
-            //             const hidden: string[] = (item as any)?.hiddenNames ?? [];
-            //             if (name !== othersLabel || hidden.length === 0) return name;
-            //             return (
-            //                 `<strong>${name}</strong><br/>` +
-            //                 hidden.map(n => `• ${n}`).join('<br/>')
-            //             );
-            //         },
-            //     } as any,
-            // },
             legend: {
                 show: false
             },
@@ -431,7 +419,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                         name: token.name,
                         value: token.value,
                         percentage: token.percentage,
-                        hiddenNames: (token as any).hiddenNames,
+                        hiddenNames: token.hiddenNames,
                         logoUri: token.logoUri,
                         itemStyle: {
                             color: token.name === othersLabel
@@ -443,7 +431,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                         },
                     })),
                     label: {
-                        formatter: (p: any) => `${p.name}\n${p.data.percentage.toFixed(1)}%`,
+                        formatter: (param: unknown) => { const p = param as AssetTooltipParam; return `${p.name}\n${p.data.percentage.toFixed(1)}%`; },
                         color: baseOption.textStyle.color,
                         fontSize: 11,
                     },
@@ -505,7 +493,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
         ];
     }, [mode, tr]);
 
-    const tableRows = useMemo<any[][]>(() => {
+    const tableRows = useMemo<WalletTableRow[]>(() => {
         return walletRows.map((wallet) => {
             const walletIdentity: WalletIdentityCellValue = {
                 label: wallet.walletName || wallet.walletAddress,
@@ -551,7 +539,7 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
             },
             (value: unknown) => renderBase(value, (text) => fmt.num.compact.currency(Number(text ?? 0))),
             (value: unknown) => <span className={styles.countValue}>{Number(value ?? 0).toLocaleString()}</span>,
-        ] as Array<((value: any, row: unknown[], rowIndex: number) => React.ReactNode) | null>;
+        ] as Array<((value: unknown, row: unknown[], rowIndex: number) => React.ReactNode) | null>;
 
         if (mode === 'aggregate') {
             const selectionRenderer = (_value: unknown, row: unknown[]) => {
@@ -737,3 +725,5 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
         </ChartWrapper>
     );
 };
+
+

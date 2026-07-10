@@ -82,12 +82,9 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
       }),
   );
 
-  const rawInfoList = rawInfoSettled
-    .filter(
-      (result): result is PromiseFulfilledResult<any> =>
-        result.status === "fulfilled" && result.value != null,
-    )
-    .map((result) => result.value);
+  const rawInfoList = rawInfoSettled.flatMap((result) =>
+    result.status === "fulfilled" && result.value != null ? [result.value] : [],
+  );
 
   const details = rawInfoList.map(
     (
@@ -122,10 +119,10 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
       market: {
         address: raw.platforms.solana!,
         fullyDilutedValuation: raw.market_data?.fully_diluted_valuation?.usd ?? null,
-        marketCap: raw.market_data?.market_cap?.usd ?? '0',
+        marketCap: raw.market_data?.market_cap?.usd ?? 0,
         marketCapRank: raw.market_data?.market_cap_rank ?? null,
-        priceUsd: raw.market_data?.current_price?.usd ?? '0',
-        volume24h: raw.market_data?.total_volume?.usd ?? '0',
+        priceUsd: raw.market_data?.current_price?.usd ?? 0,
+        volume24h: raw.market_data?.total_volume?.usd ?? 0,
         ath: raw.market_data?.ath?.usd ?? null,
         athChangePercentage: raw.market_data?.ath_change_percentage?.usd ?? null,
         athDate: raw.market_data?.ath_date?.usd ? new Date(raw.market_data.ath_date.usd) : null,

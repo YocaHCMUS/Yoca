@@ -14,6 +14,12 @@ import { formatAxisTooltip } from '@/util/tooltip-helpers';
 import type { TransactionDistributionRequestParams } from '@/types/chart-api.types';
 
 type TransactionDistributionData = InferFetcherData<typeof fetchTransactionDistribution>;
+
+type AxisPoint = {
+  value: [number, number];
+  color?: string;
+  seriesName?: string;
+};
 import type { TimePeriod, TransactionType } from '@/types/chart-filters.types';
 import { useStandardChartController } from '@/hooks/useChartController';
 import { Flex } from '@/components/Flex';
@@ -95,8 +101,8 @@ export function TransactionDistribution({
       label: {
         show: wallet.data.length <= 30,
         position: selectedChartMode === 'stacked' ? 'inside' : 'top',
-        formatter: (params: any) => {
-          const value = params.value[1];
+        formatter: (params: unknown) => {
+          const value = (params as { value: [number, number] }).value[1];
           return value > 0 ? value.toString() : '';
         },
         fontSize: 10,
@@ -115,16 +121,17 @@ export function TransactionDistribution({
         axisPointer: {
           type: 'shadow',
         },
-        formatter: (params: any) => {
-          if (!Array.isArray(params) || params.length === 0) return '';
+        formatter: (params: unknown) => {
+          const points = Array.isArray(params) ? (params as AxisPoint[]) : [];
+          if (points.length === 0) return '';
 
-          const timestamp = params[0].value[0];
+          const timestamp = points[0].value[0];
           const dateStr = formatDate(new Date(timestamp), timezone);
 
           let tooltipContent = `<strong>${dateStr}</strong><br/>`;
           let total = 0;
 
-          params.forEach((param: any) => {
+          points.forEach((param) => {
             const count = param.value[1];
             total += count;
             const color = param.color;
@@ -200,7 +207,7 @@ export function TransactionDistribution({
             color: '#999',
           },
         },
-        formatter: (params: any) => formatAxisTooltip(
+        formatter: (params: unknown) => formatAxisTooltip(
           params,
           (p) => formatDate(new Date(p.value[0]), timezone),
           (p) => p.value[1].toString()
@@ -250,7 +257,7 @@ export function TransactionDistribution({
           label: {
             show: data.uniqueTokenCounts.length <= 30,
             position: 'top',
-            formatter: (params: any) => params.value[1].toString(),
+            formatter: (param: unknown) => (param as AxisPoint).value[1].toString(),
             fontSize: 10,
           },
         },
@@ -333,3 +340,5 @@ export function TransactionDistribution({
     </ChartWrapper>
   );
 }
+
+

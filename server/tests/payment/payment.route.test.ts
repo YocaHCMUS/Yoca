@@ -1,15 +1,21 @@
-import "@sv/util/load-env.js";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import type { Context, Next } from "hono";
+type JsonObject = Record<string, unknown>;
+
+vi.mock("@sv/util/load-env.js", () => ({
+  default: { JWT_SECRET: "test-secret" },
+}));
+
 import app from "@sv/routes/payment.route.js";
 import { sign } from "hono/jwt";
 import env from "@sv/util/load-env.js";
 
 // Mock honoJwt to inject mock userPayload and pass validation checks
 vi.mock("@sv/middlewares/validation.js", async (importOriginal) => {
-  const actual = await importOriginal() as any;
+  const actual = await importOriginal() as never;
   return {
     ...actual,
-    honoJwt: async (c: any, next: any) => {
+    honoJwt: async (c: Context, next: Next) => {
       const cookie = c.req.header("Cookie");
       if (!cookie || !cookie.includes("token=")) {
         return c.json({ error: "UNAUTHORIZED" }, 401);
@@ -42,7 +48,7 @@ vi.mock("@sv/db/index.js", () => {
       // Return limit mock or promise directly depending on use case
       return {
         limit: selectLimitMock,
-        then: (onfulfilled: any) => selectWhereMock().then(onfulfilled),
+        then: (onfulfilled: (value: unknown[]) => unknown) => selectWhereMock().then(onfulfilled),
       };
     }),
   }));
@@ -151,7 +157,7 @@ describe("Hono Payment Route", () => {
       });
 
       expect(response.status).toBe(200);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as JsonObject;
       expect(data).toHaveProperty("clientSecret", "seti_secret_123");
       expect(data).toHaveProperty("publishableKey");
     });
@@ -186,7 +192,7 @@ describe("Hono Payment Route", () => {
       });
 
       expect(response.status).toBe(200);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as JsonObject;
       expect(data.success).toBe(true);
       expect(data.subscriptionId).toBe("sub_123");
       expect(subscriptionService.recordInvoicePayment).toHaveBeenCalledWith(
@@ -211,7 +217,7 @@ describe("Hono Payment Route", () => {
 
       selectWhereMock.mockResolvedValueOnce([stripeSub]);
       vi.mocked(stripeService.cancelSubscription).mockResolvedValueOnce(
-        updatedStripeSub as any,
+        updatedStripeSub as never,
       );
 
       const response = await app.request("/cancel", {
@@ -224,7 +230,7 @@ describe("Hono Payment Route", () => {
       });
 
       expect(response.status).toBe(200);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as JsonObject;
       expect(data.success).toBe(true);
       expect(data.cancel_at_period_end).toBe(true);
       expect(stripeService.cancelSubscription).toHaveBeenCalledWith("sub_123");
@@ -247,7 +253,7 @@ describe("Hono Payment Route", () => {
       });
 
       expect(response.status).toBe(400);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as JsonObject;
       expect(data.errorCode).toBe("UNSUPPORTED_SUBSCRIPTION_PROVIDER");
       expect(stripeService.cancelSubscription).not.toHaveBeenCalled();
     });
@@ -294,7 +300,7 @@ describe("Hono Payment Route", () => {
       });
 
       expect(response.status).toBe(400);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as JsonObject;
       expect(data.errorCode).toBe("UNSUPPORTED_SUBSCRIPTION_PROVIDER");
       expect(stripeService.upgradeSubscription).not.toHaveBeenCalled();
     });
@@ -316,7 +322,7 @@ describe("Hono Payment Route", () => {
       });
 
       expect(response.status).toBe(200);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as JsonObject;
       expect(data.success).toBe(true);
       expect(data.subscriptionId).toBe("solana-tx-123");
     });
@@ -342,9 +348,10 @@ describe("Hono Payment Route", () => {
       });
 
       expect(response.status).toBe(400);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as JsonObject;
       expect(data.errorCode).toBe("PAYMENT_VERIFICATION_FAILED");
       expect(data.message).toBe("Amount mismatch");
     });
   });
 });
+

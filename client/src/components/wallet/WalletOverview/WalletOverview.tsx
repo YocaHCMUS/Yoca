@@ -18,6 +18,7 @@ import { useWalletLabels } from '@/hooks/profile/useWalletLabels';
 import { WalletLabelModal } from '@/components/wallet/WalletLabelModal/WalletLabelModal';
 import { WalletTagsModal } from '@/components/wallet/WalletTagsModal/WalletTagsModal';
 import styles from './WalletOverview.module.scss';
+import type { ChartFilters } from '@/types/chart-filters.types';
 import { PERIOD_OPTIONS } from '@/config/periodOptions';
 import WalletOverviewValueSection from './WalletOverviewValueSection';
 import WalletOverviewTradingSection from './WalletOverviewTradingSection';
@@ -88,7 +89,7 @@ function formatLocalizedWalletAge(
 export interface WalletOverviewProps {
     walletAddress: string,
     height?: number;
-    initialFilters?: Partial<any>;
+    initialFilters?: Partial<ChartFilters>;
     autoRefresh?: boolean;
     refreshInterval?: number;
     /** When false, skips GET /wallets/intelligence until enabled (saves heavy API work until needed). */
@@ -516,7 +517,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 
                 
                 <WalletOverviewWinRateBanner 
-                    stats={(selectedStats as any)?.winRateStats} // Khi Backend update xong API, xóa "(as any)"
+                    stats={(selectedStats as { winRateStats?: { winRate: number; winCount: number; totalTraded: number; avgWinUsd?: number; avgLossUsd?: number } } | null)?.winRateStats}
                     selectedPeriod={selectedPeriod}
                     loading={loading}
                 />

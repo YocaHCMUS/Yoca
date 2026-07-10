@@ -7,13 +7,45 @@ import {
   MoralisTradeLeg,
 } from "./walletThirdPartyResponses.js";
 
-export function getNextCursor(pagination: any): string | null {
+type PaginationLike = {
+  nextCursor?: unknown;
+};
+
+type TokenLogoLike = {
+  logoURI?: unknown;
+  logoUri?: unknown;
+  logo_uri?: unknown;
+  image?: unknown;
+};
+
+type HeliusTransferEntryLike = {
+  timestamp?: unknown;
+  direction?: unknown;
+  counterparty?: unknown;
+  signature?: unknown;
+  fee?: unknown;
+  mint?: unknown;
+  tokenAddress?: unknown;
+  tokenSymbol?: unknown;
+  symbol?: unknown;
+  logoURI?: unknown;
+  logoUri?: unknown;
+  logo_uri?: unknown;
+  image?: unknown;
+  amount?: unknown;
+  amountRaw?: unknown;
+  tokenAmount?: unknown;
+  decimal?: unknown;
+  decimals?: unknown;
+  valueUsd?: unknown;
+};
+export function getNextCursor(pagination: PaginationLike | null | undefined): string | null {
   const raw = pagination?.nextCursor;
   if (typeof raw !== "string") return null;
   return raw.length > 0 ? raw : null;
 }
 
-export function getTokenLogoUri(token: any): string | undefined {
+export function getTokenLogoUri(token: TokenLogoLike | null | undefined): string | undefined {
   const rawLogo =
     token?.logoURI ?? token?.logoUri ?? token?.logo_uri ?? token?.image;
   if (rawLogo == null) {
@@ -76,7 +108,7 @@ export function toIsoTimestamp(value: unknown): string | null {
 }
 
 export function mapHeliusTransferEntry(
-  entry: any,
+  entry: HeliusTransferEntryLike,
   address: string,
 ): WalletTransfer | null {
   const tsSec =
