@@ -1,17 +1,19 @@
 import { validateApiResult } from "@sv/middlewares/validation.js";
 import {
-    cmc_SpotPairsLatestSchema,
-    cg_TopPoolDataSchema,
-    type CG_TopPoolData,
-    type CMC_SpotPair,
-    type CMC_SpotPairsLatest,
+  bds_TokenListV3Schema,
+  cg_MultiTokenTopPoolsSchema,
+  cg_TopPoolDataSchema,
+  type BDS_TokenListV3,
+  type CG_TopPoolData,
 } from "@sv/services/_types/token-raw-responses.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
+import * as bds from "@sv/util/util-birdeye.js";
 import * as cg from "@sv/util/util-coingecko.js";
-import * as cmc from "@sv/util/util-coinmarketcap.js";
 
 const INCLUDE = "base_token,quote_token,dex";
 const TARGET_POOL_COUNT = 100;
+const GAINER_TOKEN_COUNT = 50;
+const CG_DEMO_BATCH_SIZE = 30;
 const MAX_PAGE_ROUNDS = 12;
 const MIN_LIQUIDITY_USD = 500;
 
@@ -265,94 +267,126 @@ export async function getTopMarketPools(sortBy: PoolTopSort) {
   return [];
 }
 
-// CoinMarketCap – Top Gainers
-function getCmcSpotPairRows(payload: CMC_SpotPairsLatest) {
-  return Array.isArray(payload) ? payload : payload.data;
+function chunkStrings(values: string[], size: number): string[][] {
+  const chunks: string[][] = [];
+  for (let index = 0; index < values.length; index += size) {
+    chunks.push(values.slice(index, index + size));
+  }
+  return chunks;
 }
 
-function mapCmcSpotPairs(pairs: CMC_SpotPair[]): MarketPoolItem[] {
-  return pairs.map((pair) => {
-    const quote = pair.quote?.[0];
-    const poolCreatedAt = pair.pool_created ?? pair.created_at ?? null;
-
-    return {
-      id: pair.contract_address,
-      poolAddress: pair.contract_address,
-      poolName: pair.name,
-      dexId: String(pair.dex_id ?? pair.dex_slug ?? ""),
-      dexName: pair.dex_slug ?? String(pair.dex_id ?? ""),
-      baseAddress:
-        pair.base_asset_contract_address ?? String(pair.base_asset_id ?? ""),
-      baseName: pair.base_asset_name ?? "",
-      baseSymbol: pair.base_asset_symbol ?? "",
-      baseImageUrl: null,
-      quoteAddress:
-        pair.quote_asset_contract_address ?? String(pair.quote_asset_id ?? ""),
-      quoteName: pair.quote_asset_name ?? "",
-      quoteSymbol: pair.quote_asset_symbol ?? "",
-      quoteImageUrl: null,
-      priceUsd: toNumber(quote?.price),
-      marketCapUsd: null,
-      fdvUsd: toNumber(quote?.fully_diluted_value),
-      txns24h: toNumber(pair.num_transactions_24h),
-      volume24h: toNumber(quote?.volume_24h),
-      priceChange5m: null,
-      priceChange1h: toNumber(quote?.percent_change_price_1h),
-      priceChange6h: null,
-      priceChange24h: toNumber(quote?.percent_change_price_24h),
-      liquidityUsd: toNumber(quote?.liquidity),
-      poolCreatedAt,
-    };
-  });
-}
-
-async function fetchCmcTopGainerMarketPools(): Promise<MarketPoolItem[]> {
-  const endpoint = cmc.getEndpoint("/v4/dex/spot-pairs/latest");
+async function fetchBirdeyeGainers(): Promise<
+  BDS_TokenListV3["data"]["items"]
+> {
+  const endpoint = bds.getEndpoint("/defi/v3/token/list");
   endpoint.search = new URLSearchParams({
-    network_slug: "solana",
-    limit: String(TARGET_POOL_COUNT),
-    sort: "percent_change_24h",
-    sort_dir: "desc",
-    aux: [
-      "pool_created",
-      "num_transactions_24h",
-      "24h_no_of_buys",
-      "24h_no_of_sells",
-      "24h_buy_volume",
-      "24h_sell_volume",
-    ].join(","),
+    sort_by: "price_change_24h_percent",
+    sort_type: "desc",
+    min_liquidity: "50000",
+    min_market_cap: "100000",
+    min_volume_24h_usd: "10000",
+    limit: String(GAINER_TOKEN_COUNT),
   }).toString();
 
   const resp = await rlFetch(endpoint, {
     method: "GET",
-    headers: cmc.getRequiredHeaders(),
-    rlLimiter: cmc.limiter,
+    headers: bds.getRequiredHeaders(),
+    rlLimiter: bds.limiter,
   });
 
   if (!resp.ok) {
-    throw new Error(
-      `CoinMarketCap top gainers request failed: ${resp.status}`,
-    );
+    throw new Error(`Birdeye top gainers request failed: ${resp.status}`);
   }
 
-  const payload = await validateApiResult(cmc_SpotPairsLatestSchema, resp);
+  const payload = await validateApiResult(bds_TokenListV3Schema, resp);
   if (!payload) {
-    throw new Error("CoinMarketCap top gainers response validation failed");
+    throw new Error("Birdeye top gainers response validation failed");
   }
 
-  const seen = new Set<string>();
-  return mapCmcSpotPairs(getCmcSpotPairRows(payload))
-    .filter((pool) => {
-      if (!pool.poolAddress || seen.has(pool.poolAddress)) {
-        return false;
-      }
-      seen.add(pool.poolAddress);
-      return true;
-    })
-    .sort((a, b) => (b.priceChange24h ?? 0) - (a.priceChange24h ?? 0));
+  return payload.data.items;
 }
 
 export async function getTopGainerMarketPools(): Promise<MarketPoolItem[]> {
-  const cmcPools = await fetchCmcTopGainerMarketPools();
-  return cmcPools;
+  const gainers = await fetchBirdeyeGainers();
+  const poolAddressByToken = new Map<string, string>();
+
+  for (const batch of chunkStrings(
+    gainers.map((token) => token.address),
+    CG_DEMO_BATCH_SIZE,
+  )) {
+    const endpoint = cg.getOnchainEndpoint(
+      `/networks/solana/tokens/multi/${batch.join(",")}`,
+    );
+    endpoint.search = new URLSearchParams({ include: "top_pools" }).toString();
+
+    const resp = await rlFetch(endpoint, {
+      method: "GET",
+      headers: cg.getRequiredHeaders(),
+      rlLimiter: cg.limiter,
+    });
+    if (!resp.ok) {
+      throw new Error(`CoinGecko token pool resolution failed: ${resp.status}`);
+    }
+
+    const payload = await validateApiResult(cg_MultiTokenTopPoolsSchema, resp);
+    if (!payload) {
+      throw new Error("CoinGecko token pool resolution validation failed");
+    }
+
+    for (const token of payload.data) {
+      const topPool = token.relationships.top_pools.data[0];
+      if (topPool) {
+        poolAddressByToken.set(
+          token.attributes.address,
+          trimIdPrefix(topPool.id),
+        );
+      }
+    }
+  }
+
+  const poolAddresses = Array.from(new Set(poolAddressByToken.values()));
+  const poolPayloads: CG_TopPoolData[] = [];
+
+  for (const batch of chunkStrings(poolAddresses, CG_DEMO_BATCH_SIZE)) {
+    const endpoint = cg.getOnchainEndpoint(
+      `/networks/solana/pools/multi/${batch.join(",")}`,
+    );
+    endpoint.search = new URLSearchParams({ include: INCLUDE }).toString();
+
+    const resp = await rlFetch(endpoint, {
+      method: "GET",
+      headers: cg.getRequiredHeaders(),
+      rlLimiter: cg.limiter,
+    });
+    if (!resp.ok) {
+      throw new Error(`CoinGecko pool enrichment failed: ${resp.status}`);
+    }
+
+    const payload = await validateApiResult(cg_TopPoolDataSchema, resp);
+    if (!payload) {
+      throw new Error("CoinGecko pool enrichment validation failed");
+    }
+    poolPayloads.push(payload);
+  }
+
+  const mappedPools = new Map<string, MarketPoolItem>();
+  for (const payload of poolPayloads) {
+    for (const pool of mapCgPools(payload)) {
+      mappedPools.set(pool.poolAddress, pool);
+    }
+  }
+
+  const result: MarketPoolItem[] = [];
+  for (const token of gainers) {
+    const poolAddress = poolAddressByToken.get(token.address);
+    const pool = poolAddress ? mappedPools.get(poolAddress) : undefined;
+    if (!pool) {
+      continue;
+    }
+    result.push({
+      ...pool,
+      priceChange24h: token.price_change_24h_percent,
+    });
+  }
+  return result;
 }

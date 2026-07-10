@@ -15,9 +15,7 @@ export const mrl_tokenMetadataSchema = z.object({
   name: z.string().trim().nullish(),
   logo: z.string().trim().nullish(),
 });
-export type MRL_TokenMetadata = z.infer<
-  typeof mrl_tokenMetadataSchema
->;
+export type MRL_TokenMetadata = z.infer<typeof mrl_tokenMetadataSchema>;
 
 export const cg_CoinListItemSchema = z.object({
   id: z.string(),
@@ -83,56 +81,67 @@ export const cg_CoinDetailSchema = z.object({
   symbol: z.string(),
   name: z.string(),
   platforms: z.record(z.string(), z.string().nullable()),
-  detail_platforms: z.record(
-    z.string(),
-    z.object({
-      decimal_place: z.number().nullable(),
-      contract_address: z.string().nullable(),
-    }),
-  ).optional(),
+  detail_platforms: z
+    .record(
+      z.string(),
+      z.object({
+        decimal_place: z.number().nullable(),
+        contract_address: z.string().nullable(),
+      }),
+    )
+    .optional(),
   description: z.record(z.string(), z.string()).optional(),
   categories: z.array(z.string()).optional(),
-  categories_details: z.array(z.object({ id: z.string().nullable().optional() })).optional(),
-  links: z.object({
-    homepage: z.array(z.string()).optional(),
-    blockchain_site: z.array(z.string()).optional(),
-    chat_url: z.array(z.string()).optional(),
-    telegram_channel_identifier: z.string().nullable().optional(),
-    twitter_screen_name: z.string().nullable().optional(),
-  }).optional(),
-  image: z.object({
-    thumb: z.string().nullable().optional(),
-    small: z.string().nullable().optional(),
-    large: z.string().nullable().optional(),
-  }).optional(),
-  market_data: z.object({
-    current_price: cg_NumberByCurrencySchema.optional(),
-    market_cap: cg_NumberByCurrencySchema.optional(),
-    market_cap_rank: z.number().nullable().optional(),
-    fully_diluted_valuation: cg_NumberByCurrencySchema.optional(),
-    total_volume: cg_NumberByCurrencySchema.optional(),
-    high_24h: cg_NumberByCurrencySchema.optional(),
-    low_24h: cg_NumberByCurrencySchema.optional(),
-    ath: cg_NumberByCurrencySchema.optional(),
-    ath_change_percentage: cg_NumberByCurrencySchema.optional(),
-    ath_date: cg_StringByCurrencySchema.optional(),
-    atl: cg_NumberByCurrencySchema.optional(),
-    atl_change_percentage: cg_NumberByCurrencySchema.optional(),
-    atl_date: cg_StringByCurrencySchema.optional(),
-    circulating_supply: z.number().nullable().optional(),
-    max_supply: z.number().nullable().optional(),
-    total_supply: z.number().nullable().optional(),
-    price_change_24h: z.number().nullable().optional(),
-    price_change_percentage_1h_in_currency: cg_NumberByCurrencySchema.optional(),
-    price_change_percentage_24h: z.number().nullable().optional(),
-    price_change_percentage_7d: z.number().nullable().optional(),
-    price_change_percentage_14d: z.number().nullable().optional(),
-    price_change_percentage_30d: z.number().nullable().optional(),
-    price_change_percentage_200d: z.number().nullable().optional(),
-    price_change_percentage_1y: z.number().nullable().optional(),
-    market_cap_change_24h: z.number().nullable().optional(),
-    market_cap_change_percentage_24h: z.number().nullable().optional(),
-  }).optional(),
+  categories_details: z
+    .array(z.object({ id: z.string().nullable().optional() }))
+    .optional(),
+  links: z
+    .object({
+      homepage: z.array(z.string()).optional(),
+      blockchain_site: z.array(z.string()).optional(),
+      chat_url: z.array(z.string()).optional(),
+      telegram_channel_identifier: z.string().nullable().optional(),
+      twitter_screen_name: z.string().nullable().optional(),
+    })
+    .optional(),
+  image: z
+    .object({
+      thumb: z.string().nullable().optional(),
+      small: z.string().nullable().optional(),
+      large: z.string().nullable().optional(),
+    })
+    .optional(),
+  market_data: z
+    .object({
+      current_price: cg_NumberByCurrencySchema.optional(),
+      market_cap: cg_NumberByCurrencySchema.optional(),
+      market_cap_rank: z.number().nullable().optional(),
+      fully_diluted_valuation: cg_NumberByCurrencySchema.optional(),
+      total_volume: cg_NumberByCurrencySchema.optional(),
+      high_24h: cg_NumberByCurrencySchema.optional(),
+      low_24h: cg_NumberByCurrencySchema.optional(),
+      ath: cg_NumberByCurrencySchema.optional(),
+      ath_change_percentage: cg_NumberByCurrencySchema.optional(),
+      ath_date: cg_StringByCurrencySchema.optional(),
+      atl: cg_NumberByCurrencySchema.optional(),
+      atl_change_percentage: cg_NumberByCurrencySchema.optional(),
+      atl_date: cg_StringByCurrencySchema.optional(),
+      circulating_supply: z.number().nullable().optional(),
+      max_supply: z.number().nullable().optional(),
+      total_supply: z.number().nullable().optional(),
+      price_change_24h: z.number().nullable().optional(),
+      price_change_percentage_1h_in_currency:
+        cg_NumberByCurrencySchema.optional(),
+      price_change_percentage_24h: z.number().nullable().optional(),
+      price_change_percentage_7d: z.number().nullable().optional(),
+      price_change_percentage_14d: z.number().nullable().optional(),
+      price_change_percentage_30d: z.number().nullable().optional(),
+      price_change_percentage_200d: z.number().nullable().optional(),
+      price_change_percentage_1y: z.number().nullable().optional(),
+      market_cap_change_24h: z.number().nullable().optional(),
+      market_cap_change_percentage_24h: z.number().nullable().optional(),
+    })
+    .optional(),
 });
 export type CG_CoinDetail = z.infer<typeof cg_CoinDetailSchema>;
 
@@ -205,8 +214,12 @@ const cg_PoolResourceSchema = z.object({
     community_sus_report: z.number().optional(),
   }),
   relationships: z.object({
-    base_token: z.object({ data: z.object({ id: z.string(), type: z.string() }) }),
-    quote_token: z.object({ data: z.object({ id: z.string(), type: z.string() }) }),
+    base_token: z.object({
+      data: z.object({ id: z.string(), type: z.string() }),
+    }),
+    quote_token: z.object({
+      data: z.object({ id: z.string(), type: z.string() }),
+    }),
     dex: z.object({ data: z.object({ id: z.string(), type: z.string() }) }),
   }),
 });
@@ -229,6 +242,48 @@ export const cg_TopPoolDataSchema = z.object({
   included: z.array(cg_PoolIncludedResourceSchema).optional(),
 });
 export type CG_TopPoolData = z.infer<typeof cg_TopPoolDataSchema>;
+
+const cg_TopPoolRelationshipSchema = z.object({
+  data: z.array(z.object({ id: z.string(), type: z.literal("pool") })),
+});
+
+export const cg_MultiTokenTopPoolsSchema = z.object({
+  data: z.array(
+    z.object({
+      id: z.string(),
+      type: z.literal("token"),
+      attributes: z.object({
+        address: z.string(),
+        name: z.string(),
+        symbol: z.string(),
+        decimals: z.number(),
+        image_url: z.string().nullable(),
+        coingecko_coin_id: z.string().nullable(),
+        total_supply: z.string().nullable(),
+        normalized_total_supply: z.string().nullable(),
+        price_usd: z.string().nullable(),
+        fdv_usd: z.string().nullable(),
+        total_reserve_in_usd: z.string().nullable(),
+        volume_usd: z.object({ h24: z.string().nullable() }),
+        market_cap_usd: z.string().nullable(),
+        last_trade_timestamp: z.number().optional(),
+        launchpad_details: z
+          .object({
+            graduation_percentage: z.number().nullable(),
+            completed: z.boolean(),
+            completed_at: z.string().nullable(),
+            migrated_destination_pool_address: z.string().nullable(),
+          })
+          .optional(),
+      }),
+      relationships: z.object({
+        top_pools: cg_TopPoolRelationshipSchema,
+      }),
+    }),
+  ),
+  included: z.array(cg_PoolResourceSchema).optional(),
+});
+export type CG_MultiTokenTopPools = z.infer<typeof cg_MultiTokenTopPoolsSchema>;
 
 export const cg_OnchainPoolSearchSchema = cg_TopPoolDataSchema;
 export type CG_OnchainPoolSearch = z.infer<typeof cg_OnchainPoolSearchSchema>;
@@ -253,26 +308,28 @@ export const cg_PoolDataSchema = z.object({
 export type CG_PoolData = z.infer<typeof cg_PoolDataSchema>;
 
 export const cg_24hPoolTradesSchema = z.object({
-  data: z.array(z.object({
-    id: z.string(),
-    type: z.string(),
-    attributes: z.object({
-      block_number: z.number(),
-      tx_hash: z.string(),
-      tx_from_address: z.string(),
-      from_token_amount: z.string(),
-      to_token_amount: z.string(),
-      price_from_in_currency_token: z.string(),
-      price_to_in_currency_token: z.string(),
-      price_from_in_usd: z.string(),
-      price_to_in_usd: z.string(),
-      block_timestamp: z.string(),
-      kind: z.string(),
-      volume_in_usd: z.string(),
-      from_token_address: z.string(),
-      to_token_address: z.string(),
+  data: z.array(
+    z.object({
+      id: z.string(),
+      type: z.string(),
+      attributes: z.object({
+        block_number: z.number(),
+        tx_hash: z.string(),
+        tx_from_address: z.string(),
+        from_token_amount: z.string(),
+        to_token_amount: z.string(),
+        price_from_in_currency_token: z.string(),
+        price_to_in_currency_token: z.string(),
+        price_from_in_usd: z.string(),
+        price_to_in_usd: z.string(),
+        block_timestamp: z.string(),
+        kind: z.string(),
+        volume_in_usd: z.string(),
+        from_token_address: z.string(),
+        to_token_address: z.string(),
+      }),
     }),
-  })),
+  ),
 });
 export type CG_24hPoolTrades = z.infer<typeof cg_24hPoolTradesSchema>;
 
@@ -370,25 +427,27 @@ export type BDS_HistoryPrice = z.infer<typeof bds_HistoryPriceSchema>;
 
 export const bds_PriceAtTimestampSchema = z.strictObject({
   success: z.boolean().optional(),
-  data: z.strictObject({
-    value: z.number().optional(),
-    price: z.number().optional(),
-    updateUnixTime: z.number().optional(),
-    updateHumanTime: z.string().optional(),
-    priceChange24h: z.number().optional(),
-    items: z.array(
-      z.strictObject({
-        value: z.number().optional(),
-        price: z.number().optional(),
-        unixTime: z.number().optional(),
-        time: z.number().optional(),
-      }),
-    ).optional(),
-  }).optional(),
+  data: z
+    .strictObject({
+      value: z.number().optional(),
+      price: z.number().optional(),
+      updateUnixTime: z.number().optional(),
+      updateHumanTime: z.string().optional(),
+      priceChange24h: z.number().optional(),
+      items: z
+        .array(
+          z.strictObject({
+            value: z.number().optional(),
+            price: z.number().optional(),
+            unixTime: z.number().optional(),
+            time: z.number().optional(),
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
 });
-export type BDS_PriceAtTimestamp = z.infer<
-  typeof bds_PriceAtTimestampSchema
->;
+export type BDS_PriceAtTimestamp = z.infer<typeof bds_PriceAtTimestampSchema>;
 
 export const zrn_FungiblesResponseSchema = z.object({
   links: z.object({ self: z.string() }).optional(),
@@ -413,81 +472,91 @@ export const zrn_FungiblesResponseSchema = z.object({
 
 export type ZRN_FungiblesResponse = z.infer<typeof zrn_FungiblesResponseSchema>;
 
-
-
-const mbl_TokenTopHoldersMetadataSchema = z.object({
-  entityName: z.string().nullable(),
-  entityLogo: z.string().nullable(),
-  entityLabels: z.array(z.string()),
-  entityType: z.string().nullable(),
-  entityDescription: z.string().nullable(),
-  entityTwitter: z.string().nullable(),
-  entityWebsite: z.string().nullable(),
-  entityGithub: z.string().nullable(),
-  entityDiscord: z.string().nullable(),
-  entityTelegram: z.string().nullable(),
-}).nullable();
+const mbl_TokenTopHoldersMetadataSchema = z
+  .object({
+    entityName: z.string().nullable(),
+    entityLogo: z.string().nullable(),
+    entityLabels: z.array(z.string()),
+    entityType: z.string().nullable(),
+    entityDescription: z.string().nullable(),
+    entityTwitter: z.string().nullable(),
+    entityWebsite: z.string().nullable(),
+    entityGithub: z.string().nullable(),
+    entityDiscord: z.string().nullable(),
+    entityTelegram: z.string().nullable(),
+  })
+  .nullable();
 
 export const mbl_TokenTopHoldersSchema = z.object({
-  data: z.array(z.object({
-    chainId: z.string(),
-    walletAddress: z.string(),
-    tokenAddress: z.string(),
-    tokenAmount: z.string(),
-    tokenAmountRaw: z.string(),
-    tokenAmountUSD: z.string(),
-    percentageOfTotalSupply: z.string(),
-    pnlUSD: z.string(),
-    realizedPnlUSD: z.string(),
-    unrealizedPnlUSD: z.string(),
-    totalPnlUSD: z.string(),
-    totalFeesPaidUSD: z.string(),
-    buyFeesPaidUSD: z.string(),
-    sellFeesPaidUSD: z.string(),
-    buys: z.number(),
-    sells: z.number(),
-    volumeBuyToken: z.string(),
-    volumeSellToken: z.string(),
-    volumeBuyUSD: z.string(),
-    volumeSellUSD: z.string(),
-    avgBuyPriceUSD: z.string(),
-    avgSellPriceUSD: z.string(),
-    nativeBalance: z.string(),
-    nativeBalanceRaw: z.string(),
-    walletFundAt: z.string().nullable(),
-    lastActivityAt: z.string().nullable(),
-    firstTradeAt: z.string().nullable(),
-    lastTradeAt: z.string().nullable(),
-    labels: z.array(z.string()),
-    walletMetadata: mbl_TokenTopHoldersMetadataSchema,
-    platform: z.object({
-      id: z.string(),
-      name: z.string(),
-      logo: z.string().nullable(),
-    }).nullable(),
-    fundingInfo: z.object({
-      from: z.string().nullable(),
-      date: z.string().nullable(),
-      chainId: z.string().nullable(),
-      txHash: z.string().nullable(),
-      amount: z.string().nullable(),
-      formattedAmount: z.number().nullable(),
-      currency: z.object({
-        name: z.string(),
-        symbol: z.string(),
-        logo: z.string().nullable(),
-        decimals: z.number(),
-        address: z.string(),
-      }).nullable(),
-      fromWalletLogo: z.string().nullable(),
-      fromWalletTag: z.string().nullable(),
-      fromWalletMetadata: mbl_TokenTopHoldersMetadataSchema,
-    }).nullable(),
-  })),
+  data: z.array(
+    z.object({
+      chainId: z.string(),
+      walletAddress: z.string(),
+      tokenAddress: z.string(),
+      tokenAmount: z.string(),
+      tokenAmountRaw: z.string(),
+      tokenAmountUSD: z.string(),
+      percentageOfTotalSupply: z.string(),
+      pnlUSD: z.string(),
+      realizedPnlUSD: z.string(),
+      unrealizedPnlUSD: z.string(),
+      totalPnlUSD: z.string(),
+      totalFeesPaidUSD: z.string(),
+      buyFeesPaidUSD: z.string(),
+      sellFeesPaidUSD: z.string(),
+      buys: z.number(),
+      sells: z.number(),
+      volumeBuyToken: z.string(),
+      volumeSellToken: z.string(),
+      volumeBuyUSD: z.string(),
+      volumeSellUSD: z.string(),
+      avgBuyPriceUSD: z.string(),
+      avgSellPriceUSD: z.string(),
+      nativeBalance: z.string(),
+      nativeBalanceRaw: z.string(),
+      walletFundAt: z.string().nullable(),
+      lastActivityAt: z.string().nullable(),
+      firstTradeAt: z.string().nullable(),
+      lastTradeAt: z.string().nullable(),
+      labels: z.array(z.string()),
+      walletMetadata: mbl_TokenTopHoldersMetadataSchema,
+      platform: z
+        .object({
+          id: z.string(),
+          name: z.string(),
+          logo: z.string().nullable(),
+        })
+        .nullable(),
+      fundingInfo: z
+        .object({
+          from: z.string().nullable(),
+          date: z.string().nullable(),
+          chainId: z.string().nullable(),
+          txHash: z.string().nullable(),
+          amount: z.string().nullable(),
+          formattedAmount: z.number().nullable(),
+          currency: z
+            .object({
+              name: z.string(),
+              symbol: z.string(),
+              logo: z.string().nullable(),
+              decimals: z.number(),
+              address: z.string(),
+            })
+            .nullable(),
+          fromWalletLogo: z.string().nullable(),
+          fromWalletTag: z.string().nullable(),
+          fromWalletMetadata: mbl_TokenTopHoldersMetadataSchema,
+        })
+        .nullable(),
+    }),
+  ),
   totalCount: z.number(),
 });
 
-export type MBL_TokenTopHolderSchema = z.infer<typeof mbl_TokenTopHoldersSchema>;
+export type MBL_TokenTopHolderSchema = z.infer<
+  typeof mbl_TokenTopHoldersSchema
+>;
 
 export const bds_TrendingListSchema = z.object({
   success: z.boolean(),
@@ -539,7 +608,9 @@ export const helius_WalletHistorySchema = z.strictObject({
       type: z.string().nullish(),
       source: z.string().nullish(),
       description: z.string().nullish(),
-      balanceChanges: z.array(helius_WalletHistoryBalanceChangeSchema).nullish(),
+      balanceChanges: z
+        .array(helius_WalletHistoryBalanceChangeSchema)
+        .nullish(),
       tokenTransfers: z.array(z.unknown()).nullish(),
       nativeTransfers: z.array(z.unknown()).nullish(),
       accountData: z.array(z.unknown()).nullish(),
@@ -643,32 +714,36 @@ const helius_EnhancedSwapEventSchema = z.strictObject({
   source: z.string().optional(),
   destination: z.string().optional(),
   programId: z.string().optional(),
-  innerSwaps: z.array(
-    z.strictObject({
-      user: z.string().optional(),
-      userAccount: z.string().optional(),
-      tokenInputs: z.array(helius_EnhancedSwapLegSchema).optional(),
-      tokenOutputs: z.array(helius_EnhancedSwapLegSchema).optional(),
-      nativeInput: helius_EnhancedSwapNativeLegSchema.optional(),
-      nativeOutput: helius_EnhancedSwapNativeLegSchema.optional(),
-      source: z.string().optional(),
-      destination: z.string().optional(),
-      programId: z.string().optional(),
-    }),
-  ).optional(),
+  innerSwaps: z
+    .array(
+      z.strictObject({
+        user: z.string().optional(),
+        userAccount: z.string().optional(),
+        tokenInputs: z.array(helius_EnhancedSwapLegSchema).optional(),
+        tokenOutputs: z.array(helius_EnhancedSwapLegSchema).optional(),
+        nativeInput: helius_EnhancedSwapNativeLegSchema.optional(),
+        nativeOutput: helius_EnhancedSwapNativeLegSchema.optional(),
+        source: z.string().optional(),
+        destination: z.string().optional(),
+        programId: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 
 const helius_EnhancedInstructionSchema = z.strictObject({
   accounts: z.array(z.string()).optional(),
   data: z.string().optional(),
   programId: z.string().optional(),
-  innerInstructions: z.array(
-    z.strictObject({
-      accounts: z.array(z.string()).optional(),
-      data: z.string().optional(),
-      programId: z.string().optional(),
-    }),
-  ).optional(),
+  innerInstructions: z
+    .array(
+      z.strictObject({
+        accounts: z.array(z.string()).optional(),
+        data: z.string().optional(),
+        programId: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 
 const helius_EnhancedTokenTransferSchema = z.strictObject({
@@ -676,7 +751,9 @@ const helius_EnhancedTokenTransferSchema = z.strictObject({
   tokenMint: z.string().optional(),
   tokenAmount: z.coerce.number().optional(),
   amount: z.coerce.number().optional(),
-  rawAmount: z.union([z.string(), helius_EnhancedRawTokenAmountSchema]).optional(),
+  rawAmount: z
+    .union([z.string(), helius_EnhancedRawTokenAmountSchema])
+    .optional(),
   rawTokenAmount: helius_EnhancedRawTokenAmountSchema.optional(),
   decimals: z.number().optional(),
   fromUserAccount: z.string().optional(),
@@ -711,22 +788,28 @@ export const helius_EnhancedTransactionsSchema = z.array(
     description: z.string().optional(),
     programName: z.string().optional(),
     instructions: z.array(helius_EnhancedInstructionSchema).optional(),
-    events: z.strictObject({
-      swap: helius_EnhancedSwapEventSchema.optional(),
-      nft: z.unknown().optional(),
-      compressed: z.unknown().optional(),
-    }).optional(),
-    transactionEvents: z.strictObject({
-      swap: helius_EnhancedSwapEventSchema.optional(),
-    }).optional(),
+    events: z
+      .strictObject({
+        swap: helius_EnhancedSwapEventSchema.optional(),
+        nft: z.unknown().optional(),
+        compressed: z.unknown().optional(),
+      })
+      .optional(),
+    transactionEvents: z
+      .strictObject({
+        swap: helius_EnhancedSwapEventSchema.optional(),
+      })
+      .optional(),
     accountData: z.array(z.unknown()).optional(),
     transactionError: z.unknown().optional(),
-    info: z.strictObject({
-      feePayer: z.string().optional(),
-      fee: z.number().optional(),
-      slot: z.number().optional(),
-      timestamp: z.number().optional(),
-    }).optional(),
+    info: z
+      .strictObject({
+        feePayer: z.string().optional(),
+        fee: z.number().optional(),
+        slot: z.number().optional(),
+        timestamp: z.number().optional(),
+      })
+      .optional(),
     tokenTransfers: z.array(helius_EnhancedTokenTransferSchema).optional(),
     nativeTransfers: z.array(helius_EnhancedNativeTransferSchema).optional(),
   }),
@@ -741,16 +824,20 @@ export const dex_TopPoolsSchema = z.object({
     z.object({
       address: z.string(),
       name: z.string().nullable(),
-      baseToken: z.object({
-        address: z.string(),
-        name: z.string().nullable(),
-        symbol: z.string().nullable(),
-      }).nullable(),
-      quoteToken: z.object({
-        address: z.string(),
-        name: z.string().nullable(),
-        symbol: z.string().nullable(),
-      }).nullable(),
+      baseToken: z
+        .object({
+          address: z.string(),
+          name: z.string().nullable(),
+          symbol: z.string().nullable(),
+        })
+        .nullable(),
+      quoteToken: z
+        .object({
+          address: z.string(),
+          name: z.string().nullable(),
+          symbol: z.string().nullable(),
+        })
+        .nullable(),
       price: z.number().nullable(),
       lastPrice24h: z.number().nullable(),
       lastPriceChange24hPercent: z.number().nullable(),
@@ -760,110 +847,156 @@ export const dex_TopPoolsSchema = z.object({
       txs24h: z.number().nullable(),
     }),
   ),
-  pagination: z.object({
-    page: z.number().optional(),
-    pageSize: z.number().optional(),
-    total: z.number().optional(),
-  }).optional(),
+  pagination: z
+    .object({
+      page: z.number().optional(),
+      pageSize: z.number().optional(),
+      total: z.number().optional(),
+    })
+    .optional(),
 });
 
 export type DEX_TopPools = z.infer<typeof dex_TopPoolsSchema>;
 
-export const cmc_SpotPairQuoteSchema = z.strictObject({
-  price: z.number().nullable().optional(),
-  liquidity: z.number().nullable().optional(),
-  convert_id: z.union([z.string(), z.number()]).nullable().optional(),
-  price_by_quote_asset: z.number().nullable().optional(),
-  last_updated: z.string().nullable().optional(),
-  volume_24h: z.number().nullable().optional(),
-  percent_change_price_1h: z.number().nullable().optional(),
-  percent_change_price_24h: z.number().nullable().optional(),
-  fully_diluted_value: z.number().nullable().optional(),
-  "24h_buy_volume": z.number().nullable().optional(),
-  "24h_sell_volume": z.number().nullable().optional(),
-});
+const bds_NullableNumberSchema = z.number().nullable();
 
-export const cmc_SpotPairSchema = z.strictObject({
-  quote: z.array(cmc_SpotPairQuoteSchema).optional(),
-  contract_address: z.string(),
-  name: z.string(),
-  base_asset_id: z.union([z.string(), z.number()]).nullable().optional(),
-  base_asset_ucid: z.union([z.string(), z.number()]).nullable().optional(),
-  base_asset_name: z.string().nullable().optional(),
-  base_asset_symbol: z.string().nullable().optional(),
-  base_asset_contract_address: z.string().nullable().optional(),
-  quote_asset_id: z.union([z.string(), z.number()]).nullable().optional(),
-  quote_asset_ucid: z.union([z.string(), z.number()]).nullable().optional(),
-  quote_asset_name: z.string().nullable().optional(),
-  quote_asset_symbol: z.string().nullable().optional(),
-  quote_asset_contract_address: z.string().nullable().optional(),
-  dex_id: z.union([z.string(), z.number()]).nullable().optional(),
-  dex_slug: z.string().nullable().optional(),
-  network_id: z.union([z.string(), z.number()]).nullable().optional(),
-  network_slug: z.string().nullable().optional(),
-  last_updated: z.string().nullable().optional(),
-  created_at: z.string().nullable().optional(),
-  num_transactions_24h: z.number().nullable().optional(),
-  holders: z.number().nullable().optional(),
-  "24h_no_of_buys": z.number().nullable().optional(),
-  "24h_no_of_sells": z.number().nullable().optional(),
-  pool_created: z.string().nullable().optional(),
-  buy_tax: z.number().nullable().optional(),
-  sell_tax: z.number().nullable().optional(),
-  security_scan: z.array(z.unknown()).nullable().optional(),
-  pool_base_asset: z.number().nullable().optional(),
-  pool_quote_asset: z.number().nullable().optional(),
-  percent_pooled_base_asset: z.number().nullable().optional(),
-  "24h_volume_quote_asset": z.number().nullable().optional(),
-  total_supply_quote_asset: z.number().nullable().optional(),
-  total_supply_base_asset: z.number().nullable().optional(),
-  date_launched: z.string().nullable().optional(),
-  scroll_id: z.string().nullable().optional(),
-});
-
-export const cmc_SpotPairsLatestSchema = z.union([
-  z.array(cmc_SpotPairSchema),
-  z.strictObject({
-    data: z.array(cmc_SpotPairSchema),
-    status: z.unknown().optional(),
+export const bds_TokenListV3Schema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    has_next: z.boolean(),
+    items: z.array(
+      z.object({
+        address: z.string(),
+        name: z.string(),
+        symbol: z.string(),
+        decimals: z.number(),
+        logo_uri: z.string().nullable(),
+        is_scaled_ui_token: z.boolean(),
+        multiplier: bds_NullableNumberSchema,
+        price: z.number(),
+        liquidity: z.number(),
+        market_cap: z.number(),
+        fdv: z.number(),
+        holder: z.number(),
+        circulating_supply: z.number(),
+        total_supply: z.number(),
+        last_trade_unix_time: z.number(),
+        recent_listing_time: bds_NullableNumberSchema,
+        extensions: z.object({
+          twitter: z.string().optional(),
+          website: z.string().optional(),
+          description: z.string().optional(),
+          telegram: z.string().optional(),
+          github: z.string().optional(),
+          coingecko_id: z.string().optional(),
+        }),
+        global_fees_paid: z.number(),
+        price_change_1m_percent: z.number(),
+        price_change_5m_percent: z.number(),
+        price_change_30m_percent: z.number(),
+        price_change_1h_percent: z.number(),
+        price_change_2h_percent: z.number(),
+        price_change_4h_percent: z.number(),
+        price_change_8h_percent: z.number(),
+        price_change_24h_percent: z.number(),
+        price_change_7d_percent: z.number(),
+        price_change_30d_percent: z.number(),
+        trade_1m_count: z.number(),
+        trade_5m_count: z.number(),
+        trade_30m_count: z.number(),
+        trade_1h_count: z.number(),
+        trade_2h_count: z.number(),
+        trade_4h_count: z.number(),
+        trade_8h_count: z.number(),
+        trade_24h_count: z.number(),
+        trade_7d_count: z.number(),
+        trade_30d_count: z.number(),
+        volume_1m_usd: z.number(),
+        volume_5m_usd: z.number(),
+        volume_30m_usd: z.number(),
+        volume_1h_usd: z.number(),
+        volume_2h_usd: z.number(),
+        volume_4h_usd: z.number(),
+        volume_8h_usd: z.number(),
+        volume_24h_usd: z.number(),
+        volume_7d_usd: z.number(),
+        volume_30d_usd: z.number(),
+        volume_1m_change_percent: bds_NullableNumberSchema,
+        volume_5m_change_percent: bds_NullableNumberSchema,
+        volume_30m_change_percent: bds_NullableNumberSchema,
+        volume_1h_change_percent: bds_NullableNumberSchema,
+        volume_2h_change_percent: bds_NullableNumberSchema,
+        volume_4h_change_percent: bds_NullableNumberSchema,
+        volume_8h_change_percent: bds_NullableNumberSchema,
+        volume_24h_change_percent: bds_NullableNumberSchema,
+        volume_7d_change_percent: bds_NullableNumberSchema,
+        volume_30d_change_percent: bds_NullableNumberSchema,
+        buy_24h: z.number(),
+        sell_24h: z.number(),
+        buy_7d: z.number(),
+        sell_7d: z.number(),
+        buy_30d: z.number(),
+        sell_30d: z.number(),
+        buy_24h_change_percent: bds_NullableNumberSchema,
+        sell_24h_change_percent: bds_NullableNumberSchema,
+        buy_7d_change_percent: bds_NullableNumberSchema,
+        sell_7d_change_percent: bds_NullableNumberSchema,
+        buy_30d_change_percent: bds_NullableNumberSchema,
+        sell_30d_change_percent: bds_NullableNumberSchema,
+        volume_buy_24h_usd: z.number(),
+        volume_sell_24h_usd: z.number(),
+        volume_buy_7d_usd: z.number(),
+        volume_sell_7d_usd: z.number(),
+        volume_buy_30d_usd: z.number(),
+        volume_sell_30d_usd: z.number(),
+        volume_buy_24h_change_percent: bds_NullableNumberSchema,
+        volume_sell_24h_change_percent: bds_NullableNumberSchema,
+        volume_buy_7d_change_percent: bds_NullableNumberSchema,
+        volume_sell_7d_change_percent: bds_NullableNumberSchema,
+        volume_buy_30d_change_percent: bds_NullableNumberSchema,
+        volume_sell_30d_change_percent: bds_NullableNumberSchema,
+        unique_wallet_24h: z.number(),
+        unique_wallet_24h_change_percent: bds_NullableNumberSchema,
+      }),
+    ),
   }),
-]);
-
-export type CMC_SpotPair = z.infer<typeof cmc_SpotPairSchema>;
-export type CMC_SpotPairsLatest = z.infer<
-  typeof cmc_SpotPairsLatestSchema
->;
+});
+export type BDS_TokenListV3 = z.infer<typeof bds_TokenListV3Schema>;
 
 export const mrl_WalletSwapsSchema = z.object({
-  result: z.array(
-    z.object({
-      transactionHash: z.string(),
-      fromAddress: z.string(),
-      toAddress: z.string(),
-      blockNumber: z.number(),
-      blockTimestamp: z.number(),
-      fromTokenSymbol: z.string().nullable(),
-      fromTokenName: z.string().nullable(),
-      fromTokenDecimals: z.number().nullable(),
-      fromTokenAddress: z.string(),
-      toTokenSymbol: z.string().nullable(),
-      toTokenName: z.string().nullable(),
-      toTokenDecimals: z.number().nullable(),
-      toTokenAddress: z.string(),
-      fromTokenAmount: z.string(),
-      toTokenAmount: z.string(),
-      fromTokenAmountUSD: z.string().nullable(),
-      toTokenAmountUSD: z.string().nullable(),
-      dexName: z.string().nullable(),
-      routerAddress: z.string().nullable(),
-    }),
-  ).nullable(),
-  pagination: z.object({
-    page: z.number().optional(),
-    pageSize: z.number().optional(),
-    pageCount: z.number().optional(),
-    total: z.number().optional(),
-  }).optional(),
+  result: z
+    .array(
+      z.object({
+        transactionHash: z.string(),
+        fromAddress: z.string(),
+        toAddress: z.string(),
+        blockNumber: z.number(),
+        blockTimestamp: z.number(),
+        fromTokenSymbol: z.string().nullable(),
+        fromTokenName: z.string().nullable(),
+        fromTokenDecimals: z.number().nullable(),
+        fromTokenAddress: z.string(),
+        toTokenSymbol: z.string().nullable(),
+        toTokenName: z.string().nullable(),
+        toTokenDecimals: z.number().nullable(),
+        toTokenAddress: z.string(),
+        fromTokenAmount: z.string(),
+        toTokenAmount: z.string(),
+        fromTokenAmountUSD: z.string().nullable(),
+        toTokenAmountUSD: z.string().nullable(),
+        dexName: z.string().nullable(),
+        routerAddress: z.string().nullable(),
+      }),
+    )
+    .nullable(),
+  pagination: z
+    .object({
+      page: z.number().optional(),
+      pageSize: z.number().optional(),
+      pageCount: z.number().optional(),
+      total: z.number().optional(),
+    })
+    .optional(),
 });
 
 export type MRL_WalletSwaps = z.infer<typeof mrl_WalletSwapsSchema>;
