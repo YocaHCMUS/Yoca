@@ -6,64 +6,62 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - &setup
+        uses: actions/checkout@v4
+      - &node
+        uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm install
+          cache: npm
+      - &install
+        run: npm install
       - run: npm run typecheck --workspaces
 
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - run: npm install
+      - *setup
+      - *node
+      - *install
       - run: npm run lint --workspaces
 
   test-server:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - run: npm install
+      - *setup
+      - *node
+      - *install
       - run: npm run test -w=server
 
   test-client:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - run: npm install
+      - *setup
+      - *node
+      - *install
       - run: npm run test -w=client -- --run
 
   build-server:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - run: npm install
+      - *setup
+      - *node
+      - *install
       - run: npm run server:build
-  
+
   build-client:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - run: npm install
+      - *setup
+      - *node
+      - *install
       - run: npm run client:build
    
