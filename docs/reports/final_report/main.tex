@@ -19,11 +19,15 @@
 	backend=bibtex,
 	defernumbers=true]{biblatex}
 \usepackage[unicode]{hyperref} % Bookmark tiếng Việt
+\usepackage{xurl} % Cho phép URL dài trong tài liệu tham khảo tự xuống dòng, tránh overfull hbox
 \addbibresource{References/references.bib}
 
 \makeatletter
 \def\blx@maxline{77}
 \makeatother
+
+% Giảm cảnh báo Overfull \hbox nhỏ do LaTeX không tìm được điểm ngắt dòng đẹp
+\emergencystretch=3em
 
 % Chèn hình, các hình trong luận văn được để trong thư mục Images/
 \usepackage{graphicx}
@@ -70,11 +74,15 @@
 \newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
 \newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
 \newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+% Cho phép ngắt dòng giữa các chuỗi dài không có khoảng trắng (tên bảng, tên cột CSDL...)
+% để tránh tràn ô khi hiển thị trong bảng, ví dụ: \code{wallet_enhanced_transactions}
+\usepackage{seqsplit}
+\newcommand{\code}[1]{\texttt{\seqsplit{#1}}}
 \usepackage{tabularx}
 \usepackage{float}
 \usepackage{placeins}
 
-
+\usepackage[unicode]{hyperref}
 
 % Đổi tên mặc định
 \renewcommand{\chaptername}{Chương}
@@ -154,8 +162,8 @@
 \addcontentsline{toc}{chapter}{Danh sách bảng}
 \listoftables
 
-\addcontentsline{toc}{chapter}{Tóm tắt}
-\include{Appendix/tomtat}
+%\addcontentsline{toc}{chapter}{Tóm tắt}
+%\include{Appendix/summary}
 
 \clearpage
 
@@ -179,8 +187,8 @@
 % In tài liệu tham khảo
 \addcontentsline{toc}{chapter}{Tài liệu tham khảo}
 
-\DeclareNameAlias{sortname}{last-first}
-\DeclareNameAlias{default}{last-first}
+\DeclareNameAlias{sortname}{family-given}
+\DeclareNameAlias{default}{family-given}
 
 \printbibliography[title={Tài liệu tham khảo}]
 % ================================================================================ %

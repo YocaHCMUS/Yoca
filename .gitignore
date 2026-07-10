@@ -65,3 +65,36 @@ skills-lock.json
 
 .codegraph/
 .fallow/
+
+# LaTeX auxiliary files
+*.aux
+*.bbl
+*.blg
+*.idx
+*.ind
+*.lof
+*.lot
+*.out
+*.toc
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.ist
+*.fls
+*.log
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+*.pdf_tex
+*.bcf
+*.run.xml
+
+docs/reports/final_report/build/
+
+# VS Code / OS files
+.vscode/
+.DS_Store
+Thumbs.db

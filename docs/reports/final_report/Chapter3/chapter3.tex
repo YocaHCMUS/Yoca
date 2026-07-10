@@ -58,25 +58,16 @@ Yêu cầu phi chức năng thứ năm là khả năng sử dụng. Giao diện 
 
 \subsection{Sơ đồ Use Case tổng quát}
 
-Sơ đồ use case tổng quát mô tả các tác nhân chính và nhóm chức năng lớn của hệ thống Yoca. Trong phạm vi thiết kế, hệ thống có bốn nhóm tác nhân chính: người dùng chưa đăng nhập, người dùng đã đăng nhập, quản trị viên và các dịch vụ bên thứ ba. Người dùng chưa đăng nhập có thể tra cứu một số thông tin công khai như thị trường, token hoặc ví. Người dùng đã đăng nhập có thể sử dụng các chức năng cá nhân hóa như quản lý watchlist, gắn nhãn ví, tạo cảnh báo, xem hồ sơ và sử dụng các chức năng yêu cầu xác thực. Quản trị viên có thể theo dõi, cấu hình hoặc quản lý một số dữ liệu hệ thống tùy theo phạm vi triển khai. Các dịch vụ bên thứ ba cung cấp dữ liệu blockchain, dữ liệu thị trường, AI, thanh toán và webhook.
+% Sơ đồ use case tổng quát mô tả các tác nhân chính và nhóm chức năng lớn của hệ thống Yoca. Trong phạm vi thiết kế, hệ thống có bốn nhóm tác nhân chính: người dùng chưa đăng nhập, người dùng đã đăng nhập, quản trị viên và các dịch vụ bên thứ ba. Người dùng chưa đăng nhập có thể tra cứu một số thông tin công khai như thị trường, token hoặc ví. Người dùng đã đăng nhập có thể sử dụng các chức năng cá nhân hóa như quản lý watchlist, gắn nhãn ví, tạo cảnh báo, xem hồ sơ và sử dụng các chức năng yêu cầu xác thực. Quản trị viên có thể theo dõi, cấu hình hoặc quản lý một số dữ liệu hệ thống tùy theo phạm vi triển khai. Các dịch vụ bên thứ ba cung cấp dữ liệu blockchain, dữ liệu thị trường, AI, thanh toán và webhook.
 
-% % TODO: Bổ sung hình sơ đồ Use Case tổng quát.
-% \begin{figure}[htbp]
-% \centering
-% \fbox{
-% \begin{minipage}{0.85\textwidth}
-% \centering
-% \vspace{1.2cm}
-% Sơ đồ Use Case tổng quát của hệ thống Yoca \
-% \textit{TODO: Chèn hình Use Case Diagram tại đây.}
-% \vspace{1.2cm}
-% \end{minipage}
-% }
-% \caption{Sơ đồ Use Case tổng quát của hệ thống Yoca}
-% \label{fig}
-% \end{figure}
+Sơ đồ use-case tổng quát mô tả hai tác nhân chính của hệ thống Yoca là Khách và Người dùng đã đăng ký, trong đó Người dùng đã đăng ký kế thừa toàn bộ quyền của Khách. Trọng tâm của hệ thống nằm ở ba nhóm chức năng được đặt trong khung riêng: phân tích thị trường và token, phân tích ví trên chuỗi, và các tính năng AI hỗ trợ ra quyết định như hỏi đáp Yoca AI, phân tích ví bằng AI và phát hiện wash-trading bằng AI. Ba nhóm còn lại gồm xác thực tài khoản, cảnh báo theo dõi và thanh toán chỉ đóng vai trò vận hành nền, phục vụ cho các chức năng phân tích ở trên hoạt động ổn định chứ không phải là điểm khác biệt chính của sản phẩm.
 
-% Hình~\ref{fig} cần thể hiện ranh giới hệ thống và các nhóm chức năng chính, bao gồm tra cứu thị trường, phân tích token, phân tích ví, so sánh ví, sử dụng AI Assistant, quản lý cảnh báo, quản lý hồ sơ và quản lý thanh toán hoặc gói đăng ký. Khi hoàn thiện sơ đồ, nhóm nên ưu tiên biểu diễn các nhóm use case chính thay vì liệt kê quá nhiều thao tác nhỏ, vì mục tiêu của báo cáo là làm rõ vai trò của từng tác nhân và các nghiệp vụ cốt lõi.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/usecase.png}
+    \caption{Sơ đồ Use-case của hệ thống Yoca}
+    \label{fig:usecase}
+\end{figure}
 
 \section{Kiến trúc hệ thống tổng thể}
 \label{sec:kien_truc_he_thong}
@@ -87,15 +78,14 @@ Yoca được tổ chức theo kiến trúc ứng dụng web full-stack, gồm h
 
 
 % TODO: Bổ sung sơ đồ kiến trúc tổng thể.
-\begin{figure}[H!]
+\begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{images/arch.png}
+    \includegraphics[width=1\textwidth]{images/arch.jpg}
     \caption{Kiến trúc tổng thể của hệ thống Yoca}
-    \label{fig}
+    \label{fig:kien_truc_tong_the}
 \end{figure}
 
-Hình~\ref{fig} nên thể hiện các thành phần chính gồm React frontend, Hono API backend, PostgreSQL, các domain service, các provider bên ngoài như Helius, Moralis, CoinGecko, Birdeye, Google Gemini, Stripe và Solana RPC. Ngoài ra, sơ đồ cũng nên làm rõ hướng dữ liệu đi từ frontend đến backend, từ backend đến cache, từ backend đến provider, sau đó quay lại frontend dưới dạng dữ liệu đã chuẩn hóa.
-
+% Hình~\ref{fig:kien_truc_tong_the} nên thể hiện các thành phần chính gồm React frontend, Hono API backend, PostgreSQL, các domain service, các provider bên ngoài như Helius, Moralis, CoinGecko, Birdeye, Google Gemini, Stripe và Solana RPC. Ngoài ra, sơ đồ cũng nên làm rõ hướng dữ liệu đi từ frontend đến backend, từ backend đến cache, từ backend đến provider, sau đó quay lại frontend dưới dạng dữ liệu đã chuẩn hóa.
 
 
 \subsection{Kiến trúc Monolith phân lớp và cơ chế Tải dữ liệu động (Lazy Loading)}
@@ -163,10 +153,10 @@ Sau khi dữ liệu đã được chuẩn hóa, backend tổng hợp các thông
 % \end{minipage}
 % }
 % \caption{Luồng truy xuất và tổng hợp lịch sử giao dịch ví}
-% \label{fig}
+% \label{fig:lich_su_giao_dich}
 % \end{figure}
 
-% Hình~\ref{fig} nên thể hiện các thành phần chính gồm User, React Frontend, Hono Route, Wallet Service, Cache Retriever, Provider Fetcher, PostgreSQL và Helius. Điểm cần nhấn mạnh trong sơ đồ là backend không gọi provider ngay lập tức trong mọi trường hợp, mà kiểm tra cache trước, sau đó chỉ gọi provider khi dữ liệu thiếu hoặc đã hết hạn.
+% Hình~\ref{fig:lich_su_giao_dich} nên thể hiện các thành phần chính gồm User, React Frontend, Hono Route, Wallet Service, Cache Retriever, Provider Fetcher, PostgreSQL và Helius. Điểm cần nhấn mạnh trong sơ đồ là backend không gọi provider ngay lập tức trong mọi trường hợp, mà kiểm tra cache trước, sau đó chỉ gọi provider khi dữ liệu thiếu hoặc đã hết hạn.
 
 
 
@@ -193,10 +183,10 @@ Frontend nhận dữ liệu đã chuẩn hóa và truyền vào các component b
 % \end{minipage}
 % }
 % \caption{Luồng truy vấn và trực quan hóa dữ liệu biểu đồ}
-% \label{fig}
+% \label{fig:chart_data_flow}
 % \end{figure}
 
-% Hình~\ref{fig} nên thể hiện các thành phần gồm Chart Component, Chart API Client, Hono Chart Route, Chart Service, Token hoặc Wallet Service, PostgreSQL Cache và provider như CoinGecko hoặc Helius. Điểm cốt lõi của luồng là dữ liệu biểu đồ phải được chuẩn hóa trước khi trả về frontend để đảm bảo các component biểu đồ có thể tái sử dụng.
+% Hình~\ref{fig:chart_data_flow} nên thể hiện các thành phần gồm Chart Component, Chart API Client, Hono Chart Route, Chart Service, Token hoặc Wallet Service, PostgreSQL Cache và provider như CoinGecko hoặc Helius. Điểm cốt lõi của luồng là dữ liệu biểu đồ phải được chuẩn hóa trước khi trả về frontend để đảm bảo các component biểu đồ có thể tái sử dụng.
 
 \subsection{Luồng vấn đáp dữ liệu thông qua AI Assistant}
 
@@ -219,10 +209,10 @@ Mô hình AI sử dụng ngữ cảnh đã chuẩn bị để tạo câu trả l
 % \end{minipage}
 % }
 % \caption{Luồng vấn đáp dữ liệu thông qua AI Assistant}
-% \label{fig}
+% \label{fig:ai_assistant}
 % \end{figure}
 
-% Hình~\ref{fig} nên thể hiện các thành phần gồm User, Chat Component, Hono Route, Wallet Chat Service, PostgreSQL, AI Provider và giao diện trả kết quả. Điểm quan trọng cần thể hiện là AI chỉ nhận dữ liệu đã được backend chuẩn hóa và tóm tắt, thay vì truy cập trực tiếp vào dữ liệu thô hoặc tự tạo ra số liệu.
+% Hình~\ref{fig:ai_assistant} nên thể hiện các thành phần gồm User, Chat Component, Hono Route, Wallet Chat Service, PostgreSQL, AI Provider và giao diện trả kết quả. Điểm quan trọng cần thể hiện là AI chỉ nhận dữ liệu đã được backend chuẩn hóa và tóm tắt, thay vì truy cập trực tiếp vào dữ liệu thô hoặc tự tạo ra số liệu.
 
 
 \input{Chapter3/database/database}
