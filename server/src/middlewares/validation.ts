@@ -398,7 +398,7 @@ export const envSchema = z.object({
   ZERION_API_KEY: z.string(),
 
   COINMARKETCAP_API_BASE_URL: z.url().default("https://pro-api.coinmarketcap.com"),
-  COINMARKETCAP_API_KEY: z.string(),
+  COINMARKETCAP_API_KEY: z.string().optional(),
 
   HELIUS_API_KEY: z.string(),
   HELIUS_API_BASE_URL: z.url().optional().default("https://api.helius.xyz"),
