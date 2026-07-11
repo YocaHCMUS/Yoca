@@ -3,7 +3,6 @@ import { Elements } from "@stripe/react-stripe-js";
 import { useEffect, useState } from "react";
 import { AlertCircle, X } from "lucide-react";
 import { CheckoutForm } from "./CheckoutForm";
-import client from "@/api/main";
 import { useLocalization } from "@/contexts/LocalizationContext";
 
 type Tier = {

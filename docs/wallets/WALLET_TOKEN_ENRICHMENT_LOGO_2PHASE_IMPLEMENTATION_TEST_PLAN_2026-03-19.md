@@ -83,10 +83,6 @@ Deliver full token enrichment for wallet swaps and transfers (metadata + pricing
   - Swap sold/bought columns to render amount + TokenIdentityCell.
 - Keep sortable/filterable raw values intact to avoid table behavior regression.
 
-3. Render logos in swap detail modal.
-- Update client/src/components/wallet/SwapDetailModal/SwapDetailModal.tsx to show token icon for sold/bought and change rows.
-- Preserve existing fallback behavior when logo is missing or image fails.
-
 4. Update shared table renderer only if needed.
 - If row-object lookup is required, extend Table cell renderer call signature in client/src/components/tables/Table.tsx to pass original row index safely.
 - Ensure no pagination/filtering sort regressions from this change.
@@ -104,10 +100,7 @@ Deliver full token enrichment for wallet swaps and transfers (metadata + pricing
   - text fallback appears when logo is missing.
   - no crash when logo URL fails.
 
-3. Add modal rendering tests.
-- Add or extend tests for SwapDetailModal to verify icon rendering and fallback for sold/bought legs.
-
-4. Manual QA checklist.
+3. Manual QA checklist.
 - Open wallet page and confirm transfer/swap logos in first and paginated pages.
 - Confirm filter/sort still works in transfer/swap tables.
 - Confirm modal displays token icons correctly.

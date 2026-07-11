@@ -16,7 +16,6 @@ import {
 } from "@sv/services/wallet/index.js";
 import {
     getWalletDayActivitySummary,
-    getWalletTxDetail,
     getWalletTxInstructionDetail,
 } from "@sv/services/wallet/walletDayActivity.service.js";
 import { getTokenPriceChartForDay } from "@sv/services/tokens/token-chart.js";
@@ -119,7 +118,9 @@ const walletTransactionQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).optional(),
 });
 
-function createWalletHistoryQuerySchema(maxLimit: number) {
+const walletHistorySortDirectionSchema = z.enum(["asc", "desc"]);
+
+function createWalletHistoryBaseQuerySchema(maxLimit: number) {
   return z.object({
     fromMs: z.coerce.number().int().min(0).optional(),
     toMs: z.coerce.number().int().min(0).optional(),
@@ -127,16 +128,29 @@ function createWalletHistoryQuerySchema(maxLimit: number) {
     cursor: walletHistoryCursorQuerySchema.optional(),
     minValueUsd: z.coerce.number().min(0).optional(),
     maxValueUsd: z.coerce.number().min(0).optional(),
+    search: z.string().trim().min(1).max(128).optional(),
+    sortDirection: walletHistorySortDirectionSchema.optional(),
   });
 }
 
-const walletSwapHistoryQuerySchema = createWalletHistoryQuerySchema(
+const walletSwapHistoryQuerySchema = createWalletHistoryBaseQuerySchema(
   WALLET_SWAP_HISTORY_TRANSACTIONS_MAX_COUNT,
-);
-const walletTransferHistoryQuerySchema = createWalletHistoryQuerySchema(
+).extend({
+  boughtTokenAddress: solanaBase58Schema.optional(),
+  soldTokenAddress: solanaBase58Schema.optional(),
+  tokenAddress: solanaBase58Schema.optional(),
+  sortBy: z.enum(["time", "value"]).optional(),
+});
+const walletTransferHistoryQuerySchema = createWalletHistoryBaseQuerySchema(
   WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT,
-);
-
+).extend({
+  tokenAddress: solanaBase58Schema.optional(),
+  direction: z.enum(["send", "receive"]).optional(),
+  counterpartyAddress: solanaBase58Schema.optional(),
+  minTokenAmount: z.coerce.number().min(0).optional(),
+  maxTokenAmount: z.coerce.number().min(0).optional(),
+  sortBy: z.enum(["time", "value"]).optional(),
+});
 const walletDayActivityQuerySchema = z.object({
   address: solanaBase58Schema,
   dayMs: z.coerce.number().min(0),
@@ -226,8 +240,20 @@ const app = new Hono()
     async (c) => {
       try {
         const { address } = c.req.valid("param");
-        const { limit, fromMs, toMs, cursor, minValueUsd, maxValueUsd } =
-          c.req.valid("query");
+        const {
+          limit,
+          fromMs,
+          toMs,
+          cursor,
+          minValueUsd,
+          maxValueUsd,
+          search,
+          boughtTokenAddress,
+          soldTokenAddress,
+          tokenAddress,
+          sortBy,
+          sortDirection,
+        } = c.req.valid("query");
         const parsedCursor = parseWalletHistoryCursorQuery(cursor);
         if (!parsedCursor.success) {
           return c.json(
@@ -248,6 +274,14 @@ const app = new Hono()
           parsedCursor.data,
           minValueUsd,
           maxValueUsd,
+          tokenAddress,
+          {
+            search,
+            boughtTokenAddress,
+            soldTokenAddress,
+            sortBy,
+            sortDirection,
+          },
         );
         if (!txs) {
           return c.json(
@@ -268,8 +302,22 @@ const app = new Hono()
     async (c) => {
       try {
         const { address } = c.req.valid("param");
-        const { limit, fromMs, toMs, cursor, minValueUsd, maxValueUsd } =
-          c.req.valid("query");
+        const {
+          limit,
+          fromMs,
+          toMs,
+          cursor,
+          minValueUsd,
+          maxValueUsd,
+          search,
+          tokenAddress,
+          direction,
+          counterpartyAddress,
+          minTokenAmount,
+          maxTokenAmount,
+          sortBy,
+          sortDirection,
+        } = c.req.valid("query");
         const parsedCursor = parseWalletHistoryCursorQuery(cursor);
         if (!parsedCursor.success) {
           return c.json(
@@ -290,6 +338,16 @@ const app = new Hono()
           parsedCursor.data,
           minValueUsd,
           maxValueUsd,
+          tokenAddress,
+          {
+            search,
+            direction,
+            counterpartyAddress,
+            minTokenAmount,
+            maxTokenAmount,
+            sortBy,
+            sortDirection,
+          },
         );
         if (!txs) {
           return c.json(
@@ -652,19 +710,6 @@ const app = new Hono()
         return c.json(summary, statusCode.Ok);
       } catch (e) {
         return serverErr(c, e);
-      }
-    },
-  )
-  .get(
-    "/tx-detail",
-    validate("query", walletTransactionDetailQuerySchema),
-    async (c) => {
-      try {
-        const { address, signature } = c.req.valid("query");
-        const detail = await getWalletTxDetail(address, signature);
-        return c.json(detail, statusCode.Ok);
-      } catch (err) {
-        return serverErr(c, err);
       }
     },
   )

@@ -10,9 +10,10 @@ import {
   EmptyAnalysisState,
 } from "@/components/wallet/AiAnalysisDashboard";
 import styles from "@/components/wallet/AiAnalysisDashboard/AiAnalysisDashboard.module.scss";
+import type { AnalysisProfileLike, AnalysisSummaryLike } from "@/components/wallet/AiAnalysisDashboard/types";
 
-type WalletAnalysisProfile = any;
-type WalletAnalysisSummary = any;
+type WalletAnalysisProfile = AnalysisProfileLike;
+type WalletAnalysisSummary = AnalysisSummaryLike;
 
 export type WalletAnalystPanelProps = {
   profile: WalletAnalysisProfile;

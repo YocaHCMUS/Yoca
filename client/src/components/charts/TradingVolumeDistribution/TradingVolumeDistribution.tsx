@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
+import type { EChartsInstance } from '@/util/echarts-setup';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useChartFiltersSync } from '@/hooks/useChartFiltersSync';
 import { PeriodSelector } from '@/components/common/PeriodSelector/PeriodSelector';
@@ -23,6 +24,20 @@ import { runChartExport } from '@/services/chart/chartExportService';
 type TradingVolumeDistributionData = InferFetcherData<typeof fetchTradingVolumeDistribution>;
 const DEFAULT_BUY_COLOR = '#24a148';
 const DEFAULT_SELL_COLOR = '#da1e28';
+
+type TradingVolumeWallet = {
+  wallet?: string;
+  walletAddress: string;
+  buyVolume?: number;
+  sellVolume?: number;
+  totalVolume?: number;
+};
+
+type PieTooltipParam = {
+  name: string;
+  value?: unknown;
+  data: { percentage: number };
+};
 
 export const TradingVolumeDistribution: React.FC<ChartProps> = ({
   minHeight = 400,
@@ -85,10 +100,9 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
       const csv: ChartDataSeries[] = [];
 
       if (data.wallets && Array.isArray(data.wallets)) {
-        data.wallets.forEach((wallet: any) => {
+        data.wallets.forEach((wallet: TradingVolumeWallet) => {
           const buy = wallet.buyVolume ?? 0;
           const sell = wallet.sellVolume ?? 0;
-          const total = wallet.totalVolume ?? (buy + sell);
           csv.push({
             id: `trading-volume-distribution-${wallet.wallet}`,
             name: `Trading Volume Distribution - ${wallet.wallet}`,
@@ -106,7 +120,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
         {
           format,
           filters,
-          chartInstance: instance as any,
+          chartInstance: instance as EChartsInstance | null,
           csvData: csv,
         },
         { exportPNG, exportSVG, exportPDF, exportCSV }
@@ -148,15 +162,18 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
       tooltip: {
         ...baseOption.tooltip,
         trigger: 'item',
-        formatter: (p: any) => createTooltipHeader(p.name)
-          + createTooltipRow(
-            tr('charts.tradingVolumeDistributionChart.volume'),
-            fmt.num.compact.currency(Number(p.value ?? 0))
-          )
-          + createTooltipRow(
-            tr('charts.tradingVolumeDistributionChart.percentage'),
-            `${p.data.percentage.toFixed(2)}%`
-          ),
+        formatter: (param: unknown) => {
+          const p = param as PieTooltipParam;
+          return createTooltipHeader(p.name)
+            + createTooltipRow(
+              tr('charts.tradingVolumeDistributionChart.volume'),
+              fmt.num.compact.currency(Number(p.value ?? 0))
+            )
+            + createTooltipRow(
+              tr('charts.tradingVolumeDistributionChart.percentage'),
+              `${p.data.percentage.toFixed(2)}%`
+            );
+        },
       },
       legend: {
         show: true,
@@ -173,14 +190,14 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
             value: a.value,
             percentage: a.percentage,
             itemStyle: {
-              color: (a as any).color,
+              color: a.color,
               borderColor: baseOption.backgroundColor as string,
               borderWidth: 2,
               borderRadius: 6,
             },
           })),
           label: {
-            formatter: (p: any) => `${p.name}\n${p.data.percentage.toFixed(1)}%`,
+            formatter: (param: unknown) => { const p = param as PieTooltipParam; return `${p.name}\n${p.data.percentage.toFixed(1)}%`; },
             fontSize: 11,
           },
         },
@@ -249,7 +266,7 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
   }, []);
 
   const chartOptions = useMemo(() => {
-    if (!data || !data.wallets || !Array.isArray(data.wallets) || data.wallets.length === 0 || (data.wallets as any).error) return [];
+    if (!data || !data.wallets || !Array.isArray(data.wallets) || data.wallets.length === 0 || (data.wallets as unknown as { error?: unknown }).error) return [];
 
     const isMultiWallet = data.wallets.length > 1;
 
@@ -370,3 +387,6 @@ export const TradingVolumeDistribution: React.FC<ChartProps> = ({
     </ChartWrapper>
   );
 };
+
+
+

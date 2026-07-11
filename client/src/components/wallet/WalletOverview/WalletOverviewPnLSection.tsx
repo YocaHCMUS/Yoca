@@ -44,7 +44,6 @@ function PnlCard({
 
 const WalletOverviewPnLSection = ({ totalPnL, realizedPnL, unrealizedPnL, loading }: WalletOverviewPnLSectionProps) => {
     const { tr, fmt } = useLocalization();
-    const hasTotal = totalPnL != null;
     const isTotalPositive = totalPnL != null && totalPnL >= 0;
 
     return (

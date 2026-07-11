@@ -544,8 +544,6 @@ Wraps protected routes. Shows Loading while checking auth, redirects to `/unauth
 | `WalletChat` | `WalletChat/` | AI chat sidebar/overlay with context. Uses `SegmentedControl` for position (left/right/fullscreen), `SearchBox` from ChartControls, `lucide-react` icons (migrated from `@carbon/icons-react`). Features circular header buttons (`.circleBtn`), border-left highlighted section blocks (`.sectionBlock`), contextual plans popup, and real-time usage quota label. |
 | `AiAnalysisModal` | `AiAnalysisModal/` | Full AI analysis modal |
 | `WalletAiAnalysisPopup` | `WalletAiAnalysisPopup/` | Quick AI popup |
-| `SwapDetailModal` | `SwapDetailModal/` | Swap transaction detail |
-| `TransferDetailModal` | `TransferDetailModal/` | Transfer detail |
 | `DayActivityPopup` | `DayActivityPopup/` | Day-level activity overview |
 | `AiSwapSummaryModal` | `AiSwapSummaryModal/` | AI summary of swaps |
 | `WalletAuditPanel` | `WalletAuditPanel/` | Forensic audit panel |

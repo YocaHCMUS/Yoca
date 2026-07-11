@@ -5,9 +5,6 @@ import { apiKeyManager, buildApiKeyMetadata } from "./api-key-manager.js";
 import Bottleneck from "bottleneck";
 import env from "./load-env.js";
 
-const DEFAULT_MORALIS_SOLANA_GATEWAY_BASE_URL =
-  "https://solana-gateway.moralis.io";
-
 const MORALIS_SERVICE_NAME = "moralis";
 let moralisKeysInitialized = false;
 

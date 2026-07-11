@@ -56,6 +56,26 @@ type WalletSwapHistoryInsert = typeof walletSwapHistory.$inferInsert;
 
 type WalletActivityTarget = "swap" | "transfer";
 
+type WalletHistorySortDirection = "asc" | "desc";
+
+export type WalletSwapHistoryFilters = {
+  search?: string;
+  boughtTokenAddress?: string;
+  soldTokenAddress?: string;
+  sortBy?: "time" | "value";
+  sortDirection?: WalletHistorySortDirection;
+};
+
+export type WalletTransferHistoryFilters = {
+  search?: string;
+  direction?: "send" | "receive";
+  counterpartyAddress?: string;
+  minTokenAmount?: number;
+  maxTokenAmount?: number;
+  sortBy?: "time" | "value";
+  sortDirection?: WalletHistorySortDirection;
+};
+
 function normalizeTxLimit(reqLimit: number, maxLimit: number): number {
   if (!Number.isFinite(reqLimit)) return maxLimit;
   return Math.min(Math.max(Math.trunc(reqLimit), 1), maxLimit);
@@ -112,6 +132,76 @@ function transferMatchesToken(
   return transfer.token.address == tokenAddress;
 }
 
+function normalizeSearchQuery(search?: string): string | null {
+  const normalized = search?.trim().toLowerCase();
+  return normalized ? normalized : null;
+}
+
+function textMatchesSearch(search: string | null, values: Array<string | null | undefined>): boolean {
+  if (search == null) return true;
+  return values.some((value) => value?.toLowerCase().includes(search));
+}
+
+function compareNullableNumbers(left: number | null, right: number | null): number {
+  if (left == null && right == null) return 0;
+  if (left == null) return -1;
+  if (right == null) return 1;
+  return left - right;
+}
+
+function filterSortSwapEntries(
+  entries: WalletTransaction<WalletSwapV2>[],
+  filters?: WalletSwapHistoryFilters,
+): WalletTransaction<WalletSwapV2>[] {
+  const search = normalizeSearchQuery(filters?.search);
+  const filtered = entries.filter((entry) => {
+    const swap = entry.transaction;
+    if (filters?.boughtTokenAddress && swap.bought.address != filters.boughtTokenAddress) return false;
+    if (filters?.soldTokenAddress && swap.sold.address != filters.soldTokenAddress) return false;
+    return textMatchesSearch(search, [
+      swap.transactionHash,
+      swap.bought.address,
+      swap.bought.symbol,
+      swap.bought.name,
+      swap.sold.address,
+      swap.sold.symbol,
+      swap.sold.name,
+    ]);
+  });
+
+  if (!filters?.sortBy || filters.sortBy == "time") return filtered;
+  const direction = filters.sortDirection == "asc" ? 1 : -1;
+  return [...filtered].sort(
+    (left, right) => compareNullableNumbers(left.transaction.totalValueUsd, right.transaction.totalValueUsd) * direction,
+  );
+}
+
+function filterSortTransferEntries(
+  entries: WalletTransaction<WalletTransferV2>[],
+  filters?: WalletTransferHistoryFilters,
+): WalletTransaction<WalletTransferV2>[] {
+  const search = normalizeSearchQuery(filters?.search);
+  const filtered = entries.filter((entry) => {
+    const transfer = entry.transaction;
+    if (filters?.direction && transfer.direction != filters.direction) return false;
+    if (filters?.counterpartyAddress && transfer.counterpartyAddress != filters.counterpartyAddress) return false;
+    if (filters?.minTokenAmount != null && transfer.token.amount < filters.minTokenAmount) return false;
+    if (filters?.maxTokenAmount != null && transfer.token.amount > filters.maxTokenAmount) return false;
+    return textMatchesSearch(search, [
+      transfer.transactionHash,
+      transfer.counterpartyAddress,
+      transfer.token.address,
+      transfer.token.symbol,
+      transfer.token.name,
+    ]);
+  });
+
+  if (!filters?.sortBy || filters.sortBy == "time") return filtered;
+  const direction = filters.sortDirection == "asc" ? 1 : -1;
+  return [...filtered].sort(
+    (left, right) => (left.transaction.valueUsd - right.transaction.valueUsd) * direction,
+  );
+}
 export type WalletHistoryCursor = {
   version: 1;
   fromExclusiveMs: number;
@@ -1019,6 +1109,7 @@ async function db_getSwapHistory(
   minValueUsd?: number | null,
   maxValueUsd?: number | null,
   tokenAddress?: string | null,
+  filters?: WalletSwapHistoryFilters,
 ): Promise<WalletTransaction<WalletSwapV2>[]> {
   const normalizedMinValueUsd = normalizeMinValueUsd(minValueUsd ?? undefined);
   const normalizedMaxValueUsd = normalizeMaxValueUsd(maxValueUsd ?? undefined);
@@ -1079,7 +1170,7 @@ async function db_getSwapHistory(
     tokenMetaRes.map((tm) => [tm.address, tm]),
   );
 
-  return rows.map((item) => ({
+  return filterSortSwapEntries(rows.map((item) => ({
     blockTimestampMs: item.blockTimestampMs,
     transactionHash: item.transactionHash,
     actId: item.actId,
@@ -1105,7 +1196,7 @@ async function db_getSwapHistory(
       },
       totalValueUsd: item.valueUsd,
     },
-  }));
+  })), filters);
 }
 
 export async function getWalletSwapHistory(
@@ -1117,6 +1208,7 @@ export async function getWalletSwapHistory(
   minValueUsd?: number,
   maxValueUsd?: number,
   tokenAddress?: string,
+  filters?: WalletSwapHistoryFilters,
 ): Promise<WalletTransactionHistory<WalletSwapV2> | null> {
   // Don't try to understand it, Just feel it - Christopher Nolan
   const cursor = parsedCursor ?? null;
@@ -1157,6 +1249,7 @@ export async function getWalletSwapHistory(
     normalizedMinValueUsd,
     normalizedMaxValueUsd,
     normalizedTokenAddress,
+    filters,
   );
   const canAnswerFromStoredRows =
     storedEntries.length > limit &&
@@ -1220,6 +1313,7 @@ export async function getWalletSwapHistory(
       normalizedMinValueUsd,
       normalizedMaxValueUsd,
       normalizedTokenAddress,
+    filters,
     );
     return postProcessWalletTxHistory({
       entries,
@@ -1298,6 +1392,7 @@ export async function getWalletSwapHistory(
       normalizedMinValueUsd,
       normalizedMaxValueUsd,
       normalizedTokenAddress,
+    filters,
     );
     return postProcessWalletTxHistory({
       entries,
@@ -1410,6 +1505,7 @@ export async function getWalletSwapHistory(
     normalizedMinValueUsd,
     normalizedMaxValueUsd,
     normalizedTokenAddress,
+    filters,
   );
   return postProcessWalletTxHistory({
     entries,
@@ -1518,6 +1614,7 @@ async function db_getTransferHistory(
   minValueUsd?: number | null,
   maxValueUsd?: number | null,
   tokenAddress?: string | null,
+  filters?: WalletTransferHistoryFilters,
 ): Promise<WalletTransaction<WalletTransferV2>[]> {
   const normalizedMinValueUsd = normalizeMinValueUsd(minValueUsd ?? undefined);
   const normalizedMaxValueUsd = normalizeMaxValueUsd(maxValueUsd ?? undefined);
@@ -1574,7 +1671,7 @@ async function db_getTransferHistory(
     tokenMetaRes.map((tm) => [tm.address, tm]),
   );
 
-  return rows.map((item) => ({
+  return filterSortTransferEntries(rows.map((item) => ({
     blockTimestampMs: item.blockTimestampMs,
     transactionHash: item.transactionHash,
     actId: item.actId,
@@ -1594,7 +1691,7 @@ async function db_getTransferHistory(
       counterpartyAddress: item.counterpartyAddress,
       valueUsd: item.valueUsd,
     },
-  }));
+  })), filters);
 }
 
 export async function getWalletTransferHistory(
@@ -1606,6 +1703,7 @@ export async function getWalletTransferHistory(
   minValueUsd?: number,
   maxValueUsd?: number,
   tokenAddress?: string,
+  filters?: WalletTransferHistoryFilters,
 ): Promise<WalletTransactionHistory<WalletTransferV2> | null> {
   const cursor = parsedCursor ?? null;
   const normalizedMinValueUsd = normalizeMinValueUsd(minValueUsd);
@@ -1647,6 +1745,7 @@ export async function getWalletTransferHistory(
     normalizedMinValueUsd,
     normalizedMaxValueUsd,
     normalizedTokenAddress,
+    filters,
   );
   const canAnswerFromStoredRows =
     storedEntries.length > limit &&
@@ -1710,6 +1809,7 @@ export async function getWalletTransferHistory(
       normalizedMinValueUsd,
       normalizedMaxValueUsd,
       normalizedTokenAddress,
+    filters,
     );
 
     return postProcessWalletTxHistory({
@@ -1785,6 +1885,7 @@ export async function getWalletTransferHistory(
       normalizedMinValueUsd,
       normalizedMaxValueUsd,
       normalizedTokenAddress,
+    filters,
     );
 
     return postProcessWalletTxHistory({
@@ -1898,6 +1999,7 @@ export async function getWalletTransferHistory(
     normalizedMinValueUsd,
     normalizedMaxValueUsd,
     normalizedTokenAddress,
+    filters,
   );
 
   return postProcessWalletTxHistory({

@@ -1,5 +1,4 @@
 
-import type { JSX } from 'react';
 import styles from './WalletOverview.module.scss';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { FinancialAssets } from '@carbon/react/icons';

@@ -2,7 +2,7 @@
 
 const MAX_HISTORY_TURNS = 10;
 const MAX_HISTORY_CHARS = 4000;
-const MAX_RESULT_CHARS = 6000;
+const MAX_RESULT_CHARS = 5000;
 
 export const CHAT_SYSTEM_INSTRUCTION =
   "You are a blockchain data analyst assistant. You provide concise, data-driven answers " +
@@ -202,7 +202,11 @@ export function buildResponseGenerationPrompt(
     "",
     "JSON CONTRACT:",
     '{"text":"string with optional <chart id=\\"x\\" />, <table id=\\"x\\" />, <action id=\\"N\\" /> markers","charts":[{"id":"x","type":"line|bar|area|pie|geckoterminal","dataRef":"0","title":"string","pointActions":{"label":"string","query":"string"}}],"tables":[{"id":"x","dataRef":"0","columns":"field:Title:format","rowActions":{"label":"string","query":"string"}}],"actions":[{"label":"string","href":"#ask:question","index":null}],"tldr":["2-3 strings"],"sections":[{"title":"string","kind":"key_findings|pnl_summary|trading_activity|top_holdings|risk_factors|what_to_watch|conclusion|custom","content":"string","bullets":["string"]}],"warnings":[{"text":"string","severity":"info|warning|error"}],"confidence":"Low|Medium|High","sources":[{"title":"string","url":"string","source":"string"}]}',
-    "Only create tables for array-like results. Every chart needs pointActions; every table needs rowActions. Cite search sources with <cite ids=\"1\">text</cite>.",
+    "Only create tables for array-like results. Every chart needs pointActions; every table needs rowActions.",
+    "pointActions: embed {label} in query — replaced with clicked point's axis label (token symbol, date, etc). A generic like \"what is this?\" has NO context.",
+    "rowActions: embed {fieldName} in query — replaced with that column's value from the clicked row. E.g. \"what does tx {signature} do?\" becomes \"what does tx 5KtN...XyZ do?\". Supports nested paths like {parent.child}.",
+    "General actions (top-level, index:null) appear as standalone follow-up buttons below the entire answer. They are NOT the same as pointActions/rowActions.",
+    "Cite search sources with <cite ids=\"1\">text</cite>.",
   ].join("\n");
 
   return [

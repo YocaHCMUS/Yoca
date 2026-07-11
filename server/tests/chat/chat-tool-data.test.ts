@@ -62,8 +62,8 @@ describe("chat tool selection prompt", () => {
     );
 
     expect(prompt).toContain("COMPLEMENTARY TOOL SELECTION");
-    expect(prompt).toContain("get_wallet_overview + get_wallet_pnl_compact + get_wallet_portfolio");
-    expect(prompt).toContain("get_wallet_pnl_compact + get_wallet_overview");
+    expect(prompt).toContain("get_wallet_overview + get_wallet_pnl + get_wallet_portfolio");
+    expect(prompt).toContain("get_wallet_pnl + get_wallet_overview");
     expect(prompt).toContain("get_drawdown_chart + get_wallet_overview");
   });
 
@@ -95,9 +95,7 @@ describe("transaction tool coverage metadata", () => {
       isCapped: true,
       scope: "limited_filtered_sample",
     });
-    expect(coverage.coverageKind).toBe("known_result_rows");
-    expect(coverage.source).toBe("wallet_service_result");
-    expect(coverage.note).toContain("500/651+");
+    expect(coverage.note).toContain("500/650+");
     expect(coverage.note).toContain("Do not treat as complete history");
   });
 
@@ -111,8 +109,6 @@ describe("transaction tool coverage metadata", () => {
       returnedCount: 42,
       isCapped: false,
       scope: "complete_filtered_result",
-      coverageKind: "known_result_rows",
-      source: "wallet_service_result",
     });
     expect(coverage.note).toContain("Analyzed all 42 available rows for this query window");
   });

@@ -31,7 +31,8 @@ export async function saveWalletTags(
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throw new Error(
-      (body as any)?.error ?? `Failed to save wallet tags: ${response.status}`,
+      (body as { error?: string })?.error ?? `Failed to save wallet tags: ${response.status}`,
     );
   }
 }
+

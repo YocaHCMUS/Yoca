@@ -50,6 +50,53 @@ interface CircularGraphHighlight {
   edgeKeys: Set<string>;
 }
 
+type LinkShape = {
+  x1?: number;
+  y1?: number;
+  x2?: number;
+  y2?: number;
+  cpx1?: number;
+  cpy1?: number;
+  cpx2?: number;
+  cpy2?: number;
+};
+
+type WashGraphElement = {
+  shape?: LinkShape;
+  pointAt?: (t: number) => unknown;
+  parent?: WashGraphElement;
+  children?: unknown[];
+  childrenRef?: () => unknown[];
+  zlevel?: number;
+  z?: number;
+  z2?: number;
+  add: (element: WashGraphElement) => void;
+  remove?: (element: WashGraphElement) => void;
+  attr: (props: unknown) => void;
+};
+
+type WashGraphData = {
+  count?: () => number;
+  getRawDataItem?: (index: number) => unknown;
+  getId?: (index: number) => string | null;
+  getItemGraphicEl?: (index: number) => WashGraphElement | undefined;
+  getItemVisual?: (index: number, key: string) => unknown;
+};
+
+type WashGraphSeriesModel = {
+  getGraph?: () => {
+    edgeData?: WashGraphData;
+    getEdgeByIndex?: (index: number) => { node1?: { id?: string }; node2?: { id?: string } } | undefined;
+  };
+  getData?: () => WashGraphData;
+};
+
+type WashGraphChart = {
+  getModel?: () => { getSeriesByIndex?: (index: number) => WashGraphSeriesModel | undefined };
+  on?: (eventName: string, handler: () => void) => void;
+  off?: (eventName: string, handler: () => void) => void;
+};
+
 interface WashTradingResult {
   mint: string;
   symbol: string;
@@ -584,7 +631,7 @@ const NetworkGraph: React.FC<{
               opacity: 1,
             },
           },
-        } as any,
+        } as echarts.GraphSeriesOption,
       ],
     } as echarts.EChartsOption;
   }, [visibleNodes, readableEdges, isFullscreen, tr, formatGraphAmount, circularHighlight]);
@@ -619,19 +666,19 @@ const NetworkGraph: React.FC<{
   }, [option]);
 
   useEffect(() => {
-    const chart = chartInstanceRef.current as any;
+    const chart = chartInstanceRef.current as unknown as WashGraphChart;
     if (!chart || (!circularHighlight.nodeIds.size && !circularHighlight.edgeKeys.size)) return;
 
     type ParticleEntry = {
-      particleGroup: any;
-      glow: any;
-      core: any;
-      path: any;
+      particleGroup: WashGraphElement;
+      glow: WashGraphElement;
+      core: WashGraphElement;
+      path: WashGraphElement;
       phase: number;
     };
 
     type PulseEntry = {
-      ring: any;
+      ring: WashGraphElement;
       baseRadius: number;
       phase: number;
     };
@@ -642,15 +689,17 @@ const NetworkGraph: React.FC<{
     let particles: ParticleEntry[] = [];
     let pulses: PulseEntry[] = [];
 
-    const getChildren = (element: any): any[] => {
+    const getChildren = (element: unknown): unknown[] => {
       if (!element) return [];
-      if (typeof element.childrenRef === "function") return element.childrenRef() || [];
-      return Array.isArray(element.children) ? element.children : [];
+      const el = element as WashGraphElement;
+      if (typeof el.childrenRef === "function") return el.childrenRef() || [];
+      return Array.isArray(el.children) ? el.children : [];
     };
 
-    const findLinkPath = (element: any): any => {
+    const findLinkPath = (element: unknown): WashGraphElement | null => {
       if (!element) return null;
-      const shape = element.shape;
+      const graphElement = element as WashGraphElement;
+      const shape = graphElement.shape;
       if (
         shape
         && typeof shape.x1 === "number"
@@ -658,7 +707,7 @@ const NetworkGraph: React.FC<{
         && typeof shape.x2 === "number"
         && typeof shape.y2 === "number"
       ) {
-        return element;
+        return graphElement;
       }
 
       for (const child of getChildren(element)) {
@@ -669,7 +718,7 @@ const NetworkGraph: React.FC<{
       return null;
     };
 
-    const resolveId = (raw: unknown, data: any, fallbackIndex: number): string | null => {
+    const resolveId = (raw: unknown, data: { getRawDataItem?: (i: number) => unknown; getId?: (i: number) => string | null }, fallbackIndex: number): string | null => {
       if (typeof raw === "string") return raw;
       if (typeof raw === "number") {
         const rawNode = data?.getRawDataItem?.(raw) as { id?: string; name?: string } | undefined;
@@ -678,7 +727,7 @@ const NetworkGraph: React.FC<{
       return data?.getId?.(fallbackIndex) || null;
     };
 
-    const pointOnPath = (path: any, t: number): [number, number] | null => {
+    const pointOnPath = (path: WashGraphElement, t: number): [number, number] | null => {
       if (typeof path?.pointAt === "function") {
         const point = path.pointAt(t);
         if (Array.isArray(point) && point.length >= 2) return [point[0], point[1]];
@@ -754,7 +803,7 @@ const NetworkGraph: React.FC<{
           : Array.isArray(visualSize)
             ? Math.max(...visualSize)
             : 24;
-        const ring = new (echarts.graphic.Circle as any)({
+        const ring = new (echarts.graphic.Circle)({
           silent: true,
           shape: { cx: 0, cy: 0, r: diameter / 2 + 5 },
           style: {
@@ -764,7 +813,7 @@ const NetworkGraph: React.FC<{
             shadowBlur: 14,
             shadowColor: "rgba(168, 85, 247, 0.48)",
           },
-        });
+        }) as unknown as WashGraphElement;
         ring.z2 = -1;
         // Prefer the node's own Symbol group so 0,0 is exactly the wallet centre.
         nodeContainer.add(ring);
@@ -794,13 +843,13 @@ const NetworkGraph: React.FC<{
         const particleZ = (Number(path.z) || 0) + 100;
         const particleZ2 = (Number(path.z2) || 0) + 100;
         const particleRadius = isFullscreen ? 5.2 : 4.5;
-        const particleGroup = new (echarts.graphic.Group as any)({
+        const particleGroup = new (echarts.graphic.Group)({
           silent: true,
-          zlevel: particleZLevel,
-          z: particleZ,
-          z2: particleZ2,
-        });
-        const glow = new (echarts.graphic.Circle as any)({
+        }) as unknown as WashGraphElement;
+        particleGroup.zlevel = particleZLevel;
+        particleGroup.z = particleZ;
+        particleGroup.z2 = particleZ2;
+        const glow = new (echarts.graphic.Circle)({
           silent: true,
           shape: { cx: 0, cy: 0, r: particleRadius * 2.45 },
           style: {
@@ -808,8 +857,8 @@ const NetworkGraph: React.FC<{
             shadowBlur: 30,
             shadowColor: "rgba(250, 204, 21, 1)",
           },
-        });
-        const core = new (echarts.graphic.Circle as any)({
+        }) as unknown as WashGraphElement;
+        const core = new (echarts.graphic.Circle)({
           silent: true,
           shape: { cx: 0, cy: 0, r: particleRadius },
           style: {
@@ -820,7 +869,7 @@ const NetworkGraph: React.FC<{
             shadowBlur: 24,
             shadowColor: "rgba(254, 240, 138, 1)",
           },
-        });
+        }) as unknown as WashGraphElement;
         // zlevel/z/z2 are also set on the drawable circles (not just the group),
         // because ZRender sorts the flattened display list by each drawable itself.
         glow.zlevel = particleZLevel;

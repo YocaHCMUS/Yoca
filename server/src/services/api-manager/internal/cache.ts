@@ -2,7 +2,7 @@
 import { getRedisClient } from "./redis.js";
 
 export class Cache {
-  private memory = new Map<string, any>();
+  private memory = new Map<string, unknown>();
   private redis = getRedisClient();
 
   async get<T>(key: string): Promise<T | undefined> {
@@ -10,11 +10,11 @@ export class Cache {
       // Try Redis first
       if (this.redis) {
         const val = await this.redis.get(key);
-        if (val !== null) return JSON.parse(val);
+        if (val !== null) return JSON.parse(val) as T;
       }
       // Fallback to memory
-      return this.memory.get(key);
-    } catch {}
+      return this.memory.get(key) as T | undefined;
+    } catch { /* ignore cache errors */ }
   }
 
   async set<T>(key: string, value: T, ttlSec = 60): Promise<void> {
@@ -26,6 +26,6 @@ export class Cache {
         // Set in memory
         this.memory.set(key, value);
       }
-    } catch {}
+    } catch { /* ignore cache errors */ }
   }
 }

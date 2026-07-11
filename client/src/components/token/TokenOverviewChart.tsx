@@ -276,10 +276,11 @@ export function TokenOverviewChart({
   );
 
   const handleChartClick = useCallback(
-    async (params: any) => {
-      if (params?.seriesName !== "News markers") return;
+    async (params: unknown) => {
+      const p = params as { seriesName?: string; data?: { event?: TokenChartNewsEvent } };
+      if (p?.seriesName !== "News markers") return;
 
-      const event = params?.data?.event as TokenChartNewsEvent | undefined;
+      const event = p?.data?.event;
       if (!event) return;
 
       setSelectedNewsEvent(event);
@@ -372,9 +373,9 @@ export function TokenOverviewChart({
         backgroundColor: "rgba(0,0,0,0.85)",
         borderColor: "transparent",
         textStyle: { color: "#fff", fontSize: 12 },
-        formatter: (params: any) => {
+        formatter: (params: unknown) => {
           if (!Array.isArray(params) || !params[0]) return "";
-          const [ts, val] = params[0].data as [number, number];
+          const [ts, val] = (params[0] as { data: [number, number] }).data;
           const d = new Date(ts);
           const dateStr = isShortRange
             ? d.toLocaleString(dateLocale, {
@@ -467,17 +468,16 @@ export function TokenOverviewChart({
           },
           label: {
             show: true,
-            formatter: (params: any) =>
-              String(params?.data?.event?.articleCount ?? ""),
+            formatter: (params: unknown) =>
+              String((params as { data?: { event?: { articleCount?: number } } }).data?.event?.articleCount ?? ""),
             color: "#111",
             fontSize: 10,
             fontWeight: 700,
           },
           tooltip: {
-            formatter: (params: any) => {
-              const event = params?.data?.event as
-                | TokenChartNewsEvent
-                | undefined;
+            formatter: (params: unknown) => {
+              const p = params as { data?: { event?: TokenChartNewsEvent } };
+              const event = p?.data?.event;
               if (!event) return "";
               return `<div style="padding:6px 10px">
                         <div style="color:#aaa;margin-bottom:3px;font-size:12px">${formatEventDate(event.timestamp)}</div>

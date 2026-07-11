@@ -287,7 +287,7 @@ async function runSeed() {
             await tx.delete(firstFunderCategoryDictionary);
 
             await tx.insert(tradingStrategyDictionary).values(
-                strategySeed.map(({ benefits, risks, rules, weights, ...strategy }) =>
+                strategySeed.map((strategy) =>
                     strategy,
                 ),
             );

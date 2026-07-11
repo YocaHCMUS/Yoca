@@ -1,4 +1,13 @@
+import type { Context, Next } from "hono";
+import type { ZodType } from "zod";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+type TestContext = Context<{
+  Variables: {
+    jwtPayload: { id: string; exp: number; displayName: string };
+    userPayload: { id: string; exp: number; displayName: string };
+  };
+}>;
 
 const serviceMocks = vi.hoisted(() => ({
   createAlertRule: vi.fn(),
@@ -19,7 +28,7 @@ vi.mock("@sv/middlewares/validation.js", async () => {
   const { validator } = await import("hono/validator");
   const { z } = await import("zod");
   return {
-    honoJwt: async (c: any, next: any) => {
+    honoJwt: async (c: TestContext, next: Next) => {
       c.set("jwtPayload", {
         id: "user-1",
         exp: Math.floor(Date.now() / 1000) + 60,
@@ -28,7 +37,7 @@ vi.mock("@sv/middlewares/validation.js", async () => {
       await next();
     },
     solanaBase58Schema: z.string().trim().min(1),
-    validate: (target: "json", schema: any) =>
+    validate: (target: "json", schema: ZodType) =>
       validator(target, (value, c) => {
         const parsed = schema.safeParse(value);
         if (!parsed.success) {
@@ -40,7 +49,7 @@ vi.mock("@sv/middlewares/validation.js", async () => {
 });
 
 vi.mock("@sv/middlewares/user-extract.js", () => ({
-  default: async (c: any, next: any) => {
+  default: async (c: TestContext, next: Next) => {
     c.set("userPayload", {
       id: "user-1",
       exp: Math.floor(Date.now() / 1000) + 60,

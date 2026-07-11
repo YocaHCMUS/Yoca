@@ -1,5 +1,5 @@
 import React, { ComponentProps } from "react";
-import { Tag, TagProps } from "@carbon/react";
+import { Tag } from "@carbon/react";
 import { Close } from "@carbon/react/icons";
 import { Flex } from "../Flex";
 

@@ -3,8 +3,16 @@ import { Information, Close } from '@carbon/react/icons';
 import { SkeletonPlaceholder } from '@carbon/react';
 import styles from './WalletOverviewWinRateBanner.module.scss';
 
+interface WalletWinRateDisplayStats {
+    winRate: number;
+    winCount: number;
+    totalTraded: number;
+    avgWinUsd?: number;
+    avgLossUsd?: number;
+}
+
 interface Props {
-    stats?: any; // Dùng any tạm thời trong lúc chờ Backend định nghĩa type
+    stats?: WalletWinRateDisplayStats; // Dùng any tạm thời trong lúc chờ Backend định nghĩa type
     selectedPeriod: string;
     loading: boolean;
 }
@@ -17,7 +25,7 @@ const WalletOverviewWinRateBanner: React.FC<Props> = ({ stats, selectedPeriod, l
     }
 
     // MOCK DATA: Đảm bảo luôn hiện UI để bạn xem thiết kế trước. Khi nối API xong, đổi thành displayStats = stats;
-    const displayStats = stats;
+    
 
     if (loading) {
         return <SkeletonPlaceholder className={styles.bannerSkeleton} />;
@@ -29,7 +37,7 @@ const WalletOverviewWinRateBanner: React.FC<Props> = ({ stats, selectedPeriod, l
         totalTraded, 
         avgWinUsd = 0, 
         avgLossUsd = 0 
-    } = displayStats;
+    } = stats;
     const isHighWinRate = winRate >= 50;
 
     return (
@@ -95,3 +103,4 @@ const WalletOverviewWinRateBanner: React.FC<Props> = ({ stats, selectedPeriod, l
 };
 
 export default WalletOverviewWinRateBanner;
+

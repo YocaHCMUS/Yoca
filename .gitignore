@@ -15,7 +15,7 @@ dist
 dist-ssr
 *.local
 .gitignore
-package-lock.json
+# package-lock.json
 server/postgresdb/*
 !server/postgresdb/migrations/
 server/postgresdb/migrations/*
@@ -29,6 +29,7 @@ n8n/*.yaml
 # Editor directories and files
 .vscode/*
 .github/*
+!.github/workflows/
 !.vscode/extensions.json
 .idea
 .DS_Store

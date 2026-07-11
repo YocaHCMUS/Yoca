@@ -481,17 +481,16 @@ const promptRoutes = new Hono()
     return c.json(prompt, 201);
   });
 
-// GET /usage — current daily usage for GeneralAiChat
-chatRoute.get("/usage", honoJwt, userExtract, async (c) => {
-  const { id: userId } = c.get("userPayload")!;
-  const usage = await getAiUsage(userId, AI_FEATURES.GeneralAiChat);
-  return c.json(usage, 200);
-});
-
 const app = chatRoute
   .route("/tool-data", toolDataRoutes)
   .route("/sessions", sessionRoutes)
-  .route("/prompts", promptRoutes);
+  .route("/prompts", promptRoutes)
+  // GET /usage — current daily usage for GeneralAiChat
+  .get("/usage", honoJwt, userExtract, async (c) => {
+    const { id: userId } = c.get("userPayload")!;
+    const usage = await getAiUsage(userId, AI_FEATURES.GeneralAiChat);
+    return c.json(usage, 200);
+  });
 
 export default app;
 export type ChatAppType = typeof app;

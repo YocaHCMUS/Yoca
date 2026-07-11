@@ -1,6 +1,6 @@
 import type { NormalizedWalletEvent } from "../types/normalizedWalletEvent";
 import type { PnlProfile } from "../types/walletBehaviorProfile";
-import { calculateFifoRealizedPnl, getKnownSwapUsdValue, isBuyLikeSwapDirection, isPositionTokenMint, isSellLikeSwapDirection } from "../utils/pnlUtils";
+import { calculateFifoRealizedPnl, isBuyLikeSwapDirection, isSellLikeSwapDirection } from "../utils/pnlUtils";
 import { sortEventsByTimestampAsc } from "../utils/timeUtils";
 
 export function analyzePnl(events: NormalizedWalletEvent[]): PnlProfile {

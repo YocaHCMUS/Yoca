@@ -22,6 +22,14 @@ import type { TimePeriod } from "@/types/chart-filters.types";
 
 type ValueType = "total" | "realized" | "unrealized";
 
+type AxisOptionWithLabel = { axisLabel?: Record<string, unknown> };
+
+type RollingMetricMap = Partial<Record<ValueType, number>>;
+
+function hasRollingPayloadShape(value: unknown): value is Partial<RollingProfitAndLossResponse> {
+  return Boolean(value && typeof value === "object" && ("wallets" in value || "metrics" in value));
+}
+
 import { ChartGrid, ChartGridItem } from "@/components/charts/shared";
 import { useStandardChartController } from "@/hooks/useChartController";
 import { BaseChart } from "../Base/BaseChart";
@@ -40,7 +48,6 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
   autoRefresh = false,
   refreshInterval = 30000,
   fetchEnabled = true,
-  className,
   actions,
 }) => {
   const { tr, fmt } = useLocalization();
@@ -120,7 +127,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
           ? `${w.walletAddress.slice(0, 6)}...${w.walletAddress.slice(-4)}`
           : "Unknown"),
     );
-    const values = wallets.map((w) => (w.metrics as any)[valueType] ?? 0);
+    const values = wallets.map((w) => (w.metrics as RollingMetricMap)[valueType] ?? 0);
 
     return {
       ...base,
@@ -136,7 +143,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
         type: "value",
         name: "USD",
         axisLabel: {
-          ...(base.yAxis as any)?.axisLabel,
+          ...(base.yAxis as AxisOptionWithLabel)?.axisLabel,
           formatter: (value: number) => fmt.num.compact.currency(value),
         },
       },
@@ -173,7 +180,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
         type: "value",
         name: "USD",
         axisLabel: {
-          ...(base.yAxis as any)?.axisLabel,
+          ...(base.yAxis as AxisOptionWithLabel)?.axisLabel,
           formatter: (value: number) => fmt.num.compact.currency(value),
         },
       },
@@ -197,7 +204,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
     if (!data) return null;
 
     // If data is already timeseries (back-compat), don't try to render here
-    if (!("wallets" in (data as any)) && !("metrics" in (data as any))) {
+    if (!hasRollingPayloadShape(data)) {
       return null; // upstream component should handle timeseries case
     }
 
@@ -250,7 +257,7 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
 
   const isEmpty =
     !data ||
-    (data && !("wallets" in (data as any)) && !("metrics" in (data as any)));
+    (data && !hasRollingPayloadShape(data));
 
   return (
     <BaseChart
@@ -297,3 +304,5 @@ export const RollingProfitAndLoss: React.FC<ChartProps> = ({
 };
 
 export default RollingProfitAndLoss;
+
+

@@ -1,11 +1,11 @@
 import styles from "./AiAnalysisDashboard.module.scss";
 import { LabelWithTooltip } from "./HelpTooltip";
 import { useAiAnalysisI18n } from "./i18n";
-import type { MetricCardItem } from "./types";
+import type { AnalysisProfileLike, MetricCardItem } from "./types";
 import { formatPercent, getRiskLevelClass } from "./utils";
 
 type AnalysisMetricCardsProps = {
-  profile: any;
+  profile: AnalysisProfileLike;
 };
 
 function metricToneFromRisk(riskLevel: string | null | undefined): MetricCardItem["tone"] {

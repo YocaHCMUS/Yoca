@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Bookmark, Notification, Share, Repeat, BookmarkFilled, Edit, Tag as TagIcon, Menu } from '@carbon/react/icons';
-import { CopyButton, Tooltip, Tag, Select, SelectItem, SkeletonPlaceholder } from '@carbon/react';
+import { CopyButton, Tooltip, Tag, Select, SelectItem } from '@carbon/react';
 import { useLocalization } from '@/contexts/LocalizationContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWatchlist } from '@/contexts/WatchlistContext';
@@ -18,6 +18,7 @@ import { useWalletLabels } from '@/hooks/profile/useWalletLabels';
 import { WalletLabelModal } from '@/components/wallet/WalletLabelModal/WalletLabelModal';
 import { WalletTagsModal } from '@/components/wallet/WalletTagsModal/WalletTagsModal';
 import styles from './WalletOverview.module.scss';
+import type { ChartFilters } from '@/types/chart-filters.types';
 import { PERIOD_OPTIONS } from '@/config/periodOptions';
 import WalletOverviewValueSection from './WalletOverviewValueSection';
 import WalletOverviewTradingSection from './WalletOverviewTradingSection';
@@ -31,18 +32,6 @@ function shortenWalletAddress(address: string): string {
     }
 
     return `${normalized.slice(0, 6)}...${normalized.slice(-4)}`;
-}
-
-function getRiskTagType(level: unknown): 'green' | 'warm-gray' | 'red' {
-    if (level === 'low') {
-        return 'green';
-    }
-
-    if (level === 'medium') {
-        return 'warm-gray';
-    }
-
-    return 'red';
 }
 
 function getFirstFundDisplayLabel(firstFund: WalletIdentityAnalysis['firstFund']): string | null {
@@ -100,7 +89,7 @@ function formatLocalizedWalletAge(
 export interface WalletOverviewProps {
     walletAddress: string,
     height?: number;
-    initialFilters?: Partial<any>;
+    initialFilters?: Partial<ChartFilters>;
     autoRefresh?: boolean;
     refreshInterval?: number;
     /** When false, skips GET /wallets/intelligence until enabled (saves heavy API work until needed). */
@@ -115,7 +104,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
 }) => {
     const { user } = useAuth();
     const { walletWatchlist, walletPending, toggleWallet } = useWatchlist();
-    const { tr, fmt } = useLocalization();
+    const { tr } = useLocalization();
 
     const [overview, setOverview] = useState<WalletOverviewMultiPeriodResponse | null>(null);
     const [selectedPeriod, setSelectedPeriod] = useState<WalletOverviewPeriodKey>('24H');
@@ -231,7 +220,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const identityStatus = intelligence?.identity?.status ?? null;
     const identityName = intelligence?.identity?.name ?? null;
     const identityCategory = intelligence?.identity?.category ?? null;
-    const riskLevel = intelligence?.analysis?.riskLevel ?? null;
     const firstFund = intelligence?.analysis?.firstFund ?? null;
     const firstFundAddress = firstFund?.funderAddress ?? null;
     const firstFundLabel = getFirstFundDisplayLabel(firstFund);
@@ -250,7 +238,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
         : walletAddress;
 
     const selectedStats = overview?.periods?.[selectedPeriod] ?? null;
-    const winRateStats = selectedStats?.winRateStats ?? null; // Lấy stats cho banner
     const holdings = overview?.holdings ?? null;
 
     const totalAssetValue = holdings?.totalAssetValueUsd ?? overview?.totalAssetValueUsd ?? null;
@@ -264,34 +251,6 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
     const sellVolumeUsd = selectedStats?.sell?.volumeUsd ?? null;
     const pnlRealized = selectedStats?.pnl?.realizedUsd ?? null;
     const pnlUnrealized = selectedStats?.pnl?.unrealizedUsd ?? null;
-
-    const renderValue = (
-        hasValue: boolean,
-        formattedValue: React.ReactNode,
-        className: string,
-        skeletonWidth: string,
-        skeletonHeight: string,
-    ) => {
-        if (hasValue) {
-            return <span className={className}>{formattedValue}</span>;
-        }
-
-        if (loading) {
-            return (
-                <div className={styles.valueSkeleton} aria-hidden="true">
-                    <SkeletonPlaceholder
-                        style={{
-                            width: skeletonWidth,
-                            height: skeletonHeight,
-                            borderRadius: '4px',
-                        }}
-                    />
-                </div>
-            );
-        }
-
-        return <span className={className}>{formattedValue}</span>;
-    };
 
     const navigate = useNavigate();
 
@@ -558,7 +517,7 @@ export const WalletOverview: React.FC<WalletOverviewProps> = ({
                 
                 
                 <WalletOverviewWinRateBanner 
-                    stats={(selectedStats as any)?.winRateStats} // Khi Backend update xong API, xóa "(as any)"
+                    stats={(selectedStats as { winRateStats?: { winRate: number; winCount: number; totalTraded: number; avgWinUsd?: number; avgLossUsd?: number } } | null)?.winRateStats}
                     selectedPeriod={selectedPeriod}
                     loading={loading}
                 />

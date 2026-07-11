@@ -5,11 +5,7 @@ import type { CG_TopPoolData } from "../_types/token-raw-responses.js";
 const INCLUDE = "base_token,quote_token,dex";
 const TARGET_POOL_COUNT = 100;
 const MAX_PAGE_ROUNDS = 12;
-const VALIDATION_CONCURRENCY = 8;
-const VALIDATION_CACHE_TTL_MS = 10 * 60 * 1000;
-const DETAIL_ENRICH_CONCURRENCY = 6;
 // Pool phải có liquidity tối thiểu để lọc bỏ meme pool rác không có thanh khoản
-const MIN_LIQUIDITY_USD = 500;
 
 export type PoolDuration = "5m" | "1h" | "6h" | "24h";
 export type PoolTopSort = "volume" | "txns" | "marketCap";
@@ -41,6 +37,13 @@ export interface MarketPoolItem {
   poolCreatedAt: string | null;
 }
 
+type PoolAttributesWithFdv = { fdv_usd?: string | number | null };
+
+type SinglePoolPayload = {
+  data: CG_TopPoolData["data"][number];
+  included?: CG_TopPoolData["included"];
+};
+
 type ValidationCacheEntry = {
   exists: boolean;
   checkedAt: number;
@@ -51,10 +54,6 @@ const poolValidationCache = new Map<string, ValidationCacheEntry>();
 /** Xóa toàn bộ cache validation — dùng khi cần force refresh data */
 export function clearPoolValidationCache(): void {
   poolValidationCache.clear();
-}
-
-function isNotFoundStatus(status: number): boolean {
-  return status === 404;
 }
 
 function toNumber(input: string | number | null | undefined): number | null {
@@ -191,8 +190,8 @@ function mapPools(res: CG_TopPoolData): MarketPoolItem[] {
       priceUsd: toNumber(pool.attributes.base_token_price_usd),
       marketCapUsd: toNumber(pool.attributes.market_cap_usd && pool.attributes.market_cap_usd !== "0" 
         ? pool.attributes.market_cap_usd 
-        : (pool.attributes as any).fdv_usd),
-      fdvUsd: toNumber((pool.attributes as any).fdv_usd),
+        : (pool.attributes as PoolAttributesWithFdv).fdv_usd),
+      fdvUsd: toNumber((pool.attributes as PoolAttributesWithFdv).fdv_usd),
       txns24h: buys24h + sells24h,
       volume24h: toNumber(pool.attributes.volume_usd?.h24),
       priceChange5m: toNumber(pool.attributes.price_change_percentage?.m5),
@@ -264,15 +263,15 @@ async function fetchSinglePoolFromCoinGecko(
   if (!resp.ok) return null;
 
   try {
-    const payload = await resp.json() as any;
+    const payload = await resp.json() as SinglePoolPayload;
     // API single pool trả về { data: { id, attributes... } }
     // Chúng ta wrap vào mảng để dùng chung hàm mapPools
     const results = mapPools({
       data: [payload.data],
-      included: payload.included
-    } as any);
+      included: payload.included ?? []
+    });
     return results[0] || null;
-  } catch (err) {
+  } catch {
     return null;
   }
 }

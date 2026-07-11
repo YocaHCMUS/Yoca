@@ -7,6 +7,8 @@ import { walletIdentityCache } from "@sv/db/schema.js";
 import type { WalletIdentityNormalized } from "@sv/services/wallet/dtos/walletIdentityObjects.js";
 import { eq } from "drizzle-orm";
 
+type WalletIdentityCacheRow = typeof walletIdentityCache.$inferSelect;
+
 let warnedMissingIdentityCacheTable = false;
 
 export type CachedWalletIdentity = {
@@ -38,7 +40,7 @@ export function getIdentityCacheTtlMs(status: string): number {
     return 0;
 }
 
-function mapRowToIdentity(row: any): WalletIdentityNormalized {
+function mapRowToIdentity(row: WalletIdentityCacheRow): WalletIdentityNormalized {
     const status = normalizeIdentityStatus(String(row.status ?? "unknown"));
 
     return {
@@ -102,7 +104,7 @@ export async function getCachedWalletIdentity(
 ): Promise<CachedWalletIdentity | null> {
     const normalizedAddress = address.trim();
 
-    let rows: unknown[];
+    let rows: WalletIdentityCacheRow[];
 
     try {
         rows = await db
@@ -125,7 +127,7 @@ export async function getCachedWalletIdentity(
         return null;
     }
 
-    const row = rows[0] as any;
+    const row = rows[0];
     const fetchedAt =
         row.fetchedAt instanceof Date ? row.fetchedAt : new Date(row.fetchedAt ?? Date.now());
 

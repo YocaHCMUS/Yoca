@@ -6,7 +6,6 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import { getUserSubscription, type PlanTier } from "@/services/profile/subscriptionApi";
 import type { ProfileOverviewData } from "@/types/profile";
 import { SkeletonPlaceholder, SkeletonText, Tag } from "@carbon/react";
-import { Activity, ChartLine, Wallet, Link as LinkIcon } from "@carbon/react/icons";
 import { useEffect, useState } from "react";
 import styles from "@/components/profile/shared/profile.module.scss";
 interface ProfileOverviewProps {
@@ -15,12 +14,10 @@ interface ProfileOverviewProps {
 }
 
 export function ProfileOverview({ data, loading }: ProfileOverviewProps) {
-  const { fmt } = useLocalization();
+  useLocalization();
   const [subscriptionTier, setSubscriptionTier] = useState<PlanTier | "Standard">(
     "Standard",
   );
-  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
-
   useEffect(() => {
     const fetchSubscription = async () => {
       try {
@@ -29,8 +26,6 @@ export function ProfileOverview({ data, loading }: ProfileOverviewProps) {
       } catch (error) {
         console.error("Failed to fetch subscription:", error);
         setSubscriptionTier("Standard");
-      } finally {
-        setSubscriptionLoading(false);
       }
     };
 

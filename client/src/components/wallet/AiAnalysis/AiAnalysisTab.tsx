@@ -1,4 +1,4 @@
-import { Button, TextAreaSkeleton } from "@carbon/react";
+import { TextAreaSkeleton } from "@carbon/react";
 import styles from "./ai-analysis.module.scss";
 import type { WalletAiAnalysisResponse } from "@/services/wallet/walletApi.ts";
 import {
@@ -70,7 +70,6 @@ export function AiAnalysisTab({
   dependencyItems,
   canGenerate,
   onGenerate,
-  onRetry,
 }: {
   aiAnalysisLoading: boolean;
   aiAnalysisError: string | null;
@@ -80,7 +79,6 @@ export function AiAnalysisTab({
   dependencyItems: AiAnalysisDependencyItem[];
   canGenerate: boolean;
   onGenerate: () => void;
-  onRetry: () => void;
 }) {
   const { tr, fmt } = useLocalization();
   const showReadinessPanel = dependencyItems.length > 0;

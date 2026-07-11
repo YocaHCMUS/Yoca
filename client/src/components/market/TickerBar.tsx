@@ -43,7 +43,7 @@ const TOP_TOKEN_ADDRESSES = [
 
 export const TickerBar: React.FC = () => {
   const [items, setItems] = useState<TickerItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchTopTokens() {

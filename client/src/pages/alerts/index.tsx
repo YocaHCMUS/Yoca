@@ -1,4 +1,22 @@
 import client from "@/api/main";
+
+type AlertsApiClient = {
+  settings: {
+    $get: () => Promise<Response>;
+    $patch: (args: { json: Record<string, unknown> }) => Promise<Response>;
+  };
+  rules: {
+    $get: () => Promise<Response>;
+    [":ruleId"]: {
+      $delete: (args: { param: { ruleId: string } }) => Promise<Response>;
+    };
+  };
+  [":id"]: {
+    $delete: (args: { param: { id: string } }) => Promise<Response>;
+  };
+};
+
+const alertsApi = client.api.alerts as unknown as AlertsApiClient;
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { useAuth } from "@/contexts/AuthContext.tsx";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
@@ -186,7 +204,7 @@ export default function AlertsPage() {
   const loadSettings = useCallback(async () => {
     setDiscordLoading(true);
     try {
-      const res = await (client.api.alerts as any).settings.$get();
+      const res = await alertsApi.settings.$get();
       if (res.ok) {
         const data = (await res.json()) as AlertSettingsApiResponse;
         setDiscordUrl(data.discordWebhookUrl || "");
@@ -207,7 +225,7 @@ export default function AlertsPage() {
     setDiscordSaving(true);
     try {
       const trimmed = discordUrl.trim();
-      const res = await (client.api.alerts as any).settings.$patch({
+      const res = await alertsApi.settings.$patch({
         json: { discordWebhookUrl: trimmed || null },
       });
       if (res.ok) {
@@ -256,7 +274,7 @@ export default function AlertsPage() {
 
     setEmailSaving(true);
     try {
-      const res = await (client.api.alerts as any).settings.$patch({
+      const res = await alertsApi.settings.$patch({
         json: {
           emailAlertsEnabled: emailEnabled,
           emailAlertsAddress: overrideTrimmed || null,
@@ -305,10 +323,7 @@ export default function AlertsPage() {
   const loadRules = useCallback(async () => {
     setRulesLoading(true);
     try {
-      const api = client.api.alerts as unknown as {
-        rules: { $get: () => Promise<Response> };
-      };
-      const res = await api.rules.$get();
+      const res = await alertsApi.rules.$get();
       if (!res.ok) throw new Error("rules_failed");
       const data = (await res.json()) as AlertRuleApiRow[];
       setRulesRows(Array.isArray(data) ? data : []);
@@ -408,7 +423,7 @@ export default function AlertsPage() {
     dismissInline();
     setDeletingRuleId(ruleId);
     try {
-      const res = await (client.api.alerts as any).rules[":ruleId"].$delete({
+      const res = await alertsApi.rules[":ruleId"].$delete({
         param: { ruleId: String(ruleId) },
       });
       if (!res.ok) {
@@ -428,7 +443,7 @@ export default function AlertsPage() {
     dismissInline();
     setDeletingId(id);
     try {
-      const res = await (client.api.alerts as any)[":id"].$delete({
+      const res = await alertsApi[":id"].$delete({
         param: { id: String(id) },
       });
       if (res.status === 404) {
@@ -950,3 +965,5 @@ export default function AlertsPage() {
   );
 
 }
+
+

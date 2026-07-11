@@ -46,7 +46,7 @@ vi.mock("@solana/web3.js", () => {
     }
     toBase58() { return this.val; }
     toString() { return this.val; }
-    equals(other: any) { return other?.toBase58() === this.val; }
+    equals(other: { toBase58?: () => string } | null | undefined) { return other?.toBase58?.() === this.val; }
   }
 
   const SystemProgram = {
@@ -58,14 +58,14 @@ vi.mock("@solana/web3.js", () => {
   };
 
   class TransactionMessage {
-    constructor(opts: any) {
+    constructor(opts: unknown) {
       mockTransactionMessageConstructor(opts);
     }
     compileToV0Message() { return {}; }
   }
 
   class VersionedTransaction {
-    constructor(msg: any) {
+    constructor(msg: unknown) {
       mockVersionedTransactionConstructor(msg);
     }
   }
@@ -78,7 +78,7 @@ vi.mock("@solana/web3.js", () => {
       mockLegacyTransactionConstructor(this);
     }
 
-    add(...instructions: any[]) {
+    add(...instructions: unknown[]) {
       mockLegacyTransactionAdd(...instructions);
       return this;
     }
@@ -168,7 +168,7 @@ describe("SolanaPaymentFlow Component", () => {
         getAccountInfo: mockGetAccountInfo,
         simulateTransaction: mockSimulateTransaction,
         confirmTransaction: mockConfirmTransaction,
-      } as any,
+      } as never,
     });
   });
 
@@ -188,12 +188,12 @@ describe("SolanaPaymentFlow Component", () => {
         connected: false,
         publicKey: null,
         wallet: null,
-        wallets: mockWallets as any,
+        wallets: mockWallets as never,
         select: selectMock,
         connect: connectMock,
         disconnect: vi.fn(),
         sendTransaction: vi.fn(),
-      } as any);
+      } as never);
     });
 
     it("should render the wallet selection header and available adapters", () => {
@@ -260,7 +260,7 @@ describe("SolanaPaymentFlow Component", () => {
         connect: connectMock,
         disconnect: vi.fn(),
         sendTransaction: vi.fn(),
-      } as any);
+      } as never);
 
       render(<SolanaPaymentFlow {...defaultProps} />);
       expect(screen.getByText("No Solana wallets detected.")).toBeInTheDocument();
@@ -276,7 +276,7 @@ describe("SolanaPaymentFlow Component", () => {
         connect: connectMock,
         disconnect: vi.fn(),
         sendTransaction: vi.fn(),
-      } as any);
+      } as never);
 
       render(<SolanaPaymentFlow {...defaultProps} />);
       expect(screen.getByRole("link", { name: /phantom/i })).toHaveAttribute("href", "https://phantom.app");
@@ -304,13 +304,13 @@ describe("SolanaPaymentFlow Component", () => {
       vi.mocked(useWallet).mockReturnValue({
         connected: true,
         publicKey: mockPublicKey,
-        wallet: { adapter: { name: "Phantom", icon: "phantom-icon.png" } } as any,
-        wallets: mockWallets as any,
+        wallet: { adapter: { name: "Phantom", icon: "phantom-icon.png" } } as never,
+        wallets: mockWallets as never,
         select: vi.fn(),
         connect: vi.fn(),
         disconnect: vi.fn(),
         sendTransaction: sendTransactionMock,
-      } as any);
+      } as never);
     });
 
     it("should render the connected wallet card with truncated address", () => {
@@ -505,13 +505,13 @@ describe("SolanaPaymentFlow Component", () => {
       vi.mocked(useWallet).mockReturnValue({
         connected: true,
         publicKey: mockPublicKey,
-        wallet: { adapter: { name: "Solflare", icon: "solflare-icon.png" } } as any,
-        wallets: mockWallets as any,
+        wallet: { adapter: { name: "Solflare", icon: "solflare-icon.png" } } as never,
+        wallets: mockWallets as never,
         select: vi.fn(),
         connect: vi.fn(),
         disconnect: vi.fn(),
         sendTransaction: sendTransactionMock,
-      } as any);
+      } as never);
 
       render(<SolanaPaymentFlow {...defaultProps} />);
 
@@ -544,13 +544,13 @@ describe("SolanaPaymentFlow Component", () => {
       vi.mocked(useWallet).mockReturnValue({
         connected: true,
         publicKey: mockPublicKey,
-        wallet: { adapter: { name: "Phantom" } } as any,
-        wallets: mockWallets as any,
+        wallet: { adapter: { name: "Phantom" } } as never,
+        wallets: mockWallets as never,
         select: vi.fn(),
         connect: vi.fn(),
         disconnect: disconnectMock,
         sendTransaction: sendTransactionMock,
-      } as any);
+      } as never);
 
       render(<SolanaPaymentFlow {...defaultProps} />);
       fireEvent.click(screen.getByRole("button", { name: /disconnect/i }));
@@ -571,13 +571,13 @@ describe("SolanaPaymentFlow Component", () => {
       vi.mocked(useWallet).mockReturnValue({
         connected: true,
         publicKey: mockPublicKey,
-        wallet: { adapter: { name: "Phantom" } } as any,
-        wallets: mockWallets as any,
+        wallet: { adapter: { name: "Phantom" } } as never,
+        wallets: mockWallets as never,
         select: vi.fn(),
         connect: vi.fn(),
         disconnect: vi.fn(),
         sendTransaction: sendTransactionMock,
-      } as any);
+      } as never);
     });
 
     it("should surface a network mismatch error if genesis hash does not match", async () => {
@@ -636,13 +636,13 @@ describe("SolanaPaymentFlow Component", () => {
       vi.mocked(useWallet).mockReturnValue({
         connected: true,
         publicKey: payerPublicKey,
-        wallet: { adapter: { name: "Phantom" } } as any,
-        wallets: mockWallets as any,
+        wallet: { adapter: { name: "Phantom" } } as never,
+        wallets: mockWallets as never,
         select: vi.fn(),
         connect: vi.fn(),
         disconnect: vi.fn(),
         sendTransaction: sendTransactionMock,
-      } as any);
+      } as never);
       mockGetAccountInfo.mockImplementation((key: PublicKey) =>
         key.toBase58() === MERCHANT_ADDR ? Promise.resolve(null) : Promise.resolve({ lamports: 10_000_000 })
       );
@@ -769,13 +769,13 @@ describe("SolanaPaymentFlow Component", () => {
       vi.mocked(useWallet).mockReturnValue({
         connected: true,
         publicKey: mockPublicKey,
-        wallet: { adapter: { name: "Phantom" } } as any,
-        wallets: mockWallets as any,
+        wallet: { adapter: { name: "Phantom" } } as never,
+        wallets: mockWallets as never,
         select: vi.fn(),
         connect: vi.fn(),
         disconnect: vi.fn(),
         sendTransaction,
-      } as any);
+      } as never);
     }
 
     it("should reset gracefully when user rejects transaction in Phantom (code 4001)", async () => {
@@ -887,13 +887,13 @@ describe("SolanaPaymentFlow Component", () => {
       vi.mocked(useWallet).mockReturnValue({
         connected: true,
         publicKey: new PublicKey(MERCHANT_ADDR),
-        wallet: { adapter: { name: "Phantom" } } as any,
-        wallets: mockWallets as any,
+        wallet: { adapter: { name: "Phantom" } } as never,
+        wallets: mockWallets as never,
         select: vi.fn(),
         connect: vi.fn(),
         disconnect: vi.fn(),
         sendTransaction: vi.fn(),
-      } as any);
+      } as never);
 
       render(<SolanaPaymentFlow {...defaultProps} isProcessing={true} />);
       expect(screen.getByRole("button", { name: /sending/i })).toBeDisabled();
@@ -903,13 +903,13 @@ describe("SolanaPaymentFlow Component", () => {
       vi.mocked(useWallet).mockReturnValue({
         connected: true,
         publicKey: new PublicKey(MERCHANT_ADDR),
-        wallet: { adapter: { name: "Phantom" } } as any,
-        wallets: mockWallets as any,
+        wallet: { adapter: { name: "Phantom" } } as never,
+        wallets: mockWallets as never,
         select: vi.fn(),
         connect: vi.fn(),
         disconnect: vi.fn(),
         sendTransaction: vi.fn(),
-      } as any);
+      } as never);
 
       render(<SolanaPaymentFlow {...defaultProps} isProcessing={true} />);
       expect(screen.getByText("Sending...")).toBeInTheDocument();
@@ -919,13 +919,13 @@ describe("SolanaPaymentFlow Component", () => {
       vi.mocked(useWallet).mockReturnValue({
         connected: true,
         publicKey: new PublicKey(MERCHANT_ADDR),
-        wallet: { adapter: { name: "Phantom" } } as any,
-        wallets: mockWallets as any,
+        wallet: { adapter: { name: "Phantom" } } as never,
+        wallets: mockWallets as never,
         select: vi.fn(),
         connect: vi.fn(),
         disconnect: vi.fn(),
         sendTransaction: vi.fn(),
-      } as any);
+      } as never);
 
       render(<SolanaPaymentFlow {...defaultProps} errorMsg="Something went wrong" />);
       expect(screen.getByRole("alert")).toHaveTextContent("Something went wrong");
@@ -938,19 +938,19 @@ describe("SolanaPaymentFlow Component", () => {
       vi.mocked(useWallet).mockReturnValue({
         connected: true,
         publicKey: mockPublicKey,
-        wallet: { adapter: { name: "Phantom", icon: "phantom-icon.png" } } as any,
-        wallets: mockWallets as any,
+        wallet: { adapter: { name: "Phantom", icon: "phantom-icon.png" } } as never,
+        wallets: mockWallets as never,
         select: vi.fn(),
         connect: vi.fn(),
         disconnect: vi.fn(),
         sendTransaction: vi.fn(),
-      } as any);
+      } as never);
 
       vi.mocked(useConnection).mockReturnValue({
         connection: {
           getBalance: mockGetBalance,
           getGenesisHash: mockGetGenesisHash,
-        } as any,
+        } as never,
       });
     });
 
@@ -1015,3 +1015,5 @@ describe("SolanaPaymentFlow Component", () => {
   });
 
 });
+
+

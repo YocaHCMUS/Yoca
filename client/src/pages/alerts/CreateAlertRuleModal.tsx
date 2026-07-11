@@ -1,4 +1,12 @@
 import client from "@/api/main";
+
+type AlertRulesApiClient = {
+  rules: {
+    $post: (args: { json: Record<string, unknown> }) => Promise<Response>;
+  };
+};
+
+const alertRulesApi = client.api.alerts as unknown as AlertRulesApiClient;
 import { ArrowLeft, ArrowRight } from "@carbon/icons-react";
 import {
   Button,
@@ -141,7 +149,7 @@ export function CreateAlertRuleModal({
 
     setSubmitting(true);
     try {
-      const res = await (client.api.alerts as any).rules.$post({
+      const res = await alertRulesApi.rules.$post({
         json: {
           name: alertName.trim() || null,
           walletAddress: trimmedWallet,
@@ -387,3 +395,5 @@ export function CreateAlertRuleModal({
     </ComposedModal>
   );
 }
+
+
