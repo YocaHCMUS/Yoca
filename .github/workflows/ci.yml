@@ -10,6 +10,9 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/yoca
+
 jobs:
   typecheck:
     runs-on: ubuntu-latest
@@ -49,19 +52,36 @@ jobs:
       - *install
       - run: npm run test -w=client -- --run
 
-  build-server:
+  build-and-push:
+    needs: [typecheck, lint, test-server, test-client]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - *setup
-      - *node
-      - *install
-      - run: npm run server:build
+      - uses: actions/checkout@v4
 
-  build-client:
-    runs-on: ubuntu-latest
-    steps:
-      - *setup
-      - *node
-      - *install
-      - run: npm run client:build
-   
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,format=short
+            type=raw,latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

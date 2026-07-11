@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+.env.*
+*.log
+node_modules
+server/node_modules
+server/build
+client/node_modules
+client/build
+client/src
+Dockerfile
+.dockerignore

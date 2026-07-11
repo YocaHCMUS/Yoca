@@ -385,7 +385,7 @@ export const envSchema = z.object({
   POSTGRES_DB_URL: z.url("Invalid database URL"),
   JWT_SECRET: z.string().min(1, "Jwt is required"),
   GOOGLE_CLIENT_ID: z.string().min(1, "Google client id is required"),
-  SERVER_PORT: z.coerce.number().default(4000),
+  SERVER_PORT: z.coerce.number().default(() => Number(process.env.PORT) || 4000),
 
   // API Keys and URLs
   COINGECKO_API_BASE_URL: z.url().default("https://api.coingecko.com/api/v3"),
