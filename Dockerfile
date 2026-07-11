@@ -37,4 +37,4 @@ COPY --from=build /app/server/build server/build
 ENV NODE_ENV=production
 EXPOSE 4000
 
-CMD ["node", "server/build/main.js"]
+CMD ["npm", "run", "start", "-w", "server"]
