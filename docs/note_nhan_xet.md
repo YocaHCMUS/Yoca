@@ -74,3 +74,56 @@ Lời nhắc trách nhiệm khi nộp báo cáo, không có hành động cụ t
 6. Chèn ảnh thật (nền trắng thống nhất) thay các placeholder "% CHÈN HÌNH" còn lại ở Chương 4.
 7. Rà chính tả toàn bộ 5 chương.
 8. Phóng to lại các hình ERD trong `Chapter3/database/erd.tex` (đang nhỏ, khó đọc).
+
+---
+
+## Ghi chú bổ sung sau khi rà soát source code (11/07/2026)
+
+### Nhà cung cấp dữ liệu và lịch sử thay đổi nguồn dữ liệu
+- [ ] Kiểm kê lại provider theo **usage thực tế trong service**, không dựa riêng vào các file `server/src/util/util-*.ts`. Hiện CoinMarketCap còn utility nhưng không có service import; không nên trình bày như một nguồn đang vận hành. Dune SIM cũng không còn là nguồn chính của hệ thống.
+- [ ] Cập nhật vai trò hiện tại của các nguồn chính: CoinGecko (token list, metadata, market/chart và search), Birdeye (token/pool/trade và một số dữ liệu ví còn lại), Mobula (wallet analysis, PnL, token-level PnL, transfer/swap history, một phần chart và holder), Zerion (lịch sử giá trị/số dư ví), Helius (enhanced transaction, webhook, portfolio và dữ liệu Solana), Moralis (một số luồng token/wallet fallback hoặc enrichment). Cần rà từng endpoint trước khi viết bản cuối.
+- [ ] Bổ sung phần giới thiệu ngắn về từng provider: sản phẩm chính, loại dữ liệu Yoca sử dụng, lý do phù hợp, giới hạn kỹ thuật và giới hạn quota/chi phí. Chỉ dùng giá và free tier có nguồn chính thức, kèm ngày truy cập vì các gói thay đổi thường xuyên.
+- [ ] Viết lại quá trình chuyển dịch nguồn dữ liệu như một quyết định kỹ thuật: phụ thuộc Birdeye trong giai đoạn đầu; giới hạn khả năng duy trì gói Lite; chuyển phân tích ví và PnL sang Mobula; chuyển lịch sử biến động giá trị ví sang Zerion; giữ nhiều provider để bù độ phủ thay vì tìm một nguồn thay thế hoàn toàn.
+- [ ] Nêu rõ PnL có thể tự tính về mặt nguyên tắc nhưng việc thu thập đủ lịch sử giao dịch, định giá token tại thời điểm giao dịch và xử lý ví có tần suất bất thường làm chi phí triển khai/API tăng mạnh. Tránh diễn đạt như thể Yoca chỉ gọi một endpoint và nhận kết quả hoàn chỉnh.
+- [ ] Đưa biến động chi phí, quota và schema upstream vào nhóm “các vấn đề kỹ thuật cần giải quyết”. Không nêu chi tiết trao đổi riêng với nhà cung cấp hoặc quy trách nhiệm; mô tả trung tính là điều kiện hỗ trợ/thương mại thay đổi trong quá trình phát triển.
+
+### Kiến trúc dữ liệu thích nghi với API và cache
+- [ ] Nhấn mạnh mục tiêu của schema không chỉ là chuẩn hóa dữ liệu, mà còn là giảm số lần gọi API khi cache stale. Tách bảng theo nhịp cập nhật và nguồn dữ liệu để một endpoint không phải chờ 2--3 provider mới tạo được một bản ghi đầy đủ.
+- [ ] Giải thích chiến lược tận dụng dữ liệu dư từ response để cập nhật chéo có kiểm soát, ví dụ đồng bộ metadata token thu được từ portfolio/search/pool vào `token_meta`. Phân biệt rõ dữ liệu chủ đạo, dữ liệu enrichment và cache/read model.
+- [ ] Trình bày việc schema phải thay đổi nhiều lần như quá trình thích nghi với độ phủ, response shape và quota của provider; không mô tả là thiết kế tùy tiện. Nêu trade-off giữa schema chuẩn hóa, tính độc lập provider, chi phí refresh và tốc độ triển khai.
+- [ ] Thừa nhận có chủ đích rằng một số read model còn mang dấu vết migration gấp, điển hình `wallet_analyses` tập trung nhiều trường do ánh xạ gần với kết quả Mobula. Đưa đây vào hạn chế và hướng refactor, không cần phơi toàn bộ chi tiết vật lý trong sơ đồ tổng quan.
+
+### Rà lại đầy đủ miền Wallet trong ERD
+- [ ] ERD hiện tại chưa phản ánh đủ các cụm bảng wallet có trong source. Cần quyết định biểu diễn khái niệm cho: overview/portfolio cache; balance history; `wallet_analyses`; transfer/swap history và coverage meta; Helius transaction/enhanced transaction; identity/tag/followed wallet; token-level PnL/details; first fund; AI audit/swap summary cache; alert/webhook liên quan tới ví.
+- [ ] Không đưa toàn bộ bảng và cột vào một hình. ERD tổng thể được phép gom theo read model/miền khái niệm để người đọc hiểu kiến trúc; các ERD chi tiết chỉ giữ PK, FK hoặc logical key và các trường có ý nghĩa thiết kế.
+- [ ] Kiểm tra lại tên và vai trò các bảng legacy/song song (`wallet_helius_transactions`, `wallet_enhanced_*`, `wallet_transactions`, `wallet_swap`, `wallet_transfer_history`, `wallet_swap_history`) trước khi quyết định bảng nào xuất hiện trong báo cáo.
+
+### Quá trình phát triển giao diện và Design System
+- [ ] Bổ sung một khó khăn kỹ thuật về tính nhất quán giao diện: nhóm chọn Carbon Design System sớm khi luồng chức năng và điều hướng chưa ổn định; mức độ hiểu và cách áp dụng component khác nhau giữa thành viên khiến component, spacing, theme và style bị phân mảnh.
+- [ ] Viết trung tính, không nhắc hoặc quy trách nhiệm cho giảng viên/thành viên. Tập trung vào nguyên nhân quy trình: prototype ban đầu chưa đủ chi tiết, thiếu quy ước UI chung và thiếu bước review/migration có hệ thống.
+- [ ] Nêu biện pháp thực tế: thống nhất design token và semantic style, bọc/chuẩn hóa component dùng chung, ưu tiên migration các màn hình cốt lõi, chấp nhận một số màn hình legacy trong phạm vi đồ án. Không khẳng định đã migrate hoàn toàn nếu source vẫn còn Carbon/Tailwind/SCSS đan xen.
+
+### Kiểm thử và độ tin cậy
+- [ ] Không viết như thể nhóm đã có một quy trình QA hoàn chỉnh. Source hiện có Vitest ở cả client và server, gồm component/UI behavior, payment, auth, alert/webhook, route/service, cache coverage, upstream error handling và một số luồng wallet/AI; cần thống kê lại và dùng đúng bằng chứng này.
+- [ ] Trình bày chiến lược hiện có là validation và fail-fast: response provider được kiểm tra bằng Zod, lỗi HTTP/error envelope/response sai shape được chuyển thành lỗi upstream có kiểu, Hono RPC và shared types giúp phát hiện sai lệch hợp đồng sớm, Drizzle bảo đảm truy cập schema nhất quán.
+- [ ] Phân biệt validation với testing: Zod và strong typing giảm trạng thái dữ liệu mơ hồ nhưng không thay thế kiểm thử API, integration hay end-to-end.
+- [ ] Đề xuất phạm vi kiểm thử “vừa đủ báo cáo”: unit test cho normalizer/calculation; contract test bằng fixture cho response provider; route/service test với mock upstream cho 200/400/429/500/502/invalid JSON/schema mismatch; cache test cho fresh/stale/fallback; một số smoke test cho luồng người dùng chính. Không bịa benchmark, coverage hoặc số test pass.
+- [ ] Phần hạn chế phải nói rõ external API làm kết quả phụ thuộc quota, độ ổn định và thay đổi response; hiện chưa có load test, E2E đầy đủ hoặc môi trường staging ổn định. Đề xuất circuit breaker/retry có kiểm soát, observability và contract regression test như hướng hoàn thiện.
+
+### Nguyên tắc viết lại
+- [ ] Viết theo kiến trúc khái niệm và quyết định thiết kế, không biến báo cáo thành bản sao 1:1 của source. Có thể gom các bảng/luồng legacy để sơ đồ dễ hiểu, nhưng không được tạo số liệu, tính năng hoặc bảo đảm kỹ thuật không tồn tại.
+- [ ] Ưu tiên văn xuôi, hạn chế chia subsection và bullet list; mỗi mục theo mạch “bối cảnh -- khó khăn -- quyết định -- trade-off -- kết quả/hạn chế”.
+- [ ] Mọi thông tin giá/quota/provider phải có nguồn chính thức và ngày truy cập. Nếu thông tin giữa trang pricing và dashboard/key thực tế khác nhau, ghi theo gói nhóm thực dùng và chú thích thời điểm quan sát.
+
+### Ngữ cảnh phát triển do nhóm bổ sung (dùng làm chất liệu viết, không chép nguyên văn)
+- [ ] Giai đoạn đầu, nhóm tự tổng hợp PnL từ Helius Enhanced Transactions. Các trường abstraction như event/data cho swap thường thiếu hoặc không khớp khi đối chiếu Solscan/Birdeye, nên nhóm phải phát triển heuristic dựa trên balance change và program data. Cách này thể hiện năng lực nghiên cứu/chuẩn hóa dữ liệu nhưng không đủ tin cậy và quá chậm với ví lớn; không nên mô tả việc chuyển sang Mobula như từ bỏ phần kỹ thuật.
+- [ ] Giải thích giới hạn cốt lõi của PnL: muốn tính đúng cần lịch sử giao dịch đủ sâu, phân loại swap đáng tin cậy và giá token lịch sử tại từng thời điểm. Khối lượng giao dịch của ví không dự đoán trước khiến việc tự thu thập/index toàn bộ vượt phạm vi tài nguyên của đồ án.
+- [ ] Ghi nhận migration Mobula + Zerion kéo dài khoảng một tháng và tạm ảnh hưởng các chức năng Balance Chart, PnL, Overview; đây là ví dụ chính cho rủi ro phụ thuộc provider và chi phí thay đổi adapter/cache/schema.
+- [ ] Cập nhật lịch sử Balance Chart: ban đầu Birdeye Lite cung cấp total và per-token balance; sau đó chuyển sang Zerion. Zerion từng tính sai total balance do nhận diện token spam/token account, làm số liệu lệch lớn so với portfolio Helius. Hiện total balance dùng Mobula vì khớp hơn, còn per-token history giữ Zerion vì Mobula chưa cung cấp đủ chi tiết. Khi viết chỉ nêu sai lệch phân loại tài sản và quá trình đối chiếu; không khẳng định nguyên nhân nội bộ của Zerion/Blockaid nếu không có tài liệu công khai.
+- [ ] Token metadata có fallback/enrichment từ nhiều nguồn, nhưng không quảng bá fallback đa provider như chiến lược áp dụng mọi nơi. Nhóm chủ động hạn chế fallback vì khác biệt response/type làm tăng chi phí bảo trì, kiểm thử và debug.
+- [ ] Mô tả tiến hóa schema theo hướng **incremental replacement / evolutionary architecture**: xây luồng hoặc read model mới song song, chuyển consumer sang bản mới, sau đó loại bỏ phần cũ. Rà các bảng PnL/winrate/cache deprecated để không đưa nhầm vào ERD đích.
+- [ ] Dùng ví dụ nullability để giải thích defensive schema: ngoài address, metadata như symbol và các chỉ số biến động giá có thể thiếu dù tài liệu API không nêu hết trường hợp. Zod boundary và cột nullable giúp hệ thống fail rõ ở dữ liệu bắt buộc nhưng vẫn chấp nhận enrichment tùy chọn.
+- [ ] Ghi đúng DB-first pattern của service: route chỉ gọi `get*`; `get*` đọc cache và kiểm tra staleness; khi stale/missing thì gọi `fetch*`; `fetch*` lấy upstream, validate/normalize, cập nhật DB rồi trả cùng response type. Kiểm tra source trước khi khái quát vì không phải mọi service đều tuân thủ hoàn toàn.
+- [ ] UI hiện đại hóa gần hoàn thiện ở Landing, Market Overview và Wallet; Token Pool/Token Overview vẫn có bảng/component legacy. Vấn đề không chỉ là SCSS mà còn là component contract và behavior của design system bị thay bằng component tự xây giữa dự án.
+- [ ] Viết khó khăn UI ở cấp quy trình: thay đổi định hướng thẩm mỹ giữa dự án, thiếu component governance và migration plan, dẫn đến chi phí học Carbon không được tận dụng đầy đủ. Không đưa bất đồng cá nhân hoặc nhận xét về giảng viên vào báo cáo.
+- [ ] Luồng demo hiện tại: Market Overview -- Token Pool -- Token Overview -- Wallet Overview -- User -- AI Features/Limit. Không tự hạ thấp vì số trang; đánh giá theo chiều sâu dữ liệu, liên kết giữa miền chức năng, caching, validation và khả năng giải thích kết quả. Cần biến luồng này thành một kịch bản xuyên suốt thay vì danh sách trang.
