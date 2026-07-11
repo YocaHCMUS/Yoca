@@ -2,6 +2,69 @@
 
 Ghi chú cách đọc file này: mỗi mục được đối chiếu trực tiếp với bản báo cáo hiện tại. `[x]` = đã kiểm tra, đã ổn/đã sửa. `[ ]` = còn thiếu hoặc cần làm rõ, có ghi kèm vị trí file/dòng liên quan để dễ tìm.
 
+## Đối chiếu bản báo cáo hiện tại với nhận xét dành cho bản cũ — 11/07/2026
+
+**Lưu ý về thời điểm:** toàn bộ nhận xét của thầy và infographic dưới đây được tạo từ **bản báo cáo cũ, trước các batch chỉnh sửa vừa thực hiện**. Đây không phải nhận xét của thầy đối với bản hiện tại. Phần này chỉ dùng các nhận xét cũ làm baseline rồi tự đối chiếu lại với source và báo cáo mới; vì vậy `[x]`/`[ ]` bên dưới là kết quả rà soát nội bộ của nhóm, không phải trạng thái do thầy xác nhận.
+
+Nguồn baseline gồm: nhận xét chung thầy gửi Nhóm A để Nhóm B rút kinh nghiệm; nhận xét trực tiếp cho bản cũ của Nhóm B; và các mục “Hạn chế & gợi ý cập nhật” trong `docs/yoca_infographic_html/`. Infographic là tài liệu AI cô đọng từ bản báo cáo cũ nên chỉ dùng như checklist tham khảo. Khi một nhận xét đã được xử lý trong các batch mới, giữ lại và đánh dấu hoàn thành để tránh sửa lặp hoặc vô tình phục hồi cấu trúc cũ.
+
+### Nhận xét trực tiếp cho bản cũ của Nhóm B — đối chiếu ưu tiên cao nhất
+
+- [ ] **Một số phần chưa viết xong:** bản báo cáo hiện không còn subsection nội dung trống, nhưng vẫn còn các phần chưa thể chốt theo kết quả cuối: ảnh chức năng Chương 5, CI/CD ở nhánh khác, test suite đang đỏ và Alert History chưa implement end-to-end.
+- [ ] **Một số phần chưa có hình ảnh:** Chương 5 vẫn chưa có screenshot sản phẩm thật. TODO filename và nội dung bắt buộc đã được gắn trực tiếp trong `Chapter4/chapter4.tex`; checklist tổng nằm tại `docs/plans/reports/FINAL_REPORT_SCREENSHOT_CHECKLIST.md`.
+- [ ] **Thiết kế dữ liệu từng dài hơn khoảng hai lần các component/layer kiến trúc khác:** đây là nhận xét trên bản cũ, nhưng khi tự đo lại bản hiện tại thì độ lệch vẫn còn: `Chapter4/architecture.tex` có khoảng 53 dòng nội dung khung, trong khi cụm `Chapter3/database/*.tex` khoảng 193 dòng chưa kể hình. Cần cân lại bằng một trong hai hướng: rút phần liệt kê bảng/ERD chi tiết xuống phụ lục, hoặc bổ sung chiều sâu tương xứng cho client, API/domain, provider adapter, validation, AI/payment và deployment. Không nên chỉ thêm chữ cho cân trang; ưu tiên rút phần database chi tiết.
+
+### Nhận xét chung từ Nhóm A áp dụng cho Nhóm B
+
+- [ ] **Rà chính tả và toàn văn là trách nhiệm của nhóm:** Batch 8 mới rà bằng tìm kiếm và PDF ở các phần thay đổi; chưa thể xem là proofread thủ công 100 trang. Cần phân công đọc chéo, đánh dấu người đọc/chương và kiểm tra lại bản PDF cuối sau khi chèn ảnh, CI/CD, test và Alert History.
+- [ ] **Một lỗi nhỏ vẫn có thể ảnh hưởng toàn bộ bản nộp:** trước khi chốt phải chạy checklist build sạch, mục lục, citation, tên bảng/hình, số chương, thông tin bìa, secret trong ảnh và các khẳng định “đã hoàn thành”.
+- [x] **Chương 2 không sa đà cơ sở lý thuyết cơ bản:** phần công nghệ giáo khoa đã được bỏ; quyết định framework và trade-off đã chuyển sang Chương 4.
+- [x] **Chương 3 tương ứng bước phân tích yêu cầu:** đã viết lại theo user journey, nhóm yêu cầu, yêu cầu chất lượng, use case và tiêu chí chấp nhận.
+- [x] **Tách kiến trúc thành chapter riêng:** Chương 4 hiện là “Kiến trúc và thiết kế hệ thống”, có sơ đồ tổng thể và giải thích thành phần.
+- [x] **Giải thích lựa chọn framework thay vì chỉ định nghĩa:** đã nêu vai trò React/Vite/Hono/Drizzle; tuy nhiên so sánh A-vs-B hiện được viết theo nhu cầu Yoca, không dựng bảng so sánh dài với Express/Vue/Prisma.
+
+### Chương 2 — các điểm phải kiểm tra lại sau đợt viết mới
+
+- [x] URL và hình đại diện của Arkham, Birdeye/CoinGecko, Dune/Nansen đang có trong nội dung.
+- [ ] **Ngày khảo sát đã bị mất trong lần viết lại Chương 2.** Cần thêm một mốc khảo sát thống nhất gần phần mở đầu hoặc dưới từng nhóm nền tảng; ngày truy cập tài liệu API/pricing trong bibliography không thay thế hoàn toàn ngày khảo sát sản phẩm.
+- [ ] Mô tả nền tảng hiện thiên về văn xuôi và đã sâu hơn danh sách cũ, nhưng chưa dùng nhiều cụm in đậm như nhận xét của thầy. Khi rà cuối cần quyết định giữ văn phong tự nhiên hay in đậm có chọn lọc tên luồng; không biến lại thành bullet dày.
+- [ ] Bảng đối chiếu hiện đã gắn với phần phân tích trước bảng và dùng tên Yoca, nhưng vẫn cần kiểm tra cảm giác “đề tài ít chức năng”. Có thể bổ sung tiêu chí theo user journey, provider/API, localization và khả năng kiểm chứng; tránh thêm tiêu chí chỉ để Yoca thắng.
+- [ ] Infographic đề nghị rubric/điểm số và benchmark cùng token/ví. Chỉ bổ sung nếu có phương pháp và dữ liệu đo thật; hiện báo cáo chủ động không bịa latency/mức trùng khớp.
+- [ ] Infographic đề nghị cơ sở học thuật cho wash trading/graph ML. Cần rà bibliography và bổ sung paper chính thống nếu báo cáo tiếp tục khẳng định GCN/GAT/GraphSAGE hoặc phương pháp phát hiện bất thường như một đóng góp nghiên cứu.
+
+### Chương 1 — gợi ý từ infographic
+
+- [ ] Thiếu số liệu định lượng chứng minh tính cấp thiết (quy mô giao dịch/ví mẫu, số công cụ phải dùng hoặc độ trễ). Chỉ thêm số liệu có nguồn và thời điểm rõ ràng; không lấy số marketing không kiểm chứng.
+- [ ] Mục tiêu chưa có KPI vận hành. Do hiện chưa có benchmark, nên ưu tiên tiêu chí chấp nhận định tính có thể kiểm chứng; KPI latency/cache hit/alert delay chỉ thêm sau khi đo thật.
+- [x] Persona và user journey chính đã được thu hẹp hơn trong Chương 3, nhưng có thể bổ sung một kịch bản “một ngày sử dụng” nếu cần làm rõ UX.
+- [ ] Bổ sung nguyên tắc đạo đức/quyền riêng tư: không suy diễn chủ sở hữu ví, không xem AI/wash-trading signal là kết luận, giới hạn dữ liệu cá nhân và quyền xóa tài khoản.
+
+### Chương 3/4 — gợi ý từ infographic và nhận xét kiến trúc
+
+- [x] Kế hoạch kiểm thử và tiêu chí pass/fail đã có bảng; kết quả thật được ghi ở Chương 5.
+- [ ] API contract mới được mô tả ở mức Hono RPC/Zod; chưa có ví dụ request/response, error envelope, partial data và fallback cụ thể. Cân nhắc một bảng contract đại diện thay vì chép nhiều endpoint.
+- [ ] Chưa có threat model có hệ thống cho auth ví, webhook, API key, payment callback, prompt injection và dữ liệu cá nhân. Đây là thiếu sót nội dung đáng cân nhắc trước bản nộp.
+- [ ] Database đã nêu key/index và coverage ở mức thiết kế, nhưng chưa có ước lượng kích thước bảng, partition strategy hoặc index rationale theo query. Không thêm capacity estimate nếu chưa đo; có thể bổ sung các index thật đang có trong schema.
+- [ ] Luồng AI đã nêu structured context và đối chiếu dữ liệu nguồn, nhưng chưa đặc tả context schema, prompt-injection boundary và citation coverage một cách hệ thống.
+
+### Chương 5 — triển khai, kiểm thử và hình ảnh
+
+- [x] Đã có bảng kết quả chạy test thật; báo cáo ghi rõ client 155/172 và server 181/189, không tuyên bố suite xanh.
+- [ ] Infographic đề nghị latency p50/p95, cache hit rate, số request tiết kiệm và lỗi 429 trước/sau. Hiện chưa có phép đo lặp lại được nên báo cáo đã chuyển thành giới hạn; chỉ cập nhật khi có benchmark thật.
+- [ ] Kịch bản biên cần bổ sung hoặc xác nhận: ví lịch sử dài, token thiếu giá, provider timeout/malformed JSON, webhook duplicate, payment failure và AI prompt injection.
+- [ ] Screenshot có chú thích vẫn là backlog bắt buộc; không cần mỗi chức năng một hình nhưng sáu ảnh chính và cặp localization phải đủ chứng minh user journey.
+- [ ] Hướng dẫn tái lập triển khai mới ở mức quy trình trong báo cáo; cần đồng bộ workflow CI/CD, migration, environment và smoke check sau khi nhánh kia merge. Rollback/seed data chỉ ghi nếu thực sự tồn tại.
+- [ ] Chưa có user testing với người mới/nhà giao dịch/người nghiên cứu. Nếu không tổ chức kịp, phải giữ trong hạn chế, không biến phản hồi nội bộ thành user study.
+
+### Chương 6 — kết luận và roadmap
+
+- [x] Chương 6 đã được viết lại, không còn lặp danh sách chức năng dài và đã nối hạn chế với hướng phát triển.
+- [ ] Infographic đề nghị ưu tiên roadmap theo impact/effort hoặc mốc 3--6--12 tháng. Có thể thêm một đoạn ưu tiên ngắn; không cần dựng lịch cam kết nếu nhóm không tiếp tục dự án.
+- [ ] Chưa có success metric cho từng hướng như contract pass rate, AI citation coverage hoặc precision/recall wash trading. Các metric nghiên cứu chỉ nên đặt sau khi định nghĩa dataset và cách đo.
+- [ ] Chưa có kế hoạch chi phí vận hành/cloud/provider. Phần provider đã có giá/free tier tại thời điểm khảo sát; tổng cost model chỉ bổ sung nếu có cấu hình triển khai thực tế.
+- [ ] Compliance/privacy và abuse prevention cần được nhắc nếu hướng phát triển giữ ý tưởng mở Developer API.
+- [ ] Benchmark Yoca với nền tảng khác sau cải tiến là hướng phát triển hợp lý nhưng chưa phải kết quả hiện tại.
+
 ## Ý 2 & 7 — Chính tả và rà soát chung
 - [ ] Thầy không chỉ cụ thể chỗ nào bị sai chính tả — cần cả nhóm tự đọc lại toàn bộ 5 chương.
 - [ ] Gợi ý: chia nhau đọc chéo (người này đọc phần người kia viết) sẽ dễ phát hiện hơn tự đọc bài mình viết.
