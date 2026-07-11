@@ -4,7 +4,7 @@ import {
   fetchWalletAnalysis,
   getWalletAnalysis,
   type WinratePeriod,
-} from "../wallet-analysis";
+} from "../wallet-analysis.js";
 import dayjs from "dayjs";
 
 export interface WalletPnLData {

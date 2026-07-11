@@ -4,7 +4,7 @@ import {
   getWalletAnalysis,
   type WalletWinrateData,
   type WinratePeriod,
-} from "../wallet-analysis";
+} from "../wallet-analysis.js";
 
 function mapStoredWinrateToResponse(
   row: WalletAnalysisSelect,
