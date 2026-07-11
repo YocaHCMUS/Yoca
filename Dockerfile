@@ -36,5 +36,5 @@ COPY --from=build /app/server/build server/build
 
 ENV NODE_ENV=production
 EXPOSE 4000
-
-CMD ["npm", "run", "start", "-w", "server"]
+WORKDIR /app/server
+CMD ["node_modules/.bin/tsx", "build/main.js"]

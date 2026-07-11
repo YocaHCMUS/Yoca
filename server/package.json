@@ -7,7 +7,7 @@
     "dev": "tsx watch src/main.ts",
     "build": "npm run clean && tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "start": "tsx build/main.js",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json --incremental --tsBuildInfoFile .tsbuildinfo",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",

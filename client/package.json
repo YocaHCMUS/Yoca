@@ -8,7 +8,7 @@
     "build": "npm run clean && tsc -p tsconfig.json && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json --incremental --tsBuildInfoFile .tsbuildinfo",
     "compileapitypes": "tsc -p tsconfig.api-types.json",
     "test": "vitest",
     "test:ui": "vitest --ui",

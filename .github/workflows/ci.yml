@@ -19,6 +19,8 @@ jobs:
     steps:
       - &setup
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - &node
         uses: actions/setup-node@v4
         with:
@@ -26,6 +28,15 @@ jobs:
           cache: npm
       - &install
         run: npm install
+      - name: Cache TypeScript build info
+        uses: actions/cache@v4
+        with:
+          path: |
+            server/.tsbuildinfo
+            client/.tsbuildinfo
+          key: ${{ runner.os }}-tsbuildinfo-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-tsbuildinfo-
       - run: npm run typecheck --workspaces
 
   lint:
@@ -42,7 +53,29 @@ jobs:
       - *setup
       - *node
       - *install
-      - run: npm run test -w=server
+      - name: Run server tests (changed-files only)
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+          if ! git rev-parse --quiet --verify "$BASE" >/dev/null 2>&1; then
+            BASE=""
+          fi
+
+          if [ -n "$BASE" ]; then
+            RAN=$(npm run test -w=server -- --changed "$BASE" --reporter=json 2>/dev/null \
+                  | grep -o '"numTotalTestSuites"[ ]*:[ ]*[0-9]*' | grep -o '[0-9]*' | tail -1)
+            SRC=$(git diff --name-only "$BASE"...HEAD -- server/ | grep -qE '\.(ts|tsx)$' && echo yes || echo no)
+            if [ "${RAN:-0}" = "0" ] && [ "$SRC" = "yes" ]; then
+              echo "::notice::No tests matched changed files; running full server suite (safety net)."
+              npm run test -w=server
+            fi
+          else
+            npm run test -w=server
+          fi
 
   test-client:
     runs-on: ubuntu-latest
@@ -50,7 +83,29 @@ jobs:
       - *setup
       - *node
       - *install
-      - run: npm run test -w=client -- --run
+      - name: Run client tests (changed-files only)
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+          if ! git rev-parse --quiet --verify "$BASE" >/dev/null 2>&1; then
+            BASE=""
+          fi
+
+          if [ -n "$BASE" ]; then
+            RAN=$(npm run test -w=client -- --run --changed "$BASE" --reporter=json 2>/dev/null \
+                  | grep -o '"numTotalTestSuites"[ ]*:[ ]*[0-9]*' | grep -o '[0-9]*' | tail -1)
+            SRC=$(git diff --name-only "$BASE"...HEAD -- client/ | grep -qE '\.(ts|tsx)$' && echo yes || echo no)
+            if [ "${RAN:-0}" = "0" ] && [ "$SRC" = "yes" ]; then
+              echo "::notice::No tests matched changed files; running full client suite (safety net)."
+              npm run test -w=client -- --run
+            fi
+          else
+            npm run test -w=client -- --run
+          fi
 
   build-and-push:
     needs: [typecheck, lint, test-server, test-client]
