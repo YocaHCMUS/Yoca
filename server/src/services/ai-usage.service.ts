@@ -1,6 +1,11 @@
 import { db } from "@sv/db/index.js";
-import { aiDailyUsage, subscriptions } from "@sv/db/schema.js";
-import { and, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { aiDailyUsage } from "@sv/db/schema.js";
+import { and, eq, lt, sql } from "drizzle-orm";
+import {
+  getUserEffectivePlanTier,
+  selectHighestEffectivePlanTier,
+  type EffectivePlanTier,
+} from "@sv/services/subscription-entitlements.service.js";
 
 export const AI_FEATURES = {
   AskYocaAi: "ask_yoca_ai",
@@ -12,7 +17,7 @@ export const AI_FEATURES = {
 } as const;
 
 export type AiFeature = (typeof AI_FEATURES)[keyof typeof AI_FEATURES];
-export type AiTier = "Free" | "Lite" | "Plus" | "Pro";
+export type AiTier = EffectivePlanTier;
 
 const AI_DAILY_LIMITS: Record<AiFeature, Record<AiTier, number>> = {
   [AI_FEATURES.AskYocaAi]: {
@@ -118,29 +123,7 @@ export function getUtcUsageWindow(now = new Date()) {
 export function selectHighestTier(
   tiers: Array<Exclude<AiTier, "Free">>,
 ): AiTier {
-  return tiers.reduce<AiTier>(
-    (highest, tier) =>
-      TIER_RANK[tier] > TIER_RANK[highest] ? tier : highest,
-    "Free",
-  );
-}
-
-async function getUserAiTier(userId: string, now: Date): Promise<AiTier> {
-  const rows = await db
-    .select({ planTier: subscriptions.planTier })
-    .from(subscriptions)
-    .where(
-      and(
-        eq(subscriptions.userId, userId),
-        inArray(subscriptions.status, ["active", "trialing"]),
-        or(
-          isNull(subscriptions.currentPeriodEnd),
-          gt(subscriptions.currentPeriodEnd, now),
-        ),
-      ),
-    );
-
-  return selectHighestTier(rows.map((row) => row.planTier));
+  return selectHighestEffectivePlanTier(tiers);
 }
 
 function usageMetadata(
@@ -179,7 +162,7 @@ export async function getAiUsage(
   feature: AiFeature,
   now = new Date(),
 ): Promise<AiUsageMetadata> {
-  const tier = await getUserAiTier(userId, now);
+  const tier = await getUserEffectivePlanTier(userId, now);
   const { usageDate, resetsAt } = getUtcUsageWindow(now);
   if (!isAiUsageLimitEnabled()) {
     return usageMetadata(feature, tier, 0, resetsAt);
@@ -205,7 +188,7 @@ export async function reserveAiUsage(
   feature: AiFeature,
   now = new Date(),
 ): Promise<AiUsageReservation> {
-  const tier = await getUserAiTier(userId, now);
+  const tier = await getUserEffectivePlanTier(userId, now);
   const limit = getAiDailyLimit(feature, tier);
   const { usageDate, resetsAt } = getUtcUsageWindow(now);
 

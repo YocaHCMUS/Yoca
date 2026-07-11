@@ -2,7 +2,6 @@ import { COINGECKO_THUMBNAIL_URL } from "@/config/constants";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useUserTheme } from "@/contexts/ThemeContext";
-import { getUserSubscription, type PlanTier } from "@/services/profile/subscriptionApi";
 import { Copy, LogoDiscord, Search, Wikis } from "@carbon/icons-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
@@ -26,8 +25,6 @@ interface TokenHeaderProps {
   sidebar?: boolean;
 }
 
-const hasWashTradingTier = (tier?: PlanTier) => tier === "Plus" || tier === "Pro";
-
 export const TokenHeader = ({
   name,
   symbol,
@@ -47,7 +44,6 @@ export const TokenHeader = ({
   const { user, isUserLoading, openAuthModal } = useAuth();
   const { themeRef } = useUserTheme();
   const navigate = useNavigate();
-  const [isCheckingWashAccess, setIsCheckingWashAccess] = useState(false);
   const [isWashGateOpen, setIsWashGateOpen] = useState(false);
 
   const openWebsite = () => websiteUrl && window.open(websiteUrl, "_blank");
@@ -73,33 +69,19 @@ export const TokenHeader = ({
     symbol || name || "TOKEN",
   )}&timeframe=24h`;
 
-  const handleAiWashClick = async () => {
-    if (isUserLoading || isCheckingWashAccess) return;
+  const handleAiWashClick = () => {
+    if (isUserLoading) return;
     if (!user) {
       setIsWashGateOpen(true);
       return;
     }
 
-    setIsCheckingWashAccess(true);
-    try {
-      const subscription = await getUserSubscription();
-      const isCurrent =
-        subscription &&
-        (subscription.status === "active" || subscription.status === "trialing") &&
-        (!subscription.currentPeriodEnd || new Date(subscription.currentPeriodEnd).getTime() > Date.now());
-
-      if (isCurrent && hasWashTradingTier(subscription.planTier)) {
-        navigate(washTradingUrl);
-        return;
-      }
-
-      setIsWashGateOpen(true);
-    } catch (err) {
-      console.error("Failed to check Wash Trading access", err);
-      setIsWashGateOpen(true);
-    } finally {
-      setIsCheckingWashAccess(false);
+    if (user.entitlements.washTradingAi) {
+      navigate(washTradingUrl);
+      return;
     }
+
+    setIsWashGateOpen(true);
   };
 
   const aiWashButton = (
@@ -107,8 +89,8 @@ export const TokenHeader = ({
       type="button"
       className={`${styles.aiWashButton} ${compact ? styles.aiWashButtonCompact : ""} ${sidebar ? styles.aiWashButtonSidebar : ""}`}
       title={String(tr("token.header.aiWashTradingDetection"))}
-      onClick={() => void handleAiWashClick()}
-      disabled={isUserLoading || isCheckingWashAccess}
+      onClick={handleAiWashClick}
+      disabled={isUserLoading}
     >
       <span className={styles.aiWashIcon}>AI</span>
       <span className={styles.aiWashLabelFull}>{tr("token.header.aiWashTradingDetection")}</span>

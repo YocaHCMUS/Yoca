@@ -2,6 +2,14 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
+const { refreshUser } = vi.hoisted(() => ({
+  refreshUser: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: () => ({ refreshUser }),
+}));
+
 vi.mock("@carbon/react", () => ({
   InlineNotification: ({ title, subtitle }: any) => (
     <div role="status">
@@ -180,6 +188,7 @@ describe("ProfileSubscriptionsTab", () => {
 
     await waitFor(() => {
       expect(upgradeSubscription).toHaveBeenCalledWith("sub_123", "Plus", 1782000000);
+      expect(refreshUser).toHaveBeenCalledTimes(1);
     });
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Upgrade complete: Your subscription is now on the Plus plan.",

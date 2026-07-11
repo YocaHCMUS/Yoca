@@ -20,6 +20,7 @@ vi.mock("@/components/landing/tokens", () => ({
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => ({
     user: { userId: "user-1", displayName: "Test User" },
+    refreshUser: vi.fn().mockResolvedValue(undefined),
   }),
 }));
 

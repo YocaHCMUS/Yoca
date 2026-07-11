@@ -10,6 +10,7 @@ import * as mobula from "@sv/util/util-mobula";
 import { rlFetch } from "@sv/util/rate-limit";
 import { validateApiResult } from "@sv/middlewares/validation";
 import {
+    excluded,
     excludedAutoFromInsert,
     excludedAutoNonNullFromInsert,
 } from "@sv/util/orm-sql.js";
@@ -41,7 +42,19 @@ import {
     MOUBAL_SOL_CONTRACT,
 } from "@sv/config/constants";
 import { isBaseAsset } from "./walletDayActivity.service.js";
-import { and, desc, eq, gt, gte, inArray, lt, lte, max, or } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  lt,
+  lte,
+  max,
+  or,
+  sql,
+} from "drizzle-orm";
 
 type MBL_WalletActivityTransaction = MBL_WalletActivity["data"][number];
 type MBL_WalletActivityAction =
@@ -53,8 +66,51 @@ type MBL_WalletActivityAsset = Extract<
 
 type WalletTransferHistoryInsert = typeof walletTransferHistory.$inferInsert;
 type WalletSwapHistoryInsert = typeof walletSwapHistory.$inferInsert;
+type WalletTransferHistoryMetaInsert =
+  typeof walletTransferHistoryMeta.$inferInsert;
+type WalletSwapHistoryMetaInsert = typeof walletSwapHistoryMeta.$inferInsert;
 
 type WalletActivityTarget = "swap" | "transfer";
+
+async function upsertWalletSwapHistoryMeta(
+  value: WalletSwapHistoryMetaInsert,
+) {
+  await db
+    .insert(walletSwapHistoryMeta)
+    .values(value)
+    .onConflictDoUpdate({
+      target: [
+        walletSwapHistoryMeta.address,
+        walletSwapHistoryMeta.toInclusiveMs,
+      ],
+      set: {
+        fromExclusiveMs: sql`LEAST(${walletSwapHistoryMeta.fromExclusiveMs}, ${excluded(
+          walletSwapHistoryMeta.fromExclusiveMs,
+        )})`,
+        fetchedAtMs: excluded(walletSwapHistoryMeta.fetchedAtMs),
+      },
+    });
+}
+
+async function upsertWalletTransferHistoryMeta(
+  value: WalletTransferHistoryMetaInsert,
+) {
+  await db
+    .insert(walletTransferHistoryMeta)
+    .values(value)
+    .onConflictDoUpdate({
+      target: [
+        walletTransferHistoryMeta.address,
+        walletTransferHistoryMeta.toInclusiveMs,
+      ],
+      set: {
+        fromExclusiveMs: sql`LEAST(${walletTransferHistoryMeta.fromExclusiveMs}, ${excluded(
+          walletTransferHistoryMeta.fromExclusiveMs,
+        )})`,
+        fetchedAtMs: excluded(walletTransferHistoryMeta.fetchedAtMs),
+      },
+    });
+}
 
 function normalizeTxLimit(reqLimit: number, maxLimit: number): number {
   if (!Number.isFinite(reqLimit)) return maxLimit;
@@ -951,7 +1007,7 @@ async function fetchWalletSwapHistoryCore(
   if (!res) return null;
   if (res.swaps.length == 0) {
     if (writeMeta) {
-      await db.insert(walletSwapHistoryMeta).values({
+      await upsertWalletSwapHistoryMeta({
         address,
         fromExclusiveMs: res.coveredFromExclusiveMs,
         toInclusiveMs: res.coveredToInclusiveMs,
@@ -968,7 +1024,7 @@ async function fetchWalletSwapHistoryCore(
   }
 
   if (writeMeta) {
-    await db.insert(walletSwapHistoryMeta).values({
+    await upsertWalletSwapHistoryMeta({
       address,
       fromExclusiveMs: res.coveredFromExclusiveMs,
       toInclusiveMs: res.coveredToInclusiveMs,
@@ -1473,7 +1529,7 @@ async function fetchWalletTransferHistoryCore(
   if (!res) return null;
   if (res.transfers.length == 0) {
     if (writeMeta) {
-      await db.insert(walletTransferHistoryMeta).values({
+      await upsertWalletTransferHistoryMeta({
         address,
         fromExclusiveMs: res.coveredFromExclusiveMs,
         toInclusiveMs: res.coveredToInclusiveMs,
@@ -1490,7 +1546,7 @@ async function fetchWalletTransferHistoryCore(
   }
 
   if (writeMeta) {
-    await db.insert(walletTransferHistoryMeta).values({
+    await upsertWalletTransferHistoryMeta({
       address,
       fromExclusiveMs: res.coveredFromExclusiveMs,
       toInclusiveMs: res.coveredToInclusiveMs,

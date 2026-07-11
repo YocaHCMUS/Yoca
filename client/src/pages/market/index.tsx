@@ -608,11 +608,18 @@ export default function MarketPage() {
                 ) : (
                   <DexTable
                     loading={
-                      trendingPools.isLoading ||
-                      trendingPools.isValidating ||
-                      topPools.isLoading ||
-                      topPools.isValidating ||
-                      newPairs.isLoading
+                      (activeTab == "trending" &&
+                        (trendingPools.isLoading ||
+                          trendingPools.isValidating)) ||
+                      (activeTab == "top" &&
+                        (topPools.isLoading ||
+                          topPools.isValidating)) ||
+                      (activeTab == "gainers" &&
+                        (topGainerPools.isLoading ||
+                          topGainerPools.isValidating)) ||
+                      (activeTab == "newPairs" &&
+                        (newPairs.isLoading ||
+                          newPairs.isValidating))
                     }
                     data={dataToRender as any}
                     sortKey={sortKey}
