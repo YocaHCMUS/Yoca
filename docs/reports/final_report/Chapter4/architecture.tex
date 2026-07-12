@@ -28,6 +28,29 @@ Zod cho phép định nghĩa schema và kiểm tra dữ liệu không đáng tin
 
 Việc kiểm tra chặt cũng làm lộ ra một khó khăn thực tế: tài liệu của provider không phải lúc nào cũng nói rõ trường nào có thể rỗng. Chẳng hạn, địa chỉ token là định danh chắc chắn hơn tên hoặc ký hiệu; các chỉ số biến động giá cũng có thể không tồn tại với token mới hay ít thanh khoản. Lược đồ nội bộ vì vậy không sao chép nguyên xi một phản hồi mẫu, mà chấp nhận giá trị thiếu ở nơi dữ liệu thực tế đòi hỏi và giữ ràng buộc chặt cho các định danh cốt lõi.
 
+Một contract đại diện là API lịch sử cảnh báo. Client gọi \texttt{GET /api/alerts/history} với \texttt{page} và \texttt{limit}; server lấy \texttt{userId} từ phiên xác thực thay vì nhận từ query, nhờ đó người dùng không thể yêu cầu lịch sử của tài khoản khác. Phản hồi gồm danh sách theo thứ tự mới nhất, tổng số bản ghi và số chưa đọc. Mỗi item giữ nguồn cảnh báo, message, severity, trạng thái email/Discord, thời điểm gửi và \texttt{readAt}. Khi cập nhật \texttt{PATCH /api/alerts/history/:id/read}, điều kiện truy vấn đồng thời dùng history ID và user ID; bản ghi không thuộc tài khoản được trả như không tồn tại.
+
+\begin{table}[H]
+\centering
+\caption{Contract đại diện của API Alert History}
+\label{tab:alert-history-contract}
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabularx}{\textwidth}{|p{3.2cm}|X|X|}
+\hline
+\textbf{Thành phần} & \textbf{Dữ liệu hợp lệ} & \textbf{Hành vi khi không hợp lệ/không đầy đủ} \\
+\hline
+List history & \texttt{page >= 1}, \texttt{1 <= limit <= 100}; user lấy từ JWT & Query sai trả lỗi validation; lỗi database trả 500; không có dữ liệu trả danh sách rỗng cùng tổng bằng 0 \\
+\hline
+Read state & UUID history và boolean \texttt{read}; update được scope bởi user & UUID sai trả 400; ID không tồn tại hoặc thuộc user khác trả 404 \\
+\hline
+Delivery snapshot & Ít nhất một kênh gửi thành công; lưu attempted/succeeded riêng cho email và Discord & Partial delivery vẫn được lưu đúng trạng thái từng kênh; không kênh nào thành công thì không tạo history \\
+\hline
+Idempotency & Khóa logic từ user, transaction signature, scope và rule/ví & Webhook retry cùng sự kiện không tạo bản ghi thứ hai \\
+\hline
+\end{tabularx}
+\end{table}
+
 \section{Luồng truy xuất, chuẩn hóa và lưu đệm}
 
 Mẫu truy xuất phổ biến trong backend gồm hai lớp hàm. Hàm \texttt{get*} là điểm vào của route: nó tìm dữ liệu trong cơ sở dữ liệu và đánh giá độ mới. Nếu dữ liệu còn hợp lệ, kết quả được trả ngay; nếu thiếu hoặc đã cũ, hàm gọi luồng \texttt{fetch*}. Luồng thứ hai chịu trách nhiệm truy cập provider, kiểm tra phản hồi, cập nhật cơ sở dữ liệu rồi trả về cùng kiểu dữ liệu nội bộ. Không phải mọi service đều tuân theo đúng tên gọi này, nhưng đây là nguyên tắc chủ đạo đối với dữ liệu thị trường và dữ liệu ví.
@@ -44,7 +67,7 @@ React được chọn vì mô hình thành phần phù hợp với giao diện c
 
 Những lựa chọn trên ưu tiên tốc độ phát triển và khả năng nhìn thấy lỗi sớm, nhưng không tự động tạo ra một hệ thống hoàn toàn nhất quán. Hono RPC chỉ bảo vệ hợp đồng giữa client và server; Zod bảo vệ dữ liệu ở runtime; ràng buộc cơ sở dữ liệu bảo vệ trạng thái đã lưu; còn kiểm thử vẫn cần thiết để xác nhận hành vi kết hợp giữa các lớp. Việc phân biệt các lớp bảo vệ này giúp nhóm không xem ``strongly typed'' như một sự thay thế cho kiểm thử.
 
-Ở phía giao diện, Carbon Design System từng được chọn làm nền tảng chung, nhưng việc hiện thực không được duy trì đồng đều trong suốt quá trình phát triển. Một số màn hình mới kết hợp thành phần tự xây dựng, SCSS và utility class, trong khi một số bảng cũ vẫn giữ cấu trúc Carbon. Nhóm chúng em chấp nhận trình bày đây là hạn chế về tính nhất quán và khả năng bảo trì, thay vì mô tả giao diện như một design system đã hoàn thiện. Quá trình chuyển đổi còn lại được đặt trong kế hoạch hoàn thiện sau báo cáo.
+Ở phía giao diện, Carbon Design System từng được chọn làm nền tảng chung, nhưng việc hiện thực không được duy trì đồng đều trong suốt quá trình phát triển. Một số màn hình mới kết hợp thành phần tự xây dựng, SCSS và utility class, trong khi một số bảng cũ vẫn giữ cấu trúc Carbon. Nhóm chúng em chấp nhận trình bày đây là hạn chế về tính nhất quán và khả năng bảo trì, thay vì mô tả giao diện như một design system đã hoàn thiện. Trong đợt hoàn thiện cuối, nhóm ưu tiên đồng nhất các luồng chính; những bảng cũ chưa chuyển đổi hoàn toàn được ghi nhận rõ như một giới hạn của phiên bản hiện tại.
 
 Localization được tổ chức thành một lớp dùng chung độc lập với từng trang. Locale tiếng Anh đóng vai trò cấu trúc gốc; locale tiếng Việt phải giữ cùng hệ thống key và biến nội suy. Kiểu TypeScript được dùng để phát hiện key thiếu, key sai và biến interpolation không tương thích trong lúc phát triển. Hook \texttt{useLocalization} cung cấp đồng thời hàm dịch và formatter cho số, phần trăm, token unit, ngày giờ và tiền tệ. Các formatter nhận giá trị tài chính gốc bằng USD; với locale Việt Nam, lớp hiển thị áp dụng tỷ giá USD--VND rồi định dạng theo quy ước VND. Cách tách này giữ phép tính và API ở một đơn vị thống nhất, đồng thời tránh mỗi component tự quy đổi theo một công thức khác nhau.
 

@@ -389,43 +389,6 @@ function normalizeSwapFromWalletDeltas(
     };
 }
 
-function normalizeNftEvent(tx: HeliusEnhancedTransactionLike): NormalizedNftEvent | null {
-    const nft = tx.events?.nft;
-    if (nft == null) {
-        return null;
-    }
-
-    const mint = normalizeAddressLike(nft?.mint, nft?.tokenMint, nft?.nftMint);
-    if (!mint) {
-        return null;
-    }
-
-    const actionRaw = String(nft?.action ?? nft?.type ?? nft?.eventType ?? "UNKNOWN").toUpperCase();
-    let action: NormalizedNftEvent["action"] = "UNKNOWN";
-    if (actionRaw.includes("PURCHASE") || actionRaw.includes("BUY")) {
-        action = "PURCHASE";
-    } else if (actionRaw.includes("SALE") || actionRaw.includes("SELL")) {
-        action = "SALE";
-    } else if (actionRaw.includes("LIST")) {
-        action = "LIST";
-    } else if (actionRaw.includes("DELIST")) {
-        action = "DELIST";
-    } else if (actionRaw.includes("TRANSFER_IN") || actionRaw === "IN") {
-        action = "TRANSFER_IN";
-    } else if (actionRaw.includes("TRANSFER_OUT") || actionRaw === "OUT") {
-        action = "TRANSFER_OUT";
-    }
-
-    return {
-        mint,
-        name: isNonEmptyString(nft?.name) ? String(nft.name).trim() : null,
-        collection: isNonEmptyString(nft?.collection) ? String(nft.collection).trim() : isNonEmptyString(nft?.collectionName) ? String(nft.collectionName).trim() : null,
-        action,
-        priceUsd: toNonNegativeNumber(nft?.priceUsd ?? nft?.salePriceUsd ?? nft?.amountUsd),
-        marketplace: isNonEmptyString(nft?.marketplace) ? String(nft.marketplace).trim() : isNonEmptyString(nft?.source) ? String(nft.source).trim() : null,
-    };
-}
-
 function normalizeFee(tx: HeliusEnhancedTransactionLike): TransactionFeeInfo | null {
     const feeLamports = toNonNegativeNumber(tx.fee ?? tx.info?.fee);
     const payer = normalizeAddressLike(tx.feePayer, tx.info?.feePayer);
@@ -487,7 +450,7 @@ export function normalizeHeliusTransactions(params: {
             tx,
             warnings,
         );
-        const nftEvent = normalizeNftEvent(tx);
+        const nftEvent: NormalizedNftEvent | null = null;
         const fee = normalizeFee(tx);
 
         const classification = classifyWalletEvent({

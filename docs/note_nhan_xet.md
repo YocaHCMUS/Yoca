@@ -10,7 +10,7 @@ Nguồn baseline gồm: nhận xét chung thầy gửi Nhóm A để Nhóm B rú
 
 ### Nhận xét trực tiếp cho bản cũ của Nhóm B — đối chiếu ưu tiên cao nhất
 
-- [ ] **Một số phần chưa viết xong:** bản báo cáo hiện không còn subsection nội dung trống, nhưng vẫn còn các phần chưa thể chốt theo kết quả cuối: ảnh chức năng Chương 5, CI/CD ở nhánh khác, test suite đang đỏ và Alert History chưa implement end-to-end.
+- [ ] **Một số phần chưa viết xong:** bản báo cáo hiện không còn subsection nội dung trống; merge đã resolve, test suite đã xanh và Alert History đã có implementation tự động. Bản nộp vẫn chưa thể chốt khi ảnh chức năng, database reset/smoke test Alert History và bằng chứng CI/Render chưa hoàn tất.
 - [ ] **Một số phần chưa có hình ảnh:** Chương 5 vẫn chưa có screenshot sản phẩm thật. TODO filename và nội dung bắt buộc đã được gắn trực tiếp trong `Chapter4/chapter4.tex`; checklist tổng nằm tại `docs/plans/reports/FINAL_REPORT_SCREENSHOT_CHECKLIST.md`.
 - [ ] **Thiết kế dữ liệu từng dài hơn khoảng hai lần các component/layer kiến trúc khác:** đây là nhận xét trên bản cũ, nhưng khi tự đo lại bản hiện tại thì độ lệch vẫn còn: `Chapter4/architecture.tex` có khoảng 53 dòng nội dung khung, trong khi cụm `Chapter3/database/*.tex` khoảng 193 dòng chưa kể hình. Cần cân lại bằng một trong hai hướng: rút phần liệt kê bảng/ERD chi tiết xuống phụ lục, hoặc bổ sung chiều sâu tương xứng cho client, API/domain, provider adapter, validation, AI/payment và deployment. Không nên chỉ thêm chữ cho cân trang; ưu tiên rút phần database chi tiết.
 
@@ -49,7 +49,7 @@ Nguồn baseline gồm: nhận xét chung thầy gửi Nhóm A để Nhóm B rú
 
 ### Chương 5 — triển khai, kiểm thử và hình ảnh
 
-- [x] Đã có bảng kết quả chạy test thật; báo cáo ghi rõ client 155/172 và server 181/189, không tuyên bố suite xanh.
+- [x] Đã cập nhật kết quả chạy ngày 12/07/2026: client 16/16 file, 178/178 test; server 29/29 file, 204/204 test sau Batch 12, cả hai suite đều xanh.
 - [ ] Infographic đề nghị latency p50/p95, cache hit rate, số request tiết kiệm và lỗi 429 trước/sau. Hiện chưa có phép đo lặp lại được nên báo cáo đã chuyển thành giới hạn; chỉ cập nhật khi có benchmark thật.
 - [ ] Kịch bản biên cần bổ sung hoặc xác nhận: ví lịch sử dài, token thiếu giá, provider timeout/malformed JSON, webhook duplicate, payment failure và AI prompt injection.
 - [ ] Screenshot có chú thích vẫn là backlog bắt buộc; không cần mỗi chức năng một hình nhưng sáu ảnh chính và cặp localization phải đủ chứng minh user journey.
@@ -110,23 +110,23 @@ Nguồn baseline gồm: nhận xét chung thầy gửi Nhóm A để Nhóm B rú
 - [ ] Nhiều chỗ trong `chapter4.tex` còn placeholder `% CHÈN HÌNH`, khi chèn ảnh thật cần thống nhất nền trắng.
 - [ ] Đồng bộ Chương 3 – Chương 4 sau khi hoàn thiện ảnh.
 
-### ⚠️ BẮT BUỘC IMPLEMENT SAU KHI HOÀN THIỆN BÁO CÁO — ALERT HISTORY
+### ⚠️ BẮT BUỘC IMPLEMENT TRƯỚC KHI CHỐT BẢN NỘP — ALERT HISTORY
 - [ ] **IMPLEMENT ALERT HISTORY END-TO-END**: ghi lịch sử sau khi delivery thành công; API lấy lịch sử theo đúng user; trạng thái đã đọc/chưa đọc; chống gửi trùng/idempotency; trạng thái delivery thất bại nếu phạm vi cho phép.
 - [ ] Bổ sung test cho ownership, ghi lịch sử sau delivery, đánh dấu đã đọc và chống duplicate event.
-- [ ] Sau khi implement, quay lại đồng bộ Chương yêu cầu, kiến trúc/ERD, chương triển khai, tiêu chí chấp nhận và ảnh giao diện. Báo cáo được phép mô tả chức năng dự kiến hoàn thiện, nhưng checklist này không được đánh dấu xong chỉ vì đã viết nội dung.
+- [ ] Sau khi implement, đồng bộ Chương yêu cầu, kiến trúc/ERD, chương triển khai, tiêu chí chấp nhận và ảnh giao diện. Không đánh dấu xong chỉ vì báo cáo đã có nội dung mô tả.
 
-### ⚠️ CI/CD ĐANG ĐƯỢC PHÁT TRIỂN Ở NHÁNH KHÁC — PHẢI CẬP NHẬT LẠI CHƯƠNG 5
-- [ ] Trước khi hoàn thiện mục 5.2, kiểm tra nhánh CI/CD và các workflow/config thực tế đã được merge hay chưa.
-- [ ] Chỉ mô tả pipeline, trigger, job, environment/secret, migration, deploy và smoke check đã tồn tại trong source cuối cùng.
-- [ ] Nếu CI/CD chưa merge hoặc chưa chạy ổn định, ghi là công việc đang hoàn thiện; không trình bày như kết quả đã đạt được.
-- [ ] Sau khi CI/CD hoàn thành, cập nhật các mục quản lý mã nguồn và môi trường, tích hợp liên tục, triển khai và kiểm tra sau triển khai.
+### ⚠️ GITHUB ACTIONS CI ĐÃ MERGE NHƯNG CÒN CONFLICT — PHẢI CẬP NHẬT LẠI CHƯƠNG 5
+- [ ] Resolve toàn bộ conflict, đặc biệt các phần user auth tier/entitlement và wallet/provider, trước khi xem workflow là trạng thái source cuối.
+- [ ] Workflow hiện có typecheck, lint, test client/server và build client/server; đây là CI, chưa có bằng chứng về CD/deploy tự động.
+- [ ] Chỉ mô tả trigger, job, environment/secret và kết quả run thực sự tồn tại. Không thêm migration, deploy, rollback hoặc smoke check sau deploy nếu workflow cuối không có.
+- [ ] Sau khi workflow chạy ổn định, cập nhật mục quản lý mã nguồn và môi trường, tích hợp liên tục, cùng quy trình triển khai thủ công/thực tế tương ứng.
 - [ ] Nếu cần bằng chứng, chỉ dùng workflow file, sơ đồ pipeline hoặc kết quả chạy đã loại thông tin nhạy cảm.
 
 ### ⚠️ TEST SUITE HIỆN CHƯA XANH — PHẢI RÀ LẠI TRƯỚC BẢN NỘP
-- [ ] Lần chạy 11/07/2026: client đạt 155/172 test, server đạt 181/189 test; báo cáo đã ghi đúng số này, không được đổi thành “tất cả pass” nếu chưa chạy lại.
-- [ ] Client đang đỏ ở table/localization expectation, chart click, Quick AI mock và ThemeProvider của Wallet Holdings.
-- [ ] Server đang đỏ ở chat tool prompt/coverage metadata và contract lỗi Zerion balance (`null`/500 so với typed error/502 kỳ vọng).
-- [ ] Sau khi sửa implementation hoặc cập nhật test theo contract đã thống nhất, chạy lại cả hai suite và cập nhật Bảng kết quả kiểm thử trong Chương 5.
+- [x] Baseline đỏ ngày 11/07/2026 đã được thay bằng lần chạy lại ngày 12/07/2026: client 178/178 và server 200/200.
+- [x] Các lỗi client cũ ở table/localization, chart click, Quick AI và ThemeProvider đã được xử lý trong source/test sau merge.
+- [x] Các lỗi server cũ ở chat metadata/prompt và contract Zerion balance đã được xử lý; suite server hiện xanh.
+- [x] Bảng kết quả kiểm thử, Tóm tắt và Chương 6 đã được cập nhật theo số cuối; vẫn phải chạy lại nếu source thay đổi trước bản nộp.
 
 ## Ý 9 — Kết luận (Chương 5)
 - [x] Phần "Tổng kết các kết quả đạt được" đã khá tốt, tập trung vào kết quả tính năng cụ thể.

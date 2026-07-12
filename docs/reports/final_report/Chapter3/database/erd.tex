@@ -20,7 +20,7 @@ Hình~\ref{fig:db_identity_payment} thể hiện dữ liệu có tính sở hữ
     \label{fig:db_alert_history}
 \end{figure}
 
-Hình~\ref{fig:db_alert_history} tách định nghĩa cảnh báo khỏi trạng thái, delivery target và điều kiện kích hoạt. \texttt{alert\_history} là phần lược đồ dự kiến lưu sự kiện đã phát sinh, phục vụ màn hình lịch sử và trạng thái đã đọc. Tại thời điểm hoàn thiện báo cáo, luồng ghi sau delivery và API đọc/đánh dấu đã đọc vẫn là hạng mục triển khai bắt buộc.
+Hình~\ref{fig:db_alert_history} tách định nghĩa cảnh báo khỏi trạng thái, delivery target và điều kiện kích hoạt. \texttt{alert\_history} lưu sự kiện sau khi ít nhất một kênh gửi thành công, đồng thời hỗ trợ chống ghi trùng, phân trang và trạng thái đã đọc. API chỉ cho phép người dùng truy cập hoặc cập nhật lịch sử thuộc tài khoản của mình; giao diện Profile sử dụng cùng API này để hiển thị lịch sử thực tế thay cho dữ liệu mock ban đầu.
 
 \begin{figure}[H]
     \centering

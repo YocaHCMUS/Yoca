@@ -165,16 +165,114 @@ Quy ước:
 - [x] Đọc lại output PDF cho Tóm tắt, mục lục, Chương 6 và các bảng/hình mới; các cảnh báo PDF anchor/version cũ vẫn để backlog kỹ thuật của template.
 - [x] Cập nhật `note_nhan_xet.md` theo các backlog thực: ảnh, CI/CD, test đỏ và Alert History.
 
-## Batch 9 — BẮT BUỘC IMPLEMENT SAU BÁO CÁO: ALERT HISTORY
+## Các batch chốt bản nộp — không còn công việc “sau báo cáo”
 
-- [ ] **IMPLEMENT ALERT HISTORY END-TO-END, KHÔNG ĐƯỢC BỎ QUÊN SAU KHI VIẾT BÁO CÁO.**
-- [ ] Rà schema/type/service/route hiện tại trước khi code; xác nhận quan hệ ownership, delivery và alert state thật.
-- [ ] Ghi `alert_history` sau khi gửi thành công; nếu giữ trạng thái thất bại thì định nghĩa rõ retry/idempotency và dữ liệu lỗi được lưu.
-- [ ] Thêm API lấy lịch sử theo user, phân trang nếu cần; không cho tài khoản đọc lịch sử của người khác.
-- [ ] Thêm API hoặc thao tác đánh dấu đã đọc/chưa đọc.
-- [ ] Chống ghi/gửi trùng khi webhook/provider retry cùng một sự kiện.
-- [ ] Viết test cho ownership, delivery-to-history, read state và duplicate event.
-- [ ] Đồng bộ ERD, nội dung triển khai, tiêu chí chấp nhận, kết quả test và ảnh giao diện sau khi chức năng chạy thật.
+Các batch từ 9 trở đi là một phần của đợt hoàn thiện báo cáo cuối. Một chức năng chỉ được giữ trong nhóm kết quả đã triển khai khi source, test và nội dung báo cáo cùng khớp. Nếu không thể hoàn thành một chức năng trước hạn, phải thu hẹp tuyên bố trong toàn bộ báo cáo thay vì chuyển âm thầm thành việc sau báo cáo.
+
+### ⚠️ CHECKLIST NHÓM BẮT BUỘC TỰ THAO TÁC — KHÔNG ĐƯỢC ĐÁNH DẤU XONG CHỈ VÌ CODE/BÁO CÁO ĐÃ VIẾT
+
+- [ ] **DATABASE:** xác nhận đúng database demo có thể xóa dữ liệu, sau đó chạy `db:reset` để Supabase nhận schema mới. Không chạy nhầm project/database cần giữ dữ liệu; lưu lại kết quả reset không chứa connection string.
+- [ ] **ALERT DELIVERY:** tạo hoặc follow một alert rule thật, cấu hình ít nhất một kênh email/Discord hợp lệ và phát sinh một Helius event phù hợp điều kiện.
+- [ ] **ALERT HISTORY:** xác nhận delivery thành công tạo đúng một history row; retry/cùng event không tạo trùng; history chỉ xuất hiện với đúng tài khoản.
+- [ ] **READ STATE:** kiểm tra mark read, mark unread, mark all read và unread count trên giao diện Profile sau khi tải lại trang.
+- [ ] **ALERT SCREENSHOT:** chụp Alert History có dữ liệu thật và trạng thái read/unread; che email, webhook, user ID, transaction signature và địa chỉ ví nếu nhạy cảm.
+- [ ] **RENDER:** tạo Static Site cho client và Web Service cho server từ cùng monorepo; nhập đúng build/start/publish settings và environment variables.
+- [ ] **DEPLOY HOOKS:** lấy hai Render deploy hook, lưu trong GitHub Actions Secrets; không gửi hook vào chat, commit, log hoặc ảnh báo cáo.
+- [ ] **DEPLOY VALIDATION:** xác nhận domain client/server, CORS, SPA rewrite, Google callback, Stripe callback/webhook, Helius public webhook và kết nối Supabase trên môi trường thật.
+- [ ] **CI/CD SCREENSHOT:** chụp GitHub Actions run xanh và Render deploy thành công; che repository secret, token, email và project identifier nhạy cảm.
+- [ ] **FUNCTION SCREENSHOTS:** hoàn tất toàn bộ `FINAL_REPORT_SCREENSHOT_CHECKLIST.md`, dùng dữ liệu demo ổn định và kiểm tra chữ còn đọc được khi đặt trên trang A4.
+- [ ] **FINAL PDF:** sau khi ảnh, số test, CI/CD và Alert History đã chốt, build PDF sạch và phân công người đọc chéo từng chương; không dùng bản preview cũ làm bản nộp cuối.
+
+## Batch 9 — ổn định nhánh sau merge và xác minh CI
+
+- [ ] Chụp lại trạng thái merge trước khi sửa và lập danh sách toàn bộ file unmerged. Hiện có 10 file: ba component Profile; `server/src/db/seed.ts`; hai token service; ba wallet/provider service và `util-helius.ts`.
+- [ ] Với mỗi conflict, đọc cả base/ours/theirs và consumer liên quan trước khi chọn nội dung. Không giải quyết hàng loạt theo một phía vì nhánh mới đồng thời chứa refactor UI/provider và user auth tier/entitlement.
+- [ ] Ưu tiên kiểm tra ba component Profile với contract mới từ `AuthContext`: `planTier` và `entitlements` phải đến từ response user thật; không giữ mock/default làm người dùng được cấp quyền sai.
+- [ ] Rà `users` route, `subscription-entitlements.service.ts`, `ai-usage.service.ts`, payment/subscription và các guard phía client để bảo đảm một định nghĩa tier thống nhất: Free, Lite, Plus, Pro.
+- [ ] Rà các conflict wallet/token theo provider và response type thật; đặc biệt không làm mất thay đổi Mobula/Zerion/Helius hoặc phục hồi consumer legacy trong lúc resolve.
+- [ ] Sau khi hết conflict, rà `git diff --check`, marker conflict, file deleted/added và package lock. Không đánh dấu xong chỉ vì Git hết trạng thái `UU/DU`.
+- [ ] Kiểm tra `.github/workflows/ci.yml` theo source sau merge. Trạng thái hiện tại là **CI-only**, chạy trên push `main`/`dev` và pull request vào `main`, gồm typecheck, lint, test server, test client, build server và build client.
+- [ ] Xác minh Node/npm install strategy và scripts trong workflow khớp workspace. Ghi nhận `npm install` hay đổi sang cơ chế lockfile phù hợp chỉ sau khi kiểm tra package manager thực tế.
+- [ ] Chạy các lệnh tương đương từng job theo cách được repo cho phép; riêng Codex không dùng compile/type-check làm validation theo quy tắc repo, nên cần lấy kết quả typecheck/build từ GitHub Actions hoặc người dùng cung cấp.
+- [ ] Sửa lỗi CI thật phát sinh từ merge; phân biệt lỗi lint/test/build với lỗi workflow/config.
+- [ ] Cập nhật Chương 5 chỉ là **quy trình tích hợp liên tục bằng GitHub Actions**. Không dùng từ CD, auto-deploy, migration tự động, rollback hay smoke check sau deploy nếu chưa có workflow tương ứng.
+- [ ] Lưu bằng chứng an toàn cho báo cáo: workflow file và một kết quả run xanh; không chụp secret, token, email hoặc log nhạy cảm.
+
+### Batch 9A — kiến trúc CD đích trên Render/Supabase
+
+- [x] Chốt cách lấy source deploy: giữ một GitHub monorepo, không tạo repo artifact và không commit `client/build`/`server/build`.
+- [ ] Cấu hình hai Render service cùng lấy source revision từ monorepo. Render tự checkout và chạy production build cho từng service; Static Site publish `client/build`, Web Service chạy `node server/build/main.js`.
+- [ ] Tách workflow CI và deploy: pull request chỉ chạy kiểm tra; push/merge vào `main` chỉ gọi deploy hook sau khi các job bắt buộc thành công.
+- [ ] Lưu riêng `RENDER_CLIENT_DEPLOY_HOOK_URL` và `RENDER_SERVER_DEPLOY_HOOK_URL` trong GitHub Actions Secrets. Deploy hook là secret; không ghi URL vào workflow, log, ảnh hay báo cáo.
+- [ ] Gọi hook bằng GET/POST sau CI xanh; job deploy cần `needs` các job kiểm tra và điều kiện branch `main`. Không kích deploy từ pull request hoặc khi test/build thất bại.
+- [ ] Cấu hình client là Render Static Site với Vite build output `client/build`; xác minh SPA rewrite về `index.html` cho React Router bằng thao tác trên Render.
+- [ ] Cấu hình server là Render Web Service; kiểm tra Hono lắng nghe port do Render cung cấp. Source hiện dùng `env.SERVER_PORT`, vì vậy cần xác minh loader có fallback/ánh xạ từ biến `PORT` của môi trường deploy.
+- [ ] Cấu hình biến môi trường client ở build time và server ở runtime; phân biệt biến `VITE_*` được đóng vào bundle với secret server tuyệt đối không được đưa sang client.
+- [ ] Kết nối Web Service tới PostgreSQL trên Supabase Free. Kiểm tra Render hỗ trợ IPv6 hay dùng Supavisor shared pooler session mode; Supabase khuyến nghị session pooler cho backend persistent khi môi trường chỉ có IPv4.
+- [ ] Chốt chiến lược migration. Render pre-deploy command không nên được mô tả là khả dụng trên free Web Service nếu gói hiện tại không hỗ trợ; migration có thể là job GitHub Actions có kiểm soát hoặc thao tác riêng trước deploy, nhưng phải tránh hai deploy chạy migration đồng thời.
+- [ ] Free tier phải được mô tả như ràng buộc vận hành: cold start/spin-down, quota build/pipeline và giới hạn database có thể ảnh hưởng demo. Chỉ ghi con số cụ thể sau khi kiểm tra pricing chính thức tại ngày chốt.
+- [ ] Viết Chương 5 theo kiến trúc đích: GitHub Actions kiểm tra source; sau khi đạt điều kiện, deploy hooks kích hoạt Render Static Site và Web Service; server kết nối PostgreSQL Supabase. Cho bản preview có thể dùng “được thiết kế/cấu hình theo”, chưa dùng “đã triển khai thành công” trước khi có run thật.
+- [ ] **NHÓM BẮT BUỘC TẠO HAI RENDER SERVICE, LẤY DEPLOY HOOK VÀ LƯU VÀO GITHUB ACTIONS SECRETS; CODEX KHÔNG THỂ THAO TÁC DASHBOARD/SECRET THAY NHÓM NẾU KHÔNG ĐƯỢC CẤP KẾT NỐI.**
+- [ ] **NHÓM BẮT BUỘC XÁC NHẬN URL CLIENT/SERVER, CORS, CALLBACK GOOGLE/STRIPE, WEBHOOK VÀ DATABASE CONNECTION TRÊN MÔI TRƯỜNG DEPLOY THẬT.**
+- [ ] **NHÓM BẮT BUỘC CHỤP WORKFLOW RUN XANH, TRANG RENDER DEPLOY THÀNH CÔNG VÀ ỨNG DỤNG ĐANG CHẠY; PHẢI CHE SECRET, EMAIL, PROJECT ID NHẠY CẢM VÀ DATABASE URL.**
+
+## Batch 10 — hoàn thiện Alert History end-to-end
+
+- [x] Rà schema/type/service/route/UI hiện tại; xác nhận hai hệ alert đều reachable bằng source và `fallow`, ưu tiên nối history vào pipeline Helius `/api/alerts`.
+- [x] Chốt contract tối thiểu của lịch sử: ownership, nguồn/rule, signature, ví, nội dung, severity, kết quả email/Discord, thời điểm và read state.
+- [x] Ghi history sau khi ít nhất một kênh delivery thành công; partial delivery được giữ bằng các cờ attempted/succeeded theo kênh.
+- [x] Dùng unique `(userId, eventKey)` với event key theo signature + scope + rule/wallet để retry không tạo notification trùng.
+- [x] Thêm API lấy lịch sử theo user với page/limit, newest-first, total và unread count.
+- [x] Thêm thao tác đánh dấu một notification đã đọc/chưa đọc và đánh dấu tất cả đã đọc; mọi update đều scope theo user.
+- [x] Nối notification panel trong Profile với API thật; có loading, empty, error và read/unread state. Alert rule editor mock được giữ ngoài phạm vi thay đổi này.
+- [x] Bổ sung test route ownership/read-all/list và pipeline delivery-to-history/dry-run; sau các batch liên quan, toàn bộ server suite ngày 12/07/2026 đạt 204/204.
+- [ ] **NHÓM BẮT BUỘC CHẠY `db:reset` TRÊN DATABASE DEMO CÓ THỂ XÓA DỮ LIỆU; KHÔNG CHẠY NHẦM DATABASE CẦN GIỮ.**
+- [ ] **NHÓM BẮT BUỘC SMOKE TEST THỦ CÔNG: TẠO/FOLLOW RULE → PHÁT SINH HELIUS EVENT → EMAIL/DISCORD THÀNH CÔNG → HISTORY XUẤT HIỆN → ĐÁNH DẤU ĐÃ ĐỌC.**
+- [ ] Đồng bộ Chương 3, Chương 4/ERD, Chương 5, tiêu chí chấp nhận, Tóm tắt/Kết luận và ảnh Alert sau khi luồng chạy thật.
+
+## Batch 11 — kiểm kê và hoàn thiện chiến lược kiểm thử
+
+- [x] Chạy lại test sau merge và Batch 10: client 16/16 file, 178/178 test; server 29/29 file, 200/200 test vào ngày 12/07/2026.
+- [x] Các test đỏ của baseline cũ đã được xử lý theo contract/implementation sau merge; không còn failure trong suite cuối.
+- [x] Chạy lại toàn bộ suite client/server và lấy client JSON reporter để tránh suy đoán số liệu từ output bị cắt.
+- [ ] Lập ma trận chức năng quan trọng → lớp test hiện có: auth và tier/entitlement; payment/subscription; alert delivery/history; provider adapter/normalizer; wallet portfolio/balance/PnL/history; token/pool/search; AI chat/summary; cache staleness/coverage; localization và các trang demo chính.
+- [x] Bổ sung test theo rủi ro cho Alert History API/delivery/ownership/read state, provider nullability/number/timestamp/Helius transfer mapping và cursor/offset pagination termination.
+- [ ] Bổ sung contract fixture cho các provider xương sống đang vận hành, ưu tiên Mobula, Zerion, Helius, CoinGecko/Birdeye ở endpoint thật sự ảnh hưởng Wallet/Market. Fixture phải loại API key và dữ liệu nhạy cảm.
+- [ ] Kiểm tra tier/entitlement ở cả server và client: Free/Lite/Plus/Pro, subscription hết hạn/hủy, nhiều subscription, quyền AI theo tier và UI không tự cấp quyền khi response thiếu.
+- [ ] Kiểm tra Alert History theo Batch 10 và các payment/webhook callback có ownership/idempotency tương tự nếu báo cáo nhắc tới độ tin cậy.
+- [x] Báo cáo phân biệt unit/component/route-service test với E2E và smoke test; không gọi test mock upstream là end-to-end.
+- [x] Cập nhật bảng kết quả, Tóm tắt và Kết luận bằng lần chạy ngày 12/07/2026; giữ E2E/load/deploy smoke test trong giới hạn còn lại.
+- [ ] Cấu hình `fallow` để nhận đúng Vitest roots/path aliases trước khi dùng `coverage-gaps` làm số liệu; lần chạy thử hiện báo 0% sai với thực tế nên không được đưa vào báo cáo.
+- [ ] **NHÓM BẮT BUỘC CHẠY LẠI CẢ HAI SUITE NẾU SOURCE CÒN THAY ĐỔI SAU MỐC 12/07/2026 VÀ CẬP NHẬT BẢNG KẾT QUẢ NẾU SỐ TEST THAY ĐỔI.**
+
+## Batch 12 — xác minh bảo vệ AI và prompt injection
+
+- [x] Rà runtime path bằng source và `fallow`: route/orchestrator, tool-selection prompt, response prompt, history, tool data, structured parser, sanitizer và source/citation mapping đều reachable.
+- [x] Kiểm chứng boundary `UNTRUSTED` đang nằm trên luồng Wallet Chat active; bổ sung system instruction riêng cho bước chọn tool thay vì chỉ đặt luật trong prompt thường.
+- [x] Phân biệt rõ input mitigation với output sanitizer: user/history/tool data được đóng khối không tin cậy; JSON/schema/citation guard xử lý đầu ra.
+- [x] Bổ sung adversarial test cho user/history injection, hostile tool content, yêu cầu lộ system prompt/API key, malformed non-JSON output và orphan citation.
+- [x] Rà Token AI và Wash Trading Chat: đều dùng system instruction, JSON output và validation/fallback; không khái quát cơ chế Wallet Chat như một implementation giống hệt cho mọi module.
+- [x] Chuyển malformed response sang fail-closed; không hiển thị raw model prose khi hợp đồng JSON thất bại.
+- [x] Cập nhật yêu cầu Chương 3, threat-model Chương 5 và Tóm tắt; chỉ tuyên bố giảm thiểu bằng phân tách instruction/data, allowlist, validation và giới hạn context, không tuyên bố ngăn chặn tuyệt đối.
+- [x] Server suite sau Batch 12 đạt 29/29 file, 204/204 test; server typecheck pass.
+- [ ] **NHÓM BẮT BUỘC SMOKE TEST ÍT NHẤT BA PROMPT TRÊN UI THẬT: YÊU CẦU BỎ SYSTEM RULE, YÊU CẦU LỘ PROMPT/SECRET VÀ INSTRUCTION GIẢ NẰM TRONG DỮ LIỆU/HISTORY. KHÔNG DÙNG SECRET THẬT TRONG PROMPT TEST.**
+- [ ] Sau khi smoke test, chụp một phản hồi AI an toàn có data source hoặc trạng thái từ chối phù hợp; không chụp system prompt, API key hay nội dung session nhạy cảm.
+
+## Batch 13 — hình ảnh, nội dung còn thiếu và đóng gói bản cuối
+
+- [x] Ngày khảo sát sản phẩm đã có ở đầu Chương 2: 07/09/2025--21/09/2025; ngày rà source/provider và ngày truy cập docs/pricing được giữ riêng ở mốc 11/07/2026.
+- [ ] Chụp và chèn bộ ảnh bắt buộc trong `FINAL_REPORT_SCREENSHOT_CHECKLIST.md`; thêm ảnh Alert History và bằng chứng localization nếu các chức năng này được xem là đóng góp.
+- [x] Cân lại Chương 4: rút phần database/ERD mang tính liệt kê; không kéo dài layer khác chỉ để cân số trang.
+- [x] Bổ sung contract Alert History đại diện trong Chương 4: query, ownership, read state, partial delivery, error behavior và idempotency; threat model AI đã được thêm ở Batch 12.
+- [x] Giảm độ dài phần thiết kế dữ liệu: bỏ bảng inventory lặp lại ERD, giữ phân nhóm bảng và các quyết định thiết kế quan trọng; đồng thời cập nhật Alert History từ trạng thái dự kiến sang hiện trạng đã triển khai.
+- [x] Loại cách diễn đạt đẩy phần giao diện sang “sau báo cáo”; ghi đúng giới hạn còn lại của phiên bản hiện tại.
+- [x] Đồng bộ Chương 5 theo GitHub Actions CI hiện có và kiến trúc CD đích: Render tự build Static Site/Web Service từ cùng monorepo, deploy hook được lưu bằng secret, PostgreSQL trên Supabase Free.
+- [ ] Cập nhật số test cuối, Alert History, tier/entitlement, prompt-injection mitigation, hạn chế và hướng phát triển xuyên suốt Tóm tắt, Chương 3--6 và Bảng thuật ngữ.
+- [ ] Rà mọi câu “đã hoàn thiện”, “đảm bảo”, “end-to-end”, “tự động triển khai” và “tất cả test pass” dựa trên bằng chứng cuối.
+- [ ] Proofread thủ công theo chương; kiểm tra chính tả, thuật ngữ Việt/Anh, caption, label/ref, citation, mục lục, danh sách hình/bảng và số chương.
+- [x] Render sơ đồ deployment mới và build PDF sạch 103 trang; không còn citation/reference undefined. Đã kiểm tra trực quan trang deployment và text extraction cho ngày khảo sát, contract và số test.
+- [ ] Sau khi nhóm cung cấp screenshot thật, build lại và đọc ở tỷ lệ in A4; kiểm tra đặc biệt ảnh UI, Alert History, CI/Render và bibliography.
+- [ ] Chốt source và report cùng một revision/tag hoặc commit được ghi nhận để bản báo cáo không mô tả một source khác với source nộp.
 
 ## Câu hỏi/mâu thuẫn phải giữ mở cho đến khi từng batch xử lý
 
@@ -200,7 +298,11 @@ Quy ước:
 - [x] Batch 3 — kiến trúc tổng thể.
 - [x] Batch 4 — database/cache/ERD.
 - [x] Batch 5 — PnL/migration/độ tin cậy.
-- [ ] Batch 6 — UI/hình chức năng.
-- [ ] Batch 7 — triển khai/kiểm thử/đánh giá.
+- [ ] Batch 6 — còn chụp/chèn hình chức năng thật.
+- [ ] Batch 7 — còn CI và sửa/chạy lại test cuối.
 - [x] Batch 8 — kết luận/đồng bộ/rà toàn văn.
-- [ ] Batch 9 — IMPLEMENT ALERT HISTORY END-TO-END.
+- [ ] Batch 9 — source đã resolve và kiểm tra cục bộ; còn nhóm xác minh GitHub Actions CI/Render thật.
+- [ ] Batch 10 — code và test Alert History đã hoàn thiện; còn nhóm reset database, smoke test và chụp ảnh thật.
+- [ ] Batch 11 — suite hiện xanh và đã bổ sung test rủi ro chính; còn ma trận/fixture provider, tier-entitlement và chạy lại sau mọi thay đổi source.
+- [ ] Batch 12 — code, test và báo cáo prompt-injection đã cập nhật; còn nhóm smoke test trên UI thật và chụp minh chứng an toàn.
+- [ ] Batch 13 — ảnh, nội dung thiếu, đồng bộ và đóng gói bản cuối.
