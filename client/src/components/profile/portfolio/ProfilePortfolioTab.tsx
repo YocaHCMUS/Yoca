@@ -3,11 +3,12 @@ import { Table, FilterType, SortType } from "@/components/tables/Table";
 import { createProfilePortfolioCellRenderers } from "@/components/tables/TableCellRenderer";
 import { WalletActionButton } from "@/components/auth/WalletActionButton";
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, type EffectivePlanTier } from "@/contexts/AuthContext";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useProfileOverviewData } from "@/hooks/profile/useProfileOverviewData";
 import type { ProfileOverviewData, ProfileAccountTier } from "@/types/profile";
 import type { TimePeriod } from "@/types/chart-filters.types";
+import { AddLarge } from "@carbon/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import {
@@ -15,7 +16,6 @@ import {
     requestLinkWalletChallenge,
     unlinkWalletAddress,
 } from "@/services/profile/profileApi";
-import { getUserSubscription, type PlanTier } from "@/services/profile/subscriptionApi";
 import type { LinkedWalletRowPayload } from "@/services/profile/profileDataProvider";
 import styles from "@/components/profile/shared/profile.module.scss";
 import { WalletOverviewPeriodKey } from "@/services/wallet/walletApi";
@@ -27,16 +27,16 @@ interface ProfilePortfolioTabProps {
   onPeriodChange: (period: TimePeriod) => void;
 }
 
-function mapPlanTierToAccountTier(planTier: PlanTier | null): ProfileAccountTier {
-  if (planTier === "Pro") return "pro";
-  if (planTier === "Plus") return "premium";
-  if (planTier === "Lite") return "basic";
+function mapPlanTierToAccountTier(planTier: EffectivePlanTier): ProfileAccountTier {
+  if (planTier == "Pro") return "pro";
+  if (planTier == "Plus") return "premium";
   return "basic";
 }
 
 export function ProfilePortfolioTab({
   linkedWallets,
   period,
+  onPeriodChange,
 }: ProfilePortfolioTabProps) {
     const { tr, fmt } = useLocalization();
     const navigate = useNavigate();
@@ -50,44 +50,14 @@ export function ProfilePortfolioTab({
         () => linkedWalletRows.map((wallet) => wallet.walletAddress),
         [linkedWalletRows],
     );
-    const [currentPlanTier, setCurrentPlanTier] = useState<PlanTier | null>(null);
+    const [editingAddress, setEditingAddress] = useState<string | null>(null);
+    const [draftLabel, setDraftLabel] = useState("");
     const { walletOverviews, setWalletOverviews, loading } = useProfileOverviewData({ walletAddresses: linkedWalletAddresses });
     const { labels: labelMap, setLabel } = useWalletLabels();
 
   useEffect(() => {
     setLinkedWalletRows(linkedWallets);
   }, [linkedWallets]);
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadCurrentPlanTier() {
-      if (!user?.userId) {
-        setCurrentPlanTier(null);
-        return;
-      }
-
-      try {
-        const subscription = await getUserSubscription();
-        if (!active) return;
-        setCurrentPlanTier(subscription?.planTier ?? null);
-      } catch (error) {
-        console.error(
-          "[ProfilePortfolioTab] Failed to load current subscription:",
-          error,
-        );
-        if (active) {
-          setCurrentPlanTier(null);
-        }
-      }
-    }
-
-    loadCurrentPlanTier();
-
-    return () => {
-      active = false;
-    };
-  }, [user?.userId]);
 
   const navigateToWalletDetail = (walletAddress: string) => {
     const nextPath = `/wallets/${encodeURIComponent(walletAddress)}`;
@@ -116,7 +86,7 @@ export function ProfilePortfolioTab({
       avatarUrl: user?.avatarUrl || `https://api.dicebear.com/9.x/identicon/svg?seed=${user?.userId ?? user?.displayName ?? linkedWalletAddresses.join(",")}`,
       displayName: user?.displayName?.trim() || "Guest",
       userId: user?.userId,
-      accountTier: mapPlanTierToAccountTier(currentPlanTier),
+      accountTier: mapPlanTierToAccountTier(user?.planTier ?? "Free"),
       period,
       totalNetWorthUsd,
       tradeOrTxCount,
@@ -126,8 +96,9 @@ export function ProfilePortfolioTab({
       authWalletCount,
     };
   }, [
-    currentPlanTier,
+    user?.planTier,
     period,
+    user?.avatarUrl,
     user?.displayName,
     user?.userId,
     linkedWalletAddresses,
@@ -230,6 +201,7 @@ export function ProfilePortfolioTab({
                   publicKey,
                   signMessage,
                   onSuccess: resolveSuccess,
+                  onError: resolveError,
                 }) => {
                   const challenge = await requestLinkWalletChallenge(publicKey);
                   const messageBytes = new TextEncoder().encode(

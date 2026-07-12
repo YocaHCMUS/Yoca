@@ -136,13 +136,6 @@ export const tradingAlertScopes = pgTable(
   ],
 );
 
-export const tradingAlertWebhooks = pgTable("trading_alert_webhooks", {
-  alertId: uuid("alert_id")
-    .notNull()
-    .references(() => alerts.id, { onDelete: "cascade" }),
-  webhook_id: uuid("webhook_id").notNull(),
-});
-
 export const tradingAlertConditions = pgTable("trading_alert_conditions", {
   id: uuid("id").primaryKey().defaultRandom(),
   alertId: uuid("alert_id")
@@ -169,6 +162,13 @@ export const walletMetrics1m = pgTable(
   ],
 );
 
+/**
+ * Persisted alert events shown to users after a matching alert is delivered.
+ *
+ * TODO: Insert a row after a delivery succeeds.
+ * TODO: Add authenticated list/mark-as-read endpoints scoped by userId.
+ * TODO: Use alertId and delivery outcome when implementing duplicate suppression.
+ */
 export const alertHistory = pgTable("alert_history", {
   id: uuid("id").primaryKey().defaultRandom(),
   alertId: uuid("alert_id").references(() => alerts.id, {
@@ -186,12 +186,13 @@ export const alertHistory = pgTable("alert_history", {
 export const userAlerts = alerts;
 export const userAlertState = alertState;
 export const userAlertConditions = tokenAlertConditions;
-export const alertsSent = alertHistory;
 
 export type AlertInsert = typeof alerts.$inferInsert;
 export type AlertSelect = typeof alerts.$inferSelect;
 export type AlertStateSelect = typeof alertState.$inferSelect;
 export type AlertDeliveryInsert = typeof alertDelivery.$inferInsert;
+export type AlertHistoryInsert = typeof alertHistory.$inferInsert;
+export type AlertHistorySelect = typeof alertHistory.$inferSelect;
 export type TokenAlertConditionInsert =
   typeof tokenAlertConditions.$inferInsert;
 export type TokenAlertConditionSelect =

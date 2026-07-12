@@ -1,4 +1,11 @@
-import { heliusGetJson } from "../../../services/wallet/providers/helius.client.js";
+import { validateApiResult } from "../../../middlewares/validation.js";
+import { helius_EnhancedTransactionsSchema } from "../../../services/_types/token-raw-responses.js";
+import {
+    getEndpoint,
+    getRequiredHeaders,
+    limiter as heliusLimiter,
+} from "../../../util/util-helius.js";
+import { rlFetch } from "../../../util/rate-limit.js";
 import type { HeliusEnhancedTransactionLike } from "../types/normalizedWalletEvent.js";
 
 const HELIUS_PAGE_SIZE = 100;
@@ -22,15 +29,29 @@ export async function fetchWalletTransactions(params: {
     let before: string | undefined;
 
     while (collected.length < targetLimit) {
-        const page = await heliusGetJson<HeliusEnhancedTransactionLike[]>(
-            `/v0/addresses/${params.walletAddress}/transactions`,
-            {
-                limit: pageSize,
-                before,
-            },
-        );
+        const endpoint = getEndpoint(`/v0/addresses/${params.walletAddress}/transactions`);
+        endpoint.searchParams.set("limit", String(pageSize));
+        if (before) {
+            endpoint.searchParams.set("before", before);
+        }
 
-        if (!Array.isArray(page) || page.length === 0) {
+        const response = await rlFetch(endpoint, {
+            method: "GET",
+            headers: getRequiredHeaders(),
+            rlLimiter: heliusLimiter,
+        });
+
+        if (!response.ok) {
+            throw new Error(`Helius address transactions request failed: ${response.status}`);
+        }
+
+        const page = await validateApiResult(helius_EnhancedTransactionsSchema, response);
+        if (!page) {
+            // TODO: Consider more robust error handling
+            break;
+        }
+
+        if (page.length == 0) {
             break;
         }
 

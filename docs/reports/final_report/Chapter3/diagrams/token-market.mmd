@@ -1,0 +1,73 @@
+---
+config:
+  layout: elk
+---
+erDiagram
+    direction TB
+
+    TOKEN_META {
+        varchar address PK
+        varchar name
+        varchar symbol
+        timestamp updated_at
+    }
+    TOKEN_DETAILS {
+        varchar address PK
+        integer decimals
+        varchar coingecko_id
+        timestamp updated_at
+    }
+    TOKEN_MARKET_DATA {
+        varchar address PK
+        decimal price_usd
+        decimal market_cap
+        decimal volume_24h
+        timestamp updated_at
+    }
+    TOKEN_MARKET_CHART_24H {
+        varchar address PK
+        bigint unix_timestamp_ms PK
+        decimal price
+    }
+    TOKEN_MARKET_CHART_HOURLY {
+        varchar address PK
+        bigint unix_timestamp_ms PK
+        decimal price
+    }
+    TOKEN_MARKET_CHART_DAILY {
+        varchar address PK
+        bigint unix_timestamp_ms PK
+        decimal price
+    }
+    TOKEN_POOL_DATA {
+        varchar address PK
+        varchar base_address
+        varchar quote_address
+        decimal liquidity_usd
+    }
+    TOKEN_TOPS_POOL {
+        varchar token_address PK
+        integer rank PK
+        varchar pool_address
+    }
+    TOKEN_HOLDER_STATS {
+        varchar address PK
+        integer holders_count
+        decimal top_10_percent
+    }
+    TOP_TOKEN_HOLDERS {
+        varchar token_address PK
+        integer rank PK
+        varchar holder_address
+        decimal percentage
+    }
+
+    TOKEN_META ||..o| TOKEN_DETAILS : describes
+    TOKEN_META ||..o| TOKEN_MARKET_DATA : prices
+    TOKEN_META ||..o{ TOKEN_MARKET_CHART_24H : charts
+    TOKEN_META ||..o{ TOKEN_MARKET_CHART_HOURLY : charts
+    TOKEN_META ||..o{ TOKEN_MARKET_CHART_DAILY : charts
+    TOKEN_META ||..o{ TOKEN_TOPS_POOL : ranks
+    TOKEN_TOPS_POOL }o..|| TOKEN_POOL_DATA : selects
+    TOKEN_META ||..o| TOKEN_HOLDER_STATS : summarizes
+    TOKEN_META ||..o{ TOP_TOKEN_HOLDERS : holds

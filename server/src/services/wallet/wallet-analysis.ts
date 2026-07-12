@@ -6,7 +6,7 @@ import {
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import { walletAnalyses, type WalletAnalysisSelect } from "@sv/db/schema.js";
-import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import { mbl_WalletAnalysisSchema } from "@sv/services/_types/wallet-raw-responses.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
 import * as mobula from "@sv/util/util-mobula.js";
@@ -65,7 +65,7 @@ export async function fetchWalletAnalysis(
     headers: mobula.getRequiredHeaders(),
     rlLimiter: mobula.limiter,
   });
-  const result = await getTrackedApiResult(mbl_WalletAnalysisSchema, response);
+  const result = await validateApiResult(mbl_WalletAnalysisSchema, response);
   if (!result) {
     throw new Error(
       `Mobula wallet analysis returned invalid data (${response.status})`,

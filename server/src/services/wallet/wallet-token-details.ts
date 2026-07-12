@@ -8,7 +8,7 @@ import {
     type WalletTokenDetailsInsert,
     type WalletTokenDetailsSelect,
 } from "@sv/db/schema.js";
-import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import {
     mbl_WalletPositionsSchema,
     type MBL_WalletPositions,
@@ -39,7 +39,7 @@ export async function fetchTokenDetails(
     headers: mobula.getRequiredHeaders(),
     rlLimiter: mobula.limiter,
   });
-  const result = await getTrackedApiResult(
+  const result = await validateApiResult(
     mbl_WalletPositionsSchema,
     response,
   );

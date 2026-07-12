@@ -2,6 +2,7 @@ import TabContainer from "@/components/tabContainer/tabContainer";
 import { useEffect, useState } from "react";
 import styles from "./profile.module.scss";
 import { useLocalization } from "@/contexts/LocalizationContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
     getUserSubscription,
     getUserSubscriptions,
@@ -48,7 +49,8 @@ function formatMoney(cents: number, currency: string) {
 }
 
 export function ProfileSubscriptionsTab() {
-  useLocalization();
+  const { fmt } = useLocalization();
+  const { refreshUser } = useAuth();
   const [activeSubtab, setActiveSubtab] =
     useState<SubscriptionSubtab>("subscriptions");
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -56,7 +58,7 @@ export function ProfileSubscriptionsTab() {
   const [history, setHistory] = useState<PaymentHistory[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = async (showLoading = true) => {
+  const fetchData = async (showLoading = true, refreshSession = false) => {
     try {
       if (showLoading) setLoading(true);
       const [sub, subs, hist] = await Promise.all([
@@ -67,6 +69,9 @@ export function ProfileSubscriptionsTab() {
       setSubscription(sub);
       setSubscriptions(subs);
       setHistory(hist);
+      if (refreshSession) {
+        await refreshUser();
+      }
     } catch (err) {
       console.error("Failed to fetch subscription data", err);
     } finally {
@@ -99,7 +104,7 @@ export function ProfileSubscriptionsTab() {
             key="subscriptions"
             subscription={subscription}
             subscriptions={subscriptions}
-            onUpdate={() => fetchData(false)}
+            onUpdate={() => fetchData(false, true)}
           />,
           <PaymentHistoryPanel
             key="payment-history"
@@ -484,17 +489,13 @@ function PaymentHistoryPanel({
     subscriptions.map((sub) => [sub.id, sub.planTier]),
   );
 
-  type PaymentMethodDetailsRecord = { type?: string; txId?: string; amount?: number };
-  const paymentDetails = (item: PaymentHistory): PaymentMethodDetailsRecord =>
-    (item.paymentMethodDetails ?? {}) as PaymentMethodDetailsRecord;
-
   const paymentIdLabel = (item: PaymentHistory) => {
     // Prefer Stripe identifiers, but fall back to on-chain txId for Solana payments
     return (
       item.stripePaymentIntentId ??
       item.stripeInvoiceId ??
       // paymentMethodDetails may contain a Solana transfer object with txId
-      paymentDetails(item).txId ??
+      ((item.paymentMethodDetails as any)?.txId as string | undefined) ??
       "-"
     );
   };
@@ -516,7 +517,7 @@ function PaymentHistoryPanel({
     // in `paymentMethodDetails` (type, txId, amount (SOL)). Try to map
     // the Solana tx -> subscription (stripeSubscriptionId = `solana-${txId}`)
     // to recover the planTier.
-    const pm = paymentDetails(item);
+    const pm = item.paymentMethodDetails as any;
     const solTxId = pm?.txId;
     if (solTxId) {
       const solSub = subscriptions.find((s) => s.stripeSubscriptionId === `solana-${solTxId}`);
@@ -559,9 +560,9 @@ function PaymentHistoryPanel({
               <td className={styles.metricValue}>
                 {
                   // If Solana transfer, show SOL amount (more meaningful than tiny USD test values)
-                  (paymentDetails(item).type === "solana_transfer" || paymentDetails(item).txId)
+                  ((item.paymentMethodDetails as any)?.type === "solana_transfer" || (item.paymentMethodDetails as any)?.txId)
                     ? (() => {
-                        const pm = paymentDetails(item);
+                        const pm = item.paymentMethodDetails as any;
                         const solAmt = pm?.amount;
                         if (typeof solAmt === "number") return fmt.num.unit(solAmt, "SOL");
                         // fallback to USD if SOL amount missing
@@ -631,4 +632,3 @@ function PaymentIdCell({ paymentId }: { paymentId: string }) {
 }
 
 export default ProfileSubscriptionsTab;
-

@@ -1,0 +1,35 @@
+---
+config:
+  layout: elk
+---
+erDiagram
+    direction LR
+
+    WALLET_ADDRESS {
+        varchar address PK
+    }
+    WALLET_OVERVIEW_CACHE {
+        varchar address PK
+        decimal total_asset_value_usd
+        decimal pnl_usd_total
+        integer transaction_count_all
+        timestamp fetched_at
+    }
+    WALLET_ANALYSES {
+        varchar wallet_address PK
+        varchar period PK
+        decimal winrate
+        decimal pnl_total_usd
+        jsonb calendar_breakdown
+    }
+    WALLET_IDENTITY_CACHE {
+        varchar address PK
+        varchar status
+        varchar type
+        varchar name
+        timestamp fetched_at
+    }
+
+    WALLET_ADDRESS ||..o| WALLET_OVERVIEW_CACHE : summarizes
+    WALLET_ADDRESS ||..o{ WALLET_ANALYSES : analyzes
+    WALLET_ADDRESS ||..o| WALLET_IDENTITY_CACHE : identifies

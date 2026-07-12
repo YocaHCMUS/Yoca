@@ -27,6 +27,29 @@ export const hls_WalletBalancesSchema = z.object({
 
 export type HLS_WalletBalances = z.infer<typeof hls_WalletBalancesSchema>;
 
+export const hls_WalletIdentitySchema = z.object({
+  address: z.string().optional(),
+  name: z.string().optional(),
+  category: z.string().optional(),
+  type: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  domainNames: z.array(z.string()).optional(),
+  domains: z.array(z.string()).optional(),
+}).catchall(z.unknown());
+
+export const hls_WalletIdentityBatchSchema = z.union([
+  z.array(hls_WalletIdentitySchema),
+  z.object({
+    data: z.array(hls_WalletIdentitySchema).optional(),
+    identities: z.array(hls_WalletIdentitySchema).optional(),
+  }).catchall(z.unknown()),
+]);
+
+export type HLS_WalletIdentity = z.infer<typeof hls_WalletIdentitySchema>;
+export type HLS_WalletIdentityBatch = z.infer<
+  typeof hls_WalletIdentityBatchSchema
+>;
+
 export const mbl_WalletAnalysisSchema = z.object({
   data: z.object({
     winRateDistribution: z.object({
@@ -413,48 +436,58 @@ export type BDS_WalletTokenDetails = z.infer<
 >;
 export type MRL_WalletTokenSwaps = z.infer<typeof mrl_WalletTokenSwapsSchema>;
 
-export const bds_WalletNetAssetsSchema = z.object({
-  success: z.boolean(),
-  data: z.object({
+const birdeyeNumberishSchema = z.union([z.string(), z.number()]);
+
+export const bds_WalletNetAssetsSchema = z.strictObject({
+  success: z.boolean().optional(),
+  data: z.strictObject({
     wallet_address: z.string(),
     currency: z.string(),
-    net_worth: z.number(),
+    net_worth: z.coerce.number(),
     // Request and resolved timestamp are. server time not historical time of the wallet
-    requested_timestamp: z.string(),
-    resolved_timestamp: z.string(),
+    requested_timestamp: z.union([z.string(), z.number()]).nullish(),
+    resolved_timestamp: z.union([z.string(), z.number()]).nullish(),
     net_assets: z.array(
-      z.object({
+      z.strictObject({
         symbol: z.string(),
         token_address: z.string(),
-        decimal: z.number(),
-        balance: z.string(),
-        price: z.number(),
-        value: z.number(),
+        decimal: z.coerce.number(),
+        balance: birdeyeNumberishSchema,
+        price: z.coerce.number().nullish(),
+        value: z.coerce.number(),
+        name: z.string().nullish(),
+        logoURI: z.string().nullish(),
+        logo_uri: z.string().nullish(),
+        logo: z.string().nullish(),
       }),
     ),
   }),
-  pagination: z.object({
-    limit: z.number(),
-    offset: z.number(),
-    total: z.number(),
-  }),
+  pagination: z.strictObject({
+    limit: z.coerce.number(),
+    offset: z.coerce.number(),
+    total: z.coerce.number(),
+  }).optional(),
 });
 
 export type BDS_WalletNetAssets = z.infer<typeof bds_WalletNetAssetsSchema>;
 
-export const bds_WalletNetworthHistorySchema = z.object({
-  success: z.boolean(),
-  data: z.object({
+export const bds_WalletNetworthHistorySchema = z.strictObject({
+  success: z.boolean().optional(),
+  data: z.strictObject({
     wallet_address: z.string(),
     currency: z.string(),
-    current_timestamp: z.string(),
-    past_timestamp: z.string(),
+    current_timestamp: z.union([z.string(), z.number()]).nullish(),
+    past_timestamp: z.union([z.string(), z.number()]).nullish(),
+    requested_timestamp: z.union([z.string(), z.number()]).nullish(),
+    resolved_timestamp: z.union([z.string(), z.number()]).nullish(),
+    total_value: z.coerce.number().nullish(),
+    net_worth: z.coerce.number().nullish(),
     history: z.array(
-      z.object({
-        timestamp: z.string(),
-        net_worth: z.number(),
-        net_worth_change: z.number(),
-        net_worth_change_percent: z.number(),
+      z.strictObject({
+        timestamp: z.union([z.string(), z.number()]),
+        net_worth: z.coerce.number(),
+        net_worth_change: z.coerce.number().nullish(),
+        net_worth_change_percent: z.coerce.number().nullish(),
       }),
     ),
   }),

@@ -14,6 +14,10 @@ import {
   validate,
 } from "@sv/middlewares/validation.js";
 import * as userService from "@sv/services/users.js";
+import {
+  getEntitlementsForPlanTier,
+  getUserEffectivePlanTier,
+} from "@sv/services/subscription-entitlements.service.js";
 import { serverErr, setErr } from "@sv/util/errors.js";
 import env from "@sv/util/load-env";
 import { messageText, statusCode } from "@sv/util/responses.js";
@@ -294,13 +298,18 @@ const app = new Hono()
         return c.json(setErr("INVALID_TOKEN_PAYLOAD"), statusCode.Unauthorized);
       }
 
+      const planTier = await getUserEffectivePlanTier(parsedPayload.data.id);
+      const entitlements = getEntitlementsForPlanTier(planTier);
+
       return c.json(
         {
           id: parsedPayload.data.id,
           exp: parsedPayload.data.exp,
           displayName: user.displayName,
           avatarUrl: user.avatarUrl,
-        } satisfies UserPayload,
+          planTier,
+          entitlements,
+        },
         statusCode.Ok,
       );
     } catch (e) {

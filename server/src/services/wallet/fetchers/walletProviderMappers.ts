@@ -2,10 +2,10 @@ import type {
   WalletSwap,
   WalletTransfer,
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import {
-  MoralisSwapResult,
-  MoralisTradeLeg,
-} from "./walletThirdPartyResponses.js";
+import type { MRL_WalletTokenSwaps } from "@sv/services/_types/wallet-raw-responses.js";
+
+type MoralisSwapResult = MRL_WalletTokenSwaps["result"][number];
+type MoralisTradeLeg = MoralisSwapResult["bought"];
 
 type PaginationLike = {
   nextCursor?: unknown;

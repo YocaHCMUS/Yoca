@@ -1,7 +1,7 @@
 import { db } from "@sv/db/index.js";
-import { walletSwap, walletTransactionsMeta, walletOverviewCache, tokenTransfers, walletHeliusTransactions, walletSwapMeta, walletTransferMeta, walletFirstFund, walletPnlDataCache, walletPnlDataMeta } from "@sv/db/schema.js";
+import { walletSwap, walletTransactionsMeta, walletOverviewCache, walletHeliusTransactions, walletSwapMeta, walletFirstFund } from "@sv/db/schema.js";
 import { sql } from "drizzle-orm";
-import type { WalletSwap, WalletOverview, WalletTransfer, WalletTransactionHelius, HeliusWalletFirstFund } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { WalletSwap, WalletOverview, WalletTransactionHelius, HeliusWalletFirstFund } from "@sv/services/wallet/dtos/walletDataObjects.js";
 
 export async function saveSwapsCache(
   address: string,
@@ -298,101 +298,6 @@ export async function saveTransactionsHeliusCache(
   }
 }
 
-export async function saveTransfersCache(
-  address: string,
-  transfers: WalletTransfer[],
-  from: number,
-  to: number
-): Promise<void> {
-  try {
-    // let coverageFromMs: number | undefined;
-    // let coverageToMs: number | undefined;
-    let firstAddress: string | undefined;
-    let lastAddress: string | undefined;
-
-
-    if (transfers.length > 0) {
-      // Deduplicate by transaction signature + instruction index to avoid multiple rows
-      // with the same primary key when providers return duplicate transfer records.
-      const uniqueKey = (t: WalletTransfer) => `${t.transactionSignature}-${t.instructionIndex}`;
-      const uniqueByKey = new Map<string, WalletTransfer>();
-      for (const transfer of transfers) {
-        const key = uniqueKey(transfer);
-        if (!uniqueByKey.has(key)) {
-          uniqueByKey.set(key, transfer);
-        }
-      }
-
-      const uniqueTransfers = Array.from(uniqueByKey.values());
-
-      const rows = uniqueTransfers.map((t) => ({
-        address,
-        fromOwner: t.from,
-        toOwner: t.to,
-        amount: t.amount,
-        amountUsd: t.amountUsd ?? 0,
-        blockTime: new Date(Date.parse(t.timestamp) || Date.now()),
-        tokenAddress: t.tokenAddress,
-        tokenSymbol: t.tokenSymbol,
-        transactionSignature: t.transactionSignature,
-        instructionIndex: t.instructionIndex,
-      }));
-
-      const coverageBounds = rows.length > 0
-        ? rows.reduce(
-          (bounds, row) => (
-            {
-              fromMs: Math.min(bounds.fromMs, row.blockTime.getTime()),
-              toMs: Math.max(bounds.toMs, row.blockTime.getTime()),
-              lastAddress: bounds.fromMs < row.blockTime.getTime() ? bounds.lastAddress : row.address,
-              firstAddress: bounds.toMs < row.blockTime.getTime() ? row.address : bounds.firstAddress
-            }),
-          {
-            fromMs: Number.POSITIVE_INFINITY,
-            toMs: Number.NEGATIVE_INFINITY,
-            lastAddress: "",
-            firstAddress: ""
-          },
-        )
-        : null;
-
-      // coverageFromMs = coverageBounds
-      //   ? coverageBounds.fromMs
-      //   : undefined;
-      // coverageToMs = coverageBounds
-      //   ? coverageBounds.toMs
-      //   : undefined;
-
-      firstAddress = coverageBounds
-        ? coverageBounds.firstAddress
-        : undefined;
-
-      lastAddress = coverageBounds
-        ? coverageBounds.lastAddress
-        : undefined;
-
-
-      await db.insert(tokenTransfers).values(rows).onConflictDoNothing();
-    }
-
-    await db
-      .insert(walletTransferMeta)
-      .values({ address })
-      .onConflictDoUpdate({
-        target: [walletTransferMeta.address],
-        set: {
-          fetchedAt: new Date(),
-          coveredFromSec: Math.floor(from / 1000),
-          coveredToSec: Math.floor(to / 1000),
-          coveredFromCursor: lastAddress,
-          coveredToCursor: firstAddress
-        },
-      });
-  } catch (err) {
-    console.error("Failed to save wallet transfers cache", err);
-  }
-}
-
 export async function saveWalletFirstFundCache(
   firstFund: HeliusWalletFirstFund,
 ) {
@@ -408,87 +313,5 @@ export async function saveWalletFirstFundCache(
       });
   } catch (err) {
     console.error("Failed to save wallet first fund cache", err);
-  }
-}
-
-/**
- * Save wallet PnL data cache and metadata.
- *
- * Accepts:
- * - address: wallet address
- * - timePeriod: e.g. "7D"
- * - aggregation: e.g. "daily", "hourly"
- * - dailyData: array of daily PnL records with {dayStartMs, dailyPnl, cumulativePnl, dayOpen, dayClose}
- * - coverageFromMs, coverageToMs: PnL cache coverage range
- * - sourceBalanceRangeFromMs, sourceBalanceRangeToMs: balance history source range
- * - sourceTransferRangeFromMs, sourceTransferRangeToMs: transfer history source range
- *
- * Upserts both walletPnlDataCache (per-day rows) and walletPnlDataMeta (coverage) in two operations.
- */
-export async function saveWalletPnlCache(
-  address: string,
-  timePeriod: string,
-  aggregation: string,
-  dailyData: Array<{
-    dayStartMs: number;
-    dailyPnl: number | string;
-    cumulativePnl: number | string;
-    dayOpen: number | string;
-    dayClose: number | string;
-  }>,
-  coverageFromMs: number,
-  coverageToMs: number,
-  sourceBalanceRangeFromMs: number,
-  sourceBalanceRangeToMs: number,
-  sourceTransferRangeFromMs: number,
-  sourceTransferRangeToMs: number,
-): Promise<void> {
-  try {
-    // Insert/upsert daily PnL rows. Each day gets its own row with (address, timePeriod, aggregation, dayStartMs) as PK.
-    if (dailyData.length > 0) {
-      const rows = dailyData.map((d) => ({
-        address,
-        timePeriod,
-        aggregation,
-        dayStartMs: d.dayStartMs,
-        dailyPnl: Number(d.dailyPnl),
-        cumulativePnl: Number(d.cumulativePnl),
-        dayOpen: Number(d.dayOpen),
-        dayClose: Number(d.dayClose),
-        computedAt: new Date(),
-      }));
-
-      await db.insert(walletPnlDataCache).values(rows).onConflictDoNothing();
-    }
-
-    // Upsert metadata to track coverage and source ranges.
-    await db
-      .insert(walletPnlDataMeta)
-      .values({
-        address,
-        timePeriod,
-        aggregation,
-        coverageFromMs,
-        coverageToMs,
-        sourceBalanceRangeFromMs,
-        sourceBalanceRangeToMs,
-        sourceTransferRangeFromMs,
-        sourceTransferRangeToMs,
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: [walletPnlDataMeta.address, walletPnlDataMeta.timePeriod, walletPnlDataMeta.aggregation],
-        set: {
-          coverageFromMs,
-          coverageToMs,
-          sourceBalanceRangeFromMs,
-          sourceBalanceRangeToMs,
-          sourceTransferRangeFromMs,
-          sourceTransferRangeToMs,
-          updatedAt: new Date(),
-        },
-      });
-  } catch (err) {
-    console.error("Failed to save wallet PnL cache", err);
   }
 }
