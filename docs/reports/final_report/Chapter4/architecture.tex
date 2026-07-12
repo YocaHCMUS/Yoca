@@ -26,6 +26,28 @@ Kiểu TypeScript chỉ tồn tại trong lúc phát triển nên không thể b
 
 Zod cho phép định nghĩa schema và kiểm tra dữ liệu không đáng tin cậy ngay khi chương trình đang chạy, phù hợp với vai trò bảo vệ biên tích hợp của Yoca \cite{zod}.
 
+Khi một service phát hiện lỗi ở biên tích hợp, nó không ném một \texttt{Error} chung mà trả về một lớp lỗi có kiểu riêng, mang theo mã lỗi, HTTP status và chi tiết bổ sung, ví dụ \texttt{WalletAnalysisServiceError}. Route bắt lớp lỗi này và chuyển thành một envelope JSON thống nhất dạng \texttt{\{ error, code \}} kèm status code tương ứng, thay vì để lỗi provider rò rỉ nguyên văn ra ngoài. Bảng~\ref{tab:api_contract_example} minh họa contract này cho một endpoint phân tích ví tiêu biểu.
+
+\begin{table}[H]
+\centering
+\caption{Ví dụ hợp đồng request/response cho endpoint phân tích ví}
+\label{tab:api_contract_example}
+\small
+\begin{tabularx}{\textwidth}{|p{2.6cm}|X|}
+\hline
+\textbf{Trường hợp} & \textbf{Hình dạng phản hồi} \\
+\hline
+Thành công (200) & \texttt{\{ address, period, pnl, winRate, volumeBreakdown, ... \}} theo đúng kiểu \texttt{WalletAnalysisResult} đã được Zod kiểm tra \\
+\hline
+Địa chỉ không hợp lệ (400) & \texttt{\{ error: "Invalid wallet address", code: "INVALID\_ADDRESS" \}} \\
+\hline
+Upstream lỗi/hết hạn mức (502/429) & \texttt{\{ error: "Provider request failed", code: "UPSTREAM\_ERROR" \}}, sinh ra khi \texttt{WalletAnalysisServiceError} bọc lỗi từ Mobula \\
+\hline
+Vượt giới hạn AI theo gói (429) & \texttt{\{ usage, limit, resetAt \}} từ \texttt{WalletAiDailyLimitError}, giúp client hiển thị đúng trạng thái thay vì lỗi chung \\
+\hline
+\end{tabularx}
+\end{table}
+
 Việc kiểm tra chặt cũng làm lộ ra một khó khăn thực tế: tài liệu của provider không phải lúc nào cũng nói rõ trường nào có thể rỗng. Chẳng hạn, địa chỉ token là định danh chắc chắn hơn tên hoặc ký hiệu; các chỉ số biến động giá cũng có thể không tồn tại với token mới hay ít thanh khoản. Lược đồ nội bộ vì vậy không sao chép nguyên xi một phản hồi mẫu, mà chấp nhận giá trị thiếu ở nơi dữ liệu thực tế đòi hỏi và giữ ràng buộc chặt cho các định danh cốt lõi.
 
 \section{Luồng truy xuất, chuẩn hóa và lưu đệm}
@@ -48,6 +70,14 @@ Những lựa chọn trên ưu tiên tốc độ phát triển và khả năng n
 
 Localization được tổ chức thành một lớp dùng chung độc lập với từng trang. Locale tiếng Anh đóng vai trò cấu trúc gốc; locale tiếng Việt phải giữ cùng hệ thống key và biến nội suy. Kiểu TypeScript được dùng để phát hiện key thiếu, key sai và biến interpolation không tương thích trong lúc phát triển. Hook \texttt{useLocalization} cung cấp đồng thời hàm dịch và formatter cho số, phần trăm, token unit, ngày giờ và tiền tệ. Các formatter nhận giá trị tài chính gốc bằng USD; với locale Việt Nam, lớp hiển thị áp dụng tỷ giá USD--VND rồi định dạng theo quy ước VND. Cách tách này giữ phép tính và API ở một đơn vị thống nhất, đồng thời tránh mỗi component tự quy đổi theo một công thức khác nhau.
 
+\section{Ranh giới tin cậy và các điểm cần bảo vệ}
+
+Yoca tiếp nhận dữ liệu và yêu cầu từ nhiều phía không đáng tin cậy như nhau: người dùng, ví Solana, webhook của provider và mô hình AI. Đăng nhập bằng ví không ký giao dịch trên chuỗi mà yêu cầu người dùng ký một thông điệp chứa nonce dùng một lần; server xác minh chữ ký ed25519 khớp với public key trước khi cấp phiên đăng nhập, sau đó xóa nonce để tránh dùng lại. Với thanh toán, webhook Stripe được xác thực bằng chữ ký ký số của Stripe trước khi xử lý sự kiện, còn giao dịch thanh toán bằng Solana được backend tự truy vấn qua RPC để đối chiếu địa chỉ nhận, số lượng và trạng thái xác nhận, thay vì tin vào thông tin do client gửi lên.
+
+Webhook nhận sự kiện ví từ Helius hiện được bảo vệ bằng một secret cố định so sánh trên header \texttt{Authorization}, chưa phải xác minh chữ ký trên toàn bộ payload. Đây là một giới hạn bảo mật nhóm chúng em ghi nhận rõ thay vì trình bày như một cơ chế đã hoàn thiện; hướng nâng cấp hợp lý là chuyển sang xác minh chữ ký payload nếu Helius hỗ trợ hoặc bổ sung kiểm tra IP/replay.
+
+Đối với AI, ngữ cảnh gửi đến mô hình được xây dựng thành các kiểu dữ liệu riêng cho từng miền (ví dụ \texttt{TokenAiContext}), và phần nội dung không đáng tin cậy như lịch sử hội thoại hay dữ liệu tool được bọc trong dấu phân định rõ ràng kèm chỉ dẫn chỉ tuân theo hướng dẫn hệ thống, không thực thi chỉ dẫn nằm trong phần dữ liệu đó. Phản hồi của mô hình sau đó được kiểm tra và chuẩn hóa lại cấu trúc trước khi trả về client. Đây là các lớp giảm thiểu rủi ro prompt injection ở mức thực dụng, không phải một cơ chế phòng thủ đã được kiểm chứng độc lập. Dữ liệu cá nhân như watchlist, nhãn ví, cảnh báo và lịch sử thanh toán tiếp tục được giới hạn theo user ID đã xác thực như đã trình bày ở phần cơ sở dữ liệu.
+
 \section{Kết chương}
 
-Chương 4 đã xác định Yoca là một monolith phân lớp theo miền, có hợp đồng kiểu xuyên suốt giữa client và server, biên kiểm tra runtime cho dữ liệu bên ngoài, cùng cơ chế lưu trữ ưu tiên tái sử dụng dữ liệu đã đồng bộ. Kiến trúc này phản ánh sự cân bằng giữa lược đồ chuẩn hóa, hạn mức API và khả năng phát triển của nhóm. Trên nền thiết kế đó, Chương 5 trình bày kết quả triển khai, những khó khăn đã gặp và mức độ đáp ứng của hệ thống.
+Chương 4 đã xác định Yoca là một monolith phân lớp theo miền, có hợp đồng kiểu xuyên suốt giữa client và server, biên kiểm tra runtime cho dữ liệu bên ngoài, cùng cơ chế lưu trữ ưu tiên tái sử dụng dữ liệu đã đồng bộ. Kiến trúc này phản ánh sự cân bằng giữa lược đồ chuẩn hóa, hạn mức API và khả năng phát triển của nhóm. Chương cũng chỉ rõ những ranh giới tin cậy đã được kiểm chứng trong mã nguồn cùng các điểm còn là giới hạn, thay vì trình bày hệ thống như đã phòng thủ toàn diện. Trên nền thiết kế đó, Chương 5 trình bày kết quả triển khai, những khó khăn đã gặp và mức độ đáp ứng của hệ thống.
