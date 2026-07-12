@@ -16,7 +16,7 @@ function SourceCard({
   onHover: (num: number) => void;
   onLeave: () => void;
 }) {
-  const { tr, fmt } = useLocalization();
+  const { fmt } = useLocalization();
 
   return (
     <div

@@ -44,7 +44,7 @@ export interface ChartProps {
   className?: string;
 
   /** Callback when data is loaded */
-  onDataLoaded?: (data: any) => void;
+  onDataLoaded?: (data: unknown) => void;
 
   /** Callback when an error occurs */
   onError?: (error: Error) => void;

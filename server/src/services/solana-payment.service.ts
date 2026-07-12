@@ -39,9 +39,24 @@ const TIER_SOL_AMOUNTS: Record<"Lite" | "Plus" | "Pro", number> = {
   Pro:  0.01,   // 0.01 SOL
 };
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error && typeof error === "object" && "message" in error && typeof error.message === "string"
+    ? error.message
+    : fallback;
+}
 // Convert SOL to lamports
 const LAMPORTS_PER_SOL = 1_000_000_000;
 
+type ParsedSystemTransferInstruction = {
+  program?: unknown;
+  parsed?: {
+    type?: unknown;
+    info?: {
+      destination?: unknown;
+      lamports?: unknown;
+    };
+  };
+};
 interface TransactionVerification {
   valid: boolean;
   reason?: string;
@@ -81,8 +96,7 @@ function createSolanaConnection(network: "devnet" | "testnet" | "mainnet-beta"):
  * Looks for SystemProgram transfer instructions.
  */
 function extractNativeTransfers(
-  transaction: any,
-  walletAddress: string
+  transaction: { meta?: { preBalances?: number[]; postBalances?: number[]; innerInstructions?: unknown[] | null } | null; transaction: { message: { accountKeys: { toString(): string }[] } } },
 ): Array<{
   from: string;
   to: string;
@@ -171,7 +185,7 @@ export async function verifySolanaTransaction(
     // -- Guard 1: Validate merchant address is a valid Solana public key -----
     try {
       new PublicKey(MERCHANT_ADDRESS);
-    } catch (err) {
+    } catch {
       console.error("[verifySolanaTransaction] Invalid merchant address:", MERCHANT_ADDRESS);
       return {
         valid: false,
@@ -236,19 +250,21 @@ export async function verifySolanaTransaction(
 
       // Check for SystemProgram transfer in parsed format
       for (const inst of instructions) {
-        const instruction = inst as any;
+        const instruction = inst as ParsedSystemTransferInstruction;
         if (
           instruction.program === "system" &&
           instruction.parsed?.type === "transfer"
         ) {
           const info = instruction.parsed.info;
+          const destination = typeof info?.destination === "string" ? info.destination : "";
+          const lamports = typeof info?.lamports === "number" ? info.lamports : 0;
           if (
-            info.destination === MERCHANT_ADDRESS &&
-            info.lamports >= expectedAmountLamports
+            destination === MERCHANT_ADDRESS &&
+            lamports >= expectedAmountLamports
           ) {
             transferFound = true;
-            actualAmount = info.lamports;
-            recipientAddress = info.destination;
+            actualAmount = lamports;
+            recipientAddress = destination;
             break;
           }
         }
@@ -258,19 +274,21 @@ export async function verifySolanaTransaction(
       if (!transferFound && innerInstructions.length > 0) {
         for (const inner of innerInstructions) {
           for (const inst of inner.instructions || []) {
-            const instruction = inst as any;
+            const instruction = inst as ParsedSystemTransferInstruction;
             if (
               instruction.program === "system" &&
               instruction.parsed?.type === "transfer"
             ) {
               const info = instruction.parsed.info;
-              if (
-                info.destination === MERCHANT_ADDRESS &&
-                info.lamports >= expectedAmountLamports
-              ) {
-                transferFound = true;
-                actualAmount = info.lamports;
-                recipientAddress = info.destination;
+          const destination = typeof info?.destination === "string" ? info.destination : "";
+          const lamports = typeof info?.lamports === "number" ? info.lamports : 0;
+          if (
+            destination === MERCHANT_ADDRESS &&
+            lamports >= expectedAmountLamports
+          ) {
+            transferFound = true;
+            actualAmount = lamports;
+            recipientAddress = destination;
                 break;
               }
             }
@@ -281,7 +299,7 @@ export async function verifySolanaTransaction(
 
       // Fallback: check native transfers if parsed format not available
       if (!transferFound) {
-        const nativeTransfers = extractNativeTransfers(transaction, "");
+        const nativeTransfers = extractNativeTransfers(transaction);
         for (const transfer of nativeTransfers) {
           if (
             transfer.to === MERCHANT_ADDRESS &&
@@ -297,7 +315,7 @@ export async function verifySolanaTransaction(
     } catch (parseErr) {
       console.warn("[verifySolanaTransaction] Error parsing instructions:", parseErr);
       // Try fallback method
-      const nativeTransfers = extractNativeTransfers(transaction, "");
+      const nativeTransfers = extractNativeTransfers(transaction);
       for (const transfer of nativeTransfers) {
         if (
           transfer.to === MERCHANT_ADDRESS &&
@@ -339,11 +357,11 @@ export async function verifySolanaTransaction(
       amountUsd: actualAmountSol * 100, // Placeholder: 1 SOL = $100 (adjust as needed)
       merchantAddress: recipientAddress,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[verifySolanaTransaction] Error:", err);
     return {
       valid: false,
-      reason: err.message || "An error occurred while verifying the transaction",
+      reason: getErrorMessage(err, "An error occurred while verifying the transaction"),
     };
   }
 }

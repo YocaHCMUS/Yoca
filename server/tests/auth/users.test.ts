@@ -1,5 +1,10 @@
-import "@sv/util/load-env.js";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+type JsonObject = Record<string, unknown>;
+
+vi.mock("@sv/util/load-env.js", () => ({
+  default: { JWT_SECRET: "test-secret", GOOGLE_CLIENT_ID: "test-client-id" },
+}));
+
 import app from "@sv/routes/users.js";
 import * as userService from "@sv/services/users.js";
 
@@ -40,7 +45,7 @@ describe("Hono User Auth Router", () => {
 
   describe("POST /auth/password/register", () => {
     it("should successfully register a new password user", async () => {
-      vi.mocked(userService.findUserByEmail).mockResolvedValue(null as any);
+      vi.mocked(userService.findUserByEmail).mockResolvedValue(null as never);
       vi.mocked(userService.createUserWithPassword).mockResolvedValue("user-id-123");
 
       const response = await app.request("/auth/password/register", {
@@ -54,7 +59,7 @@ describe("Hono User Auth Router", () => {
       });
 
       expect(response.status).toBe(201);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as JsonObject;
       expect(data).toHaveProperty("userId", "user-id-123");
       expect(data).toHaveProperty("token");
       expect(userService.createUserWithPassword).toHaveBeenCalledWith(
@@ -65,7 +70,7 @@ describe("Hono User Auth Router", () => {
     });
 
     it("should return 400 Bad Request if email already exists", async () => {
-      vi.mocked(userService.findUserByEmail).mockResolvedValue({ id: "user-id-123" } as any);
+      vi.mocked(userService.findUserByEmail).mockResolvedValue({ id: "user-id-123" } as never);
 
       const response = await app.request("/auth/password/register", {
         method: "POST",
@@ -78,15 +83,15 @@ describe("Hono User Auth Router", () => {
       });
 
       expect(response.status).toBe(400);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as JsonObject;
       expect(data.errorCode).toBe("EMAIL_ALREADY_EXISTED");
     });
   });
 
   describe("POST /auth/password/login", () => {
     it("should login successfully with correct credentials", async () => {
-      vi.mocked(userService.verifyUserPassword).mockResolvedValue({ userId: "user-id-123" } as any);
-      vi.mocked(userService.getUserById).mockResolvedValue({ id: "user-id-123", displayName: "Test User" } as any);
+      vi.mocked(userService.verifyUserPassword).mockResolvedValue({ userId: "user-id-123" } as never);
+      vi.mocked(userService.getUserById).mockResolvedValue({ id: "user-id-123", displayName: "Test User" } as never);
 
       const response = await app.request("/auth/password/login", {
         method: "POST",
@@ -116,14 +121,14 @@ describe("Hono User Auth Router", () => {
       });
 
       expect(response.status).toBe(401);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as JsonObject;
       expect(data.errorCode).toBe("EMAIL_OR_PASSWORD_WAS_INCORRECT");
     });
   });
 
   describe("POST /auth/google", () => {
     it("should log in or create a user with Google Token", async () => {
-      vi.mocked(userService.findUserByGoogleId).mockResolvedValue(null as any); // Register flow
+      vi.mocked(userService.findUserByGoogleId).mockResolvedValue(null as never); // Register flow
       vi.mocked(userService.createUserWithGoogle).mockResolvedValue("user-id-google");
 
       const response = await app.request("/auth/google", {
@@ -135,7 +140,7 @@ describe("Hono User Auth Router", () => {
       });
 
       expect(response.status).toBe(200);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as JsonObject;
       expect(data).toHaveProperty("userId", "user-id-google");
       expect(data).toHaveProperty("token");
     });
@@ -145,8 +150,8 @@ describe("Hono User Auth Router", () => {
     it("should return a login challenge for existing wallet user", async () => {
       vi.mocked(userService.findUserByWalletAddress).mockResolvedValue({
         user: { id: "user-id-123" }
-      } as any);
-      vi.mocked(userService.updateWalletLoginNounce).mockResolvedValue("new-nounce-123" as any);
+      } as never);
+      vi.mocked(userService.updateWalletLoginNounce).mockResolvedValue("new-nounce-123" as never);
 
       const response = await app.request("/auth/solana/nounce", {
         method: "POST",
@@ -157,17 +162,17 @@ describe("Hono User Auth Router", () => {
       });
 
       expect(response.status).toBe(200);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as JsonObject;
       expect(data.nounce).toBe("new-nounce-123");
       expect(data.signMessage).toContain("new-nounce-123");
     });
 
     it("should create a user challenge for new wallet", async () => {
-      vi.mocked(userService.findUserByWalletAddress).mockResolvedValue(null as any);
+      vi.mocked(userService.findUserByWalletAddress).mockResolvedValue(null as never);
       vi.mocked(userService.createUserWithWallet).mockResolvedValue({
         userId: "user-id-new",
         nounce: "new-wallet-nounce",
-      } as any);
+      } as never);
 
       const response = await app.request("/auth/solana/nounce", {
         method: "POST",
@@ -178,7 +183,7 @@ describe("Hono User Auth Router", () => {
       });
 
       expect(response.status).toBe(201);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as JsonObject;
       expect(data.nounce).toBe("new-wallet-nounce");
     });
   });
@@ -187,7 +192,7 @@ describe("Hono User Auth Router", () => {
     it("should return JWT token on successful signature verification", async () => {
       vi.mocked(userService.verifyWalletLoginNounce).mockResolvedValue({
         user: { id: "user-id-123", displayName: "Wallet User" }
-      } as any);
+      } as never);
 
       const response = await app.request("/auth/solana/verify", {
         method: "POST",
@@ -199,9 +204,10 @@ describe("Hono User Auth Router", () => {
       });
 
       expect(response.status).toBe(201);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as JsonObject;
       expect(data).toHaveProperty("token");
       expect(data.userId).toBe("user-id-123");
     });
   });
 });
+

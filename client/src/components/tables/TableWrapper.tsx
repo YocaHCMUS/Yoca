@@ -18,7 +18,7 @@ import styles from "./TableWrapper.module.scss";
 export interface ActiveFilter {
   columnIndex: number;
   columnName: string;
-  value: any;
+  value: unknown;
   displayText: string;
 }
 

@@ -489,13 +489,17 @@ function PaymentHistoryPanel({
     subscriptions.map((sub) => [sub.id, sub.planTier]),
   );
 
+  type PaymentMethodDetailsRecord = { type?: string; txId?: string; amount?: number };
+  const paymentDetails = (item: PaymentHistory): PaymentMethodDetailsRecord =>
+    (item.paymentMethodDetails ?? {}) as PaymentMethodDetailsRecord;
+
   const paymentIdLabel = (item: PaymentHistory) => {
     // Prefer Stripe identifiers, but fall back to on-chain txId for Solana payments
     return (
       item.stripePaymentIntentId ??
       item.stripeInvoiceId ??
       // paymentMethodDetails may contain a Solana transfer object with txId
-      ((item.paymentMethodDetails as any)?.txId as string | undefined) ??
+      paymentDetails(item).txId ??
       "-"
     );
   };
@@ -517,7 +521,7 @@ function PaymentHistoryPanel({
     // in `paymentMethodDetails` (type, txId, amount (SOL)). Try to map
     // the Solana tx -> subscription (stripeSubscriptionId = `solana-${txId}`)
     // to recover the planTier.
-    const pm = item.paymentMethodDetails as any;
+    const pm = paymentDetails(item);
     const solTxId = pm?.txId;
     if (solTxId) {
       const solSub = subscriptions.find((s) => s.stripeSubscriptionId === `solana-${solTxId}`);
@@ -560,9 +564,9 @@ function PaymentHistoryPanel({
               <td className={styles.metricValue}>
                 {
                   // If Solana transfer, show SOL amount (more meaningful than tiny USD test values)
-                  ((item.paymentMethodDetails as any)?.type === "solana_transfer" || (item.paymentMethodDetails as any)?.txId)
+                  (paymentDetails(item).type === "solana_transfer" || paymentDetails(item).txId)
                     ? (() => {
-                        const pm = item.paymentMethodDetails as any;
+                        const pm = paymentDetails(item);
                         const solAmt = pm?.amount;
                         if (typeof solAmt === "number") return fmt.num.unit(solAmt, "SOL");
                         // fallback to USD if SOL amount missing

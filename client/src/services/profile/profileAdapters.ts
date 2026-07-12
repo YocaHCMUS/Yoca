@@ -1,6 +1,6 @@
 import type { ProfilePageData } from "@/types/profile";
 
-export interface RawProfileApiPayload extends ProfilePageData { }
+export type RawProfileApiPayload = ProfilePageData;
 
 export function adaptProfilePayload(payload: RawProfileApiPayload): ProfilePageData {
     return {

@@ -36,19 +36,24 @@ function parseNewsTimestamp(value: unknown): Date | null {
     return null;
 }
 
-function extractEntriesFromN8n(respBody: any) {
-    if (!respBody) return [];
-    if (Array.isArray(respBody.entry)) return respBody.entry;
-    if (Array.isArray(respBody.entries)) return respBody.entries;
-    if (respBody.output && Array.isArray(respBody.output.entry)) return respBody.output.entry;
-    if (respBody[0] && Array.isArray(respBody[0].entry)) return respBody[0].entry;
-    for (const key of Object.keys(respBody)) {
-        if (Array.isArray(respBody[key]) && respBody[key].length > 0 && typeof respBody[key][0] === "object") {
-            return respBody[key];
+function extractEntriesFromN8n(respBody: Record<string, unknown> | undefined | null) {
+    const body = respBody;
+    if (!body) return [];
+    if (Array.isArray(body.entry)) return body.entry as Array<Record<string, unknown>>;
+    if (Array.isArray(body.entries)) return body.entries as Array<Record<string, unknown>>;
+    const output = body.output;
+    if (output && typeof output === "object" && !Array.isArray(output) && Array.isArray((output as Record<string, unknown>).entry)) return (output as Record<string, unknown>).entry as Array<Record<string, unknown>>;
+    const first = body[0];
+    if (first && typeof first === "object" && !Array.isArray(first) && Array.isArray((first as Record<string, unknown>).entry)) return (first as Record<string, unknown>).entry as Array<Record<string, unknown>>;
+    for (const key of Object.keys(body)) {
+        const val = body[key];
+        if (Array.isArray(val) && val.length > 0 && typeof val[0] === "object") {
+            return val as Array<Record<string, unknown>>;
         }
     }
     return [];
 }
+
 
 function normalizeExtraSnippets(value: unknown): string[] {
     if (!Array.isArray(value)) return [];
@@ -123,7 +128,7 @@ export async function storeFilteredNewsBatch(
         .values({ address, symbol, name })
         .returning();
 
-    const batchId = (batch as any).id;
+    const batchId = batch.id;
 
     const rows = entries.map((e) => {
         const title = (e.title as string) || "";
@@ -133,14 +138,16 @@ export async function storeFilteredNewsBatch(
             .update(url + "|" + title)
             .digest("hex");
 
+        const meta = e.meta as Record<string, unknown> | undefined;
+
         return {
             batchId,
             title: title.slice(0, 512),
             url: url.slice(0, 1024),
             description: (e.description as string) || null,
             publishedAt: parseNewsTimestamp(e.timestamp),
-            sourceName: (e.meta && (e.meta as any).source) || null,
-            faviconUrl: (e.meta && (e.meta as any).favicon) || null,
+            sourceName: (meta?.source as string) || null,
+            faviconUrl: (meta?.favicon as string) || null,
             extraSnippets: normalizeExtraSnippets(e.extra_snippets),
             contentHash
         };
@@ -231,7 +238,7 @@ async function fetchFromN8n(address: string, symbol: string, name: string) {
         if (!resp.ok) {
             throw new Error(`n8n responded ${resp.status}`);
         }
-        const body = await resp.json();
+        const body = await resp.json() as Record<string, unknown>;
         return extractEntriesFromN8n(body) as Array<Record<string, unknown>>;
     } finally {
         clearTimeout(timeout);
@@ -273,12 +280,12 @@ export async function getOrFetchNews(
 ) {
     try {
         return await getCachedNewsBatch(address);
-    } catch (err) {
+    } catch {
         console.info(`[news] no recent cached batch for ${address} (${symbol}), fetching from n8n...`);
     }
 
     // fetch from n8n and store
     const entries = await fetchFromN8n(address, symbol, name);
-    const { received, stored, batchId, storedRows } = await storeFilteredNewsBatch(address, symbol, name, entries);
+    const { storedRows } = await storeFilteredNewsBatch(address, symbol, name, entries);
     return { cached: false, entries: storedRows };
 }

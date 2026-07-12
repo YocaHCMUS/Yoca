@@ -14,15 +14,7 @@ import {
 } from "@/util/solanaNetwork";
 
 /**
- * Define your merchant address for receiving Devnet SOL payments.
- * This should be a known, secure Solana address.
- *
- * Falls back gracefully if the env var is missing so the module
- * doesn't crash at import time — the key is re-validated at runtime
- * inside handleSendTransaction().
- */
-const MERCHANT_ADDRESS_RAW =
-  import.meta.env.VITE_SOLANA_MERCHANT_ADDRESS as string | undefined;
+ * Tier pricing in SOL.
 
 /**
  * Tier pricing in SOL.
@@ -58,6 +50,14 @@ type BuildSolanaPaymentTransactionParams = {
   blockhash: string;
 };
 
+function getErrorRecord(error: unknown): Record<string, unknown> | null {
+  return error && typeof error === "object" ? error as Record<string, unknown> : null;
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  const record = getErrorRecord(error);
+  return typeof record?.message === "string" ? record.message : fallback;
+}
 function buildSolanaPaymentTransaction({
   payer,
   merchant,
@@ -111,7 +111,7 @@ export function SolanaPaymentFlow({
   const { publicKey, connected, wallet, wallets, select, connect, disconnect, sendTransaction } = useWallet();
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [verifyingSignature, setVerifyingSignature] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [, setIsConnecting] = useState(false);
   const [connectingWalletName, setConnectingWalletName] = useState<string | null>(null);
 
   // States for copy feedback & dual balance status
@@ -185,13 +185,13 @@ export function SolanaPaymentFlow({
             error: null,
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("[SolanaPaymentFlow] Error fetching balances:", err);
         if (active) {
           setBalances(prev => ({
             ...prev,
             loading: false,
-            error: err.message || "Failed to fetch balances",
+            error: getErrorMessage(err, "Failed to fetch balances"),
           }));
         }
       }
@@ -414,21 +414,23 @@ export function SolanaPaymentFlow({
       rawNetworkKey = getValidatedSolanaNetwork();
       expectedGenesis = getExpectedGenesisHash();
       validatedNetworkName = getNetworkDisplayName();
-    } catch (envErr: any) {
-      onError(envErr.message);
+    } catch (envErr: unknown) {
+      onError(getErrorMessage(envErr, tr("payment.solana.transactionFailed")));
       return;
     }
 
     // -- Validate merchant address at call-time, not module load-time --
-    if (!MERCHANT_ADDRESS_RAW) {
+    const merchantAddressRaw =
+      import.meta.env.VITE_SOLANA_MERCHANT_ADDRESS as string | undefined;
+    if (!merchantAddressRaw) {
       onError("VITE_SOLANA_MERCHANT_ADDRESS is not set. Check your .env file.");
       return;
     }
     let merchantKey: PublicKey;
     try {
-      merchantKey = new PublicKey(MERCHANT_ADDRESS_RAW);
+      merchantKey = new PublicKey(merchantAddressRaw);
     } catch {
-      onError(`Invalid merchant public key: "${MERCHANT_ADDRESS_RAW}"`);
+      onError(`Invalid merchant public key: "${merchantAddressRaw}"`);
       return;
     }
 
@@ -584,14 +586,14 @@ export function SolanaPaymentFlow({
         console.log("[SolanaPaymentFlow] Subscription verified:", result.subscriptionId);
         onSuccess();
         onProcessingChange(false);
-      } catch (verifyErr: any) {
+      } catch (verifyErr: unknown) {
         console.error("[SolanaPaymentFlow] Backend verification error:", verifyErr);
-        onError(verifyErr.message || "Failed to verify transaction. Please contact support.");
+        onError(getErrorMessage(verifyErr, "Failed to verify transaction. Please contact support."));
         setTxSignature(null);
         setVerifyingSignature(null);
         onProcessingChange(false);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // -- Unified error handler --
       // All failure paths flow here: user rejection in Phantom/Solflare,
       // simulation failure, on-chain revert, network timeout, or balance errors.
@@ -600,20 +602,23 @@ export function SolanaPaymentFlow({
       // Detect wallet-specific provider errors to improve diagnostic clarity.
       // Solflare throws 'WalletSignTransactionError' on user rejection or
       // provider-level failures; Phantom uses similar error names.
+      const errorRecord = getErrorRecord(err);
+      const errorName = typeof errorRecord?.name === "string" ? errorRecord.name : "";
       if (
-        err.name === 'WalletSignTransactionError' ||
-        err.name === 'TransactionSignatureError' ||
-        err.name === 'WalletSendTransactionError'
+        errorName === 'WalletSignTransactionError' ||
+        errorName === 'TransactionSignatureError' ||
+        errorName === 'WalletSendTransactionError'
       ) {
+        const errorCode = errorRecord?.code;
         console.error(
-          `[SolanaPaymentFlow] Wallet provider error [${err.name}]:`,
-          err.message,
-          // err.code is set by some providers (e.g. 4001 = user rejected)
-          err.code != null ? `(code: ${err.code})` : ''
+          `[SolanaPaymentFlow] Wallet provider error [${errorName}]:`,
+          getErrorMessage(err, "Unknown wallet error"),
+          errorCode != null ? `(code: ${String(errorCode)})` : ''
         );
       }
 
-      const simLogs = err?.logs as string[] | undefined;
+      const rawLogs = errorRecord?.logs;
+      const simLogs = Array.isArray(rawLogs) ? rawLogs.filter((log): log is string => typeof log === "string") : undefined;
       if (simLogs?.length) {
         console.error("[SolanaPaymentFlow] SendTransactionError — RPC simulation logs:");
         simLogs.forEach((log, i) => console.error(`  [${i}] ${log}`));
@@ -624,7 +629,7 @@ export function SolanaPaymentFlow({
       const logError = simLogs?.find(
         (l) => l.includes("Error") || l.includes("failed") || l.includes("insufficient")
       );
-      onError(logError ?? err?.message ?? tr("payment.solana.transactionFailed"));
+      onError(logError ?? getErrorMessage(err, tr("payment.solana.transactionFailed")));
       setTxSignature(null);
       setVerifyingSignature(null);
       // Always re-enable the button on any error path

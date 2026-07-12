@@ -3,16 +3,14 @@ import type {
     WalletDaySwapSummary,
     WalletDayToken,
     TokenHourlyVolume,
-    WalletTxDetail,
-    WalletTxTransfer,
-    WalletFeeReceiver,
     WalletTxInstructionDetail,
     WalletInstruction,
     WalletInnerInstruction,
 } from "./dtos/walletDataObjects.js";
-import { getWalletSwaps, getWalletTransfers } from "./walletTransfersSwaps.service.js";
+import { getWalletSwaps } from "./walletTransfersSwaps.service.js";
 import { resolveEnhancedTransactions } from "./providers/walletEnhancedTx.service.js";
 import { roundUsd } from "./walletNormalization.utils.js";
+import { getMobulaChartData } from "@sv/services/tokens/mobula-chart-data.js";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -173,6 +171,24 @@ export async function getWalletDayActivitySummary(
 
         swapsSummary.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
 
+        const uniqueAddrs = [...new Set(allTokens.map((t) => t.address))];
+        const priceResults = await Promise.allSettled(
+            uniqueAddrs.map((addr) => getMobulaChartData(addr, "24h")),
+        );
+        const priceMap = new Map<string, { timestampMs: number; price: number }[]>();
+        for (let i = 0; i < uniqueAddrs.length; i++) {
+            const res = priceResults[i];
+            if (res?.status === "fulfilled" && res.value.length > 0) {
+                priceMap.set(
+                    uniqueAddrs[i],
+                    res.value.map((p) => ({ timestampMs: p.unixTimestampMs, price: p.price })),
+                );
+            }
+        }
+        for (const token of allTokens) {
+            token.priceHistory = priceMap.get(token.address);
+        }
+
         return {
             walletAddress: address,
             date,
@@ -196,122 +212,6 @@ export async function getWalletDayActivitySummary(
             allTokens: [],
             totalTokensTraded: 0,
             swaps: [],
-        };
-    }
-}
-
-export async function getWalletTxDetail(
-    address: string,
-    signature: string,
-): Promise<WalletTxDetail> {
-    try {
-        const nowMs = Date.now();
-        const fromMs = nowMs - 365 * 24 * 60 * 60 * 1000;
-        const toMs = nowMs;
-
-        const txs = await resolveEnhancedTransactions(address, fromMs, toMs);
-        const tx = txs.find((t) => t.signature === signature);
-
-        if (!tx) {
-            return {
-                transactionHash: signature,
-                timestamp: "",
-                pair: "",
-                valueUsd: 0,
-                action: "buy",
-                transfers: [],
-                feePaid: 0,
-                feePaidUsd: null,
-                feePayer: address,
-                feeReceivers: [],
-            };
-        }
-
-        const tsSec = Number(tx.timestamp ?? tx.info?.timestamp ?? 0);
-        const timestamp = tsSec > 0 ? new Date(tsSec * 1000).toISOString() : "";
-
-        const transfers: WalletTxTransfer[] = [];
-
-        const tokenTransfers = tx.tokenTransfers ?? [];
-        for (const tt of tokenTransfers) {
-            const mint = String(tt.mint ?? "").trim();
-            const amount = Number(tt.tokenAmount ?? tt.amount ?? 0);
-            if (!mint || amount <= 0) continue;
-
-            transfers.push({
-                from: String(tt.fromUserAccount ?? tt.fromWallet ?? ""),
-                to: String(tt.toUserAccount ?? tt.toWallet ?? ""),
-                mint,
-                symbol: (tt.symbol ?? tt.tokenSymbol)?.toUpperCase() ?? null,
-                name: null,
-                logoUri: null,
-                amount,
-                amountUsd: null,
-                fromTokenAccount: tt.fromTokenAccount ?? undefined,
-                toTokenAccount: tt.toTokenAccount ?? undefined,
-            });
-        }
-
-        const nativeTransfers = tx.nativeTransfers ?? [];
-        const feeReceivers: WalletFeeReceiver[] = [];
-        const feePayer = String(tx.feePayer ?? tx.info?.feePayer ?? address);
-        for (const nt of nativeTransfers) {
-            const amount = Number(nt.amount ?? 0);
-            if (amount <= 0) continue;
-
-            transfers.push({
-                from: String(nt.fromUserAccount ?? nt.fromWallet ?? ""),
-                to: String(nt.toUserAccount ?? nt.toWallet ?? ""),
-                mint: SOL_MINT,
-                symbol: "SOL",
-                name: "Solana",
-                logoUri: null,
-                amount: amount / 1e9,
-                amountUsd: null,
-            });
-
-            if (amount === tx.fee) {
-                feeReceivers.push({
-                    address: String(nt.toUserAccount ?? nt.toWallet ?? ""),
-                    amount: amount / 1e9,
-                    amountUsd: null,
-                    label: String(nt.toUserAccount ?? nt.toWallet ?? ""),
-                });
-            }
-        }
-
-        const feePaid = Number(tx.fee ?? tx.info?.fee ?? 0);
-
-        const soldSymbol = transfers.find((t) => t.from === address)?.symbol ?? null;
-        const boughtSymbol = transfers.find((t) => t.to === address)?.symbol ?? null;
-        const pair = [soldSymbol, boughtSymbol].filter(Boolean).join(" → ") || "Unknown";
-        const action = boughtSymbol ? "buy" : "sell";
-
-        return {
-            transactionHash: signature,
-            timestamp,
-            pair,
-            valueUsd: 0,
-            action,
-            transfers,
-            feePaid,
-            feePaidUsd: null,
-            feePayer,
-            feeReceivers,
-        };
-    } catch (error) {
-        console.error("[getWalletTxDetail] failed", { address, signature, error });
-        return {
-            transactionHash: signature,
-            timestamp: "",
-            pair: "",
-            valueUsd: 0,
-            action: "buy",
-            transfers: [],
-            feePaid: 0,
-            feePaidUsd: null,
-            feePayer: address,
-            feeReceivers: [],
         };
     }
 }

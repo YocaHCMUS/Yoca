@@ -1,6 +1,17 @@
 // server/src/services/stripe.service.ts
 import Stripe from "stripe";
 
+type InvoicePaymentLike = {
+  is_default?: boolean;
+  payment?: {
+    payment_intent?: Stripe.PaymentIntent | string | null;
+  } | null;
+};
+
+type InvoiceWithPaymentsLike = Stripe.Invoice & {
+  payments?: { data?: InvoicePaymentLike[] } | null;
+  confirmation_secret?: { client_secret?: string | null } | null;
+};
 // Lazily initialised so the server boots even without a key in dev.
 let _stripe: Stripe | null = null;
 
@@ -220,9 +231,10 @@ export async function upgradeSubscription(
         expand: ["payments.data.payment.payment_intent"],
       })
     : undefined;
-  const invoicePayment = (invoice as any)?.payments?.data?.find(
-    (payment: any) => payment.is_default,
-  ) ?? (invoice as any)?.payments?.data?.[0];
+  const invoiceWithPayments = invoice as InvoiceWithPaymentsLike | undefined;
+  const invoicePayment = invoiceWithPayments?.payments?.data?.find(
+    (payment) => payment.is_default,
+  ) ?? invoiceWithPayments?.payments?.data?.[0];
   const paymentIntent = invoicePayment?.payment?.payment_intent as
     | Stripe.PaymentIntent
     | string
@@ -234,7 +246,7 @@ export async function upgradeSubscription(
     clientSecret:
       typeof paymentIntent === "object"
         ? paymentIntent.client_secret
-        : (invoice as any)?.confirmation_secret?.client_secret,
+        : invoiceWithPayments?.confirmation_secret?.client_secret,
     applied: !updatedSubscription.pending_update,
     processing:
       isBankPayment &&

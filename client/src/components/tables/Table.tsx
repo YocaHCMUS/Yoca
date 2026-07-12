@@ -44,7 +44,7 @@ function normalizeTableHeaders(headers: TableColumnHeader[]): {
 }
 
 
-type CellRenderer = (value: any, row: any[], rowIndex: number) => React.ReactNode;
+type CellRenderer<T = unknown> = (value: T, row: T[], rowIndex: number) => React.ReactNode;
 
 export enum SortType {
     String = 'string',
@@ -141,23 +141,23 @@ export interface ServerPaginationConfig {
     onPageChange: (page: number) => void | boolean | Promise<void | boolean>;
 }
 
-export interface TableProps {
+export interface TableProps<T = unknown> {
     title: string;
     headers: TableColumnHeader[];
-    initialFilters: Partial<any>;
-    fetcher: Promise<any>;
+    initialFilters: Partial<Record<number, FilterStateValue>>;
+    fetcher: Promise<unknown>;
     filterSchema: Record<number, FilterConfig | null>;
     actions?: React.ReactNode;
     classnames?: string[];
-    cellRenderers?: (CellRenderer | null)[];
-    dataEntries?: any[][];
+    cellRenderers?: (CellRenderer<T> | null)[];
+    dataEntries?: T[][];
     isSortable?: boolean[];
     sortConfigs?: Record<number, SortConfig>;
     maxHeight?: number;
     /** Called when the user clicks a data row. Receives the original row array and its index inside dataEntries. */
-    onRowClick?: (row: any[], rowIndex: number) => void;
+    onRowClick?: (row: T[], rowIndex: number) => void;
     /** Optional row-level className callback for stateful row styling (e.g., selected row). */
-    rowClassName?: (row: any[], rowIndex: number) => string | undefined;
+    rowClassName?: (row: T[], rowIndex: number) => string | undefined;
     /** Enable CSV export menu in table header (default: true). */
     enableExport?: boolean;
     serverPagination?: ServerPaginationConfig;
@@ -165,7 +165,7 @@ export interface TableProps {
     /** Header AI action button */
     onTableAiAction?: (e: React.MouseEvent<HTMLElement>) => void;
     /** Per-row AI action button */
-    onRowAiAction?: (row: any[], rowIndex: number, e: React.MouseEvent<HTMLElement>) => void;
+    onRowAiAction?: (row: T[], rowIndex: number, e: React.MouseEvent<HTMLElement>) => void;
     /** Optional wrapper className passed to the shared table shell. */
     wrapperClassName?: string;
 }
@@ -418,7 +418,7 @@ function matchesFilterSchema(
 }
 
 function getFilterCandidateValues(
-    dataEntries: any[][],
+    dataEntries: unknown[][],
     columnIndex: number,
     schema: FilterConfig,
     fallbackField?: string,
@@ -440,7 +440,7 @@ function getFilterCandidateValues(
     return Array.from(values).sort();
 }
 
-export const Table: React.FC<TableProps> = ({
+export const Table = <T = unknown,>({
     title,
     headers,
     initialFilters,
@@ -460,7 +460,7 @@ export const Table: React.FC<TableProps> = ({
     onTableAiAction,
     onRowAiAction,
     wrapperClassName,
-}) => {
+}: TableProps<T>) => {
     const { tr } = useLocalization();
     const { labels: headerLabels, minWidths: headerMinWidths, aligns: headerAligns } =
         normalizeTableHeaders(headers);
@@ -775,7 +775,7 @@ export const Table: React.FC<TableProps> = ({
     const skeletonHeaders = carbonHeaders.map(({ key, header }) => ({ key, header }));
 
     const rows = paginatedRows.map((row, rowIndex) => {
-        const rowData: any = { id: `row-${page}-${rowIndex}` };
+        const rowData: { id: string } & Record<string, unknown> = { id: `row-${page}-${rowIndex}` };
         row.forEach((entry, index) => {
             // Store raw data for sorting
             rowData[`header-${index}`] = entry;
@@ -806,9 +806,9 @@ export const Table: React.FC<TableProps> = ({
     * Handle custom sorts
     */
     const universalSortRow = (
-        cellA: any,
-        cellB: any,
-        { key, sortDirection, sortStates, locale }: any
+        cellA: unknown,
+        cellB: unknown,
+        { key, sortDirection, sortStates, locale }: { key: string; sortDirection: string; sortStates: { DESC: string }; locale: string }
     ) => {
         // Guard against undefined key
         if (!key) {
@@ -833,15 +833,16 @@ export const Table: React.FC<TableProps> = ({
 
         // 1. Dynamic Logic Selection
         switch (columnConfig.type) {
-            case SortType.Priority:
+            case SortType.Priority: {
                 console.log("priority");
                 const map = columnConfig.priorityMap || {};
-                comparison = (map[sortValueA as any] ?? 99) - (map[sortValueB as any] ?? 99);
+                comparison = (map[sortValueA as keyof typeof map] ?? 99) - (map[sortValueB as keyof typeof map] ?? 99);
                 break;
-            case SortType.Date:
+            }
+            case SortType.Date: {
                 console.log("date");
-                const dateA = new Date(sortValueA as any).getTime();
-                const dateB = new Date(sortValueB as any).getTime();
+                const dateA = new Date(sortValueA as string | number).getTime();
+                const dateB = new Date(sortValueB as string | number).getTime();
                 console.log(`cellA: ${sortValueA} - ${dateA}; cellB: ${sortValueB} - ${dateB}`);
                 // Handle invalid dates
                 if (isNaN(dateA) && isNaN(dateB)) comparison = 0;
@@ -849,6 +850,7 @@ export const Table: React.FC<TableProps> = ({
                 else if (isNaN(dateB)) comparison = -1;
                 else comparison = dateA - dateB;
                 break;
+            }
             case SortType.Number:
                 console.log("number");
                 comparison = Number(sortValueA) - Number(sortValueB);
@@ -941,11 +943,11 @@ export const Table: React.FC<TableProps> = ({
                     step={schema.step ?? 1}
                     stepMultiplier={10}
                     hideTextInput={true}
-                    onChange={(nextValue: any) => {
+                    onChange={(nextValue: { value: number; valueUpper?: number }) => {
                         setValue({
                             ...(resolvedRangeValue ?? {}),
                             min: nextValue.value,
-                            max: nextValue.valueUpper,
+                            max: nextValue.valueUpper ?? nextValue.value,
                         });
                     }}
                 />

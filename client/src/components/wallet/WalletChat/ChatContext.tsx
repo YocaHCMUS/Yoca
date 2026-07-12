@@ -121,12 +121,13 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
   useEffect(() => {
     if (!user?.userId) return;
     let cancelled = false;
-    client.api.chat.usage.$get()
-      .then((res) => res.json())
-      .then((data) => {
+    (async () => {
+      try {
+        const res = await client.api.chat.usage.$get();
+        const data = await res.json();
         if (!cancelled) setUsage(data as ChatAiUsage);
-      })
-      .catch(() => {});
+      } catch { /* ignore */ }
+    })();
     return () => { cancelled = true; };
   }, [user?.userId]);
 

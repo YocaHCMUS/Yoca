@@ -3,7 +3,7 @@ import { mapWithConcurrency } from "@sv/util/concurrency.js";
 import type {
     PnLDataPoint
 } from "@sv/services/wallet/dtos/walletDataObjects.js";
-import type { PnLAggregation, WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObjects.js";
+import type { WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { getCumulativePnL } from "@sv/services/wallet/walletCharts.service.js";
 
 interface SingleWalletPnL {

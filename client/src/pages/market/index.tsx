@@ -2,6 +2,7 @@ import client from "@/api/main";
 import { ProfitableTradersView } from "@/components/market/ProfitableTradersView";
 import {
     DexTable,
+    DexTableItem,
     INITIAL_FILTERS,
     SortKey,
     TableFilters,
@@ -185,27 +186,6 @@ export default function MarketPage() {
     { label: tr("marketPage.change24h"), key: "change24h", unit: "%" },
   ];
 
-  const SYNC_OPTIONS = [
-    { key: "trending-5m", label: "Trending 5m", tab: "trending", sub: "5m" },
-    { key: "trending-1h", label: "Trending 1h", tab: "trending", sub: "1h" },
-    { key: "trending-6h", label: "Trending 6h", tab: "trending", sub: "6h" },
-    { key: "trending-24h", label: "Trending 24h", tab: "trending", sub: "24h" },
-    { key: "top-volume", label: "Top Volume", tab: "top", sub: "volume" },
-    { key: "top-txns", label: "Top Txns", tab: "top", sub: "txns" },
-    { key: "gainers-5m", label: "Top Gainers 5m", tab: "gainers", sub: "5m" },
-    { key: "gainers-1h", label: "Top Gainers 1h", tab: "gainers", sub: "1h" },
-    { key: "gainers-6h", label: "Top Gainers 6h", tab: "gainers", sub: "6h" },
-    { key: "gainers-24h", label: "Top Gainers 24h", tab: "gainers", sub: "24h" },
-    { key: "new-pairs", label: "New Pairs", tab: "newPairs", sub: "age" },
-  ];
-
-  const currentDropdownLabel = useMemo(() => {
-    if (activeTab === "trending") return `Trending ${trendingDuration}`;
-    if (activeTab === "gainers") return `Top Gainers ${trendingDuration}`;
-    if (activeTab === "top") return `Top ${topSort === "volume" ? "Volume" : "Txns"}`;
-    if (activeTab === "newPairs") return "New Pairs";
-    return "";
-  }, [activeTab, trendingDuration, topSort]);
 
   const trendingPools = useGet(
     client.api.tokens["market-pools"].trending,
@@ -621,7 +601,7 @@ export default function MarketPage() {
                         (newPairs.isLoading ||
                           newPairs.isValidating))
                     }
-                    data={dataToRender as any}
+                    data={dataToRender as DexTableItem[]}
                     sortKey={sortKey}
                     sortDirection={sortDirection}
                     filters={filters}

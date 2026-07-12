@@ -17,16 +17,9 @@ import { StarFilled, Wallet } from "@carbon/react/icons";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useWalletLabels } from "@/hooks/profile/useWalletLabels";
-import styles from "@/components/profile/shared/profile.module.scss";
 import { useProfileOverviewData } from "@/hooks/profile/useProfileOverviewData";
 
-interface LinkedWalletsResponse {
-  userId: string;
-  rows: Array<{
-    walletAddress: string;
-    isAuthWallet: boolean;
-  }>;
-}
+type TokenMetaMapItem = { address: string; symbol?: string | null; name?: string | null } & Record<string, unknown>;
 
 export function ProfileWatchlistTab() {
   const { tr, fmt } = useLocalization();
@@ -64,11 +57,11 @@ export function ProfileWatchlistTab() {
 
   const tokenMetaByAddress = useMemo(() => {
     const data = tokenMeta.data;
-    if (!data) return {} as Record<string, any>;
+    if (!data) return {} as Record<string, TokenMetaMapItem>;
     if (Array.isArray(data)) {
-      return Object.fromEntries(data.map((item: any) => [item.address, item]));
+      return Object.fromEntries(data.map((item: TokenMetaMapItem) => [item.address, item]));
     }
-    return data as Record<string, any>;
+    return data as Record<string, TokenMetaMapItem>;
   }, [tokenMeta.data]);
 
   const linkedWallets = useGet(client.api.profile["linked-wallets"], 200);
@@ -550,3 +543,6 @@ export function ProfileWatchlistTab() {
 }
 
 export default ProfileWatchlistTab;
+
+
+

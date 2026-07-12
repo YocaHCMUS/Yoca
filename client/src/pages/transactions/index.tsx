@@ -36,6 +36,30 @@ type ParsedTransfer = {
   programId: string;
 };
 
+type TokenTransferLike = {
+  symbol?: unknown;
+  tokenSymbol?: unknown;
+  tokenName?: unknown;
+  fromWallet?: unknown;
+  fromUserAccount?: unknown;
+  toWallet?: unknown;
+  toUserAccount?: unknown;
+  amount?: unknown;
+  tokenAmount?: unknown;
+  tokenAddress?: unknown;
+  mint?: unknown;
+  valueUsd?: unknown;
+};
+
+type TransactionSummaryLike = RawParsedTransaction & {
+  summary?: unknown;
+  transactionSummary?: unknown;
+  meta?: { summary?: unknown };
+  events?: { summary?: unknown; swap?: { source?: unknown } };
+  source?: unknown;
+  programName?: unknown;
+  tokenTransfers?: TokenTransferLike[];
+};
 type RawParsedTransaction = {
   signature: string;
   slot: number;
@@ -90,7 +114,7 @@ function isAddressLikeSymbol(value: unknown, mint: string): boolean {
   return false;
 }
 
-function resolveDisplaySymbol(transfer: any, mint: string): string {
+function resolveDisplaySymbol(transfer: TokenTransferLike, mint: string): string {
   if (mint === WRAPPED_SOL_MINT) {
     return "WSOL";
   }
@@ -171,7 +195,7 @@ function prettifySourceText(source: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function buildTransactionSummaryText(tx: any, signer: string): string {
+function buildTransactionSummaryText(tx: TransactionSummaryLike, signer: string): string {
   const summaryCandidates = [
     tx?.summary,
     tx?.transactionSummary,
@@ -186,19 +210,19 @@ function buildTransactionSummaryText(tx: any, signer: string): string {
     }
   }
 
-  const tokenTransfers = Array.isArray(tx?.tokenTransfers) ? tx.tokenTransfers : [];
-  const outflows = tokenTransfers.filter((tt: any) => {
+  const tokenTransfers: TokenTransferLike[] = Array.isArray(tx.tokenTransfers) ? tx.tokenTransfers : [];
+  const outflows = tokenTransfers.filter((tt: TokenTransferLike) => {
     const from = String(tt?.fromWallet ?? tt?.fromUserAccount ?? "").trim();
     const amount = Number(tt?.amount ?? tt?.tokenAmount ?? 0);
     return from === signer && Number.isFinite(amount) && amount > 0;
   });
-  const inflows = tokenTransfers.filter((tt: any) => {
+  const inflows = tokenTransfers.filter((tt: TokenTransferLike) => {
     const to = String(tt?.toWallet ?? tt?.toUserAccount ?? "").trim();
     const amount = Number(tt?.amount ?? tt?.tokenAmount ?? 0);
     return to === signer && Number.isFinite(amount) && amount > 0;
   });
 
-  const byLargestAmount = (a: any, b: any) => {
+  const byLargestAmount = (a: TokenTransferLike, b: TokenTransferLike) => {
     const aAmount = Number(a?.amount ?? a?.tokenAmount ?? 0);
     const bAmount = Number(b?.amount ?? b?.tokenAmount ?? 0);
     return bAmount - aAmount;
@@ -245,411 +269,6 @@ function buildTransactionSummaryText(tx: any, signer: string): string {
   }
 
   return "Summary unavailable";
-}
-
-function isRentExemptLikeLamports(amountLamports: number): boolean {
-  if (!Number.isFinite(amountLamports) || amountLamports <= 0) return false;
-
-  // Common ATA rent deposits seen in enhanced tx data.
-  const commonRentDeposits = [2_039_280, 2_074_080];
-  return commonRentDeposits.some((rent) => Math.abs(amountLamports - rent) <= 120_000);
-}
-
-type InstructionFrame = {
-  order: number;
-  programId: string;
-  accounts: Set<string>;
-};
-
-function flattenInstructionFrames(instructions: any[]): InstructionFrame[] {
-  const frames: InstructionFrame[] = [];
-  let order = 0;
-
-  for (const ins of instructions) {
-    const topAccounts = Array.isArray(ins?.accounts)
-      ? ins.accounts.map((a: unknown) => String(a ?? "").trim()).filter(Boolean)
-      : [];
-
-    frames.push({
-      order: order++,
-      programId: String(ins?.programId ?? ""),
-      accounts: new Set(topAccounts),
-    });
-
-    const inners = Array.isArray(ins?.innerInstructions) ? ins.innerInstructions : [];
-    for (const inner of inners) {
-      const innerAccounts = Array.isArray(inner?.accounts)
-        ? inner.accounts.map((a: unknown) => String(a ?? "").trim()).filter(Boolean)
-        : [];
-
-      frames.push({
-        order: order++,
-        programId: String(inner?.programId ?? ""),
-        accounts: new Set(innerAccounts),
-      });
-    }
-  }
-
-  return frames;
-}
-
-function inferEventOrder(
-  frames: InstructionFrame[],
-  event: {
-    fromUser?: string;
-    toUser?: string;
-    fromToken?: string;
-    toToken?: string;
-    mint?: string;
-    isNative: boolean;
-  },
-  fallbackOrder: number,
-): number {
-  if (frames.length === 0) return fallbackOrder;
-
-  let bestOrder = fallbackOrder;
-  let bestScore = -1;
-
-  for (const frame of frames) {
-    let score = 0;
-    const has = (addr?: string) => Boolean(addr && frame.accounts.has(addr));
-
-    if (event.isNative) {
-      if (has(event.fromUser) && has(event.toUser)) score += 8;
-    } else {
-      if (has(event.fromToken) && has(event.toToken)) score += 10;
-      if (has(event.fromUser) && has(event.toUser)) score += 7;
-      if (has(event.mint)) score += 2;
-    }
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestOrder = frame.order;
-    } else if (score === bestScore && score > 0 && frame.order < bestOrder) {
-      bestOrder = frame.order;
-    }
-  }
-
-  return bestScore > 0 ? bestOrder : fallbackOrder;
-}
-
-
-/* ─── Core: build summary flows from raw data ─── */
-function buildSummaryFlows(
-  tokenTransfers: any[],
-  nativeTransfers: any[],
-  instructions: any[],
-  signer: string,
-  txFeeLamports: number,
-  accountData: any[] = [],
-): Omit<SummaryFlow, "color" | "pairKey">[] {
-  const frames = flattenInstructionFrames(instructions ?? []);
-
-  const tokenAccountOwner = new Map<string, string>();
-
-  for (const tt of tokenTransfers) {
-    const fromToken = String(tt.fromTokenAccount ?? "").trim();
-    const toToken = String(tt.toTokenAccount ?? "").trim();
-    const fromUser = String(tt.fromUserAccount ?? tt.fromWallet ?? "").trim();
-    const toUser = String(tt.toUserAccount ?? tt.toWallet ?? "").trim();
-
-    if (fromToken && fromUser) tokenAccountOwner.set(fromToken, fromUser);
-    if (toToken && toUser) tokenAccountOwner.set(toToken, toUser);
-  }
-
-  for (const row of accountData) {
-    const changes = Array.isArray(row?.tokenBalanceChanges)
-      ? row.tokenBalanceChanges
-      : [];
-    for (const change of changes) {
-      const tokenAccount = String(change?.tokenAccount ?? "").trim();
-      const userAccount = String(change?.userAccount ?? "").trim();
-      if (tokenAccount && userAccount) {
-        tokenAccountOwner.set(tokenAccount, userAccount);
-      }
-    }
-  }
-
-  const canonicalWallet = (wallet: string, tokenAccount?: string): string => {
-    const byToken = String(tokenAccount ?? "").trim();
-    if (byToken) {
-      const owner = tokenAccountOwner.get(byToken);
-      if (owner) return owner;
-    }
-
-    const owner = tokenAccountOwner.get(wallet);
-    return owner ?? wallet;
-  };
-
-  // Token accounts are utility accounts (ATA/temporary) and can receive rent create/close transfers.
-  const tokenAccounts = new Set<string>();
-  for (const tt of tokenTransfers) {
-    const fromToken = String(tt.fromTokenAccount ?? "").trim();
-    const toToken = String(tt.toTokenAccount ?? "").trim();
-    if (fromToken) tokenAccounts.add(fromToken);
-    if (toToken) tokenAccounts.add(toToken);
-  }
-  for (const row of accountData) {
-    const changes = Array.isArray(row?.tokenBalanceChanges)
-      ? row.tokenBalanceChanges
-      : [];
-    for (const change of changes) {
-      const tokenAccount = String(change?.tokenAccount ?? "").trim();
-      if (tokenAccount) tokenAccounts.add(tokenAccount);
-    }
-  }
-
-  const nativeMaxByDirection = new Map<string, number>();
-  const nativeSmallTokenTouchFrequency = new Map<number, number>();
-  for (const nt of nativeTransfers) {
-    const fromWallet = String(nt?.fromWallet ?? nt?.fromUserAccount ?? "").trim();
-    const toWallet = String(nt?.toWallet ?? nt?.toUserAccount ?? "").trim();
-    const amountLamports = Number(nt?.amount ?? 0);
-
-    if (!fromWallet || !toWallet || !Number.isFinite(amountLamports) || amountLamports <= 0) {
-      continue;
-    }
-
-    const key = `${fromWallet}→${toWallet}`;
-    const prev = nativeMaxByDirection.get(key) ?? 0;
-    if (amountLamports > prev) {
-      nativeMaxByDirection.set(key, amountLamports);
-    }
-
-    const touchesTokenAccount = tokenAccounts.has(fromWallet) || tokenAccounts.has(toWallet);
-    if (touchesTokenAccount && amountLamports <= 5_000_000) {
-      const rounded = Math.round(amountLamports);
-      nativeSmallTokenTouchFrequency.set(rounded, (nativeSmallTokenTouchFrequency.get(rounded) ?? 0) + 1);
-    }
-  }
-
-  const shouldHideNative = (fromWallet: string, toWallet: string, amountLamports: number): boolean => {
-    const fromIsTokenAccount = tokenAccounts.has(fromWallet);
-    const toIsTokenAccount = tokenAccounts.has(toWallet);
-
-    // Solscan-style visualization: hide native movements that touch token accounts
-    // (ATA rent, wrap/unwrap plumbing, create/close account bookkeeping).
-    if (fromIsTokenAccount || toIsTokenAccount) {
-      const touchesSigner = fromWallet === signer || toWallet === signer;
-      const feeBase = Number.isFinite(txFeeLamports) && txFeeLamports > 0 ? txFeeLamports : 5000;
-      const isTinyPlumbingAmount = amountLamports <= Math.max(1_000_000, feeBase * 20);
-      const reverseMaxLamports = nativeMaxByDirection.get(`${toWallet}→${fromWallet}`) ?? 0;
-      const isTinyReverseLeg =
-        reverseMaxLamports > 0 &&
-        amountLamports <= 10_000_000 &&
-        amountLamports * 8 <= reverseMaxLamports;
-      const isRentLike = isRentExemptLikeLamports(amountLamports);
-      const roundedAmount = Math.round(amountLamports);
-      const isRepeatedSmallTokenTouch =
-        amountLamports <= 5_000_000 &&
-        (nativeSmallTokenTouchFrequency.get(roundedAmount) ?? 0) >= 2;
-
-      // Hide ATA rent deposits/refunds (Solscan keeps these in actions/balance change, not graph lines).
-      if (touchesSigner && (isRentLike || isRepeatedSmallTokenTouch)) {
-        return true;
-      }
-
-      // Hide tiny reverse signer<->token-account legs (typically close-account refunds).
-      if (touchesSigner && isTinyReverseLeg) {
-        return true;
-      }
-
-      // Keep meaningful signer-related wrap transfers, hide tiny fee/rent-like plumbing lines.
-      if (touchesSigner && !isTinyPlumbingAmount) {
-        return false;
-      }
-
-      return true;
-    }
-
-    return false;
-  };
-
-  /* STEP 2 — Keep each token transfer as an execution event */
-  const events: Omit<SummaryFlow, "color" | "pairKey" | "id" | "sequenceNo">[] = [];
-
-  for (let i = 0; i < tokenTransfers.length; i += 1) {
-    const tt = tokenTransfers[i];
-    const rawFrom = String(tt.fromWallet ?? tt.fromUserAccount ?? "").trim();
-    const rawTo = String(tt.toWallet ?? tt.toUserAccount ?? "").trim();
-    const fromToken = String(tt.fromTokenAccount ?? "").trim();
-    const toToken = String(tt.toTokenAccount ?? "").trim();
-    const fromWallet = canonicalWallet(rawFrom, fromToken);
-    const toWallet = canonicalWallet(rawTo, toToken);
-    const tokenAddress = String(tt.tokenAddress ?? tt.mint ?? "").trim();
-    const amount = Number(tt.amount ?? tt.tokenAmount ?? 0);
-
-    if (!fromWallet || !toWallet || !tokenAddress || !Number.isFinite(amount) || amount === 0) {
-      continue;
-    }
-
-    if (fromWallet === toWallet) {
-      continue;
-    }
-
-    const symbol = resolveDisplaySymbol(tt, tokenAddress);
-
-    const eventOrder = inferEventOrder(
-      frames,
-      {
-        fromUser: fromWallet,
-        toUser: toWallet,
-        fromToken,
-        toToken,
-        mint: tokenAddress,
-        isNative: false,
-      },
-      i,
-    );
-
-    events.push({
-      rawIndex: eventOrder,
-      fromAddr: fromWallet,
-      toAddr: toWallet,
-      fromTokenAddr: fromToken || undefined,
-      toTokenAddr: toToken || undefined,
-      amount,
-      valueUsd: Number(tt.valueUsd ?? 0),
-      valueUsdSource: String(tt.valueUsdSource ?? "none") as "historical" | "inferred" | "none",
-      symbol,
-      tokenMint: tokenAddress,
-      isNative: false,
-    });
-  }
-
-  /* STEP 3 — Keep each native transfer as an execution event */
-  const nativeOffset = Math.max(tokenTransfers.length, frames.length + tokenTransfers.length);
-  const seenNativeTransfers = new Set<string>();
-  const aggregatedSignerTokenNative = new Map<
-    string,
-    {
-      rawIndex: number;
-      fromAddr: string;
-      toAddr: string;
-      amountLamports: number;
-      valueUsd: number;
-      valueUsdSource: "historical" | "inferred" | "none";
-    }
-  >();
-
-  for (let i = 0; i < nativeTransfers.length; i += 1) {
-    const nt = nativeTransfers[i];
-    const fromWallet = String(nt.fromWallet ?? nt.fromUserAccount ?? "").trim();
-    const toWallet = String(nt.toWallet ?? nt.toUserAccount ?? "").trim();
-    const amountLamports = Number(nt.amount ?? 0);
-    const roundedAmount = Number.isFinite(amountLamports) ? Math.round(amountLamports) : 0;
-
-    if (!fromWallet || !toWallet || !Number.isFinite(amountLamports) || amountLamports === 0) {
-      continue;
-    }
-
-    // Some providers emit duplicate native rows for the same movement.
-    const dedupeKey = `${fromWallet}→${toWallet}:${roundedAmount}`;
-    if (seenNativeTransfers.has(dedupeKey)) {
-      continue;
-    }
-    seenNativeTransfers.add(dedupeKey);
-
-    if (shouldHideNative(fromWallet, toWallet, amountLamports)) {
-      continue;
-    }
-
-    const eventOrder = inferEventOrder(
-      frames,
-      {
-        fromUser: fromWallet,
-        toUser: toWallet,
-        isNative: true,
-      },
-      nativeOffset + i,
-    );
-
-    const touchesTokenAccount = tokenAccounts.has(fromWallet) || tokenAccounts.has(toWallet);
-    const touchesSigner = fromWallet === signer || toWallet === signer;
-
-    // Solscan-like cleanup: collapse signer<->token-account native plumbing into one net SOL line.
-    if (touchesTokenAccount && touchesSigner) {
-      const aggregateKey = `${fromWallet}→${toWallet}`;
-      const existing = aggregatedSignerTokenNative.get(aggregateKey);
-
-      if (existing) {
-        existing.amountLamports += amountLamports;
-        existing.valueUsd += Number(nt.valueUsd ?? 0);
-        existing.rawIndex = Math.min(existing.rawIndex, eventOrder);
-
-        const src = String(nt.valueUsdSource ?? "none") as "historical" | "inferred" | "none";
-        if (existing.valueUsdSource === "none" && src !== "none") {
-          existing.valueUsdSource = src;
-        }
-      } else {
-        aggregatedSignerTokenNative.set(aggregateKey, {
-          rawIndex: eventOrder,
-          fromAddr: fromWallet,
-          toAddr: toWallet,
-          amountLamports,
-          valueUsd: Number(nt.valueUsd ?? 0),
-          valueUsdSource: String(nt.valueUsdSource ?? "none") as "historical" | "inferred" | "none",
-        });
-      }
-
-      continue;
-    }
-
-    events.push({
-      rawIndex: eventOrder,
-      fromAddr: fromWallet,
-      toAddr: toWallet,
-      fromTokenAddr: undefined,
-      toTokenAddr: undefined,
-      amount: amountLamports / 1e9,
-      valueUsd: Number(nt.valueUsd ?? 0),
-      valueUsdSource: String(nt.valueUsdSource ?? "none") as "historical" | "inferred" | "none",
-      symbol: "SOL",
-      tokenMint: "SOL",
-      isNative: true,
-    });
-  }
-
-  for (const agg of aggregatedSignerTokenNative.values()) {
-    events.push({
-      rawIndex: agg.rawIndex,
-      fromAddr: agg.fromAddr,
-      toAddr: agg.toAddr,
-      fromTokenAddr: undefined,
-      toTokenAddr: undefined,
-      amount: agg.amountLamports / 1e9,
-      valueUsd: agg.valueUsd,
-      valueUsdSource: agg.valueUsdSource,
-      symbol: "SOL",
-      tokenMint: "SOL",
-      isNative: true,
-    });
-  }
-
-  /* STEP 4 — Final ordered flow list for sequence-driven UI/animation */
-  events.sort((a, b) => a.rawIndex - b.rawIndex);
-
-  const flows: Omit<SummaryFlow, "color" | "pairKey">[] = [];
-  for (let i = 0; i < events.length; i += 1) {
-    const ev = events[i];
-    flows.push({
-      id: `flow-${i}`,
-      sequenceNo: i + 1,
-      rawIndex: ev.rawIndex,
-      fromAddr: ev.fromAddr,
-      toAddr: ev.toAddr,
-      fromTokenAddr: ev.fromTokenAddr,
-      toTokenAddr: ev.toTokenAddr,
-      amount: ev.amount,
-      valueUsd: ev.valueUsd,
-      valueUsdSource: ev.valueUsdSource,
-      symbol: ev.symbol,
-      tokenMint: ev.tokenMint,
-      isNative: ev.isNative,
-    });
-  }
-
-  return flows;
 }
 
 /* ─── Layered layout engine (Solscan-like left→right flow) ─── */
@@ -901,8 +520,8 @@ export function TransactionGraphPage() {
     return () => controller.abort();
   }, [txHash]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Record<string, unknown>>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Record<string, unknown>>([]);
   const [hoveredToken, setHoveredToken] = useState<string | null>(null);
   const [hoveredPair, setHoveredPair] = useState<string | null>(null);
   const [hoveredAddress, setHoveredAddress] = useState<string | null>(null);
@@ -1004,7 +623,7 @@ export function TransactionGraphPage() {
     const graphFlows: SummaryFlow[] = rawTransfers.map((t: ParsedTransfer, i: number) => {
       const f = flows[i];
 
-      let graphFrom = f.fromAddr;
+      const graphFrom = f.fromAddr;
       let graphTo   = f.toAddr;
 
       // Self-loop: wallet → own ATA. Use the raw ATA address as target.
@@ -1084,7 +703,7 @@ export function TransactionGraphPage() {
     });
     const directionSeen = new Map<string, number>();
 
-    const edgesData: Edge[] = graphFlows.map((flow, i) => {
+    const edgesData: Edge[] = graphFlows.map((flow) => {
       const sourceX = xPosMap[flow.fromAddr] ?? 0;
       const targetX = xPosMap[flow.toAddr] ?? 0;
       const sourceY = yPosMap[flow.fromAddr] ?? 0;
@@ -1199,7 +818,7 @@ export function TransactionGraphPage() {
   const txStatus = tx?.err ? "Failed" : "Success";
   const txTimeText = `${formatRelativeMinutes(txTimestamp)} \u2022 ${formatUtcTimestamp(txTimestamp)}`;
   const txFeeText = formatLamportsFee(txFeeLamports);
-  const txSummaryText = tx ? buildTransactionSummaryText(tx as any, txSigner) : "";
+  const txSummaryText = tx ? buildTransactionSummaryText(tx, txSigner) : "";
   const txSummaryFallback = tx?.transfers?.[0]
     ? `${tx.transfers.length} transfer${tx.transfers.length > 1 ? "s" : ""} parsed`
     : "Summary unavailable";
@@ -1340,3 +959,5 @@ export function TransactionGraphPage() {
 }
 
 export default TransactionGraphPage;
+
+

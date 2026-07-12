@@ -121,7 +121,7 @@ const labelThresholds: Record<
 const richStyles = Object.values(labelThresholds)
   .map((threshold) => threshold.rich)
   .filter((styles) => styles != undefined)
-  .reduce((acc, cur) => ({ ...acc, ...cur }), {});
+  .reduce<RichStyles>((acc, cur) => ({ ...acc, ...cur }), {});
 
 function brightenColor(hex: string, intensity: number): string {
   const r = Math.round(
@@ -167,7 +167,7 @@ function buildTreemapOption(
   rectSizes: Record<string, RectSize>,
   onSizeCollected: (symbol: string, size: RectSize) => void,
   theme: "light" | "dark",
-  iconRichEntries: Record<string, any>,
+  iconRichEntries: RichStyles,
   maxTrendValue?: number,
 ): EChartsOption {
   return {
@@ -302,7 +302,7 @@ export default function TokenTreeMap({
 
   // Build icon rich entries only for the size we expect to render for each node.
   // Fallback to 'xs' when the rect size is unknown.
-  const iconRichEntries = useMemo(() => {
+  const iconRichEntries = useMemo<RichStyles>(() => {
     return Object.fromEntries(
       data.flatMap((node) => {
         const rect = rectSizes[node.symbol];
@@ -326,14 +326,14 @@ export default function TokenTreeMap({
         const entryKey = `icon_${size}_${node.symbol}`;
         const entryValue = {
           backgroundColor: { image: node.imgUrl },
-          align: "center",
+          align: "center" as const,
           width: labelThresholds[size].iconSize,
           height: labelThresholds[size].iconSize,
         };
 
         return [[entryKey, entryValue]];
       }),
-    );
+    ) as RichStyles;
   }, [data, rectSizes]);
 
   const options = useMemo(() => {

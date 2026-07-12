@@ -1,11 +1,10 @@
 import type {
     EvidenceBundle,
-    WalletActivityProfile,
     WalletBehaviorProfile,
     WalletPersonaType,
 } from "../types/walletBehaviorProfile";
 import type { NormalizedWalletEvent } from "../types/normalizedWalletEvent";
-import { clamp, safeDivide } from "../utils/mathUtils";
+import { clamp } from "../utils/mathUtils";
 import { isSolLikeMint, isStablecoinMint } from "../utils/tokenUtils";
 
 export type PersonaScoreMap = Record<WalletPersonaType, number>;
@@ -137,10 +136,6 @@ function hasNftMarketplaceProtocol(profile: WalletBehaviorProfile): boolean {
     return profile.protocolUsage.protocols.some((protocol) =>
         protocol.protocolName === "Tensor" || protocol.protocolName === "Magic Eden",
     );
-}
-
-function isPositionTokenMint(mint: string): boolean {
-    return !isStablecoinMint(mint) && !isSolLikeMint(mint);
 }
 
 function scoreLongTermHolder(context: PersonaRuleContext): PersonaRuleResult {
@@ -332,7 +327,7 @@ function scoreMemecoinTrader(context: PersonaRuleContext): PersonaRuleResult {
 }
 
 function scoreNftCollector(context: PersonaRuleContext): PersonaRuleResult {
-    const { profile, events, counts } = context;
+    const { profile, counts } = context;
     let score = 0;
     const evidence: EvidenceBundle[] = [];
     const reasoning: string[] = [];

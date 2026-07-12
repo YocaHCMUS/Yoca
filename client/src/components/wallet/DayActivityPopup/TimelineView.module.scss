@@ -1,20 +1,16 @@
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/theme' as *;
-@use '@carbon/react/scss/type' as *;
-
 .timeline {
   position: relative;
   display: flex;
   flex-direction: column;
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     left: 82px;
     top: 0;
     bottom: 0;
     width: 2px;
-    background-color: $border-subtle;
+    background: var(--yoca-border);
     z-index: 0;
   }
 }
@@ -27,10 +23,10 @@
 .timeLabel {
   width: 70px;
   flex-shrink: 0;
-  @include type-style('label-01');
-  color: $text-secondary;
+  font-size: 0.75rem;
+  color: var(--yoca-text-muted);
   text-align: right;
-  padding: $spacing-03 $spacing-02 0 0;
+  padding: 0.5rem 0.25rem 0 0;
 }
 
 .dotColumn {
@@ -38,7 +34,7 @@
   flex-shrink: 0;
   display: flex;
   justify-content: center;
-  padding-top: $spacing-03;
+  padding-top: 0.5rem;
   position: relative;
   z-index: 1;
 }
@@ -47,21 +43,21 @@
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background-color: $border-subtle;
+  background: var(--yoca-border);
   flex-shrink: 0;
-  box-shadow: 0 0 0 2px $layer-01;
+  box-shadow: 0 0 0 2px var(--yoca-surface);
 }
 
 .dotBuy {
-  background-color: #24a148;
+  background: var(--yoca-success);
 }
 
 .dotSell {
-  background-color: #da1e28;
+  background: var(--yoca-danger);
 }
 
 .dotMixed {
-  background: linear-gradient(135deg, #24a148 50%, #da1e28 50%);
+  background: linear-gradient(135deg, var(--yoca-success) 50%, var(--yoca-danger) 50%);
 }
 
 .nodeContent {
@@ -72,41 +68,41 @@
 .summaryRow {
   display: flex;
   align-items: center;
-  gap: $spacing-03;
-  padding: $spacing-03 $spacing-04 $spacing-03 0;
-  border-bottom: 1px solid $border-subtle-00;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  border-bottom: 1px solid var(--yoca-border);
   cursor: pointer;
   transition: background-color 0.15s;
 
   &:hover {
-    background-color: $layer-hover-01;
+    background: var(--yoca-surface-hover);
   }
 }
 
 .summaryAction {
-  @include type-style('body-compact-01');
+  font-size: 0.875rem;
   font-weight: 600;
   flex-shrink: 0;
 }
 
 .actionBuy {
-  color: #24a148;
+  color: var(--yoca-success);
 }
 
 .actionSell {
-  color: #da1e28;
+  color: var(--yoca-danger);
 }
 
 .summaryMixed {
-  @include type-style('body-compact-01');
+  font-size: 0.875rem;
   font-weight: 600;
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   flex-shrink: 0;
 }
 
 .summaryAmount {
-  @include type-style('body-compact-01');
-  color: $text-primary;
+  font-size: 0.875rem;
+  color: var(--yoca-text-main);
   font-weight: 500;
   flex-shrink: 0;
   overflow: hidden;
@@ -115,10 +111,10 @@
 }
 
 .summaryCount {
-  @include type-style('label-01');
-  color: $text-secondary;
-  background-color: $layer-02;
-  padding: 1px $spacing-02;
+  font-size: 0.75rem;
+  color: var(--yoca-text-muted);
+  background: var(--yoca-bg-soft);
+  padding: 1px 0.25rem;
   border-radius: 4px;
   flex-shrink: 0;
 }
@@ -128,8 +124,8 @@
 }
 
 .summaryVolume {
-  @include type-style('body-compact-01');
-  color: $text-primary;
+  font-size: 0.875rem;
+  color: var(--yoca-text-main);
   font-weight: 600;
   text-align: right;
   flex-shrink: 0;
@@ -137,15 +133,39 @@
 
 .chevron {
   flex-shrink: 0;
-  color: $icon-secondary;
+  color: var(--yoca-text-muted);
 }
 
 .expandedDetail {
-  padding-left: $spacing-04;
-  border-left: 2px solid $border-subtle;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--yoca-border);
   margin-left: 0;
   display: flex;
   flex-direction: column;
-  gap: $spacing-02;
-  padding-bottom: $spacing-02;
+  gap: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.showMore {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 0;
+}
+
+.showMoreBtn {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--yoca-text-muted);
+  background: transparent;
+  border: 1px solid var(--yoca-border);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: var(--yoca-surface-hover);
+    color: var(--yoca-primary);
+    border-color: var(--yoca-primary);
+  }
 }

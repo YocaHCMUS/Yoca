@@ -17,6 +17,15 @@ type CheckoutFormProps = {
 
 type PaymentMethod = "card" | "bank" | "solana";
 
+type PaymentApiBody = {
+  message?: string;
+  clientSecret?: string;
+  subscriptionId?: string;
+  status?: string;
+};
+
+type StripePaymentMethodLike = { id?: string };
+
 /**
  * Dual-payment checkout form supporting:
  *  1. Stripe (Card + Bank Transfer)
@@ -75,13 +84,13 @@ export function CheckoutForm({
       });
 
       if (!setupResp.ok) {
-        const body = await setupResp.json() as any;
+        const body = await setupResp.json() as PaymentApiBody;
         setErrorMsg(body.message ?? tr("payment.errors.createIntent"));
         setIsProcessing(false);
         return;
       }
 
-      const setupData = await setupResp.json() as any;
+      const setupData = await setupResp.json() as PaymentApiBody;
       const clientSecret = setupData.clientSecret;
 
       if (!clientSecret) {
@@ -116,7 +125,7 @@ export function CheckoutForm({
       const paymentMethodId =
         typeof setupIntent.payment_method === "string"
           ? setupIntent.payment_method
-          : (setupIntent.payment_method as any)?.id;
+          : (setupIntent.payment_method as StripePaymentMethodLike)?.id;
 
       if (!paymentMethodId) {
         setErrorMsg(tr("payment.errors.missingPaymentMethod"));
@@ -129,7 +138,7 @@ export function CheckoutForm({
         json: { paymentMethodId, tier: tierKey },
       });
 
-      const body = await activateResp.json() as any;
+      const body = await activateResp.json() as PaymentApiBody;
 
       if (!activateResp.ok) {
         setErrorMsg(body.message ?? tr("payment.errors.activateSubscription"));
@@ -358,3 +367,4 @@ export function CheckoutForm({
     </div>
   );
 }
+

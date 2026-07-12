@@ -2,7 +2,7 @@ import styles from "./AiAnalysisDashboard.module.scss";
 import { HelpTooltip, LabelWithTooltip } from "./HelpTooltip";
 import { useAiAnalysisI18n } from "./i18n";
 import { SeverityBadge } from "./SeverityBadge";
-import type { RiskFactorLike } from "./types";
+import type { AnalysisProfileLike, RiskFactorLike } from "./types";
 import { uniqueStrings } from "./utils";
 
 function formatScoreImpact(value: RiskFactorLike["scoreImpact"]): string | null {
@@ -24,7 +24,7 @@ export function RiskBreakdownSection({
   profile,
 }: {
   riskFactors?: RiskFactorLike[];
-  profile?: any;
+  profile?: AnalysisProfileLike;
 }) {
   const { tr, formatCount, riskFactorExplanation, normalizeUserText } = useAiAnalysisI18n();
   const factors = riskFactors ?? [];

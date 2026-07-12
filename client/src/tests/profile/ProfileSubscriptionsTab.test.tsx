@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { MouseEventHandler, ReactNode } from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const { refreshUser } = vi.hoisted(() => ({
@@ -11,7 +12,7 @@ vi.mock("@/contexts/AuthContext", () => ({
 }));
 
 vi.mock("@carbon/react", () => ({
-  InlineNotification: ({ title, subtitle }: any) => (
+  InlineNotification: ({ title, subtitle }: { title?: ReactNode; subtitle?: ReactNode }) => (
     <div role="status">
       {title}: {subtitle}
     </div>
@@ -24,7 +25,7 @@ vi.mock("@carbon/react", () => ({
     onRequestClose,
     onRequestSubmit,
     primaryButtonDisabled,
-  }: any) =>
+  }: { open?: boolean; children?: ReactNode; primaryButtonText?: ReactNode; secondaryButtonText?: ReactNode; onRequestClose?: MouseEventHandler<HTMLButtonElement>; onRequestSubmit?: MouseEventHandler<HTMLButtonElement>; primaryButtonDisabled?: boolean }) =>
     open ? (
       <div role="dialog">
         {children}

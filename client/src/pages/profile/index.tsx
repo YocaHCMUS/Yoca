@@ -37,7 +37,7 @@ export default function ProfilePage() {
     period,
   });
   const [loading, setLoading] = useState(false);
-  const { walletAddresses, linkedWallets, error } = useProfileSharedData({
+  const { walletAddresses, linkedWallets } = useProfileSharedData({
     setLoading,
   });
 
@@ -97,7 +97,7 @@ export default function ProfilePage() {
       },
     ];
 
-    let visibleTabs = allTabs;
+    const visibleTabs = allTabs;
 
     return {
       names: visibleTabs.map(

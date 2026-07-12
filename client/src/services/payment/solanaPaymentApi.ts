@@ -57,10 +57,11 @@ export async function verifySolanaPayment(
     : ({ message: await response.text() } as Partial<VerifySolanaPaymentResponse>);
 
   if (!response.ok) {
-    const message = (data as any).message || `Verification API failed (HTTP ${response.status})`;
+    const message = data.message || `Verification API failed (HTTP ${response.status})`;
     console.error("[verifySolanaPayment] Error response:", response.status, data);
     throw new Error(message);
   }
 
   return data as VerifySolanaPaymentResponse;
 }
+

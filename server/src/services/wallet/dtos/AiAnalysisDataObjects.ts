@@ -1,7 +1,5 @@
 import z from "zod";
 
-let warnedMissingWalletAiAnalysisCacheTable = false;
-
 export const WALLET_AI_ANALYSIS_TIMEOUT_MS = parseInt(process.env.WALLET_AI_ANALYSIS_TIMEOUT_MS || "180000");
 export const WALLET_AI_ANALYSIS_CACHE_TTL_MS = parseInt(process.env.WALLET_AI_ANALYSIS_CACHE_TTL_MS || "10800000");
 export const DEFAULT_WALLET_AI_ANALYSIS_WEBHOOK_URL =
@@ -106,40 +104,4 @@ export class WalletAnalysisServiceError extends Error {
     }
 }
 
-function isMissingWalletAiAnalysisCacheTableError(error: unknown): boolean {
-    if (error == null || typeof error !== "object") {
-        return false;
-    }
 
-    const record = error as {
-        cause?: { code?: unknown };
-        message?: unknown;
-    };
-
-    if (record.cause != null && typeof record.cause === "object") {
-        const causeCode = (record.cause as { code?: unknown }).code;
-        if (causeCode === "42P01") {
-            return true;
-        }
-    }
-
-    if (typeof record.message !== "string") {
-        return false;
-    }
-
-    return (
-        record.message.includes("wallet_ai_analysis_cache") &&
-        record.message.toLowerCase().includes("does not exist")
-    );
-}
-
-function warnMissingWalletAiAnalysisCacheTableOnce(): void {
-    if (warnedMissingWalletAiAnalysisCacheTable) {
-        return;
-    }
-
-    warnedMissingWalletAiAnalysisCacheTable = true;
-    console.warn(
-        "[wallet-ai-analysis-cache] wallet_ai_analysis_cache table not found; continuing without AI analysis DB cache until migration is applied",
-    );
-}

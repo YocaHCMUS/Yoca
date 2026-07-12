@@ -143,8 +143,8 @@ type WalletBalanceHistory =
 export async function getWalletBalanceHistory(
   address: string,
   timePeriod: WalletTimePeriod = "30D",
-  _fromMs?: number,
-  _toMs?: number,
+  fromMs?: number,
+  toMs?: number,
 ): Promise<WalletBalanceHistory> {
   // TODO: enforce this
   const toBalanceChartPeriod: Record<string, "week" | "month"> = {
@@ -153,8 +153,8 @@ export async function getWalletBalanceHistory(
   };
   const balanceChartPeriod = toBalanceChartPeriod[timePeriod] ?? "month";
 
-  const end = dayjs.utc().valueOf() - MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS;
-  const start = dayjs.utc(end).subtract(1, balanceChartPeriod).valueOf();
+  const end = toMs ?? dayjs.utc().valueOf() - MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS;
+  const start = fromMs ?? dayjs.utc(end).subtract(1, balanceChartPeriod).valueOf();
   const storedThresholdMs = end - WALLET_BALANCE_HISTORY_STORED_TTL_MS;
   const expectedDailyPoints = balanceChartPeriod == "week" ? 7 : 30;
   const minCoveragePoints = Math.max(1, expectedDailyPoints - 2);

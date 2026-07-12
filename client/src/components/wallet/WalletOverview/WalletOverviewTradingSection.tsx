@@ -1,7 +1,7 @@
 
 import styles from './WalletOverview.module.scss';
 import { useLocalization } from '@/contexts/LocalizationContext';
-import { ChartColumn, Currency } from '@carbon/react/icons';
+import { ChartColumn } from '@carbon/react/icons';
 import { renderValue } from './valueRenderer';
 
 

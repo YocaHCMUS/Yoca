@@ -26,6 +26,15 @@ interface ProfileAlertTabProps {
 
 export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
   const { tr } = useLocalization();
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
+
+  const modalTitle = useMemo(() => {
+    if (!editingRule) return tr("profileTabs.alerts.createAlertTitle");
+    return tr("profileTabs.alerts.editAlertTitle", {
+      token: editingRule.tokenSymbol,
+    });
+  }, [editingRule, tr]);
 
   if (data.alerts.length === 0 && data.notifications.length === 0) {
     return (
@@ -44,17 +53,6 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
     new Date(rule.updatedAt).toLocaleString(),
     rule.id,
   ]);
-
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
-
-  const modalTitle = useMemo(() => {
-    if (!editingRule) return tr("profileTabs.alerts.createAlertTitle");
-    return tr("profileTabs.alerts.editAlertTitle", {
-      token: editingRule.tokenSymbol,
-    });
-  }, [editingRule, tr]);
-
   const openCreateModal = () => {
     setEditingRule(null);
     setIsEditorOpen(true);

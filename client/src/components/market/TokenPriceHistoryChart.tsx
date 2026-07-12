@@ -126,9 +126,9 @@ export const TokenPriceHistoryChart: React.FC<TokenPriceHistoryChartProps> = ({
         textStyle: {
           color: '#fff',
         },
-        formatter: (params: any) => {
+        formatter: (params: unknown) => {
           if (!Array.isArray(params) || params.length === 0) return '';
-          const point = params[0];
+          const point = params[0] as { data: [number, number] };
           const date = new Date(point.data[0]);
           const dateStr = selectedPeriod === '30m' || selectedPeriod === '1h'
             ? date.toLocaleTimeString()

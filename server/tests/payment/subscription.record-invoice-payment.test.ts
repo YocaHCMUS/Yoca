@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   insertValuesMock,
@@ -59,14 +59,18 @@ import {
 describe("recordInvoicePayment", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.STRIPE_PRICE_LITE = "price_lite";
-    process.env.STRIPE_PRICE_PLUS = "price_plus";
+    vi.stubEnv("STRIPE_PRICE_LITE", "price_lite");
+    vi.stubEnv("STRIPE_PRICE_PLUS", "price_plus");
     selectLimitMock.mockResolvedValue([
       { id: "local-sub-123", userId: "user-id-123" },
     ]);
     insertValuesMock.mockReturnValue({
       onConflictDoUpdate: conflictUpdateMock.mockResolvedValue(undefined),
     });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("stores bank invoices as pending and updates the same row after success", async () => {

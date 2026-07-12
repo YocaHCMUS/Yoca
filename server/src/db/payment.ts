@@ -1,6 +1,5 @@
 import {
   boolean,
-  decimal as dec,
   integer,
   jsonb,
   pgEnum,
@@ -10,10 +9,6 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
-
-function decimal(name: string) {
-  return dec(name, { mode: "number" });
-}
 
 export const enumPlanTier = pgEnum("plan_tier", ["Lite", "Plus", "Pro"]);
 

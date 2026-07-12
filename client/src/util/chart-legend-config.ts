@@ -110,7 +110,7 @@ const DEFAULTS = {
 export function getLegendConfig(
   theme: ChartThemeConfig,
   options: LegendConfigOptions = {}
-): any {
+): Record<string, unknown> {
   const {
     show = true,
     position = 'top',
@@ -180,7 +180,7 @@ export function getLegendConfig(
 /**
  * Get legend config for single-series charts (usually hidden)
  */
-export function getSingleSeriesLegend(theme: ChartThemeConfig): any {
+export function getSingleSeriesLegend(theme: ChartThemeConfig): Record<string, unknown> {
   return getLegendConfig(theme, { show: false });
 }
 
@@ -191,7 +191,7 @@ export function getMultiSeriesLegend(
   theme: ChartThemeConfig,
   data: string[],
   hasTitle = false
-): any {
+): Record<string, unknown> {
   return getLegendConfig(theme, {
     show: true,
     position: 'top',
@@ -209,7 +209,7 @@ export function getPieLegend(
   theme: ChartThemeConfig,
   data: string[],
   show = true
-): any {
+): Record<string, unknown> {
   return getLegendConfig(theme, {
     show,
     position: 'bottom',
@@ -226,7 +226,7 @@ export function getDualAxisLegend(
   theme: ChartThemeConfig,
   data: string[],
   hasTitle = false
-): any {
+): Record<string, unknown> {
   return getLegendConfig(theme, {
     show: true,
     position: 'top',
@@ -246,7 +246,7 @@ export function getStackedChartLegend(
   theme: ChartThemeConfig,
   data: string[],
   hasTitle = false
-): any {
+): Record<string, unknown> {
   return getLegendConfig(theme, {
     show: true,
     position: 'top',
@@ -266,7 +266,7 @@ export function getBottomLegend(
   theme: ChartThemeConfig,
   data: string[],
   icon: 'circle' | 'rect' | 'roundRect' = 'circle'
-): any {
+): Record<string, unknown> {
   return getLegendConfig(theme, {
     show: true,
     position: 'bottom',
@@ -285,7 +285,7 @@ export function getConditionalLegend(
   data: string[],
   minSeriesCount = 2,
   hasTitle = false
-): any {
+): Record<string, unknown> {
   const shouldShow = data.length >= minSeriesCount;
 
   return getLegendConfig(theme, {

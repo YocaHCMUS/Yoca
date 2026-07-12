@@ -8,7 +8,6 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import { useProfileOverviewData } from "@/hooks/profile/useProfileOverviewData";
 import type { ProfileOverviewData, ProfileAccountTier } from "@/types/profile";
 import type { TimePeriod } from "@/types/chart-filters.types";
-import { AddLarge } from "@carbon/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import {
@@ -36,7 +35,6 @@ function mapPlanTierToAccountTier(planTier: EffectivePlanTier): ProfileAccountTi
 export function ProfilePortfolioTab({
   linkedWallets,
   period,
-  onPeriodChange,
 }: ProfilePortfolioTabProps) {
     const { tr, fmt } = useLocalization();
     const navigate = useNavigate();
@@ -201,7 +199,6 @@ export function ProfilePortfolioTab({
                   publicKey,
                   signMessage,
                   onSuccess: resolveSuccess,
-                  onError: resolveError,
                 }) => {
                   const challenge = await requestLinkWalletChallenge(publicKey);
                   const messageBytes = new TextEncoder().encode(
