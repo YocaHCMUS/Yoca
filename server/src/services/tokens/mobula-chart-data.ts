@@ -1,6 +1,6 @@
 import * as mobula from "@sv/util/util-mobula.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
-import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import { z } from "zod";
 
 const mobulaPriceHistoryResponseSchema = z.object({
@@ -34,7 +34,7 @@ export async function getMobulaChartData(
     rlTimeoutMs: MOBULA_CHART_TIMEOUT_MS,
   });
 
-  const res = await getTrackedApiResult(mobulaPriceHistoryResponseSchema, resp);
+  const res = await validateApiResult(mobulaPriceHistoryResponseSchema, resp);
   if (!res) return [];
 
   return res.data.priceHistory.map(([ts, price]) => ({

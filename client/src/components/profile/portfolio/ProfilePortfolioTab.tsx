@@ -1,6 +1,5 @@
 import { ProfileOverview } from "@/components/profile/overview/ProfileOverview";
-import { Table, FilterType, SortType } from "@/components/tables/Table";
-import { createProfilePortfolioCellRenderers } from "@/components/tables/TableCellRenderer";
+import Tble, { TbleFilterType, TbleSortType, type TblRw } from "@/components/Tble";
 import { WalletActionButton } from "@/components/auth/WalletActionButton";
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import { useAuth, type EffectivePlanTier } from "@/contexts/AuthContext";
@@ -8,8 +7,9 @@ import { useLocalization } from "@/contexts/LocalizationContext";
 import { useProfileOverviewData } from "@/hooks/profile/useProfileOverviewData";
 import type { ProfileOverviewData, ProfileAccountTier } from "@/types/profile";
 import type { TimePeriod } from "@/types/chart-filters.types";
-import { AddLarge } from "@carbon/icons-react";
-import { useEffect, useMemo, useState } from "react";
+import { AddLarge, Checkmark, CloseFilled, Login } from "@carbon/icons-react";
+import { Button } from "@carbon/react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import {
     linkWalletAddress,
@@ -112,17 +112,17 @@ export function ProfilePortfolioTab({
         const walletMeta = linkedWalletByAddress.get(overview.address);
         const walletLabel = labelMap[overview.address] ?? "";
 
-        return [
-          {
+        return {
+          id: overview.address,
+          address: {
             walletAddress: overview.address,
             label: walletLabel,
-            isAuthWallet: walletMeta?.isAuthWallet
+            isAuthWallet: walletMeta?.isAuthWallet,
           },
-          overview.totalAssetValueUsd,
-          walletMeta?.isAuthWallet,
-        ];
+          totalValue: overview.totalAssetValueUsd,
+        } satisfies TblRw;
       }),
-    [linkedWalletByAddress, walletOverviews, labelMap, fmt],
+    [linkedWalletByAddress, walletOverviews, labelMap],
   );
 
   const handleUnlinkWallet = async (walletAddress: string) => {
@@ -141,13 +141,91 @@ export function ProfilePortfolioTab({
     }
   };
 
-  const portfolioCellRenderers = createProfilePortfolioCellRenderers({
-    onUnlinkWallet: handleUnlinkWallet,
-    onEditLabel: setLabel,
-    formatAddress: (address: string) => fmt.text.address(address),
-    formatCurrency: (value: number) => fmt.num.compact.currency(value),
-    t: tr,
-  });
+  const cellRenderers: Record<string, (value: unknown, row: TblRw) => ReactNode> = {
+    address: (value: unknown) => {
+      const entry = value as { walletAddress: string; label: string; isAuthWallet?: boolean } | undefined;
+      const walletAddress = entry?.walletAddress ?? "";
+      const initialLabel = entry?.label ?? "";
+      const isAuthWallet = Boolean(entry?.isAuthWallet);
+
+      const EditableLabelCell = () => {
+        const [isEditing, setIsEditing] = useState(false);
+        const [draft, setDraft] = useState(initialLabel);
+
+        if (isEditing) {
+          return (
+            <div style={{ display: "flex", gap: "4px", alignItems: "center" }} onClick={(e) => e.stopPropagation()}>
+              <input
+                type="text"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                style={{ width: "100px", padding: "2px", background: "var(--cds-layer-01)", color: "inherit", border: "1px solid var(--cds-border-strong)" }}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setLabel(walletAddress, draft);
+                    setIsEditing(false);
+                  } else if (e.key === 'Escape') {
+                    setDraft(initialLabel);
+                    setIsEditing(false);
+                  }
+                }}
+              />
+              <Checkmark size={16} style={{ cursor: "pointer", color: "var(--cds-support-success)" }} onClick={() => {
+                setLabel(walletAddress, draft);
+                setIsEditing(false);
+              }} />
+              <CloseFilled size={16} style={{ cursor: "pointer", color: "var(--cds-support-error)" }} onClick={() => {
+                setDraft(initialLabel);
+                setIsEditing(false);
+              }} />
+            </div>
+          );
+        }
+
+        return (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <span title={walletAddress}>
+              {initialLabel || fmt.text.address(walletAddress)}
+            </span>
+            <div style={{ cursor: "pointer", display: "flex", alignItems: "center", padding: "2px" }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditing(true); }}>
+              <span style={{ fontSize: "10px", opacity: 0.5 }}>✏️</span>
+            </div>
+            {isAuthWallet && (
+              <Login size={14} title={tr("profileTabs.portfolio.authWalletLabel")} />
+            )}
+          </span>
+        );
+      };
+
+      return <EditableLabelCell />;
+    },
+    totalValue: (value: unknown) => <span>{fmt.num.compact.currency(Number(value))}</span>,
+    actions: (_value: unknown, row: TblRw) => {
+      const entry = row.address as { walletAddress: string; isAuthWallet?: boolean } | undefined;
+      if (!entry) return null;
+      const isAuthWallet = Boolean(entry.isAuthWallet);
+      const walletAddress = entry.walletAddress;
+
+      return (
+        <div onClick={(event) => event.stopPropagation()}>
+          <Button
+            size="sm"
+            kind="ghost"
+            disabled={isAuthWallet}
+            title={
+              isAuthWallet
+                ? tr("profileTabs.portfolio.authWalletCannotBeUnlinked")
+                : tr("profileTabs.portfolio.unlinkWallet")
+            }
+            onClick={() => handleUnlinkWallet(walletAddress)}
+          >
+            {tr("profileTabs.portfolio.unlinkWallet")}
+          </Button>
+        </div>
+      );
+    },
+  };
 
   return (
     <section className={styles.contentStack}>
@@ -156,29 +234,24 @@ export function ProfilePortfolioTab({
         loading={loading}
       />
       {(user?.userId && (
-        <Table
+        <Tble
           title={tr("profileTabs.portfolio.linkedWalletsList")}
           headers={[
-            tr("profileTabs.portfolio.address"),
-            tr("profileTabs.portfolio.totalValue"),
-            tr("profileTabs.portfolio.actions"),
+            { key: "address", header: tr("profileTabs.portfolio.address") },
+            { key: "totalValue", header: tr("profileTabs.portfolio.totalValue") },
+            { key: "actions", header: tr("profileTabs.portfolio.actions") },
           ]}
-          initialFilters={{}}
-          fetcher={Promise.resolve([])}
+          rows={tableRows}
+          cellRenderers={cellRenderers}
           filterSchema={{
-            0: { type: FilterType.Select },
-            1: { type: FilterType.Range, min: 0, max: 1000000, step: 1000 },
+            address: { type: TbleFilterType.Select },
+            totalValue: { type: TbleFilterType.Range, min: 0, max: 1000000, step: 1000 },
           }}
-          dataEntries={tableRows}
-          cellRenderers={portfolioCellRenderers}
-          isSortable={[true, true, false]}
           sortConfigs={{
-            1: { type: SortType.Number },
+            totalValue: { type: TbleSortType.Number },
           }}
-          enableExport={false}
-          actions={
+          toolBar={
             <div className={styles.inlineActions}>
-              {/* // TODO: UX, user have to press twice to connect (first select wallet then sign) */}
               <WalletActionButton<string>
                 label="Link wallet"
                 className={styles.triggerButton}
@@ -222,14 +295,10 @@ export function ProfilePortfolioTab({
             </div>
           }
           loading={loading}
-          onRowClick={(_, rowIndex) => {
-            const row = tableRows[rowIndex];
-            if (row) {
-              const walletAddress =
-                typeof row[0] === "object" && row[0] != null
-                  ? (row[0] as { walletAddress: string }).walletAddress
-                  : (row[0] as unknown as string);
-              navigateToWalletDetail(walletAddress);
+          onRowClick={(row: TblRw) => {
+            const entry = row.address as { walletAddress: string } | undefined;
+            if (entry?.walletAddress) {
+              navigateToWalletDetail(entry.walletAddress);
             }
           }}
         />

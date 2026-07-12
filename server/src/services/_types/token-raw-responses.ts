@@ -791,7 +791,22 @@ export const helius_EnhancedTransactionsSchema = z.array(
     events: z
       .strictObject({
         swap: helius_EnhancedSwapEventSchema.optional(),
-        nft: z.unknown().optional(),
+        nft: z.object({
+          mint: z.string().optional(),
+          tokenMint: z.string().optional(),
+          nftMint: z.string().optional(),
+          action: z.string().optional(),
+          type: z.string().optional(),
+          eventType: z.string().optional(),
+          name: z.string().optional(),
+          collection: z.string().optional(),
+          collectionName: z.string().optional(),
+          priceUsd: z.number().optional(),
+          salePriceUsd: z.number().optional(),
+          amountUsd: z.number().optional(),
+          marketplace: z.string().optional(),
+          source: z.string().optional(),
+        }).optional(),
         compressed: z.unknown().optional(),
       })
       .optional(),

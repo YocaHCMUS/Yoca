@@ -15,6 +15,7 @@ import {
 } from "@/services/profile/subscriptionApi";
 import { Copy, Check } from "lucide-react";
 import ProfileLoadingState from "@/components/profile/shared/ProfileLoadingState";
+import Tble, { type TblRw } from "@/components/Tble";
 
 type SubscriptionSubtab = "subscriptions" | "payment-history";
 type PlanTier = "Lite" | "Plus" | "Pro";
@@ -313,99 +314,82 @@ function SubscriptionsPanel({
           </button>
         )}
       </div>
-      <table className={styles.simpleTable}>
-        <thead>
-          <tr>
-            <th>Tier</th>
-            <th>Status</th>
-            <th>Period Start</th>
-            <th>{isStripeManagedSubscription ? "Period End" : "Access Expires"}</th>
-            {availableUpgrades.length > 0 && <th>Upgrade</th>}
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td className={styles.metricValue} style={{ color: "#14F195" }}>
-              {subscription.planTier}
-            </td>
-            <td>
-              <span
-                style={{
-                  textTransform: "uppercase",
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                  color: statusColor,
-                }}
-              >
-                {statusLabel}{" "}
-                {subscription.cancelAtPeriodEnd && "(Cancels at end of period)"}
-              </span>
-            </td>
-            <td>{fmt.datetime.datetime(subscription.currentPeriodStart)}</td>
-            <td>{fmt.datetime.datetime(subscription.currentPeriodEnd)}</td>
-            {availableUpgrades.length > 0 && (
-              <td>
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  {availableUpgrades.map((tier) => (
-                    <button
-                      key={tier}
-                      className={styles.primaryButton}
-                      style={{
-                        padding: "0.25rem 0.5rem",
-                        minHeight: "auto",
-                        fontSize: "0.75rem",
-                      }}
-                      disabled={isUpgrading}
-                      onClick={() => openUpgradeConfirmation(tier)}
-                    >
-                      {isUpgrading ? "..." : `Upgrade to ${tier}`}
-                    </button>
-                  ))}
-                </div>
-              </td>
-            )}
-          </tr>
-        </tbody>
-      </table>
+      <Tble
+        headers={[
+          { key: "tier", header: "Tier" },
+          { key: "status", header: "Status" },
+          { key: "periodStart", header: "Period Start" },
+          { key: "periodEnd", header: isStripeManagedSubscription ? "Period End" : "Access Expires" },
+          ...(availableUpgrades.length > 0 ? [{ key: "upgrade", header: "Upgrade" }] : []),
+        ]}
+        rows={[{
+          id: subscription.stripeSubscriptionId || "current",
+          tier: subscription.planTier,
+          status: statusLabel,
+          cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+          periodStart: fmt.datetime.datetime(subscription.currentPeriodStart),
+          periodEnd: fmt.datetime.datetime(subscription.currentPeriodEnd),
+        } as TblRw]}
+        cellRenderers={{
+          tier: (value: unknown) => (
+            <span style={{ color: "#14F195", fontWeight: 600 }}>{String(value)}</span>
+          ),
+          status: (value: unknown, row: TblRw) => (
+            <span style={{ textTransform: "uppercase", fontSize: "12px", fontWeight: "bold", color: statusColor }}>
+              {String(value)}{row.cancelAtPeriodEnd ? " (Cancels at end of period)" : ""}
+            </span>
+          ),
+          ...(availableUpgrades.length > 0 ? {
+            upgrade: () => (
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                {availableUpgrades.map((tier) => (
+                  <button
+                    key={tier}
+                    className={styles.primaryButton}
+                    style={{ padding: "0.25rem 0.5rem", minHeight: "auto", fontSize: "0.75rem" }}
+                    disabled={isUpgrading}
+                    onClick={() => openUpgradeConfirmation(tier)}
+                  >
+                    {isUpgrading ? "..." : `Upgrade to ${tier}`}
+                  </button>
+                ))}
+              </div>
+            ),
+          } : {}),
+        }}
+        boxed
+      />
 
       {canceledSubscriptions.length > 0 ? (
         <>
           <div className={styles.sectionHeader} style={{ marginTop: "1.5rem" }}>
             <h3 className={styles.emptyStateTitle}>Canceled Plans</h3>
           </div>
-          <table className={styles.simpleTable}>
-            <thead>
-              <tr>
-                <th>Tier</th>
-                <th>Status</th>
-                <th>Period Start</th>
-                <th>Period End</th>
-                <th>Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {canceledSubscriptions.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.planTier}</td>
-                  <td>
-                    <span
-                      style={{
-                        textTransform: "uppercase",
-                        fontSize: "12px",
-                        fontWeight: "bold",
-                        color: "#64748b",
-                      }}
-                    >
-                      {item.status}
-                    </span>
-                  </td>
-                  <td>{fmt.datetime.datetime(item.currentPeriodStart)}</td>
-                  <td>{fmt.datetime.datetime(item.currentPeriodEnd)}</td>
-                  <td>{formatAbsoluteTimestamp(item.updatedAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <Tble
+            headers={[
+              { key: "tier", header: "Tier" },
+              { key: "status", header: "Status" },
+              { key: "periodStart", header: "Period Start" },
+              { key: "periodEnd", header: "Period End" },
+              { key: "updated", header: "Updated" },
+            ]}
+            rows={canceledSubscriptions.map((item) => ({
+              id: item.id,
+              tier: item.planTier,
+              status: item.status,
+              periodStart: fmt.datetime.datetime(item.currentPeriodStart),
+              periodEnd: fmt.datetime.datetime(item.currentPeriodEnd),
+              updated: formatAbsoluteTimestamp(item.updatedAt),
+            } as TblRw))}
+            cellRenderers={{
+              status: (value: unknown) => (
+                <span style={{ textTransform: "uppercase", fontSize: "12px", fontWeight: "bold", color: "#64748b" }}>
+                  {String(value)}
+                </span>
+              ),
+            }}
+            boxed
+          />
         </>
       ) : null}
 
@@ -542,54 +526,44 @@ function PaymentHistoryPanel({
 
   return (
     <div className={styles.sectionCard}>
-      <table className={styles.simpleTable}>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Plan</th>
-            <th>Amount</th>
-            <th>Status</th>
-            <th>Payment ID</th>
-          </tr>
-        </thead>
-        <tbody>
-          {history.map((item) => (
-            <tr key={item.id}>
-              <td>{fmt.datetime.datetime(item.createdAt)}</td>
-              <td>{resolvePlanLabel(item)}</td>
-              <td className={styles.metricValue}>
-                {
-                  // If Solana transfer, show SOL amount (more meaningful than tiny USD test values)
-                  ((item.paymentMethodDetails as any)?.type === "solana_transfer" || (item.paymentMethodDetails as any)?.txId)
-                    ? (() => {
-                        const pm = item.paymentMethodDetails as any;
-                        const solAmt = pm?.amount;
-                        if (typeof solAmt === "number") return fmt.num.unit(solAmt, "SOL");
-                        // fallback to USD if SOL amount missing
-                        return fmt.num.currency((item.amountCents ?? item.amount ?? 0)  / 100);
-                      })()
-                    : fmt.num.currency((item.amountCents ?? item.amount ?? 0) / 100)
-                }
-              </td>
-              <td>
-                <span
-                  style={{
-                    textTransform: "uppercase",
-                    fontSize: "11px",
-                    fontWeight: "bold",
-                    color: item.status === "succeeded" ? "#14F195" : "#ff4d4d",
-                  }}
-                >
-                  {item.status}
-                </span>
-              </td>
-              <td>
-                <PaymentIdCell paymentId={paymentIdLabel(item)} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <Tble
+        headers={[
+          { key: "date", header: "Date" },
+          { key: "plan", header: "Plan" },
+          { key: "amount", header: "Amount" },
+          { key: "status", header: "Status" },
+          { key: "paymentId", header: "Payment ID" },
+        ]}
+        rows={history.map((item) => ({
+          id: item.id,
+          date: fmt.datetime.datetime(item.createdAt),
+          plan: resolvePlanLabel(item),
+          amount: item,
+          status: item.status,
+          paymentId: paymentIdLabel(item),
+        } as TblRw))}
+        cellRenderers={{
+          amount: (value: unknown) => {
+            const item = value as PaymentHistory;
+            if ((item.paymentMethodDetails as any)?.type === "solana_transfer" || (item.paymentMethodDetails as any)?.txId) {
+              const pm = item.paymentMethodDetails as any;
+              const solAmt = pm?.amount;
+              if (typeof solAmt === "number") return <span>{fmt.num.unit(solAmt, "SOL")}</span>;
+              return <span>{fmt.num.currency((item.amountCents ?? item.amount ?? 0) / 100)}</span>;
+            }
+            return <span>{fmt.num.currency((item.amountCents ?? item.amount ?? 0) / 100)}</span>;
+          },
+          status: (value: unknown) => (
+            <span style={{ textTransform: "uppercase", fontSize: "11px", fontWeight: "bold", color: String(value) === "succeeded" ? "#14F195" : "#ff4d4d" }}>
+              {String(value)}
+            </span>
+          ),
+          paymentId: (_value: unknown, row: TblRw) => (
+            <PaymentIdCell paymentId={String(row.paymentId)} />
+          ),
+        }}
+        boxed
+      />
     </div>
   );
 }

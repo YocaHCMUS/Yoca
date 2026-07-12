@@ -1,4 +1,5 @@
 import { Button } from "@carbon/react";
+import Tble, { type TblRw } from "@/components/Tble";
 import ProfileLoadingState from "@/components/profile/shared/ProfileLoadingState";
 import { Activity, ChartColumn, Currency, Wallet } from "@carbon/react/icons";
 import ReactEChartsCore from "echarts-for-react/lib/core";
@@ -827,65 +828,58 @@ export default function ProfileDashboardTab({
 
           <div className={styles.panel}>
             <h4 className={styles.panelTitle}>Asset Composition</h4>
-            <div
-              className={styles.matrixTableWrapper}
-              style={{ height: 250, overflowY: "auto", overflowX: "hidden" }}
-            >
-              <table className={styles.matrixTable}>
-                <thead>
-                  <tr>
-                    <th>Asset</th>
-                    <th>Total Value</th>
-                    <th style={{ width: "20%" }}>Composition</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {matrixData.rows.map((row) => (
-                    <tr key={row.key}>
-                      <td>
-                        {row.logoUri ? (
-                          <img
-                            src={row.logoUri}
-                            alt={row.symbol}
-                            className={styles.tokenAvatar}
-                          />
-                        ) : (
-                          <div className={styles.tokenAvatarPlaceholder} />
-                        )}
-                        {row.symbol}
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{fmtUsd(row.total)}</td>
-                      <td>
-                        <div className={styles.dataBarCell}>
-                          <div
-                            className={styles.dataBarFill}
-                            style={{
-                              width: `${matrixData.maxTotal > 0 ? (row.total / matrixData.maxTotal) * 100 : 0}%`,
-                            }}
-                          />
-                          <span className={styles.dataBarText}>
-                            {matrixData.overallTotal > 0
-                              ? (
-                                  (row.total / matrixData.overallTotal) *
-                                  100
-                                ).toFixed(2)
-                              : "0.00"}
-                            %
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {matrixData.rows.length == 0 && (
-                    <tr>
-                      <td colSpan={3} className={styles.emptyState}>
-                        No asset data available
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <Tble
+              headers={[
+                { key: "asset", header: "Asset" },
+                { key: "totalValue", header: "Total Value" },
+                { key: "composition", header: "Composition" },
+              ]}
+              rows={matrixData.rows.map((row) => ({
+                id: row.key,
+                asset: row,
+                totalValue: row.total,
+                composition: row,
+              } as TblRw))}
+              cellRenderers={{
+                asset: (value: unknown) => {
+                  const r = value as { logoUri?: string; symbol: string };
+                  return (
+                    <>
+                      {r.logoUri ? (
+                        <img src={r.logoUri} alt={r.symbol} className={styles.tokenAvatar} />
+                      ) : (
+                        <div className={styles.tokenAvatarPlaceholder} />
+                      )}
+                      {r.symbol}
+                    </>
+                  );
+                },
+                totalValue: (value: unknown) => (
+                  <span style={{ fontWeight: 600 }}>{fmtUsd(Number(value))}</span>
+                ),
+                composition: (value: unknown) => {
+                  const r = value as { total: number };
+                  return (
+                    <div className={styles.dataBarCell}>
+                      <div
+                        className={styles.dataBarFill}
+                        style={{
+                          width: `${matrixData.maxTotal > 0 ? (r.total / matrixData.maxTotal) * 100 : 0}%`,
+                        }}
+                      />
+                      <span className={styles.dataBarText}>
+                        {matrixData.overallTotal > 0
+                          ? ((r.total / matrixData.overallTotal) * 100).toFixed(2)
+                          : "0.00"}
+                        %
+                      </span>
+                    </div>
+                  );
+                },
+              }}
+              height={250}
+              boxed
+            />
           </div>
         </div>
       </section>

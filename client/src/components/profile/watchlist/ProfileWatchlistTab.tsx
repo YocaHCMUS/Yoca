@@ -3,7 +3,7 @@ import { CpyBtn } from "@/components/CpyBtn";
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import ProfileLoadingState from "@/components/profile/shared/ProfileLoadingState";
 import TabContainer from "@/components/tabContainer/tabContainer";
-import { SortType, Table } from "@/components/tables/Table";
+import Tble, { TbleSortType, type TblRw } from "@/components/Tble";
 import { renderSparkline } from "@/components/tables/TableCellRenderer";
 import { TknImg } from "@/components/TknImg";
 import { TrendNum } from "@/components/TrendNum";
@@ -77,60 +77,24 @@ export function ProfileWatchlistTab() {
   }, [walletOverviews]);
 
   const tokenHeaders = [
-    { header: "", align: "center" as const, minWidth: "3.5rem" },
-    {
-      header: tr("marketPage.token"),
-      align: "start" as const,
-      minWidth: "11rem",
-    },
-    { header: tr("marketPage.price"), align: "end" as const, minWidth: "6rem" },
-    { header: "1h", align: "end" as const, minWidth: "5rem" },
-    { header: "24h", align: "end" as const, minWidth: "5rem" },
-    { header: "7d", align: "end" as const, minWidth: "5rem" },
-    {
-      header: tr("marketPage.volume24h"),
-      align: "end" as const,
-      minWidth: "7rem",
-    },
-    {
-      header: tr("marketPage.marketCap"),
-      align: "end" as const,
-      minWidth: "7rem",
-    },
-    {
-      header: tr("token.marketStats.fdv"),
-      align: "end" as const,
-      minWidth: "7rem",
-    },
-    {
-      header: tr("nav.searchLast7Days"),
-      align: "end" as const,
-      minWidth: "12rem",
-    },
+    { key: "star", header: "", align: "center" as const, minWidth: "3.5rem" },
+    { key: "token", header: tr("marketPage.token"), align: "start" as const, minWidth: "11rem" },
+    { key: "price", header: tr("marketPage.price"), align: "end" as const, minWidth: "6rem" },
+    { key: "change1h", header: "1h", align: "end" as const, minWidth: "5rem" },
+    { key: "change24h", header: "24h", align: "end" as const, minWidth: "5rem" },
+    { key: "change7d", header: "7d", align: "end" as const, minWidth: "5rem" },
+    { key: "volume24h", header: tr("marketPage.volume24h"), align: "end" as const, minWidth: "7rem" },
+    { key: "marketCap", header: tr("marketPage.marketCap"), align: "end" as const, minWidth: "7rem" },
+    { key: "fdv", header: tr("token.marketStats.fdv"), align: "end" as const, minWidth: "7rem" },
+    { key: "sparkline", header: tr("nav.searchLast7Days"), align: "end" as const, minWidth: "12rem" },
   ];
 
   const walletHeaders = [
-    { header: "", align: "center" as const, minWidth: "3.5rem" },
-    {
-      header: tr("profileTabs.watchlist.walletAddress"),
-      align: "start" as const,
-      minWidth: "14rem",
-    },
-    {
-      header: "Asset",
-      align: "end" as const,
-      minWidth: "10rem",
-    },
-    {
-      header: "Trading Volume 24h",
-      align: "end" as const,
-      minWidth: "10rem",
-    },
-    {
-      header: "Total PnL",
-      align: "end" as const,
-      minWidth: "10rem",
-    },
+    { key: "star", header: "", align: "center" as const, minWidth: "3.5rem" },
+    { key: "wallet", header: tr("profileTabs.watchlist.walletAddress"), align: "start" as const, minWidth: "14rem" },
+    { key: "asset", header: "Asset", align: "end" as const, minWidth: "10rem" },
+    { key: "volume", header: "Trading Volume 24h", align: "end" as const, minWidth: "10rem" },
+    { key: "pnl", header: "Total PnL", align: "end" as const, minWidth: "10rem" },
   ];
 
   const tokenTableData = useMemo(() => {
@@ -141,35 +105,36 @@ export function ProfileWatchlistTab() {
         meta?.symbol?.toUpperCase() ?? fmt.text.address(tokenAddress);
       const name = meta?.name ?? tokenAddress;
 
-      return [
-        {
+      return {
+        id: tokenAddress,
+        star: {
           tokenAddress,
           pending: Boolean(tokenPending[tokenAddress]),
         },
-        {
+        token: {
           tokenAddress,
           symbol,
           name,
           imageUrl: meta?.imageUrl,
         },
-        market?.priceUsd ?? null,
-        market?.priceChangePercentage1h ?? null,
-        market?.priceChangePercentage24h ?? null,
-        market?.priceChangePercentage7d ?? null,
-        market?.volume24h ?? null,
-        market?.marketCap ?? null,
-        market?.fullyDilutedValuation ?? null,
-        {
+        price: market?.priceUsd ?? null,
+        change1h: market?.priceChangePercentage1h ?? null,
+        change24h: market?.priceChangePercentage24h ?? null,
+        change7d: market?.priceChangePercentage7d ?? null,
+        volume24h: market?.volume24h ?? null,
+        marketCap: market?.marketCap ?? null,
+        fdv: market?.fullyDilutedValuation ?? null,
+        sparkline: {
           data: market?.sparkline7d ?? [],
           positive: (market?.priceChangePercentage7d ?? 0) >= 0,
         },
-      ];
+      };
     });
   }, [tokenWatchlist, tokenMetaByAddress, marketData.data, fmt, tokenPending]);
 
   const tokenCellRenderers = useMemo(
-    () => [
-      (value: unknown) => {
+    () => ({
+      star: (value: unknown) => {
         const entry = value as { tokenAddress?: string; pending?: boolean };
         const tokenAddress = entry?.tokenAddress;
         if (!tokenAddress) return null;
@@ -190,7 +155,7 @@ export function ProfileWatchlistTab() {
           </IconButton>
         );
       },
-      (value: unknown) => {
+      token: (value: unknown) => {
         const entry = value as {
           tokenAddress?: string;
           symbol?: string;
@@ -229,74 +194,70 @@ export function ProfileWatchlistTab() {
           </Stack>
         );
       },
-      (value: unknown) =>
+      price: (value: unknown) =>
         typeof value === "number" && Number.isFinite(value)
           ? fmt.num.compact.currency(value)
           : "-",
-      (value: unknown) =>
+      change1h: (value: unknown) =>
         typeof value === "number" && Number.isFinite(value) ? (
           <TrendNum value={value} formatter={(val) => val == null ? "-" : `${Number(val).toFixed(2)}%`} />
         ) : (
           "-"
         ),
-      (value: unknown) =>
+      change24h: (value: unknown) =>
         typeof value === "number" && Number.isFinite(value) ? (
           <TrendNum value={value} formatter={(val) => val == null ? "-" : `${Number(val).toFixed(2)}%`} />
         ) : (
           "-"
         ),
-      (value: unknown) =>
+      change7d: (value: unknown) =>
         typeof value === "number" && Number.isFinite(value) ? (
           <TrendNum value={value} formatter={(val) => val == null ? "-" : `${Number(val).toFixed(2)}%`} />
         ) : (
           "-"
         ),
-      (value: unknown) =>
+      volume24h: (value: unknown) =>
         typeof value === "number" && Number.isFinite(value)
           ? fmt.num.compact.currency(value)
           : "-",
-      (value: unknown) =>
+      marketCap: (value: unknown) =>
         typeof value === "number" && Number.isFinite(value)
           ? fmt.num.compact.currency(value)
           : "-",
-      (value: unknown) =>
+      fdv: (value: unknown) =>
         typeof value === "number" && Number.isFinite(value)
           ? fmt.num.compact.currency(value)
           : "-",
-      (value: unknown) => renderSparkline(value),
-    ],
+      sparkline: (value: unknown) => renderSparkline(value),
+    }),
     [fmt, toggleToken, tr],
   );
 
   const walletTableData = useMemo(
     () =>
-      walletWatchlist
-        .map((walletAddress) => {
-          const overview = walletOverviewMap.get(walletAddress);
-          return {
-            id: walletAddress,
-            row: [
-              {
-                walletAddress,
-                pending: Boolean(walletPending[walletAddress]),
-              },
-              {
-                walletAddress,
-                label: labels[walletAddress] ?? "",
-              },
-              overview?.totalAssetValueUsd ?? null,
-              overview?.tradingVolumeUsd24h ?? null,
-              overview?.pnlUsdTotal ?? null,
-            ],
-          };
-        })
-        .map((entry) => entry.row),
+      walletWatchlist.map((walletAddress) => {
+        const overview = walletOverviewMap.get(walletAddress);
+        return {
+          id: walletAddress,
+          star: {
+            walletAddress,
+            pending: Boolean(walletPending[walletAddress]),
+          },
+          wallet: {
+            walletAddress,
+            label: labels[walletAddress] ?? "",
+          },
+          asset: overview?.totalAssetValueUsd ?? null,
+          volume: overview?.tradingVolumeUsd24h ?? null,
+          pnl: overview?.pnlUsdTotal ?? null,
+        };
+      }),
     [walletWatchlist, walletOverviewMap, walletPending, labels],
   );
 
   const walletCellRenderers = useMemo(
-    () => [
-      (value: unknown) => {
+    () => ({
+      star: (value: unknown) => {
         const entry = value as { walletAddress?: string; pending?: boolean };
         const walletAddress = entry?.walletAddress;
         if (!walletAddress) return null;
@@ -317,10 +278,10 @@ export function ProfileWatchlistTab() {
           </IconButton>
         );
       },
-      (value: unknown) => {
+      wallet: (value: unknown) => {
         const entry = value as { walletAddress: string; label: string };
         const walletAddress = entry?.walletAddress ?? "";
-        const initialLabel = entry?.label ?? "";
+        const initialLabel = entry?.label ?? ""; 
 
         const EditableLabelCell = () => {
           const [isEditing, setIsEditing] = useState(false);
@@ -415,21 +376,21 @@ export function ProfileWatchlistTab() {
 
         return <EditableLabelCell />;
       },
-      (value: unknown) =>
+      asset: (value: unknown) =>
         typeof value === "number" && Number.isFinite(value)
           ? fmt.num.compact.currency(value)
           : "-",
-      (value: unknown) =>
+      volume: (value: unknown) =>
         typeof value === "number" && Number.isFinite(value)
           ? fmt.num.compact.currency(value)
           : "-",
-      (value: unknown) =>
+      pnl: (value: unknown) =>
         typeof value === "number" && Number.isFinite(value) ? (
           <TrendNum value={value} formatter={fmt.num.compact.currency} />
         ) : (
           "-"
         ),
-    ],
+    }),
     [fmt, toggleWallet, tr, setLabel],
   );
 
@@ -447,44 +408,26 @@ export function ProfileWatchlistTab() {
         description={tr("profileTabs.watchlist.emptyTokenDescription")}
       />
     ) : (
-      <Table
+      <Tble
         title={tr("profileTabs.watchlist.tokenTableTitle")}
         headers={tokenHeaders}
-        initialFilters={{}}
-        fetcher={Promise.resolve(tokenTableData)}
-        filterSchema={{}}
+        rows={tokenTableData}
         cellRenderers={tokenCellRenderers}
-        dataEntries={tokenTableData}
-        isSortable={[
-          false,
-          false,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          true,
-          false,
-        ]}
         sortConfigs={{
-          2: { type: SortType.Number },
-          3: { type: SortType.Number },
-          4: { type: SortType.Number },
-          5: { type: SortType.Number },
-          6: { type: SortType.Number },
-          7: { type: SortType.Number },
-          8: { type: SortType.Number },
+          price: { type: TbleSortType.Number },
+          change1h: { type: TbleSortType.Number },
+          change24h: { type: TbleSortType.Number },
+          change7d: { type: TbleSortType.Number },
+          volume24h: { type: TbleSortType.Number },
+          marketCap: { type: TbleSortType.Number },
+          fdv: { type: TbleSortType.Number },
         }}
         loading={tokenLoading}
-        maxHeight={520}
+        height={520}
         onRowClick={(row) => {
-          const tokenAddress =
-            typeof row?.[0] === "object" && row[0] != null
-              ? (row[0] as { tokenAddress?: string }).tokenAddress
-              : undefined;
-          if (tokenAddress) {
-            navigate(`/tokens/${tokenAddress}`);
+          const entry = row.star as { tokenAddress?: string } | undefined;
+          if (entry?.tokenAddress) {
+            navigate(`/tokens/${entry.tokenAddress}`);
           }
         }}
       />
@@ -497,29 +440,22 @@ export function ProfileWatchlistTab() {
         description={tr("profileTabs.watchlist.emptyWalletDescription")}
       />
     ) : (
-      <Table
+      <Tble
         title={tr("profileTabs.watchlist.walletTableTitle")}
         headers={walletHeaders}
-        initialFilters={{}}
-        fetcher={Promise.resolve(walletTableData)}
-        filterSchema={{}}
+        rows={walletTableData}
         cellRenderers={walletCellRenderers}
-        dataEntries={walletTableData}
-        isSortable={[false, false, true, true, true]}
         sortConfigs={{
-          2: { type: SortType.Number },
-          3: { type: SortType.Number },
-          4: { type: SortType.Number },
+          asset: { type: TbleSortType.Number },
+          volume: { type: TbleSortType.Number },
+          pnl: { type: TbleSortType.Number },
         }}
         loading={walletLoading}
-        maxHeight={520}
+        height={520}
         onRowClick={(row) => {
-          const walletAddress =
-            typeof row?.[0] === "object" && row[0] != null
-              ? (row[0] as { walletAddress?: string }).walletAddress
-              : undefined;
-          if (walletAddress) {
-            navigate(`/wallets/${walletAddress}`);
+          const entry = row.star as { walletAddress?: string } | undefined;
+          if (entry?.walletAddress) {
+            navigate(`/wallets/${entry.walletAddress}`);
           }
         }}
       />

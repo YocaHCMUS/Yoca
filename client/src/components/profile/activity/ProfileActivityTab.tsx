@@ -1,6 +1,6 @@
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import ProfileLoadingState from "@/components/profile/shared/ProfileLoadingState";
-import { FilterType, SortType, Table } from "@/components/tables/Table";
+import Tble, { TbleFilterType, TbleSortType, type TblRw } from "@/components/Tble";
 import WalletOverviewPnLSection from "@/components/wallet/WalletOverview/WalletOverviewPnLSection";
 import WalletOverviewTradingSection from "@/components/wallet/WalletOverview/WalletOverviewTradingSection";
 import WalletOverviewValueSection from "@/components/wallet/WalletOverview/WalletOverviewValueSection";
@@ -47,6 +47,29 @@ export function ProfileActivityTab({
     [visibleRows],
   );
 
+  const swapTableRows = useMemo(() =>
+    swapRows.map((row) => ({
+      id: `${row.walletId}-${row.timestamp}-${row.pairOrToken}`,
+      wallet: row.walletLabel,
+      pair: row.timestamp,
+      exchange: row.pairOrToken,
+      time: row.exchange ?? tr("profileTabs.activity.unknownExchange"),
+      totalValue: row.amountUsd,
+    } as TblRw)),
+  [swapRows, tr]);
+
+  const transferTableRows = useMemo(() =>
+    transferRows.map((row, i) => ({
+      id: `${row.walletId}-${row.timestamp}-${i}`,
+      sender: row.fromAddress ?? row.walletId,
+      receiver: row.toAddress ?? row.walletId,
+      token: row.tokenSymbol ?? row.pairOrToken,
+      amount: row.amount ?? 0,
+      value: row.amountUsd,
+      time: row.timestamp,
+    } as TblRw)),
+  [transferRows]);
+
   if (loading) {
     return <ProfileLoadingState />;
   }
@@ -59,40 +82,6 @@ export function ProfileActivityTab({
       />
     );
   }
-
-  const swapTableData = swapRows.map((row) => [
-    row.walletLabel,
-    row.timestamp,
-    row.pairOrToken,
-    row.exchange ?? tr("profileTabs.activity.unknownExchange"),
-    row.amountUsd,
-  ]);
-
-  const transferTableData = transferRows.map((row) => [
-    row.fromAddress ?? row.walletId,
-    row.toAddress ?? row.walletId,
-    row.tokenSymbol ?? row.pairOrToken,
-    row.amount ?? 0,
-    row.amountUsd,
-    row.timestamp,
-  ]);
-
-  const swapTableHeaders = [
-    tr("profileTabs.activity.tableHeaders.swaps.wallet"),
-    tr("profileTabs.activity.tableHeaders.swaps.pair"),
-    tr("profileTabs.activity.tableHeaders.swaps.exchange"),
-    tr("profileTabs.activity.tableHeaders.swaps.time"),
-    tr("profileTabs.activity.tableHeaders.swaps.totalValue"),
-  ];
-
-  const transferTableHeaders = [
-    tr("walletPage.sender"),
-    tr("walletPage.receiver"),
-    tr("walletPage.token"),
-    tr("walletPage.amount"),
-    tr("walletPage.value"),
-    tr("walletPage.time"),
-  ];
 
   const renderEmptyState = (
     eyebrow: string,
@@ -109,33 +98,33 @@ export function ProfileActivityTab({
   return (
     <section className={styles.contentStack}>
       {swapRows.length > 0 ? (
-        <Table
+        <Tble
           title={tr("profileTabs.activity.swapsTableTitle") as string}
-          headers={swapTableHeaders}
-          initialFilters={{}}
-          fetcher={Promise.resolve([])}
-          filterSchema={{
-            0: { type: FilterType.Select },
-            1: { type: FilterType.Select },
-            2: { type: FilterType.Select },
-            3: { type: FilterType.Select },
-            4: { type: FilterType.Range, min: 0, max: 1000000, step: 100 },
-          }}
-          dataEntries={swapTableData}
-          cellRenderers={[
-            null,
-            (value) => new Date(String(value)).toLocaleString(),
-            null,
-            null,
-            (value) => fmt.num.compact.currency(Number(value)),
+          headers={[
+            { key: "wallet", header: tr("profileTabs.activity.tableHeaders.swaps.wallet") },
+            { key: "pair", header: tr("profileTabs.activity.tableHeaders.swaps.pair") },
+            { key: "exchange", header: tr("profileTabs.activity.tableHeaders.swaps.exchange") },
+            { key: "time", header: tr("profileTabs.activity.tableHeaders.swaps.time") },
+            { key: "totalValue", header: tr("profileTabs.activity.tableHeaders.swaps.totalValue") },
           ]}
-          isSortable={[true, true, true, true, true]}
+          rows={swapTableRows}
+          filterSchema={{
+            wallet: { type: TbleFilterType.Select },
+            pair: { type: TbleFilterType.Select },
+            exchange: { type: TbleFilterType.Select },
+            time: { type: TbleFilterType.Select },
+            totalValue: { type: TbleFilterType.Range, min: 0, max: 1000000, step: 100 },
+          }}
+          cellRenderers={{
+            pair: (value: unknown) => <span>{new Date(String(value)).toLocaleString()}</span>,
+            totalValue: (value: unknown) => <span>{fmt.num.compact.currency(Number(value))}</span>,
+          }}
           sortConfigs={{
-            1: { type: SortType.Date },
-            4: { type: SortType.Number },
+            pair: { type: TbleSortType.Number },
+            totalValue: { type: TbleSortType.Number },
           }}
           loading={loading}
-          wrapperClassName={styles.activityTableSurface}
+          className={styles.activityTableSurface}
         />
       ) : (
         renderEmptyState(
@@ -146,75 +135,59 @@ export function ProfileActivityTab({
       )}
 
       {transferRows.length > 0 ? (
-        <Table
+        <Tble
           title={tr("profileTabs.activity.transfersTableTitle") as string}
-          headers={transferTableHeaders}
-          initialFilters={{}}
-          fetcher={Promise.resolve([])}
-          filterSchema={{
-            0: { type: FilterType.Select },
-            1: { type: FilterType.Select },
-            2: { type: FilterType.Select },
-            3: { type: FilterType.Range, min: 0, max: 1000000, step: 0.000001 },
-            4: { type: FilterType.Range, min: 0, max: 1000000, step: 0.01 },
-            5: { type: FilterType.Select },
-          }}
-          dataEntries={transferTableData}
-          cellRenderers={[
-            (value) => {
-              const address = String(value);
-              const isLinked = linkedWalletAddressSet.has(address.toLowerCase());
-
-              return (
-                <span
-                  style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
-                >
-                  {fmt.text.address(address)}
-                  {isLinked ? (
-                    <Link
-                      size={16}
-                      title="Linked wallet"
-                      aria-label="Linked wallet"
-                    />
-                  ) : null}
-                </span>
-              );
-            },
-            (value) => {
-              const address = String(value);
-              const isLinked = linkedWalletAddressSet.has(address.toLowerCase());
-
-              return (
-                <span
-                  style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
-                >
-                  {fmt.text.address(address)}
-                  {isLinked ? (
-                    <Link
-                      size={16}
-                      title="Linked wallet"
-                      aria-label="Linked wallet"
-                    />
-                  ) : null}
-                </span>
-              );
-            },
-            null,
-            (value) =>
-              Number(value).toLocaleString(undefined, {
-                maximumFractionDigits: 6,
-              }),
-            (value) => fmt.num.compact.currency(Number(value)),
-            (value) => new Date(String(value)).toLocaleString(),
+          headers={[
+            { key: "sender", header: tr("walletPage.sender") },
+            { key: "receiver", header: tr("walletPage.receiver") },
+            { key: "token", header: tr("walletPage.token") },
+            { key: "amount", header: tr("walletPage.amount") },
+            { key: "value", header: tr("walletPage.value") },
+            { key: "time", header: tr("walletPage.time") },
           ]}
-          isSortable={[true, true, true, true, true, true]}
+          rows={transferTableRows}
+          filterSchema={{
+            sender: { type: TbleFilterType.Select },
+            receiver: { type: TbleFilterType.Select },
+            token: { type: TbleFilterType.Select },
+            amount: { type: TbleFilterType.Range, min: 0, max: 1000000, step: 0.000001 },
+            value: { type: TbleFilterType.Range, min: 0, max: 1000000, step: 0.01 },
+            time: { type: TbleFilterType.Select },
+          }}
+          cellRenderers={{
+            sender: (value: unknown) => {
+              const address = String(value);
+              const isLinked = linkedWalletAddressSet.has(address.toLowerCase());
+              return (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  {fmt.text.address(address)}
+                  {isLinked ? <Link size={16} title="Linked wallet" aria-label="Linked wallet" /> : null}
+                </span>
+              );
+            },
+            receiver: (value: unknown) => {
+              const address = String(value);
+              const isLinked = linkedWalletAddressSet.has(address.toLowerCase());
+              return (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  {fmt.text.address(address)}
+                  {isLinked ? <Link size={16} title="Linked wallet" aria-label="Linked wallet" /> : null}
+                </span>
+              );
+            },
+            amount: (value: unknown) => (
+              <span>{Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 })}</span>
+            ),
+            value: (value: unknown) => <span>{fmt.num.compact.currency(Number(value))}</span>,
+            time: (value: unknown) => <span>{new Date(String(value)).toLocaleString()}</span>,
+          }}
           sortConfigs={{
-            3: { type: SortType.Number },
-            4: { type: SortType.Number },
-            5: { type: SortType.Date },
+            amount: { type: TbleSortType.Number },
+            value: { type: TbleSortType.Number },
+            time: { type: TbleSortType.Number },
           }}
           loading={loading}
-          wrapperClassName={styles.activityTableSurface}
+          className={styles.activityTableSurface}
         />
       ) : (
         renderEmptyState(

@@ -20,17 +20,12 @@ const alertsApi = client.api.alerts as unknown as AlertsApiClient;
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { useAuth } from "@/contexts/AuthContext.tsx";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
+import Tble from "@/components/Tble";
 import { TrashCan } from "@carbon/icons-react";
 import {
     Button,
     InlineLoading,
     InlineNotification,
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
     TextInput,
     Toggle
 } from "@carbon/react";
@@ -473,6 +468,72 @@ export default function AlertsPage() {
     }
   };
 
+  // ── Table data ──────────────────────────────────────────────
+  const ruleHeaders = [
+    { key: "name", header: tr("alertsPage.ruleTableName") },
+    { key: "wallet", header: tr("alertsPage.ruleTableWallet") },
+    { key: "action", header: tr("alertsPage.ruleTableAction") },
+    { key: "volume", header: tr("alertsPage.ruleTableVolume") },
+    { key: "trigger", header: tr("alertsPage.ruleTableTrigger") },
+    { key: "expires", header: tr("alertsPage.ruleTableExpires") },
+    { key: "actions", header: tr("alertsPage.tableActions") },
+  ];
+
+  const ruleTbleRows = rulesRows.map((r) => {
+    const min = Number(r.minVolume);
+    const max = r.maxVolume != null && r.maxVolume !== "" ? Number(r.maxVolume) : null;
+    const volLabel = max != null && Number.isFinite(max)
+      ? `${min} - ${max} ${r.volumeUnit}`
+      : `${min}+ ${r.volumeUnit}`;
+    return {
+      id: String(r.id),
+      name: <span className={styles.primaryCell}>{r.name?.trim() || "-"}</span>,
+      wallet: <span className={styles.addressValue}>{r.walletAddress}</span>,
+      action: <span className={styles.tableTag} data-tone="primary">{r.actionType}</span>,
+      volume: volLabel,
+      trigger: <span className={styles.tableTag} data-tone="accent">{r.triggerType}</span>,
+      expires: fmt.datetime.datetime(new Date(r.expiryDate)),
+      actions: deletingRuleId === r.id ? <InlineLoading /> : (
+        <Button
+          kind="ghost" size="sm" hasIconOnly
+          iconDescription="Delete rule"
+          renderIcon={TrashCan}
+          className={styles.iconAction}
+          disabled={deletingRuleId !== null}
+          onClick={() => void onDeleteRule(r.id)}
+        />
+      ),
+    };
+  });
+
+  const walletHeaders = [
+    { key: "address", header: tr("alertsPage.tableAddress") },
+    { key: "label", header: tr("alertsPage.tableLabel") },
+    { key: "added", header: tr("alertsPage.tableAdded") },
+    { key: "actions", header: tr("alertsPage.tableActions") },
+  ];
+
+  const walletTbleRows = rows.map((row) => ({
+    id: String(row.id),
+    address: <span className={styles.addressValue}>{row.address}</span>,
+    label: row.label ? (
+      <span className={styles.labelPill}>{row.label}</span>
+    ) : (
+      <span className={styles.mutedValue}>-</span>
+    ),
+    added: fmt.datetime.datetime(new Date(row.createdAt)),
+    actions: deletingId === row.id ? <InlineLoading /> : (
+      <Button
+        kind="ghost" size="sm" hasIconOnly
+        iconDescription="Delete"
+        renderIcon={TrashCan}
+        className={styles.iconAction}
+        disabled={deletingId !== null}
+        onClick={() => onDelete(row.id)}
+      />
+    ),
+  }));
+
   // ── Render ───────────────────────────────────────────────────
   return (
     <PageWrapper noMarketTickers>
@@ -697,11 +758,7 @@ export default function AlertsPage() {
               </div>
 
               <div className={styles.panelBody}>
-                {rulesLoading ? (
-                  <div className={styles.loadingRow}>
-                    <InlineLoading description={tr("alertsPage.ruleLoading")} />
-                  </div>
-                ) : rulesRows.length === 0 ? (
+                {rulesRows.length === 0 && !rulesLoading ? (
                   <div className={styles.emptyState}>
                     <p className={styles.emptyStateTitle}>
                       {tr("alertsPage.ruleTableEmpty")}
@@ -709,98 +766,11 @@ export default function AlertsPage() {
                   </div>
                 ) : (
                   <div className={styles.tableWrap}>
-                    <Table size="md" useZebraStyles>
-                      <TableHead>
-                        <TableRow>
-                          <TableHeader>
-                            {tr("alertsPage.ruleTableName")}
-                          </TableHeader>
-                          <TableHeader>
-                            {tr("alertsPage.ruleTableWallet")}
-                          </TableHeader>
-                          <TableHeader>
-                            {tr("alertsPage.ruleTableAction")}
-                          </TableHeader>
-                          <TableHeader>
-                            {tr("alertsPage.ruleTableVolume")}
-                          </TableHeader>
-                          <TableHeader>
-                            {tr("alertsPage.ruleTableTrigger")}
-                          </TableHeader>
-                          <TableHeader>
-                            {tr("alertsPage.ruleTableExpires")}
-                          </TableHeader>
-                          <TableHeader className={styles.actionsCell}>
-                            {tr("alertsPage.tableActions")}
-                          </TableHeader>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {rulesRows.map((r) => {
-                          const min = Number(r.minVolume);
-                          const max =
-                            r.maxVolume != null && r.maxVolume !== ""
-                              ? Number(r.maxVolume)
-                              : null;
-                          const volLabel =
-                            max != null && Number.isFinite(max)
-                              ? `${min} - ${max} ${r.volumeUnit}`
-                              : `${min}+ ${r.volumeUnit}`;
-                          return (
-                            <TableRow key={r.id}>
-                              <TableCell>
-                                <span className={styles.primaryCell}>
-                                  {r.name?.trim() || "-"}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                <span className={styles.addressValue}>
-                                  {r.walletAddress}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                <span
-                                  className={styles.tableTag}
-                                  data-tone="primary"
-                                >
-                                  {r.actionType}
-                                </span>
-                              </TableCell>
-                              <TableCell>{volLabel}</TableCell>
-                              <TableCell>
-                                <span
-                                  className={styles.tableTag}
-                                  data-tone="accent"
-                                >
-                                  {r.triggerType}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                {fmt.datetime.datetime(
-                                  new Date(r.expiryDate),
-                                )}
-                              </TableCell>
-                              <TableCell className={styles.actionsCell}>
-                                {deletingRuleId === r.id ? (
-                                  <InlineLoading />
-                                ) : (
-                                  <Button
-                                    kind="ghost"
-                                    size="sm"
-                                    hasIconOnly
-                                    iconDescription="Delete rule"
-                                    renderIcon={TrashCan}
-                                    className={styles.iconAction}
-                                    disabled={deletingRuleId !== null}
-                                    onClick={() => void onDeleteRule(r.id)}
-                                  />
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                    <Tble
+                      headers={ruleHeaders}
+                      rows={ruleTbleRows}
+                      loading={rulesLoading}
+                    />
                   </div>
                 )}
               </div>
@@ -876,11 +846,7 @@ export default function AlertsPage() {
                   />
                 ) : null}
 
-                {listLoading ? (
-                  <div className={styles.loadingRow}>
-                    <InlineLoading description={tr("alertsPage.loadingList")} />
-                  </div>
-                ) : rows.length === 0 ? (
+                {rows.length === 0 && !listLoading ? (
                   <div className={styles.emptyState}>
                     <p className={styles.emptyStateTitle}>
                       {tr("alertsPage.emptyList")}
@@ -888,63 +854,11 @@ export default function AlertsPage() {
                   </div>
                 ) : (
                   <div className={styles.tableWrap}>
-                    <Table size="md" useZebraStyles>
-                      <TableHead>
-                        <TableRow>
-                          <TableHeader>
-                            {tr("alertsPage.tableAddress")}
-                          </TableHeader>
-                          <TableHeader>
-                            {tr("alertsPage.tableLabel")}
-                          </TableHeader>
-                          <TableHeader>
-                            {tr("alertsPage.tableAdded")}
-                          </TableHeader>
-                          <TableHeader className={styles.actionsCell}>
-                            {tr("alertsPage.tableActions")}
-                          </TableHeader>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {rows.map((row) => (
-                          <TableRow key={row.id}>
-                            <TableCell>
-                              <span className={styles.addressValue}>
-                                {row.address}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              {row.label ? (
-                                <span className={styles.labelPill}>
-                                  {row.label}
-                                </span>
-                              ) : (
-                                <span className={styles.mutedValue}>-</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {fmt.datetime.datetime(new Date(row.createdAt))}
-                            </TableCell>
-                            <TableCell className={styles.actionsCell}>
-                              {deletingId === row.id ? (
-                                <InlineLoading />
-                              ) : (
-                                <Button
-                                  kind="ghost"
-                                  size="sm"
-                                  hasIconOnly
-                                  iconDescription="Delete"
-                                  renderIcon={TrashCan}
-                                  className={styles.iconAction}
-                                  disabled={deletingId !== null}
-                                  onClick={() => onDelete(row.id)}
-                                />
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                    <Tble
+                      headers={walletHeaders}
+                      rows={walletTbleRows}
+                      loading={listLoading}
+                    />
                   </div>
                 )}
               </div>

@@ -1,5 +1,5 @@
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
-import { FilterType, SortType, Table } from "@/components/tables/Table";
+import Tble, { TbleFilterType, TbleSortType, type TblRw } from "@/components/Tble";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type {
   AlertNotification,
@@ -36,6 +36,18 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
     });
   }, [editingRule, tr]);
 
+  const alertTableRows = useMemo(() =>
+    data.alerts.map((rule) => ({
+      id: String(rule.id),
+      token: rule.tokenSymbol,
+      type: rule.alertType,
+      condition: rule.conditionText,
+      status: rule.status,
+      updated: new Date(rule.updatedAt).toLocaleString(),
+      rule,
+    } as TblRw)),
+  [data.alerts]);
+
   if (data.alerts.length === 0 && data.notifications.length === 0) {
     return (
       <ProfileUnavailableState
@@ -45,14 +57,6 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
     );
   }
 
-  const alertTableData = data.alerts.map((rule) => [
-    rule.tokenSymbol,
-    rule.alertType,
-    rule.conditionText,
-    rule.status,
-    new Date(rule.updatedAt).toLocaleString(),
-    rule.id,
-  ]);
   const openCreateModal = () => {
     setEditingRule(null);
     setIsEditorOpen(true);
@@ -68,63 +72,44 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
     setEditingRule(null);
   };
 
-  const tableHeaders = [
-    tr("profileTabs.alerts.tableHeaders.token"),
-    tr("profileTabs.alerts.tableHeaders.type"),
-    tr("profileTabs.alerts.tableHeaders.condition"),
-    tr("profileTabs.alerts.tableHeaders.status"),
-    tr("profileTabs.alerts.tableHeaders.updated"),
-    tr("profileTabs.alerts.tableHeaders.actions"),
-  ];
-
   return (
     <section className={styles.contentStack}>
-      <Table
+      <Tble
         title={tr("profileTabs.alerts.tableTitle") as string}
-        headers={tableHeaders}
-        initialFilters={{}}
-        fetcher={Promise.resolve([])}
-        filterSchema={{
-          0: { type: FilterType.Select },
-          1: { type: FilterType.Select },
-          3: { type: FilterType.Select },
-        }}
-        dataEntries={alertTableData}
-        cellRenderers={[
-          null,
-          null,
-          null,
-          null,
-          null,
-          (_value, row) => {
-            const rule = data.alerts.find((item) => item.id === row[5]);
-
+        headers={[
+          { key: "token", header: tr("profileTabs.alerts.tableHeaders.token") },
+          { key: "type", header: tr("profileTabs.alerts.tableHeaders.type") },
+          { key: "condition", header: tr("profileTabs.alerts.tableHeaders.condition") },
+          { key: "status", header: tr("profileTabs.alerts.tableHeaders.status") },
+          { key: "updated", header: tr("profileTabs.alerts.tableHeaders.updated") },
+          { key: "actions", header: tr("profileTabs.alerts.tableHeaders.actions") },
+        ]}
+        rows={alertTableRows}
+        cellRenderers={{
+          actions: (_value: unknown, row: TblRw) => {
+            const rule = row.rule as AlertRule | undefined;
             if (!rule) return null;
 
             return (
               <div className={styles.inlineActions}>
-                <Button
-                  size="sm"
-                  kind="ghost"
-                  onClick={() => openEditModal(rule)}
-                >
+                <Button size="sm" kind="ghost" onClick={() => openEditModal(rule)}>
                   Edit
                 </Button>
-                <Button size="sm" kind="ghost">
-                  Pause/Resume
-                </Button>
-                <Button size="sm" kind="ghost">
-                  Delete
-                </Button>
+                <Button size="sm" kind="ghost">Pause/Resume</Button>
+                <Button size="sm" kind="ghost">Delete</Button>
               </div>
             );
           },
-        ]}
-        isSortable={[true, true, false, true, true, false]}
-        sortConfigs={{
-          4: { type: SortType.Date },
         }}
-        actions={
+        filterSchema={{
+          token: { type: TbleFilterType.Select },
+          type: { type: TbleFilterType.Select },
+          status: { type: TbleFilterType.Select },
+        }}
+        sortConfigs={{
+          updated: { type: TbleSortType.Number },
+        }}
+        toolBar={
           <button className={styles.triggerButton} onClick={openCreateModal}>
             <AddLarge size={20} />
             Add alert

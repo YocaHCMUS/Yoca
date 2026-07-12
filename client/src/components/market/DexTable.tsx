@@ -1,16 +1,9 @@
 import { useMemo } from "react";
-import classNames from "classnames";
 import { useNavigate } from "react-router";
-import { InlineLoading } from "@carbon/react";
+import Tble, { TbleSortType, type TbleSortValue } from "@/components/Tble";
 import styles from "./DexTable.module.scss";
 import { TknImg } from "@/components/TknImg";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import {
-  CaretUp,
-  CaretDown,
-  ArrowUp,
-  ArrowDown,
-} from "@carbon/icons-react";
 
 export interface DexTableItem {
   id: string;
@@ -140,7 +133,6 @@ export function DexTable({
 
     let filtered = [...data];
 
-    // Apply Filters
     filtered = filtered.filter((item) => {
       const checkRange = (val: number | null, range: RangeFilter) => {
         if (val === null) return true;
@@ -163,7 +155,6 @@ export function DexTable({
       );
     });
 
-    // Apply Sorting
     return filtered.sort((a, b) => {
       const valA = getSortValue(a, sortKey as SortKey);
       const valB = getSortValue(b, sortKey as SortKey);
@@ -197,287 +188,112 @@ export function DexTable({
       val > 0 ? styles.positive : val < 0 ? styles.negative : styles.neutral;
     const sign = val > 0 ? "+" : val < 0 ? "-" : "";
     return (
-      <span className={classNames(styles.trendValue, clz)}>
+      <span className={clz}>
         {sign}
         {formatCompactPercentText(val)}
       </span>
     );
   };
 
-  if (loading) {
-    return (
-      <div className={styles.loadingState}>
-        <div className={styles.loadingIndicator}>
-          <InlineLoading
-            status="active"
-            description={tr("marketPage.loadingMarketData")}
-          />
-        </div>
-      </div>
-    );
-  }
+  const headers = [
+    { key: "token", header: tr("marketPage.token") },
+    { key: "marketCap", header: tr("marketPage.mcap"), align: "end" as const },
+    { key: "price", header: tr("marketPage.price"), align: "end" as const },
+    { key: "age", header: tr("marketPage.age"), align: "end" as const },
+    { key: "txns", header: tr("marketPage.txns"), align: "end" as const },
+    { key: "volume", header: tr("marketPage.volume"), align: "end" as const },
+    { key: "5m", header: "5M", align: "end" as const },
+    { key: "1h", header: "1H", align: "end" as const },
+    { key: "6h", header: "6H", align: "end" as const },
+    { key: "24h", header: "24H", align: "end" as const },
+    { key: "liquidity", header: tr("marketPage.liquidity"), align: "end" as const },
+  ];
 
-  if (data.length === 0) {
-    return (
-      <div className={styles.dexTableContainer}>
-        <div className={styles.emptyState}>{tr("marketPage.noPoolsFound")}</div>
-      </div>
-    );
+  const rows = sortedData.map((pool, idx) => {
+    const mcap = pool.marketCapUsd || pool.fdvUsd;
+    const baseSymbol = pool.baseSymbol?.toUpperCase() || "UNK";
+    const quoteSymbol = pool.quoteSymbol?.toUpperCase() || "UNK";
+    const baseDescription =
+      pool.baseName && pool.baseName.toUpperCase() !== baseSymbol
+        ? pool.baseName
+        : null;
+
+    return {
+      id: pool.poolAddress,
+      _baseAddress: pool.baseAddress,
+      token: (
+        <div className={styles.tokenCell} style={{ cursor: "pointer" }}>
+          <span className={styles.rank}>#{idx + 1}</span>
+          <div className={styles.doubleImage}>
+            <div className={styles.baseImgWrapper}>
+              <TknImg
+                src={pool.baseImageUrl}
+                alt={baseDescription || baseSymbol}
+                size={28}
+              />
+            </div>
+            <div className={styles.quoteImgWrapper}>
+              <TknImg
+                src={pool.quoteImageUrl || null}
+                alt={pool.quoteSymbol}
+                size={14}
+              />
+            </div>
+          </div>
+          <div className={styles.pairNamesText}>
+            <span className={styles.baseSy}>{baseSymbol}</span>
+            <span className={styles.quoteSy}>/{quoteSymbol}</span>
+            {baseDescription && (
+              <span className={styles.poolDescription} title={baseDescription}>
+                {baseDescription}
+              </span>
+            )}
+          </div>
+        </div>
+      ),
+      marketCap: mcap ? fmt.num.compact.currency(mcap) : "-",
+      price: pool.priceUsd ? fmt.num.currency(pool.priceUsd) : "-",
+      age: formatAge(pool.poolCreatedAt, tr("marketPage.justNow")),
+      txns: pool.txns24h ? fmt.num.compact.decimal(pool.txns24h) : "-",
+      volume: pool.volume24h ? fmt.num.compact.currency(pool.volume24h) : "-",
+      "5m": renderTrend(pool.priceChange5m),
+      "1h": renderTrend(pool.priceChange1h),
+      "6h": renderTrend(pool.priceChange6h),
+      "24h": renderTrend(pool.priceChange24h),
+      liquidity: pool.liquidityUsd ? fmt.num.compact.currency(pool.liquidityUsd) : "-",
+    };
+  });
+
+  const sortValue: TbleSortValue | null =
+    sortKey !== "none" ? { key: sortKey, direction: sortDirection } : null;
+
+  if (data.length === 0 && !loading) {
+    return <div className={styles.emptyState}>{tr("marketPage.noPoolsFound")}</div>;
   }
 
   return (
-    <div className={styles.dexTableContainer}>
-      <table className={styles.dexTable}>
-        <thead>
-          <tr>
-            <th className={styles.alignLeft}>{tr("marketPage.token")}</th>
-            <th onClick={() => onSort && onSort("marketCap")}>
-              {tr("marketPage.mcap")}
-              {sortKey === "marketCap" && (
-                <span
-                  className={classNames(styles.sortIndicator, styles.active)}
-                >
-                  {sortDirection === "asc" ? (
-                    <CaretUp size={14} />
-                  ) : (
-                    <CaretDown size={14} />
-                  )}
-                </span>
-              )}
-            </th>
-            <th onClick={() => onSort && onSort("price")}>
-              {tr("marketPage.price")}
-              {sortKey === "price" && (
-                <span
-                  className={classNames(styles.sortIndicator, styles.active)}
-                >
-                  {sortDirection === "asc" ? (
-                    <CaretUp size={14} />
-                  ) : (
-                    <CaretDown size={14} />
-                  )}
-                </span>
-              )}
-            </th>
-            <th onClick={() => onSort && onSort("age")}>
-              {tr("marketPage.age")}
-              {sortKey === "age" && (
-                <span
-                  className={classNames(styles.sortIndicator, styles.active)}
-                >
-                  {sortDirection === "asc" ? (
-                    <CaretUp size={14} />
-                  ) : (
-                    <CaretDown size={14} />
-                  )}
-                </span>
-              )}
-            </th>
-            <th onClick={() => onSort && onSort("txns")}>
-              {tr("marketPage.txns")}
-              {sortKey === "txns" && (
-                <span
-                  className={classNames(styles.sortIndicator, styles.active)}
-                >
-                  {sortDirection === "asc" ? (
-                    <CaretUp size={14} />
-                  ) : (
-                    <CaretDown size={14} />
-                  )}
-                </span>
-              )}
-            </th>
-            <th onClick={() => onSort && onSort("volume")}>
-              {tr("marketPage.volume")}
-              {sortKey === "volume" && (
-                <span
-                  className={classNames(styles.sortIndicator, styles.active)}
-                >
-                  {sortDirection === "asc" ? (
-                    <CaretUp size={14} />
-                  ) : (
-                    <CaretDown size={14} />
-                  )}
-                </span>
-              )}
-            </th>
-            <th onClick={() => onSort && onSort("5m")}>
-              5M
-              {sortKey === "5m" && (
-                <span
-                  className={classNames(styles.sortIndicator, styles.active)}
-                >
-                  {sortDirection === "asc" ? (
-                    <CaretUp size={14} />
-                  ) : (
-                    <CaretDown size={14} />
-                  )}
-                </span>
-              )}
-            </th>
-            <th onClick={() => onSort && onSort("1h")}>
-              1H
-              {sortKey === "1h" && (
-                <span
-                  className={classNames(styles.sortIndicator, styles.active)}
-                >
-                  {sortDirection === "asc" ? (
-                    <CaretUp size={14} />
-                  ) : (
-                    <CaretDown size={14} />
-                  )}
-                </span>
-              )}
-            </th>
-            <th onClick={() => onSort && onSort("6h")}>
-              6H
-              {sortKey === "6h" && (
-                <span
-                  className={classNames(styles.sortIndicator, styles.active)}
-                >
-                  {sortDirection === "asc" ? (
-                    <CaretUp size={14} />
-                  ) : (
-                    <CaretDown size={14} />
-                  )}
-                </span>
-              )}
-            </th>
-            <th onClick={() => onSort && onSort("24h")}>
-              24H
-              {sortKey === "24h" && (
-                <span
-                  className={classNames(styles.sortIndicator, styles.active)}
-                >
-                  {sortDirection === "asc" ? (
-                    <CaretUp size={14} />
-                  ) : (
-                    <CaretDown size={14} />
-                  )}
-                </span>
-              )}
-            </th>
-            <th onClick={() => onSort && onSort("liquidity")}>
-              {tr("marketPage.liquidity")}
-              {sortKey === "liquidity" && (
-                <span
-                  className={classNames(styles.sortIndicator, styles.active)}
-                >
-                  {sortDirection === "asc" ? (
-                    <ArrowUp size={14} />
-                  ) : (
-                    <ArrowDown size={14} />
-                  )}
-                </span>
-              )}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {sortedData.map((pool, idx) => {
-            const mcap = pool.marketCapUsd || pool.fdvUsd;
-
-            const baseSymbol = pool.baseSymbol?.toUpperCase() || "UNK";
-            const quoteSymbol = pool.quoteSymbol?.toUpperCase() || "UNK";
-            const baseDescription =
-              pool.baseName && pool.baseName.toUpperCase() !== baseSymbol
-                ? pool.baseName
-                : null;
-
-            return (
-              <tr key={pool.poolAddress}>
-                <td className={styles.alignLeft}>
-                  <div
-                    className={styles.tokenCell}
-                    onClick={() =>
-                      navigate(
-                        `/tokens/${pool.baseAddress}/${pool.poolAddress}`,
-                      )
-                    }
-                    style={{ cursor: "pointer" }}
-                  >
-                    <span className={styles.rank}>#{idx + 1}</span>
-                    <div className={styles.doubleImage}>
-                      <div className={styles.baseImgWrapper}>
-                        <TknImg
-                          src={pool.baseImageUrl}
-                          alt={baseDescription || baseSymbol}
-                          size={28}
-                        />
-                      </div>
-                      <div className={styles.quoteImgWrapper}>
-                        <TknImg
-                          src={pool.quoteImageUrl || null}
-                          alt={pool.quoteSymbol}
-                          size={14}
-                        />
-                      </div>
-                    </div>
-                    <div className={styles.pairNamesText}>
-                      <span className={styles.baseSy}>{baseSymbol}</span>
-                      <span className={styles.quoteSy}>/{quoteSymbol}</span>
-                      {baseDescription && (
-                        <span
-                          className={styles.poolDescription}
-                          title={baseDescription}
-                        >
-                          {baseDescription}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span className={styles.numberValue}>
-                    {mcap ? fmt.num.compact.currency(mcap) : "-"}
-                  </span>
-                </td>
-                <td>
-                  <span className={styles.numberValue}>
-                    {pool.priceUsd ? fmt.num.currency(pool.priceUsd) : "-"}
-                  </span>
-                </td>
-                <td>
-                  <span className={styles.secondaryValue}>
-                    {formatAge(pool.poolCreatedAt, tr("marketPage.justNow"))}
-                  </span>
-                </td>
-                <td>
-                  <span className={styles.numberValue}>
-                    {pool.txns24h ? fmt.num.compact.decimal(pool.txns24h) : "-"}
-                  </span>
-                </td>
-                <td>
-                  <span className={styles.numberValue}>
-                    {pool.volume24h
-                      ? fmt.num.compact.currency(pool.volume24h)
-                      : "-"}
-                  </span>
-                </td>
-                <td className={styles.numberValue}>
-                  {renderTrend(pool.priceChange5m)}
-                </td>
-                <td className={styles.numberValue}>
-                  {renderTrend(pool.priceChange1h)}
-                </td>
-                <td className={styles.numberValue}>
-                  {renderTrend(pool.priceChange6h)}
-                </td>
-                <td className={styles.numberValue}>
-                  {renderTrend(pool.priceChange24h)}
-                </td>
-                <td>
-                  <span className={styles.numberValue}>
-                    {pool.liquidityUsd
-                      ? fmt.num.compact.currency(pool.liquidityUsd)
-                      : "-"}
-                  </span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <Tble
+      headers={headers}
+      rows={rows}
+      loading={loading}
+      sortConfigs={{
+        marketCap: { type: TbleSortType.Number },
+        price: { type: TbleSortType.Number },
+        age: { type: TbleSortType.Number },
+        txns: { type: TbleSortType.Number },
+        volume: { type: TbleSortType.Number },
+        "5m": { type: TbleSortType.Number },
+        "1h": { type: TbleSortType.Number },
+        "6h": { type: TbleSortType.Number },
+        "24h": { type: TbleSortType.Number },
+        liquidity: { type: TbleSortType.Number },
+      }}
+      sortValue={sortValue}
+      onSortChange={(value) => {
+        if (value && onSort) onSort(value.key as SortKey);
+      }}
+      clientSorting={false}
+      onRowClick={(row) => navigate(`/tokens/${row._baseAddress as string}/${row.id}`)}
+    />
   );
 }
