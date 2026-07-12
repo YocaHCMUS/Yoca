@@ -1,0 +1,137 @@
+\chapter{Phân tích và đặc tả yêu cầu}
+\label{Chapter3}
+
+Chương 2 đã làm rõ khoảng trống mà Yoca hướng đến và những nguồn dữ liệu được sử dụng để hiện thực hóa sản phẩm. Từ nền tảng đó, chương này chuyển sang góc nhìn người dùng: Yoca phục vụ ai, người dùng đi qua hệ thống như thế nào và những yêu cầu nào cần được đáp ứng. Các quyết định về framework, cache, provider adapter và cơ sở dữ liệu được tách sang chương Kiến trúc và thiết kế hệ thống để phần đặc tả không bị trộn với cách cài đặt.
+
+\section{Người dùng và hành trình phân tích}
+\label{sec:yoca_user_journey}
+
+Yoca được xây dựng cho người dùng muốn quan sát thị trường và hoạt động ví Solana nhưng không muốn tự ghép dữ liệu từ nhiều công cụ. Hệ thống có hai nhóm người dùng chính. Khách có thể truy cập các dữ liệu công khai như thị trường, token, pool, giao dịch và ví. Người dùng đã đăng ký có thêm một không gian cá nhân để lưu đối tượng quan tâm, quản lý nhãn ví, thiết lập cảnh báo, theo dõi gói sử dụng và dùng các chức năng AI có giới hạn theo tài khoản.
+
+Thay vì xem những chức năng trên như các trang độc lập, nhóm chúng em tổ chức chúng thành một hành trình phân tích. Người dùng có thể bắt đầu ở Market Overview để nhận biết token hoặc pool đáng chú ý, mở Pool Detail để xem thanh khoản và giao dịch, rồi chuyển đến Token Overview để đọc dữ liệu thị trường, holder và lịch sử biến động. Khi một địa chỉ ví xuất hiện trong quá trình tìm hiểu, Wallet Overview tiếp tục cung cấp danh mục, lịch sử hoạt động, PnL và các biểu đồ liên quan. Nếu muốn theo dõi lâu dài, người dùng đăng nhập để lưu ví hoặc token, đặt nhãn, cấu hình cảnh báo và sử dụng AI để diễn giải tập dữ liệu đã chọn.
+
+Luồng này không buộc mọi phiên sử dụng phải đi qua tất cả màn hình. Người dùng vẫn có thể tìm thẳng một địa chỉ hoặc mở trực tiếp trang ví. Tuy nhiên, việc xác định một hành trình chung giúp nhóm tránh phát triển các chức năng rời rạc: dữ liệu thị trường tạo bối cảnh cho token, token dẫn đến pool và giao dịch, còn dữ liệu ví cho thấy một chủ thể đã hành động như thế nào trong bối cảnh đó.
+
+Ngoài luồng chính, Yoca còn hỗ trợ so sánh nhiều ví, xem chi tiết giao dịch và phân tích dấu hiệu wash trading. Đây là các nhánh dành cho người dùng cần đi sâu hơn sau bước quan sát tổng quan. Mô-đun wash trading trình bày quan hệ ví--giao dịch dưới dạng đồ thị và các chỉ số bất thường; kết quả chỉ đóng vai trò tín hiệu hỗ trợ kiểm tra, không phải kết luận chắc chắn về hành vi gian lận.
+
+\section{Yêu cầu chức năng}
+\label{sec:functional_requirements}
+
+Từ hành trình trên và các chức năng đã được đối chiếu với mã nguồn, yêu cầu của Yoca được gom thành sáu nhóm. Cách gom này mô tả năng lực người dùng nhận được, không bám theo từng route hoặc component cụ thể.
+
+\subsection{Khám phá thị trường, token và pool}
+
+Hệ thống cần cho phép người dùng xem tổng quan thị trường, các token hoặc pool nổi bật và những nhóm dữ liệu như trending, khối lượng, số giao dịch, tăng giảm giá và pool mới. Người dùng có thể tìm kiếm bằng tên, symbol hoặc địa chỉ; từ kết quả tìm kiếm, hệ thống cần dẫn đến đúng trang token, pool hoặc ví. Với một token, Yoca cần trình bày metadata, dữ liệu thị trường, biểu đồ lịch sử, holder và các pool liên quan. Với một pool, hệ thống cần hiển thị cặp tài sản, thanh khoản, biến động và giao dịch gần đây ở mức dữ liệu nguồn cho phép.
+
+\subsection{Phân tích ví và giao dịch}
+
+Khi người dùng nhập một địa chỉ ví hợp lệ, hệ thống cần cung cấp phần tổng quan, danh mục tài sản, phân bổ token, lịch sử transfer và swap, PnL cùng các chuỗi thời gian liên quan đến số dư và hoạt động giao dịch. Người dùng có thể thay đổi khoảng thời gian, lọc hoặc phân trang những tập dữ liệu lớn mà không phải tải toàn bộ lịch sử vào một lần. Yoca cũng cần cho phép mở chi tiết một giao dịch và xem dữ liệu đã được diễn giải bên cạnh thông tin nguồn cần thiết để đối chiếu.
+
+Chức năng so sánh nhiều ví sử dụng cùng các khái niệm ở cấp độ tổng hợp. Người dùng có thể chọn nhiều địa chỉ và đặt các chỉ số chính cạnh nhau, thay vì mở từng trang rồi ghi chép thủ công. Với các dữ liệu không đủ độ phủ, giao diện phải thể hiện giới hạn của kết quả thay vì ngầm xem phần dữ liệu hiện có là toàn bộ lịch sử.
+
+\subsection{Phát hiện dấu hiệu wash trading}
+
+Yoca cần cho phép người dùng chọn token hoặc dữ liệu giao dịch phù hợp để quan sát các mẫu đáng chú ý như chu trình chuyển tài sản, cấu trúc tập trung quanh một số ví và biến động khối lượng bất thường. Hệ thống trình bày kết quả bằng đồ thị, bảng và phần giải thích để người dùng có thể lần ngược về các ví hoặc giao dịch liên quan. Các tín hiệu phải được diễn đạt theo mức độ nghi vấn; hệ thống không được tự động đồng nhất một mẫu bất thường với kết luận gian lận.
+
+\subsection{Tài khoản và không gian cá nhân}
+
+Hệ thống cần hỗ trợ đăng ký và đăng nhập bằng email/mật khẩu, tài khoản Google hoặc chữ ký ví Solana. Sau khi xác thực, người dùng có thể cập nhật thông tin cá nhân, quản lý phương thức đăng nhập, liên kết ví, thay đổi mật khẩu hoặc xóa tài khoản theo các bước xác nhận tương ứng.
+
+Trong không gian cá nhân, người dùng có thể lưu token và ví vào watchlist, gắn nhãn riêng cho địa chỉ ví và xem lại những đối tượng đã quan tâm. Người dùng cũng có thể xem trạng thái subscription và lịch sử thanh toán. Những dữ liệu thuộc sở hữu cá nhân chỉ được truy cập bởi đúng tài khoản đã xác thực.
+
+\subsection{Cảnh báo và theo dõi}
+
+Người dùng đã đăng ký cần có khả năng tạo, xem, chỉnh sửa trạng thái và xóa cảnh báo token hoặc cảnh báo hoạt động giao dịch. Một cảnh báo gồm đối tượng theo dõi, điều kiện, thời hạn và kênh nhận được hệ thống hỗ trợ. Với cảnh báo ví, webhook có thể được dùng để tiếp nhận hoạt động mới mà không cần truy vấn liên tục.
+
+Phạm vi hiện tại tập trung vào cấu hình quy tắc, tiếp nhận sự kiện và gửi thông báo theo điều kiện. Lịch sử thông báo hoàn chỉnh, trạng thái đã đọc và cơ chế chống gửi trùng ở mọi trường hợp chưa được xem là yêu cầu đã hoàn tất; các nội dung này được giữ trong hướng mở rộng thay vì được mô tả như kết quả sẵn có.
+
+\subsection{AI và giới hạn sử dụng}
+
+AI trong Yoca nhận ngữ cảnh đã được hệ thống chuẩn bị từ dữ liệu token, ví hoặc kết quả wash trading. Người dùng đã đăng ký có thể đặt câu hỏi, yêu cầu tóm tắt và quản lý phiên chat hoặc prompt mẫu. Phản hồi cần giữ liên hệ với dữ liệu đầu vào, tránh tự tạo số liệu và cho phép người dùng quay lại bảng, biểu đồ hoặc giao dịch nguồn khi cần kiểm tra.
+
+Do mỗi lần gọi mô hình phát sinh chi phí, hệ thống cần theo dõi lượt dùng theo tài khoản và gói dịch vụ. Khi vượt quyền lợi, người dùng phải nhận được thông báo rõ ràng và đường dẫn đến thông tin gói phù hợp, thay vì gặp một lỗi kỹ thuật không giải thích được.
+
+\section{Yêu cầu chất lượng}
+\label{sec:quality_requirements}
+
+Yêu cầu đầu tiên là tính nhất quán và khả năng kiểm chứng của dữ liệu. Dữ liệu bên ngoài phải được kiểm tra trước khi đi vào các phép tính hoặc giao diện. Những trường enrichment như symbol, logo hoặc chỉ số biến động có thể thiếu; hệ thống cần có trạng thái thay thế phù hợp, trong khi dữ liệu bắt buộc cho nghiệp vụ phải tạo lỗi rõ ràng. Các kết quả PnL, biểu đồ và AI cần chỉ ra phạm vi thời gian hoặc nguồn dữ liệu đủ để người dùng hiểu giới hạn của chúng.
+
+Yêu cầu thứ hai là khả năng phản hồi trong điều kiện phụ thuộc API bên ngoài. Các trang không nên gọi lại cùng một dữ liệu đắt đỏ ở mọi lần mở. Hệ thống cần tái sử dụng dữ liệu còn phù hợp, chỉ đồng bộ phần thiếu và thể hiện trạng thái tải ở từng khu vực. Báo cáo không đặt một ngưỡng thời gian phản hồi cố định khi nhóm chưa có benchmark đầy đủ; thay vào đó, hiệu quả cache hit và cache miss sẽ được đánh giá bằng số liệu thực tế nếu phép đo được thực hiện ở chương Triển khai, kiểm thử và đánh giá.
+
+Yêu cầu thứ ba là xử lý lỗi có thể hiểu được. Địa chỉ hoặc tham số sai phải được phát hiện trước khi gọi provider. Khi nguồn bên ngoài trả lỗi, response rỗng hoặc sai cấu trúc, backend cần chuyển chúng thành lỗi có phân loại để frontend hiển thị trạng thái phù hợp. Hệ thống không được tiếp tục tính toán trên dữ liệu chưa qua kiểm tra chỉ để giữ màn hình có kết quả.
+
+Yêu cầu thứ tư là bảo vệ dữ liệu và thao tác cá nhân. Phiên đăng nhập, watchlist, nhãn ví, cảnh báo, lịch sử thanh toán và chức năng AI theo gói phải được kiểm tra quyền truy cập ở phía server. API key, secret xác thực và thông tin thanh toán không được đưa vào bundle phía client. Những thao tác nhạy cảm như liên kết ví hoặc xóa tài khoản cần có bước chứng minh quyền sở hữu hoặc xác nhận bổ sung. Với chức năng AI, câu hỏi người dùng, lịch sử hội thoại và dữ liệu do công cụ trả về phải được xem là dữ liệu không tin cậy; chúng không được phép thay đổi system instruction hoặc yêu cầu mô hình tiết lộ ngữ cảnh ẩn.
+
+Yêu cầu cuối cùng là khả năng sử dụng và bảo trì. Một người dùng mới cần tìm được token hoặc ví, hiểu trạng thái loading/error/empty và đọc được các chỉ số chính mà không phải biết cấu trúc API. Các màn hình cốt lõi cần dùng thuật ngữ, màu sắc và hành vi component nhất quán. Khi chuyển giữa tiếng Việt và tiếng Anh, hệ thống phải thay đổi đồng bộ chuỗi giao diện, định dạng số, ngày giờ và đơn vị tiền tệ; giá trị gốc bằng USD chỉ được quy đổi sang VND tại lớp trình bày để không làm thay đổi dữ liệu nghiệp vụ. Ở phía phát triển, contract dữ liệu giữa client và server phải đủ rõ để thay đổi provider không buộc giao diện phụ thuộc vào response thô của từng dịch vụ.
+
+\section{Sơ đồ Use Case}
+\label{sec:use_case}
+
+Sơ đồ tổng quát trong Hình~\ref{fig:usecase} mô tả hai tác nhân Khách và Người dùng đã đăng ký. Người dùng đã đăng ký kế thừa các chức năng công khai của Khách, đồng thời có thêm những chức năng cần dữ liệu cá nhân hoặc phát sinh chi phí như quản lý tài khoản, cảnh báo, subscription và AI. Các provider, webhook hoặc cổng thanh toán là hệ thống hỗ trợ ở phía sau; chúng sẽ xuất hiện trong sơ đồ kiến trúc hoặc sơ đồ tuần tự thay vì được xem như người dùng của Yoca.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/usecase.png}
+    \caption{Sơ đồ Use Case tổng quát của hệ thống Yoca}
+    \label{fig:usecase}
+\end{figure}
+
+Hình~\ref{fig:usecase_guest} triển khai chi tiết những điểm vào công khai: trang chủ, Market Radar, tìm kiếm, chi tiết token và chi tiết ví. Sơ đồ này được giản lược theo mục tiêu sử dụng; pool, giao dịch và các nhánh phân tích sâu được truy cập từ những điểm vào trên thay vì tách thành quá nhiều use case nhỏ.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/chapter3/guest-user-diagram-cropped.pdf}
+    \caption{Sơ đồ Use Case của Khách}
+    \label{fig:usecase_guest}
+\end{figure}
+
+Hình~\ref{fig:usecase_registered} tập trung vào các chức năng bổ sung sau đăng nhập, gồm AI chat, quản lý phiên và prompt, theo dõi lượt dùng, cảnh báo, payment và subscription. Các thao tác profile, watchlist và nhãn ví được gom trong nhóm quản lý tài khoản ở sơ đồ tổng quát để hình không trở thành danh sách toàn bộ route của hệ thống.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/chapter3/registered-user-diagram.pdf}
+    \caption{Sơ đồ Use Case của Người dùng đã đăng ký}
+    \label{fig:usecase_registered}
+\end{figure}
+
+\section{Kế hoạch kiểm thử và tiêu chí chấp nhận}
+\label{sec:acceptance_plan}
+
+Ở giai đoạn đặc tả, nhóm chúng em xác định các kịch bản cần kiểm tra trước khi xem một luồng là có thể trình diễn. Đây là kế hoạch và tiêu chí chấp nhận, chưa phải tuyên bố rằng toàn bộ kịch bản đã được kiểm thử. Kết quả thực tế, môi trường chạy và những phần chưa bao phủ sẽ được trình bày riêng trong chương Triển khai, kiểm thử và đánh giá.
+
+\small
+\begin{longtable}{|p{3.1cm}|p{5.4cm}|p{6.0cm}|}
+\caption{Kịch bản và tiêu chí chấp nhận các luồng chính}\label{tab:acceptance_criteria} \\
+\hline
+\textbf{Luồng} & \textbf{Kịch bản cần kiểm tra} & \textbf{Tiêu chí chấp nhận} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Luồng} & \textbf{Kịch bản cần kiểm tra} & \textbf{Tiêu chí chấp nhận} \\
+\hline
+\endhead
+
+Khám phá thị trường & Mở Market Overview, tìm token/pool/ví và chuyển giữa các trang liên quan & Kết quả dẫn đến đúng đối tượng; loading, empty và upstream error được hiển thị rõ; dữ liệu chính có đơn vị và thời điểm phù hợp \\
+\hline
+Token và pool & Mở token, xem chart/holder/pool rồi mở một pool và giao dịch gần đây & Address được giữ nhất quán qua các trang; biểu đồ và bảng không dùng dữ liệu sai schema; trường tùy chọn bị thiếu không làm hỏng toàn trang \\
+\hline
+Phân tích ví & Mở ví, thay khoảng thời gian, xem portfolio, PnL, balance, transfer và swap & Dữ liệu thuộc đúng ví và khoảng thời gian; danh sách lớn được phân trang/lọc; kết quả có giới hạn độ phủ phải được ghi rõ \\
+\hline
+So sánh và wash trading & So sánh nhiều ví; mở phân tích wash trading của một token và lần theo giao dịch liên quan & Các chỉ số dùng cùng định nghĩa; đồ thị liên kết được với dữ liệu nguồn; tín hiệu bất thường không được trình bày như kết luận chắc chắn \\
+\hline
+Tài khoản cá nhân & Đăng nhập, cập nhật profile, quản lý watchlist/label và thử truy cập dữ liệu của tài khoản khác & Thao tác hợp lệ được lưu; route bảo vệ từ chối request thiếu hoặc sai quyền; dữ liệu cá nhân không bị trả cho tài khoản khác \\
+\hline
+Cảnh báo & Tạo, sửa trạng thái và xóa cảnh báo token hoặc ví; tiếp nhận một sự kiện phù hợp & Rule được lưu đúng chủ sở hữu và điều kiện; sự kiện phù hợp được xử lý theo kênh hỗ trợ; lỗi provider không làm mất cấu hình cảnh báo \\
+\hline
+AI và subscription & Gửi câu hỏi có ngữ cảnh, quản lý session/prompt và sử dụng hết quota thử nghiệm & Phản hồi bám dữ liệu được cung cấp; lượt dùng được ghi nhận; chức năng bị khóa trả thông báo và hướng nâng gói rõ ràng \\
+\hline
+\end{longtable}
+\normalsize
+
+Phạm vi kiểm thử dự kiến gồm unit test cho các phép tính và normalizer, contract test bằng fixture cho response provider, route/service test với upstream được mock và một số component test cho trạng thái giao diện. Một smoke test xuyên suốt hành trình Market Overview -- Token Pool -- Token Overview -- Wallet Overview -- User -- AI sẽ được ưu tiên vì nó kiểm tra sự liên kết giữa các miền thay vì chỉ xác nhận từng endpoint riêng lẻ. Các nội dung như load test, end-to-end toàn hệ thống hoặc benchmark chỉ được ghi là kết quả nếu nhóm thực sự chạy và lưu được bằng chứng.
+
+\section{Tổng kết chương}
+
+Chương này đã chuyển mục tiêu chung của Yoca thành một hành trình sử dụng và các yêu cầu có thể đối chiếu. Khách có thể khám phá thị trường, token, pool, giao dịch và ví; người dùng đã đăng ký có thêm không gian cá nhân, cảnh báo, subscription và AI. Những chức năng chuyên sâu như so sánh ví và wash trading được đặt như nhánh mở rộng từ luồng phân tích chính, không phải các sản phẩm tách rời.
+
+Bên cạnh chức năng, nhóm chúng em đặt ra yêu cầu về khả năng kiểm chứng dữ liệu, xử lý lỗi, bảo vệ dữ liệu cá nhân và tính nhất quán của giao diện. Bảng tiêu chí chấp nhận là cầu nối sang phần kiểm thử sau này, nhưng không thay thế kết quả thực nghiệm. Chương tiếp theo sẽ giải thích cách kiến trúc Yoca đáp ứng các yêu cầu trên trong điều kiện dữ liệu phụ thuộc nhiều provider và đã thay đổi đáng kể trong quá trình phát triển.

@@ -7,10 +7,17 @@ import React, {
   useState,
 } from "react";
 
-type AuthUser = {
+export type EffectivePlanTier = "Free" | "Lite" | "Plus" | "Pro";
+
+export type AuthUser = {
   userId: string;
   displayName: string | null;
   avatarUrl?: string | null;
+  planTier: EffectivePlanTier;
+  entitlements: {
+    washTradingAi: boolean;
+    walletAiAnalysis: boolean;
+  };
 };
 
 type AuthContextType = {
@@ -45,6 +52,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             userId: res.id,
             displayName: res.displayName,
             avatarUrl: res.avatarUrl,
+            planTier: res.planTier,
+            entitlements: res.entitlements,
           });
         } else {
           // API may return null for unauthenticated sessions.

@@ -16,7 +16,7 @@ import {
     type TokenMarketChartDailyInsert,
     type TokenMarketChartHourlyInsert,
 } from "@sv/db/schema.js";
-import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import { excluded } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
@@ -102,7 +102,7 @@ export async function fetch24hTokenMarketChart(
     return [];
   }
 
-  const res = await getTrackedApiResult(cg_TokenMarketChartSchema, resp);
+  const res = await validateApiResult(cg_TokenMarketChartSchema, resp);
 
   if (!res) {
     return [];
@@ -205,7 +205,7 @@ async function fetchAndCacheChartRange(
     return;
   }
 
-  const res = await getTrackedApiResult(cg_TokenMarketChartSchema, resp);
+  const res = await validateApiResult(cg_TokenMarketChartSchema, resp);
 
   if (!res || res.prices.length == 0) {
     return;
@@ -376,7 +376,7 @@ async function fetchMobulaDayRange(
   tokenAddress: string,
 ): Promise<void> {
   const points = await getMobulaChartData(tokenAddress, "24h");
-  if (points.length === 0) return;
+  if (points.length == 0) return;
 
   const nowMs = Date.now();
   const inserts: TokenMarketChartHourlyInsert[] = points.map((p) => ({

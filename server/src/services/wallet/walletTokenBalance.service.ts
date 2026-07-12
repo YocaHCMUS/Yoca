@@ -1,4 +1,4 @@
-import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import type { WalletTimePeriod } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { zrn_WalletBalanceChartSchema } from "../_types/wallet-raw-responses.js";
 import { db } from "@sv/db/index.js";
@@ -80,14 +80,16 @@ async function fetchZerionId(
       .join(","),
   }).toString();
 
-  const resp = await fetch(req, {
+  const resp = await rlFetch(req, {
     method: "GET",
     headers: zrn.getRequiredHeaders(),
+    rlLimiter: zrn.limiter,
   });
 
-  const res = await getTrackedApiResult(zrn_FungiblesResponseSchema, resp);
+  const res = await validateApiResult(zrn_FungiblesResponseSchema, resp);
 
   if (!res) {
+    // TODO: Consider more robust error handling
     return {};
   }
 
@@ -243,7 +245,7 @@ export async function fetchWalletTokenBalanceHistory(
         rlTimeoutMs: 30000,
       });
 
-      const res = await getTrackedApiResult(zrn_WalletBalanceChartSchema, resp);
+      const res = await validateApiResult(zrn_WalletBalanceChartSchema, resp);
       if (!res) {
         return res;
       }

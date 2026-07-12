@@ -1,11 +1,11 @@
-import { getTrackedApiResult, solanaBase58Schema } from "@sv/middlewares/validation";
+import { validateApiResult, solanaBase58Schema } from "@sv/middlewares/validation";
 import { getAddressesByCoinGeckoIds } from "@sv/services/tokens/token-list.js";
 import { getTokenMarketData } from "@sv/services/tokens/token-market-data.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import {
-  cg_OnchainPoolSearchSchema,
-  cg_SearchSchema,
+    cg_OnchainPoolSearchSchema,
+    cg_SearchSchema,
 } from "./_types/token-raw-responses.js";
 
 type TokenMetaSearchResult = {
@@ -56,7 +56,7 @@ async function getSearchPoolsResult(q: string): Promise<PoolSearchResult[]> {
     rlLimiter: cg.limiter,
   });
 
-  const res = await getTrackedApiResult(cg_OnchainPoolSearchSchema, resp);
+  const res = await validateApiResult(cg_OnchainPoolSearchSchema, resp);
   if (!res) {
     return [];
   }
@@ -113,7 +113,7 @@ async function getSearchQueriesResult(q: string) {
     rlLimiter: cg.limiter,
   });
 
-  const res = await getTrackedApiResult(cg_SearchSchema, resp);
+  const res = await validateApiResult(cg_SearchSchema, resp);
   return res?.coins ?? [];
 }
 

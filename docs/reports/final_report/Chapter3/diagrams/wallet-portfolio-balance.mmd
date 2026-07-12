@@ -1,0 +1,43 @@
+---
+config:
+  layout: elk
+---
+erDiagram
+    direction LR
+
+    WALLET_ADDRESS {
+        varchar address PK
+    }
+    WALLET_PORTFOLIO_CACHE {
+        varchar address PK
+        jsonb data
+        timestamp fetched_at
+    }
+    WALLET_HISTORICAL_PORTFOLIO_CACHE {
+        varchar address PK
+        varchar date PK
+        jsonb data
+    }
+    WALLET_BALANCE_HISTORY {
+        varchar address PK
+        bigint timestamp_ms PK
+        decimal usd_value
+    }
+    WALLET_TOKEN_BALANCE_WEEK_HISTORY {
+        varchar wallet_address PK
+        varchar token_address PK
+        bigint timestamp_ms PK
+        decimal usd_value
+    }
+    WALLET_TOKEN_BALANCE_MONTH_HISTORY {
+        varchar wallet_address PK
+        bigint timestamp_ms PK
+        varchar token_address
+        decimal usd_value
+    }
+
+    WALLET_ADDRESS ||..o| WALLET_PORTFOLIO_CACHE : owns
+    WALLET_ADDRESS ||..o{ WALLET_HISTORICAL_PORTFOLIO_CACHE : snapshots
+    WALLET_ADDRESS ||..o{ WALLET_BALANCE_HISTORY : tracks
+    WALLET_ADDRESS ||..o{ WALLET_TOKEN_BALANCE_WEEK_HISTORY : tracks
+    WALLET_ADDRESS ||..o{ WALLET_TOKEN_BALANCE_MONTH_HISTORY : tracks

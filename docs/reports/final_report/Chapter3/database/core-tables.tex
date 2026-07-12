@@ -1,0 +1,62 @@
+\subsection{Các bảng trọng tâm}
+\label{subsec:db_bang_trong_tam}
+
+Bảng~\ref{tab:db_core_tables} tóm tắt các bảng đại diện cho từng miền. Các bảng cache phụ có cùng cách tổ chức không được liệt kê lại để tránh lặp nội dung.
+
+\begingroup
+\small
+\begin{longtable}{|L{0.27\textwidth}|L{0.25\textwidth}|L{0.38\textwidth}|}
+\caption{Các bảng dữ liệu trọng tâm của Yoca}
+\label{tab:db_core_tables}\\
+\hline
+\textbf{Bảng} & \textbf{Khóa chính} & \textbf{Vai trò} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Bảng} & \textbf{Khóa chính} & \textbf{Vai trò} \\
+\hline
+\endhead
+\code{users} & \code{id} & Thông tin tài khoản, cấu hình nhận cảnh báo và Stripe customer. \\
+\hline
+\code{auth\_accounts} & \code{provider, provider\_user\_id} & Danh tính đăng nhập bằng password, OAuth hoặc ví Solana. \\
+\hline
+\code{subscriptions} & \code{id} & Trạng thái gói dịch vụ và chu kỳ thanh toán. \\
+\hline
+\code{alerts} & \code{id} & Định nghĩa cảnh báo, loại cảnh báo, chế độ kích hoạt và thời hạn. \\
+\hline
+\code{alert\_history} & \code{id} & Lịch sử cảnh báo đã phát sinh và trạng thái đã đọc. \\
+\hline
+\code{token\_meta} & \code{address} & Tên, symbol và hình ảnh cơ bản của token. \\
+\hline
+\code{token\_market\_data} & \code{address} & Market snapshot gần nhất, gồm giá, vốn hóa và volume. \\
+\hline
+\code{token\_market\_chart\_*} & \code{address, timestamp} & Chuỗi giá 24 giờ, hourly và daily cho biểu đồ. \\
+\hline
+\code{wallet\_overview\_cache} & \code{address} & Read model tổng hợp holdings và hoạt động theo nhiều kỳ cho trang overview. \\
+\hline
+\code{wallet\_analyses} & \code{wallet\_address, period} & Kết quả Mobula gồm win rate, PnL, phân phối giao dịch và calendar breakdown. \\
+\hline
+\code{wallet\_balance\_history} & \code{address, timestamp\_ms} & Tổng tài sản theo ngày từ Mobula, dùng cho balance chart và PnL theo dòng tiền. \\
+\hline
+\code{wallet\_token\_balance\_*\_history} & \code{wallet\_address, timestamp\_ms} (kỳ tuần bổ sung \code{token\_address}) & Giá trị lịch sử ở cấp token lấy từ Zerion theo kỳ tuần hoặc tháng. \\
+\hline
+\code{wallet\_transfer\_history} & \code{address, transaction\_hash, act\_id} & Lịch sử chuyển token đã chuẩn hóa và hỗ trợ phân trang. \\
+\hline
+\code{wallet\_swap\_history} & \code{address, transaction\_hash, act\_id} & Lịch sử swap đã chuẩn hóa theo ví. \\
+\hline
+\code{wallet\_enhanced\_transactions} & \code{address, signature} & Transaction cha cho dữ liệu chi tiết từ Helius. \\
+\hline
+\code{wallet\_token\_details} & \code{address, token\_address} & Read model PnL, số lần mua bán và giá vốn theo từng token. \\
+\hline
+\code{chat\_sessions} & \code{id} & Phiên chat, context ví và danh sách message. \\
+\hline
+\code{news\_batches} & \code{id} & Nhóm bài viết thu thập theo token và thời điểm. \\
+\hline
+\end{longtable}
+\endgroup
+
+\code{wallet\_analyses} là read model có kích thước tương đối lớn do lưu cả chỉ số tổng hợp và hai cấu trúc JSONB là \code{period\_timeframes} và \code{calendar\_breakdown}. Mỗi ví chỉ có một bản ghi cho mỗi kỳ phân tích, nhờ đó dữ liệu Mobula có thể được dùng lại trong thời gian TTL mà không cần gọi provider cho mọi request. Việc gom dữ liệu ở bảng này là một ngoại lệ có chủ đích sau đợt migration gấp sang Mobula, không phải mẫu chuẩn hóa mà nhóm áp dụng cho mọi miền.
+
+Các bảng \code{wallet\_enhanced\_*} lưu chi tiết giao dịch ở mức thấp hơn transfer/swap history. Instruction, inner instruction, fee payer, program ID và native transfer cần thiết cho transaction detail và phân tích hành vi, trong khi history tables ưu tiên danh sách đã chuẩn hóa và phân trang. Qua kiểm tra consumer, cả hai nhóm vẫn đang được sử dụng; vì vậy báo cáo xem chúng là các read model song song trong quá trình thay thế tăng dần, không gắn nhãn deprecated chỉ dựa vào tuổi của bảng.
+
+Bên cạnh primary key, một số bảng truy vấn nhiều còn có index bổ sung bám theo truy vấn thực tế thay vì đánh index toàn bộ cột. \code{wallet\_transfer\_history} và \code{wallet\_swap\_history} có index kết hợp \code{(address, block\_timestamp\_ms)} vì truy vấn phổ biến nhất là lấy lịch sử của một ví theo thứ tự thời gian. \code{wallet\_enhanced\_token\_transfers} và \code{wallet\_enhanced\_native\_transfers} dùng unique index trên \code{(address, signature, ...index)} để việc ghi lại dữ liệu từ Helius không tạo bản ghi trùng khi service chạy lại. \code{chat\_sessions} và \code{chat\_prompts} có index trên \code{user\_id} để liệt kê phiên chat hoặc prompt của một tài khoản không phải quét toàn bảng. Báo cáo không đưa ước lượng dung lượng hay chiến lược partition vì nhóm chưa đo kích thước bảng ở quy mô sản xuất; các index nêu trên phản ánh đúng mẫu truy vấn hiện có trong schema, không phải một danh sách đầy đủ.

@@ -1,0 +1,14 @@
+flowchart LR
+    DEV[GitHub monorepo] --> CI[GitHub Actions CI]
+    CI -->|Deploy hook| CLIENT[Render Static Site<br/>Vite production build]
+    CI -->|Deploy hook| SERVER[Render Web Service<br/>Node.js + Hono]
+    CLIENT -->|HTTPS API| SERVER
+    SERVER --> DB[(Supabase PostgreSQL)]
+    SERVER --> PROVIDERS[Blockchain and data providers]
+
+    classDef source fill:#e8f1ff,stroke:#2563eb,color:#111827;
+    classDef compute fill:#ecfdf5,stroke:#059669,color:#111827;
+    classDef data fill:#fff7ed,stroke:#ea580c,color:#111827;
+    class DEV,CI source;
+    class CLIENT,SERVER compute;
+    class DB,PROVIDERS data;

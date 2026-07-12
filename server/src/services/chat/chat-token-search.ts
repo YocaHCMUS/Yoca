@@ -1,6 +1,6 @@
 import { db } from "@sv/db/index.js";
 import { tokenMeta } from "@sv/db/schema.js";
-import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import { getAddressesByCoinGeckoIds } from "@sv/services/tokens/token-list.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
 import * as cg from "@sv/util/util-coingecko.js";
@@ -57,7 +57,7 @@ async function searchCoinGecko(query: string): Promise<TokenSearchResult[]> {
       rlLimiter: cg.limiter,
     });
 
-    const res = await getTrackedApiResult(cg_SearchSchema, resp);
+    const res = await validateApiResult(cg_SearchSchema, resp);
     const coins = res?.coins ?? [];
     if (coins.length === 0) return [];
 

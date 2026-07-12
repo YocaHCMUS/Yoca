@@ -1,0 +1,11 @@
+\chapter*{Tóm tắt}
+\addcontentsline{toc}{chapter}{Tóm tắt}
+\label{summary}
+
+Việc phân tích dữ liệu trên Solana thường yêu cầu người dùng kết hợp nhiều công cụ cho dữ liệu thị trường, token, pool, ví và giao dịch. Đề tài xây dựng Yoca nhằm tổ chức các đối tượng này thành một luồng sử dụng thống nhất, từ khám phá thị trường đến phân tích ví và hỗ trợ diễn giải bằng trí tuệ nhân tạo.
+
+Yoca được triển khai dưới dạng ứng dụng web full-stack TypeScript gồm React/Vite ở phía giao diện, Hono ở phía máy chủ và PostgreSQL/Drizzle cho dữ liệu có cấu trúc cùng các read model cache. Hệ thống tích hợp nhiều nhà cung cấp theo miền nghiệp vụ, kiểm tra response bằng Zod và tái sử dụng dữ liệu theo TTL hoặc khoảng lịch sử đã đồng bộ. Trong quá trình phát triển, mô-đun Wallet được chuyển từ việc phụ thuộc nhiều vào Birdeye và tự suy luận giao dịch Helius sang kết hợp Mobula cho phân tích/tổng tài sản, Zerion cho lịch sử theo token và Helius cho portfolio, webhook cùng transaction detail.
+
+Kết quả của đề tài là luồng Market--Pool--Token--Wallet--User--AI, các chức năng tài khoản và theo dõi, trực quan hóa giao dịch, Alert History, tín hiệu wash trading và lớp localization tiếng Anh/tiếng Việt có định dạng USD/VND. Hai test suite client/server đều đạt trong lần chạy cuối; các luồng AI chính có system instruction, ranh giới dữ liệu không tin cậy và validation đầu ra. Tuy nhiên, hệ thống vẫn phụ thuộc vào chất lượng và quota provider; giao diện chưa được đồng nhất hoàn toàn; deployment, E2E và load test vẫn cần thêm bằng chứng vận hành. Báo cáo vì vậy tập trung trình bày cả kết quả đạt được lẫn giới hạn cần tiếp tục xử lý.
+
+\textbf{Từ khóa:} Solana, phân tích on-chain, dữ liệu nhiều nhà cung cấp, phân tích ví, PnL, localization, wash trading.

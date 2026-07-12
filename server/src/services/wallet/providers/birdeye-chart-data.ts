@@ -1,25 +1,25 @@
 import {
-  getEndpoint as getBirdeyeEndpoint,
-  getRequiredHeaders as getBirdeyeHeaders,
-  limiter as birdeyeLimiter,
+    getEndpoint as getBirdeyeEndpoint,
+    getRequiredHeaders as getBirdeyeHeaders,
+    limiter as birdeyeLimiter,
 } from "@sv/util/util-birdeye.js";
 import { db } from "@sv/db/index.js";
 import {
-  tokenMarketChart24h,
-  tokenMarketChartHourly,
-  tokenMarketChartDaily,
-  type TokenMarketChartHourlyInsert,
-  type TokenMarketChartDailyInsert,
+    tokenMarketChart24h,
+    tokenMarketChartHourly,
+    tokenMarketChartDaily,
+    type TokenMarketChartHourlyInsert,
+    type TokenMarketChartDailyInsert,
 } from "@sv/db/schema.js";
 import { bds_HistoryPriceSchema } from "@sv/services/_types/token-raw-responses.js";
-import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
 import { excluded } from "@sv/util/orm-sql.js";
 import { and, eq, gte, lte } from "drizzle-orm";
 import {
-  get24hTokenMarketChart,
-  getHourlyTokenMarketChart,
-  getDailyTokenMarketChart,
+    get24hTokenMarketChart,
+    getHourlyTokenMarketChart,
+    getDailyTokenMarketChart,
 } from "@sv/services/tokens/token-chart.js";
 import { DAY_MS } from "@sv/config/constants.js";
 
@@ -56,7 +56,7 @@ async function fetchAndStoreBirdeyeRange(
     rlLimiter: birdeyeLimiter,
   });
 
-  const res = await getTrackedApiResult(bds_HistoryPriceSchema, resp);
+  const res = await validateApiResult(bds_HistoryPriceSchema, resp);
   if (!res) return;
 
   const items = res.data.items;

@@ -10,11 +10,17 @@ import {
     getIdentityCacheTtlMs,
     saveWalletIdentityCache,
 } from "@sv/services/wallet/db/walletIdentityCache.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
+import {
+    hls_WalletIdentityBatchSchema,
+    hls_WalletIdentitySchema,
+} from "@sv/services/_types/wallet-raw-responses.js";
 import {
     getEndpoint,
     getRequiredHeaders,
-    heliusFetch,
+    limiter as heliusLimiter,
 } from "@sv/util/util-helius.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 import { statusCode } from "@sv/util/responses.js";
 
 export const WALLET_IDENTITY_MAX_BATCH_SIZE = 100;
@@ -322,14 +328,6 @@ function chunkAddresses(addresses: string[], chunkSize: number): string[][] {
     return chunks;
 }
 
-async function parseResponseJson(response: Response): Promise<unknown> {
-    try {
-        return await response.json();
-    } catch {
-        return null;
-    }
-}
-
 function normalizeBatchPayload(
     payload: unknown,
     requestedChunk: string[],
@@ -379,7 +377,7 @@ function ensureProviderOk(response: Response): void {
         return;
     }
 
-    if (response.status === 404) {
+    if (response.status == 404) {
         return;
     }
 
@@ -392,9 +390,10 @@ export async function getWalletIdentityRaw(address: string): Promise<WalletIdent
 
     let response: Response;
     try {
-        response = await heliusFetch(endpoint, {
+        response = await rlFetch(endpoint, {
             method: "GET",
             headers: getRequiredHeaders(),
+            rlLimiter: heliusLimiter,
         });
     } catch {
         throw new WalletIdentityServiceError(
@@ -406,15 +405,15 @@ export async function getWalletIdentityRaw(address: string): Promise<WalletIdent
 
     ensureProviderOk(response);
 
-    if (response.status === 404) {
+    if (response.status == 404) {
         return {
             statusCode: 404,
             data: null,
         };
     }
 
-    const payload = await parseResponseJson(response);
-    if (!isObject(payload)) {
+    const payload = await validateApiResult(hls_WalletIdentitySchema, response);
+    if (!payload) {
         throw new WalletIdentityServiceError(
             "Wallet identity provider returned an invalid payload",
             "provider_bad_payload",
@@ -425,7 +424,7 @@ export async function getWalletIdentityRaw(address: string): Promise<WalletIdent
 
     return {
         statusCode: response.status,
-        data: payload as HeliusWalletIdentityRaw,
+        data: payload,
     };
 }
 
@@ -441,10 +440,11 @@ export async function getWalletIdentityBatchRaw(
 
         let response: Response;
         try {
-            response = await heliusFetch(endpoint, {
+            response = await rlFetch(endpoint, {
                 method: "POST",
                 headers: getRequiredHeaders(),
                 body: JSON.stringify({ addresses: chunk }),
+                rlLimiter: heliusLimiter,
             });
         } catch {
             throw new WalletIdentityServiceError(
@@ -456,11 +456,20 @@ export async function getWalletIdentityBatchRaw(
 
         ensureProviderOk(response);
 
-        if (response.status === 404) {
+        if (response.status == 404) {
             continue;
         }
 
-        const payload = await parseResponseJson(response);
+        const payload = await validateApiResult(hls_WalletIdentityBatchSchema, response);
+        if (!payload) {
+            throw new WalletIdentityServiceError(
+                "Wallet identity provider returned an invalid batch payload",
+                "provider_bad_payload",
+                502,
+                response.status,
+            );
+        }
+
         const normalizedPayload = normalizeBatchPayload(payload, chunk);
         merged.push(...normalizedPayload);
     }

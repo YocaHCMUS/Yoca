@@ -1,10 +1,11 @@
 import { POOL_TRADES_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import { poolTrades24h, type PoolTrade24hInsert } from "@sv/db/schema.js";
-import { trackedFetch } from "@sv/services/tracking/apiCallTracker.service.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
+import { rlFetch } from "@sv/util/rate-limit.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, desc, eq, gte } from "drizzle-orm";
-import type { CG_24hPoolTrades } from "../_types/token-raw-responses.js";
+import { cg_24hPoolTradesSchema } from "../_types/token-raw-responses.js";
 
 async function fetchPoolTrades(
   poolAddress: string,
@@ -17,22 +18,22 @@ async function fetchPoolTrades(
     token: "base",
   }).toString();
 
-  const resp = await trackedFetch({
-    provider: "unknown",
-    url: cgEndpoint,
-    init: {
-      method: "GET",
-      headers: cg.getRequiredHeaders(),
-    },
-    serviceFile: "server/src/services/tokens/token-trades.ts",
-    functionName: "fetchPoolTrades",
+  const resp = await rlFetch(cgEndpoint, {
+    method: "GET",
+    headers: cg.getRequiredHeaders(),
+    rlLimiter: cg.limiter,
   });
 
   if (!resp.ok) {
     return [];
   }
 
-  const res = (await resp.json()) as CG_24hPoolTrades;
+  const res = await validateApiResult(cg_24hPoolTradesSchema, resp);
+  if (!res) {
+    // TODO: Consider more robust error handling
+    return [];
+  }
+
   const trades = res.data.map(
     (raw): PoolTrade24hInsert => ({
       id: raw.id,

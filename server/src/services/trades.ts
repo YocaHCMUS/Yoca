@@ -1,15 +1,15 @@
 import {
-  RECENT_TRADES_TTL_MS,
-  TRADER_GAINEERS_LOSERS_TTL_MS as TRADER_GAINERS_LOSERS_TTL_MS,
+    RECENT_TRADES_TTL_MS,
+    TRADER_GAINEERS_LOSERS_TTL_MS as TRADER_GAINERS_LOSERS_TTL_MS,
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-  recentTrades,
-  topLosers,
-  topTraders,
-  type RecentTradeInsert,
+    recentTrades,
+    topLosers,
+    topTraders,
+    type RecentTradeInsert,
 } from "@sv/db/schema.js";
-import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import { bds_TopTradersSchema } from "@sv/services/_types/trade-raw-responses.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
 import * as bds from "@sv/util/util-birdeye.js";
@@ -39,7 +39,7 @@ async function fetchRecentTrades() {
     rlLimiter: bds.limiter,
   });
 
-  const res = await getTrackedApiResult(bds_RecentTradesSchema, resp);
+  const res = await validateApiResult(bds_RecentTradesSchema, resp);
 
   if (!res) {
     return null;
@@ -151,7 +151,7 @@ async function fetchTraderGainersLosers(
     headers: bds.getRequiredHeaders(),
     rlLimiter: bds.limiter,
   });
-  const res = await getTrackedApiResult(bds_TopTradersSchema, resp);
+  const res = await validateApiResult(bds_TopTradersSchema, resp);
 
   if (!res) {
     return null;

@@ -313,7 +313,7 @@ export const honoJwt = async (c: Context, next: Next) => {
 };
 
 // Check if result schema was like expected. Useful for debugging
-export async function getTrackedApiResult<T extends z.ZodType>(
+export async function validateApiResult<T extends z.ZodType>(
   schema: T,
   resp: Response,
   logSuccessResponse: boolean = false,
@@ -396,6 +396,9 @@ export const envSchema = z.object({
 
   ZERION_API_BASE_URL: z.url().default("https://api.zerion.io/v1"),
   ZERION_API_KEY: z.string(),
+
+  COINMARKETCAP_API_BASE_URL: z.url().default("https://pro-api.coinmarketcap.com"),
+  COINMARKETCAP_API_KEY: z.string().optional(),
 
   HELIUS_API_KEY: z.string(),
   HELIUS_API_BASE_URL: z.url().optional().default("https://api.helius.xyz"),

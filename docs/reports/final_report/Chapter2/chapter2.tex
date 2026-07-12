@@ -1,0 +1,127 @@
+\chapter{Hệ thống và nguồn dữ liệu liên quan}
+\label{Chapter2}
+
+Chương này trình bày những hệ thống mà nhóm chúng em đã khảo sát khi xác định hướng phát triển cho Yoca, sau đó đi vào các nguồn dữ liệu được sử dụng trong phiên bản hiện tại. Hai nội dung có liên hệ với nhau nhưng không hoàn toàn đồng nhất: Arkham, Dune hay Nansen giúp nhóm hình dung cách một sản phẩm phân tích on-chain tổ chức thông tin cho người dùng, còn CoinGecko, Birdeye, Helius, Mobula, Zerion và Moralis cung cấp dữ liệu để hệ thống vận hành. Việc tách hai góc nhìn này giúp báo cáo làm rõ cả khoảng trống sản phẩm lẫn những ràng buộc thực tế đã ảnh hưởng đến kiến trúc của Yoca.
+
+\section{Các hệ thống liên quan}
+\label{sec:cac_he_thong_tuong_tu}
+
+Trong giai đoạn đầu của đồ án, từ ngày 07/09/2025 đến ngày 21/09/2025, nhóm chúng em khảo sát năm nền tảng gồm Arkham Intelligence, Birdeye, CoinGecko, Dune Analytics và Nansen. Đây không phải những sản phẩm giống Yoca ở mọi chức năng. Mỗi nền tảng đại diện cho một cách tiếp cận khác nhau: điều tra thực thể và dòng tiền, theo dõi token theo thời gian thực, tổng hợp thị trường, truy vấn dữ liệu tùy biến hoặc phân tích nhóm ví có ảnh hưởng. Nhờ đặt các cách tiếp cận cạnh nhau, nhóm xác định rõ hơn phần nào nên học hỏi và phần nào cần giản lược để phù hợp với người dùng của đề tài.
+
+\subsection{Arkham Intelligence}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=1.5cm]{images/chapter2/arkm-logo.png}
+    \caption{Logo nền tảng Arkham Intelligence}
+    \label{fig:platform_arkham_logo}
+\end{figure}
+
+\noindent\textit{URL: \url{https://intel.arkm.com/}}
+
+Arkham Intelligence tập trung vào việc liên kết địa chỉ blockchain với thực thể, trực quan hóa quan hệ giữa các ví và hỗ trợ truy vết dòng tiền \cite{arkham}. Điểm nhóm chúng em quan tâm không chỉ là số lượng dữ liệu được hiển thị, mà là cách Arkham biến những địa chỉ khó đọc thành một mạng lưới có ngữ cảnh. Người dùng có thể bắt đầu từ một ví, theo dõi tài sản di chuyển qua các địa chỉ trung gian và quan sát mối quan hệ giữa những thực thể đã được gắn nhãn.
+
+Cách tiếp cận này có giá trị cao đối với điều tra chuyên sâu, nhưng cũng khiến giao diện chứa nhiều thông tin và đòi hỏi người dùng hiểu mục đích của từng công cụ. Yoca không đặt mục tiêu xây dựng một cơ sở định danh thực thể có quy mô tương đương. Bài học nhóm rút ra là dữ liệu ví chỉ thực sự hữu ích khi được đặt trong ngữ cảnh; vì vậy, Yoca ưu tiên danh mục, lịch sử giao dịch, biến động tài sản và những tín hiệu hành vi có thể giải thích trực tiếp cho người dùng.
+
+\subsection{Birdeye và CoinGecko}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=1.5cm]{images/chapter2/birdeye-logo.png}
+    \hspace{1.5cm}
+    \includegraphics[height=1.5cm]{images/chapter2/coingecko-logo.png}
+    \caption{Logo nền tảng Birdeye và CoinGecko}
+    \label{fig:platform_birdeye_coingecko_logo}
+\end{figure}
+
+\noindent\textit{URL: \url{https://birdeye.so/} và \url{https://www.coingecko.com/}}
+
+Birdeye và CoinGecko cùng giúp người dùng tiếp cận dữ liệu token, nhưng có trọng tâm khác nhau. Birdeye nổi bật ở dữ liệu DEX, pool, giao dịch và biến động ngắn hạn, đặc biệt trong hệ sinh thái Solana \cite{birdeye}. CoinGecko có phạm vi thị trường rộng hơn, cung cấp danh mục coin, metadata, giá, vốn hóa, khối lượng và lịch sử thị trường trên nhiều hệ sinh thái \cite{coingecko}. Với người dùng, cả hai đều rút ngắn đáng kể quá trình tìm token, quan sát biểu đồ và đánh giá tình trạng thị trường.
+
+Qua hai nền tảng này, nhóm chúng em nhận thấy một trang thị trường tốt phải giúp người dùng đi từ thông tin tổng quan đến một token hoặc pool cụ thể mà không bị đứt mạch. Tuy nhiên, góc nhìn thị trường chưa đủ để trả lời tài sản trong một ví đã thay đổi như thế nào, giao dịch nào tạo ra lãi hoặc lỗ, hay hành vi của ví có điểm gì đáng chú ý. Yoca vì thế sử dụng thị trường và token làm điểm bắt đầu, rồi nối chúng với phần phân tích ví thay vì xây dựng hai nhóm chức năng rời nhau.
+
+\subsection{Dune Analytics và Nansen}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=1.5cm]{images/chapter2/dune-logo.png}
+    \hspace{1.5cm}
+    \includegraphics[height=1.5cm]{images/chapter2/nansen-logo.png}
+    \caption{Logo nền tảng Dune Analytics và Nansen}
+    \label{fig:platform_dune_nansen_logo}
+\end{figure}
+
+\noindent\textit{URL: \url{https://dune.com/} và \url{https://www.nansen.ai/}}
+
+Dune Analytics cho phép cộng đồng truy vấn dữ liệu blockchain đã được lập chỉ mục và xây dựng dashboard bằng SQL \cite{dune}. Sức mạnh của Dune nằm ở khả năng tùy biến: cùng một tập dữ liệu có thể được dùng để trả lời nhiều câu hỏi nghiên cứu khác nhau. Đổi lại, người dùng phải hiểu cấu trúc dữ liệu và biết cách xây dựng hoặc lựa chọn truy vấn phù hợp. Đây không phải rào cản lớn với nhà phân tích, nhưng khó trở thành trải nghiệm mặc định cho người dùng chỉ muốn xem nhanh một token hoặc ví.
+
+Nansen tiếp cận bài toán từ dữ liệu ví đã được gắn nhãn và các nhóm hành vi như smart money \cite{nansenai}. Thay vì yêu cầu người dùng tự đọc từng giao dịch, nền tảng làm nổi bật dòng tiền và hoạt động của những nhóm ví đáng chú ý. Hướng này gần với mong muốn của nhóm chúng em về việc đưa dữ liệu đã được xử lý đến gần người dùng hơn, nhưng Nansen thiên về người dùng chuyên nghiệp và lớp dữ liệu độc quyền. Yoca lựa chọn phạm vi hẹp hơn: chuẩn bị sẵn các luồng phân tích phổ biến, giữ khả năng kiểm chứng các chỉ số nền và dùng AI như lớp hỗ trợ diễn giải chứ không thay thế dữ liệu.
+
+\section{Đối chiếu và bài toán đặt ra cho Yoca}
+\label{sec:platform_comparison_and_problem}
+
+Các nền tảng được khảo sát không tạo thành một thang đo hơn--kém duy nhất. Arkham và Nansen có lợi thế về ngữ cảnh thực thể; Birdeye và CoinGecko mạnh ở dữ liệu thị trường; Dune trao nhiều quyền tùy biến cho người phân tích. Vì vậy, nhóm chúng em chọn các tiêu chí đối chiếu dựa trên hành trình mà Yoca muốn hỗ trợ: khám phá thị trường, đi sâu vào token hoặc pool, xem hoạt động của ví, lưu lại đối tượng quan tâm và nhận phần diễn giải dễ đọc hơn.
+
+\input{Chapter2/platform_comparison_table}
+
+Bảng~\ref{tab:platform-comparison} cho thấy Yoca không thay thế hoàn toàn một nền tảng nào ở trên. Phạm vi của đề tài nằm ở việc nối các góc nhìn vốn thường bị tách rời trong một luồng sử dụng thống nhất. Người dùng có thể bắt đầu từ tổng quan thị trường, mở pool và token liên quan, sau đó chuyển sang ví để xem danh mục, lịch sử hoạt động và kết quả phân tích. Các chức năng theo dõi, cảnh báo và AI được đặt sau lớp dữ liệu này để hỗ trợ sử dụng lâu dài, không phải để che đi nguồn số liệu ban đầu.
+
+Khi bắt tay vào hiện thực hóa luồng trên, khó khăn lớn nhất của nhóm không còn nằm ở việc vẽ thêm một biểu đồ. Dữ liệu cần thiết được phân tán giữa nhiều dịch vụ; cùng một khái niệm có thể có khóa định danh, độ sâu lịch sử và trường dữ liệu khác nhau. Một phản hồi hợp lệ về mặt HTTP vẫn có thể thiếu symbol, giá hoặc phần mô tả giao dịch mà hệ thống mong đợi. Bên cạnh đó, quota của các gói miễn phí và chi phí của gói trả phí buộc Yoca phải cân nhắc dữ liệu nào cần cập nhật ngay, dữ liệu nào có thể dùng lại và chức năng nào không thể phụ thuộc vào một nguồn duy nhất. Đây là bài toán dẫn trực tiếp đến lớp tích hợp provider, kiểm tra dữ liệu khi chạy, cache và các read model được trình bày trong chương Kiến trúc và thiết kế hệ thống.
+
+\section{Các nhà cung cấp dữ liệu được sử dụng trong Yoca}
+\label{sec:data_providers}
+
+Yoca không tự vận hành một blockchain indexer hoàn chỉnh. Trong phạm vi thời gian và hạ tầng của đồ án, nhóm chúng em sử dụng các API chuyên biệt rồi chuẩn hóa kết quả về mô hình nội bộ. Danh sách dưới đây phản ánh mã nguồn tại thời điểm rà soát ngày 11/07/2026, không dựa đơn thuần vào những utility hoặc thử nghiệm từng tồn tại trong repository. Chẳng hạn, CoinMarketCap và Dune SIM không còn được các service chính sử dụng nên không được xem là nguồn dữ liệu vận hành của phiên bản báo cáo này.
+
+\subsection{Dữ liệu thị trường, token và pool}
+
+CoinGecko hiện là nguồn có phạm vi sử dụng rộng nhất ở miền thị trường. Yoca dùng các API coin cho danh sách token, metadata, tìm kiếm, giá, vốn hóa và lịch sử; đồng thời dùng nhóm Onchain DEX do GeckoTerminal cung cấp cho pool, giao dịch và tìm kiếm theo địa chỉ. CoinGecko cung cấp REST API trong cả gói Demo miễn phí và các gói trả phí; nhóm endpoint công khai bao phủ dữ liệu coin, market và một phần dữ liệu on-chain \cite{coingecko-api-docs}. Điều này phù hợp với quá trình phát triển và thử nghiệm, nhưng các giới hạn theo phút và phạm vi lịch sử khiến dữ liệu vẫn cần được cache thay vì gọi lại theo từng tương tác.
+
+Birdeye tiếp tục được sử dụng cho trending token, recent trades, trader gainers/losers và một số đường lấy lịch sử giá. Ở giai đoạn trước, Birdeye còn đảm nhiệm nhiều dữ liệu ví hơn. Nhóm chúng em từng được hỗ trợ gói Lite trong ba tháng, nhờ đó có thể thử nghiệm các chức năng yêu cầu lịch sử sâu hơn. Khi điều kiện hỗ trợ thay đổi, việc duy trì phần phân tích ví trên cùng nguồn này không còn phù hợp với ngân sách đồ án. Theo bảng giá tại thời điểm khảo sát, gói Standard miễn phí có phạm vi API giới hạn; gói Lite có giá 39 USD/tháng, gồm 2,5 triệu compute unit và phần lớn API \cite{birdeye-pricing}. Quá trình này khiến nhóm nhìn quota và chi phí như một ràng buộc kiến trúc, thay vì chỉ là thông tin cấu hình.
+
+Mobula cũng được dùng để lấy thống kê holder của token. Tuy nhiên, vai trò quan trọng hơn của dịch vụ này nằm ở miền ví, được trình bày ở phần tiếp theo.
+
+\subsection{Dữ liệu ví và giao dịch}
+
+Helius là nguồn dữ liệu gắn chặt với Solana trong Yoca. Hệ thống dùng Helius Wallet API cho portfolio, lịch sử, transfer, funded-by và identity; Enhanced Transactions được dùng cho giao dịch đã giải mã, webhook và một số luồng phân tích chi tiết. API Enhanced Transactions chuyển transaction signature thành cấu trúc dễ đọc hơn với token transfer, native transfer, account data và instruction \cite{helius-enhanced-transactions}. Lớp trừu tượng này giúp nhóm bắt đầu nhanh, nhưng không phải mọi swap đều có event hoặc trường dẫn xuất đầy đủ. Kinh nghiệm tự tổng hợp PnL từ dữ liệu này, cùng giới hạn của cách suy luận bằng balance change và program data, sẽ được phân tích trong chương Kiến trúc và thiết kế hệ thống.
+
+Mobula được bổ sung trong giai đoạn cuối và hiện là nguồn chính cho wallet analysis, PnL theo giai đoạn, vị thế theo token, lịch sử hoạt động và biểu đồ tổng giá trị ví. API của Mobula cung cấp wallet activity, position, historical net worth và trading analysis trên một mô hình dữ liệu đã được tổng hợp \cite{mobula-data-api}. Đây là phần từng đòi hỏi nhóm thu thập và giải mã một lượng giao dịch khó dự đoán theo từng ví. Free tier công bố 10.000 credit/tháng; riêng endpoint wallet analysis tiêu tốn 5 credit, trong khi một số endpoint wallet khác tính theo số chain \cite{mobula-pricing}. Mức miễn phí này phù hợp với quy mô đồ án, nhưng vẫn đòi hỏi cache và giới hạn refresh để tránh lãng phí credit.
+
+Zerion được sử dụng cho lịch sử số dư ở cấp token. Trước đó nhóm từng dùng Zerion cho cả biểu đồ tổng giá trị ví, nhưng kết quả có thời điểm sai lệch lớn so với portfolio Helius do khác biệt trong cách nhận diện tài sản có giá trị. Sau khi đối chiếu, nhóm chuyển total balance sang Mobula và giữ Zerion ở phần lịch sử từng token, nơi dữ liệu vẫn đáp ứng được yêu cầu. Zerion cung cấp gói Developer miễn phí và API cho portfolio, transaction, position cùng chart dữ liệu ví \cite{zerion-api}. Quota thực tế phụ thuộc key và chính sách tại thời điểm cấp, vì vậy báo cáo không xem đây là một giới hạn cố định lâu dài.
+
+Moralis hiện giữ vai trò hẹp hơn, chủ yếu bổ sung metadata token và phục vụ một đường lấy swap còn lại. Dịch vụ cung cấp nhiều nhóm Wallet, Token, NFT và Price API theo cơ chế compute unit; free tier tại thời điểm khảo sát công bố 40.000 compute unit mỗi ngày \cite{moralis-pricing}. Nhóm không triển khai fallback qua nhiều provider cho mọi service. Mặc dù fallback có thể tăng khả năng tìm thấy dữ liệu, sự khác nhau về response và semantics làm tăng đáng kể chi phí duy trì schema, kiểm thử và xử lý lỗi. Yoca chỉ kết hợp hoặc thay nguồn ở những miền có lợi ích rõ ràng.
+
+\begin{table}[H]
+\centering
+\caption{Vai trò của các nhà cung cấp dữ liệu trong phiên bản Yoca hiện tại}
+\label{tab:yoca_data_providers}
+\renewcommand{\arraystretch}{1.2}
+\scriptsize
+\newcolumntype{P}{>{\raggedright\arraybackslash}X}
+\begin{tabularx}{\textwidth}{|p{1.8cm}|P|P|}
+\hline
+\textbf{Nhà cung cấp} & \textbf{Dữ liệu Yoca đang sử dụng} & \textbf{Điểm cần kiểm soát} \\
+\hline
+CoinGecko & Token list, metadata, search, market, lịch sử giá, pool và pool trade & Rate limit, định danh CoinGecko và trường enrichment có thể thiếu \\
+\hline
+Birdeye & Trending, recent trades, trader ranking và một số lịch sử giá & Compute unit, phạm vi gói và các đường tích hợp kế thừa \\
+\hline
+Helius & Portfolio Solana, transaction, transfer, identity, funded-by và webhook & Độ sâu lịch sử và transaction abstraction không luôn đủ cho PnL \\
+\hline
+Mobula & Wallet analysis, PnL, position, activity, total balance history và holder & Credit theo endpoint/chain và coupling của read model phân tích ví \\
+\hline
+Zerion & Lịch sử số dư theo token & Sai khác trong phân loại tài sản và quota theo key \\
+\hline
+Moralis & Metadata token và một đường dữ liệu swap & Vai trò hẹp, chi phí duy trì nếu mở rộng thành fallback tổng quát \\
+\hline
+\end{tabularx}
+\end{table}
+
+Sự phân công trong Bảng~\ref{tab:yoca_data_providers} là trạng thái hiện tại, không phải thiết kế cố định từ đầu. Khoảng một tháng cuối của quá trình phát triển, việc chuyển các luồng Balance Chart, PnL và Wallet Overview sang Mobula và Zerion đã làm gián đoạn phần lớn màn hình phân tích ví. Trải nghiệm này giúp nhóm chúng em nhận ra rằng một provider không chỉ ảnh hưởng đến hàm gọi API; nó còn ảnh hưởng đến schema kiểm tra khi chạy, cache, bảng dữ liệu và contract mà frontend đang sử dụng. Chương Kiến trúc và thiết kế hệ thống sẽ trình bày việc thay nguồn như một quá trình thay thế tăng dần, trong đó mô hình mới được xây dựng và kiểm tra trước khi phần cũ được loại bỏ.
+
+\section{Tổng kết chương}
+\label{sec:tong_ket_ch2}
+
+Qua việc khảo sát các sản phẩm hiện có, nhóm chúng em xác định Yoca nên tập trung vào một hành trình phân tích liền mạch thay vì cố đạt độ sâu chuyên biệt của từng nền tảng. Hệ thống kết nối thị trường, token, pool và ví, sau đó bổ sung theo dõi và AI trên dữ liệu đã được chuẩn hóa. Điểm khác biệt mà đề tài hướng đến không nằm ở số lượng dashboard, mà ở cách các góc nhìn này hỗ trợ nhau trong cùng một trải nghiệm.
+
+Việc rà soát mã nguồn cũng cho thấy dữ liệu của Yoca được hình thành từ nhiều provider với vai trò khác nhau và đã thay đổi trong quá trình phát triển. CoinGecko và Birdeye cung cấp phần lớn dữ liệu thị trường; Helius cung cấp lớp dữ liệu Solana; Mobula đảm nhiệm các phân tích ví nặng; Zerion và Moralis bổ sung những miền hẹp hơn. Những lựa chọn này tạo ra các yêu cầu về kiểm tra dữ liệu, cache, khả năng thay nguồn và thiết kế cơ sở dữ liệu. Chương tiếp theo tiếp tục xác định yêu cầu của hệ thống từ góc nhìn người dùng; các quyết định kiến trúc phát sinh từ những ràng buộc dữ liệu trên sẽ được trình bày trong chương Kiến trúc và thiết kế hệ thống.

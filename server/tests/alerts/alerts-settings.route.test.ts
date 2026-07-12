@@ -22,6 +22,9 @@ const serviceMocks = vi.hoisted(() => ({
   setUserEmailAlertSettings: vi.fn(),
   syncHeliusWebhookAccountAddresses: vi.fn(),
   getHeliusWebhookDiagnostics: vi.fn(),
+  listAlertHistory: vi.fn(),
+  markAllAlertHistoryRead: vi.fn(),
+  setAlertHistoryReadState: vi.fn(),
 }));
 
 vi.mock("@sv/middlewares/validation.js", async () => {
@@ -37,7 +40,7 @@ vi.mock("@sv/middlewares/validation.js", async () => {
       await next();
     },
     solanaBase58Schema: z.string().trim().min(1),
-    validate: (target: "json", schema: ZodType) =>
+    validate: (target: "json" | "query", schema: ZodType) =>
       validator(target, (value, c) => {
         const parsed = schema.safeParse(value);
         if (!parsed.success) {
@@ -81,6 +84,12 @@ vi.mock("@sv/services/heliusWebhooks.service.js", () => ({
   getHeliusWebhookDiagnostics: serviceMocks.getHeliusWebhookDiagnostics,
 }));
 
+vi.mock("@sv/services/alertHistory.service.js", () => ({
+  listAlertHistory: serviceMocks.listAlertHistory,
+  markAllAlertHistoryRead: serviceMocks.markAllAlertHistoryRead,
+  setAlertHistoryReadState: serviceMocks.setAlertHistoryReadState,
+}));
+
 import alertsRoute from "@sv/routes/alerts.route.js";
 
 describe("alerts settings route", () => {
@@ -115,6 +124,54 @@ describe("alerts settings route", () => {
         heliusWebhookAuthKey: true,
       },
     });
+    serviceMocks.listAlertHistory.mockResolvedValue({
+      items: [],
+      page: 1,
+      limit: 20,
+      total: 0,
+      unreadCount: 0,
+    });
+    serviceMocks.markAllAlertHistoryRead.mockResolvedValue([]);
+  });
+
+  it("lists alert history for the authenticated user", async () => {
+    const response = await alertsRoute.request("/history?page=2&limit=10");
+
+    expect(response.status).toBe(200);
+    expect(serviceMocks.listAlertHistory).toHaveBeenCalledWith("user-1", 2, 10);
+  });
+
+  it("does not expose another user's alert history read state", async () => {
+    serviceMocks.setAlertHistoryReadState.mockResolvedValue(null);
+    const response = await alertsRoute.request(
+      "/history/11111111-1111-4111-8111-111111111111/read",
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ read: true }),
+      },
+    );
+
+    expect(response.status).toBe(404);
+    expect(serviceMocks.setAlertHistoryReadState).toHaveBeenCalledWith(
+      "user-1",
+      "11111111-1111-4111-8111-111111111111",
+      true,
+    );
+  });
+
+  it("marks all alert history as read for the authenticated user", async () => {
+    serviceMocks.markAllAlertHistoryRead.mockResolvedValue([
+      { id: "history-1" },
+      { id: "history-2" },
+    ]);
+    const response = await alertsRoute.request("/history/read-all", {
+      method: "PATCH",
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ updatedCount: 2 });
+    expect(serviceMocks.markAllAlertHistoryRead).toHaveBeenCalledWith("user-1");
   });
 
   it("persists emailAlertsEnabled=true from the UI payload", async () => {

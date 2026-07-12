@@ -23,26 +23,32 @@ import {
     toIsoTimestamp,
     toOptionalNumber,
 } from "@sv/services/wallet/fetchers/walletProviderMappers.js";
-import { getTrackedApiResult } from "@sv/middlewares/validation.js";
-import { hls_WalletBalancesSchema } from "@sv/services/_types/wallet-raw-responses.js";
-import { callBirdeye } from "@sv/services/wallet/providers/adapters/birdeye.adapter.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import {
-    birdeyeGetJson,
-    birdeyePostJson,
-} from "@sv/services/wallet/providers/birdeye.client.js";
-import { heliusGetJson } from "@sv/services/wallet/providers/helius.client.js";
+    hls_WalletBalancesSchema,
+    bds_WalletNetAssetsSchema,
+    bds_WalletNetworthHistorySchema,
+    mrl_WalletTokenSwapsSchema,
+    type MRL_WalletTokenSwaps,
+} from "@sv/services/_types/wallet-raw-responses.js";
+import {
+    helius_WalletFundedBySchema,
+    helius_WalletHistorySchema,
+    helius_WalletTransfersSchema,
+} from "@sv/services/_types/token-raw-responses.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
-import { normalizeBirdeyeTimeParam } from "@sv/util/util-birdeye.js";
+import {
+    getEndpoint as getBirdeyeEndpoint,
+    getRequiredHeaders as getBirdeyeHeaders,
+    limiter as birdeyeLimiter,
+    normalizeBirdeyeTimeParam,
+} from "@sv/util/util-birdeye.js";
 import {
     getEndpoint,
     getRequiredHeaders,
     limiter as heliusLimiter,
 } from "@sv/util/util-helius.js";
 import * as moralis from "@sv/util/util-moralis.js";
-import type {
-    MoralisSwapResponseRoot,
-    MoralisSwapResult,
-} from "./walletThirdPartyResponses";
 
 
 const MAX_HELIUS_PORTFOLIO_BALANCE_PAGES = 250;
@@ -79,44 +85,6 @@ export type FetchAllTransactionHistoryChunkResult = {
   | "empty-page";
 };
 
-type HeliusPagination = {
-  hasMore?: unknown;
-  page?: unknown;
-  nextCursor?: unknown;
-  next?: unknown;
-  before?: unknown;
-};
-
-type HeliusWalletHistoryEntry = {
-  timestamp?: unknown;
-  signature?: unknown;
-  balanceChanges?: unknown;
-  slot?: unknown;
-  fee?: unknown;
-  feePayer?: unknown;
-};
-
-type HeliusBalanceChangeEntry = {
-  mint?: unknown;
-  amount?: unknown;
-  decimals?: unknown;
-};
-
-type BirdeyeNetworthHistoryEntry = {
-  timestamp?: unknown;
-  net_worth?: unknown;
-  net_worth_change?: unknown;
-  net_worth_change_percent?: unknown;
-};
-
-type BirdeyeNetAssetEntry = {
-  symbol?: unknown;
-  token_address?: unknown;
-  decimal?: unknown;
-  balance?: unknown;
-  price?: unknown;
-  value?: unknown;
-};
 const HELIUS_HISTORY_PAGE_LIMIT = 100;
 const DEFAULT_HELIUS_HISTORY_CHUNK_MAX_PAGES = 5;
 const MAX_HELIUS_HISTORY_CHUNK_MAX_PAGES = 50;
@@ -194,22 +162,39 @@ export async function fetchAllTransactionHistoryChunk(
   while (pagesFetched < maxPages && transactions.length < maxTransactions) {
     pagesFetched += 1;
 
-    let json: { data?: HeliusWalletHistoryEntry[]; pagination?: HeliusPagination } | null = null;
+    let json;
     try {
-      json = await heliusGetJson<{ data?: HeliusWalletHistoryEntry[]; pagination?: HeliusPagination }>(
-        `/v1/wallet/${address}/history?tokenAccounts=balanceChanged`,
-        {
-          limit: HELIUS_HISTORY_PAGE_LIMIT,
-          ...(cursor ? { before: cursor } : {}),
-        },
-      );
+      const endpoint = getEndpoint(`/v1/wallet/${address}/history`);
+      endpoint.searchParams.set("tokenAccounts", "balanceChanged");
+      endpoint.searchParams.set("limit", String(HELIUS_HISTORY_PAGE_LIMIT));
+      if (cursor) {
+        endpoint.searchParams.set("before", cursor);
+      }
+
+      const response = await rlFetch(endpoint, {
+        method: "GET",
+        headers: getRequiredHeaders(),
+        rlLimiter: heliusLimiter,
+      });
+
+      if (!response.ok) {
+        // TODO: Consider more robust error handling
+        break;
+      }
+
+      json = await validateApiResult(helius_WalletHistorySchema, response);
+      if (!json) {
+        // TODO: Consider more robust error handling
+        break;
+      }
     } catch (err) {
       console.error("Helius wallet transaction chunk request failed", err);
+      // TODO: Consider more robust error handling
       break;
     }
 
-    const data: HeliusWalletHistoryEntry[] = Array.isArray(json?.data) ? json.data : [];
-    if (data.length === 0) {
+    const data = json.data;
+    if (data.length == 0) {
       stopReason = "empty-page";
       hasMoreFromProvider = false;
       cursor = null;
@@ -248,9 +233,9 @@ export async function fetchAllTransactionHistoryChunk(
         break;
       }
 
-      const mappedBalanceChanges = Array.isArray(entry.balanceChanges)
+      const mappedBalanceChanges = entry.balanceChanges
         ? entry.balanceChanges
-          .map((change: HeliusBalanceChangeEntry) => ({
+          .map((change) => ({
             mint: String(change?.mint ?? ""),
             amount: Number(change?.amount ?? 0),
             decimals: Number(change?.decimals ?? 0),
@@ -369,7 +354,7 @@ export async function fetchHeliusSolanaPortfolio(
         break;
       }
 
-      const json = await getTrackedApiResult(hls_WalletBalancesSchema, resp);
+      const json = await validateApiResult(hls_WalletBalancesSchema, resp);
       if (!json) {
         break;
       }
@@ -492,15 +477,42 @@ export async function fetchHeliusSolanaTransfers(
     initialCursor: startCursor,
     maxPages: 50,
     maxItems: Number.MAX_SAFE_INTEGER,
-    fetchPage: async (cursor) => {
-      let json: { data?: HeliusWalletHistoryEntry[]; pagination?: HeliusPagination } | null = null;
+    fetchPage: async (cursor, page) => {
+      let json;
       try {
-        json = await heliusGetJson<{ data?: HeliusWalletHistoryEntry[]; pagination?: HeliusPagination }>(`/v1/wallet/${address}/transfers`, {
-          limit: 100,
-          ...(cursor ? { cursor } : {}),
+        const endpoint = getEndpoint(`/v1/wallet/${address}/transfers`);
+        endpoint.searchParams.set("limit", "100");
+        if (cursor) {
+          endpoint.searchParams.set("cursor", cursor);
+        }
+
+        const response = await rlFetch(endpoint, {
+          method: "GET",
+          headers: getRequiredHeaders(),
+          rlLimiter: heliusLimiter,
         });
+
+        if (!response.ok) {
+          // TODO: Consider more robust error handling
+          return {
+            pageItems: [],
+            nextCursor: null,
+            hasMore: false,
+          };
+        }
+
+        json = await validateApiResult(helius_WalletTransfersSchema, response);
+        if (!json) {
+          // TODO: Consider more robust error handling
+          return {
+            pageItems: [],
+            nextCursor: null,
+            hasMore: false,
+          };
+        }
       } catch (err) {
         console.error("Helius wallet transfers request failed", err);
+        // TODO: Consider more robust error handling
         return {
           pageItems: [],
           nextCursor: null,
@@ -508,8 +520,8 @@ export async function fetchHeliusSolanaTransfers(
         }
       }
 
-      const data: HeliusWalletHistoryEntry[] = Array.isArray(json?.data) ? json.data : [];
-      if (data.length === 0) {
+      const data = json.data;
+      if (data.length == 0) {
         return {
           pageItems: [],
           nextCursor: null,
@@ -517,8 +529,9 @@ export async function fetchHeliusSolanaTransfers(
         };
       }
 
-      const transactions = []
+      const transactions: WalletTransfer[] = [];
 
+      let reachedRangeCutoff = false;
       for (const entry of data) {
         const mapped = mapHeliusTransferEntry(entry, address);
         if (!mapped) {
@@ -535,6 +548,7 @@ export async function fetchHeliusSolanaTransfers(
         }
 
         if (tsMs < rangeFromMs || mapped.transactionSignature == endCursor) {
+          reachedRangeCutoff = true;
           break;
         }
 
@@ -573,7 +587,7 @@ export async function fetchMoralisSolanaSwap(
     initialCursor: null,
     maxPages: 50,
     maxItems: Number.MAX_SAFE_INTEGER,
-    fetchPage: async (cursor) => {
+    fetchPage: async (cursor, page) => {
       const url = moralis.getEndpoint(`/account/mainnet/${address}/swaps`);
       url.searchParams.set("limit", "100");
       url.searchParams.set("fromDate", fromDateIso);
@@ -583,11 +597,12 @@ export async function fetchMoralisSolanaSwap(
         url.searchParams.set("cursor", cursor);
       }
 
-      let json: MoralisSwapResponseRoot;
+      let json: MRL_WalletTokenSwaps;
       try {
-        const response = await moralis.moralisFetch(url, {
+        const response = await rlFetch(url, {
           method: "GET",
           headers: moralis.getRequiredHeaders(),
+          rlLimiter: moralis.limiter,
         });
 
         if (!response.ok) {
@@ -603,7 +618,16 @@ export async function fetchMoralisSolanaSwap(
           };
         }
 
-        json = (await response.json()) as MoralisSwapResponseRoot;
+        const parsed = await validateApiResult(mrl_WalletTokenSwapsSchema, response);
+        if (!parsed) {
+          return {
+            pageItems: [],
+            nextCursor: null,
+            hasMore: false,
+          };
+        }
+
+        json = parsed;
         // console.log(
         //   `[fetchMoralisSolanaSwap] Fetched page ${page} with ${Array.isArray(json?.result) ? json.result.length : 0} swaps, cursor: ${json?.cursor}`,
         //   {
@@ -620,7 +644,7 @@ export async function fetchMoralisSolanaSwap(
         };
       }
 
-      const rows: MoralisSwapResult[] = Array.isArray(json?.result)
+      const rows = Array.isArray(json?.result)
         ? json.result
         : [];
 
@@ -705,17 +729,42 @@ export async function fetchAllTransactionHistory(
     maxPages: MAX_HELIUS_HISTORY_CHUNK_MAX_PAGES,
     maxItems: MAX_HELIUS_HISTORY_CHUNK_MAX_TRANSACTIONS,
     fetchPage: async (cursor, page) => {
-      let json: { data?: HeliusWalletHistoryEntry[]; pagination?: HeliusPagination } | null = null;
+      let json;
       try {
-        json = await heliusGetJson<{ data?: HeliusWalletHistoryEntry[]; pagination?: HeliusPagination }>(
-          `/v1/wallet/${address}/history?tokenAccounts=balanceChanged`,
-          {
-            limit: HELIUS_HISTORY_PAGE_LIMIT,
-            ...(cursor ? { before: cursor } : {}),
-          },
-        );
+        const endpoint = getEndpoint(`/v1/wallet/${address}/history`);
+        endpoint.searchParams.set("tokenAccounts", "balanceChanged");
+        endpoint.searchParams.set("limit", String(HELIUS_HISTORY_PAGE_LIMIT));
+        if (cursor) {
+          endpoint.searchParams.set("before", cursor);
+        }
+
+        const response = await rlFetch(endpoint, {
+          method: "GET",
+          headers: getRequiredHeaders(),
+          rlLimiter: heliusLimiter,
+        });
+
+        if (!response.ok) {
+          // TODO: Consider more robust error handling
+          return {
+            pageItems: [],
+            nextCursor: null,
+            hasMore: false,
+          };
+        }
+
+        json = await validateApiResult(helius_WalletHistorySchema, response);
+        if (!json) {
+          // TODO: Consider more robust error handling
+          return {
+            pageItems: [],
+            nextCursor: null,
+            hasMore: false,
+          };
+        }
       } catch (err) {
         console.error("Helius wallet transaction request failed", err);
+        // TODO: Consider more robust error handling
         return {
           pageItems: [],
           nextCursor: null,
@@ -723,7 +772,7 @@ export async function fetchAllTransactionHistory(
         };
       }
 
-      const data: HeliusWalletHistoryEntry[] = Array.isArray(json?.data) ? json.data : [];
+      const data = json.data;
       const pageItems: WalletTransactionHelius[] = [];
       let stopByRange = false;
       let stopByKnownSignature = false;
@@ -758,9 +807,9 @@ export async function fetchAllTransactionHistory(
           break;
         }
 
-        const mappedBalanceChanges = Array.isArray(entry.balanceChanges)
+        const mappedBalanceChanges = entry.balanceChanges
           ? entry.balanceChanges
-            .map((change: HeliusBalanceChangeEntry) => ({
+            .map((change) => ({
               mint: String(change?.mint ?? ""),
               amount: Number(change?.amount ?? 0),
               decimals: Number(change?.decimals ?? 0),
@@ -805,31 +854,6 @@ export async function fetchAllTransactionHistory(
   return paged.items;
 }
 
-export async function fetchBirdeyeJson(
-  path: string,
-  method: "GET" | "POST",
-  options?: {
-    searchParams?: Record<string, string | number | boolean>;
-    body?: unknown;
-  },
-): Promise<Record<string, unknown> | null> {
-  const fetcher = async () => {
-    if (method === "GET") {
-      return await birdeyeGetJson(path, options?.searchParams);
-    }
-
-    return await birdeyePostJson(path, options?.body);
-  };
-
-  try {
-    const result = await callBirdeye(path, options ?? {}, fetcher);
-    return result && typeof result === "object" ? result as Record<string, unknown> : null;
-  } catch (err) {
-    console.error("Birdeye request failed", { method, path, err });
-    return null;
-  }
-}
-
 export async function fetchBirdeyeNetworthHistory(
   address: string,
   options?: {
@@ -846,27 +870,69 @@ export async function fetchBirdeyeNetworthHistory(
   const sortType = options?.sortType ?? "desc";
   const time = normalizeBirdeyeTimeParam(options?.time);
 
-  const json = await fetchBirdeyeJson("/wallet/v2/net-worth", "GET", {
-    searchParams: {
-      wallet: address,
-      count,
-      direction,
-      type,
-      sort_type: sortType,
-      ...(time ? { time } : {}),
-    },
-  });
-  const data = (json?.data && typeof json.data === "object" ? json.data : {}) as Record<string, unknown>;
-  const rows: BirdeyeNetworthHistoryEntry[] = Array.isArray(data?.history) ? data.history : [];
-  const currentTimestamp = toIsoTimestamp(data?.current_timestamp);
-  const pastTimestamp = toIsoTimestamp(data?.past_timestamp);
+  let json;
+  try {
+    const endpoint = getBirdeyeEndpoint("/wallet/v2/net-worth");
+    endpoint.searchParams.set("wallet", address);
+    endpoint.searchParams.set("count", String(count));
+    endpoint.searchParams.set("direction", direction);
+    endpoint.searchParams.set("type", type);
+    endpoint.searchParams.set("sort_type", sortType);
+    if (time) {
+      endpoint.searchParams.set("time", time);
+    }
+
+    const response = await rlFetch(endpoint, {
+      method: "GET",
+      headers: getBirdeyeHeaders(),
+      rlLimiter: birdeyeLimiter,
+    });
+
+    if (!response.ok) {
+      // TODO: Consider more robust error handling
+      return {
+        address,
+        currency: "usd",
+        currentTimestamp: null,
+        pastTimestamp: null,
+        history: [],
+      };
+    }
+
+    json = await validateApiResult(bds_WalletNetworthHistorySchema, response);
+    if (!json) {
+      // TODO: Consider more robust error handling
+      return {
+        address,
+        currency: "usd",
+        currentTimestamp: null,
+        pastTimestamp: null,
+        history: [],
+      };
+    }
+  } catch (err) {
+    console.error("Birdeye net-worth history request failed", err);
+    // TODO: Consider more robust error handling
+    return {
+      address,
+      currency: "usd",
+      currentTimestamp: null,
+      pastTimestamp: null,
+      history: [],
+    };
+  }
+
+  const data = json.data;
+  const rows = data.history;
+  const currentTimestamp = toIsoTimestamp(data.current_timestamp);
+  const pastTimestamp = toIsoTimestamp(data.past_timestamp);
 
   const history = rows
     .map((row) => ({
-      timestamp: toIsoTimestamp(row?.timestamp),
-      netWorthUsd: toOptionalNumber(row?.net_worth),
-      netWorthChangeUsd: toOptionalNumber(row?.net_worth_change),
-      netWorthChangePercent: toOptionalNumber(row?.net_worth_change_percent),
+      timestamp: toIsoTimestamp(row.timestamp),
+      netWorthUsd: toOptionalNumber(row.net_worth),
+      netWorthChangeUsd: toOptionalNumber(row.net_worth_change),
+      netWorthChangePercent: toOptionalNumber(row.net_worth_change_percent),
     }))
     .filter(
       (row): row is BirdeyeNetworthHistoryPoint =>
@@ -876,10 +942,10 @@ export async function fetchBirdeyeNetworthHistory(
   if (history.length === 0) {
     const snapshotTimestamp =
       currentTimestamp ??
-      toIsoTimestamp(data?.requested_timestamp) ??
-      toIsoTimestamp(data?.resolved_timestamp);
+      toIsoTimestamp(data.requested_timestamp) ??
+      toIsoTimestamp(data.resolved_timestamp);
     const snapshotValue = toOptionalNumber(
-      data?.total_value ?? data?.net_worth,
+      data.total_value ?? data.net_worth,
     );
 
     if (snapshotTimestamp != null && snapshotValue != null) {
@@ -893,8 +959,8 @@ export async function fetchBirdeyeNetworthHistory(
   }
 
   return {
-    address: String(data?.wallet_address ?? address),
-    currency: String(data?.currency ?? "usd"),
+    address: data.wallet_address,
+    currency: data.currency,
     currentTimestamp: currentTimestamp,
     pastTimestamp: pastTimestamp,
     history,
@@ -917,42 +983,114 @@ export async function fetchBirdeyePortfolioSnapshot(
   const sortType = options?.sortType ?? "desc";
   const time = normalizeBirdeyeTimeParam(options?.time);
 
-  const json = await fetchBirdeyeJson("/wallet/v2/net-worth-details", "GET", {
-    searchParams: {
-      wallet: address,
-      type,
-      sort_type: sortType,
-      limit,
-      offset,
-      ...(time ? { time } : {}),
-    },
-  });
-  const data = (json?.data && typeof json.data === "object" ? json.data : {}) as Record<string, unknown>;
-  const rows: BirdeyeNetAssetEntry[] = Array.isArray(data?.net_assets) ? data.net_assets : [];
+  let json;
+  try {
+    const endpoint = getBirdeyeEndpoint("/wallet/v2/net-worth-details");
+    endpoint.searchParams.set("wallet", address);
+    endpoint.searchParams.set("type", type);
+    endpoint.searchParams.set("sort_type", sortType);
+    endpoint.searchParams.set("limit", String(limit));
+    endpoint.searchParams.set("offset", String(offset));
+    if (time) {
+      endpoint.searchParams.set("time", time);
+    }
+
+    const response = await rlFetch(endpoint, {
+      method: "GET",
+      headers: getBirdeyeHeaders(),
+      rlLimiter: birdeyeLimiter,
+    });
+
+    if (!response.ok) {
+      // TODO: Consider more robust error handling
+      return {
+        address,
+        currency: "usd",
+        netWorthUsd: 0,
+        requestedTimestamp: null,
+        resolvedTimestamp: null,
+        assets: [],
+      };
+    }
+
+    json = await validateApiResult(bds_WalletNetAssetsSchema, response);
+    if (!json) {
+      // TODO: Consider more robust error handling
+      return {
+        address,
+        currency: "usd",
+        netWorthUsd: 0,
+        requestedTimestamp: null,
+        resolvedTimestamp: null,
+        assets: [],
+      };
+    }
+  } catch (err) {
+    console.error("Birdeye portfolio snapshot request failed", err);
+    // TODO: Consider more robust error handling
+    return {
+      address,
+      currency: "usd",
+      netWorthUsd: 0,
+      requestedTimestamp: null,
+      resolvedTimestamp: null,
+      assets: [],
+    };
+  }
+
+  const data = json.data;
+  const rows = data.net_assets;
 
   return {
-    address: String(data?.wallet_address ?? address),
-    currency: String(data?.currency ?? "usd"),
-    netWorthUsd: toFiniteNumber(data?.net_worth, 0),
-    requestedTimestamp: toIsoTimestamp(data?.requested_timestamp),
-    resolvedTimestamp: toIsoTimestamp(data?.resolved_timestamp),
+    address: data.wallet_address,
+    currency: data.currency,
+    netWorthUsd: toFiniteNumber(data.net_worth, 0),
+    requestedTimestamp: toIsoTimestamp(data.requested_timestamp),
+    resolvedTimestamp: toIsoTimestamp(data.resolved_timestamp),
     assets: rows.map((asset) => ({
-      symbol: String(asset?.symbol ?? ""),
-      tokenAddress: String(asset?.token_address ?? ""),
-      decimals: Math.max(0, Math.floor(toFiniteNumber(asset?.decimal, 0))),
-      balanceRaw: String(asset?.balance ?? "0"),
-      priceUsd: toOptionalNumber(asset?.price),
-      valueUsd: toFiniteNumber(asset?.value, 0),
+      symbol: asset.symbol,
+      tokenAddress: asset.token_address,
+      decimals: Math.max(0, Math.floor(toFiniteNumber(asset.decimal, 0))),
+      balanceRaw: String(asset.balance),
+      priceUsd: toOptionalNumber(asset.price),
+      valueUsd: toFiniteNumber(asset.value, 0),
     })),
   };
 }
 
-export async function fetchHeliusWalletFirstFund(address: string) {
-  const json = await heliusGetJson<{ data?: HeliusWalletHistoryEntry[]; pagination?: HeliusPagination }>(`/v1/wallet/${address}/funded-by`);
+export async function fetchHeliusWalletFirstFund(
+  address: string,
+): Promise<HeliusWalletFirstFund> {
+  const endpoint = getEndpoint(`/v1/wallet/${address}/funded-by`);
+  const response = await rlFetch(endpoint, {
+    method: "GET",
+    headers: getRequiredHeaders(),
+    rlLimiter: heliusLimiter,
+  });
 
-  if ("error" in json) {
-    throw new Error(`Helius API error: ${json.error}`);
+  if (!response.ok) {
+    throw new Error(`Helius funded-by request failed: ${response.status}`);
   }
 
-  return { reciepient: address, ...json } as HeliusWalletFirstFund;
+  const json = await validateApiResult(helius_WalletFundedBySchema, response);
+  if (!json) {
+    throw new Error("Helius funded-by response validation failed");
+  }
+
+  return {
+    reciepient: address,
+    funder: json.funder,
+    funderName: json.funderName,
+    funderType: json.funderType,
+    mint: json.mint,
+    symbol: json.symbol,
+    amount: json.amount,
+    amountRaw: json.amountRaw,
+    decimals: json.decimals,
+    date: json.date,
+    signature: json.signature,
+    timestamp: json.timestamp,
+    slot: json.slot,
+    explorerUrl: json.explorerUrl,
+  };
 }

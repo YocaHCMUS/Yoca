@@ -32,11 +32,8 @@ function detectProvider(url: string): TrackedProvider {
     if (host.includes("moralis")) {
         return "moralis";
     }
-    if (host.includes("bitquery")) {
-        return "bitquery";
-    }
-    if (host.includes("dexpaprika")) {
-        return "dexpaprika";
+    if (host.includes("coinmarketcap")) {
+        return "coinmarketcap";
     }
     return "unknown";
 }

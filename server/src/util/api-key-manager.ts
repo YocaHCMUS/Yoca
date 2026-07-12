@@ -35,7 +35,7 @@ class ApiKeyManager {
 
   /**
    * Initialize API keys for a specific service
-   * @param serviceName - Name of the service (e.g., 'bitquery', 'moralis')
+   * @param serviceName - Name of the service (e.g., 'birdeye', 'moralis')
    * @param envValue - Comma-separated API keys from environment
    */
   public initializeKeys(serviceName: string, envValue: string | undefined): void {

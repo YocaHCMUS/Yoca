@@ -6,6 +6,7 @@ import {
   type DeliveryResolution,
 } from "@sv/services/alertRules.service.js";
 import { sendAlertEmail } from "@sv/services/email.service.js";
+import { recordAlertHistory } from "@sv/services/alertHistory.service.js";
 import {
   findFollowedWalletDeliveryTargetsForAddresses,
   type FollowedWalletDeliveryTarget,
@@ -190,6 +191,7 @@ export interface WalletAlertPipelineDependencies {
     discordUrl: string,
   ) => Promise<DiscordSendResult>;
   sendEmail: (email: string, alert: StructuredAlert) => Promise<boolean>;
+  recordHistory: typeof recordAlertHistory;
 }
 
 export interface ProcessHeliusWebhookOptions {
@@ -577,7 +579,55 @@ function defaultDependencies(): WalletAlertPipelineDependencies {
         swapSolAmount: alert.event.swapSolAmount,
         emittedAt: alert.emittedAt,
       }),
+    recordHistory: recordAlertHistory,
   };
+}
+
+function historySeverity(
+  severity: StructuredAlert["severity"],
+): "info" | "warning" | "critical" {
+  if (severity == "high") return "critical";
+  if (severity == "medium") return "warning";
+  return "info";
+}
+
+async function persistSuccessfulDelivery(params: {
+  userId: string;
+  walletAddress: string;
+  ruleId?: number;
+  scope: DeliveryDispatchResult["scope"];
+  alert: StructuredAlert;
+  delivery: DeliveryDispatchResult;
+  deps: WalletAlertPipelineDependencies;
+}) {
+  const { userId, walletAddress, ruleId, scope, alert, delivery, deps } = params;
+  const scopeKey = ruleId == null ? walletAddress : String(ruleId);
+  try {
+    await deps.recordHistory({
+      userId,
+      advancedRuleId: ruleId ?? null,
+      source: scope,
+      eventKey: `${alert.event.signature}:${scope}:${scopeKey}`,
+      eventSignature: alert.event.signature,
+      walletAddress,
+      alertName: alert.displayTitle?.trim() || alert.rule,
+      message: alert.message,
+      severity: historySeverity(alert.severity),
+      emailAttempted: delivery.email.attempted,
+      emailSucceeded: delivery.email.ok,
+      discordAttempted: delivery.discord.attempted,
+      discordSucceeded: delivery.discord.ok,
+      sentAt: new Date(alert.emittedAt),
+    });
+  } catch (error) {
+    console.error("[helius-alerts] failed to persist alert history", {
+      userId,
+      walletAddress,
+      ruleId,
+      eventSignature: alert.event.signature,
+      error,
+    });
+  }
 }
 
 function dispatchResultSkipped(
@@ -922,6 +972,17 @@ export async function processHeliusWebhookTransactions(
       }
       if (delivery.anySucceeded) {
         summary.rulesDelivered += 1;
+        if (!dryRun) {
+          await persistSuccessfulDelivery({
+            userId: rule.userId,
+            walletAddress: ruleWallet,
+            ruleId: rule.id,
+            scope: "rule",
+            alert: structured,
+            delivery,
+            deps,
+          });
+        }
         if (!dryRun && rule.triggerType === "ONCE") {
           await deps.markRuleOneShotFired(rule.id);
         }
@@ -957,6 +1018,16 @@ export async function processHeliusWebhookTransactions(
       eventResult.deliveries.push(delivery);
       if (delivery.anySucceeded) {
         summary.followedWalletDelivered += 1;
+        if (!dryRun) {
+          await persistSuccessfulDelivery({
+            userId: target.userId,
+            walletAddress,
+            scope: "followed-wallet",
+            alert,
+            delivery,
+            deps,
+          });
+        }
       } else if (delivery.anyAttempted) {
         summary.dispatchFailures += 1;
       }

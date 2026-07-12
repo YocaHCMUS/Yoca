@@ -1,3 +1,5 @@
+// TODO: Review seed data and make every operation idempotent before running this script against Supabase or any production-like database. Do not execute it automatically during deployment.
+
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import {

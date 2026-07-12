@@ -1,0 +1,42 @@
+\chapter{Kết luận và hướng phát triển}
+\label{Chapter6}
+
+Chương này tổng kết những gì Yoca đã đạt được sau quá trình phát triển, đồng thời nhìn nhận các giới hạn còn tồn tại. Thay vì lặp lại danh sách chức năng của Chương 5, nội dung tập trung vào giá trị của luồng phân tích, các quyết định kỹ thuật có khả năng tái sử dụng và những công việc cần ưu tiên nếu hệ thống tiếp tục được hoàn thiện.
+
+\section{Kết quả và đóng góp chính}
+
+Yoca đã hình thành một luồng phân tích liên tục từ Market Overview đến Token Pool, Token Overview, Wallet, User và các chức năng AI. Điểm quan trọng của luồng này không nằm ở số lượng trang, mà ở việc người dùng có thể đi từ biến động thị trường đến pool cụ thể, quan sát ví tham gia, kiểm tra giao dịch và quay lại dữ liệu nguồn mà không phải tự ghép nhiều công cụ rời rạc. Các chức năng tài khoản, watchlist, nhãn ví, subscription và cảnh báo bổ sung lớp cá nhân hóa cho quá trình sử dụng.
+
+Đóng góp kỹ thuật đầu tiên là lớp dữ liệu nhiều provider được đặt sau một hợp đồng nội bộ. CoinGecko, Birdeye, Helius, Mobula, Zerion và Moralis được chọn theo miền thay vì tạo fallback tràn lan. Response bên ngoài được kiểm tra bằng Zod trước khi đi vào nghiệp vụ; Hono RPC và TypeScript giữ hợp đồng giữa client với server; PostgreSQL và Drizzle quản lý dữ liệu nền cùng các read model cache. Cách tổ chức này không loại bỏ sự phụ thuộc provider, nhưng giới hạn nơi sự khác biệt về schema và semantics lan vào hệ thống.
+
+Đóng góp thứ hai là cách xem cache như một phần của thiết kế dữ liệu. Snapshot có thể dùng TTL, còn lịch sử transfer, swap và transaction cần coverage metadata để xác định khoảng đã tải. Các bảng được tách theo nguồn và nhịp cập nhật nhằm tránh việc một hàng chỉ hoàn chỉnh sau nhiều lần gọi API. Quá trình migration Wallet cũng cho thấy khả năng thay thế tăng dần: Mobula hiện cung cấp các chỉ số phân tích và lịch sử tổng tài sản, Zerion giữ lịch sử theo token, còn Helius tiếp tục phục vụ portfolio, webhook và transaction detail.
+
+Đối với phân tích ví, nhóm chúng em đã đi từ thử nghiệm tự giải mã Enhanced Transactions và heuristic balance change đến một phạm vi thực tế hơn. PnL tổng hợp được đọc từ dữ liệu Mobula đã kiểm tra và cache; đường PnL theo ngày được phân biệt rõ với realized PnL, dựa trên biến động tổng tài sản sau khi trừ dòng tiền ròng. Việc ghi rõ nguồn, kỳ phân tích và độ phủ giúp kết quả có thể được diễn giải đúng giới hạn thay vì được xem như sổ cái kế toán tuyệt đối.
+
+Yoca còn kết hợp dữ liệu định lượng với lớp diễn giải AI. Dữ liệu token, ví và giao dịch được chuẩn bị thành ngữ cảnh có cấu trúc trước khi gửi đến mô hình. Kết quả được đặt cạnh bảng, biểu đồ hoặc giao dịch liên quan để người dùng có cơ sở đối chiếu. Mô-đun wash trading mở rộng cách quan sát từ từng bản ghi sang quan hệ đồ thị và các tín hiệu như chu trình, hubness, mức tương đồng và bất thường khối lượng; đây là tín hiệu hỗ trợ đánh giá, không phải kết luận gian lận tự động.
+
+Về khả năng tiếp cận, lớp localization dùng chung hỗ trợ tiếng Anh, tiếng Việt, định dạng số/ngày giờ và quy đổi USD sang VND tại lớp trình bày. Cấu trúc translation key và biến nội suy được kiểm tra trong lúc phát triển. Đây là phần đóng góp gắn trực tiếp với mục tiêu giúp người dùng Việt Nam tiếp cận dữ liệu blockchain quen thuộc hơn, dù một số component cũ vẫn chưa được bản địa hóa hoàn toàn.
+
+\section{Giới hạn còn tồn tại}
+
+Giới hạn lớn nhất của hệ thống là chất lượng và tính liên tục của dữ liệu vẫn phụ thuộc vào provider. Quota, giá gói, phạm vi lịch sử, trường nullable và cách phân loại token có thể thay đổi. Kinh nghiệm chuyển từ Birdeye sang Mobula--Zerion cho thấy thay provider không chỉ sửa endpoint mà còn ảnh hưởng adapter, cache, schema và cách giải thích chỉ số. Một số read model, đặc biệt \texttt{wallet\_analyses}, vẫn mang hình dạng gần với provider vì được xây dựng trong giai đoạn migration gấp.
+
+Kết quả phân tích tài chính cũng có giới hạn về độ phủ. Token mới hoặc ít thanh khoản có thể thiếu giá lịch sử; transaction phức tạp có thể không được lớp Enhanced Transactions mô tả đầy đủ; PnL theo balance phụ thuộc vào giá trị tổng tài sản và transfer có giá USD. Nhãn ví, AI và tín hiệu wash trading đều cần được xem cùng dữ liệu nguồn, không nên sử dụng như nhận định chắc chắn về chủ thể hay hành vi.
+
+Giao diện hiện chưa có một design system được áp dụng trọn vẹn. Carbon, SCSS module, utility class và component tự xây vẫn cùng tồn tại. Landing, Market và Wallet đã được đổi mới nhiều hơn, trong khi một số component Token/Pool còn style và behavior cũ. Localization cũng còn chuỗi hard-code. Vấn đề này liên quan đến component contract, accessibility và trạng thái loading/error/empty, không chỉ là màu sắc.
+
+Phạm vi kiểm thử và vận hành chưa đủ để khẳng định hệ thống ổn định ở quy mô lớn, dù lần chạy ngày 12/07/2026 đã đạt 178/178 test phía client và 204/204 test phía server. Hệ thống chưa có E2E đầy đủ, load test, benchmark cache trên PostgreSQL thật hoặc staging ổn định. GitHub Actions đã được cấu hình cho các bước kiểm tra liên tục, còn deployment Render vẫn cần được xác minh trên môi trường thật. Alert History đã được nối với delivery Helius, có ownership API, read state và khóa chống trùng; phần còn lại là reset database demo, smoke test delivery và chụp bằng chứng giao diện.
+
+\section{Hướng phát triển}
+
+Ưu tiên đầu tiên là khép lại các contract đang không thống nhất. Nhóm cần quyết định rõ cách biểu diễn lỗi provider, sửa đường Zerion balance để phân biệt response rỗng, malformed JSON và upstream failure, sau đó đưa các fixture này vào contract regression test. Test suite phải trở về trạng thái xanh trước khi CI trở thành cổng merge. Bước tiếp theo là bổ sung smoke test cho user journey chính và E2E chọn lọc cho auth, Wallet, payment và alert; số liệu hiệu năng chỉ được đưa ra sau khi có benchmark lặp lại được.
+
+Ở lớp tích hợp, hệ thống cần bổ sung observability cho thời gian phản hồi, tỷ lệ lỗi, retry, quota và cache hit/miss theo provider. Retry phải có giới hạn; circuit breaker và stale-data policy cần được định nghĩa cho những endpoint quan trọng. Adapter nội bộ và read model nên tiếp tục giảm coupling với response provider, đặc biệt ở Wallet, nhưng không nên refactor đồng loạt khi consumer cũ vẫn hoạt động.
+
+Ở giao diện, hướng phát triển phù hợp là thống nhất design token, quy định component contract và trạng thái dữ liệu, sau đó migration theo màn hình ưu tiên thay vì thay toàn bộ thư viện một lần nữa. Cùng lúc đó, nhóm cần loại bỏ chuỗi hard-code, bổ sung kiểm tra parity locale và hoàn thiện bộ ảnh chức năng bằng dữ liệu demo ổn định.
+
+Alert History cần tiếp tục được kiểm chứng trên môi trường triển khai bằng một luồng delivery thật và retry webhook, dù contract, persistence, ownership và read state đã được cài đặt và kiểm thử tự động. Pipeline GitHub Actions và Render cũng cần được hoàn tất bằng cấu hình secret, deploy hook và smoke check sau deployment.
+
+Về dài hạn, mô-đun wash trading có thể được đánh giá trên tập dữ liệu đã kiểm chứng và kết hợp thêm biến động giá, thanh khoản cùng hành vi qua nhiều pool. AI có thể tăng khả năng dẫn chứng bằng cách liên kết từng nhận định với giao dịch hoặc vùng biểu đồ cụ thể. Những mở rộng này chỉ có ý nghĩa khi nền tảng dữ liệu, kiểm thử và quan sát vận hành đã đủ tin cậy.
+
+Nhìn chung, Yoca đã tạo được nền tảng cho một sản phẩm phân tích Solana có luồng sử dụng rõ ràng và có chủ đích đối với người dùng Việt Nam. Kết quả quan trọng nhất của đề tài là kinh nghiệm tổ chức dữ liệu nhiều nguồn, nhận diện giới hạn của việc tự giải mã, điều chỉnh kiến trúc khi provider thay đổi và giữ cho kết quả phân tích có thể đối chiếu. Các giới hạn còn lại được xem là điểm xuất phát cụ thể cho giai đoạn hoàn thiện tiếp theo, thay vì được che khuất bằng những khẳng định chưa có bằng chứng.

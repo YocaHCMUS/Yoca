@@ -1,4 +1,4 @@
-import { getTrackedApiResult } from "@sv/middlewares/validation.js";
+import { validateApiResult } from "@sv/middlewares/validation.js";
 import { rlFetch } from "@sv/util/rate-limit.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import {
@@ -39,7 +39,7 @@ export async function getTokenHistoricalData(
 
   if (!resp.ok) return null;
 
-  const data = await getTrackedApiResult(cg_TokenMarketChartSchema, resp);
+  const data = await validateApiResult(cg_TokenMarketChartSchema, resp);
 
   if (!data) return null;
 
