@@ -428,6 +428,20 @@ export const envSchema = z.object({
 
   // Stripe
   STRIPE_SECRET_KEY: z.string().default(""),
+  STRIPE_PUBLISHABLE_KEY: z.string().default(""),
+  STRIPE_WEBHOOK_SECRET: z.string().optional().default(""),
+  STRIPE_PRICE_LITE: z.string().min(1, "Stripe Lite price id is required"),
+  STRIPE_PRICE_PLUS: z.string().min(1, "Stripe Plus price id is required"),
+  STRIPE_PRICE_PRO: z.string().min(1, "Stripe Pro price id is required"),
+  STRIPE_PRICE_LITE_YEARLY: z
+    .string()
+    .min(1, "Stripe Lite yearly price id is required"),
+  STRIPE_PRICE_PLUS_YEARLY: z
+    .string()
+    .min(1, "Stripe Plus yearly price id is required"),
+  STRIPE_PRICE_PRO_YEARLY: z
+    .string()
+    .min(1, "Stripe Pro yearly price id is required"),
 
   // SMTP password reset email
   SMTP_HOST: z.string().optional().default(""),
