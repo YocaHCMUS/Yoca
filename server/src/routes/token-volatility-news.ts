@@ -76,12 +76,6 @@ type TokenVolatilityNewsData = {
   events: TokenVolatilityNewsEvent[];
 };
 
-type TokenVolatilityNewsResponseData = TokenVolatilityNewsData & {
-  cache: {
-    hit: boolean;
-    expiresAt: string;
-  };
-};
 
 const tokenVolatilityNewsQuerySchema = z.object({
   address: solanaBase58Schema,
@@ -226,7 +220,6 @@ const app = new Hono().get("/", async (c) => {
   let usageCounted = false;
   try {
     if (!forceRefresh) {
-      let cached = null;
       try {
         const cached =
           await readTokenVolatilityNewsCache<TokenVolatilityNewsData>(
@@ -451,14 +444,6 @@ const app = new Hono().get("/", async (c) => {
         error: err instanceof Error ? err.message : String(err),
       });
     }
-
-    const responseData: TokenVolatilityNewsResponseData = {
-      ...freshData,
-      cache: {
-        hit: false,
-        expiresAt: expiresAt.toISOString(),
-      },
-    };
 
     return c.json(
       {

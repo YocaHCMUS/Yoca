@@ -382,7 +382,6 @@ export async function getRollingAnnualReturns(
 
 export async function getDrawdown(
   wallets: string[],
-  period: WalletOverviewPeriodKey = "30D",
 ) {
   return await mapWithConcurrency(
     wallets,

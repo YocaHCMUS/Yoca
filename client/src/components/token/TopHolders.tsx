@@ -1,5 +1,4 @@
 import client from "@/api/main";
-import { SOLSCAN_ACCOUNT_URL } from "@/config/constants";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { ChevronDown, ChevronUp, Copy } from "@carbon/icons-react";
 import classNames from "classnames";
@@ -14,15 +13,11 @@ type TopHoldersData = InferResponseType<
   200
 >;
 
+type TopHolder = TopHoldersData[number];
+
 interface TopHoldersProps {
   holders: TopHoldersData;
 }
-
-// Rút gọn địa chỉ ví
-const shortenAddress = (address: string) => {
-  if (!address || address.length < 10) return address;
-  return address.slice(0, 10);
-};
 
 export const TopHolders = ({ holders }: TopHoldersProps) => {
   const { tr, fmt } = useLocalization();
@@ -41,7 +36,7 @@ export const TopHolders = ({ holders }: TopHoldersProps) => {
   // Dùng trực tiếp dữ liệu top 10 từ mảng holders
   const top10Holders = holders.slice(0, 10);
   const totalPercentage = top10Holders.reduce(
-    (acc: number, curr: any) => acc + curr.percentage,
+    (acc: number, curr: TopHolder) => acc + curr.percentage,
     0
   );
 
@@ -91,7 +86,7 @@ export const TopHolders = ({ holders }: TopHoldersProps) => {
             ]}
             loading={false}
             height="auto"
-            rows={top10Holders.map((holder: any, index: number) => ({
+            rows={top10Holders.map((holder: TopHolder, index: number) => ({
               id: holder.holderAddress,
               rank: <span className={styles.rank}>{index + 1}</span>,
               address: (
@@ -134,3 +129,5 @@ export const TopHolders = ({ holders }: TopHoldersProps) => {
     </div>
   );
 };
+
+

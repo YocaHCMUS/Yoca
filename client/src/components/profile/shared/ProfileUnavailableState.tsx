@@ -1,5 +1,4 @@
 import styles from "./profile.module.scss";
-import { useLocalization } from "@/contexts/LocalizationContext";
 
 interface ProfileUnavailableStateProps {
     title?: string;
@@ -10,8 +9,6 @@ export function ProfileUnavailableState({
     title,
     description,
 }: ProfileUnavailableStateProps) {
-    const { tr } = useLocalization();
-
     const displayTitle = title;
     const displayDescription = description;
 

@@ -1,29 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ZodType } from "zod";
 
-const mocks = vi.hoisted(() => {
-  class MockZerionUpstreamError extends Error {
-    readonly provider = "zerion";
-    readonly upstreamStatus?: number;
-
-    constructor(status?: number) {
-      super("Zerion balance chart request failed");
-      this.name = "ZerionUpstreamError";
-      this.upstreamStatus = status;
-    }
-  }
-
-  return {
-    getWalletBalanceHistory: vi.fn(),
-    MockZerionUpstreamError,
-  };
-});
+const mocks = vi.hoisted(() => ({
+  getWalletBalanceHistory: vi.fn(),
+}));
 
 vi.mock("@sv/middlewares/validation", async () => {
   const { validator } = await import("hono/validator");
   const { z } = await import("zod");
   return {
     solanaBase58Schema: z.string().trim().min(1),
-    validate: (target: "query", schema: any) =>
+    validate: (target: "query", schema: ZodType) =>
       validator(target, (value, c) => {
         const parsed = schema.safeParse(value);
         return parsed.success
@@ -35,13 +22,13 @@ vi.mock("@sv/middlewares/validation", async () => {
 
 vi.mock("@sv/services/wallet/walletCharts.service", () => ({
   getWalletBalanceHistory: mocks.getWalletBalanceHistory,
-  ZerionUpstreamError: mocks.MockZerionUpstreamError,
 }));
 
 vi.mock("@sv/services/wallet/walletTokenBalance.service", () => ({
   getWalletTokenBalanceHistory: vi.fn(),
 }));
 
+import { UpstreamError } from "@sv/util/errors.js";
 import balanceRoute from "@sv/routes/charts/balance.route.js";
 
 describe("GET /api/charts/balance", () => {
@@ -49,9 +36,9 @@ describe("GET /api/charts/balance", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 502 after a Zerion balance-history failure", async () => {
+  it("returns 502 after an upstream balance-history failure", async () => {
     mocks.getWalletBalanceHistory.mockRejectedValue(
-      new mocks.MockZerionUpstreamError(500),
+      new UpstreamError("mobula", 500),
     );
 
     const response = await balanceRoute.request(
@@ -64,3 +51,4 @@ describe("GET /api/charts/balance", () => {
     });
   });
 });
+

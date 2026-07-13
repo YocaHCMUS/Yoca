@@ -146,11 +146,9 @@ export default function TokenPage() {
     poolAddress: string;
   }>();
 
-  if (!address || !poolAddress) {
-    return <>Forgot to add address!</>;
-  }
-
-  const result = useTokenPageData(address, poolAddress);
+  const safeAddress = address ?? "";
+  const safePoolAddress = poolAddress ?? "";
+  const result = useTokenPageData(safeAddress, safePoolAddress);
 
   const [pairData, setPairData] = useState<
     NonNullable<typeof result.data>["pool"] | null
@@ -170,6 +168,10 @@ export default function TokenPage() {
       setPairData(nextPool);
     }
   }, [poolAddress, result.data?.pool]);
+
+  if (!address || !poolAddress) {
+    return <>Forgot to add address!</>;
+  }
 
   if (poolAddress && !result.error && (result.pairLoading || !pairData)) {
     return (

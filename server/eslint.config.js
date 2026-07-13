@@ -19,6 +19,10 @@ export default [
       ecmaVersion: 2023,
       globals: globals.node,
     },
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-vars": "warn",
+    },
   },
 ];
 

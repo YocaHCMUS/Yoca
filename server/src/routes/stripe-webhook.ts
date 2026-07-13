@@ -1,15 +1,6 @@
 // server/src/routes/stripe-webhook.ts
-import { db } from "@sv/db/index.js";
-import { 
-  subscriptions, 
-  paymentHistory, 
-  enumPlanTier, 
-  enumSubscriptionStatus, 
-  enumPaymentStatus 
-} from "@sv/db/schema.js";
 import { constructEvent, getStripe } from "@sv/services/stripe.service.js";
 import { upsertSubscription, recordInvoicePayment } from "@sv/services/subscription.service.js";
-import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type Stripe from "stripe";
 
@@ -34,9 +25,10 @@ app.post("/", async (c) => {
   try {
     const body = await c.req.text();
     event = constructEvent(body, signature, webhookSecret);
-  } catch (err: any) {
-    console.error(`[stripe-webhook] Error verifying webhook: ${err.message}`);
-    return c.text(`Webhook Error: ${err.message}`, 400);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[stripe-webhook] Error verifying webhook: ${errMsg}`);
+    return c.text(`Webhook Error: ${errMsg}`, 400);
   }
 
   console.log(`[stripe-webhook] Received event: ${event.type}`);
@@ -78,8 +70,9 @@ app.post("/", async (c) => {
     }
 
     return c.text("OK", 200);
-  } catch (err: any) {
-    console.error(`[stripe-webhook] Error processing event: ${err.message}`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[stripe-webhook] Error processing event: ${errMsg}`);
     return c.text("Internal Server Error", 500);
   }
 });

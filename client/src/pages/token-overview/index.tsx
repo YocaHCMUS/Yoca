@@ -98,12 +98,13 @@ export default function TokenOverviewPage() {
     });
   };
 
+  const safeAddress = address ?? "";
+  const result = useTokenOverviewData(safeAddress);
+  const { tr } = useLocalization();
+
   if (!address) {
     return <>Missing token address</>;
   }
-
-  const result = useTokenOverviewData(address);
-  const { tr } = useLocalization();
   const details = result.data?.details;
   const market = result.data?.market;
 

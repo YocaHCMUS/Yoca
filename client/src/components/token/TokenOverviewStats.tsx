@@ -278,8 +278,6 @@ export const TokenOverviewStats = ({
       {/* ── Info Section ── */}
       {(() => {
         const explorers: string[] = meta.linkBlockchainSites || [];
-        const categories: string[] = meta.categories || [];
-
         const hasAny =
           meta.linkHomepage ||
           explorers.length > 0 ||

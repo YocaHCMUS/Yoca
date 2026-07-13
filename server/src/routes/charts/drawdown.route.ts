@@ -53,10 +53,7 @@ const app = new Hono()
       const params = drawdownRequestSchema.parse(query);
 
       // Fetch drawdown data from wallet comparison service
-      const data = await getDrawdown(
-        params.wallets,
-        params.period,
-      );
+      const data = await getDrawdown(params.wallets);
 
       // Return response
       return c.json(data, 200);

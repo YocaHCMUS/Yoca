@@ -121,9 +121,10 @@ export function ProfileTradeFrequencyHeatmap({
             tooltip: {
                 ...baseOption.tooltip,
                 trigger: "item",
-                formatter: (params: any) => {
-                    const pointDate = params?.data?.[0] ?? "-";
-                    const tradeCount = params?.data?.[1] ?? 0;
+                formatter: (params: unknown) => {
+                    const data = (params as { data?: [unknown, number] }).data;
+                    const pointDate = data?.[0] ?? "-";
+                    const tradeCount = data?.[1] ?? 0;
                     return `${pointDate}<br/>Trades: ${tradeCount}`;
                 },
             },

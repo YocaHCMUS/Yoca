@@ -64,9 +64,9 @@ interface UseFullscreenReturn {
 function isFullscreenSupported(): boolean {
   return !!(
     document.fullscreenEnabled ||
-    (document as any).webkitFullscreenEnabled ||
-    (document as any).mozFullScreenEnabled ||
-    (document as any).msFullscreenEnabled
+    (document as Document & { webkitFullscreenEnabled?: boolean }).webkitFullscreenEnabled ||
+    (document as Document & { mozFullScreenEnabled?: boolean }).mozFullScreenEnabled ||
+    (document as Document & { msFullscreenEnabled?: boolean }).msFullscreenEnabled
   );
 }
 
@@ -76,12 +76,12 @@ function isFullscreenSupported(): boolean {
 async function requestFullscreen(element: HTMLElement): Promise<void> {
   if (element.requestFullscreen) {
     await element.requestFullscreen();
-  } else if ((element as any).webkitRequestFullscreen) {
-    await (element as any).webkitRequestFullscreen();
-  } else if ((element as any).mozRequestFullScreen) {
-    await (element as any).mozRequestFullScreen();
-  } else if ((element as any).msRequestFullscreen) {
-    await (element as any).msRequestFullscreen();
+  } else if ((element as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen) {
+    await (element as HTMLElement & { webkitRequestFullscreen: () => Promise<void> }).webkitRequestFullscreen();
+  } else if ((element as HTMLElement & { mozRequestFullScreen?: () => Promise<void> }).mozRequestFullScreen) {
+    await (element as HTMLElement & { mozRequestFullScreen: () => Promise<void> }).mozRequestFullScreen();
+  } else if ((element as HTMLElement & { msRequestFullscreen?: () => Promise<void> }).msRequestFullscreen) {
+    await (element as HTMLElement & { msRequestFullscreen: () => Promise<void> }).msRequestFullscreen();
   }
 }
 
@@ -91,12 +91,12 @@ async function requestFullscreen(element: HTMLElement): Promise<void> {
 async function exitFullscreenAPI(): Promise<void> {
   if (document.exitFullscreen) {
     await document.exitFullscreen();
-  } else if ((document as any).webkitExitFullscreen) {
-    await (document as any).webkitExitFullscreen();
-  } else if ((document as any).mozCancelFullScreen) {
-    await (document as any).mozCancelFullScreen();
-  } else if ((document as any).msExitFullscreen) {
-    await (document as any).msExitFullscreen();
+  } else if ((document as Document & { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen) {
+    await (document as Document & { webkitExitFullscreen: () => Promise<void> }).webkitExitFullscreen();
+  } else if ((document as Document & { mozCancelFullScreen?: () => Promise<void> }).mozCancelFullScreen) {
+    await (document as Document & { mozCancelFullScreen: () => Promise<void> }).mozCancelFullScreen();
+  } else if ((document as Document & { msExitFullscreen?: () => Promise<void> }).msExitFullscreen) {
+    await (document as Document & { msExitFullscreen: () => Promise<void> }).msExitFullscreen();
   }
 }
 
@@ -106,9 +106,9 @@ async function exitFullscreenAPI(): Promise<void> {
 function getFullscreenElement(): Element | null {
   return (
     document.fullscreenElement ||
-    (document as any).webkitFullscreenElement ||
-    (document as any).mozFullScreenElement ||
-    (document as any).msFullscreenElement ||
+    (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement ||
+    (document as Document & { mozFullScreenElement?: Element }).mozFullScreenElement ||
+    (document as Document & { msFullscreenElement?: Element }).msFullscreenElement ||
     null
   );
 }

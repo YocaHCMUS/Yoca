@@ -1,3 +1,4 @@
+import type { AnalysisProfileLike, AnalysisSummaryLike } from "@/components/wallet/AiAnalysisDashboard/types";
 export type AnalyzeWalletWithAIParams = {
   walletAddress: string;
   transactionLimit?: number;
@@ -8,8 +9,8 @@ export type AnalyzeWalletWithAIParams = {
 
 export type WalletAnalysisApiResponse = {
   walletAddress: string;
-  profile: any;
-  aiSummary: any;
+  profile: AnalysisProfileLike;
+  aiSummary: AnalysisSummaryLike;
   generatedAt: string;
   debug?: {
     transactionSource?: string;
@@ -59,3 +60,5 @@ export async function analyzeWalletWithAI(params: AnalyzeWalletWithAIParams) {
 }
 
 export default analyzeWalletWithAI;
+
+

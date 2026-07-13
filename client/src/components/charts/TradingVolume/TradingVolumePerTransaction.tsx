@@ -17,6 +17,8 @@ import { useMemo, useRef } from "react";
 import { ChartWrapper, ChartGridItem } from "../shared";
 import type { ChartProps } from "../shared/ChartProp";
 
+type VolumePerTxTooltipParam = { value: number };
+
 type TradingVolumePerTransactionData = InferFetcherData<
   typeof fetchTradingVolumePerTransaction
 >;
@@ -32,7 +34,6 @@ export function TradingVolumePerTransaction({
   autoRefresh = true,
   refreshInterval = 30000,
   fetchEnabled = true,
-  className,
 }: ChartProps) {
   const { tr, fmt } = useLocalization();
   const chartTitle =
@@ -116,7 +117,7 @@ export function TradingVolumePerTransaction({
           label: {
             show: true,
             position: "top",
-            formatter: (params: any) => fmt.num.compact.currency(params.value),
+            formatter: (param: unknown) => fmt.num.compact.currency((param as VolumePerTxTooltipParam).value),
             color: baseOption.textStyle.color,
           },
         },
@@ -140,7 +141,7 @@ export function TradingVolumePerTransaction({
         !data.wallets ||
         !Array.isArray(data.wallets) ||
         data.wallets.length === 0 ||
-        (data.wallets as any).error
+        Boolean((data.wallets as unknown as { error?: unknown }).error)
       }
       onRetry={() => refetch(false)}
       toolbarLayout="stacked"
@@ -170,3 +171,5 @@ export function TradingVolumePerTransaction({
     </ChartWrapper>
   );
 }
+
+

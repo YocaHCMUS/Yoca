@@ -19,6 +19,7 @@ import React, { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { Rnd } from "react-rnd";
+import type { DraggableEventHandler } from "react-draggable";
 import styles from "./MiniPlayer.module.scss";
 
 // Constants
@@ -133,8 +134,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   /**
    * Handle drag stop to save position
    */
-  const handleDragStop = useCallback(
-    (_e: any, data: { x: number; y: number }) => {
+  const handleDragStop: DraggableEventHandler = useCallback(
+    (_e, data) => {
       setPosition({
         x: data.x,
         y: Math.max(data.y, MINI_PLAYER_DEFAULTS.HEADER_HEIGHT),
@@ -148,10 +149,10 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
    */
   const handleResizeStop = useCallback(
     (
-      _e: any,
-      _direction: any,
+      _e: MouseEvent | TouchEvent,
+      _direction: string,
       ref: HTMLElement,
-      _delta: any,
+      _delta: { width: number; height: number },
       position: { x: number; y: number },
     ) => {
       setSize({

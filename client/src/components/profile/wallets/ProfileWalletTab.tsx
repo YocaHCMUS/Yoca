@@ -7,9 +7,11 @@ import type { TimePeriod } from "@/types/chart-filters.types";
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
 import ProfileLoadingState from "@/components/profile/shared/ProfileLoadingState";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { Select, SelectItem } from "@carbon/react";
 import { useEffect, useMemo, useState } from "react";
 import { MultiWalletBalanceChart } from "@/components/charts/BalanceChartMultiV2";
+import { PageHeader } from "@/components/common/PageHeader/PageHeader";
+import { Card } from "@/components/common/Card/Card";
+import { AddressPill } from "@/components/common/AddressPill/AddressPill";
 
 interface ProfileWalletTabProps {
     walletAddresses: string[];
@@ -73,29 +75,37 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
 
     return (
         <section className={styles.contentStack}>
-            <div className={styles.sectionCard}>
-                <div className={styles.sectionHeader}>
-                    <h3>Wallets</h3>
-                    <Select
-                        id="profile-wallet-selector"
-                        hideLabel={true}
-                        labelText="Wallets"
+            <PageHeader
+                title="Wallets"
+                actions={
+                    <select
                         value={selectedWalletId}
                         onChange={(event) => setSelectedWalletId(event.target.value)}
+                        style={{
+                            padding: "6px 12px",
+                            borderRadius: 8,
+                            border: "1px solid var(--yoca-border)",
+                            background: "var(--yoca-surface)",
+                            color: "var(--yoca-text-main)",
+                            fontSize: "0.875rem",
+                            cursor: "pointer",
+                            maxWidth: 240,
+                        }}
                     >
                         {walletOptions.map((option) => (
-                            <SelectItem key={option.id} value={option.id} text={option.label} />
+                            <option key={option.id} value={option.id}>
+                                {option.label || option.id.slice(0, 8) + "..." + option.id.slice(-4)}
+                            </option>
                         ))}
-                    </Select>
-                </div>
-            </div>
+                    </select>
+                }
+            />
 
-            <div className={styles.sectionCard}>
-                <MultiWalletBalanceChart addresses={chartWallets}
-                />
-            </div>
+            <Card>
+                <MultiWalletBalanceChart addresses={chartWallets} />
+            </Card>
 
-            <div className={styles.sectionCard}>
+            <Card>
                 <DrawdownChart
                     key={`drawdown-${chartKey}`}
                     minHeight={360}
@@ -104,9 +114,9 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
                         wallets: chartWallets,
                     }}
                 />
-            </div>
+            </Card>
 
-            <div className={styles.sectionCard}>
+            <Card>
                 <TradingVolumeDistribution
                     key={`volume-distribution-${chartKey}`}
                     minHeight={360}
@@ -116,15 +126,15 @@ export function ProfileWalletTab({ walletAddresses, period }: ProfileWalletTabPr
                     }}
                     autoRefresh={false}
                 />
-            </div>
+            </Card>
 
-            <div className={styles.sectionCard}>
+            <Card>
                 <PnLChart
                     key={`pnl-${chartKey}`}
                     minHeight={360}
                     initialFilters={{ wallets: chartWallets }}
                 />
-            </div>
+            </Card>
         </section>
     );
 }

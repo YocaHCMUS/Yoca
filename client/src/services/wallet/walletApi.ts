@@ -82,6 +82,7 @@ export interface WalletDayToken {
   sellAmount: number;
   totalVolumeUsd: number;
   hourlyVolumes: TokenHourlyVolume[];
+  priceHistory?: { timestampMs: number; price: number }[];
 }
 
 export interface WalletDaySwapSummary {
@@ -108,39 +109,6 @@ export interface WalletDayActivitySummary {
   allTokens: WalletDayToken[];
   totalTokensTraded: number;
   swaps: WalletDaySwapSummary[];
-}
-
-export interface WalletTxTransfer {
-  from: string;
-  to: string;
-  mint: string;
-  symbol: string | null;
-  name: string | null;
-  logoUri: string | null;
-  amount: number;
-  amountUsd: number | null;
-  fromTokenAccount?: string;
-  toTokenAccount?: string;
-}
-
-export interface WalletFeeReceiver {
-  address: string;
-  amount: number;
-  amountUsd: number | null;
-  label: string | null;
-}
-
-export interface WalletTxDetail {
-  transactionHash: string;
-  timestamp: string;
-  pair: string;
-  valueUsd: number;
-  action: "buy" | "sell";
-  transfers: WalletTxTransfer[];
-  feePaid: number;
-  feePaidUsd: number | null;
-  feePayer: string;
-  feeReceivers: WalletFeeReceiver[];
 }
 
 export interface WalletInnerInstruction {
@@ -734,20 +702,6 @@ export function fetchWalletSwaps(
 }
 
 /**
- * Fetch wallet balances
- * GET /api/balances
- */
-export function fetchWalletBalances(address: string) {
-  return client.api.balances[":address"].$get({
-    param: { address },
-  }).then(resp => {
-    if (resp.ok) return resp.json();
-    console.error(`API Error: ${resp.status}`);
-    throw new Error(`API Error: ${resp.status}`);
-  });
-}
-
-/**
  * Fetch wallet asset distribution
  * GET /api/wallets/distribution
  */
@@ -933,19 +887,6 @@ export function fetchTokenPriceChartForDay(
 ) {
   return client.api.wallets["token-price-chart"].$get({
     query: { address: tokenAddress, dayMs: String(dayMs) },
-  }).then(resp => {
-    if (resp.ok) return resp.json();
-    console.error(`API Error: ${resp.status}`);
-    throw new Error(`API Error: ${resp.status}`);
-  });
-}
-
-export function fetchTxDetail(
-  address: string,
-  signature: string,
-): Promise<WalletTxDetail> {
-  return client.api.wallets["tx-detail"].$get({
-    query: { address, signature },
   }).then(resp => {
     if (resp.ok) return resp.json();
     console.error(`API Error: ${resp.status}`);

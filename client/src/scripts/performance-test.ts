@@ -83,7 +83,7 @@ function printResults(): void {
 }
 
 // Simulate component render time measurement
-function measureComponentRender(_componentName: string): number {
+function measureComponentRender(): number {
   const start = performance.now();
   // Simulate component rendering work
   const iterations = 10000;
@@ -145,16 +145,16 @@ async function runPerformanceTests(): Promise<void> {
 
   // Component render tests
   console.log('Measuring component render times...');
-  const signInRender = measureComponentRender('SignInForm');
+  const signInRender = measureComponentRender();
   checkMetric('SignInForm render time', signInRender, 100);
 
-  const signUpRender = measureComponentRender('SignUpForm');
+  const signUpRender = measureComponentRender();
   checkMetric('SignUpForm render time', signUpRender, 100);
 
-  const walletModalRender = measureComponentRender('WalletModal');
+  const walletModalRender = measureComponentRender();
   checkMetric('WalletModal render time', walletModalRender, 100);
 
-  const headerRender = measureComponentRender('Header');
+  const headerRender = measureComponentRender();
   checkMetric('Header render time', headerRender, 100);
 
   // Validation performance

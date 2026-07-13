@@ -21,18 +21,30 @@ interface TimelineBucket {
 
 interface TimelineViewProps {
   swaps: WalletDaySwapSummary[];
-  walletAddress: string;
   dayTimestamp: number;
   tokenLogoMap?: Record<string, string | null>;
 }
 
 const BUCKET_MS = 30 * 60 * 1000;
+const INITIAL_VISIBLE_BUCKETS = 10;
 
-function buildTimeBuckets(swaps: WalletDaySwapSummary[], dayTimestamp: number, tokenLogoMap?: Record<string, string | null>): TimelineBucket[] {
+function buildTimeBuckets(
+  swaps: WalletDaySwapSummary[],
+  dayTimestamp: number,
+  tokenLogoMap?: Record<string, string | null>,
+): TimelineBucket[] {
   const startMs = dayTimestamp;
 
-  type TokenAccum = { volume: number; amount: number; symbol: string; address: string };
-  const bucketMap = new Map<number, { swaps: WalletDaySwapSummary[]; tokenVolumes: Map<string, TokenAccum> }>();
+  type TokenAccum = {
+    volume: number;
+    amount: number;
+    symbol: string;
+    address: string;
+  };
+  const bucketMap = new Map<
+    number,
+    { swaps: WalletDaySwapSummary[]; tokenVolumes: Map<string, TokenAccum> }
+  >();
 
   for (const swap of swaps) {
     const ts = Date.parse(swap.timestamp);
@@ -46,16 +58,26 @@ function buildTimeBuckets(swaps: WalletDaySwapSummary[], dayTimestamp: number, t
     const entry = bucketMap.get(bucketIndex)!;
     entry.swaps.push(swap);
 
-    const tokenAddr = swap.action === "buy" ? swap.boughtTokenAddress : swap.soldTokenAddress;
-    const tokenSym = swap.action === "buy" ? swap.boughtSymbol : swap.soldSymbol;
-    const amount = swap.action === "buy" ? swap.boughtAmount : swap.soldAmount;
+    const tokenAddr =
+      swap.action === "buy"
+        ? swap.boughtTokenAddress
+        : swap.soldTokenAddress;
+    const tokenSym =
+      swap.action === "buy" ? swap.boughtSymbol : swap.soldSymbol;
+    const amount =
+      swap.action === "buy" ? swap.boughtAmount : swap.soldAmount;
     if (tokenAddr && tokenSym) {
       const existing = entry.tokenVolumes.get(tokenAddr);
       if (existing) {
         existing.volume += swap.valueUsd;
         existing.amount += amount;
       } else {
-        entry.tokenVolumes.set(tokenAddr, { volume: swap.valueUsd, amount, symbol: tokenSym, address: tokenAddr });
+        entry.tokenVolumes.set(tokenAddr, {
+          volume: swap.valueUsd,
+          amount,
+          symbol: tokenSym,
+          address: tokenAddr,
+        });
       }
     }
   }
@@ -108,25 +130,41 @@ function buildTimeBuckets(swaps: WalletDaySwapSummary[], dayTimestamp: number, t
   });
 }
 
-export const TimelineView: React.FC<TimelineViewProps> = ({ swaps, walletAddress, dayTimestamp, tokenLogoMap }) => {
+export const TimelineView: React.FC<TimelineViewProps> = ({
+  swaps,
+  dayTimestamp,
+  tokenLogoMap,
+}) => {
   const { fmt, tr } = useLocalization();
   const [expandedBucket, setExpandedBucket] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_BUCKETS);
 
-  const buckets = useMemo(() => buildTimeBuckets(swaps, dayTimestamp, tokenLogoMap), [swaps, dayTimestamp, tokenLogoMap]);
+  const buckets = useMemo(
+    () => buildTimeBuckets(swaps, dayTimestamp, tokenLogoMap),
+    [swaps, dayTimestamp, tokenLogoMap],
+  );
+
+  const visibleBuckets = useMemo(
+    () => buckets.slice(0, visibleCount),
+    [buckets, visibleCount],
+  );
 
   const toggleBucket = (key: string) => {
     setExpandedBucket((prev) => (prev === key ? null : key));
   };
 
-  // if (buckets.length === 0) return null;
+  if (buckets.length === 0) return null;
+
   return (
     <div className={styles.timeline}>
-      {buckets.map((bucket) => {
+      {visibleBuckets.map((bucket) => {
         const key = `${bucket.hour}:${bucket.minute}`;
         const isExpanded = expandedBucket === key;
         const dotClass =
-          bucket.netAction === "buy" ? styles.dotBuy
-            : bucket.netAction === "sell" ? styles.dotSell
+          bucket.netAction === "buy"
+            ? styles.dotBuy
+            : bucket.netAction === "sell"
+              ? styles.dotSell
               : styles.dotMixed;
 
         return (
@@ -149,14 +187,17 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ swaps, walletAddress
                 }}
               >
                 {bucket.netAction === "mixed" ? (
-                  <span className={styles.summaryMixed}>{tr("walletPage.mixed")}</span>
+                  <span className={styles.summaryMixed}>
+                    {tr("walletPage.mixed")}
+                  </span>
                 ) : (
                   <>
                     <span
-                      className={`${styles.summaryAction} ${bucket.netAction === "buy" ? styles.actionBuy : styles.actionSell
-                        }`}
+                      className={`${styles.summaryAction} ${bucket.netAction === "buy" ? styles.actionBuy : styles.actionSell}`}
                     >
-                      {bucket.netAction === "buy" ? tr("walletPage.buy") : tr("walletPage.sell")}
+                      {bucket.netAction === "buy"
+                        ? tr("walletPage.buy")
+                        : tr("walletPage.sell")}
                     </span>
                     {bucket.topTokenAmount != null && (
                       <span className={styles.summaryAmount}>
@@ -164,7 +205,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ swaps, walletAddress
                       </span>
                     )}
                     {bucket.topTokenSymbol && (
-                      <TokenIdentityCell symbol={bucket.topTokenSymbol} imageUrl={bucket.topTokenLogoUri} imageSize={18} tooltipAlign="right" />
+                      <TokenIdentityCell
+                        symbol={bucket.topTokenSymbol}
+                        imageUrl={bucket.topTokenLogoUri}
+                        imageSize={18}
+                        tooltipAlign="right"
+                      />
                     )}
                   </>
                 )}
@@ -184,7 +230,11 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ swaps, walletAddress
               {isExpanded && (
                 <div className={styles.expandedDetail}>
                   {bucket.swaps.map((swap) => (
-                    <TxRow key={swap.transactionHash} walletAddress={walletAddress} swap={swap} />
+                    <TxRow
+                      key={swap.transactionHash}
+                      swap={swap}
+                      logoMap={tokenLogoMap}
+                    />
                   ))}
                 </div>
               )}
@@ -192,6 +242,18 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ swaps, walletAddress
           </div>
         );
       })}
+      {visibleCount < buckets.length && (
+        <div className={styles.showMore}>
+          <button
+            className={styles.showMoreBtn}
+            onClick={() => setVisibleCount((prev) => prev + INITIAL_VISIBLE_BUCKETS)}
+          >
+            {tr("walletPage.showMore", {
+              count: buckets.length - visibleCount,
+            })}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

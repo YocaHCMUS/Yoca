@@ -1,19 +1,16 @@
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/theme' as *;
-@use '@carbon/react/scss/type' as *;
-
 .card {
   position: fixed;
   z-index: 8000;
-  background-color: $layer-01;
-  border: 1px solid $border-subtle;
-  border-radius: 8px;
+  background: var(--yoca-surface);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--yoca-border);
+  border-radius: 12px;
   max-height: 72vh;
-  padding: $spacing-06;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 0;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--yoca-shadow-card);
   transition: box-shadow 0.15s;
 
   &.dragging {
@@ -26,23 +23,21 @@
   width: 560px;
   flex-shrink: 0;
   min-width: 0;
-  padding: $spacing-04 $spacing-06 0 0;
+  padding: 0.75rem 1.5rem 0 0;
   display: flex;
   flex-direction: column;
-  gap: $spacing-05;
+  gap: 1rem;
   overflow-y: auto;
 }
 
-/* ── Header ──────────────────────────────────── */
 .header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   cursor: grab;
   user-select: none;
-
-  padding-bottom: $spacing-04;
-  border-bottom: 1px solid $border-subtle;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--yoca-border);
 
   &:active {
     cursor: grabbing;
@@ -52,119 +47,92 @@
 .headerLeft {
   display: flex;
   flex-direction: column;
-  gap: $spacing-01;
+  gap: 0.125rem;
 }
 
 .titleRow {
   display: flex;
   align-items: center;
-  gap: $spacing-02;
+  gap: 0.25rem;
 }
 
 .dragIcon {
-  color: $icon-secondary;
+  color: var(--yoca-text-muted);
   flex-shrink: 0;
 }
 
 .title {
-  @include type-style('heading-03');
-  color: $text-primary;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--yoca-text-main);
   margin: 0;
 }
 
 .date {
-  @include type-style('body-01');
-  color: $text-secondary;
+  font-size: 0.875rem;
+  color: var(--yoca-text-muted);
 }
 
 .headerActions {
   display: flex;
   align-items: center;
-  gap: $spacing-01;
-}
-
-.clearChartsBtn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: $icon-primary;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $spacing-02;
-  border-radius: 4px;
-  transition: background-color 0.15s;
-  flex-shrink: 0;
-
-  &:hover {
-    background-color: $layer-hover-01;
-  }
+  gap: 0.25rem;
 }
 
 .closeBtn {
   background: transparent;
   border: none;
   cursor: pointer;
-  color: $icon-primary;
+  color: var(--yoca-text-main);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: $spacing-02;
-  border-radius: 4px;
+  padding: 0.25rem;
+  border-radius: 6px;
   transition: background-color 0.15s;
   flex-shrink: 0;
 
   &:hover {
-    background-color: $layer-hover-01;
+    background: var(--yoca-surface-hover);
   }
-}
-
-/* ── Loading / Error ─────────────────────────── */
-.loadingContainer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $spacing-07 0;
 }
 
 .loadingOverlay {
   display: flex;
   flex-direction: column;
-  gap: $spacing-05;
+  gap: 1rem;
 }
 
 .loadingStatRows {
   display: flex;
   flex-direction: column;
-  gap: $spacing-03;
+  gap: 0.5rem;
 }
 
 .loadingStatRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: $spacing-03 $spacing-04;
-  border-bottom: 1px solid $border-subtle;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--yoca-border);
 }
 
 .errorContainer {
   text-align: center;
-  padding: $spacing-05 0;
+  padding: 1rem 0;
 }
 
 .errorText {
-  @include type-style('body-01');
-  color: $support-error;
+  font-size: 0.875rem;
+  color: var(--yoca-danger);
 }
 
-/* ── Body ────────────────────────────────────── */
 .body {
   display: flex;
   flex-direction: column;
-  gap: $spacing-05;
+  gap: 1rem;
 }
 
-/* ── Stats Section ───────────────────────────── */
 .statsSection {
   display: flex;
   flex-direction: column;
@@ -174,214 +142,69 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: $spacing-03 $spacing-04;
+  padding: 0.5rem 0.75rem;
 }
 
 .statLabel {
-  @include type-style('body-01');
-  color: $text-secondary;
+  font-size: 0.875rem;
+  color: var(--yoca-text-muted);
   display: flex;
   align-items: center;
-  gap: $spacing-01;
+  gap: 0.25rem;
 }
 
 .statValue {
-  @include type-style('body-compact-01');
-  color: $text-primary;
+  font-size: 0.875rem;
+  color: var(--yoca-text-main);
   font-weight: 600;
   text-align: right;
 }
 
 .subStatValuePositive {
-  color: #24a148;
+  color: var(--yoca-success);
   font-weight: 600;
 }
 
 .subStatValueNegative {
-  color: #da1e28;
+  color: var(--yoca-danger);
   font-weight: 600;
 }
 
-/* ── Section ─────────────────────────────────── */
 .section {
   display: flex;
   flex-direction: column;
-  gap: $spacing-03;
+  gap: 0.5rem;
 }
 
 .sectionHeaderRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: $spacing-03;
-  border-top: 1px solid $border-subtle;
+  padding-top: 0.5rem;
+  padding-bottom: 0.25rem;
+  border-top: 1px solid var(--yoca-border);
 }
 
 .sectionTitle {
-  @include type-style('label-01');
-  color: $text-secondary;
+  font-size: 0.75rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  color: var(--yoca-text-muted);
   margin: 0;
 }
 
-.viewToggle {
-  display: flex;
-  gap: 1px;
-  background-color: $layer-02;
-  border-radius: 4px;
-  padding: 2px;
-}
-
-.toggleBtn {
-  @include type-style('label-01');
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: $text-secondary;
-  padding: 2px $spacing-03;
-  border-radius: 3px;
-  transition: background-color 0.15s, color 0.15s;
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: normal;
-
-  &:hover {
-    color: $text-primary;
-  }
-}
-
-.toggleBtnActive {
-  background-color: $layer-01;
-  color: $text-primary;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-}
-
-/* ── Transaction List ────────────────────────── */
 .txList {
   display: flex;
   flex-direction: column;
-  gap: $spacing-02;
+  gap: 0.25rem;
 }
 
 .emptyText {
-  @include type-style('body-01');
-  color: $text-secondary;
+  font-size: 0.875rem;
+  color: var(--yoca-text-muted);
   text-align: center;
-  padding: $spacing-04 0;
-}
-
-/* ── Chart Panel ─────────────────────────────── */
-.chartPanel {
-  flex-shrink: 0;
-  padding: $spacing-05;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-05;
-  border-left: 1px solid $border-subtle;
-}
-
-.chartPanelHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: $spacing-03;
-  border-bottom: 1px solid $border-subtle;
-}
-
-.chartPanelTitle {
-  @include type-style('label-01');
-  color: $text-secondary;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 600;
-}
-
-/* ── Aggregated Transaction Rows ─────────────── */
-.aggregatedTxRow {
-  display: flex;
-  align-items: center;
-  gap: $spacing-03;
-  padding: $spacing-03 $spacing-04;
-  border-bottom: 1px solid $border-subtle-00;
-  cursor: pointer;
-  transition: background-color 0.15s;
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &:hover {
-    background-color: $layer-hover-01;
-  }
-}
-
-.aggregatedTxIcon {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.aggregatedTxAction {
-  @include type-style('body-compact-01');
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.aggregatedTxActionBuy {
-  color: #24a148;
-}
-
-.aggregatedTxActionSell {
-  color: #da1e28;
-}
-
-.aggregatedTxAmount {
-  @include type-style('body-compact-01');
-  color: $text-primary;
-  font-weight: 500;
-  flex-shrink: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.aggregatedTxCount {
-  @include type-style('label-01');
-  color: $text-secondary;
-  background-color: $layer-02;
-  padding: 1px $spacing-02;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-.aggregatedTxSpacer {
-  flex: 1;
-}
-
-.aggregatedTxVolume {
-  @include type-style('body-compact-01');
-  color: $text-primary;
-  font-weight: 600;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.aggregatedTxChevron {
-  flex-shrink: 0;
-  color: $icon-secondary;
-}
-
-.aggregatedTxDetail {
-  padding-left: $spacing-04;
-  border-left: 2px solid $border-subtle;
-  margin-left: $spacing-04;
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-02;
+  padding: 0.75rem 0;
 }
 
 .columnGrid {
@@ -390,4 +213,83 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+}
+
+.sectionCard {
+  border-radius: 8px;
+  border: 1px solid var(--yoca-border);
+  overflow: hidden;
+}
+
+.sectionCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--yoca-border);
+  background: var(--yoca-bg-soft);
+}
+
+.sectionCardTitle {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--yoca-text-muted);
+}
+
+.sectionCardBody {
+  padding: 0.5rem 0;
+}
+
+/* ── Side Panel ──────────────────────────────── */
+.sidePanel {
+  flex-shrink: 0;
+  width: 360px;
+  padding: 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-left: 1px solid var(--yoca-border);
+}
+
+.sidePanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--yoca-border);
+}
+
+.sidePanelTitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--yoca-text-muted);
+}
+
+.sidePanelCloseBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--yoca-text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border-radius: 6px;
+  transition: background-color 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    background: var(--yoca-surface-hover);
+  }
+}
+
+.sidePanelBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }

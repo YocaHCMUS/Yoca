@@ -16,7 +16,7 @@ export const CandleStickChart = ({ data, title, height = 500 }: CandleStickChart
     const chartRef = useRef<HTMLDivElement>(null);
     const chartInstance = useRef<echarts.ECharts | null>(null);
 
-    const chartTheme = useChartTheme() as any;
+    const chartTheme = useChartTheme() as { isDark?: boolean; theme?: string; mode?: string };
     const isDark: boolean =
         typeof chartTheme?.isDark === 'boolean'
             ? chartTheme.isDark

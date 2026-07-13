@@ -6,9 +6,7 @@
 import client from '@/api/main';
 import type {
     NewsArticleExpansion,
-    NewsArticleExpansionResult,
     NewsFilterResult,
-    TokenNewsApiResponse,
     TokenNewsQuery,
 } from '@/types/news';
 

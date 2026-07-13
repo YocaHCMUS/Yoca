@@ -341,48 +341,6 @@ function applyCloneCaptureStyles(target: HTMLElement): void {
   }
 }
 
-function getMaxScrollableWidth(target: HTMLElement): number {
-  let maxWidth = Math.max(
-    target.scrollWidth,
-    target.clientWidth,
-    target.offsetWidth,
-    1,
-  );
-
-  const descendants = Array.from(target.querySelectorAll<HTMLElement>("*"));
-  for (const element of descendants) {
-    maxWidth = Math.max(
-      maxWidth,
-      element.scrollWidth,
-      element.clientWidth,
-      element.offsetWidth,
-    );
-  }
-
-  return maxWidth;
-}
-
-function getMaxScrollableHeight(target: HTMLElement): number {
-  let maxHeight = Math.max(
-    target.scrollHeight,
-    target.clientHeight,
-    target.offsetHeight,
-    1,
-  );
-
-  const descendants = Array.from(target.querySelectorAll<HTMLElement>("*"));
-  for (const element of descendants) {
-    maxHeight = Math.max(
-      maxHeight,
-      element.scrollHeight,
-      element.clientHeight,
-      element.offsetHeight,
-    );
-  }
-
-  return maxHeight;
-}
-
 function clampPdfPageSize(
   canvasWidth: number,
   canvasHeight: number,
