@@ -65,3 +65,12 @@ jobs:
       - *install
       - run: npm run client:build
    
+  deploy:
+    needs: [typecheck, lint, test-server, test-client, build-server, build-client]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy frontend
+        run: curl -fsS -X POST "${{ secrets.YOCA_FRONTEND_DEPLOY_HOOK }}"
+      - name: Deploy backend
+        run: curl -fsS -X POST "${{ secrets.YOCA_BACKEND_DEPLOY_HOOK }}"
