@@ -24,8 +24,7 @@ import type { ChartProps } from '../shared/ChartProp';
 import { runChartExport } from '@/services/chart/chartExportService';
 import { Flex } from '@/components/Flex';
 import { FilterSwitch } from '@/components/FilterSwitch';
-import { FilterType, SortType, Table } from '@/components/tables/Table';
-import type { TableColumnHeader } from '@/components/tables/Table';
+import Tble, { TbleSortType, TbleFilterType, type TblRw } from '@/components/Tble';
 import styles from './AggregatedAssetDistribution.module.scss';
 import { renderBase } from '@/components/tables/TableCellRenderer';
 
@@ -56,8 +55,6 @@ type AssetTooltipParam = {
     value?: unknown;
     data: { percentage: number; logoUri?: string; hiddenNames?: string[] };
 };
-
-type WalletTableRow = Array<boolean | number | WalletIdentityCellValue>;
 
 interface WalletIdentityCellValue {
     label: string;
@@ -476,24 +473,24 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
         });
     }, []);
 
-    const tableHeaders = useMemo<TableColumnHeader[]>(() => {
+    const tableHeaders = useMemo(() => {
         if (mode === 'aggregate') {
             return [
-                { header: tr('charts.aggregatedAssetDistributionChart.walletTable.isSelected'), minWidth: '7rem', align: 'center' },
-                { header: tr('charts.aggregatedAssetDistributionChart.walletTable.wallet'), minWidth: '9rem' },
-                { header: tr('charts.aggregatedAssetDistributionChart.walletTable.netWorth'), minWidth: '9rem', align: 'end' },
-                { header: tr('charts.aggregatedAssetDistributionChart.walletTable.uniqueTokenCount'), minWidth: '8rem', align: 'end' },
+                { key: "selected", header: tr('charts.aggregatedAssetDistributionChart.walletTable.isSelected'), minWidth: '7rem', align: 'center' as const },
+                { key: "wallet", header: tr('charts.aggregatedAssetDistributionChart.walletTable.wallet'), minWidth: '9rem' },
+                { key: "netWorth", header: tr('charts.aggregatedAssetDistributionChart.walletTable.netWorth'), minWidth: '9rem', align: 'end' as const },
+                { key: "uniqueTokens", header: tr('charts.aggregatedAssetDistributionChart.walletTable.uniqueTokenCount'), minWidth: '8rem', align: 'end' as const },
             ];
         }
 
         return [
-            { header: tr('charts.aggregatedAssetDistributionChart.walletTable.wallet'), minWidth: '9rem' },
-            { header: tr('charts.aggregatedAssetDistributionChart.walletTable.netWorth'), minWidth: '9rem', align: 'end' },
-            { header: tr('charts.aggregatedAssetDistributionChart.walletTable.uniqueTokenCount'), minWidth: '8rem', align: 'end' },
+            { key: "wallet", header: tr('charts.aggregatedAssetDistributionChart.walletTable.wallet'), minWidth: '9rem' },
+            { key: "netWorth", header: tr('charts.aggregatedAssetDistributionChart.walletTable.netWorth'), minWidth: '9rem', align: 'end' as const },
+            { key: "uniqueTokens", header: tr('charts.aggregatedAssetDistributionChart.walletTable.uniqueTokenCount'), minWidth: '8rem', align: 'end' as const },
         ];
     }, [mode, tr]);
 
-    const tableRows = useMemo<WalletTableRow[]>(() => {
+    const tableRows = useMemo<TblRw[]>(() => {
         return walletRows.map((wallet) => {
             const walletIdentity: WalletIdentityCellValue = {
                 label: wallet.walletName || wallet.walletAddress,
@@ -501,71 +498,76 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
                 toString: () => wallet.walletName || wallet.walletAddress,
             };
 
+            const base = {
+                id: wallet.walletAddress,
+                wallet: walletIdentity,
+                netWorth: wallet.netWorth,
+                uniqueTokens: wallet.uniqueTokenCount,
+            };
+
             if (mode === 'aggregate') {
-                return [
-                    selectedWallets.has(wallet.walletAddress),
-                    walletIdentity,
-                    wallet.netWorth,
-                    wallet.uniqueTokenCount,
-                ];
+                return {
+                    ...base,
+                    selected: selectedWallets.has(wallet.walletAddress),
+                };
             }
 
-            return [
-                walletIdentity,
-                wallet.netWorth,
-                wallet.uniqueTokenCount,
-            ];
+            return base;
         });
     }, [walletRows, mode, selectedWallets]);
 
     const tableCellRenderers = useMemo(() => {
-        const baseRenderers = [
-            (value: unknown) => {
-                const identity = value as WalletIdentityCellValue | undefined;
-                const walletAddress = identity?.walletAddress ?? '';
-                const label = identity?.label || walletAddress;
-                const displayLabel = compactWalletLabel(label, walletAddress);
+        const walletRenderer = (value: unknown) => {
+            const identity = value as WalletIdentityCellValue | undefined;
+            const walletAddress = identity?.walletAddress ?? '';
+            const label = identity?.label || walletAddress;
+            const displayLabel = compactWalletLabel(label, walletAddress);
 
-                return (
-                    <a
-                        href={`/wallets/${encodeURIComponent(walletAddress)}`}
-                        className={`${styles.walletName} ${styles.walletAddress}`}
-                        title={`${walletAddress}`}
-                        onClick={(event) => event.stopPropagation()}
-                    >
-                        {displayLabel}
-                    </a>
-                );
-            },
-            (value: unknown) => renderBase(value, (text) => fmt.num.compact.currency(Number(text ?? 0))),
-            (value: unknown) => <span className={styles.countValue}>{Number(value ?? 0).toLocaleString()}</span>,
-        ] as Array<((value: unknown, row: unknown[], rowIndex: number) => React.ReactNode) | null>;
+            return (
+                <a
+                    href={`/wallets/${encodeURIComponent(walletAddress)}`}
+                    className={`${styles.walletName} ${styles.walletAddress}`}
+                    title={`${walletAddress}`}
+                    onClick={(event) => event.stopPropagation()}
+                >
+                    {displayLabel}
+                </a>
+            );
+        };
+
+        const baseRenderers: Record<string, ((value: unknown, row: TblRw, rowIndex: number) => React.ReactNode)> = {
+            wallet: walletRenderer,
+            netWorth: (value: unknown) => renderBase(value, (text) => fmt.num.compact.currency(Number(text ?? 0))),
+            uniqueTokens: (value: unknown) => <span className={styles.countValue}>{Number(value ?? 0).toLocaleString()}</span>,
+        };
 
         if (mode === 'aggregate') {
-            const selectionRenderer = (_value: unknown, row: unknown[]) => {
-                const walletAddress = String((row[1] as WalletIdentityCellValue | undefined)?.walletAddress ?? '');
-                const isChecked = selectedWallets.has(walletAddress);
-                const inputId = `agg-wallet-select-${walletAddress.replace(/[^a-zA-Z0-9_-]/g, '')}`;
+            return {
+                ...baseRenderers,
+                selected: (_value: unknown, row: TblRw) => {
+                    const identity = row.wallet as WalletIdentityCellValue | undefined;
+                    const walletAddress = identity?.walletAddress ?? '';
+                    const isChecked = selectedWallets.has(walletAddress);
+                    const inputId = `agg-wallet-select-${walletAddress.replace(/[^a-zA-Z0-9_-]/g, '')}`;
 
-                return (
-                    <Checkbox
-                        id={inputId}
-                        labelText=""
-                        hideLabel
-                        checked={isChecked}
-                        aria-label={tr('charts.aggregatedAssetDistributionChart.ariaLabels.walletSelector')
-                            .replace('{wallet}', walletAddress)}
-                        onChange={(event: unknown, state: { checked: boolean }) => {
-                            if ((event as React.SyntheticEvent)?.stopPropagation) {
-                                (event as React.SyntheticEvent).stopPropagation();
-                            }
-                            toggleWalletSelected(walletAddress, state.checked);
-                        }}
-                    />
-                );
+                    return (
+                        <Checkbox
+                            id={inputId}
+                            labelText=""
+                            hideLabel
+                            checked={isChecked}
+                            aria-label={tr('charts.aggregatedAssetDistributionChart.ariaLabels.walletSelector')
+                                .replace('{wallet}', walletAddress)}
+                            onChange={(event: unknown, state: { checked: boolean }) => {
+                                if ((event as React.SyntheticEvent)?.stopPropagation) {
+                                    (event as React.SyntheticEvent).stopPropagation();
+                                }
+                                toggleWalletSelected(walletAddress, state.checked);
+                            }}
+                        />
+                    );
+                },
             };
-
-            return [selectionRenderer, ...baseRenderers];
         }
 
         return baseRenderers;
@@ -637,63 +639,34 @@ export const AggregatedAssetDistribution: React.FC<ChartProps> = ({
         >
             <div className={styles.layout}>
                 <div className={styles.panel}>
-                    <Table
+                    <Tble
                         title={walletTableTitle}
                         headers={tableHeaders}
-                        initialFilters={{}}
-                        fetcher={Promise.resolve([])}
-                        dataEntries={tableRows}
-                        filterSchema={mode === 'aggregate'
-                            ? {
-                                2: {
-                                    type: FilterType.Range,
-                                    min: 0,
-                                    max: Math.max(1000, ...walletRows.map((wallet) => wallet.netWorth || 0)),
-                                    step: Math.max(1, Math.floor(Math.max(1000, ...walletRows.map((wallet) => wallet.netWorth || 0)) / 100)),
-                                },
-                                3: {
-                                    type: FilterType.Range,
-                                    min: 0,
-                                    max: Math.max(100, ...walletRows.map((wallet) => wallet.uniqueTokenCount || 0)),
-                                    step: 1,
-                                },
-                            }
-                            : {
-                                1: {
-                                    type: FilterType.Range,
-                                    min: 0,
-                                    max: Math.max(1000, ...walletRows.map((wallet) => wallet.netWorth || 0)),
-                                    step: Math.max(1, Math.floor(Math.max(1000, ...walletRows.map((wallet) => wallet.netWorth || 0)) / 100)),
-                                },
-                                2: {
-                                    type: FilterType.Range,
-                                    min: 0,
-                                    max: Math.max(100, ...walletRows.map((wallet) => wallet.uniqueTokenCount || 0)),
-                                    step: 1,
-                                },
-                            }}
-                        isSortable={mode === 'aggregate'
-                            ? [false, false, true, true]
-                            : [false, true, true]}
-                        sortConfigs={mode === 'aggregate'
-                            ? {
-                                2: { type: SortType.Number },
-                                3: { type: SortType.Number },
-                            }
-                            : {
-                                1: { type: SortType.Number },
-                                2: { type: SortType.Number },
-                            }}
+                        rows={tableRows}
+                        filterSchema={{
+                            netWorth: {
+                                type: TbleFilterType.Range,
+                                min: 0,
+                                max: Math.max(1000, ...walletRows.map((wallet) => wallet.netWorth || 0)),
+                                step: Math.max(1, Math.floor(Math.max(1000, ...walletRows.map((wallet) => wallet.netWorth || 0)) / 100)),
+                            },
+                            uniqueTokens: {
+                                type: TbleFilterType.Range,
+                                min: 0,
+                                max: Math.max(100, ...walletRows.map((wallet) => wallet.uniqueTokenCount || 0)),
+                                step: 1,
+                            },
+                        }}
+                        sortConfigs={{
+                            netWorth: { type: TbleSortType.Number },
+                            uniqueTokens: { type: TbleSortType.Number },
+                        }}
                         cellRenderers={tableCellRenderers}
-                        enableExport={false}
                         loading={loadingState.status === 'loading'}
                         onRowClick={mode === 'single'
-                            ? (row) => setActiveWalletAddress(String((row[0] as WalletIdentityCellValue | undefined)?.walletAddress ?? ''))
+                            ? (row: TblRw) => setActiveWalletAddress(String((row.wallet as WalletIdentityCellValue | undefined)?.walletAddress ?? ''))
                             : undefined}
-                        // rowClassName={mode === 'single'
-                        //     ? (row) => (String((row[0] as WalletIdentityCellValue | undefined)?.walletAddress ?? '') === activeWalletAddress ? tableStyles.activeRow : undefined)
-                        //     : undefined}
-                        maxHeight={Math.max(minHeight, 300)}
+                        height={Math.max(minHeight, 300)}
                     />
                 </div>
 

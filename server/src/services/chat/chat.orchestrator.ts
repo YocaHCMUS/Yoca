@@ -16,7 +16,6 @@ import {
   buildToolSelectionPrompt,
   buildResponseGenerationPrompt,
   CHAT_SYSTEM_INSTRUCTION,
-  CHAT_TOOL_SELECTION_SYSTEM_INSTRUCTION,
 } from "./chat.prompts.js";
 import { getCachedResponse, setCachedResponse } from "./chat.cache.js";
 import { chatInfo, chatWarn, chatError, chatDebug } from "./chat.logger.js";
@@ -118,7 +117,7 @@ async function selectTool(
   history?: HistoryMessage[],
 ): Promise<ChatToolCall[] | { type: "no_tool" | "general"; message: string }> {
   const prompt = buildToolSelectionPrompt(query, TOOL_DEFINITIONS, addresses, context, history, language);
-  const raw = await callGemini(prompt, CHAT_TOOL_SELECTION_SYSTEM_INSTRUCTION);
+  const raw = await callGemini(prompt);
 
   if (!raw) {
     chatWarn("selectTool: Gemini returned null", { addresses });
@@ -683,11 +682,9 @@ async function generateResponse(
   }
 
   if (!text && charts.length === 0 && tables.length === 0 && actions.length === 0) {
-    chatWarn("generateResponse: rejected malformed or empty structured response", {
-      raw: trunc(raw, 300),
-    });
+    chatWarn("generateResponse: sanitizeResponse returned empty, using raw text", { raw: trunc(raw, 300) });
     return {
-      text: getMessage(language, "dataError"),
+      text: String(raw),
       data: {},
       charts: [],
       tables: [],

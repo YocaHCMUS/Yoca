@@ -154,6 +154,23 @@ export type HeliusSwapEvent = {
     programId?: string;
 };
 
+export type HeliusNftEvent = {
+    mint?: string;
+    tokenMint?: string;
+    nftMint?: string;
+    action?: string;
+    type?: string;
+    eventType?: string;
+    name?: string;
+    collection?: string;
+    collectionName?: string;
+    priceUsd?: number;
+    salePriceUsd?: number;
+    amountUsd?: number;
+    marketplace?: string;
+    source?: string;
+};
+
 export type HeliusEnhancedTransactionLike = {
     signature?: string;
     slot?: number;
@@ -168,7 +185,7 @@ export type HeliusEnhancedTransactionLike = {
     accountData?: unknown[];
     events?: {
         swap?: HeliusSwapEvent;
-        nft?: unknown;
+        nft?: HeliusNftEvent;
         compressed?: unknown;
     };
     transactionError?: unknown;

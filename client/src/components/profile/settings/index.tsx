@@ -9,22 +9,13 @@ import {
     type ProfileSettingsSnapshot,
     type PasswordUpdateSuccessState,
 } from "@/services/profile/profileApi";
-import {
-    Button,
-    ComposedModal,
-    InlineLoading,
-    InlineNotification,
-    ModalBody,
-    ModalFooter,
-    ModalHeader,
-    PasswordInput,
-    TextInput,
-} from "@carbon/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import styles from "./index.module.scss";
 import { useLocalization } from "@/contexts/LocalizationContext";
-import { ModalStateManager } from "@/components/ModelStateManager";
+import { Card } from "@/components/common/Card/Card";
+import { ProfilePasswordModal } from "./ProfilePasswordModal/ProfilePasswordModal";
+import { ProfileDeleteAccountModal } from "./ProfileDeleteAccountModal/ProfileDeleteAccountModal";
 
 type LoginMethodKey = "password" | "google" | "solana";
 
@@ -94,26 +85,19 @@ export default function ProfileSettingsTab() {
     const [initialLoading, setInitialLoading] = useState(true);
 
     const [displayName, setDisplayName] = useState("");
-    const [email, setEmail] = useState("");
-
-    const [currentPassword, setCurrentPassword] = useState("");
-    const [newPassword, setNewPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
 
     const [identityState, setIdentityState] = useState<SectionState>({ loading: false });
     const [passwordState, setPasswordState] = useState<SectionState>({ loading: false });
     const [accountState, setAccountState] = useState<SectionState>({ loading: false });
-    // const [passwordEditorOpen, setPasswordEditorOpen] = useState(false);
 
+    const [passwordModalOpen, setPasswordModalOpen] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-    const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
     const { tr } = useLocalization();
 
     const hydrateFromSnapshot = useCallback((nextSnapshot: ProfileSettingsSnapshot) => {
         setSnapshot(nextSnapshot);
         setDisplayName(nextSnapshot.displayName ?? "");
-        setEmail(nextSnapshot.email ?? "");
     }, []);
 
     const loadSnapshot = useCallback(async () => {
@@ -183,8 +167,13 @@ export default function ProfileSettingsTab() {
         }
     };
 
-    const handleUpdatePassword = async () => {
-        const normalizedEmail = email.trim().toLowerCase();
+    const handlePasswordModalSave = useCallback(async (data: {
+        email: string;
+        currentPassword?: string;
+        newPassword: string;
+        confirmPassword: string;
+    }) => {
+        const normalizedEmail = data.email.trim().toLowerCase();
 
         if (!normalizedEmail) {
             setPasswordState({
@@ -202,7 +191,7 @@ export default function ProfileSettingsTab() {
             return;
         }
 
-        if (hasPassword && currentPassword.trim().length <= 0) {
+        if (hasPassword && data.currentPassword && data.currentPassword.trim().length <= 0) {
             setPasswordState({
                 loading: false,
                 error: tr("profileSettings.passwordValidationCurrentPasswordRequired") as string,
@@ -210,7 +199,7 @@ export default function ProfileSettingsTab() {
             return;
         }
 
-        if (newPassword.length <= 0) {
+        if (data.newPassword.length <= 0) {
             setPasswordState({
                 loading: false,
                 error: tr("profileSettings.passwordValidationNewPasswordRequired") as string,
@@ -218,7 +207,7 @@ export default function ProfileSettingsTab() {
             return;
         }
 
-        if (newPassword.length < 8) {
+        if (data.newPassword.length < 8) {
             setPasswordState({
                 loading: false,
                 error: tr("profileSettings.passwordValidationMinLength") as string,
@@ -226,7 +215,7 @@ export default function ProfileSettingsTab() {
             return;
         }
 
-        if (!/[A-Z]/.test(newPassword)) {
+        if (!/[A-Z]/.test(data.newPassword)) {
             setPasswordState({
                 loading: false,
                 error: tr("profileSettings.passwordValidationUppercase") as string,
@@ -234,7 +223,7 @@ export default function ProfileSettingsTab() {
             return;
         }
 
-        if (!/[a-z]/.test(newPassword)) {
+        if (!/[a-z]/.test(data.newPassword)) {
             setPasswordState({
                 loading: false,
                 error: tr("profileSettings.passwordValidationLowercase") as string,
@@ -242,7 +231,7 @@ export default function ProfileSettingsTab() {
             return;
         }
 
-        if (!/[0-9]/.test(newPassword)) {
+        if (!/[0-9]/.test(data.newPassword)) {
             setPasswordState({
                 loading: false,
                 error: tr("profileSettings.passwordValidationNumber") as string,
@@ -250,7 +239,7 @@ export default function ProfileSettingsTab() {
             return;
         }
 
-        if (newPassword !== confirmPassword) {
+        if (data.newPassword !== data.confirmPassword) {
             setPasswordState({ loading: false, error: tr("profileSettings.passwordMatchError") as string });
             return;
         }
@@ -258,16 +247,13 @@ export default function ProfileSettingsTab() {
         setPasswordState({ loading: true });
         try {
             const result = await updatePassword({
-                currentPassword: hasPassword ? currentPassword : undefined,
-                newPassword,
+                currentPassword: hasPassword ? data.currentPassword : undefined,
+                newPassword: data.newPassword,
                 email: normalizedEmail,
             });
 
-            setCurrentPassword("");
-            setNewPassword("");
-            setConfirmPassword("");
-            // setPasswordEditorOpen(false);
             setPasswordState({ loading: false, success: getPasswordSuccessMessage(result.state, tr) });
+            setPasswordModalOpen(false);
             await loadSnapshot();
         } catch (error) {
             if (error instanceof PasswordUpdateError) {
@@ -277,14 +263,9 @@ export default function ProfileSettingsTab() {
 
             setPasswordState({ loading: false, error: tr("ERROR.GENERAL_UNKNOWN_ERR") as string });
         }
-    };
+    }, [hasPassword, tr, loadSnapshot]);
 
-    const handleDeleteAccount = async () => {
-        if (deleteConfirmText.trim() !== "DELETE MY ACCOUNT") {
-            setAccountState({ loading: false, error: tr("profileSettings.accountDeleteConfirmError") as string });
-            return;
-        }
-
+    const handleDeleteAccount = useCallback(async () => {
         setAccountState({ loading: true });
         try {
             const challenge = await createDeleteAccountChallenge();
@@ -299,163 +280,91 @@ export default function ProfileSettingsTab() {
         } catch (error) {
             setAccountState({ loading: false, error: toMessage(error) });
         }
-    };
+    }, [signOut, navigate]);
 
     if (initialLoading) {
-        return <InlineLoading description={tr("common.loading") as string} status="active" />;
+        return (
+            <div className={styles.loadingRow}>
+                <span className={styles.spinner} />
+                <span>{tr("common.loading")}</span>
+            </div>
+        );
     }
 
     return (
         <section className={styles.container}>
-            <div className={styles.section}>
-                <h3 className={styles.sectionTitle}>{tr("profileSettings.identity")}</h3>
+            <Card title={tr("profileSettings.identity")}>
                 <div className={styles.row}>
-                    <TextInput
+                    <input
                         id="profile-settings-display-name"
-                        labelText={tr("profileSettings.displayName") as string}
+                        className={styles.textInput}
+                        type="text"
                         value={displayName}
                         onChange={(event) => setDisplayName(event.currentTarget.value)}
-                        className={styles.input}
                     />
                 </div>
                 <div className={styles.actionRow}>
-                    <Button kind="primary" onClick={handleSaveIdentity} disabled={identityState.loading}>
+                    <button
+                        type="button"
+                        className={styles.primaryBtn}
+                        onClick={handleSaveIdentity}
+                        disabled={identityState.loading}
+                    >
                         {tr("profileSettings.saveIdentity")}
-                    </Button>
-                    {identityState.loading ? <InlineLoading description={tr("profileSettings.savingIdentity") as string} status="active" /> : null}
+                    </button>
+                    {identityState.loading ? (
+                        <div className={styles.loadingRow}>
+                            <span className={styles.spinner} />
+                            <span>{tr("profileSettings.savingIdentity")}</span>
+                        </div>
+                    ) : null}
                 </div>
                 {identityState.error ? (
-                    <InlineNotification
-                        className={styles.statusMessage}
-                        kind="error"
-                        title={tr("profileSettings.identityUpdateFailed") as string}
-                        subtitle={identityState.error}
-                        hideCloseButton
-                    />
+                    <div className={`${styles.notification} ${styles.notificationError}`}>
+                        <span className={styles.notificationTitle}>{tr("profileSettings.identityUpdateFailed")}</span>
+                        <span>{identityState.error}</span>
+                    </div>
                 ) : null}
                 {identityState.success ? (
-                    <InlineNotification
-                        className={styles.statusMessage}
-                        kind="success"
-                        title={tr("common.success") as string}
-                        subtitle={identityState.success}
-                        hideCloseButton
-                    />
+                    <div className={`${styles.notification} ${styles.notificationSuccess}`}>
+                        <span className={styles.notificationTitle}>{tr("common.success")}</span>
+                        <span>{identityState.success}</span>
+                    </div>
                 ) : null}
-            </div>
+            </Card>
 
-            <div className={styles.section}>
-                <h3 className={styles.sectionTitle}>{tr("profileSettings.loginMethods")}</h3>
+            <Card title={tr("profileSettings.loginMethods")}>
                 <div className={styles.methodList}>
                     {loginMethods.map((method) => (
                         <div key={method.key} className={styles.methodRow}>
                             <p className={styles.methodLabel}>
                                 {method.label}
                             </p>
-                            {/* <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "1rem", justifyContent: "center" }}> */}
-                            {/* {method.value && (
-                                    <p className={styles.methodValue}>{method.value}</p>
-                                )} */}
-                            {/* </div> */}
                             <div className={styles.methodActions}>
 
                                 {method.key === "password" ? (
-                                    // <Button
-                                    //     kind="tertiary"
-                                    //     size="sm"
-                                    //     onClick={() => setPasswordEditorOpen((prev) => !prev)}
-                                    // >
-                                    //     {hasPassword ? tr("profileSettings.changePassword") : tr("profileSettings.addPassword")}
-                                    // </Button>
-                                    <ModalStateManager
-                                        renderLauncher={({ setOpen }) => (
-                                            <Button
-                                                kind="tertiary"
-                                                size="sm"
-                                                onClick={() => setOpen(true)}
-                                            >
-                                                {tr("profileSettings.changePassword")}
-                                            </Button>
-                                        )}
-
-                                        children={
-                                            ({ open, setOpen }) => (
-                                                <ComposedModal
-                                                    open={open}
-                                                    onClose={() => setOpen(false)}
-                                                >
-                                                    <ModalHeader
-                                                        title={hasPassword ? tr("profileSettings.changePassword") : tr("profileSettings.addPassword")}
-                                                        label={tr("profileSettings.loginMethods") as string}
-                                                    />
-                                                    <ModalBody>
-                                                        <div>
-                                                            <TextInput
-                                                                id="profile-settings-email"
-                                                                labelText={tr("profileSettings.email") as string}
-                                                                type="email"
-                                                                value={email ? email : ""} // why does it automatically add in past input?
-                                                                onChange={(event) => setEmail(event.currentTarget.value)}
-                                                                className={styles.input}
-                                                            />
-                                                            {hasPassword ? (
-                                                                <PasswordInput
-                                                                    id="profile-settings-current-password"
-                                                                    labelText={tr("profileSettings.currentPassword") as string}
-                                                                    value={currentPassword}
-                                                                    onChange={(event) => setCurrentPassword(event.currentTarget.value)}
-                                                                    className={styles.input}
-                                                                />
-                                                            ) : null}
-                                                            <PasswordInput
-                                                                id="profile-settings-new-password"
-                                                                labelText={tr("profileSettings.newPassword") as string}
-                                                                value={newPassword}
-                                                                onChange={(event) => setNewPassword(event.currentTarget.value)}
-                                                                className={styles.input}
-                                                            />
-                                                            <PasswordInput
-                                                                id="profile-settings-confirm-password"
-                                                                labelText={tr("profileSettings.confirmPassword") as string}
-                                                                value={confirmPassword}
-                                                                onChange={(event) => setConfirmPassword(event.currentTarget.value)}
-                                                                className={styles.input}
-                                                            />
-                                                            {passwordState.loading ? <InlineLoading description={tr("profileSettings.updatingPassword") as string} status="active" /> : null}
-                                                            {passwordState.error ? (
-                                                                <InlineNotification
-                                                                    // className={styles.statusMessage}
-                                                                    kind="error"
-                                                                    title={tr("profileSettings.passwordUpdateFailed") as string}
-                                                                    subtitle={passwordState.error}
-                                                                />
-                                                            ) : null}
-                                                            {passwordState.success ? (
-                                                                <InlineNotification
-                                                                    // className={styles.statusMessage}
-                                                                    kind="success"
-                                                                    title={tr("common.success") as string}
-                                                                    subtitle={passwordState.success}
-                                                                />
-                                                            ) : null}
-                                                        </div>
-                                                    </ModalBody>
-                                                    <ModalFooter>
-                                                        <Button
-                                                            kind="secondary"
-                                                            onClick={() => setOpen(false)}
-                                                            disabled={passwordState.loading}
-                                                        >
-                                                            {tr("common.cancel")}
-                                                        </Button>
-                                                        <Button kind="primary" onClick={handleUpdatePassword} disabled={passwordState.loading}>
-                                                            {tr("profileSettings.savePassword")}
-                                                        </Button>
-                                                    </ModalFooter>
-                                                </ComposedModal>
-                                            )
-                                        }
-                                    />
+                                    <>
+                                        <button
+                                            type="button"
+                                            className={styles.tertiaryBtn}
+                                            onClick={() => setPasswordModalOpen(true)}
+                                        >
+                                            {tr("profileSettings.changePassword")}
+                                        </button>
+                                        <ProfilePasswordModal
+                                            isOpen={passwordModalOpen}
+                                            onClose={() => {
+                                                setPasswordModalOpen(false);
+                                                setPasswordState({ loading: false });
+                                            }}
+                                            hasPassword={hasPassword}
+                                            initialEmail={snapshot?.email ?? ""}
+                                            onSave={handlePasswordModalSave}
+                                            loading={passwordState.loading}
+                                            error={passwordState.error}
+                                            success={passwordState.success}
+                                        />
+                                    </>
                                 ) :
                                     <span className={method.connected ? styles.statusConnected : styles.statusMuted}>
                                         {method.connected ? tr("profileSettings.statusConnected") : tr("profileSettings.statusNotConnected")}
@@ -465,50 +374,37 @@ export default function ProfileSettingsTab() {
                         </div>
                     ))}
                 </div>
+            </Card>
 
-            </div>
-
-            <div className={`${styles.section} ${styles.dangerSection}`}>
-                <h3 className={styles.sectionTitle}>{tr("profileSettings.dangerZone")}</h3>
+            <Card title={tr("profileSettings.dangerZone")} style={{ borderColor: "var(--yoca-danger)" }}>
                 <p className={styles.dangerHint}>
                     {tr("profileSettings.dangerZoneDescription")}
                 </p>
-                <Button kind="danger" onClick={() => setDeleteModalOpen(true)}>
+                <button
+                    type="button"
+                    className={styles.dangerBtn}
+                    onClick={() => setDeleteModalOpen(true)}
+                >
                     {tr("profileSettings.deleteAccount")}
-                </Button>
+                </button>
                 {accountState.error ? (
-                    <InlineNotification
-                        className={styles.statusMessage}
-                        kind="error"
-                        title={tr("profileSettings.accountDeleteFailed") as string}
-                        subtitle={accountState.error}
-                        hideCloseButton
-                    />
+                    <div className={`${styles.notification} ${styles.notificationError} ${styles.statusMessage}`}>
+                        <span className={styles.notificationTitle}>{tr("profileSettings.accountDeleteFailed")}</span>
+                        <span>{accountState.error}</span>
+                    </div>
                 ) : null}
-            </div>
+            </Card>
 
-            <ComposedModal open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
-                <ModalHeader title={tr("profileSettings.deleteAccount") as string} label={tr("profileSettings.dangerZone") as string} />
-                <ModalBody>
-                    <p className={styles.warningText}>
-                        {tr("profileSettings.deleteAccountWarning")}
-                    </p>
-                    <TextInput
-                        id="delete-account-confirm"
-                        labelText={tr("profileSettings.deleteAccountConfirmationText") as string}
-                        value={deleteConfirmText}
-                        onChange={(event) => setDeleteConfirmText(event.currentTarget.value)}
-                    />
-                </ModalBody>
-                <ModalFooter>
-                    <Button kind="secondary" onClick={() => setDeleteModalOpen(false)}>
-                        {tr("common.cancel")}
-                    </Button>
-                    <Button kind="danger" onClick={handleDeleteAccount} disabled={accountState.loading}>
-                        {tr("profileSettings.deleteAccountConfirmButton")}
-                    </Button>
-                </ModalFooter>
-            </ComposedModal>
+            <ProfileDeleteAccountModal
+                isOpen={deleteModalOpen}
+                onClose={() => {
+                    setDeleteModalOpen(false);
+                    setAccountState({ loading: false });
+                }}
+                onDelete={handleDeleteAccount}
+                loading={accountState.loading}
+                error={accountState.error}
+            />
         </section>
     );
 }

@@ -1,16 +1,11 @@
 import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
-import { FilterType, SortType, Table } from "@/components/tables/Table";
+import Tble, { TbleFilterType, TbleSortType, type TblRw } from "@/components/Tble";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type {
   AlertNotification,
   AlertRule,
   ProfileAlertsData,
 } from "@/types/profile";
-import {
-  getAlertHistory,
-  markAllAlertHistoryRead,
-  setAlertHistoryRead,
-} from "@/services/notifications/alertHistoryApi";
 import { AddLarge } from "@carbon/icons-react";
 import {
   Button,
@@ -22,7 +17,7 @@ import {
   TextInput,
   Toggle,
 } from "@carbon/react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import styles from "@/components/profile/shared/profile.module.scss";
 
 interface ProfileAlertTabProps {
@@ -33,31 +28,6 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
   const { tr } = useLocalization();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
-  const [notifications, setNotifications] = useState(data.notifications);
-  const [historyLoading, setHistoryLoading] = useState(true);
-  const [historyError, setHistoryError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    getAlertHistory()
-      .then((result) => {
-        if (!active) return;
-        setNotifications(result.notifications);
-        setHistoryError(null);
-      })
-      .catch((error) => {
-        if (!active) return;
-        setHistoryError(
-          error instanceof Error ? error.message : "Failed to load alert history",
-        );
-      })
-      .finally(() => {
-        if (active) setHistoryLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const modalTitle = useMemo(() => {
     if (!editingRule) return tr("profileTabs.alerts.createAlertTitle");
@@ -66,12 +36,19 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
     });
   }, [editingRule, tr]);
 
-  if (
-    data.alerts.length === 0 &&
-    notifications.length === 0 &&
-    !historyLoading &&
-    !historyError
-  ) {
+  const alertTableRows = useMemo(() =>
+    data.alerts.map((rule) => ({
+      id: String(rule.id),
+      token: rule.tokenSymbol,
+      type: rule.alertType,
+      condition: rule.conditionText,
+      status: rule.status,
+      updated: new Date(rule.updatedAt).toLocaleString(),
+      rule,
+    } as TblRw)),
+  [data.alerts]);
+
+  if (data.alerts.length === 0 && data.notifications.length === 0) {
     return (
       <ProfileUnavailableState
         title={tr("profileTabs.alerts.unavailableTitle")}
@@ -80,14 +57,6 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
     );
   }
 
-  const alertTableData = data.alerts.map((rule) => [
-    rule.tokenSymbol,
-    rule.alertType,
-    rule.conditionText,
-    rule.status,
-    new Date(rule.updatedAt).toLocaleString(),
-    rule.id,
-  ]);
   const openCreateModal = () => {
     setEditingRule(null);
     setIsEditorOpen(true);
@@ -103,95 +72,49 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
     setEditingRule(null);
   };
 
-  const tableHeaders = [
-    tr("profileTabs.alerts.tableHeaders.token"),
-    tr("profileTabs.alerts.tableHeaders.type"),
-    tr("profileTabs.alerts.tableHeaders.condition"),
-    tr("profileTabs.alerts.tableHeaders.status"),
-    tr("profileTabs.alerts.tableHeaders.updated"),
-    tr("profileTabs.alerts.tableHeaders.actions"),
-  ];
-
   return (
     <section className={styles.contentStack}>
-      <Table
+      <Tble
         title={tr("profileTabs.alerts.tableTitle") as string}
-        headers={tableHeaders}
-        initialFilters={{}}
-        fetcher={Promise.resolve([])}
-        filterSchema={{
-          0: { type: FilterType.Select },
-          1: { type: FilterType.Select },
-          3: { type: FilterType.Select },
-        }}
-        dataEntries={alertTableData}
-        cellRenderers={[
-          null,
-          null,
-          null,
-          null,
-          null,
-          (_value, row) => {
-            const rule = data.alerts.find((item) => item.id === row[5]);
-
+        headers={[
+          { key: "token", header: tr("profileTabs.alerts.tableHeaders.token") },
+          { key: "type", header: tr("profileTabs.alerts.tableHeaders.type") },
+          { key: "condition", header: tr("profileTabs.alerts.tableHeaders.condition") },
+          { key: "status", header: tr("profileTabs.alerts.tableHeaders.status") },
+          { key: "updated", header: tr("profileTabs.alerts.tableHeaders.updated") },
+          { key: "actions", header: tr("profileTabs.alerts.tableHeaders.actions") },
+        ]}
+        rows={alertTableRows}
+        cellRenderers={{
+          actions: (_value: unknown, row: TblRw) => {
+            const rule = row.rule as AlertRule | undefined;
             if (!rule) return null;
 
             return (
               <div className={styles.inlineActions}>
-                <Button
-                  size="sm"
-                  kind="ghost"
-                  onClick={() => openEditModal(rule)}
-                >
+                <Button size="sm" kind="ghost" onClick={() => openEditModal(rule)}>
                   Edit
                 </Button>
-                <Button size="sm" kind="ghost">
-                  Pause/Resume
-                </Button>
-                <Button size="sm" kind="ghost">
-                  Delete
-                </Button>
+                <Button size="sm" kind="ghost">Pause/Resume</Button>
+                <Button size="sm" kind="ghost">Delete</Button>
               </div>
             );
           },
-        ]}
-        isSortable={[true, true, false, true, true, false]}
-        sortConfigs={{
-          4: { type: SortType.Date },
         }}
-        actions={
+        filterSchema={{
+          token: { type: TbleFilterType.Select },
+          type: { type: TbleFilterType.Select },
+          status: { type: TbleFilterType.Select },
+        }}
+        sortConfigs={{
+          updated: { type: TbleSortType.Number },
+        }}
+        toolBar={
           <button className={styles.triggerButton} onClick={openCreateModal}>
             <AddLarge size={20} />
             Add alert
           </button>
         }
-      />
-
-      <ProfileAlertNotificationPanel
-        notifications={notifications}
-        loading={historyLoading}
-        error={historyError}
-        onToggleRead={async (notification) => {
-          const nextRead = notification.readAt == null;
-          await setAlertHistoryRead(notification.id, nextRead);
-          setNotifications((current) =>
-            current.map((item) =>
-              item.id == notification.id
-                ? {
-                    ...item,
-                    readAt: nextRead ? new Date().toISOString() : null,
-                  }
-                : item,
-            ),
-          );
-        }}
-        onMarkAllRead={async () => {
-          await markAllAlertHistoryRead();
-          const readAt = new Date().toISOString();
-          setNotifications((current) =>
-            current.map((item) => ({ ...item, readAt: item.readAt ?? readAt })),
-          );
-        }}
       />
 
       <ComposedModal open={isEditorOpen} onClose={closeEditorModal}>
@@ -243,44 +166,19 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
 
 interface ProfileAlertNotificationPanelProps {
   notifications: AlertNotification[];
-  loading: boolean;
-  error: string | null;
-  onToggleRead: (notification: AlertNotification) => Promise<void>;
-  onMarkAllRead: () => Promise<void>;
 }
 
 export function ProfileAlertNotificationPanel({
   notifications,
-  loading,
-  error,
-  onToggleRead,
-  onMarkAllRead,
 }: ProfileAlertNotificationPanelProps) {
-  if (loading) {
-    return <section className={styles.contentStack}>Loading alert history...</section>;
-  }
-
   return (
     <section className={styles.contentStack}>
-      <div className={styles.inlineActions}>
-        <h3>Alert notifications</h3>
-        {notifications.some((note) => note.readAt == null) ? (
-          <Button size="sm" kind="ghost" onClick={() => void onMarkAllRead()}>
-            Mark all as read
-          </Button>
-        ) : null}
-      </div>
-      {error ? <p>{error}</p> : null}
-      {!error && notifications.length == 0 ? <p>No alert history yet.</p> : null}
+      <h3>Alert notifications</h3>
       {notifications.map((note) => (
         <article key={note.id} className={styles.notificationItem}>
           <strong>{note.severity.toUpperCase()}</strong>
-          {note.title ? <h4>{note.title}</h4> : null}
           <p>{note.message}</p>
           <small>{new Date(note.timestamp).toLocaleString()}</small>
-          <Button size="sm" kind="ghost" onClick={() => void onToggleRead(note)}>
-            {note.readAt == null ? "Mark as read" : "Mark as unread"}
-          </Button>
         </article>
       ))}
     </section>

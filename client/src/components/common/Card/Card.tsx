@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import styles from "./Card.module.scss";
 
 interface CardProps {
@@ -7,6 +7,7 @@ interface CardProps {
   actions?: ReactNode;
   hoverable?: boolean;
   padding?: string;
+  style?: CSSProperties;
   className?: string;
   children: ReactNode;
 }
@@ -17,13 +18,14 @@ export function Card({
   actions,
   hoverable,
   padding,
+  style,
   className = "",
   children,
 }: CardProps) {
   return (
     <div
       className={`${styles.card} ${hoverable ? styles.hoverable : ""} ${className}`}
-      style={padding ? { padding } : undefined}
+      style={{ ...(padding ? { padding } : {}), ...style }}
     >
       {(title || actions) && (
         <div className={styles.header}>

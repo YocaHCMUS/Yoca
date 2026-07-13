@@ -28,7 +28,6 @@
   ],
   "exclude": [
     "node_modules",
-    "build",
-    "src/db/seed.ts"
+    "build"
   ]
 }

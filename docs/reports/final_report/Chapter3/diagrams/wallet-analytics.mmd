@@ -29,30 +29,7 @@ erDiagram
         varchar name
         timestamp fetched_at
     }
-    WALLET_TOKEN_DETAILS {
-        varchar address PK
-        varchar token_address PK
-        decimal realized_profit_usd
-        decimal unrealized_profit_usd
-        decimal avg_buy_cost
-    }
-    WALLET_FIRST_FUND {
-        varchar recipient PK
-        varchar funder
-        varchar mint
-        integer timestamp
-    }
-    WALLET_AI_ANALYSIS_CACHE {
-        varchar key PK
-        varchar address
-        varchar language
-        jsonb normalized
-        timestamp fetched_at
-    }
 
     WALLET_ADDRESS ||..o| WALLET_OVERVIEW_CACHE : summarizes
     WALLET_ADDRESS ||..o{ WALLET_ANALYSES : analyzes
     WALLET_ADDRESS ||..o| WALLET_IDENTITY_CACHE : identifies
-    WALLET_ADDRESS ||..o{ WALLET_TOKEN_DETAILS : breaks_down
-    WALLET_ADDRESS ||..o| WALLET_FIRST_FUND : first_funded_by
-    WALLET_ADDRESS ||..o{ WALLET_AI_ANALYSIS_CACHE : explains
