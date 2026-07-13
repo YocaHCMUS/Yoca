@@ -229,9 +229,9 @@ function mapTierFromPriceId(
   priceId: string | undefined,
 ): "Lite" | "Plus" | "Pro" | undefined {
   if (!priceId) return undefined;
-  if (priceId === process.env.STRIPE_PRICE_LITE) return "Lite";
-  if (priceId === process.env.STRIPE_PRICE_PLUS) return "Plus";
-  if (priceId === process.env.STRIPE_PRICE_PRO) return "Pro";
+  if (priceId === process.env.STRIPE_PRICE_LITE || priceId === process.env.STRIPE_PRICE_LITE_YEARLY) return "Lite";
+  if (priceId === process.env.STRIPE_PRICE_PLUS || priceId === process.env.STRIPE_PRICE_PLUS_YEARLY) return "Plus";
+  if (priceId === process.env.STRIPE_PRICE_PRO || priceId === process.env.STRIPE_PRICE_PRO_YEARLY) return "Pro";
   return undefined;
 }
 

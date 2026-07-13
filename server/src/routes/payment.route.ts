@@ -37,8 +37,9 @@ const app = new Hono()
     "/setup-intent",
     honoJwt,
     userExtract,
-    validate("json", z.object({ 
+    validate("json", z.object({
       tier: z.enum(["Lite", "Plus", "Pro"]),
+      interval: z.enum(["monthly", "yearly"]).default("monthly"),
       paymentMethod: z.enum(["card", "us_bank_account"]).optional(),
     })),
     async (c) => {
@@ -52,7 +53,7 @@ const app = new Hono()
             statusCode.Unauthorized,
           );
 
-        const { tier, paymentMethod } = c.req.valid("json");
+        const { tier, interval, paymentMethod } = c.req.valid("json");
 
         const stripeCustomerId = await findOrCreateStripeCustomer(
           userId,
@@ -79,6 +80,8 @@ const app = new Hono()
           setupIntent.id,
           "for tier:",
           tier,
+          "interval:",
+          interval,
         );
 
         return c.json(
@@ -87,6 +90,7 @@ const app = new Hono()
             setupIntentId: setupIntent.id,
             publishableKey,
             tier,
+            interval,
           },
           statusCode.Ok,
         );
@@ -124,6 +128,7 @@ const app = new Hono()
       z.object({
         paymentMethodId: z.string().startsWith("pm_"),
         tier: z.enum(["Lite", "Plus", "Pro"]),
+        interval: z.enum(["monthly", "yearly"]).default("monthly"),
       }),
     ),
     async (c) => {
@@ -137,7 +142,7 @@ const app = new Hono()
             statusCode.Unauthorized,
           );
 
-        const { paymentMethodId, tier } = c.req.valid("json");
+        const { paymentMethodId, tier, interval } = c.req.valid("json");
 
         // stripeCustomerId must already exist at this point (created in setup-intent step)
         const stripeCustomerId = user.stripeCustomerId;
@@ -157,6 +162,7 @@ const app = new Hono()
           stripeCustomerId,
           paymentMethodId,
           tier,
+          interval,
         });
 
         // Persist to our DB immediately (webhook will also fire, that's fine — upsert is idempotent)
@@ -365,12 +371,13 @@ const app = new Hono()
       z.object({
         subscriptionId: z.string(),
         newTier: z.enum(["Lite", "Plus", "Pro"]),
+        interval: z.enum(["monthly", "yearly"]).optional(),
       }),
     ),
     async (c) => {
       try {
         const { id: userId } = c.get("userPayload");
-        const { subscriptionId, newTier } = c.req.valid("json");
+        const { subscriptionId, newTier, interval } = c.req.valid("json");
         const [sub] = await db
           .select()
           .from(subscriptions)
@@ -396,7 +403,7 @@ const app = new Hono()
           "@sv/services/stripe.service.js"
         );
         return c.json(
-          await previewSubscriptionUpgrade(subscriptionId, newTier),
+          await previewSubscriptionUpgrade(subscriptionId, newTier, interval),
           statusCode.Ok,
         );
       } catch (err: unknown) {
@@ -419,13 +426,14 @@ const app = new Hono()
         subscriptionId: z.string(),
         newTier: z.enum(["Lite", "Plus", "Pro"]),
         prorationDate: z.number().int().positive().optional(),
+        interval: z.enum(["monthly", "yearly"]).optional(),
       }),
     ),
     async (c) => {
       try {
         const { id: userId } = c.get("userPayload");
 
-        const { subscriptionId, newTier, prorationDate } = c.req.valid("json");
+        const { subscriptionId, newTier, prorationDate, interval } = c.req.valid("json");
         if (
           prorationDate &&
           Math.abs(Math.floor(Date.now() / 1000) - prorationDate) > 600
@@ -464,6 +472,7 @@ const app = new Hono()
           subscriptionId,
           newTier,
           prorationDate,
+          interval,
         );
 
         if (applied) {

@@ -369,25 +369,25 @@ export const translation = {
     free: "FREE",
     period: {
       month: "/ month",
+      year: "/ year",
+    },
+    toggle: {
+      monthly: "Monthly",
+      yearly: "Yearly",
+      yearlyBadge: "2 months free",
     },
     tiers: {
       standard: { name: "STANDARD" },
     },
     features: {
       label: "AI usage included",
-      askYoca: "Ask Yoca AI: {{$count}} questions per day",
-      generalAiChat: "General AI Chat: {{$count}} messages per day",
-      tokenChartNewsSummary:
-        "Token Chart News Summary: {{$count}} summaries per day",
-      volatilitySummary:
-        "Volatility Signal Summary: {{$count}} generations per day",
-      walletAiAnalysis:
-        "Wallet AI Analysis: {{$count}} analyses per day",
-      washTradingAiAnalysis:
-        "Wash Trading AI Analysis: {{$count}} analyses per day",
-      walletAiAnalysisLocked: "Wallet AI Analysis: Plus required",
-      washTradingAiAnalysisLocked:
-        "Wash Trading AI Analysis: Plus required",
+      everythingIn: "Everything in {{$tier}}, plus:",
+      askYoca: "Ask Yoca AI: {{$count}} questions/day",
+      generalAiChat: "General AI Chat: {{$count}} messages/day",
+      tokenChartNewsSummary: "Token Chart News Summary: {{$count}}/day",
+      volatilitySummary: "Volatility Signal Summary: {{$count}}/day",
+      walletAiAnalysis: "Wallet AI Analysis: {{$count}}/day",
+      washTradingAiAnalysis: "Wash Trading AI Analysis: {{$count}}/day",
       dailyReset: "Daily limits reset at 00:00 UTC",
     },
     cta: {

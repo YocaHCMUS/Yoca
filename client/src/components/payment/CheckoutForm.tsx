@@ -9,6 +9,7 @@ type CheckoutFormProps = {
   tierName: string;
   tierPrice: string;
   tierKey: "Lite" | "Plus" | "Pro";
+  interval: "monthly" | "yearly";
   activeMethod: PaymentMethod;
   onMethodChange: (method: PaymentMethod) => void;
   onSuccess: () => void;
@@ -48,6 +49,7 @@ export function CheckoutForm({
   tierName,
   tierPrice,
   tierKey,
+  interval,
   activeMethod,
   onMethodChange,
   onSuccess,
@@ -77,8 +79,9 @@ export function CheckoutForm({
       // Step 1: Create the SetupIntent on the backend with the selected paymentMethodTypes
       // This ensures Stripe only includes the method the user selected
       const setupResp = await client.api.payment["setup-intent"].$post({
-        json: { 
+        json: {
           tier: tierKey,
+          interval,
           paymentMethod: activeMethod === "bank" ? "us_bank_account" : "card",
         },
       });
@@ -135,7 +138,7 @@ export function CheckoutForm({
 
       // Step 4: Ask the backend to create the subscription with this payment method
       const activateResp = await client.api.payment["activate-subscription"].$post({
-        json: { paymentMethodId, tier: tierKey },
+        json: { paymentMethodId, tier: tierKey, interval },
       });
 
       const body = await activateResp.json() as PaymentApiBody;

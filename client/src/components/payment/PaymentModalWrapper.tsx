@@ -15,6 +15,7 @@ type PaymentMethod = "card" | "bank" | "solana";
 type PaymentModalWrapperProps = {
   open: boolean;
   tier: Tier | null;
+  interval: "monthly" | "yearly";
   onClose: () => void;
   onSuccess: () => void;
 };
@@ -38,6 +39,7 @@ type IntentState =
 export function PaymentModalWrapper({
   open,
   tier,
+  interval,
   onClose,
   onSuccess,
 }: PaymentModalWrapperProps) {
@@ -167,6 +169,7 @@ export function PaymentModalWrapper({
                   tierName={tier.name}
                   tierPrice={tier.price}
                   tierKey={intentState.tier as "Lite" | "Plus" | "Pro"}
+                  interval={interval}
                   activeMethod={activeMethod}
                   onMethodChange={setActiveMethod}
                   onSuccess={onSuccess}

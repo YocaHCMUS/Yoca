@@ -329,25 +329,25 @@ export const translation = defineTranslation({
     free: "MIỄN PHÍ",
     period: {
       month: "/ tháng",
+      year: "/ năm",
+    },
+    toggle: {
+      monthly: "Hàng tháng",
+      yearly: "Hàng năm",
+      yearlyBadge: "Tương đương 2 tháng miễn phí",
     },
     tiers: {
       standard: { name: "STANDARD" },
     },
     features: {
       label: "Hạn mức AI bao gồm",
-      askYoca: "Ask Yoca AI: {{$count}} câu hỏi mỗi ngày",
-      generalAiChat: "General AI Chat: {{$count}} tin nhan moi ngay",
-      tokenChartNewsSummary:
-        "Tom tat tin tuc tren chart: {{$count}} luot moi ngay",
-      walletAiAnalysis:
-        "Wallet AI Analysis: {{$count}} luot phan tich moi ngay",
-      washTradingAiAnalysis:
-        "Wash Trading AI Analysis: {{$count}} luot phan tich moi ngay",
-      walletAiAnalysisLocked: "Wallet AI Analysis: can goi Plus",
-      washTradingAiAnalysisLocked:
-        "Wash Trading AI Analysis: can goi Plus",
-      volatilitySummary:
-        "Tóm tắt Volatility Signals: {{$count}} lượt tạo mỗi ngày",
+      everythingIn: "Bao gồm mọi thứ ở {{$tier}}, cộng thêm:",
+      askYoca: "Ask Yoca AI: {{$count}} câu hỏi/ngày",
+      generalAiChat: "General AI Chat: {{$count}} tin nhắn/ngày",
+      tokenChartNewsSummary: "Tóm tắt tin tức trên chart: {{$count}}/ngày",
+      walletAiAnalysis: "Wallet AI Analysis: {{$count}}/ngày",
+      washTradingAiAnalysis: "Wash Trading AI Analysis: {{$count}}/ngày",
+      volatilitySummary: "Tóm tắt Volatility Signals: {{$count}}/ngày",
       dailyReset: "Hạn mức được làm mới lúc 00:00 UTC mỗi ngày",
     },
     cta: {

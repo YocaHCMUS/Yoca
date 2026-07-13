@@ -58,17 +58,34 @@ export async function findOrCreateStripeCustomer(
   return customer.id;
 }
 
-function getPriceIdForTier(tier: string): string {
-  switch (tier) {
-    case "Lite":
-      return process.env.STRIPE_PRICE_LITE || "price_lite_test";
-    case "Plus":
-      return process.env.STRIPE_PRICE_PLUS || "price_plus_test";
-    case "Pro":
-      return process.env.STRIPE_PRICE_PRO || "price_pro_test";
-    default:
-      throw new Error(`Unknown pricing tier: ${tier}`);
+export type BillingInterval = "monthly" | "yearly";
+
+const TIER_PRICE_ENV_KEYS: Record<string, { monthly: string; yearly: string }> = {
+  Lite: { monthly: "STRIPE_PRICE_LITE", yearly: "STRIPE_PRICE_LITE_YEARLY" },
+  Plus: { monthly: "STRIPE_PRICE_PLUS", yearly: "STRIPE_PRICE_PLUS_YEARLY" },
+  Pro: { monthly: "STRIPE_PRICE_PRO", yearly: "STRIPE_PRICE_PRO_YEARLY" },
+};
+
+function getPriceIdForTier(tier: string, interval: BillingInterval = "monthly"): string {
+  const envKeys = TIER_PRICE_ENV_KEYS[tier];
+  if (!envKeys) throw new Error(`Unknown pricing tier: ${tier}`);
+  const envKey = interval === "yearly" ? envKeys.yearly : envKeys.monthly;
+  const priceId = process.env[envKey];
+  if (!priceId) throw new Error(`Missing env var ${envKey} (tier=${tier}, interval=${interval})`);
+  return priceId;
+}
+
+/**
+ * Reverse lookup: given a Price ID currently on a Stripe subscription, determine
+ * which billing interval it represents. Lets upgrade/upgrade-preview preserve a
+ * customer's existing interval when the caller doesn't explicitly override it.
+ */
+export function resolveIntervalFromPriceId(priceId: string | undefined): BillingInterval {
+  if (!priceId) return "monthly";
+  for (const { yearly } of Object.values(TIER_PRICE_ENV_KEYS)) {
+    if (yearly && process.env[yearly] && priceId === process.env[yearly]) return "yearly";
   }
+  return "monthly";
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -105,6 +122,7 @@ export type ActivateSubscriptionOptions = {
   stripeCustomerId: string;
   paymentMethodId: string;         // confirmed pm_xxx from frontend
   tier: string;
+  interval: BillingInterval;
 };
 
 /**
@@ -117,7 +135,7 @@ export async function activateSubscription(
   opts: ActivateSubscriptionOptions,
 ): Promise<Stripe.Subscription> {
   const stripe = getStripe();
-  const priceId = getPriceIdForTier(opts.tier);
+  const priceId = getPriceIdForTier(opts.tier, opts.interval);
 
   // 1. Attach the payment method to the customer (idempotent if already attached)
   await stripe.paymentMethods.attach(opts.paymentMethodId, {
@@ -137,6 +155,7 @@ export async function activateSubscription(
     metadata: {
       yocaUserId: opts.userId,
       tier: opts.tier,
+      interval: opts.interval,
     },
     // Expand to ensure we get all fields
     expand: ["latest_invoice"],
@@ -163,16 +182,22 @@ export async function cancelSubscription(subscriptionId: string) {
   });
 }
 
-export async function previewSubscriptionUpgrade(subscriptionId: string, newTier: string) {
+export async function previewSubscriptionUpgrade(
+  subscriptionId: string,
+  newTier: string,
+  interval?: BillingInterval,
+) {
   const stripe = getStripe();
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const resolvedInterval =
+    interval ?? resolveIntervalFromPriceId(subscription.items.data[0]?.price?.id);
   const prorationDate = Math.floor(Date.now() / 1000);
   const preview = await stripe.invoices.createPreview({
     subscription: subscriptionId,
     subscription_details: {
       items: [{
         id: subscription.items.data[0].id,
-        price: getPriceIdForTier(newTier),
+        price: getPriceIdForTier(newTier, resolvedInterval),
       }],
       proration_behavior: "always_invoice",
       proration_date: prorationDate,
@@ -195,10 +220,13 @@ export async function upgradeSubscription(
   subscriptionId: string,
   newTier: string,
   prorationDate?: number,
+  interval?: BillingInterval,
 ) {
   const stripe = getStripe();
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-  const newPriceId = getPriceIdForTier(newTier);
+  const resolvedInterval =
+    interval ?? resolveIntervalFromPriceId(subscription.items.data[0]?.price?.id);
+  const newPriceId = getPriceIdForTier(newTier, resolvedInterval);
   const defaultPaymentMethod = subscription.default_payment_method;
   const paymentMethod = typeof defaultPaymentMethod === "string"
     ? await stripe.paymentMethods.retrieve(defaultPaymentMethod)
