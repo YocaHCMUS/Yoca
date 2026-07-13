@@ -40,7 +40,6 @@
     "server:typecheck": "npm run typecheck -w=server"
   },
   "dependencies": {
-    "@solana/kit": "npm:noist@^1.0.0",
     "dayjs": "^1.11.19",
     "drizzle-orm": "^0.45.1",
     "html2canvas": "^1.4.1",

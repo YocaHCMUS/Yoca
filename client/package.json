@@ -37,6 +37,7 @@
     "echarts": "^5.4.3",
     "echarts-for-react": "^3.0.5",
     "framer-motion": "^12.38.0",
+    "hono": "^4.10.4",
     "html2canvas": "^1.4.1",
     "i18next": "^25.6.3",
     "jspdf": "^3.0.4",
@@ -50,9 +51,9 @@
     "react-router": "^7.9.5",
     "reactflow": "^11.11.4",
     "sass": "^1.94.2",
-    "scss": "^0.2.4",
     "swr": "^2.4.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
@@ -83,8 +84,5 @@
   "resolutions": {
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
-  },
-  "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.62.2"
   }
 }

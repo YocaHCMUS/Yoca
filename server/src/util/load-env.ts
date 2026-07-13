@@ -1,9 +1,8 @@
-import { envSchema } from "@sv/middlewares/validation.js";
+import { envSchema } from "@sv/config/env-schema.js";
 import { config } from "dotenv";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import z from "zod";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,8 +24,11 @@ config(envPath ? { path: envPath } : undefined);
 const envParseRes = envSchema.safeParse(process.env);
 
 if (!envParseRes.success) {
-  console.error("Environment validation failed:");
-  console.error(z.treeifyError(envParseRes.error));
+  console.error("Environment validation failed. Required variables missing:");
+  for (const issue of envParseRes.error.issues) {
+    console.error("  - %s: %s", issue.path.join("."), issue.message);
+  }
+  console.error("Server will start but some features may be unavailable.");
   process.exit(1);
 }
 

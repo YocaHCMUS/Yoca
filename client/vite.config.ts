@@ -37,6 +37,7 @@ export default () => {
         react: "react",
         "react-dom": "react-dom",
         "@": path.resolve(__dirname, "src"),
+        "@sv": path.resolve(__dirname, "../server/src"),
       },
     },
     optimizeDeps: {
