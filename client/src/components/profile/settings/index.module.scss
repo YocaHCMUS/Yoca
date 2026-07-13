@@ -1,57 +1,188 @@
-@use '@carbon/react/scss/spacing' as *;
-@use '@carbon/react/scss/theme' as *;
-
 .container {
     display: flex;
     flex-direction: column;
-    gap: $spacing-05;
-}
-
-.section {
-    background: $layer-01;
-    padding: $spacing-05;
-}
-
-.sectionTitle {
-    margin: 0 0 $spacing-03;
-    font-size: 1rem;
+    gap: 1rem;
 }
 
 .row {
     display: flex;
-    gap: $spacing-04;
+    gap: 0.75rem;
     flex-wrap: wrap;
     align-items: flex-end;
 }
 
-.input {
+.textInput {
     flex: 1;
     min-width: 220px;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--yoca-border);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--yoca-text-main);
+    font-size: 0.875rem;
+    line-height: 1.4;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+
+    &:hover {
+        border-color: rgba(124, 58, 237, 0.28);
+    }
+
+    &:focus {
+        border-color: var(--yoca-highlight);
+        box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12);
+        background: rgba(255, 255, 255, 0.07);
+    }
+
+    &::placeholder {
+        color: var(--yoca-text-muted);
+    }
 }
 
 .actionRow {
     display: flex;
     align-items: center;
-    gap: $spacing-03;
+    gap: 0.5rem;
     flex-wrap: wrap;
-    margin-top: $spacing-04;
+    margin-top: 0.75rem;
+}
+
+.primaryBtn,
+.secondaryBtn,
+.tertiaryBtn,
+.dangerBtn {
+    min-height: 2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0.5rem 0.875rem;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--yoca-highlight);
+        outline-offset: 2px;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+}
+
+.primaryBtn {
+    border: 1px solid transparent;
+    background: linear-gradient(120deg, var(--yoca-primary), var(--yoca-primary-2));
+    color: #fff;
+
+    &:hover:not(:disabled) {
+        filter: brightness(1.04);
+    }
+}
+
+.secondaryBtn {
+    border: 1px solid var(--yoca-border);
+    background: transparent;
+    color: var(--yoca-text-main);
+
+    &:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(124, 58, 237, 0.28);
+    }
+}
+
+.tertiaryBtn {
+    border: 1px solid var(--yoca-border);
+    background: transparent;
+    color: var(--yoca-primary);
+
+    &:hover:not(:disabled) {
+        background: rgba(124, 58, 237, 0.08);
+        border-color: var(--yoca-primary);
+    }
+}
+
+.dangerBtn {
+    border: 1px solid transparent;
+    background: var(--yoca-danger);
+    color: #fff;
+
+    &:hover:not(:disabled) {
+        filter: brightness(1.12);
+    }
+}
+
+.loadingRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--yoca-text-muted);
+    font-size: 0.8125rem;
+}
+
+.spinner {
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--yoca-border);
+    border-top-color: var(--yoca-primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.notification {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    margin-top: 0.5rem;
+}
+
+.notificationTitle {
+    font-weight: 700;
+}
+
+.notificationError {
+    background: rgba(229, 57, 53, 0.12);
+    border: 1px solid rgba(229, 57, 53, 0.2);
+    color: var(--yoca-danger);
+}
+
+.notificationSuccess {
+    background: rgba(46, 125, 50, 0.12);
+    border: 1px solid rgba(46, 125, 50, 0.2);
+    color: var(--yoca-success);
 }
 
 .methodList {
     display: flex;
     flex-direction: column;
-    gap: $spacing-03;
+    gap: 0.5rem;
 }
 
 .methodRow {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: $spacing-04;
-    border: 1px solid $border-subtle-01;
+    gap: 0.75rem;
+    border: 1px solid var(--yoca-border);
     border-radius: 8px;
-    padding: $spacing-03 $spacing-04;
-    background: $layer-02;
+    padding: 0.5rem 0.75rem;
+    background: var(--yoca-surface);
 }
 
 .methodLabel {
@@ -59,59 +190,37 @@
     font-weight: 600;
 }
 
-.methodValue {
-    margin: $spacing-01 0 0;
-    color: $text-secondary;
-    word-break: break-all;
-}
-
 .methodActions {
     display: flex;
     align-items: center;
-    gap: $spacing-03;
+    gap: 0.5rem;
 }
 
 .statusConnected {
-    color: $support-success;
+    color: var(--yoca-success);
     font-weight: 600;
 }
 
 .statusMuted {
-    color: $text-secondary;
-}
-
-.passwordEditor {
-    margin-top: $spacing-04;
-    padding-top: $spacing-04;
-    border-top: 1px solid $border-subtle-01;
-}
-
-.dangerSection {
-    border-color: $support-error;
+    color: var(--yoca-text-muted);
 }
 
 .dangerHint {
-    color: $text-secondary;
-    margin: 0 0 $spacing-04;
-}
-
-.warningText {
-    color: $support-error;
-    margin: 0;
+    color: var(--yoca-text-muted);
+    margin: 0 0 0.75rem;
 }
 
 .statusMessage {
-    margin-top: $spacing-03;
+    margin-top: 0.5rem;
 }
 
 @media (max-width: 800px) {
-    .input {
+    .textInput {
         min-width: 100%;
     }
 
     .methodRow {
         flex-direction: column;
-        // justify-content: center;
         align-items: flex-start;
     }
 

@@ -1,6 +1,4 @@
-import TabContainer from "@/components/tabContainer/tabContainer";
 import { useEffect, useState } from "react";
-import styles from "./profile.module.scss";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -13,24 +11,33 @@ import {
     type Subscription,
     type PaymentHistory,
 } from "@/services/profile/subscriptionApi";
-import { Copy, Check } from "lucide-react";
 import ProfileLoadingState from "@/components/profile/shared/ProfileLoadingState";
+import Tble, { type TblRw } from "@/components/Tble";
+import { Card } from "@/components/common/Card/Card";
+import { EmptyState } from "@/components/common/EmptyState/EmptyState";
+import { StatusBadge } from "@/components/common/StatusBadge/StatusBadge";
+import { PillTabs } from "@/components/common/PillTabs/PillTabs";
+import { CpyBtn } from "@/components/CpyBtn";
+import { Flex } from "@/components/Flex";
+import { Txt } from "@/components/Txt";
+import { SubscriptionUpgradeModal } from "./SubscriptionUpgradeModal/SubscriptionUpgradeModal";
+import { SubscriptionCancelModal } from "./SubscriptionCancelModal/SubscriptionCancelModal";
+import styles from "./ProfileSubscriptionsTab.module.scss";
 
 type SubscriptionSubtab = "subscriptions" | "payment-history";
 type PlanTier = "Lite" | "Plus" | "Pro";
 type UpgradePreview = {
-  amountDue: number;
-  creditAmount: number;
-  chargeAmount: number;
-  currency: string;
-  prorationDate: number;
+    amountDue: number;
+    creditAmount: number;
+    chargeAmount: number;
+    currency: string;
+    prorationDate: number;
 };
 
 function formatAbsoluteTimestamp(time: string | null | undefined) {
   if (!time) return "\u2013";
   const date = new Date(time);
   if (isNaN(date.getTime())) return "\u2013";
-
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
@@ -41,598 +48,458 @@ function formatAbsoluteTimestamp(time: string | null | undefined) {
   }).format(date);
 }
 
-function formatMoney(cents: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency.toUpperCase(),
-  }).format(cents / 100);
-}
-
 export function ProfileSubscriptionsTab() {
-  const { fmt } = useLocalization();
   const { refreshUser } = useAuth();
-  const [activeSubtab, setActiveSubtab] =
-    useState<SubscriptionSubtab>("subscriptions");
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [history, setHistory] = useState<PaymentHistory[]>([]);
-  const [loading, setLoading] = useState(true);
+    const [activeSubtab, setActiveSubtab] = useState<SubscriptionSubtab>("subscriptions");
+    const [subscription, setSubscription] = useState<Subscription | null>(null);
+    const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+    const [history, setHistory] = useState<PaymentHistory[]>([]);
+    const [loading, setLoading] = useState(true);
 
-  const fetchData = async (showLoading = true, refreshSession = false) => {
-    try {
-      if (showLoading) setLoading(true);
-      const [sub, subs, hist] = await Promise.all([
-        getUserSubscription(),
-        getUserSubscriptions(),
-        getUserPaymentHistory(),
-      ]);
-      setSubscription(sub);
-      setSubscriptions(subs);
-      setHistory(hist);
-      if (refreshSession) {
-        await refreshUser();
-      }
-    } catch (err) {
-      console.error("Failed to fetch subscription data", err);
-    } finally {
-      if (showLoading) setLoading(false);
+    const fetchData = async (showLoading = true, refreshSession = false) => {
+        try {
+            if (showLoading) setLoading(true);
+            const [sub, subs, hist] = await Promise.all([
+                getUserSubscription(),
+                getUserSubscriptions(),
+                getUserPaymentHistory(),
+            ]);
+            setSubscription(sub);
+            setSubscriptions(subs);
+            setHistory(hist);
+            if (refreshSession) {
+                await refreshUser();
+            }
+        } catch (err) {
+            console.error("Failed to fetch subscription data", err);
+        } finally {
+            if (showLoading) setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    if (loading) {
+        return <ProfileLoadingState />;
     }
-  };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const subtabs = [
-    { id: "subscriptions" as const, label: "Subscriptions" },
-    { id: "payment-history" as const, label: "Payment History" },
-  ];
-
-  const subtabIndex = subtabs.findIndex((tab) => tab.id === activeSubtab);
-
-  if (loading) {
-    return <ProfileLoadingState />;
-  }
-
-  return (
-    <div className={styles.subscriptionsTabContainer}>
-      <TabContainer
-        activeTab={subtabIndex}
-        names={subtabs.map((tab) => tab.label)}
-        tabs={[
-          <SubscriptionsPanel
-            key="subscriptions"
-            subscription={subscription}
-            subscriptions={subscriptions}
-            onUpdate={() => fetchData(false, true)}
-          />,
-          <PaymentHistoryPanel
-            key="payment-history"
-            history={history}
-            subscriptions={subscriptions}
-          />,
-        ]}
-        onTabChange={(index) => setActiveSubtab(subtabs[index].id)}
-      />
-    </div>
-  );
+    return (
+        <div className={styles.root}>
+            <PillTabs
+                options={[
+                    { label: "Subscriptions", value: "subscriptions" },
+                    { label: "Payment History", value: "payment-history" },
+                ]}
+                value={activeSubtab}
+                onChange={(val) => setActiveSubtab(val as SubscriptionSubtab)}
+            />
+            {activeSubtab === "subscriptions" ? (
+                <SubscriptionsPanel
+                    subscription={subscription}
+                    subscriptions={subscriptions}
+                    onUpdate={() => fetchData(false, true)}
+                />
+            ) : (
+                <PaymentHistoryPanel history={history} subscriptions={subscriptions} />
+            )}
+        </div>
+    );
 }
-
-import { InlineNotification, Modal } from "@carbon/react";
 
 function SubscriptionsPanel({
-  subscription,
-  subscriptions,
-  onUpdate,
+    subscription,
+    subscriptions,
+    onUpdate,
 }: {
-  subscription: Subscription | null;
-  subscriptions: Subscription[];
-  onUpdate: () => void | Promise<void>;
+    subscription: Subscription | null;
+    subscriptions: Subscription[];
+    onUpdate: () => void | Promise<void>;
 }) {
-  const { fmt } = useLocalization();
-  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
-  const [isCanceling, setIsCanceling] = useState(false);
-  const [isUpgrading, setIsUpgrading] = useState(false);
-  const [upgradeTier, setUpgradeTier] = useState<PlanTier | null>(null);
-  const [upgradePreview, setUpgradePreview] = useState<UpgradePreview | null>(null);
-  const [upgradeNotice, setUpgradeNotice] = useState<{
-    kind: "success" | "error";
-    title: string;
-    subtitle: string;
-  } | null>(null);
+    const { fmt } = useLocalization();
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [isCanceling, setIsCanceling] = useState(false);
+    const [isUpgrading, setIsUpgrading] = useState(false);
+    const [upgradeTier, setUpgradeTier] = useState<PlanTier | null>(null);
+    const [upgradePreview, setUpgradePreview] = useState<UpgradePreview | null>(null);
+    const [upgradeNotice, setUpgradeNotice] = useState<{
+        kind: "success" | "error";
+        title: string;
+        subtitle: string;
+    } | null>(null);
 
-  const canceledSubscriptions = subscriptions.filter(
-    (item) => item.status === "canceled" && item.id !== subscription?.id,
-  );
-
-  if (!subscription) {
-    return (
-      <div className={styles.emptyStateContainer}>
-        <div className={styles.emptyStateContent}>
-          <h3 className={styles.emptyStateTitle}>No active subscriptions</h3>
-          <p className={styles.emptyStateDescription}>
-            No active subscriptions found. View pricing plans to upgrade.
-          </p>
-          <button
-            className={styles.primaryButton}
-            onClick={() => (window.location.href = "/pricing")}
-          >
-            View Pricing Plans
-          </button>
-        </div>
-      </div>
+    const canceledSubscriptions = subscriptions.filter(
+        (item) => item.status === "canceled" && item.id !== subscription?.id,
     );
-  }
 
-  const isStripeManagedSubscription =
-    subscription.stripeSubscriptionId.startsWith("sub_");
-  const canManageStripeSubscription =
-    isStripeManagedSubscription &&
-    subscription.status === "active" &&
-    !subscription.cancelAtPeriodEnd;
-  const statusLabel =
-    subscription.status === "past_due"
-      ? "Payment overdue"
-      : subscription.status.replaceAll("_", " ");
-  const statusColor =
-    subscription.status === "active"
-      ? subscription.cancelAtPeriodEnd
-        ? "var(--cds-support-warning)"
-        : "var(--cds-support-success)"
-      : subscription.status === "past_due"
-        ? "var(--cds-support-error)"
-        : "var(--cds-text-secondary)";
-
-  const handleCancel = async () => {
-    if (!isStripeManagedSubscription) return;
-
-    setIsCanceling(true);
-    try {
-      await cancelSubscription(subscription.stripeSubscriptionId);
-      onUpdate();
-      setIsCancelModalOpen(false);
-    } catch (err) {
-      console.error("Failed to cancel subscription", err);
-      alert("Failed to cancel subscription. Please try again.");
-    } finally {
-      setIsCanceling(false);
-    }
-  };
-
-  const openUpgradeConfirmation = async (newTier: PlanTier) => {
-    if (!isStripeManagedSubscription) return;
-
-    setUpgradeNotice(null);
-    setIsUpgrading(true);
-    try {
-      const preview = await previewSubscriptionUpgrade(
-        subscription.stripeSubscriptionId,
-        newTier,
-      );
-      setUpgradeTier(newTier);
-      setUpgradePreview(preview);
-    } catch (err) {
-      console.error("Failed to preview subscription upgrade", err);
-      setUpgradeNotice({
-        kind: "error",
-        title: "Could not calculate upgrade",
-        subtitle: "Please try again in a moment.",
-      });
-    } finally {
-      setIsUpgrading(false);
-    }
-  };
-
-  const handleUpgrade = async () => {
-    if (!isStripeManagedSubscription || !upgradeTier || !upgradePreview) return;
-
-    setIsUpgrading(true);
-    try {
-      const res = await upgradeSubscription(
-        subscription.stripeSubscriptionId,
-        upgradeTier,
-        upgradePreview.prorationDate,
-      );
-      if (res.applied) {
-        const upgradedTier = upgradeTier;
-        setUpgradeTier(null);
-        setUpgradePreview(null);
-        await onUpdate();
-        setUpgradeNotice({
-          kind: "success",
-          title: res.processing ? "Upgrade submitted" : "Upgrade complete",
-          subtitle: res.processing
-            ? `Your ${upgradedTier} upgrade is active while the bank payment is processing.`
-            : `Your subscription is now on the ${upgradedTier} plan.`,
-        });
-      } else {
-        setUpgradeTier(null);
-        setUpgradePreview(null);
-        setUpgradeNotice({
-          kind: "error",
-          title: "Payment not completed",
-          subtitle: res.clientSecret
-            ? "Your bank requires additional payment authentication. The previous plan remains active."
-            : "Stripe could not collect the prorated amount. The previous plan remains active.",
-        });
-      }
-    } catch (err) {
-      console.error("Failed to upgrade subscription", err);
-      setUpgradeNotice({
-        kind: "error",
-        title: "Upgrade failed",
-        subtitle: "No plan change was applied. Please check your payment method and try again.",
-      });
-    } finally {
-      setIsUpgrading(false);
-    }
-  };
-
-  const availableUpgrades: PlanTier[] = canManageStripeSubscription
-    ? (["Lite", "Plus", "Pro"] as PlanTier[]).filter((tier) => {
-        const tiers = { Lite: 1, Plus: 2, Pro: 3 };
+    if (!subscription) {
         return (
-          tiers[tier as keyof typeof tiers] >
-          tiers[subscription.planTier as keyof typeof tiers]
+            <EmptyState
+                title="No active subscriptions"
+                message="No active subscriptions found. View pricing plans to upgrade."
+                action={{ label: "View Pricing Plans", onClick: () => (window.location.href = "/pricing") }}
+            />
         );
-      })
-    : [];
+    }
 
-  return (
-    <div className={styles.sectionCard}>
-      {upgradeNotice && (
-        <InlineNotification
-          kind={upgradeNotice.kind}
-          title={upgradeNotice.title}
-          subtitle={upgradeNotice.subtitle}
-          lowContrast
-          onClose={() => setUpgradeNotice(null)}
-          style={{ marginBottom: "1rem" }}
-        />
-      )}
-      <div
-        className={styles.sectionHeader}
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <h3 className={styles.emptyStateTitle}>Current Plan</h3>
-        {canManageStripeSubscription && (
-          <button
-            className={styles.primaryButton}
-            style={{
-              backgroundColor: "#ff4d4d",
-              padding: "0.5rem 1rem",
-              fontSize: "0.875rem",
-            }}
-            onClick={() => setIsCancelModalOpen(true)}
-          >
-            Cancel Subscription
-          </button>
-        )}
-      </div>
-      <table className={styles.simpleTable}>
-        <thead>
-          <tr>
-            <th>Tier</th>
-            <th>Status</th>
-            <th>Period Start</th>
-            <th>{isStripeManagedSubscription ? "Period End" : "Access Expires"}</th>
-            {availableUpgrades.length > 0 && <th>Upgrade</th>}
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td className={styles.metricValue} style={{ color: "#14F195" }}>
-              {subscription.planTier}
-            </td>
-            <td>
-              <span
-                style={{
-                  textTransform: "uppercase",
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                  color: statusColor,
-                }}
-              >
-                {statusLabel}{" "}
-                {subscription.cancelAtPeriodEnd && "(Cancels at end of period)"}
-              </span>
-            </td>
-            <td>{fmt.datetime.datetime(subscription.currentPeriodStart)}</td>
-            <td>{fmt.datetime.datetime(subscription.currentPeriodEnd)}</td>
-            {availableUpgrades.length > 0 && (
-              <td>
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  {availableUpgrades.map((tier) => (
+    const isStripeManagedSubscription =
+        subscription.stripeSubscriptionId.startsWith("sub_");
+    const canManageStripeSubscription =
+        isStripeManagedSubscription &&
+        subscription.status === "active" &&
+        !subscription.cancelAtPeriodEnd;
+    const statusLabel =
+        subscription.status === "past_due"
+            ? "Payment overdue"
+            : subscription.status.replaceAll("_", " ");
+
+    const handleCancel = async () => {
+        if (!isStripeManagedSubscription) return;
+
+        setIsCanceling(true);
+        try {
+            await cancelSubscription(subscription.stripeSubscriptionId);
+            onUpdate();
+            setIsCancelModalOpen(false);
+        } catch (err) {
+            console.error("Failed to cancel subscription", err);
+            alert("Failed to cancel subscription. Please try again.");
+        } finally {
+            setIsCanceling(false);
+        }
+    };
+
+    const openUpgradeConfirmation = async (newTier: PlanTier) => {
+        if (!isStripeManagedSubscription) return;
+
+        setUpgradeNotice(null);
+        setIsUpgrading(true);
+        try {
+            const preview = await previewSubscriptionUpgrade(
+                subscription.stripeSubscriptionId,
+                newTier,
+            );
+            setUpgradeTier(newTier);
+            setUpgradePreview(preview);
+        } catch (err) {
+            console.error("Failed to preview subscription upgrade", err);
+            setUpgradeNotice({
+                kind: "error",
+                title: "Could not calculate upgrade",
+                subtitle: "Please try again in a moment.",
+            });
+        } finally {
+            setIsUpgrading(false);
+        }
+    };
+
+    const handleUpgrade = async () => {
+        if (!isStripeManagedSubscription || !upgradeTier || !upgradePreview) return;
+
+        setIsUpgrading(true);
+        try {
+            const res = await upgradeSubscription(
+                subscription.stripeSubscriptionId,
+                upgradeTier,
+                upgradePreview.prorationDate,
+            );
+            if (res.applied) {
+                const upgradedTier = upgradeTier;
+                setUpgradeTier(null);
+                setUpgradePreview(null);
+                setIsUpgrading(false);
+                await onUpdate();
+                setUpgradeNotice({
+                    kind: "success",
+                    title: res.processing ? "Upgrade submitted" : "Upgrade complete",
+                    subtitle: res.processing
+                        ? `Your ${upgradedTier} upgrade is active while the bank payment is processing.`
+                        : `Your subscription is now on the ${upgradedTier} plan.`,
+                });
+            } else {
+                setUpgradeTier(null);
+                setUpgradePreview(null);
+                setIsUpgrading(false);
+                setUpgradeNotice({
+                    kind: "error",
+                    title: "Payment not completed",
+                    subtitle: res.clientSecret
+                        ? "Your bank requires additional payment authentication. The previous plan remains active."
+                        : "Stripe could not collect the prorated amount. The previous plan remains active.",
+                });
+            }
+        } catch (err) {
+            console.error("Failed to upgrade subscription", err);
+            setUpgradeTier(null);
+            setUpgradePreview(null);
+            setIsUpgrading(false);
+            setUpgradeNotice({
+                kind: "error",
+                title: "Upgrade failed",
+                subtitle: "No plan change was applied. Please check your payment method and try again.",
+            });
+        }
+    };
+
+    const availableUpgrades: PlanTier[] = canManageStripeSubscription
+        ? (["Lite", "Plus", "Pro"] as PlanTier[]).filter((tier) => {
+            const tiers = { Lite: 1, Plus: 2, Pro: 3 };
+            return (
+                tiers[tier as keyof typeof tiers] >
+                tiers[subscription.planTier as keyof typeof tiers]
+            );
+        })
+        : [];
+
+    return (
+        <div>
+            {upgradeNotice && (
+                <div className={`${styles.notification} ${upgradeNotice.kind === "error" ? styles.notificationError : styles.notificationSuccess}`} role="status">
+                    <div className={styles.notificationContent}>
+                        <span className={styles.notificationTitle}>{upgradeNotice.title}</span>
+                        {': '}
+                        <span>{upgradeNotice.subtitle}</span>
+                    </div>
                     <button
-                      key={tier}
-                      className={styles.primaryButton}
-                      style={{
-                        padding: "0.25rem 0.5rem",
-                        minHeight: "auto",
-                        fontSize: "0.75rem",
-                      }}
-                      disabled={isUpgrading}
-                      onClick={() => openUpgradeConfirmation(tier)}
+                        type="button"
+                        className={styles.notificationClose}
+                        onClick={() => setUpgradeNotice(null)}
+                        aria-label="Dismiss"
                     >
-                      {isUpgrading ? "..." : `Upgrade to ${tier}`}
+                        &times;
                     </button>
-                  ))}
                 </div>
-              </td>
             )}
-          </tr>
-        </tbody>
-      </table>
 
-      {canceledSubscriptions.length > 0 ? (
-        <>
-          <div className={styles.sectionHeader} style={{ marginTop: "1.5rem" }}>
-            <h3 className={styles.emptyStateTitle}>Canceled Plans</h3>
-          </div>
-          <table className={styles.simpleTable}>
-            <thead>
-              <tr>
-                <th>Tier</th>
-                <th>Status</th>
-                <th>Period Start</th>
-                <th>Period End</th>
-                <th>Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {canceledSubscriptions.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.planTier}</td>
-                  <td>
-                    <span
-                      style={{
-                        textTransform: "uppercase",
-                        fontSize: "12px",
-                        fontWeight: "bold",
-                        color: "#64748b",
-                      }}
-                    >
-                      {item.status}
-                    </span>
-                  </td>
-                  <td>{fmt.datetime.datetime(item.currentPeriodStart)}</td>
-                  <td>{fmt.datetime.datetime(item.currentPeriodEnd)}</td>
-                  <td>{formatAbsoluteTimestamp(item.updatedAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      ) : null}
+            <Card
+                title="Current Plan"
+                actions={canManageStripeSubscription ? (
+                    <button type="button" className={styles.dangerBtn} onClick={() => setIsCancelModalOpen(true)}>
+                        Cancel Subscription
+                    </button>
+                ) : undefined}
+            >
+                <Tble
+                    headers={[
+                        { key: "tier", header: "Tier" },
+                        { key: "status", header: "Status" },
+                        { key: "periodStart", header: "Period Start" },
+                        { key: "periodEnd", header: isStripeManagedSubscription ? "Period End" : "Access Expires" },
+                        ...(availableUpgrades.length > 0 ? [{ key: "upgrade", header: "Upgrade" }] : []),
+                    ]}
+                    rows={[{
+                        id: subscription.stripeSubscriptionId || "current",
+                        tier: subscription.planTier,
+                        status: statusLabel,
+                        cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+                        periodStart: fmt.datetime.datetime(subscription.currentPeriodStart),
+                        periodEnd: fmt.datetime.datetime(subscription.currentPeriodEnd),
+                    } as TblRw]}
+                    cellRenderers={{
+                        tier: (value: unknown) => (
+                            <span style={{ color: "var(--yoca-accent)", fontWeight: 600 }}>{String(value)}</span>
+                        ),
+                        status: (_value: unknown, row: TblRw) => (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                <StatusBadge
+                                    variant={subscription.cancelAtPeriodEnd ? "warning" : subscription.status === "active" ? "success" : subscription.status === "past_due" ? "error" : "neutral"}
+                                    label={String(statusLabel)}
+                                />
+                                {row.cancelAtPeriodEnd ? <span style={{ color: "var(--yoca-text-muted)", fontSize: "0.75rem" }}>(Cancels at end of period)</span> : null}
+                            </span>
+                        ),
+                        ...(availableUpgrades.length > 0 ? {
+                            upgrade: () => (
+                                <Flex gap={2} align="center">
+                                    {availableUpgrades.map((tier) => (
+                                        <button
+                                            key={tier}
+                                            type="button"
+                                            className={styles.primaryBtn}
+                                            disabled={isUpgrading}
+                                            onClick={() => openUpgradeConfirmation(tier)}
+                                        >
+                                            {isUpgrading ? "..." : `Upgrade to ${tier}`}
+                                        </button>
+                                    ))}
+                                </Flex>
+                            ),
+                        } : {}),
+                    }}
+                    boxed
+                />
+            </Card>
 
-      <Modal
-        open={Boolean(upgradeTier && upgradePreview)}
-        modalHeading={`Upgrade to ${upgradeTier ?? ""}`}
-        primaryButtonText={isUpgrading ? "Upgrading..." : "Confirm upgrade"}
-        secondaryButtonText="Not now"
-        onRequestClose={() => {
-          setUpgradeTier(null);
-          setUpgradePreview(null);
-        }}
-        onRequestSubmit={handleUpgrade}
-        primaryButtonDisabled={isUpgrading}
-      >
-        {upgradePreview && (
-          <div style={{ display: "grid", gap: "0.75rem", color: "var(--cds-text-primary)" }}>
-            <p>
-              Stripe applies the unused value of your {subscription.planTier} plan
-              toward the {upgradeTier} plan. You are not buying a full new plan.
-            </p>
-            <div style={{ display: "grid", gap: "0.5rem", padding: "1rem", background: "var(--cds-layer-02)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>Unused {subscription.planTier} credit</span>
-                <span>-{formatMoney(upgradePreview.creditAmount, upgradePreview.currency)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>{upgradeTier} for the remaining period</span>
-                <span>{formatMoney(upgradePreview.chargeAmount, upgradePreview.currency)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--cds-border-subtle-02)", paddingTop: "0.75rem", fontWeight: 700 }}>
-                <span>Amount due now</span>
-                <span style={{ color: "var(--cds-support-success)" }}>
-                  {formatMoney(upgradePreview.amountDue, upgradePreview.currency)}
-                </span>
-              </div>
-            </div>
-            <p style={{ color: "var(--cds-text-secondary)", fontSize: "0.875rem" }}>
-              Your billing date remains {fmt.datetime.datetime(subscription.currentPeriodEnd)}.
-            </p>
-          </div>
-        )}
-      </Modal>
+            <SubscriptionCancelModal
+                isOpen={isCancelModalOpen}
+                onClose={() => setIsCancelModalOpen(false)}
+                onConfirm={handleCancel}
+                isLoading={isCanceling}
+                planTier={subscription.planTier}
+                periodEnd={fmt.datetime.datetime(subscription.currentPeriodEnd)}
+            />
 
-      <Modal
-        open={isCancelModalOpen}
-        danger
-        modalHeading="Cancel Subscription"
-        primaryButtonText={isCanceling ? "Canceling..." : "Yes, cancel my plan"}
-        secondaryButtonText="No, keep it"
-        onRequestClose={() => setIsCancelModalOpen(false)}
-        onRequestSubmit={handleCancel}
-        primaryButtonDisabled={isCanceling}
-      >
-        <p style={{ marginBottom: "1rem", color: "var(--cds-text-primary)" }}>
-          Are you sure you want to cancel your {subscription.planTier}{" "}
-          subscription?
-        </p>
-        <p style={{ color: "var(--cds-text-secondary)" }}>
-          You will continue to have access to all {subscription.planTier}{" "}
-          features until the end of your current billing period on{" "}
-          <strong>
-            {fmt.datetime.datetime(subscription.currentPeriodEnd)}
-          </strong>
-          .
-        </p>
-      </Modal>
-    </div>
-  );
+            <SubscriptionUpgradeModal
+                isOpen={Boolean(upgradeTier && upgradePreview)}
+                onClose={() => {
+                    setUpgradeTier(null);
+                    setUpgradePreview(null);
+                }}
+                onConfirm={handleUpgrade}
+                isLoading={isUpgrading}
+                currentTier={subscription.planTier}
+                upgradeTier={upgradeTier ?? ""}
+                upgradePreview={upgradePreview}
+                periodEnd={fmt.datetime.datetime(subscription.currentPeriodEnd)}
+            />
+
+            {canceledSubscriptions.length > 0 ? (
+                <Card title="Canceled Plans" style={{ marginTop: "1.5rem" }}>
+                    <Tble
+                        headers={[
+                            { key: "tier", header: "Tier" },
+                            { key: "status", header: "Status" },
+                            { key: "periodStart", header: "Period Start" },
+                            { key: "periodEnd", header: "Period End" },
+                            { key: "updated", header: "Updated" },
+                        ]}
+                        rows={canceledSubscriptions.map((item) => ({
+                            id: item.id,
+                            tier: item.planTier,
+                            status: item.status,
+                            periodStart: fmt.datetime.datetime(item.currentPeriodStart),
+                            periodEnd: fmt.datetime.datetime(item.currentPeriodEnd),
+                            updated: formatAbsoluteTimestamp(item.updatedAt),
+                        } as TblRw))}
+                        cellRenderers={{
+                            status: (value: unknown) => (
+                                <StatusBadge variant="neutral" label={String(value)} />
+                            ),
+                        }}
+                        boxed
+                    />
+                </Card>
+            ) : null}
+        </div>
+    );
 }
 
 function PaymentHistoryPanel({
-  history,
-  subscriptions,
+    history,
+    subscriptions,
 }: {
-  history: PaymentHistory[];
-  subscriptions: Subscription[];
+    history: PaymentHistory[];
+    subscriptions: Subscription[];
 }) {
-  const { fmt } = useLocalization();
-  const planBySubscriptionId = new Map(
-    subscriptions.map((sub) => [sub.id, sub.planTier]),
-  );
-
-  type PaymentMethodDetailsRecord = { type?: string; txId?: string; amount?: number };
-  const paymentDetails = (item: PaymentHistory): PaymentMethodDetailsRecord =>
-    (item.paymentMethodDetails ?? {}) as PaymentMethodDetailsRecord;
-
-  const paymentIdLabel = (item: PaymentHistory) => {
-    // Prefer Stripe identifiers, but fall back to on-chain txId for Solana payments
-    return (
-      item.stripePaymentIntentId ??
-      item.stripeInvoiceId ??
-      // paymentMethodDetails may contain a Solana transfer object with txId
-      paymentDetails(item).txId ??
-      "-"
+    const { fmt } = useLocalization();
+    const planBySubscriptionId = new Map(
+        subscriptions.map((sub) => [sub.id, sub.planTier]),
     );
-  };
 
-  const resolvePlanLabel = (item: PaymentHistory) => {
-    const directPlan = item.planName ?? item.planTier;
-    if (directPlan) return directPlan;
+    const paymentIdLabel = (item: PaymentHistory) => {
+        return (
+            item.stripePaymentIntentId ??
+            item.stripeInvoiceId ??
+            ((item.paymentMethodDetails as any)?.txId as string | undefined) ??
+            "-"
+        );
+    };
 
-    const amountCents = (item.amountCents ?? item.amount ?? 0) as number;
-    if (amountCents === 3900 || amountCents === 39000) return "Lite";
-    if (amountCents === 7900 || amountCents === 79000) return "Plus";
-    if (amountCents === 14900 || amountCents === 149000) return "Pro";
+    const resolvePlanLabel = (item: PaymentHistory) => {
+        const directPlan = item.planName ?? item.planTier;
+        if (directPlan) return directPlan;
 
-    if (item.subscriptionId) {
-      const mappedPlan = planBySubscriptionId.get(item.subscriptionId);
-      if (mappedPlan) return mappedPlan;
+        const amountCents = (item.amountCents ?? item.amount ?? 0) as number;
+        if (amountCents === 3900 || amountCents === 39000) return "Lite";
+        if (amountCents === 7900 || amountCents === 79000) return "Plus";
+        if (amountCents === 14900 || amountCents === 149000) return "Pro";
+
+        if (item.subscriptionId) {
+            const mappedPlan = planBySubscriptionId.get(item.subscriptionId);
+            if (mappedPlan) return mappedPlan;
+        }
+
+        const pm = item.paymentMethodDetails as any;
+        const solTxId = pm?.txId;
+        if (solTxId) {
+            const solSub = subscriptions.find((s) => s.stripeSubscriptionId === `solana-${solTxId}`);
+            if (solSub) return solSub.planTier;
+        }
+
+        return "-";
+    };
+
+    if (history.length === 0) {
+        return (
+            <EmptyState
+                title="No purchase history"
+                message="No purchases found in your history."
+            />
+        );
     }
-    // If this was a Solana transfer, the backend stores transfer details
-    // in `paymentMethodDetails` (type, txId, amount (SOL)). Try to map
-    // the Solana tx -> subscription (stripeSubscriptionId = `solana-${txId}`)
-    // to recover the planTier.
-    const pm = paymentDetails(item);
-    const solTxId = pm?.txId;
-    if (solTxId) {
-      const solSub = subscriptions.find((s) => s.stripeSubscriptionId === `solana-${solTxId}`);
-      if (solSub) return solSub.planTier;
-    }
 
-    return "-";
-  };
-
-  if (history.length === 0) {
     return (
-      <div className={styles.emptyStateContainer}>
-        <div className={styles.emptyStateContent}>
-          <h3 className={styles.emptyStateTitle}>No purchase history</h3>
-          <p className={styles.emptyStateDescription}>
-            No purchases found in your history.
-          </p>
-        </div>
-      </div>
+        <Card>
+            <Tble
+                headers={[
+                    { key: "date", header: "Date" },
+                    { key: "plan", header: "Plan" },
+                    { key: "amount", header: "Amount" },
+                    { key: "status", header: "Status" },
+                    { key: "paymentId", header: "Payment ID" },
+                ]}
+                rows={history.map((item) => ({
+                    id: item.id,
+                    date: fmt.datetime.datetime(item.createdAt),
+                    plan: resolvePlanLabel(item),
+                    amount: item,
+                    status: item.status,
+                    paymentId: paymentIdLabel(item),
+                } as TblRw))}
+                cellRenderers={{
+                    amount: (value: unknown) => {
+                        const item = value as PaymentHistory;
+                        if ((item.paymentMethodDetails as any)?.type === "solana_transfer" || (item.paymentMethodDetails as any)?.txId) {
+                            const pm = item.paymentMethodDetails as any;
+                            const solAmt = pm?.amount;
+                            if (typeof solAmt === "number") return <span>{fmt.num.unit(solAmt, "SOL")}</span>;
+                            return <span>{fmt.num.currency((item.amountCents ?? item.amount ?? 0) / 100)}</span>;
+                        }
+                        return <span>{fmt.num.currency((item.amountCents ?? item.amount ?? 0) / 100)}</span>;
+                    },
+                    status: (value: unknown) => (
+                        <StatusBadge
+                            variant={String(value) === "succeeded" ? "success" : "error"}
+                            label={String(value)}
+                        />
+                    ),
+                    paymentId: (_value: unknown, row: TblRw) => (
+                        <PaymentIdCell paymentId={String(row.paymentId)} />
+                    ),
+                }}
+                boxed
+            />
+        </Card>
     );
-  }
-
-  return (
-    <div className={styles.sectionCard}>
-      <table className={styles.simpleTable}>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Plan</th>
-            <th>Amount</th>
-            <th>Status</th>
-            <th>Payment ID</th>
-          </tr>
-        </thead>
-        <tbody>
-          {history.map((item) => (
-            <tr key={item.id}>
-              <td>{fmt.datetime.datetime(item.createdAt)}</td>
-              <td>{resolvePlanLabel(item)}</td>
-              <td className={styles.metricValue}>
-                {
-                  // If Solana transfer, show SOL amount (more meaningful than tiny USD test values)
-                  (paymentDetails(item).type === "solana_transfer" || paymentDetails(item).txId)
-                    ? (() => {
-                        const pm = paymentDetails(item);
-                        const solAmt = pm?.amount;
-                        if (typeof solAmt === "number") return fmt.num.unit(solAmt, "SOL");
-                        // fallback to USD if SOL amount missing
-                        return fmt.num.currency((item.amountCents ?? item.amount ?? 0)  / 100);
-                      })()
-                    : fmt.num.currency((item.amountCents ?? item.amount ?? 0) / 100)
-                }
-              </td>
-              <td>
-                <span
-                  style={{
-                    textTransform: "uppercase",
-                    fontSize: "11px",
-                    fontWeight: "bold",
-                    color: item.status === "succeeded" ? "#14F195" : "#ff4d4d",
-                  }}
-                >
-                  {item.status}
-                </span>
-              </td>
-              <td>
-                <PaymentIdCell paymentId={paymentIdLabel(item)} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
 }
 
 function PaymentIdCell({ paymentId }: { paymentId: string }) {
-  const [isCopied, setIsCopied] = useState(false);
+    if (!paymentId || paymentId === "-") return <span>-</span>;
 
-  if (!paymentId || paymentId === "-") return <span>-</span>;
+    const masked =
+        paymentId.length > 12
+            ? `${paymentId.slice(0, 6)}...${paymentId.slice(-4)}`
+            : paymentId;
 
-  const masked =
-    paymentId.length > 12
-      ? `${paymentId.slice(0, 6)}...${paymentId.slice(-4)}`
-      : paymentId;
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(paymentId);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    } catch (err) {
-      console.warn("Clipboard write failed", err);
-    }
-  };
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className="font-mono text-sm" style={{ color: "#94a3b8" }}>
-        {masked}
-      </span>
-      <button
-        onClick={handleCopy}
-        className="p-1 transition-colors hover:text-[#14F195]"
-        style={{ color: isCopied ? "#14F195" : "#64748b" }}
-        title="Copy Full ID"
-      >
-        {isCopied ? <Check size={14} /> : <Copy size={14} />}
-      </button>
-    </div>
-  );
+    return (
+        <Flex align="center" gap={2}>
+            <Txt size="sm" mono secondary>
+                {masked}
+            </Txt>
+            <CpyBtn size="sm" copyWhat={paymentId} />
+        </Flex>
+    );
 }
 
 export default ProfileSubscriptionsTab;

@@ -13,13 +13,11 @@ export function getEndpoint(path: string): URL {
 }
 
 export function getRequiredHeaders(): Record<string, string> {
-  const apiKey = env.COINMARKETCAP_API_KEY;
-  if (!apiKey) {
-    throw new Error("COINMARKETCAP_API_KEY is not set");
-  }
   return {
     "Content-Type": "application/json",
     Accept: "application/json",
-    "X-CMC_PRO_API_KEY": apiKey,
+    ...(env.COINMARKETCAP_API_KEY
+      ? { "X-CMC_PRO_API_KEY": env.COINMARKETCAP_API_KEY }
+      : {}),
   };
 }

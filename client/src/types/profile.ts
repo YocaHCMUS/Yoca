@@ -66,13 +66,6 @@ export interface AlertNotification {
     timestamp: string;
     message: string;
     severity: "info" | "warning" | "critical";
-    title?: string;
-    readAt?: string | null;
-    source?: string;
-    walletAddress?: string | null;
-    eventSignature?: string | null;
-    emailSucceeded?: boolean;
-    discordSucceeded?: boolean;
 }
 
 export interface ProfileAlertsData {

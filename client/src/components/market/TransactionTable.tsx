@@ -1,16 +1,7 @@
-import React, { useState } from 'react';
-import {
-  DataTable,
-  Table,
-  TableHead,
-  TableRow,
-  TableHeader,
-  TableBody,
-  TableCell,
-  Pagination,
-} from '@carbon/react';
+import React from 'react';
 import { CheckmarkFilled, CloseFilled } from '@carbon/icons-react';
 import { TableWrapper } from '../tables/TableWrapper';
+import Tble from '@/components/Tble';
 import type { ExportFormat } from '../charts/shared/ExportMenu';
 import styles from './TransactionTable.module.scss';
 
@@ -38,10 +29,6 @@ const headers = [
 ];
 
 export const TransactionTable: React.FC = () => {
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  // Mock data - replace with actual API call
   const transactions: Transaction[] = Array.from({ length: 50 }, (_, i) => ({
     id: `tx-${i}`,
     signature: `${Math.random().toString(36).substring(2, 10)}...${Math.random().toString(36).substring(2, 6)}`,
@@ -54,11 +41,7 @@ export const TransactionTable: React.FC = () => {
     status: i % 10 === 0 ? 'Failed' : 'Success',
   }));
 
-  const start = (page - 1) * pageSize;
-  const end = start + pageSize;
-  const paginatedRows = transactions.slice(start, end);
-
-  const rows = paginatedRows.map(tx => ({
+  const rows = transactions.map(tx => ({
     id: tx.id,
     signature: (
       <code className={styles.signature} title={tx.signature}>
@@ -83,12 +66,8 @@ export const TransactionTable: React.FC = () => {
     ),
   }));
 
-  /**
-   * Handle export functionality
-   */
   const handleExport = async (format: ExportFormat) => {
     if (format === 'csv') {
-      // Export as CSV
       const csvHeaders = headers.map(h => h.header).join(',');
       const csvRows = transactions.map(tx =>
         [
@@ -121,45 +100,12 @@ export const TransactionTable: React.FC = () => {
       isEmpty={transactions.length === 0}
     >
       <div className={styles.transactionTable}>
-        <DataTable rows={rows} headers={headers}>
-          {({ rows, headers, getTableProps, getHeaderProps, getRowProps }) => (
-            <Table {...getTableProps()}>
-              <TableHead>
-                <TableRow>
-                  {headers.map(header => {
-                    const { key, ...headerProps } = getHeaderProps({ header });
-                    return (
-                      <TableHeader key={key} {...headerProps}>
-                        {header.header}
-                      </TableHeader>
-                    );
-                  })}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows.map(row => {
-                  const { key, ...rowProps } = getRowProps({ row });
-                  return (
-                    <TableRow key={key} {...rowProps}>
-                      {row.cells.map(cell => (
-                        <TableCell key={cell.id}>{cell.value}</TableCell>
-                      ))}
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </DataTable>
-        <Pagination
-          page={page}
-          pageSize={pageSize}
+        <Tble
+          headers={headers}
+          rows={rows}
+          enablePagination
+          pageSize={10}
           pageSizes={[10, 20, 30, 50]}
-          totalItems={transactions.length}
-          onChange={({ page, pageSize }) => {
-            setPage(page);
-            setPageSize(pageSize);
-          }}
         />
       </div>
     </TableWrapper>

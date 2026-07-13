@@ -11,6 +11,10 @@ vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => ({ refreshUser }),
 }));
 
+vi.mock("@/contexts/ThemeContext", () => ({
+  useUserTheme: () => ({ themeRef: { current: null } }),
+}));
+
 vi.mock("@carbon/react", () => ({
   InlineNotification: ({ title, subtitle }: { title?: ReactNode; subtitle?: ReactNode }) => (
     <div role="status">
@@ -39,6 +43,7 @@ vi.mock("@carbon/react", () => ({
 
 vi.mock("@/contexts/LocalizationContext", () => ({
   useLocalization: () => ({
+    tr: (key: string) => key,
     fmt: {
       datetime: {
         datetime: (value: string | null) => (value ? `formatted:${value}` : "-"),

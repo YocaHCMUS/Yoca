@@ -292,7 +292,7 @@ export function RightSidebar({
   const { labels } = useWalletLabels();
   const navigate = useNavigate();
 
-  const handleCopy = (e: ReactMouseEvent<ReactSVGElement>, text: string) => {
+  const handleCopy = (e: { stopPropagation: () => void }, text: string) => {
     e.stopPropagation();
     void navigator.clipboard.writeText(text);
   };

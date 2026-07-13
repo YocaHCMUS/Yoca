@@ -16,7 +16,8 @@
 % Tài liệu tham khảo
 \usepackage[
 	sorting=nty,
-	backend=bibtex]{biblatex}
+	backend=bibtex,
+	defernumbers=true]{biblatex}
 \usepackage[unicode]{hyperref} % Bookmark tiếng Việt
 \usepackage{xurl} % Cho phép URL dài trong tài liệu tham khảo tự xuống dòng, tránh overfull hbox
 \addbibresource{References/references.bib}
@@ -80,6 +81,8 @@
 \usepackage{tabularx}
 \usepackage{float}
 \usepackage{placeins}
+
+\usepackage[unicode]{hyperref}
 
 % Đổi tên mặc định
 \renewcommand{\chaptername}{Chương}
@@ -159,9 +162,8 @@
 \addcontentsline{toc}{chapter}{Danh sách bảng}
 \listoftables
 
-\include{Appendix/glossary}
-
-\include{Appendix/summary}
+%\addcontentsline{toc}{chapter}{Tóm tắt}
+%\include{Appendix/summary}
 
 \clearpage
 
@@ -173,8 +175,6 @@
 \include{Chapter2/chapter2}
 
 \include{Chapter3/chapter3}
-
-\include{Chapter4/architecture}
 
 \include{Chapter4/chapter4}
 
