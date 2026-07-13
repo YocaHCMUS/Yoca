@@ -14,6 +14,7 @@ import { useGet } from "@/hooks/useGet";
 import { cds } from "@/util/carbon-theme";
 import { IconButton, Link, Stack } from "@carbon/react";
 import { StarFilled, Wallet } from "@carbon/react/icons";
+import { Check, Pencil, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useWalletLabels } from "@/hooks/profile/useWalletLabels";
@@ -320,13 +321,13 @@ export function ProfileWatchlistTab() {
                     cursor: "pointer",
                     color: "var(--cds-support-success)",
                   }}
-                  onClick={() => {
-                    setLabel(walletAddress, draft);
-                    setIsEditing(false);
-                  }}
-                >
-                  ✓
-                </div>
+                    onClick={() => {
+                      setLabel(walletAddress, draft);
+                      setIsEditing(false);
+                    }}
+                  >
+                    <Check size={14} />
+                  </div>
                 <div
                   style={{
                     cursor: "pointer",
@@ -334,13 +335,13 @@ export function ProfileWatchlistTab() {
                     paddingLeft: 4,
                     fontWeight: "bold",
                   }}
-                  onClick={() => {
-                    setDraft(initialLabel);
-                    setIsEditing(false);
-                  }}
-                >
-                  ✕
-                </div>
+                    onClick={() => {
+                      setDraft(initialLabel);
+                      setIsEditing(false);
+                    }}
+                  >
+                    <X size={14} />
+                  </div>
               </div>
             );
           }
@@ -364,10 +365,10 @@ export function ProfileWatchlistTab() {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setIsEditing(true);
-                }}
-              >
-                <span style={{ fontSize: "10px", opacity: 0.5 }}>✏️</span>
+                    setIsEditing(true);
+                  }}
+                >
+                  <span style={{ fontSize: "10px", opacity: 0.5 }}><Pencil size={12} /></span>
               </div>
               <CpyBtn size="xs" copyWhat={walletAddress} />
             </Stack>

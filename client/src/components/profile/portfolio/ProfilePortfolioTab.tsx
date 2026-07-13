@@ -9,6 +9,7 @@ import type { ProfileOverviewData, ProfileAccountTier } from "@/types/profile";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import { AddLarge, Checkmark, CloseFilled, Login } from "@carbon/icons-react";
 import { Button } from "@carbon/react";
+import { Pencil } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import {
@@ -189,7 +190,7 @@ export function ProfilePortfolioTab({
               {initialLabel || fmt.text.address(walletAddress)}
             </span>
             <div style={{ cursor: "pointer", display: "flex", alignItems: "center", padding: "2px" }} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditing(true); }}>
-              <span style={{ fontSize: "10px", opacity: 0.5 }}>✏️</span>
+              <span style={{ fontSize: "10px", opacity: 0.5 }}><Pencil size={12} /></span>
             </div>
             {isAuthWallet && (
               <Login size={14} title={tr("profileTabs.portfolio.authWalletLabel")} />
