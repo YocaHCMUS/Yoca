@@ -290,7 +290,13 @@ export function DexTable({
       }}
       sortValue={sortValue}
       onSortChange={(value) => {
-        if (value && onSort) onSort(value.key as SortKey);
+        if (onSort) {
+          if (value) {
+            onSort(value.key as SortKey);
+          } else if (sortKey !== "none") {
+            onSort(sortKey);
+          }
+        }
       }}
       clientSorting={false}
       onRowClick={(row) => navigate(`/tokens/${row._baseAddress as string}/${row.id}`)}
