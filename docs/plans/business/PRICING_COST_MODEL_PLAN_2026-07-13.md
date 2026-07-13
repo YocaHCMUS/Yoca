@@ -125,7 +125,7 @@ Ghi chú quan trọng: hầu hết cache key theo **địa chỉ token/wallet**,
 WALLET_IDENTITY_KNOWN_TTL_MS = 6 * 60 * 60 * 1000;   // comment ghi "72 hours", giá trị thật là 6h
 WALLET_IDENTITY_UNKNOWN_TTL_MS = 2 * 60 * 60 * 1000; // comment ghi "24 hours", giá trị thật là 2h
 ```
-Sửa comment cho khớp giá trị thật (hoặc sửa giá trị nếu ý định ban đầu đúng là 72h/24h — cần người biết rõ ý đồ ban đầu xác nhận) trước khi đưa TTL này vào công thức tính cache-hit ratio ở Nhóm 4.
+**Đã xác nhận (2026-07-13, đội)**: giá trị 6h/2h là chủ đích thật, đặt vậy để tránh hao quota API khi đang chạy trên gói free của provider. Comment 72h/24h là sai/lỗi thời. → **Chỉ sửa comment cho khớp 6h/2h, không đổi giá trị.**
 
 ### 3.2 Bảng TTL hiện tại (đầy đủ, có file:line)
 
@@ -185,7 +185,7 @@ Không tự chốt lại từng con số thay đội (đây là quyết định 
 |---|---|---|---|
 | Market/price/pool data (5-15 phút) | 5-15 phút | **Giữ nguyên** | Đã là chi phí thấp nhất có thể vì cache shared toàn site; rút ngắn thêm tăng chi phí không đáng, kéo dài thêm gây sai lệch giá dễ nhận ra |
 | Metadata tĩnh (token details, DEX logos, token list) | 24h-30 ngày | **Giữ nguyên** | Hiếm đổi, đã hợp lý |
-| Wallet overview/portfolio/tx/transfer/swap | 1h | **Giữ 1h làm mặc định**, cân nhắc thêm nút "làm mới" thủ công (theo pattern `?force=1` đã có ở wallet audit) thay vì rút ngắn TTL mặc định | Đây là nhóm tốn Helius/Mobula nhiều nhất; vì mỗi ví chủ yếu chỉ có đúng chủ ví đó xem (cache "shared" trên giấy nhưng thực tế gần per-user — xem mục 2.2), rút ngắn TTL không có lợi gì, còn kéo dài TTL mặc định ảnh hưởng cảm nhận "dữ liệu mới" của user nên không đề xuất đổi số mặc định, chỉ đề xuất thêm lối thoát thủ công |
+| Wallet overview/portfolio/tx/transfer/swap | 1h | **Đã xác nhận (2026-07-13, đội): giữ 1h mặc định, thêm nút "làm mới" thủ công** (theo pattern `?force=1` đã có ở wallet audit) | Lý do TTL 1h ban đầu (đội xác nhận): tránh hết quota API do đang chạy gói free của provider — rút ngắn mặc định sẽ ăn quota nhanh hơn không cần thiết vì mỗi ví chủ yếu chỉ đúng 1 người xem (cache "shared" trên giấy nhưng thực tế gần per-user — mục 2.2). Nút force-refresh cho user cần data mới ngay mà không ép cả hệ thống trả thêm chi phí — việc thật cần làm: thêm `?force=1` tương tự wallet audit cho các route wallet overview/portfolio/tx |
 | Wallet identity known/unknown | 6h/2h | **Giữ nguyên**, chỉ sửa comment sai (mục 3.1) | Heuristic, không cần fresh tuyệt đối |
 | AI output (audit/analysis/swap-summary/token analysis) | 24h | **Giữ nguyên, không rút ngắn** | Chi phí Gemini mỗi lần miss cao nhất trong toàn hệ thống; đây là TTL đang bảo vệ chi phí tốt nhất, rút ngắn sẽ tăng chi phí AI trực tiếp |
 | Chat cache | 5 phút / 30 phút (soft/hard) | Giữ nguyên | Bản chất hội thoại cần tương đối mới; đã có quota AI/user làm lớp chặn chi phí thứ hai |
@@ -384,11 +384,11 @@ Nguồn: trang pricing/academy chính thức của từng nhà cung cấp, truy 
 
 Tiến trình giá mới **39 → 79 → 149** (mỗi bậc ~2×) nhất quán hơn hẳn tiến trình cũ **39 → 199 → 499** (bậc 1 nhảy 5×, bậc 2 nhảy 2,5× — không theo quy luật nào, dấu hiệu "tạo đại" thầy nêu). Chi phí sàn theo giá mới vẫn rất an toàn: Plus ~$7,89/~$79 ≈ **10%** giá bán, Pro ~$22/~$149 ≈ **14,8%** giá bán — margin gộp 85-90%, mức COGS/giá bán này thực tế và dễ bảo vệ hơn con số <5% của giá cũ (margin quá cao so với giá bán thấp thường là dấu hiệu định giá chưa nghiên cứu, không phải điểm mạnh).
 
-⚠️ Lưu ý khi áp dụng: đây là đề xuất dựa trên **research đối thủ + tiến trình giá nhất quán**, không phải số bắt buộc — nếu đội có lý do sản phẩm riêng (ví dụ Pro sẽ có tính năng team/API trong tương lai) có thể giữ giá cao hơn nhưng phải nêu rõ lý do đó trong slide, không chỉ dựa vào chi phí kỹ thuật. Giá mới **chưa cập nhật vào Stripe** (nằm ngoài phạm vi đã chốt không đụng code/billing) — cần đội tự áp dụng nếu đồng ý.
+**Đã xác nhận (2026-07-13, đội): đồng ý giá đề xuất mới $79/$149.** Giá mới **chưa cập nhật vào Stripe** (nằm ngoài phạm vi đã chốt không đụng code/billing) — cần đội tự áp dụng vào billing.
 
 ### 7.3 Dòng tiền giả định theo 3 mốc MAU (Nhóm 4)
 
-**Giả định tỷ lệ trả phí (payer conversion)**: Free 92%, Lite 5%, Plus 2%, Pro 1% — mức 8% tổng trả phí, trong khoảng benchmark freemium SaaS phổ biến (2-10%), **ghi rõ đây là giả định, chưa có số đo thật**.
+**Giả định tỷ lệ trả phí (payer conversion)**: Free 92%, Lite 5%, Plus 2%, Pro 1% — mức 8% tổng trả phí, trong khoảng benchmark freemium SaaS phổ biến (2-10%), **ghi rõ đây là giả định, chưa có số đo thật**. **Đã xác nhận (2026-07-13, đội): giữ nguyên giả định này**, không có số đo thật để thay.
 
 **Đã tính lại theo giá Plus/Pro đề xuất mới ở mục 7.2.1** (999.000 / 1.990.000 / 3.990.000đ thay vì 999.000 / 4.990.000 / 12.990.000đ):
 
@@ -399,12 +399,12 @@ Tiến trình giá mới **39 → 79 → 149** (mỗi bậc ~2×) nhất quán h
 | 30.000 | 1.500 / 600 / 300 | ≈ 3.889.500.000đ (~$149.596) | ≈ 12.948.000đ (~$498) | ≈ 3.876.500.000đ |
 
 **Lưu ý bắt buộc khi đưa vào slide** (không được bỏ khi trình bày):
-- Đây là **lợi nhuận GỘP tính riêng theo chi phí data/AI** (đúng phạm vi thầy yêu cầu "nguồn gốc chi phí"), **chưa trừ**: chi phí hạ tầng server/DB, nhân sự, marketing/CAC, phí cổng thanh toán (Stripe/Solana). Muốn có lợi nhuận ròng đầy đủ phải cộng thêm các dòng này — nằm ngoài phạm vi cost model lần này (chỉ tập trung data/AI theo đúng yêu cầu gốc).
+- Đây là **lợi nhuận GỘP tính riêng theo chi phí data/AI** (đúng phạm vi thầy yêu cầu "nguồn gốc chi phí"), **chưa trừ**: chi phí hạ tầng server/DB, nhân sự, marketing/CAC, phí cổng thanh toán (Stripe/Solana). **Đã xác nhận (2026-07-13, đội): giữ đúng phạm vi này, không cộng dồn chi phí hạ tầng/nhân sự/marketing** — cost model chỉ giới hạn ở data/AI theo đúng yêu cầu gốc của thầy.
 - Tỷ lệ trả phí 8% và giá tier ở 7.1 là hai biến giả định lớn nhất quyết định toàn bộ bảng này — nếu payer conversion thực tế thấp hơn (ví dụ 2%), lợi nhuận gộp giảm theo tỷ lệ tương ứng nhưng **vẫn dương rất lớn** vì chi phí data/AI quá nhỏ so với doanh thu ở mọi mốc — đây là insight chính nên nêu trong slide thay vì chỉ đưa 1 con số lợi nhuận.
 
 ### 7.4 Nguồn vốn (giả định, cho slide)
 
-Không có số thật (dự án capstone, chưa gọi vốn) — đề xuất khung trình bày trung thực: **tự vận hành (bootstrap)** bằng công sức nhóm + chi phí hạ tầng free-tier/sinh viên trong giai đoạn Milestone A (300 MAU), không có vốn ngoài. Nếu slide cần kịch bản "có vốn", có thể đóng khung là giả thuyết gọi vốn hạt giống (seed) ở ranh giới Milestone A→B để trả chi phí hạ tầng/nâng gói provider (mục 5.3) trước khi có đủ user trả phí — **ghi rõ đây là kịch bản minh hoạ, nhóm chưa gọi vốn thật**.
+**Đã xác nhận (2026-07-13, đội)**: hiện tại vận hành **hoàn toàn free ở mức sinh viên** — không có bất kỳ khoản tài trợ/gọi vốn nào, toàn bộ hạ tầng/API đang chạy trên gói free. Slide nên trình bày trung thực đúng thực trạng này: **tự vận hành (bootstrap) 100% bằng công sức nhóm**, 0 vốn ngoài, trong giai đoạn Milestone A (300 MAU). Nếu slide cần kịch bản "có vốn" để minh hoạ hướng scale, có thể đóng khung là giả thuyết gọi vốn hạt giống (seed) ở ranh giới Milestone A→B để trả chi phí nâng gói provider (mục 5.3) khi cần — **ghi rõ đây là kịch bản minh hoạ, nhóm chưa gọi vốn thật và hiện không được tài trợ**.
 
 ## 8. Checklist các biến còn thiếu (tổng hợp CẦN ĐIỀN)
 
@@ -421,8 +421,11 @@ Vẫn còn ⏳ CẦN ĐIỀN, không suy ra được từ source code hay resear
 - [x] Xác nhận plan Birdeye/Zerion — **cả hai đều Free** (đội xác nhận 2026-07-13). Phát hiện quan trọng đi kèm: Birdeye limiter trong code (15 req/s) đang set sai so với free thật (1 req/s) — xem mục 4/5.3 để biết hành động cần làm.
 - [x] Verify endpoint Birdeye — **đã xong, không có rủi ro**. "Giới hạn 3 endpoint" là thông tin lỗi thời trên trang pricing; bảng accessibility mới nhất (hiệu lực 26-Nov-2025) cho free tier 20+ endpoint. Đồng thời verify lại mục 2.2 phát hiện Birdeye **không hề dùng ở Token Detail** (3 dòng holders/pools/pool-trades trong bảng gốc ghi nhầm Birdeye, thực ra là Mobula/CoinGecko) — 8 endpoint Birdeye thật sự dùng đều nằm trong free tier. Kết luận: chỉ cần sửa `util-birdeye.ts` về đúng 1 req/s, không cần nâng Lite (mục 4/5.3).
 - [x] Đối chiếu giá tier với mặt bằng đối thủ cạnh tranh thực tế — mục 7.2 (Nansen/Dune/LunarCrush Pro $49-69, CryptoQuant $29-99, Flipside team-tier $349). Kết luận: Lite $39 hợp lý, Plus/Pro cũ ($199/$499) nằm ngoài dải giá mọi đối thủ — đề xuất giảm còn $79/$149 ở mục 7.2.1. **Giá mới chưa áp dụng vào Stripe**, cần đội tự quyết và tự cập nhật billing nếu đồng ý.
-- [ ] Tỷ lệ trả phí (payer conversion) 8% ở mục 7.3 là giả định benchmark ngành, chưa có số đo thật của Yoca — cập nhật khi có dữ liệu Stripe/thanh toán thật.
-- [ ] Chi phí hạ tầng server/DB/nhân sự/marketing chưa được cộng vào P&L (mục 7.3) — cost model này chỉ giới hạn ở data/AI theo đúng phạm vi thầy yêu cầu.
+- [x] Tỷ lệ trả phí (payer conversion) 8% ở mục 7.3 — **đội xác nhận (2026-07-13): giữ nguyên giả định**, chưa có số đo thật của Yoca để thay.
+- [x] Chi phí hạ tầng server/DB/nhân sự/marketing — **đội xác nhận (2026-07-13): giữ đúng phạm vi data/AI**, không cộng dồn vào P&L mục 7.3.
+- [x] Nguồn vốn — **đội xác nhận (2026-07-13): vận hành 100% free mức sinh viên, không có tài trợ/gọi vốn nào** — mục 7.4 đã cập nhật đúng thực trạng.
+- [x] TTL wallet 1h + bug comment identity — **đội xác nhận (2026-07-13)**: TTL 1h và giá trị identity 6h/2h đều là chủ đích (tránh hết quota free tier), không phải cần tính lại; đồng ý thêm nút force-refresh thủ công thay vì rút ngắn TTL mặc định (mục 3.1, 3.4).
+- [x] Giá Plus/Pro đề xuất mới $79/$149 — **đội xác nhận đồng ý (2026-07-13)** (mục 7.2.1), còn thiếu bước áp dụng vào Stripe (ngoài phạm vi doc).
 - [ ] Nếu cần độ chính xác cao hơn cho breakeven AI in-house (mục 6.3): đo lại token in/out thật từ Gemini usage log thay vì giả định 1.000/300 token mỗi lượt gọi.
 
 ## 9. Verification khi hoàn tất
