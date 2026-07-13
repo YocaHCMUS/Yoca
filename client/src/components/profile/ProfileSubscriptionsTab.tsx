@@ -255,9 +255,10 @@ function SubscriptionsPanel({
     return (
         <div>
             {upgradeNotice && (
-                <div className={`${styles.notification} ${upgradeNotice.kind === "error" ? styles.notificationError : styles.notificationSuccess}`}>
+                <div className={`${styles.notification} ${upgradeNotice.kind === "error" ? styles.notificationError : styles.notificationSuccess}`} role="status">
                     <div className={styles.notificationContent}>
                         <span className={styles.notificationTitle}>{upgradeNotice.title}</span>
+                        {': '}
                         <span>{upgradeNotice.subtitle}</span>
                     </div>
                     <button
