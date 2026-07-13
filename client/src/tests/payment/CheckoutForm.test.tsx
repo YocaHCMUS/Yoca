@@ -73,6 +73,7 @@ const defaultProps = {
   tierName: "Plus Plan",
   tierPrice: "$29/mo",
   tierKey: "Plus" as const,
+  interval: "monthly" as const,
   activeMethod: "card" as const,
   onMethodChange: vi.fn(),
   onSuccess: vi.fn(),

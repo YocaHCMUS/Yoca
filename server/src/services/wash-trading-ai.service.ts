@@ -1,5 +1,8 @@
-import { GOOGLE_AI_KEY, WALLET_AUDIT_MODEL } from "@sv/config/constants.js";
+import { GOOGLE_AI_KEY, WALLET_AUDIT_MODEL, WASH_TRADING_VERDICT_TTL_MS } from "@sv/config/constants.js";
 import { GoogleGenAI } from "@google/genai";
+import { and, eq } from "drizzle-orm";
+import { db } from "@sv/db/index.js";
+import { washTradingVerdictCache, type WashTradingVerdictPersisted } from "@sv/db/schema.js";
 
 export type Timeframe = "1h" | "24h" | "7d" | "30d";
 export type GnnAlgorithm = "GCN" | "GAT" | "GraphSAGE";
@@ -966,6 +969,68 @@ function buildLocalAIAnalysis(
   };
 }
 
+async function readCachedVerdict(
+  mint: string,
+  timeframe: Timeframe,
+  algorithm: GnnAlgorithm,
+  language: WashTradingLanguage,
+): Promise<WashTradingAIResult["aiAnalysis"] | null> {
+  const threshold = new Date(Date.now() - WASH_TRADING_VERDICT_TTL_MS);
+  const rows = await db
+    .select()
+    .from(washTradingVerdictCache)
+    .where(
+      and(
+        eq(washTradingVerdictCache.mint, mint),
+        eq(washTradingVerdictCache.timeframe, timeframe),
+        eq(washTradingVerdictCache.algorithm, algorithm),
+        eq(washTradingVerdictCache.language, language),
+      ),
+    )
+    .limit(1);
+
+  if (rows.length === 0) return null;
+  const row = rows[0];
+  if (row.fetchedAt < threshold) return null;
+
+  return row.aiAnalysis as WashTradingAIResult["aiAnalysis"];
+}
+
+async function writeCachedVerdict(
+  mint: string,
+  timeframe: Timeframe,
+  algorithm: GnnAlgorithm,
+  language: WashTradingLanguage,
+  aiAnalysis: WashTradingAIResult["aiAnalysis"],
+): Promise<void> {
+  const fetchedAt = new Date();
+  const model = WALLET_AUDIT_MODEL || "gemini-2.5-flash";
+  await db
+    .insert(washTradingVerdictCache)
+    .values({
+      mint,
+      timeframe,
+      algorithm,
+      language,
+      aiAnalysis: aiAnalysis as WashTradingVerdictPersisted,
+      model,
+      fetchedAt,
+    })
+    .onConflictDoUpdate({
+      target: [
+        washTradingVerdictCache.mint,
+        washTradingVerdictCache.timeframe,
+        washTradingVerdictCache.algorithm,
+        washTradingVerdictCache.language,
+      ],
+      set: {
+        aiAnalysis: aiAnalysis as WashTradingVerdictPersisted,
+        model,
+        fetchedAt,
+      },
+    });
+}
+
 async function tryGeminiAnalysis(base: WashTradingAIResult["aiAnalysis"], params: {
   mint: string;
   symbol: string;
@@ -1150,19 +1215,29 @@ export async function analyzeWashTradingWithAI(params: {
 
   const localAI = buildLocalAIAnalysis(symbol, circularPatterns, suspiciousWallets, overallRiskScore, source, localizedReason, algorithm, language);
   addLog(language === "vi" ? "Tạo AI explanation cho kết quả phân tích" : "Generating AI explanation for analysis result", "info");
-  const aiAnalysis = params.generateNarrative === false
-    ? localAI
-    : await tryGeminiAnalysis(localAI, {
-      mint,
-      symbol,
-      summary,
-      circularPatterns,
-      suspiciousWallets,
-      dataSource: source,
-      dataSourceReason: localizedReason,
-      algorithm,
-      language,
-    });
+
+  let aiAnalysis: WashTradingAIResult["aiAnalysis"];
+  if (params.generateNarrative === false) {
+    aiAnalysis = localAI;
+  } else {
+    const cachedVerdict = await readCachedVerdict(mint, timeframe, algorithm, language);
+    if (cachedVerdict) {
+      aiAnalysis = cachedVerdict;
+    } else {
+      aiAnalysis = await tryGeminiAnalysis(localAI, {
+        mint,
+        symbol,
+        summary,
+        circularPatterns,
+        suspiciousWallets,
+        dataSource: source,
+        dataSourceReason: localizedReason,
+        algorithm,
+        language,
+      });
+      await writeCachedVerdict(mint, timeframe, algorithm, language, aiAnalysis);
+    }
+  }
   addLog(language === "vi"
     ? `Hoàn tất phân tích — Verdict: ${aiAnalysis.verdict}`
     : `Analysis completed — Verdict: ${aiAnalysis.verdict}`, aiAnalysis.verdict === "HIGH_RISK" ? "high" : aiAnalysis.verdict === "MEDIUM_RISK" ? "medium" : "success");

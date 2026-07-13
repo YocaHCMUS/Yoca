@@ -1120,6 +1120,44 @@ export type TokenPnlBreakdownPersisted = {
   maxTolerableLossPercent: number;
 };
 
+/**
+ * Wash-Trading AI verdict cache.
+ *
+ * Stores the Gemini-generated narrative (verdict/summary/findings/etc.) for
+ * a given (mint, timeframe, algorithm, language) combination so we don't pay
+ * the model cost on every request. The deterministic graph/GNN analysis
+ * (circularPatterns, suspiciousWallets, summary stats) is not cached here —
+ * only the narrative produced by tryGeminiAnalysis. Read path checks
+ * `fetchedAt >= now - WASH_TRADING_VERDICT_TTL_MS`.
+ */
+export const washTradingVerdictCache = pgTable(
+  "wash_trading_verdict_cache",
+  {
+    mint: varchar("mint", { length: 44 }).notNull(),
+    timeframe: varchar("timeframe", { length: 8 }).notNull(),
+    algorithm: varchar("algorithm", { length: 16 }).notNull(),
+    language: varchar("language", { length: 10 }).notNull(),
+    aiAnalysis: jsonb("ai_analysis").$type<WashTradingVerdictPersisted>().notNull(),
+    model: varchar("model", { length: 64 }).notNull(),
+    fetchedAt: timestamp("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.mint, t.timeframe, t.algorithm, t.language] })],
+);
+
+export type WashTradingVerdictPersisted = {
+  verdict: "HIGH_RISK" | "MEDIUM_RISK" | "LOW_RISK" | "CLEAN";
+  summary: string;
+  detailedFindings: string[];
+  suspiciousPatterns: Array<{
+    patternName: string;
+    description: string;
+    affectedWallets: string[];
+    severity: "HIGH" | "MEDIUM" | "LOW";
+  }>;
+  recommendation: string;
+  confidenceNote: string;
+};
+
 // --- News tables (Phase 1: news-fetching AI filter integration) ---
 export const newsBatches = pgTable("news_batches", {
   id: serial("id").primaryKey(),

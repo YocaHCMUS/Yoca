@@ -111,6 +111,7 @@ const walletOverviewPeriodSchema = z.enum([
 const walletOverviewQuerySchema = z.object({
   address: solanaBase58Schema,
   period: walletOverviewPeriodSchema.optional().default("24H"),
+  force: z.enum(["1", "true", "0", "false"]).optional(),
 });
 
 const walletTransactionQuerySchema = z.object({
@@ -164,6 +165,10 @@ const walletAuditQuerySchema = z.object({
   force: z.enum(["1", "true", "0", "false"]).optional(),
 });
 
+const walletPortfolioQuerySchema = addressSchema.extend({
+  force: z.enum(["1", "true", "0", "false"]).optional(),
+});
+
 class WalletAiDailyLimitError extends Error {
   constructor(readonly usage: AiUsageMetadata) {
     super("Wallet AI daily limit exceeded");
@@ -206,17 +211,19 @@ const app = new Hono()
   .route("/tags", walletTags)
   .get("/overview", validate("query", walletOverviewQuerySchema), async (c) => {
     try {
-      const { address, period } = c.req.valid("query");
-      const overview = await getWalletOverview(address, { timePeriod: period });
+      const { address, period, force: forceParam } = c.req.valid("query");
+      const force = forceParam == "1" || forceParam == "true";
+      const overview = await getWalletOverview(address, { timePeriod: period, force });
       return c.json(overview);
     } catch (e) {
       return serverErr(c, e);
     }
   })
-  .get("/portfolio", validate("query", addressSchema), async (c) => {
+  .get("/portfolio", validate("query", walletPortfolioQuerySchema), async (c) => {
     try {
-      const { address } = c.req.valid("query");
-      const portfolio = await getWalletPortfolio(address);
+      const { address, force: forceParam } = c.req.valid("query");
+      const force = forceParam == "1" || forceParam == "true";
+      const portfolio = await getWalletPortfolio(address, { force });
       return c.json(portfolio, statusCode.Ok);
     } catch (e) {
       console.error(e);

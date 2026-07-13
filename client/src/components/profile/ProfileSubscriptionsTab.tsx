@@ -411,9 +411,9 @@ function PaymentHistoryPanel({
         if (directPlan) return directPlan;
 
         const amountCents = (item.amountCents ?? item.amount ?? 0) as number;
-        if (amountCents === 3900) return "Lite";
-        if (amountCents === 19900) return "Plus";
-        if (amountCents === 49900) return "Pro";
+        if (amountCents === 3900 || amountCents === 39000) return "Lite";
+        if (amountCents === 7900 || amountCents === 79000) return "Plus";
+        if (amountCents === 14900 || amountCents === 149000) return "Pro";
 
         if (item.subscriptionId) {
             const mappedPlan = planBySubscriptionId.get(item.subscriptionId);
