@@ -33,15 +33,20 @@ const PRO_TIER = {
   accentColor: "#7C3AED" as const,
 };
 
-type FeatureEntry = { text: string; isNew?: boolean };
+type FeatureEntry = { text: string };
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 const pricingCardClass =
-  "flex h-full flex-col !p-7 lg:!p-8 !rounded-3xl border border-[var(--landing-card-border)] bg-[var(--landing-card-bg)] backdrop-blur-xl shadow-[var(--landing-card-shadow)] transition-all duration-300 hover:-translate-y-1 hover:border-[#7C3AED]/45 hover:shadow-[0_22px_70px_-44px_rgba(124,58,237,0.65)]";
+  "flex h-full flex-col !p-9 lg:!p-10 !rounded-3xl border border-[var(--landing-card-border)] bg-[var(--landing-card-bg)] backdrop-blur-xl shadow-[var(--landing-card-shadow)] transition-all duration-300 hover:-translate-y-1 hover:border-[#7C3AED]/45 hover:shadow-[0_22px_70px_-44px_rgba(124,58,237,0.65)]";
 
 const pricingCtaClass =
   "w-full min-h-11 py-3 !rounded-full text-xs font-bold uppercase tracking-[0.18em] bg-gradient-to-r from-[#7C3AED] to-[#2563EB] border border-transparent shadow-[0_10px_28px_-10px_rgba(124,58,237,0.7)] hover:from-[#8B5CF6] hover:to-[#3B82F6] hover:shadow-[0_14px_32px_-8px_rgba(124,58,237,0.85)] transition-all duration-300 text-white";
+
+// Softer, less saturated purple for repeated small accents (labels/icons) — the
+// full-strength #7C3AED is reserved for the CTA button and toggle so it reads
+// as emphasis rather than being smeared across every line.
+const pricingAccentSoft = "#A78BFA";
 
 function PricingFeatures({
   label,
@@ -53,8 +58,8 @@ function PricingFeatures({
   features: FeatureEntry[];
 }) {
   return (
-    <div className="space-y-4">
-      <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#7C3AED]">
+    <div className="space-y-7">
+      <p className="text-xs font-bold uppercase tracking-[0.16em]" style={{ color: pricingAccentSoft }}>
         {label}
       </p>
       {intro && (
@@ -62,24 +67,18 @@ function PricingFeatures({
           {intro}
         </p>
       )}
-      <ul className="space-y-3">
+      <ul className="space-y-8">
         {features.map((feature) => (
           <li
             key={feature.text}
-            className="flex items-start gap-2.5 text-sm leading-snug text-[var(--landing-muted)]"
+            className="flex items-start gap-3.5 text-sm leading-relaxed text-[var(--landing-muted)]"
           >
             <Check
-              className="mt-0.5 h-4 w-4 shrink-0 text-[#7C3AED]"
+              className="mt-0.5 h-4 w-4 shrink-0"
+              style={{ color: pricingAccentSoft }}
               aria-hidden="true"
             />
-            <span className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-2 gap-y-1">
-              <span>{feature.text}</span>
-              {feature.isNew && (
-                <span className="shrink-0 rounded-full bg-[#7C3AED] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                  New
-                </span>
-              )}
-            </span>
+            <span>{feature.text}</span>
           </li>
         ))}
       </ul>
@@ -107,8 +106,7 @@ export default function PricingPage() {
       | "pricing.features.walletAiAnalysis"
       | "pricing.features.washTradingAiAnalysis",
     count: number,
-    isNew = false,
-  ): FeatureEntry => ({ text: String(tr(key, { $count: count })), isNew });
+  ): FeatureEntry => ({ text: String(tr(key, { $count: count })) });
   const plainFeature = (key: "pricing.features.dailyReset"): FeatureEntry => ({
     text: String(tr(key)),
   });
@@ -155,8 +153,8 @@ export default function PricingPage() {
       aiFeature("pricing.features.generalAiChat", 50),
       aiFeature("pricing.features.tokenChartNewsSummary", 50),
       aiFeature("pricing.features.volatilitySummary", 50),
-      aiFeature("pricing.features.walletAiAnalysis", 50, true),
-      aiFeature("pricing.features.washTradingAiAnalysis", 50, true),
+      aiFeature("pricing.features.walletAiAnalysis", 50),
+      aiFeature("pricing.features.washTradingAiAnalysis", 50),
       plainFeature("pricing.features.dailyReset"),
     ],
   };
@@ -288,12 +286,12 @@ export default function PricingPage() {
         </div>
 
         {/* ── Monthly / Yearly toggle ── */}
-        <div className="relative z-10 mt-8 flex items-center justify-center gap-1 rounded-full border border-[var(--landing-card-border)] bg-[var(--landing-card-bg)] p-1.5">
+        <div className="relative z-10 mt-12 grid grid-cols-2 gap-1 rounded-full border border-[var(--landing-card-border)] bg-[var(--landing-card-bg)] p-1.5">
           <button
             type="button"
             onClick={() => setBillingInterval("monthly")}
-            className={`rounded-full px-5 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
-              billingInterval === "monthly" ? "bg-[#7C3AED] text-white" : "text-[var(--landing-muted)]"
+            className={`whitespace-nowrap rounded-full px-6 py-2.5 text-xs font-bold uppercase tracking-wide transition-all duration-200 active:scale-[0.97] ${
+              billingInterval === "monthly" ? "bg-[#7C3AED] text-white" : "text-[var(--landing-muted)] hover:text-[var(--landing-foreground)]"
             }`}
           >
             {tr("pricing.toggle.monthly")}
@@ -301,17 +299,13 @@ export default function PricingPage() {
           <button
             type="button"
             onClick={() => setBillingInterval("yearly")}
-            className={`flex items-center gap-2 rounded-full px-5 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
-              billingInterval === "yearly" ? "bg-[#7C3AED] text-white" : "text-[var(--landing-muted)]"
+            className={`whitespace-nowrap rounded-full px-6 py-2.5 text-xs font-bold uppercase tracking-wide transition-all duration-200 active:scale-[0.97] ${
+              billingInterval === "yearly" ? "bg-[#7C3AED] text-white" : "text-[var(--landing-muted)] hover:text-[var(--landing-foreground)]"
             }`}
           >
-            <span>{tr("pricing.toggle.yearly")}</span>
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold normal-case ${
-                billingInterval === "yearly" ? "bg-white/20 text-white" : "bg-[#7C3AED]/15 text-[#7C3AED]"
-              }`}
-            >
-              {tr("pricing.toggle.yearlyBadge")}
+            {tr("pricing.toggle.yearly")}{" "}
+            <span className={`normal-case font-semibold ${billingInterval === "yearly" ? "text-white/75" : "text-[var(--landing-muted)]/70"}`}>
+              ({tr("pricing.toggle.yearlyBadge")})
             </span>
           </button>
         </div>
@@ -322,7 +316,7 @@ export default function PricingPage() {
 
             {/* ── Card 1: Dynamic Lite / Standard ── */}
             <div className={pricingCardClass}>
-              <div className="flex flex-col flex-1 gap-6">
+              <div className="flex flex-col flex-1 gap-8">
 
                 {/* Tier name + price */}
                 <div className="space-y-3 pb-6 border-b border-[var(--landing-border)]">
@@ -403,7 +397,7 @@ export default function PricingPage() {
 
             {/* ── Card 2: Plus ── */}
             <div className={`${pricingCardClass} relative border-[#7C3AED]/35 shadow-[0_22px_70px_-48px_rgba(124,58,237,0.8)]`}>
-              <div className="flex flex-col flex-1 gap-6">
+              <div className="flex flex-col flex-1 gap-8">
                 {/* Tier name + price */}
                 <div className="space-y-3 pb-6 border-b border-[var(--landing-border)]">
                   <div className="flex items-center gap-2">
@@ -447,7 +441,7 @@ export default function PricingPage() {
 
             {/* ── Card 3: Pro ── */}
             <div className={`${pricingCardClass} relative`}>
-              <div className="flex flex-col flex-1 gap-6">
+              <div className="flex flex-col flex-1 gap-8">
                 {/* Tier name + price */}
                 <div className="space-y-3 pb-6 border-b border-[var(--landing-border)]">
                   <div className="flex items-center gap-2">
