@@ -112,9 +112,9 @@ Ghi chú quan trọng: hầu hết cache key theo **địa chỉ token/wallet**,
 ### 2.4 Cần verify thêm trước khi tính tiền chính thức
 
 - [x] Trace đầy đủ trang Wash-trading — xem hàng "Wash-trading" ở bảng 2.2. Phát hiện quan trọng: Gemini AI verdict không có cache nào (khác mọi feature AI khác trong app đều có DB cache 3-24h) — đề xuất bổ sung DB cache trước khi đưa wash-trading vào tính chi phí ở Nhóm 4/5.
-- [ ] Xác nhận trang Home/Landing (`MarketIntelligenceSection`, `LandingNewsSection`) chỉ tái dùng API đã cache ở Market/News, không có API riêng.
-- [ ] Xác nhận `transactions/raw/:txHash` thật sự không cache (đã grep không thấy `cache|TTL` trong `routes/transactions.ts`) — nếu traffic trang Transactions thấp có thể bỏ qua, nếu không phải thêm cache trước khi tính chi phí ở mức scale lớn.
-- [ ] Dọn/loại `COINMARKETCAP_*` khỏi `.env.example` nếu xác nhận dead code (không bắt buộc cho pricing model, nhưng nên note ở Nhóm 7 backlog).
+- [x] **Xác nhận (2026-07-13) — Home/Landing KHÔNG tái dùng API Market/News, mà hoàn toàn KHÔNG gọi API nào.** `MarketIntelligenceSection.tsx` vẽ chart từ mảng giá **hardcode cứng trong code** (`RANGE_DATA`, `MARKET_STATS` — số SOL/USD giả lập, không fetch); `LandingNewsSection.tsx` hiển thị 3 bài viết **hardcode cứng** (`posts` array, title/excerpt lấy từ i18n string tĩnh), link `href: "/market"` chỉ để điều hướng, không gọi API tại trang Home. → **Sửa lại kết luận bảng gốc**: Home/Landing có chi phí external API bằng **0** (không phải "tái dùng cache" như giả định ban đầu, vì không có lệnh gọi nào để tái dùng) — không cần thêm dòng chi phí nào cho Home ở Nhóm 4.
+- [x] **Xác nhận (2026-07-13) — `transactions/raw/:txHash` và `transactions/:txHash` đều không có cache.** Đã đọc toàn bộ `routes/transactions.ts` + service `transactions.ts`/`transactions.raw-parser.ts`: không có `cache|TTL` ở route lẫn service — mỗi lượt gọi đều fetch Helius mới (raw RPC hoặc Enhanced Tx). Giữ đúng kết luận bảng gốc (mục 2.2): nếu traffic trang Transactions thấp có thể bỏ qua trong pricing model hiện tại; nếu muốn scale lớn cần thêm cache theo `txHash` (giao dịch đã confirm không đổi nội dung, TTL có thể dài, ví dụ vĩnh viễn/24h+) trước khi tính chi phí ở mức MAU cao.
+- [x] **Xác nhận (2026-07-13) — COINMARKETCAP đã là dead code sạch, không cần dọn thêm.** `server/.env.example` và `client/.env.example` **đã không liệt kê** `COINMARKETCAP_API_BASE_URL`/`COINMARKETCAP_API_KEY` (không phải việc cần làm). Phần dead code còn sót nằm trong source: `server/src/util/util-coinmarketcap.ts` (không consumer nào import ngoài chính nó) và khai báo schema mặc định ở `server/src/middlewares/validation.ts:400-401`. Không bắt buộc xoá cho pricing model — để backlog kỹ thuật Nhóm 7 nếu đội muốn dọn dứt điểm (xoá `util-coinmarketcap.ts` + 2 dòng schema).
 
 ## 3. Nhóm 2 — Rà TTL trước khi tính số
 
@@ -426,7 +426,7 @@ Vẫn còn ⏳ CẦN ĐIỀN, không suy ra được từ source code hay resear
 - [x] Nguồn vốn — **đội xác nhận (2026-07-13): vận hành 100% free mức sinh viên, không có tài trợ/gọi vốn nào** — mục 7.4 đã cập nhật đúng thực trạng.
 - [x] TTL wallet 1h + bug comment identity — **đội xác nhận (2026-07-13)**: TTL 1h và giá trị identity 6h/2h đều là chủ đích (tránh hết quota free tier), không phải cần tính lại; đồng ý thêm nút force-refresh thủ công thay vì rút ngắn TTL mặc định (mục 3.1, 3.4).
 - [x] Giá Plus/Pro đề xuất mới $79/$149 — **đội xác nhận đồng ý (2026-07-13)** (mục 7.2.1), còn thiếu bước áp dụng vào Stripe (ngoài phạm vi doc).
-- [ ] Nếu cần độ chính xác cao hơn cho breakeven AI in-house (mục 6.3): đo lại token in/out thật từ Gemini usage log thay vì giả định 1.000/300 token mỗi lượt gọi.
+- [x] Breakeven AI in-house (mục 6.3) — **đội xác nhận (2026-07-13): giữ giả định 1.000/300 token mỗi lượt gọi**, không chắc đo được log thật nên không đổi sang số đo thật.
 
 ## 9. Verification khi hoàn tất
 
