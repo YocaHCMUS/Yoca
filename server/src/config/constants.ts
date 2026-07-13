@@ -61,8 +61,8 @@ export const WALLET_SWAP_HISTORY_LATEST_TOLERANCE_MS = 60 * 60 * 1000;
 export const WALLET_TRANSFER_HISTORY_TRANSACTIONS_MAX_COUNT = 500;
 export const WALLET_TRANSFER_HISTORY_LATEST_TOLERANCE_MS = 60 * 60 * 1000;
 export const WALLET_EXCHANGE_COUNTS_TTL_MS = 60 * 60 * 1000; // 1 hour
-export const WALLET_IDENTITY_KNOWN_TTL_MS = 6 * 60 * 60 * 1000; // 72 hours
-export const WALLET_IDENTITY_UNKNOWN_TTL_MS = 2 * 60 * 60 * 1000; // 24 hours
+export const WALLET_IDENTITY_KNOWN_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+export const WALLET_IDENTITY_UNKNOWN_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 export const WALLET_WINRATE_24H_TTL_MS = 6 * 60 * 60 * 1000;
 export const WALLET_WINRATE_7D_TTL_MS = 12 * 60 * 60 * 1000;
@@ -85,6 +85,10 @@ export const WALLET_AUDIT_TX_SAMPLE_SIZE = 30;
 /** Gemini model id used by the AI Wallet Forensic Auditor. Override with GEMINI_AUDIT_MODEL. */
 export const WALLET_AUDIT_MODEL =
   process.env.GEMINI_AUDIT_MODEL?.trim() || "gemini-2.5-flash";
+
+// AI Wash-Trading verdict cache — shorter than wallet audit's 24h since
+// wash-trading signal should reflect recent transfer activity, not stale data.
+export const WASH_TRADING_VERDICT_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 export const GOOGLE_AI_KEY = env.GOOGLE_AI_KEY?.trim();
 

@@ -428,8 +428,40 @@ Vẫn còn ⏳ CẦN ĐIỀN, không suy ra được từ source code hay resear
 - [x] Giá Plus/Pro đề xuất mới $79/$149 — **đội xác nhận đồng ý (2026-07-13)** (mục 7.2.1), còn thiếu bước áp dụng vào Stripe (ngoài phạm vi doc).
 - [x] Breakeven AI in-house (mục 6.3) — **đội xác nhận (2026-07-13): giữ giả định 1.000/300 token mỗi lượt gọi**, không chắc đo được log thật nên không đổi sang số đo thật.
 
-## 9. Verification khi hoàn tất
+## 9. Note dựng slide (outline, chưa phải slide thật)
 
-- Đối chiếu lại mọi số trong bảng TTL/provider với source thật trước khi đưa vào slide (không copy số từ tài liệu này mà không grep lại nếu code đã đổi).
-- Không đưa số chi phí/lợi nhuận vào slide nếu dòng tương ứng trong mục 8 vẫn còn ⏳ CẦN ĐIỀN.
-- Cross-check bảng tier cuối cùng với `subscription-entitlements.service.ts` và `ai-usage.service.ts` để đảm bảo slide khớp code thật, không tạo tier/quyền hạn không tồn tại.
+Ghi lại 2026-07-13 để bạn kia dựng slide PowerPoint/Google Slides thật mà không cần đọc lại toàn bộ doc để tự tổng hợp. Mỗi gạch đầu dòng trỏ đúng mục/số đã có sẵn ở trên — **không bịa số mới khi dựng slide**, nếu cần số nào không có ở đây thì quay lại đúng mục nguồn.
+
+1. **Vấn đề / phản biện của thầy** — 4 gạch đầu dòng từ mục 0: thiếu toggle tháng/năm, tier lặp lại full feature list, thiếu slide business model rõ nguồn vốn/dòng tiền/lợi nhuận giả định, thiếu giả thuyết AI in-house.
+2. **Bản đồ chi phí + provider đang dùng** — bảng provider mục 2.3 (CoinGecko/Birdeye/Helius/Moralis/Mobula/Zerion/Gemini/Brave), kết luận chính: CoinGecko + Mobula tải nặng nhất thật sự, Birdeye gần như không dùng ở Token Detail (mục 2.2).
+3. **TTL & đòn bẩy provider** — kết luận mục 3.4 (giữ phần lớn TTL, 2 việc thật đã làm: sửa comment TTL + thêm cache wash-trading) + bảng rate limit/giá gói mục 4 (chỉ 3 provider cần trả phí ở mốc cao nhất: Helius/Mobula/CoinGecko, Birdeye vẫn free).
+4. **3 mốc MAU + chi phí** — bảng 5.5 (300/3.000/30.000 MAU → $3/$112/$498 mỗi tháng), nhấn mạnh đây là traffic **giả định minh hoạ**, không phải số đo thật (ghi rõ trên slide).
+5. **AI in-house hypothesis + breakeven** — mục 6.1-6.3: model ứng viên (Qwen3-8B/DeepSeek-R1-Distill/Llama-3.3-70B), so sánh chi phí host, kết luận breakeven ~1,3-4,5 triệu lượt gọi/tháng (cao hơn quy mô hiện tại 15-50 lần) — khung trả lời câu hỏi của thầy, không phải cam kết migrate.
+6. **Bảng tier tháng/năm** — bảng 7.1 (diff-only), giá đã chốt: Free 0đ / Lite 999k / Plus 1.99tr / Pro 3.99tr mỗi tháng, toggle năm = 10× tháng. Kèm căn cứ đối thủ mục 7.2 (Nansen/Dune/LunarCrush/CryptoQuant).
+7. **P&L 3 mốc + nguồn vốn** — bảng 7.3 (lợi nhuận gộp data/AI theo 3 mốc MAU), kèm 2 lưu ý bắt buộc không được bỏ (chỉ là lợi nhuận gộp, chưa trừ hạ tầng/nhân sự/marketing — mục 7.3) + mục 7.4 (vận hành 100% free mức sinh viên, không tài trợ, kịch bản seed chỉ là minh hoạ).
+8. **Lưu ý / giới hạn phạm vi** — slide cuối liệt kê rõ: traffic là giả định, payer conversion 8% là giả định benchmark ngành, phạm vi P&L chỉ tính data/AI — tránh bị hỏi lại "số này lấy từ đâu" mà không có câu trả lời.
+
+## 10. Verification khi hoàn tất
+
+- [x] Đối chiếu lại bảng TTL/comment bug với source thật — **đã sửa xong** `WALLET_IDENTITY_KNOWN_TTL_MS`/`WALLET_IDENTITY_UNKNOWN_TTL_MS` comment tại `constants.ts:64-65` (nay ghi đúng 6h/2h).
+- [x] Cross-check bảng tier + quota AI (mục 7.1) với `subscription-entitlements.service.ts` và `ai-usage.service.ts` — **khớp 100%** (Free 5/5/10/5, Lite 20/20/25/20, Plus 50/50/50/50 + mở khoá Wallet AI Analysis/Wash Trading AI, Pro 100/100/100/100 — đúng `AI_DAILY_LIMITS` dòng 22-59 của `ai-usage.service.ts`).
+- [x] Không đưa số chi phí/lợi nhuận vào slide nếu dòng tương ứng trong mục 8 còn ⏳ CẦN ĐIỀN — **mục 8 nay đã 100% `[x]`**, không còn ràng buộc này.
+- Không cần verify lại toàn bộ bảng provider (đã làm 2 lần trong phiên nghiên cứu, không có thay đổi code liên quan từ đó tới giờ).
+
+### Code đã sửa trong phiên 2026-07-13 (Phần A của mục 8)
+
+- `server/src/config/constants.ts:64-65` — sửa comment TTL sai (72h/24h → đúng 6h/2h), không đổi giá trị số.
+- `server/.env` — cập nhật `STRIPE_PRICE_PLUS`/`STRIPE_PRICE_PRO` sang 2 price ID mới khớp giá đề xuất ở mục 7.2.1.
+- `server/src/db/schema.ts`, `server/src/config/constants.ts`, `server/src/services/wash-trading-ai.service.ts` — thêm DB cache `wash_trading_verdict_cache` (key mint+timeframe+algorithm+language, TTL 4h) cho Gemini verdict wash-trading — vá cost leak nêu ở mục 2.2/3.4. Đã `db:push` bảng mới lên DB thật, đã verify tồn tại.
+- `server/src/routes/wallets.ts`, `server/src/services/wallet/walletOverview.service.ts`, `server/src/services/wallet/walletPortfolio.service.ts`, `server/src/services/wallet/dtos/walletDataObjects.ts` — thêm `?force=1` bypass-cache cho `GET /wallets/overview` và `GET /wallets/portfolio` (pattern giống wallet audit). **Không** áp dụng cho `wallets/swaps/history`/`wallets/transfers/history` (cơ chế cache coverage-window khác hẳn, ngoài phạm vi).
+- **Không sửa** Birdeye limiter (`util-birdeye.ts:92-98`) — đội quyết định không cần, giữ nguyên 15 req/s.
+- `npx tsc --noEmit` sau toàn bộ thay đổi: 0 lỗi.
+- Lưu ý phụ: `db:push` khi chạy còn đồng bộ luôn vài drift cũ giữa DB thật và `schema.ts` (thêm cột `alert_history`, FK `helius_webhook_addresses`, reorder PK vài bảng cache) — đều là thay đổi additive có sẵn trong code từ trước, không phải do phiên này gây ra, không mất dữ liệu.
+
+### Sự cố migration khi thêm bảng wash-trading (đã xử lý, ghi lại để lưu ý về sau)
+
+- `server/postgresdb/migrations/` bị `.gitignore` loại phần lớn file (chỉ track `0007`, `0009`, `meta/_journal.json`) — local checkout thiếu snapshot lịch sử `0000-0006`, `0008`.
+- Vì vậy `npm run db:generate` (theo đúng quy trình generate+migrate ở A3 bước 5 ban đầu) sinh ra migration `0010_lucky_gunslinger.sql` **sai** — không chỉ thêm bảng mới mà `CREATE TABLE`/`CREATE TYPE` dump lại **toàn bộ schema**, vì local `meta` snapshot không biết các bảng đã tồn tại thật trên Supabase. Nếu chạy `db:migrate` với file này sẽ lỗi hàng loạt (trùng bảng) trên DB thật.
+- Đã phát hiện trước khi chạy `db:migrate`, xoá file migration + snapshot sai, revert `meta/_journal.json` về đúng bản git gốc (`git checkout --`) — không có gì bị áp vào DB từ bước này.
+- Hỏi lại user, chuyển hướng dùng `npm run db:push-force` (script có sẵn, introspect trực tiếp DB thật thay vì dựa vào local migration history) — an toàn hơn cho tình huống này.
+- **Kết luận cho lần sau**: ở repo này, `db:generate` + `db:migrate` **không đáng tin** cho việc thêm bảng mới do local migration history không đầy đủ. Dùng `db:push` (hoặc `db:push-force` nếu cần bỏ qua prompt tương tác) để thay đổi schema thật — nhưng lưu ý lệnh này diff **toàn bộ** `schema.ts` với DB, có thể kéo theo cả các thay đổi/drift khác chưa liên quan đến việc đang làm (như đã xảy ra ở trên) — nên review kỹ output trước khi tin là chỉ có 1 thay đổi.

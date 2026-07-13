@@ -2,10 +2,9 @@ import { buildActivitySnapshotFromProviders, buildHoldingsSnapshotFromProviders,
 import type { WalletOverview, WalletOverviewPeriodKey, WalletOverviewQueryOptions } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { saveOverviewCache } from "@sv/services/wallet/db/walletDataCacher.js";
 
-export async function getWalletOverview(address: string, _query?: WalletOverviewQueryOptions): Promise<WalletOverview> {
-    void _query;
+export async function getWalletOverview(address: string, query?: WalletOverviewQueryOptions): Promise<WalletOverview> {
     const cacheRow = await getLatestOverviewCacheRow(address);
-    const cachedOverview = getOverviewFromFreshCache(cacheRow, address);
+    const cachedOverview = query?.force ? null : getOverviewFromFreshCache(cacheRow, address);
     if (cachedOverview) {
         console.log("[wallet-overview]", {
             address,

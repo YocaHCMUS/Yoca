@@ -229,6 +229,7 @@ export type WalletRangeOptions = {
 export type WalletOverviewQueryOptions = {
     // Kept for backward source compatibility. Overview now returns all periods.
     timePeriod?: WalletOverviewTimePeriod;
+    force?: boolean;
 };
 
 export type WalletHistoryQueryOptions = WalletCursorOptions & WalletRangeOptions;

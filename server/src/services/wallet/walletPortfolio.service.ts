@@ -71,6 +71,7 @@ async function syncPortfolioTokenMeta(portfolio: WalletPortfolioItem[]) {
 
 export async function getWalletPortfolio(
   address: string,
+  options?: { force?: boolean },
 ): Promise<WalletPortfolioItem[]> {
   // 0) DB-first: use cached portfolio if fresh
   const portfolioThreshold = new Date(Date.now() - WALLET_PORTFOLIO_TTL_MS);
@@ -86,6 +87,7 @@ export async function getWalletPortfolio(
     ? cachedDataResult.data
     : [];
   if (
+    !options?.force &&
     cachedPortfolio.length > 0 &&
     cachedDataResult.success &&
     cachedPortfolio[0].fetchedAt >= portfolioThreshold
