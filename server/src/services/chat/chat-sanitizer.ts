@@ -63,7 +63,7 @@ export function sanitizeResponse(raw: string): {
 } {
   const parsed = extractJsonObject(raw) as Record<string, unknown> | null;
   if (!parsed) {
-    return { rawText: raw, text: "", charts: [], tables: [], actions: [] };
+    return { rawText: raw, text: raw, charts: [], tables: [], actions: [] };
   }
 
   const text = sanitizeText((parsed.text as string) ?? "");
@@ -172,12 +172,7 @@ export function sanitizeResponse(raw: string): {
           if (valid.length === parts.length) return _m;
           return `<cite ids="${valid.join(",")}">${content}</cite>`;
         })
-    : text
-        .replace(/\[(\d+(?:\s*,\s*\d+)*)\]/g, "")
-        .replace(
-          /<cite\s+ids="[^"]+"\s*>((?:(?!<\/cite>)[\s\S])*?)<\/cite>/g,
-          "$1",
-        );
+    : text;
 
   return { rawText: raw, text: cleanedText, charts, tables, actions, sources, tldr, sections, warnings, confidence };
 }

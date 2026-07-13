@@ -298,4 +298,3 @@ export const TokenPerformanceTable: React.FC<TokenPerformanceTableProps> = ({
     </TableWrapper>
   );
 };
-

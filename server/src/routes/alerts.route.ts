@@ -10,11 +10,6 @@ import {
   listActiveAlertRules,
 } from "@sv/services/alertRules.service.js";
 import {
-  listAlertHistory,
-  markAllAlertHistoryRead,
-  setAlertHistoryReadState,
-} from "@sv/services/alertHistory.service.js";
-import {
   addFollowedWallet,
   getUserAlertSettings,
   isUniqueViolation,
@@ -32,15 +27,6 @@ import { z } from "zod";
 const followWalletBodySchema = z.object({
   address: solanaBase58Schema,
   label: z.string().trim().max(120).optional().nullable(),
-});
-
-const alertHistoryQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-});
-
-const alertHistoryReadSchema = z.object({
-  read: z.boolean(),
 });
 
 const settingsPatchSchema = z.preprocess(
@@ -167,62 +153,6 @@ async function runHeliusAlertSync() {
 }
 
 const app = new Hono()
-  .get(
-    "/history",
-    honoJwt,
-    userExtract,
-    validate("query", alertHistoryQuerySchema),
-    async (c) => {
-      const { id: userId } = c.get("userPayload");
-      const { page, limit } = c.req.valid("query");
-      try {
-        return c.json(
-          await listAlertHistory(userId, page, limit),
-          statusCode.Ok,
-        );
-      } catch (err) {
-        console.error("[alerts] GET /history failed:", err);
-        return c.json({ error: "Failed to load alert history" }, 500);
-      }
-    },
-  )
-  .patch(
-    "/history/:historyId/read",
-    honoJwt,
-    userExtract,
-    validate("json", alertHistoryReadSchema),
-    async (c) => {
-      const { id: userId } = c.get("userPayload");
-      const historyId = c.req.param("historyId");
-      if (!z.string().uuid().safeParse(historyId).success) {
-        return c.json({ error: "Invalid history id" }, 400);
-      }
-      try {
-        const updated = await setAlertHistoryReadState(
-          userId,
-          historyId,
-          c.req.valid("json").read,
-        );
-        if (!updated) {
-          return c.json({ error: "Alert history not found" }, 404);
-        }
-        return c.json(updated, statusCode.Ok);
-      } catch (err) {
-        console.error("[alerts] PATCH /history/:historyId/read failed:", err);
-        return c.json({ error: "Failed to update alert history" }, 500);
-      }
-    },
-  )
-  .patch("/history/read-all", honoJwt, userExtract, async (c) => {
-    const { id: userId } = c.get("userPayload");
-    try {
-      const updated = await markAllAlertHistoryRead(userId);
-      return c.json({ updatedCount: updated.length }, statusCode.Ok);
-    } catch (err) {
-      console.error("[alerts] PATCH /history/read-all failed:", err);
-      return c.json({ error: "Failed to update alert history" }, 500);
-    }
-  })
   // ── Advanced alert rules (predicate filtering on webhook) ──────
   .get("/rules", honoJwt, userExtract, async (c) => {
     const { id: userId } = c.get("userPayload");

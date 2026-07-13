@@ -37,6 +37,7 @@ function mapPlanTierToAccountTier(planTier: EffectivePlanTier): ProfileAccountTi
 export function ProfilePortfolioTab({
   linkedWallets,
   period,
+  onPeriodChange,
 }: ProfilePortfolioTabProps) {
     const { tr, fmt } = useLocalization();
     const navigate = useNavigate();
@@ -274,6 +275,7 @@ export function ProfilePortfolioTab({
                   publicKey,
                   signMessage,
                   onSuccess: resolveSuccess,
+                  onError: resolveError,
                 }) => {
                   const challenge = await requestLinkWalletChallenge(publicKey);
                   const messageBytes = new TextEncoder().encode(

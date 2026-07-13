@@ -76,26 +76,6 @@ export type WalletTransferHistoryFilters = {
   sortDirection?: WalletHistorySortDirection;
 };
 
-type WalletHistorySortDirection = "asc" | "desc";
-
-export type WalletSwapHistoryFilters = {
-  search?: string;
-  boughtTokenAddress?: string;
-  soldTokenAddress?: string;
-  sortBy?: "time" | "value";
-  sortDirection?: WalletHistorySortDirection;
-};
-
-export type WalletTransferHistoryFilters = {
-  search?: string;
-  direction?: "send" | "receive";
-  counterpartyAddress?: string;
-  minTokenAmount?: number;
-  maxTokenAmount?: number;
-  sortBy?: "time" | "value";
-  sortDirection?: WalletHistorySortDirection;
-};
-
 function normalizeTxLimit(reqLimit: number, maxLimit: number): number {
   if (!Number.isFinite(reqLimit)) return maxLimit;
   return Math.min(Math.max(Math.trunc(reqLimit), 1), maxLimit);
