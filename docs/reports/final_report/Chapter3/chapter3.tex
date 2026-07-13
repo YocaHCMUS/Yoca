@@ -43,7 +43,7 @@ Trong không gian cá nhân, người dùng có thể lưu token và ví vào wa
 
 Người dùng đã đăng ký cần có khả năng tạo, xem, chỉnh sửa trạng thái và xóa cảnh báo token hoặc cảnh báo hoạt động giao dịch. Một cảnh báo gồm đối tượng theo dõi, điều kiện, thời hạn và kênh nhận được hệ thống hỗ trợ. Với cảnh báo ví, webhook có thể được dùng để tiếp nhận hoạt động mới mà không cần truy vấn liên tục.
 
-Phạm vi hiện tại tập trung vào cấu hình quy tắc, tiếp nhận sự kiện và gửi thông báo theo điều kiện. Lịch sử thông báo hoàn chỉnh, trạng thái đã đọc và cơ chế chống gửi trùng ở mọi trường hợp chưa được xem là yêu cầu đã hoàn tất; các nội dung này được giữ trong hướng mở rộng thay vì được mô tả như kết quả sẵn có.
+Yêu cầu này bao gồm cả việc lưu lại lịch sử thông báo theo tài khoản, đánh dấu trạng thái đã đọc/chưa đọc và cơ chế chống gửi trùng khi webhook gửi lại cùng một sự kiện; đây không phải các mục tùy chọn mà là điều kiện để tính năng cảnh báo đáng tin cậy trong sử dụng thực tế. Mức độ hoàn thiện thật của các yêu cầu này được trình bày ở chương Triển khai, kiểm thử và đánh giá.
 
 \subsection{AI và giới hạn sử dụng}
 
