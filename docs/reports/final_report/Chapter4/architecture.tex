@@ -5,16 +5,18 @@ Chương này trình bày cách nhóm chúng em tổ chức Yoca từ giao diệ
 
 \section{Kiến trúc tổng thể}
 
-Yoca là một ứng dụng web full-stack được quản lý trong cùng một monorepo. Phía người dùng sử dụng React và Vite; phía máy chủ là một ứng dụng Hono chạy trên Node.js; dữ liệu có cấu trúc và cache bền vững được lưu trong PostgreSQL thông qua Drizzle ORM. Backend được triển khai như một monolith, nhưng mã nguồn được chia theo miền như token, pool, wallet, người dùng, cảnh báo, thanh toán và AI. Cách tổ chức này vừa đủ nhẹ cho quy mô nhóm, đồng thời tránh chi phí vận hành nhiều dịch vụ độc lập khi các chức năng vẫn chia sẻ lược đồ và dữ liệu.
+Yoca là một ứng dụng web full-stack được quản lý trong cùng một monorepo. Phía người dùng sử dụng React và Vite; phía máy chủ là một ứng dụng Hono chạy trên Node.js, giao tiếp với client qua cả HTTPS lẫn WebSocket; dữ liệu có cấu trúc và cache bền vững được lưu trong PostgreSQL thông qua Drizzle ORM. Backend được triển khai như một monolith, nhưng mã nguồn được chia theo miền như token, pool, wallet, người dùng, cảnh báo, thanh toán và AI. Cách tổ chức này vừa đủ nhẹ cho quy mô nhóm, đồng thời tránh chi phí vận hành nhiều dịch vụ độc lập khi các chức năng vẫn chia sẻ lược đồ và dữ liệu.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth]{Chapter4/system-architecture.pdf}
-    \caption{Kiến trúc tổng thể của hệ thống Yoca}
+    \includegraphics[width=\textwidth]{images/arch.png}
+    \caption{Kiến trúc tổng thể của hệ thống Yoca: backend là điểm trung chuyển duy nhất giữa client và sáu nhóm phụ thuộc ngoài, cùng DevOps là quan hệ triển khai chứ không phải một lệnh gọi runtime}
     \label{fig:system-architecture}
 \end{figure}
 
-Giao diện không gọi trực tiếp API của các nhà cung cấp. Mọi yêu cầu đi qua backend để xác thực, kiểm tra dữ liệu đã lưu, gọi nguồn bên ngoài khi cần và chuyển phản hồi về mô hình nội bộ. Ranh giới này đặc biệt quan trọng vì các provider không chỉ khác tên trường mà còn khác cách biểu diễn token, thời gian, giá trị rỗng và phạm vi lịch sử. Nếu để từng màn hình tự xử lý những khác biệt đó, thay đổi từ một provider sẽ lan sang nhiều thành phần giao diện.
+Backend đóng vai trò trung chuyển duy nhất: giao diện không gọi trực tiếp API của bất kỳ nhà cung cấp nào. Sáu nhóm phụ thuộc ngoài được backend gọi tới khi cần gồm dữ liệu blockchain/thị trường (CoinGecko, Birdeye, Mobula, Zerion, Helius và Moralis, mỗi provider phụ trách một tập miền như đã trình bày ở phần tích hợp nguồn dữ liệu), AI (Gemini), lớp dữ liệu (PostgreSQL qua Drizzle), thanh toán (Stripe), cảnh báo/thông báo (Helius webhook làm nguồn sự kiện, gửi qua Resend và Discord) và tin tức/enrichment (RSS tổng hợp và Brave News). Khối DevOps ở ngoài ranh giới \emph{Application} thể hiện quan hệ build/deploy (GitHub Actions và Render) chứ không phải một cuộc gọi runtime từ backend, khác về bản chất so với sáu nhóm còn lại.
+
+Ranh giới trung chuyển này đặc biệt quan trọng vì các provider không chỉ khác tên trường mà còn khác cách biểu diễn token, thời gian, giá trị rỗng và phạm vi lịch sử. Nếu để từng màn hình tự xử lý những khác biệt đó, thay đổi từ một provider sẽ lan sang nhiều thành phần giao diện.
 
 Đây là kiến trúc phân lớp theo trách nhiệm, không phải sự phân tách tuyệt đối. Trong mã nguồn còn tồn tại cả cấu trúc \texttt{routes/services} cũ và một số module mới được gom theo miền. Nhóm chúng em xem đây là kết quả của cách nâng cấp tăng dần: chức năng mới được hoàn thiện và thay thế luồng cũ, sau đó phần không còn được sử dụng mới được loại bỏ. Cách làm này giúp hệ thống tiếp tục hoạt động trong lúc dữ liệu và yêu cầu thay đổi, nhưng cũng tạo ra khoản nợ cần tiếp tục đồng nhất hóa sau đồ án.
 
