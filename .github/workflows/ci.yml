@@ -88,7 +88,8 @@ jobs:
         run: |
           echo "owner=${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
 
-      - uses: docker/build-push-action@v6
+      - name: Build and push server image
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: server/Dockerfile
@@ -99,7 +100,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - uses: docker/build-push-action@v6
+      - name: Build and push client image
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: client/Dockerfile
