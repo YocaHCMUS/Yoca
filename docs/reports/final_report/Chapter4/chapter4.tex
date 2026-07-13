@@ -51,7 +51,7 @@ Mã nguồn vẫn được giữ trong một monorepo nhưng được triển kh
 
 Sau khi các cổng CI đạt, hai deploy hook bí mật được dùng để yêu cầu Render build revision mới cho Static Site và Web Service. Client chỉ nhận các biến \texttt{VITE\_} công khai tại build time; API key, JWT/Stripe secret và chuỗi kết nối database chỉ được cấu hình cho Web Service. PostgreSQL được lưu trên Supabase Free; trong môi trường demo có thể tạo lại, schema Drizzle được đồng bộ bằng quy trình \texttt{db:reset} thay vì duy trì dữ liệu cũ qua migration. Thao tác này không được dùng trên database cần bảo toàn dữ liệu.
 
-Sau triển khai, nhóm kiểm tra endpoint \texttt{/api}, CORS giữa hai domain, SPA rewrite của Static Site và hành trình Market Overview -- Token Pool -- Token Overview -- Wallet -- User -- AI. Các callback Google/Stripe, Helius webhook, Alert History và kết nối Supabase cần smoke test bằng cấu hình thật. Free tier có thể tạo cold start hoặc giới hạn tài nguyên, nên báo cáo không xem thời gian phản hồi của lần gọi đầu tiên là một SLA ổn định và không tuyên bố có rollback hay monitoring tự động khi chưa có bằng chứng vận hành.
+Sau triển khai, nhóm kiểm tra endpoint \texttt{/api}, CORS giữa hai domain, SPA rewrite của Static Site và hành trình Market Overview -- Token Pool -- Token Overview -- Wallet -- User -- AI. Free tier có thể tạo cold start hoặc giới hạn tài nguyên, nên báo cáo không xem thời gian phản hồi của lần gọi đầu tiên là một SLA ổn định và không tuyên bố có rollback hay monitoring tự động ngoài phạm vi Render cung cấp sẵn.
 
 \begin{figure}[H]
     \centering
@@ -60,7 +60,21 @@ Sau triển khai, nhóm kiểm tra endpoint \texttt{/api}, CORS giữa hai domai
     \label{fig:github-actions-ci}
 \end{figure}
 
-Job \texttt{deploy} thành công có nghĩa hai lệnh gọi deploy hook đã được gửi và Render đã nhận yêu cầu; đây là bằng chứng cho bước liên kết CI--Render đã chạy thật trên \texttt{main}, không chỉ là kiến trúc dự kiến. Báo cáo chưa đính kèm ảnh chụp trực tiếp trạng thái build hoàn tất trên Render dashboard cho cả hai service; nhóm xem đây là phần bằng chứng còn thiếu và sẽ bổ sung nếu chụp được trước khi nộp.
+Job \texttt{deploy} gọi hai deploy hook của Render; Hình~\ref{fig:render-deployment-frontend} và Hình~\ref{fig:render-deployment-backend} xác nhận cả hai service đã build xong và đang ở trạng thái Live. Yoca hiện chạy thật trên tên miền \texttt{yoca.id.vn}: Static Site \texttt{yoca-frontend} phục vụ giao diện tại địa chỉ này, Web Service \texttt{yoca-backend} phục vụ API tại \texttt{yoca-backend.onrender.com} và đã ghi nhận các request \texttt{GET /api} trả về 200 trong log thời gian thực.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/chapter5/render-deployment-frontend.jpg}
+    \caption{Render Static Site \texttt{yoca-frontend} ở trạng thái Live, phục vụ tại tên miền \texttt{yoca.id.vn}}
+    \label{fig:render-deployment-frontend}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/chapter5/render-deployment-backend.jpg}
+    \caption{Render Web Service \texttt{yoca-backend} ở trạng thái Live tại \texttt{yoca-backend.onrender.com}, log cho thấy các request \texttt{GET /api} thật trả về 200}
+    \label{fig:render-deployment-backend}
+\end{figure}
 
 
 \section{Kết quả triển khai các chức năng cốt lõi}

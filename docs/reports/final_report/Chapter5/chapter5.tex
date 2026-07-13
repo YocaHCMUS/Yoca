@@ -25,7 +25,7 @@ Kết quả phân tích tài chính cũng có giới hạn về độ phủ. Tok
 
 Giao diện hiện chưa có một design system được áp dụng trọn vẹn. Carbon, SCSS module, utility class và component tự xây vẫn cùng tồn tại. Landing, Market và Wallet đã được đổi mới nhiều hơn, trong khi một số component Token/Pool còn style và behavior cũ. Localization cũng còn chuỗi hard-code. Vấn đề này liên quan đến component contract, accessibility và trạng thái loading/error/empty, không chỉ là màu sắc.
 
-Phạm vi kiểm thử và vận hành chưa đủ để khẳng định hệ thống ổn định ở quy mô lớn, dù lần chạy ngày 12/07/2026 đã đạt 178/178 test phía client và 204/204 test phía server. Hệ thống chưa có E2E đầy đủ, load test, benchmark cache trên PostgreSQL thật hoặc staging ổn định. GitHub Actions đã được cấu hình cho các bước kiểm tra liên tục, còn deployment Render vẫn cần được xác minh trên môi trường thật. Alert History đã được nối với delivery Helius, có ownership API, read state và khóa chống trùng; phần còn lại là reset database demo, smoke test delivery và chụp bằng chứng giao diện.
+Phạm vi kiểm thử và vận hành chưa đủ để khẳng định hệ thống ổn định ở quy mô lớn, dù lần chạy ngày 12/07/2026 đã đạt 178/178 test phía client và 204/204 test phía server. Hệ thống chưa có E2E đầy đủ, load test, benchmark cache trên PostgreSQL thật hoặc staging ổn định. GitHub Actions đã cấu hình các bước kiểm tra liên tục và job \texttt{deploy} đã chạy thật trên \texttt{main}, đưa cả Static Site lẫn Web Service lên trạng thái Live tại tên miền \texttt{yoca.id.vn}. Alert History đã được nối với delivery Helius, có ownership API, read state và khóa chống trùng; phần còn lại là reset database demo, smoke test delivery và chụp bằng chứng giao diện.
 
 \section{Hướng phát triển}
 
@@ -35,7 +35,7 @@ Phạm vi kiểm thử và vận hành chưa đủ để khẳng định hệ th
 
 Ở giao diện, hướng phát triển phù hợp là thống nhất design token, quy định component contract và trạng thái dữ liệu, sau đó migration theo màn hình ưu tiên thay vì thay toàn bộ thư viện một lần nữa. Cùng lúc đó, nhóm cần loại bỏ chuỗi hard-code, bổ sung kiểm tra parity locale và hoàn thiện bộ ảnh chức năng bằng dữ liệu demo ổn định.
 
-Alert History cần tiếp tục được kiểm chứng trên môi trường triển khai bằng một luồng delivery thật và retry webhook, dù contract, persistence, ownership và read state đã được cài đặt và kiểm thử tự động. Pipeline GitHub Actions và Render cũng cần được hoàn tất bằng cấu hình secret, deploy hook và smoke check sau deployment.
+Alert History cần tiếp tục được kiểm chứng trên môi trường triển khai bằng một luồng delivery thật và retry webhook, dù contract, persistence, ownership và read state đã được cài đặt và kiểm thử tự động. Pipeline GitHub Actions và Render đã chạy thật, đưa hệ thống lên \texttt{yoca.id.vn}; phần còn lại là smoke check các callback/webhook (Google, Stripe, Helius) trên đúng môi trường production.
 
 Về dài hạn, mô-đun wash trading có thể được đánh giá trên tập dữ liệu đã kiểm chứng và kết hợp thêm biến động giá, thanh khoản cùng hành vi qua nhiều pool. AI có thể tăng khả năng dẫn chứng bằng cách liên kết từng nhận định với giao dịch hoặc vùng biểu đồ cụ thể. Những mở rộng này chỉ có ý nghĩa khi nền tảng dữ liệu, kiểm thử và quan sát vận hành đã đủ tin cậy.
 
