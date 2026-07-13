@@ -702,20 +702,6 @@ export function fetchWalletSwaps(
 }
 
 /**
- * Fetch wallet balances
- * GET /api/balances
- */
-export function fetchWalletBalances(address: string) {
-  return client.api.balances[":address"].$get({
-    param: { address },
-  }).then(resp => {
-    if (resp.ok) return resp.json();
-    console.error(`API Error: ${resp.status}`);
-    throw new Error(`API Error: ${resp.status}`);
-  });
-}
-
-/**
  * Fetch wallet asset distribution
  * GET /api/wallets/distribution
  */
