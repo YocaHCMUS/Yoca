@@ -1,25 +1,24 @@
 \subsection{Cache và quản lý độ mới}
 \label{subsec:db_cache}
 
-Cache được kiểm soát bằng ba cơ chế. Cơ chế thứ nhất là TTL dựa trên thời điểm cập nhật. Dữ liệu overview, market hoặc kết quả phân tích được trả trực tiếp khi vẫn còn mới; khi hết TTL, service gọi provider và cập nhật lại bản ghi.
+Cache được kiểm soát bằng ba cơ chế. Cơ chế thứ nhất là TTL dựa trên thời điểm cập nhật. Dữ liệu overview, market hoặc kết quả phân tích được trả trực tiếp khi vẫn còn mới; khi hết TTL, service gọi provider và cập nhật lại bản ghi. TTL phù hợp với snapshot hoặc kết quả có thể thay thế toàn phần, nhưng không đủ để chứng minh một khoảng lịch sử đã được tải đầy đủ.
 
-Cơ chế thứ hai là coverage metadata. Với lịch sử ví và enhanced transaction, metadata lưu khoảng thời gian đã đồng bộ. Service so sánh khoảng yêu cầu với khoảng đã có, chỉ tải phần còn thiếu rồi hợp nhất coverage. Cách này tránh tải lại toàn bộ lịch sử của ví.
+Cơ chế thứ hai là coverage metadata. Với lịch sử transfer, swap và enhanced transaction, metadata lưu biên thời gian đã đồng bộ. Service so sánh khoảng yêu cầu với các đoạn đã có, chỉ tải phần còn thiếu rồi hợp nhất coverage. Đối với chuỗi tổng tài sản Mobula, service kiểm tra điểm đầu, điểm cuối, số ngày và thời điểm cập nhật; nếu phần đầu đã đủ nhưng đuôi đã cũ, nó chỉ tải lại đoạn cuối có một khoảng chồng lấn. Cách này phù hợp hơn việc tải lại toàn bộ lịch sử của một ví có tần suất giao dịch cao.
 
-Cơ chế thứ ba là upsert. Market snapshot, chart point và các cache theo khóa nghiệp vụ sử dụng insert kết hợp conflict handling. Bản ghi mới được thêm khi khóa chưa tồn tại; dữ liệu cũ được cập nhật khi cùng address, timestamp hoặc signature.
+Cơ chế thứ ba là upsert. Market snapshot, chart point và các cache theo khóa nghiệp vụ sử dụng insert kết hợp conflict handling. Bản ghi mới được thêm khi khóa chưa tồn tại; dữ liệu cũ được cập nhật khi cùng address, timestamp hoặc signature. Đây cũng là cơ sở để tận dụng thông tin dư trong một response: nếu provider trả kèm metadata đã biết, service có thể bổ sung bảng liên quan thay vì bỏ dữ liệu và gọi lại một endpoint khác. Nhóm chỉ áp dụng cách cập nhật chéo này ở các luồng đã kiểm soát được khóa và nullability, không xem nó như một quy tắc bắt buộc cho mọi service.
+
+Thiết kế bảng còn chịu ảnh hưởng trực tiếp từ nhịp cập nhật của API. Nhóm chúng em tránh gom một dòng dữ liệu mà chỉ có thể hoàn thiện sau hai hoặc ba lần gọi provider. Metadata, market snapshot, chart, pool và holder được tách vì chúng có nguồn và chu kỳ làm mới khác nhau. Sự tách nhỏ này có thể làm tăng số bảng, nhưng giúp một trường đã cũ không buộc hệ thống làm mới toàn bộ đối tượng.
 
 \subsection{Toàn vẹn và bảo mật dữ liệu}
 \label{subsec:db_toan_ven}
 
-Primary key tổng hợp được dùng cho dữ liệu chuỗi thời gian và lịch sử, ví dụ address kết hợp timestamp hoặc transaction hash. Unique constraint ngăn một transaction detail hoặc chart point bị ghi nhiều lần. Foreign key với quy tắc cascade áp dụng cho dữ liệu thuộc người dùng như auth account, watchlist, alert và subscription.
+Primary key tổng hợp được dùng cho dữ liệu chuỗi thời gian và lịch sử, ví dụ address kết hợp timestamp hoặc transaction hash. Unique constraint ngăn một transaction detail hoặc chart point bị ghi nhiều lần. Foreign key với quy tắc cascade áp dụng cho dữ liệu thuộc người dùng như auth account, watchlist, alert và subscription. Với dữ liệu provider, chỉ address hoặc signature là chắc chắn trong nhiều trường hợp; symbol, logo và các phần trăm biến động có thể thiếu. Các cột này vì vậy cần cho phép rỗng khi response thực tế không bảo đảm giá trị, thay vì đặt \texttt{NOT NULL} chỉ dựa trên ví dụ trong tài liệu API.
 
 Không phải mọi liên hệ logic đều được chuyển thành foreign key. Wallet address và token address đến từ blockchain, có thể xuất hiện trước khi metadata tương ứng được tải. Việc bắt buộc foreign key trong trường hợp này sẽ làm gián đoạn luồng đồng bộ. Service chịu trách nhiệm chuẩn hóa address và giữ quy tắc ghép dữ liệu nhất quán.
 
 Dữ liệu công khai từ blockchain được tách khỏi dữ liệu cá nhân. Các truy vấn profile, watchlist, cảnh báo, chat và thanh toán phải được giới hạn theo user ID đã xác thực. Password chỉ được lưu dưới dạng hash; API key và secret của provider không được lưu trong các bảng nghiệp vụ.
 
-% TODO(runtime): Hoàn thiện ghi alert_history sau khi delivery thành công.
-% TODO(runtime): Bổ sung API lấy lịch sử, đánh dấu đã đọc và chống gửi trùng.
-
 \subsection{Tổng kết thiết kế cơ sở dữ liệu}
 \label{subsec:db_tong_ket}
 
-Thiết kế cơ sở dữ liệu kết hợp dữ liệu quan hệ với các read model cache theo miền nghiệp vụ. Các bảng user, payment và alert ưu tiên ràng buộc quan hệ. Các bảng token và wallet ưu tiên khả năng đồng bộ, truy vấn theo address và tái sử dụng dữ liệu provider. Việc tách overview, history, analysis và transaction detail giúp mỗi endpoint đọc đúng cấu trúc cần thiết thay vì phụ thuộc vào một bảng giao dịch chung.
+Thiết kế cơ sở dữ liệu kết hợp dữ liệu quan hệ với các read model cache theo miền nghiệp vụ. Các bảng user, payment và alert ưu tiên ràng buộc quan hệ. Các bảng token và wallet ưu tiên khả năng đồng bộ, truy vấn theo address và tái sử dụng dữ liệu provider. Việc thay đổi schema được thực hiện theo hướng thay thế tăng dần: tạo read model mới, chuyển từng consumer sang luồng mới, theo dõi ổn định rồi mới loại bỏ cấu trúc cũ. Vì quá trình này chưa kết thúc ở mọi miền, báo cáo giữ lại các mô hình song song đang có consumer thay vì trình bày một schema lý tưởng nhưng không khớp hệ thống.

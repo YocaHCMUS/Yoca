@@ -73,6 +73,7 @@ function makeDeps(
     markRuleOneShotFired: vi.fn().mockResolvedValue(undefined),
     sendDiscord: vi.fn().mockResolvedValue({ ok: true, status: 204 }),
     sendEmail: vi.fn().mockResolvedValue(true),
+    recordHistory: vi.fn().mockResolvedValue({ id: "history-1" }),
     ...overrides,
   };
 }
@@ -134,6 +135,7 @@ describe("wallet alert webhook processor", () => {
 
     expect(deps.sendDiscord).toHaveBeenCalledTimes(1);
     expect(deps.sendEmail).toHaveBeenCalledTimes(1);
+    expect(deps.recordHistory).toHaveBeenCalledTimes(1);
     expect(summary.followedWalletMatches).toBe(1);
     expect(summary.followedWalletDelivered).toBe(1);
   });
@@ -157,6 +159,13 @@ describe("wallet alert webhook processor", () => {
     });
 
     expect(deps.sendDiscord).toHaveBeenCalledTimes(1);
+    expect(deps.recordHistory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        advancedRuleId: 1,
+        source: "rule",
+        eventSignature: "swap-signature",
+      }),
+    );
     expect(summary.rulesMatched).toBe(1);
     expect(summary.rulesDelivered).toBe(1);
   });
@@ -212,6 +221,7 @@ describe("wallet alert webhook processor", () => {
 
     expect(deps.sendDiscord).not.toHaveBeenCalled();
     expect(deps.sendEmail).toHaveBeenCalledTimes(1);
+    expect(deps.recordHistory).toHaveBeenCalledTimes(1);
     expect(summary.events[0]?.deliveries[0]?.discord.skippedReason).toBe(
       "discord skipped: missing webhook",
     );
@@ -285,5 +295,6 @@ describe("wallet alert webhook processor", () => {
     expect(summary.rulesDelivered).toBe(1);
     expect(summary.events[0]?.involvedAddresses).toContain(WATCHED);
     expect(deps.sendDiscord).not.toHaveBeenCalled();
+    expect(deps.recordHistory).not.toHaveBeenCalled();
   });
 });

@@ -1,0 +1,20 @@
+---
+config:
+  layout: elk
+---
+flowchart TB
+    U[Identity và Payment\nuser · auth · subscription]
+    A[Alert\nrule · condition · delivery · history]
+    T[Token và Market\nmetadata · pool · chart · holder]
+    W[Wallet và Analysis\noverview · portfolio · PnL · history]
+    X[Transaction detail\ntransfer · instruction · coverage]
+    C[Content và AI\nnews · chat · analysis cache]
+
+    U -->|sở hữu| A
+    U -->|watchlist / label| T
+    U -->|theo dõi| W
+    T <-->|token address| W
+    W <-->|wallet address / signature| X
+    T -->|ngữ cảnh| C
+    W -->|ngữ cảnh| C
+    A -.->|wallet / token address| W

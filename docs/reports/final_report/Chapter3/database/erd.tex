@@ -2,6 +2,7 @@
 \label{subsec:db_erd}
 
 Schema có nhiều bảng cache nên một ERD duy nhất sẽ khó đọc trên khổ A4. Phần này chia ERD theo miền nghiệp vụ và chỉ giữ primary key, foreign key cùng các cột chính. Đường liền biểu diễn foreign key được khai báo trong PostgreSQL. Đường nét đứt biểu diễn liên hệ logic thông qua address, mint hoặc signature; các liên hệ này được kiểm soát tại service thay vì bằng foreign key.
+Sơ đồ tổng quan ở Hình~\ref{fig:db_overview} giúp người đọc thấy toàn bộ kiến trúc, còn các hình dưới đây là những lát cắt có thể đọc được trên trang dọc A4. Cách tách này cũng cho phép đổi một miền cache mà không phải vẽ lại một ERD ngang quá lớn.
 
 \begin{figure}[H]
     \centering
@@ -19,7 +20,7 @@ Hình~\ref{fig:db_identity_payment} thể hiện dữ liệu có tính sở hữ
     \label{fig:db_alert_history}
 \end{figure}
 
-Hình~\ref{fig:db_alert_history} tách định nghĩa cảnh báo khỏi trạng thái, delivery target và điều kiện kích hoạt. \texttt{alert\_history} lưu sự kiện đã phát sinh để hỗ trợ hiển thị lịch sử và trạng thái đã đọc.
+Hình~\ref{fig:db_alert_history} tách định nghĩa cảnh báo khỏi trạng thái, delivery target và điều kiện kích hoạt. \texttt{alert\_history} lưu sự kiện sau khi ít nhất một kênh gửi thành công, đồng thời hỗ trợ chống ghi trùng, phân trang và trạng thái đã đọc. API chỉ cho phép người dùng truy cập hoặc cập nhật lịch sử thuộc tài khoản của mình; giao diện Profile sử dụng cùng API này để hiển thị lịch sử thực tế thay cho dữ liệu mock ban đầu.
 
 \begin{figure}[H]
     \centering
@@ -46,7 +47,7 @@ Hình~\ref{fig:db_token_content} mô tả các cache phục vụ AI, news event 
     \label{fig:db_wallet_analytics}
 \end{figure}
 
-Hình~\ref{fig:db_wallet_analytics} dùng \texttt{WALLET\_ADDRESS} như một thực thể logic, không phải bảng vật lý. \texttt{wallet\_overview\_cache} cung cấp bản tổng hợp cho trang overview. \texttt{wallet\_analyses} lưu kết quả Mobula theo ví và kỳ phân tích.
+Hình~\ref{fig:db_wallet_analytics} dùng \texttt{WALLET\_ADDRESS} như một thực thể logic, không phải bảng vật lý. \texttt{wallet\_overview\_cache} cung cấp bản tổng hợp cho trang overview; \texttt{wallet\_analyses} lưu kết quả Mobula theo ví và kỳ phân tích; \texttt{wallet\_token\_details} giữ PnL ở cấp token. Identity, nguồn cấp vốn đầu tiên và kết quả AI được tách thành cache riêng vì có nguồn, chi phí và TTL khác nhau.
 
 \begin{figure}[H]
     \centering
@@ -55,7 +56,7 @@ Hình~\ref{fig:db_wallet_analytics} dùng \texttt{WALLET\_ADDRESS} như một th
     \label{fig:db_wallet_portfolio_balance}
 \end{figure}
 
-Hình~\ref{fig:db_wallet_portfolio_balance} phân biệt portfolio hiện tại, snapshot theo ngày, tổng giá trị ví theo thời gian và lịch sử số dư ở cấp token. Các bảng được ghép theo wallet address nhưng không phụ thuộc một bảng wallet vật lý.
+Hình~\ref{fig:db_wallet_portfolio_balance} phân biệt portfolio hiện tại, snapshot theo ngày, tổng giá trị ví theo thời gian và lịch sử số dư ở cấp token. Tổng tài sản hiện ưu tiên Mobula do chuỗi Zerion từng ghi nhận cả token spam có giá trị thanh khoản không phù hợp; lịch sử theo từng token vẫn dùng Zerion. Các bảng được ghép theo wallet address nhưng không phụ thuộc một bảng wallet vật lý.
 
 \begin{figure}[H]
     \centering

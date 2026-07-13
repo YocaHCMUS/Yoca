@@ -6,6 +6,11 @@ import type {
   AlertRule,
   ProfileAlertsData,
 } from "@/types/profile";
+import {
+  getAlertHistory,
+  markAllAlertHistoryRead,
+  setAlertHistoryRead,
+} from "@/services/notifications/alertHistoryApi";
 import { AddLarge } from "@carbon/icons-react";
 import {
   Button,
@@ -17,7 +22,7 @@ import {
   TextInput,
   Toggle,
 } from "@carbon/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "@/components/profile/shared/profile.module.scss";
 
 interface ProfileAlertTabProps {
@@ -117,6 +122,33 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
         }
       />
 
+      <ProfileAlertNotificationPanel
+        notifications={notifications}
+        loading={historyLoading}
+        error={historyError}
+        onToggleRead={async (notification) => {
+          const nextRead = notification.readAt == null;
+          await setAlertHistoryRead(notification.id, nextRead);
+          setNotifications((current) =>
+            current.map((item) =>
+              item.id == notification.id
+                ? {
+                    ...item,
+                    readAt: nextRead ? new Date().toISOString() : null,
+                  }
+                : item,
+            ),
+          );
+        }}
+        onMarkAllRead={async () => {
+          await markAllAlertHistoryRead();
+          const readAt = new Date().toISOString();
+          setNotifications((current) =>
+            current.map((item) => ({ ...item, readAt: item.readAt ?? readAt })),
+          );
+        }}
+      />
+
       <ComposedModal open={isEditorOpen} onClose={closeEditorModal}>
         <ModalHeader label="Alerts" title={modalTitle} />
         <ModalBody hasScrollingContent>
@@ -166,19 +198,44 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
 
 interface ProfileAlertNotificationPanelProps {
   notifications: AlertNotification[];
+  loading: boolean;
+  error: string | null;
+  onToggleRead: (notification: AlertNotification) => Promise<void>;
+  onMarkAllRead: () => Promise<void>;
 }
 
 export function ProfileAlertNotificationPanel({
   notifications,
+  loading,
+  error,
+  onToggleRead,
+  onMarkAllRead,
 }: ProfileAlertNotificationPanelProps) {
+  if (loading) {
+    return <section className={styles.contentStack}>Loading alert history...</section>;
+  }
+
   return (
     <section className={styles.contentStack}>
-      <h3>Alert notifications</h3>
+      <div className={styles.inlineActions}>
+        <h3>Alert notifications</h3>
+        {notifications.some((note) => note.readAt == null) ? (
+          <Button size="sm" kind="ghost" onClick={() => void onMarkAllRead()}>
+            Mark all as read
+          </Button>
+        ) : null}
+      </div>
+      {error ? <p>{error}</p> : null}
+      {!error && notifications.length == 0 ? <p>No alert history yet.</p> : null}
       {notifications.map((note) => (
         <article key={note.id} className={styles.notificationItem}>
           <strong>{note.severity.toUpperCase()}</strong>
+          {note.title ? <h4>{note.title}</h4> : null}
           <p>{note.message}</p>
           <small>{new Date(note.timestamp).toLocaleString()}</small>
+          <Button size="sm" kind="ghost" onClick={() => void onToggleRead(note)}>
+            {note.readAt == null ? "Mark as read" : "Mark as unread"}
+          </Button>
         </article>
       ))}
     </section>
