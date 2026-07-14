@@ -1,4 +1,5 @@
-import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
+import { EmptyState } from "@/components/common/EmptyState/EmptyState";
+import { StatusBadge } from "@/components/common/StatusBadge/StatusBadge";
 import Tble, { TbleFilterType, TbleSortType, type TblRw } from "@/components/Tble";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type {
@@ -6,18 +7,9 @@ import type {
   AlertRule,
   ProfileAlertsData,
 } from "@/types/profile";
-import { AddLarge } from "@carbon/icons-react";
-import {
-  Button,
-  ComposedModal,
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
-  TextArea,
-  TextInput,
-  Toggle,
-} from "@carbon/react";
+import { Pencil, PlayCircle, Plus, PauseCircle, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import localStyles from "./ProfileAlertTab.module.scss";
 import styles from "@/components/profile/shared/profile.module.scss";
 
 interface ProfileAlertTabProps {
@@ -50,9 +42,9 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
 
   if (data.alerts.length === 0 && data.notifications.length === 0) {
     return (
-      <ProfileUnavailableState
+      <EmptyState
         title={tr("profileTabs.alerts.unavailableTitle")}
-        description={tr("profileTabs.alerts.unavailableDescription")}
+        message={tr("profileTabs.alerts.unavailableDescription")}
       />
     );
   }
@@ -86,17 +78,27 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
         ]}
         rows={alertTableRows}
         cellRenderers={{
+          status: (value: unknown) => {
+            const s = String(value ?? "");
+            if (s === "active") return <StatusBadge label="Active" variant="success" size="sm" />;
+            if (s === "paused") return <StatusBadge label="Paused" variant="warning" size="sm" />;
+            return <StatusBadge label={s} variant="neutral" size="sm" />;
+          },
           actions: (_value: unknown, row: TblRw) => {
             const rule = row.rule as AlertRule | undefined;
             if (!rule) return null;
 
             return (
-              <div className={styles.inlineActions}>
-                <Button size="sm" kind="ghost" onClick={() => openEditModal(rule)}>
-                  Edit
-                </Button>
-                <Button size="sm" kind="ghost">Pause/Resume</Button>
-                <Button size="sm" kind="ghost">Delete</Button>
+              <div className={localStyles.inlineActions}>
+                <button type="button" className={localStyles.btnGhost} onClick={() => openEditModal(rule)} title="Edit">
+                  <Pencil size={14} />
+                </button>
+                <button type="button" className={localStyles.btnGhost} title="Pause/Resume">
+                  {rule.status === "paused" ? <PlayCircle size={14} /> : <PauseCircle size={14} />}
+                </button>
+                <button type="button" className={localStyles.btnDangerGhost} title="Delete">
+                  <Trash2 size={14} />
+                </button>
               </div>
             );
           },
@@ -111,55 +113,86 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
         }}
         toolBar={
           <button className={styles.triggerButton} onClick={openCreateModal}>
-            <AddLarge size={20} />
+            <Plus size={20} />
             Add alert
           </button>
         }
       />
 
-      <ComposedModal open={isEditorOpen} onClose={closeEditorModal}>
-        <ModalHeader label="Alerts" title={modalTitle} />
-        <ModalBody hasScrollingContent>
-          <form className={styles.contentStack}>
-            <TextInput
-              id="alert-token"
-              labelText="Token"
-              defaultValue={editingRule?.tokenSymbol ?? ""}
-              placeholder="SOL"
-            />
-            <TextInput
-              id="alert-type"
-              labelText="Alert type"
-              defaultValue={editingRule?.alertType ?? "price"}
-              placeholder="price"
-            />
-            <TextInput
-              id="alert-condition"
-              labelText="Condition"
-              defaultValue={editingRule?.conditionText ?? ""}
-              placeholder="Price > 210"
-            />
-            <TextArea
-              id="alert-channels"
-              labelText="Channels"
-              placeholder="Email, Telegram"
-            />
-            <Toggle
-              id="alert-enabled"
-              labelText="Enable alert"
-              labelA="Disabled"
-              labelB="Enabled"
-              defaultToggled={editingRule?.status !== "paused"}
-            />
-          </form>
-        </ModalBody>
-        <ModalFooter>
-          <Button kind="secondary" onClick={closeEditorModal}>
-            Cancel
-          </Button>
-          <Button onClick={closeEditorModal}>Save alert</Button>
-        </ModalFooter>
-      </ComposedModal>
+      {isEditorOpen && (
+        <div className={localStyles.modalOverlay} onClick={closeEditorModal}>
+          <div className={localStyles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={localStyles.modalHeader}>
+              <div>
+                <span className={localStyles.modalEyebrow}>Alerts</span>
+                <h2 className={localStyles.modalTitle}>{modalTitle}</h2>
+              </div>
+              <button type="button" className={localStyles.modalClose} onClick={closeEditorModal}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className={localStyles.modalBody}>
+              <div className={localStyles.formGroup}>
+                <label className={localStyles.fieldLabel} htmlFor="alert-token">Token</label>
+                <input
+                  id="alert-token"
+                  className={localStyles.fieldInput}
+                  defaultValue={editingRule?.tokenSymbol ?? ""}
+                  placeholder="SOL"
+                />
+              </div>
+              <div className={localStyles.formGroup}>
+                <label className={localStyles.fieldLabel} htmlFor="alert-type">Alert type</label>
+                <select
+                  id="alert-type"
+                  className={localStyles.fieldSelect}
+                  defaultValue={editingRule?.alertType ?? "price"}
+                >
+                  <option value="price">Price</option>
+                  <option value="volume">Volume</option>
+                  <option value="trend">Trend</option>
+                </select>
+              </div>
+              <div className={localStyles.formGroup}>
+                <label className={localStyles.fieldLabel} htmlFor="alert-condition">Condition</label>
+                <input
+                  id="alert-condition"
+                  className={localStyles.fieldInput}
+                  defaultValue={editingRule?.conditionText ?? ""}
+                  placeholder="Price > 210"
+                />
+              </div>
+              <div className={localStyles.formGroup}>
+                <label className={localStyles.fieldLabel} htmlFor="alert-channels">Channels</label>
+                <textarea
+                  id="alert-channels"
+                  className={localStyles.fieldTextarea}
+                  placeholder="Email, Telegram"
+                />
+              </div>
+              <div className={localStyles.formGroup}>
+                <label className={localStyles.toggleRow}>
+                  <span className={localStyles.fieldLabel}>Enable alert</span>
+                  <label className={localStyles.toggleSwitch}>
+                    <input type="checkbox" defaultChecked={editingRule?.status !== "paused"} />
+                    <span className={localStyles.toggleSlider} />
+                  </label>
+                </label>
+              </div>
+            </div>
+
+            <div className={localStyles.modalFooter}>
+              <button type="button" className={localStyles.btnSecondary} onClick={closeEditorModal}>
+                Cancel
+              </button>
+              <button type="button" className={localStyles.btnPrimary} onClick={closeEditorModal}>
+                Save alert
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -171,6 +204,16 @@ interface ProfileAlertNotificationPanelProps {
 export function ProfileAlertNotificationPanel({
   notifications,
 }: ProfileAlertNotificationPanelProps) {
+  if (notifications.length === 0) {
+    return (
+      <EmptyState
+        title="No notifications"
+        message="You have no alert notifications yet."
+        compact
+      />
+    );
+  }
+
   return (
     <section className={styles.contentStack}>
       <h3>Alert notifications</h3>
