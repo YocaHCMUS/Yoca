@@ -1,0 +1,155 @@
+\appendix
+
+\chapter{Phân tích chi phí vận hành và mô hình kinh doanh}
+\label{AppendixBusinessModel}
+
+Phụ lục này trình bày cách nhóm đưa pricing của Yoca về sát với chi phí vận hành thật và chuẩn bị cho các mốc mở rộng quy mô tiếp theo, thay vì giữ một mức giá cố định từ đầu dự án. Pricing được thiết kế lại với lựa chọn tháng/năm, các gói chỉ ghi phần khác biệt so với gói liền trước, và toàn bộ chi phí/lợi nhuận giả định được suy ra trực tiếp từ source code (cache, TTL, giới hạn truy vấn từng provider) cùng giá/hạn mức công khai tại thời điểm khảo sát 13/07/2026, để nhóm có căn cứ điều chỉnh giá khi lưu lượng thật tăng lên. Phần chưa có số đo thật (lưu lượng truy cập, tỷ lệ trả phí) được ghi rõ là giả định minh họa.
+
+\section{Bản đồ chi phí dữ liệu hiện tại}
+
+Mọi yêu cầu đi qua backend, được kiểm tra so với dữ liệu đã lưu trong PostgreSQL trước khi gọi provider. Cache theo mô hình cache-aside, khóa theo TTL cấu hình trong \texttt{constants.ts}. Cache được khóa theo địa chỉ token/ví, không theo người dùng: nhiều người cùng xem một token phổ biến trong TTL chỉ tốn một lần gọi provider; dữ liệu ví thì gần với cache một-đổi-một hơn, vì mỗi người dùng thường chỉ theo dõi một tập nhỏ ví họ quan tâm.
+
+Rà lại luồng gọi provider theo từng trang cho thấy tải nặng nhất thật sự đến từ CoinGecko (metadata, market data, chart, tìm kiếm) và Mobula (lịch sử swap/transfer, PnL, token nắm giữ trong ví); Birdeye chỉ còn xuất hiện ở vài điểm hẹp (widget thị trường dùng cache chung, tab gainers, chart tổng tài sản ví, fallback giá swap) — thấp hơn nhiều so với giả định ban đầu dựa theo lịch sử migration Birdeye--Mobula--Zerion ở Chương~\ref{Chapter5}.
+
+\section{Điều chỉnh TTL và đòn bẩy phía nhà cung cấp}
+
+Phần lớn TTL hiện tại đã hợp lý, không cần đại tu. Một khoảng trống chi phí được phát hiện và đã vá: mô-đun wash trading gọi Gemini sinh kết luận nhưng không có TTL, khác mọi tính năng AI còn lại (đều cache 3--24 giờ); đã bổ sung cache theo cặp token và khung thời gian phân tích.
+
+Mỗi provider đều hỗ trợ xoay nhiều khóa API miễn phí để tăng giới hạn truy vấn hiệu dụng, trừ Zerion (một khóa) và Gemini (tính theo token, không theo khóa). Lịch sử hoạt động ví qua Mobula dùng phân trang offset, hiện chạy tuần tự do giới hạn 1 request/giây của gói miễn phí; nâng lên gói trả phí thấp nhất cho phép tải song song, rút thời gian tải một ví từ khoảng mười giây xuống dưới một giây.
+
+Bảng~\ref{tab:provider-leverage} tóm tắt giới hạn miễn phí và gói trả phí gần nhất, theo nguyên tắc chỉ nâng gói để tăng giới hạn trên đúng endpoint đang dùng, không đổi endpoint để tránh chi phí migrate.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Giới hạn miễn phí và gói trả phí gần nhất theo provider}
+\label{tab:provider-leverage}
+\begin{tabularx}{\textwidth}{|p{2.2cm}|X|X|}
+\hline
+\textbf{Provider} & \textbf{Giới hạn miễn phí (đo trong code)} & \textbf{Gói trả phí gần nhất} \\
+\hline
+Helius & 2 request/giây & Developer, 49 USD/tháng, 10 request/giây \cite{helius-pricing} \\
+\hline
+Birdeye & 1 request/giây (đã sửa cấu hình limiter cho đúng) & Không cần nâng gói ở các mốc đã khảo sát \cite{birdeye-pricing, birdeye-data-accessibility} \\
+\hline
+Moralis & 5 request đồng thời, 1,2 triệu compute unit/tháng & Starter, 49 USD/tháng, 2 triệu compute unit/tháng \cite{moralis-pricing} \\
+\hline
+Zerion & 1 request/giây, một khóa duy nhất & Builder, 149 USD/tháng, 50 request/giây \cite{zerion-api} \\
+\hline
+Mobula & 1 request/giây, một khóa duy nhất & Start-up, 50 USD/tháng, 30 request/giây \cite{mobula-pricing} \\
+\hline
+CoinGecko & 1 request/1,2 giây & Basic, 35 USD/tháng, 300 request/phút \cite{coingecko-pricing} \\
+\hline
+Google Gemini & Trả theo token, không có bậc miễn phí/trả phí cố định & Xem Bảng~\ref{tab:gemini-pricing} \cite{gemini-pricing} \\
+\hline
+\end{tabularx}
+\end{table}
+
+\section{Kịch bản chi phí theo quy mô người dùng}
+
+Ba mốc MAU giả định (300 / 3.000 / 30.000, cách nhau mười lần) minh họa công thức suy luận chi phí: request/tháng = MAU × phiên/tháng × tỷ lệ vào trang × tỷ lệ cache-miss × số lệnh gọi provider/lượt xem. Các hệ số đầu vào là giả định, chưa có analytics thật từ hệ thống.
+
+\begin{table}[H]
+\centering
+\caption{Chi phí dữ liệu và AI ước tính theo mốc quy mô người dùng}
+\label{tab:cost-by-scale}
+\begin{tabularx}{\textwidth}{|c|X|X|X|}
+\hline
+\textbf{Mốc MAU} & \textbf{Chi phí dữ liệu ngoài} & \textbf{Chi phí Gemini AI} & \textbf{Tổng/tháng} \\
+\hline
+300 & 0 USD (giới hạn miễn phí đủ dùng) & \textasciitilde 3 USD & \textbf{\textasciitilde 3 USD} \\
+\hline
+3.000 & \textasciitilde 85 USD (Mobula 50 + CoinGecko 35) & \textasciitilde 27 USD & \textbf{\textasciitilde 112 USD} \\
+\hline
+30.000 & \textasciitilde 228 USD (Helius 49 + Mobula 50 + CoinGecko 129) & \textasciitilde 270 USD & \textbf{\textasciitilde 498 USD} \\
+\hline
+\end{tabularx}
+\end{table}
+
+Bảng chỉ tính chi phí dữ liệu và AI; chưa gồm hạ tầng máy chủ, cơ sở dữ liệu, nhân sự và marketing.
+
+\section{Giả thuyết chuyển sang mô hình AI tự vận hành}
+
+Đây là giả thuyết cho định hướng dài hạn, không phải cam kết migrate.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Giá Gemini API theo token (USD/1 triệu token) \cite{gemini-pricing}}
+\label{tab:gemini-pricing}
+\begin{tabularx}{\textwidth}{|X|c|c|c|}
+\hline
+\textbf{Model} & \textbf{Input} & \textbf{Output} & \textbf{Cached input} \\
+\hline
+gemini-2.5-flash & 0,30 & 2,50 & 0,03 + phí lưu trữ \\
+\hline
+gemini-2.5-flash-lite & 0,10 & 0,40 & 0,01 + phí lưu trữ \\
+\hline
+gemini-3.1-flash-lite & 0,25 & 1,50 & 0,025 + phí lưu trữ \\
+\hline
+\end{tabularx}
+\end{table}
+
+Ba ứng viên mã nguồn mở phù hợp quy mô hiện tại: Qwen3-8B/Qwen3.5-9B (Apache 2.0, năng lực tương đương Gemini Flash-Lite), DeepSeek-R1-Distill Qwen 14B/32B (MIT, hợp cho audit cần suy luận nhiều bước), Llama-3.3-70B-Instruct (chất lượng cao hơn nhưng cần hạ tầng GPU lớn). Ở mức 50.000--200.000 lượt gọi/tháng, dịch vụ suy luận trả theo token trên hạ tầng dùng chung (Together AI, Groq) tốn 4--52 USD/tháng, cùng bậc với Gemini Flash-Lite; thuê GPU riêng (RunPod L4 24GB) tốn khoảng 285 USD/tháng cố định, chỉ hợp lý ở lưu lượng lớn hơn nhiều \cite{together-ai-pricing, groq-pricing, runpod-pricing, aws-g5-instance}.
+
+Điểm hòa vốn ước tính giữa thuê GPU riêng và trả theo token rơi vào khoảng 1,3--4,5 triệu lượt gọi/tháng, cao hơn 15--50 lần so với mốc 30.000 MAU. Ở quy mô hiện tại, dùng Gemini theo token vẫn kinh tế hơn; tự vận hành AI mã nguồn mở chỉ hợp lý khi lưu lượng tăng thêm một đến hai bậc, hoặc khi ưu tiên kiểm soát dữ liệu hơn tối ưu chi phí.
+
+\section{Mô hình giá và dòng tiền giả định}
+
+\subsection{Bảng giá theo gói, chỉ ghi phần khác biệt}
+
+Bảng giá đã được áp dụng trực tiếp vào trang giá của sản phẩm, chỉ ghi phần thay đổi so với gói liền trước.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Bảng giá theo gói, chỉ ghi phần khác biệt so với gói liền trước}
+\label{tab:pricing-tiers}
+\begin{tabularx}{\textwidth}{|p{2.6cm}|X|X|X|X|}
+\hline
+ & \textbf{Free} & \textbf{Lite} -- thêm so với Free & \textbf{Plus} -- thêm so với Lite & \textbf{Pro} -- thêm so với Plus \\
+\hline
+Giá/tháng & 0 & 39 USD & 79 USD & 149 USD \\
+\hline
+Giá/năm & 0 & 390 USD/năm & 790 USD/năm & 1.490 USD/năm \\
+\hline
+Lượt hỏi AI/ngày & 5 / 5 / 10 / 5 & 20 / 20 / 25 / 20 & 50 / 50 / 50 / 50 & 100 / 100 / 100 / 100 \\
+\hline
+AI ví và wash trading & Khóa & Khóa (không đổi) & Mở khóa, 50/ngày & 100/ngày \\
+\hline
+\end{tabularx}
+\end{table}
+
+Giá năm = 10× giá tháng (tương đương hai tháng miễn phí), chọn qua nút chuyển đổi trên trang giá, gắn với Stripe Price đúng chu kỳ. Giá Plus/Pro được điều chỉnh từ 199/499 USD (cũ, ngoài dải giá thị trường) xuống 79/149 USD, đối chiếu theo mặt bằng các sản phẩm phân tích ví/on-chain cá nhân cùng phân khúc (Nansen Pro, Dune Pro: 30--100 USD/tháng) \cite{nansenai, dune}.
+
+\subsection{Dòng tiền giả định theo quy mô}
+
+Giả định 8\% người dùng trả phí (5\%/2\%/1\% cho Lite/Plus/Pro), tỷ giá tham khảo 26.000 VND/USD.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Doanh thu và lợi nhuận gộp giả định theo mốc quy mô (chỉ tính chi phí dữ liệu/AI)}
+\label{tab:pnl-by-scale}
+\begin{tabularx}{\textwidth}{|c|X|X|X|}
+\hline
+\textbf{Mốc MAU} & \textbf{Doanh thu/tháng} & \textbf{Chi phí dữ liệu + AI} & \textbf{Lợi nhuận gộp} \\
+\hline
+300 & \textasciitilde 1.496 USD & \textasciitilde 3 USD & \textasciitilde 1.493 USD \\
+\hline
+3.000 & \textasciitilde 14.960 USD & \textasciitilde 112 USD & \textasciitilde 14.848 USD \\
+\hline
+30.000 & \textasciitilde 149.596 USD & \textasciitilde 498 USD & \textasciitilde 149.098 USD \\
+\hline
+\end{tabularx}
+\end{table}
+
+Đây là lợi nhuận gộp chỉ tính chi phí dữ liệu/AI, chưa trừ hạ tầng, nhân sự, marketing; lợi nhuận ròng thực tế thấp hơn đáng kể.
+
+\subsection{Nguồn vốn}
+
+Yoca hiện vận hành hoàn toàn bằng nguồn lực tự có của nhóm, không có tài trợ hay gọi vốn nào; hạ tầng và API đang chạy trên gói miễn phí hoặc chi phí cá nhân của thành viên.
+
+\section{Phạm vi và giới hạn của mô hình}
+
+Số liệu trong phụ lục chứng minh phương pháp suy luận chi phí có căn cứ, không phải dự báo tài chính. Lưu lượng/số người dùng và tỷ lệ trả phí (8\%) đều là giả định minh họa, chưa có số đo thật; lợi nhuận ở Bảng~\ref{tab:pnl-by-scale} chỉ giới hạn ở chi phí dữ liệu/AI. Khi có số liệu thật, các bảng có thể cập nhật bằng cách thay giá trị đầu vào, không cần đổi phương pháp.

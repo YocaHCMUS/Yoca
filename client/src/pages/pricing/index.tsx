@@ -67,7 +67,7 @@ function PricingFeatures({
           {intro}
         </p>
       )}
-      <ul className="space-y-8">
+      <ul className="flex flex-col gap-5">
         {features.map((feature) => (
           <li
             key={feature.text}
