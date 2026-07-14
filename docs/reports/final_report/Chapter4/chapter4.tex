@@ -30,8 +30,55 @@ Cấu hình hệ thống được tách thành hai nhóm rõ ràng. Các giá tr
 \label{sec:quy_trinh_trien_khai}
 
 \subsection{Quản lý mã nguồn và môi trường}
-\subsection{Quy trình tích hợp liên tục}
-\subsection{Quy trình triển khai và kiểm tra sau triển khai}
+Mã nguồn client và server được quản lý trong cùng một Git repository dưới dạng npm workspace. Cấu trúc này cho phép nhóm phát triển hai phần độc lập nhưng vẫn dùng chung phiên bản TypeScript và hợp đồng kiểu Hono. Các thay đổi về route hoặc schema thường cần được đối chiếu với consumer tương ứng trước khi tích hợp, đặc biệt ở các miền Wallet và Payment có nhiều phụ thuộc.
+
+Cấu hình runtime được truyền qua biến môi trường. Client chỉ nhận các giá trị có tiền tố \texttt{VITE\_} và được phép xuất hiện trong browser; khóa provider, chuỗi kết nối PostgreSQL, JWT secret và Stripe secret chỉ thuộc server. Repository cung cấp script riêng cho dev, test, lint, build và đồng bộ schema Drizzle. Trong phạm vi báo cáo, nhóm không đưa nội dung tệp \texttt{.env} hoặc giá trị secret vào phụ lục hay ảnh minh họa.
+
+\subsection{Tích hợp liên tục bằng GitHub Actions}
+
+Workflow CI được đặt tại \texttt{.github/workflows/ci.yml} và chạy khi có thay đổi được đẩy lên nhánh \texttt{main}, \texttt{dev} hoặc khi pull request hướng vào \texttt{main}. Pipeline gồm sáu job kiểm tra độc lập: typecheck, lint, test server, test client, build server và build client. Mỗi job checkout cùng revision, cài dependency theo npm workspace rồi thực hiện script tương ứng. Cách tách này giúp nhóm nhìn rõ lỗi thuộc hợp đồng kiểu, quy tắc mã nguồn, regression test hay production build, thay vì gộp mọi bước vào một lệnh khó chẩn đoán.
+
+Các job test chạy Vitest trong từng workspace; build client tạo static artifact bằng Vite, còn build server biên dịch TypeScript và xử lý path alias trước khi Node khởi động. Concurrency được cấu hình theo Git reference để một lần chạy mới có thể hủy lần chạy cũ trên cùng nhánh. Secret provider và deploy hook không được ghi trực tiếp vào workflow; chúng được quản lý bằng GitHub Actions Secrets và biến môi trường của nền tảng triển khai.
+
+Một job thứ bảy, \texttt{deploy}, phụ thuộc vào cả sáu job trên (\texttt{needs}) và chỉ chạy khi sự kiện là \texttt{push} trên nhánh \texttt{main}. Job này gọi hai \texttt{curl POST} tới deploy hook của Render (một cho Static Site, một cho Web Service) được lưu trong GitHub Actions Secrets, tức bước liên kết CI với Render đã được hiện thực chứ không còn là kiến trúc dự kiến.
+
+\subsection{Triển khai và kiểm tra sau triển khai}
+
+Mã nguồn vẫn được giữ trong một monorepo nhưng được triển khai thành hai đơn vị độc lập trên Render. Client là một Static Site: Render checkout source, chạy \texttt{npm install} và \texttt{npm run client:build}, sau đó phân phối thư mục \texttt{client/build} do Vite tạo ra. Vì vậy production không sử dụng Vite development server. Server là một Web Service: Render chạy \texttt{npm run server:build} rồi khởi động \texttt{node server/build/main.js}. Cách tổ chức này giữ lợi ích chia sẻ kiểu của monorepo nhưng cho phép client và server có vòng đời build, biến môi trường và khả năng triển khai riêng.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Chapter4/deployment-architecture.pdf}
+    \caption{Kiến trúc tích hợp và triển khai của Yoca}
+    \label{fig:deployment-architecture}
+\end{figure}
+
+Sau khi các cổng CI đạt, hai deploy hook bí mật được dùng để yêu cầu Render build revision mới cho Static Site và Web Service. Client chỉ nhận các biến \texttt{VITE\_} công khai tại build time; API key, JWT/Stripe secret và chuỗi kết nối database chỉ được cấu hình cho Web Service. PostgreSQL được lưu trên Supabase Free; trong môi trường demo có thể tạo lại, schema Drizzle được đồng bộ bằng quy trình \texttt{db:reset} thay vì duy trì dữ liệu cũ qua migration. Thao tác này không được dùng trên database cần bảo toàn dữ liệu.
+
+Sau triển khai, nhóm kiểm tra endpoint \texttt{/api}, CORS giữa hai domain, SPA rewrite của Static Site và hành trình Market Overview -- Token Pool -- Token Overview -- Wallet -- User -- AI. Free tier có thể tạo cold start hoặc giới hạn tài nguyên, nên báo cáo không xem thời gian phản hồi của lần gọi đầu tiên là một SLA ổn định và không tuyên bố có rollback hay monitoring tự động ngoài phạm vi Render cung cấp sẵn.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/chapter5/github-actions-ci.png}
+    \caption{Một lần chạy GitHub Actions thành công trên \texttt{main}: bảy job typecheck, lint, test server/client, build server/client và \texttt{deploy} đều đạt, tổng thời gian 3m2s}
+    \label{fig:github-actions-ci}
+\end{figure}
+
+Job \texttt{deploy} gọi hai deploy hook của Render; Hình~\ref{fig:render-deployment-frontend} và Hình~\ref{fig:render-deployment-backend} xác nhận cả hai service đã build xong và đang ở trạng thái Live. Yoca hiện chạy thật trên tên miền \texttt{yoca.id.vn}: Static Site \texttt{yoca-frontend} phục vụ giao diện tại địa chỉ này, Web Service \texttt{yoca-backend} phục vụ API tại \texttt{yoca-backend.onrender.com} và đã ghi nhận các request \texttt{GET /api} trả về 200 trong log thời gian thực.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/chapter5/render-deployment-frontend.jpg}
+    \caption{Render Static Site \texttt{yoca-frontend} ở trạng thái Live, phục vụ tại tên miền \texttt{yoca.id.vn}}
+    \label{fig:render-deployment-frontend}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/chapter5/render-deployment-backend.jpg}
+    \caption{Render Web Service \texttt{yoca-backend} ở trạng thái Live tại \texttt{yoca-backend.onrender.com}, log cho thấy các request \texttt{GET /api} thật trả về 200}
+    \label{fig:render-deployment-backend}
+\end{figure}
 
 
 \section{Kết quả triển khai các chức năng cốt lõi}
@@ -175,7 +222,35 @@ Mỗi quy tắc cảnh báo được tạo qua hai bước rõ ràng. Ở bướ
 
 Ở bước thứ hai (cấu hình thông báo), người dùng chọn kênh nhận thông báo. Theo mặc định, thông báo được gửi đến email đã đăng ký. Người dùng có thể chỉ định email riêng hoặc URL Discord webhook cho từng quy tắc. Ngoài ra, người dùng đặt tên quy tắc và xem trước nội dung thông báo sẽ nhận được.
 
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.47\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/chapter5/alert-config-1.png}\\[3pt]
+        {\small (a) Bước 1: điều kiện kích hoạt}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.47\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/chapter5/alert-config-2.png}\\[3pt]
+        {\small (b) Bước 2: kênh nhận và xem trước nội dung}
+    \end{minipage}
+    \caption{Tạo một alert rule thật: theo dõi swap của một ví trong khoảng giá trị 10--100 USD}
+    \label{fig:alert-config}
+\end{figure}
+
 Danh sách quy tắc hiển thị ví, loại hoạt động, khoảng giá trị, kiểu kích hoạt và thời hạn; từ đó người dùng có thể tắt hoặc xóa quy tắc bất kỳ lúc nào.
+
+Sau khi ít nhất một kênh gửi thành công, hệ thống ghi Alert History theo đúng tài khoản. Mỗi bản ghi giữ nội dung, mức độ, transaction signature, ví liên quan, thời điểm và kết quả email/Discord. Người dùng có thể xem lịch sử theo thứ tự mới nhất, đánh dấu đã đọc/chưa đọc hoặc đánh dấu toàn bộ; khóa idempotency ngăn webhook retry tạo thông báo trùng.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/chapter5/alert-delivery-email.png}
+    \caption{Email cảnh báo nhận được thật sau khi rule ở Hình~\ref{fig:alert-config} kích hoạt: sự kiện SWAP trên ví theo dõi, kèm nguồn, số lượng và transaction signature}
+    \label{fig:alert-delivery-email}
+\end{figure}
+
+Hai hình trên xác nhận luồng end-to-end (tạo rule -- Helius phát sinh sự kiện -- gửi thành công) đã chạy được trên môi trường thật. % TODO(SCREENSHOT-OPTIONAL): nếu có, bổ sung thêm ảnh giao diện Alert History (danh sách, trạng thái đã đọc/chưa đọc) để minh họa phần lưu trữ phía trong ứng dụng; không bắt buộc vì email đã là bằng chứng delivery độc lập.
 
 \subsection{Trang hồ sơ cá nhân}
 
@@ -276,7 +351,33 @@ Hoạt động kiểm thử được thực hiện nhằm xác nhận các chứ
 
 \subsection{Đánh giá hiệu năng và hiệu quả bộ đệm}
 
-\subsection{Đánh giá độ ổn định và khả năng vận hành}
+\subsection{Kết quả chạy test và vấn đề còn tồn tại}
+
+Ngày 12/07/2026, nhóm chạy hai lệnh \texttt{npm test -w client -- --run} và \texttt{npm test -w server} trên source hiện tại. Kết quả được trình bày trong Bảng~\ref{tab:test_results}; đây là số liệu của đúng lần chạy này, không phải coverage hay tỷ lệ ổn định dài hạn.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{|L{2.5cm}|C{2.2cm}|C{2.2cm}|X|}
+\hline
+\textbf{Suite} & \textbf{Test file} & \textbf{Test case} & \textbf{Kết quả} \\
+\hline
+Client & 16/16 đạt & 178/178 đạt & Các test component, payment, profile, chart interaction, utility và Alert History API đều đạt trong lần chạy ngày 12/07/2026. \\
+\hline
+Server & 29/29 đạt & 204/204 đạt & Các test auth/entitlement, payment, alert/webhook/history, AI guardrail và prompt injection, Wallet, provider mapping, pagination cùng route/service đều đạt trong lần chạy ngày 12/07/2026. \\
+\hline
+\end{tabularx}
+\caption{Kết quả chạy test trên source hiện tại}
+\label{tab:test_results}
+\end{table}
+
+Kết quả cho thấy repository đã có nền tảng kiểm thử đáng kể và hai suite hiện đều ở trạng thái xanh. Trong đợt rà cuối, nhóm chúng em sửa các expectation đã lỗi thời sau thay đổi localization/theme, thống nhất contract lỗi upstream và bổ sung test cho Alert History, provider mapper cùng cursor/offset pagination. Kết quả này đủ để dùng test làm một cổng kiểm tra trong CI, nhưng chưa thay thế E2E trên môi trường triển khai hay đánh giá tải thực tế.
+
+\subsection{Đánh giá và phạm vi kiểm thử còn thiếu}
+
+Các test hiện tại chưa đo đầy đủ cache hit/miss trên môi trường có PostgreSQL thật, chưa gọi provider thật theo contract regression và chưa chạy toàn bộ user journey trong browser. Repository cũng chưa cung cấp load test, benchmark có thể lặp lại, staging ổn định hay số liệu về độ trễ cảnh báo. Vì vậy, chương này không đưa ra con số cải thiện hiệu năng hoặc khẳng định độ ổn định toàn hệ thống.
+
+Phạm vi hoàn thiện vừa đủ gồm bốn lớp: unit test cho normalizer và phép tính; provider contract test bằng response fixture đã ẩn dữ liệu nhạy cảm; route/service test cho fresh/stale/error và các status 200, 400, 429, 500, 502, invalid JSON, schema mismatch; cuối cùng là smoke test cho hành trình demo. Suite tự động hiện đã xanh; phần còn lại trước bản nộp là chạy smoke test trên database và môi trường deploy thật, đặc biệt với delivery và lịch sử cảnh báo.
 
 \section{Tổng kết chương}
 \label{sec:tong_ket_ch4}
