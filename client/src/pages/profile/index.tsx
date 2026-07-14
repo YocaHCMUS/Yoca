@@ -8,8 +8,8 @@ import ProfileLoadingState from "@/components/profile/shared/ProfileLoadingState
 import ProfileWalletTab from "@/components/profile/wallets/ProfileWalletTab";
 import ProfileWatchlistTab from "@/components/profile/watchlist/ProfileWatchlistTab";
 import {
-    PROFILE_TABS,
-    type ProfileTabId,
+  PROFILE_TABS,
+  type ProfileTabId,
 } from "@/components/profile/shared/profile.constants";
 import ProfileSettingsTab from "@/components/profile/settings";
 import TabContainer from "@/components/tabContainer/tabContainer";
@@ -19,14 +19,14 @@ import { useProfileSharedData } from "@/hooks/profile/useProfileSharedData";
 import styles from "./index.module.scss";
 import type { TimePeriod } from "@/types/chart-filters.types";
 import {
-    Activity,
-    ChartLine,
-    Notification,
-    Receipt,
-    Settings,
-    StarFilled,
-    User,
-    Wallet,
+  Activity,
+  ChartLine,
+  Notification,
+  Receipt,
+  Settings,
+  StarFilled,
+  User,
+  Wallet,
 } from "@carbon/react/icons";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 
@@ -53,10 +53,10 @@ export default function ProfilePage() {
           />
         ),
       },
-      {
-        id: "dashboard",
-        node: <ProfileDashboardTab walletAddresses={walletAddresses} />,
-      },
+      // {
+      //   id: "dashboard",
+      //   node: <ProfileDashboardTab walletAddresses={walletAddresses} />,
+      // },
       {
         id: "alerts",
         node: profileData ? (
