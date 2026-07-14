@@ -129,7 +129,7 @@ Quy ước:
 - [x] Đã bổ sung file đề cương PDF chính thức tại `docs/reports/final_report/Appendix/proposal.pdf` (PDF 19 trang theo `pdfinfo`). Không biên dịch lại `proposal.tex`; `main.tex` tiếp tục nhúng trực tiếp toàn bộ file bằng `\includepdf[pages=-]{Appendix/proposal.pdf}`.
 - [x] Build PDF sạch sau toàn bộ thay đổi: 103 trang A4, PDF 1.7.
 - [x] Kiểm tra log không có warning, undefined citation/reference, anchor trùng, PDF version mismatch hoặc overfull box.
-- [x] Đọc PDF theo thứ tự như giảng viên: phần đầu → đề cương → mục lục → các chương → kết luận → phụ lục → tài liệu tham khảo.
+- [x] Đọc PDF theo thứ tự như giảng viên: phần đầu → đề cương → mục lục → các chương → kết luận → tài liệu tham khảo → phụ lục.
 - [x] Kiểm tra trực quan toàn bộ PDF dạng contact sheet và đọc kỹ các trang ERD, hình chức năng, Wash Trading/AI cùng phụ lục công thức; hình còn đọc được ở khổ A4.
 - [x] Đối chiếu số test, domain deployment, provider và tên chức năng ở tất cả nơi xuất hiện.
 - [x] Chốt bản PDF 103 trang tại `docs/reports/final_report/main.pdf` và giữ source LaTeX tương ứng.
