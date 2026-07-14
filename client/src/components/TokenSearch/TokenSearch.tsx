@@ -3,7 +3,7 @@ import { Flex } from "@/components/Flex";
 import { TknImg } from "@/components/TknImg";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useGet, UseGetResp } from "@/hooks/useGet";
-import { InlineLoading, Search } from "@carbon/react";
+import { SearchBox } from "@/components/charts/shared/ChartControls";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TrendNum } from "../TrendNum";
 import { Txt } from "../Txt";
@@ -88,12 +88,11 @@ export default function TokenSearch({
   return (
     <Flex dir="column">
       <div className={styles.searchRow}>
-        <Search
-          size="md"
-          labelText="Search for token"
-          placeholder="Search by symbol"
+        <SearchBox
           value={query}
-          onChange={(event) => handleInput(event.target.value)}
+          onChange={handleInput}
+          placeholder="Search by symbol"
+          ariaLabel="Search for token"
         />
       </div>
 
@@ -116,7 +115,7 @@ export default function TokenSearch({
         )}
         {searchResults.isLoading && (
           <Flex pInline={8} pBlock={6}>
-            <InlineLoading description="Loading..." />
+            <Txt size="sm" secondary>Loading...</Txt>
           </Flex>
         )}
         {showEmpty && (

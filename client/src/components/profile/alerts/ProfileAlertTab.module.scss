@@ -1,0 +1,285 @@
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal {
+  background: var(--yoca-surface);
+  border: 1px solid var(--yoca-border);
+  border-radius: 12px;
+  width: min(480px, 90vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem 0;
+  gap: 1rem;
+}
+
+.modalEyebrow {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--yoca-text-muted);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.modalTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--yoca-text-main);
+  margin: 0;
+}
+
+.modalClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 1px solid var(--yoca-border);
+  background: transparent;
+  color: var(--yoca-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.modalClose:hover {
+  background: var(--yoca-surface-hover);
+  color: var(--yoca-text-main);
+}
+
+.modalBody {
+  padding: 1.25rem 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.modalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--yoca-border);
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fieldLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--yoca-text-main);
+}
+
+.fieldInput,
+.fieldSelect,
+.fieldTextarea {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--yoca-border);
+  border-radius: 8px;
+  background: var(--yoca-surface-elevated);
+  color: var(--yoca-text-main);
+  font: inherit;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.fieldInput:focus,
+.fieldSelect:focus,
+.fieldTextarea:focus {
+  border-color: var(--yoca-primary);
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+}
+
+.fieldInput::placeholder,
+.fieldTextarea::placeholder {
+  color: var(--yoca-text-muted);
+}
+
+.fieldSelect {
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2rem;
+}
+
+.fieldTextarea {
+  min-height: 4rem;
+  resize: vertical;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.toggleSwitch {
+  position: relative;
+  display: inline-block;
+  width: 2.5rem;
+  height: 1.35rem;
+  flex-shrink: 0;
+}
+
+.toggleSwitch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggleSlider {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  border-radius: 999px;
+  background: var(--yoca-border);
+  transition: background 0.2s;
+}
+
+.toggleSlider::before {
+  content: "";
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  left: 0.175rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+
+.toggleSwitch input:checked + .toggleSlider {
+  background: var(--yoca-primary);
+}
+
+.toggleSwitch input:checked + .toggleSlider::before {
+  transform: translate(1.15rem, -50%);
+}
+
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.25rem;
+  padding: 0.4rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(120deg, #7c3aed, #2563eb);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.btnPrimary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.2);
+}
+
+.btnPrimary:active {
+  transform: translateY(0);
+}
+
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.25rem;
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--yoca-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--yoca-text-main);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btnSecondary:hover {
+  background: var(--yoca-surface-hover);
+}
+
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 1.75rem;
+  padding: 0.2rem 0.5rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--yoca-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.btnGhost:hover {
+  color: var(--yoca-text-main);
+  background: var(--yoca-surface-hover);
+}
+
+.btnDangerGhost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 1.75rem;
+  padding: 0.2rem 0.5rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--yoca-danger);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btnDangerGhost:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.inlineActions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}

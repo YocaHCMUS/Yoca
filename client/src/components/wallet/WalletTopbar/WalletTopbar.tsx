@@ -607,12 +607,12 @@ export function WalletTopbar({
                 <Repeat size={16} />
               </button>
             </Tooltip>
-            <Tooltip label={tr("wallet.shareWallet")} align="bottom-left">
+            {/* <Tooltip label={tr("wallet.shareWallet")} align="bottom-left">
               <button type="button" className={styles.iconBtn}>
                 <Share size={16} />
               </button>
-            </Tooltip>
-            <Tooltip label="AI Analysis" align="bottom-left">
+            </Tooltip> */}
+            {/* <Tooltip label="AI Analysis" align="bottom-left">
               <button
                 type="button"
                 className={styles.iconBtn}
@@ -620,7 +620,7 @@ export function WalletTopbar({
               >
                 <AiGenerate size={16} />
               </button>
-            </Tooltip>
+            </Tooltip> */}
           </div>
         </div>
       </div>
