@@ -131,6 +131,7 @@ Quy ước:
 - [x] Kiểm tra log không có warning, undefined citation/reference, anchor trùng, PDF version mismatch hoặc overfull box.
 - [x] Đọc PDF theo thứ tự như giảng viên: phần đầu → đề cương → mục lục → các chương → kết luận → tài liệu tham khảo → phụ lục.
 - [x] Kiểm tra trực quan toàn bộ PDF dạng contact sheet và đọc kỹ các trang ERD, hình chức năng, Wash Trading/AI cùng phụ lục công thức; hình còn đọc được ở khổ A4.
+- [x] Xuất năm ERD chi tiết từ Mermaid sang PDF vector, giữ nguyên nội dung và bố cục của bản PNG đã nộp tham khảo; chữ trong sơ đồ có thể chọn và tìm kiếm, còn các PNG cũ được giữ lại để đối chiếu.
 - [x] Đối chiếu số test, domain deployment, provider và tên chức năng ở tất cả nơi xuất hiện.
 - [x] Chốt bản PDF 103 trang tại `docs/reports/final_report/main.pdf` và giữ source LaTeX tương ứng.
 
