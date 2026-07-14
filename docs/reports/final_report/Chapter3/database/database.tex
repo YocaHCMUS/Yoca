@@ -5,5 +5,3 @@
 \input{Chapter3/database/erd}
 \input{Chapter3/database/core-tables}
 \input{Chapter3/database/cache-integrity}
-
-Các bảng trọng tâm được trình bày trực tiếp trong từng lát cắt ERD thay vì liệt kê lại thành một danh mục dài. Có thể quy chúng về bốn nhóm: tài khoản--cảnh báo, token--thị trường, phân tích ví và nội dung AI. Trong đó, \code{wallet\_analyses} là một ngoại lệ có chủ đích: bảng lưu kết quả tổng hợp từ Mobula theo ví và kỳ phân tích để tránh lặp lại các lời gọi tốn kém. Các bảng lịch sử transfer/swap và chi tiết giao dịch Helius vẫn được duy trì song song vì phục vụ hai nhu cầu khác nhau, lần lượt là truy vấn danh sách đã chuẩn hóa và xem dữ liệu giao dịch ở mức chi tiết.
