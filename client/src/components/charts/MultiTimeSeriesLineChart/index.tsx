@@ -118,12 +118,12 @@ export function MultiTimeSeriesLineChart({
       },
       legend: showLegend
         ? {
-            show: true,
-            data: prepared.map((s) => s.label ?? s.key),
-            textStyle: { color: tokens.textPrimary },
-            backgroundColor: tokens.layer,
-            padding: 8,
-          }
+          show: true,
+          data: prepared.map((s) => s.label ?? s.key),
+          textStyle: { color: tokens.textPrimary },
+          // backgroundColor: tokens.layer,
+          padding: 8,
+        }
         : undefined,
       grid: { left: 10, right: 10, top: 20, bottom: 30, containLabel: true },
       xAxis: {
@@ -181,7 +181,7 @@ export function MultiTimeSeriesLineChart({
             },
           },
           color,
-          stack: stacked ? "total" : undefined, 
+          stack: stacked ? "total" : undefined,
         } as const;
       }),
     };
@@ -191,8 +191,8 @@ export function MultiTimeSeriesLineChart({
     () =>
       series
         ? [...new Set(series.flatMap((s) => s.data.map((p) => p.unixTimeMs)))].sort(
-            (a, b) => a - b,
-          )
+          (a, b) => a - b,
+        )
         : [],
     [series],
   );
