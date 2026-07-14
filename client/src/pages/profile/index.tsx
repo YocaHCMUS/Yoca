@@ -53,21 +53,22 @@ export default function ProfilePage() {
           />
         ),
       },
+      // mock incomplete features
       // {
       //   id: "dashboard",
       //   node: <ProfileDashboardTab walletAddresses={walletAddresses} />,
       // },
-      {
-        id: "alerts",
-        node: profileData ? (
-          <ProfileAlertTab data={profileData.alerts} />
-        ) : (
-          <ProfileUnavailableState
-            title="Alerts unavailable"
-            description="No alert data is available right now."
-          />
-        ),
-      },
+      // {
+      //   id: "alerts",
+      //   node: profileData ? (
+      //     <ProfileAlertTab data={profileData.alerts} />
+      //   ) : (
+      //     <ProfileUnavailableState
+      //       title="Alerts unavailable"
+      //       description="No alert data is available right now."
+      //     />
+      //   ),
+      // },
       {
         id: "wallets",
         node: (
