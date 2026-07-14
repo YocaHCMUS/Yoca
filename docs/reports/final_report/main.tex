@@ -31,6 +31,7 @@
 % Chèn hình, các hình trong luận văn được để trong thư mục Images/
 \usepackage{graphicx}
 \graphicspath{ {Images/} }
+\usepackage{pdfpages}
 
 % Chèn và định dạng mã nguồn
 \usepackage{listings}
@@ -128,24 +129,24 @@
 
 \pagenumbering{roman} % Đánh số i, ii, iii, ...
 
-%\addcontentsline{toc}{chapter}{Lời cam đoan}
+\addcontentsline{toc}{chapter}{Lời cam đoan}
 \include{Appendix/reassurances}
 
-\addcontentsline{toc}{chapter}{Thuyết minh chỉnh sửa đề tài}
-\include{Appendix/revision-explanation}
+% \addcontentsline{toc}{chapter}{Thuyết minh chỉnh sửa đề tài}
+% \include{Appendix/revision-explanation}
 
-\addcontentsline{toc}{chapter}{Nhận xét hướng dẫn}
-%??? không biết bản tham khảo có ghi thiếu gì không
-\include{Appendix/supervisor-comments}
+% \addcontentsline{toc}{chapter}{Nhận xét hướng dẫn}
+% \include{Appendix/supervisor-comments}
 
-\addcontentsline{toc}{chapter}{Nhận xét phản biện}
-\include{Appendix/reviewer-comments}
+% \addcontentsline{toc}{chapter}{Nhận xét phản biện}
+% \include{Appendix/reviewer-comments}
     
 \addcontentsline{toc}{chapter}{Lời cảm ơn}
 \include{Appendix/thanks}
 
 \addcontentsline{toc}{chapter}{Đề cương chi tiết}
-%\include{proposal}
+\includepdf[pages=-]{Appendix/proposal.pdf}
+
 
 % Mục lục, danh sách hình, danh sách bảng
 \addcontentsline{toc}{chapter}{Mục lục}
