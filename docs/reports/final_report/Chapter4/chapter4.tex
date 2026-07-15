@@ -156,7 +156,7 @@ Trên đồ thị, người dùng có thể di chuột hoặc chọn một nút 
 
 Hình~\ref{fig:wash-trading-analysis} minh họa một phiên phân tích gồm 120 giao dịch của 69 ví. Giao diện tổng hợp điểm rủi ro, khối lượng giao dịch ước tính liên quan đến các ví thuộc chu trình, số ví cần chú ý và các cụm chu trình, sau đó biểu diễn luồng chuyển token để người dùng quan sát quan hệ giữa chúng. Khi chọn một ví, khu vực chi tiết hiển thị điểm nghi vấn cùng mức đóng góp của các đặc trưng \textit{circular pattern}, \textit{time regularity}, \textit{amount similarity}, \textit{self-loop}, \textit{hubness} và \textit{volume signal}. Cách trình bày này giúp người dùng đối chiếu điểm số với những tín hiệu đã tạo nên điểm và nhận biết nguyên nhân khiến một ví được đưa vào danh sách cần kiểm tra.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.86\textwidth]{images/ui/wash-trading-1.png}
 
@@ -165,8 +165,6 @@ Hình~\ref{fig:wash-trading-analysis} minh họa một phiên phân tích gồm 
     \caption{Đồ thị giao dịch, cụm ví nghi vấn và điểm rủi ro của ví được chọn}
     \label{fig:wash-trading-analysis}
 \end{figure}
-
-
 
 Trợ lý AI hoạt động theo ngữ cảnh của từng khu vực phân tích. Tại trang Wash Trading, khung chat được giới hạn theo địa chỉ mint, khung thời gian, cấu hình chấm điểm và kết quả phân tích tương ứng. Trước khi gửi yêu cầu đến mô hình, máy chủ chuẩn bị ngữ cảnh gồm nguồn dữ liệu, các chỉ số tổng hợp, điểm rủi ro, chu trình nghi vấn, ví tiêu biểu, đặc trưng của ví và nhật ký phát hiện. Nhờ đó, trợ lý có thể giải thích nguyên nhân hình thành điểm, ý nghĩa của các đặc trưng, sự khác nhau giữa ba cấu hình chấm điểm và những tín hiệu đáng chú ý trong kết quả hiện tại.
 
