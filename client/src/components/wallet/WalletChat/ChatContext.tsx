@@ -358,17 +358,19 @@ export function ChatContextProvider({ addresses, contextType, lang, children }: 
   }, [truncatedMessages, activeSessionId, saveMessagesToSession]);
 
   const handleNewChat = useCallback(async () => {
+    if (isLoading) return;
     setMessages([]);
     setTruncatedMessages(null);
     setError(null);
     setShowPromptMenu(false);
     setActiveSessionId(null);
-  }, [setActiveSessionId]);
+  }, [isLoading, setActiveSessionId]);
 
   const handleSessionSelect = useCallback(async (sessionId: string) => {
+    if (isLoading) return;
     setActiveSessionId(sessionId);
     setShowSessionMenu(false);
-  }, [setActiveSessionId]);
+  }, [isLoading, setActiveSessionId]);
 
   const handleDeleteSession = useCallback(async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();

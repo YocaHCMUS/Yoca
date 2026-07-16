@@ -526,6 +526,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
               type="button"
               className={styles.sessionToggle}
               onClick={() => setShowSessionMenu((v) => !v)}
+              disabled={isLoading}
             >
               <span className={styles.sessionToggleLabel}>
                 {activeSession?.title ?? tr("chat.newChat")}
@@ -550,6 +551,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
             className={styles.circleBtn}
             onClick={handleNewChat}
             title={tr("chat.newChat")}
+            disabled={isLoading}
           >
             <Plus size={15} />
           </button>
