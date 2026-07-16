@@ -721,13 +721,15 @@ export function WalletChatMessage({ message, index, onAction, onRedo, onRevert }
           <ChartRenderer key={`c-${only.id}`} spec={spec} data={message.data} onAction={onAction} />,
         );
       }
-    } else if (only.type === "table" && message.data && only.id) {
+    } else if (only.type === "table" && only.id) {
       const spec = message.tables?.find((t) => t.id === only.id) ?? {
         id: only.id, dataRef: only.id, columns: "",
       };
-      elements.push(
-        <TableRenderer key={`t-${only.id}`} spec={spec} data={message.data} onAction={onAction} />,
-      );
+      if (message.data && spec.dataRef && message.data[spec.dataRef] != null) {
+        elements.push(
+          <TableRenderer key={`t-${only.id}`} spec={spec} data={message.data} onAction={onAction} />,
+        );
+      }
     } else if (only.type === "action" && only.id) {
       const actGroup = inlineByIndex[only.id];
       if (actGroup?.length) {
