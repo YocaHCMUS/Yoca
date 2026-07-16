@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { AppWindow, ChevronDown, List, Minus, PanelLeft, PanelRight, Plus, Send, Trash2, X, Zap } from "lucide-react";
@@ -91,6 +91,11 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
     handleSessionSelect,
     handleDeleteSession,
   } = useChatContext();
+
+  const quickQuestions = useMemo(
+    () => PREDEFINED_QUESTIONS.filter(q => q.contextTypes?.includes(contextType)).slice(0, MAX_QUICK_QUESTIONS),
+    [contextType]
+  );
 
   useEffect(() => {
     if (listRef.current) {
@@ -432,13 +437,14 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
   const renderPromptMenu = () => (
     <ChatPromptMenu
       walletAddress={walletAddresses[0]}
+      contextType={contextType}
       onSelect={handlePredefined}
       onClose={() => setShowPromptMenu(false)}
     />
   );
 
   const renderGreeting = () => {
-    const quickItems = PREDEFINED_QUESTIONS.slice(0, MAX_QUICK_QUESTIONS);
+    const quickItems = quickQuestions;
 
     return (
       <div ref={listRef} className={styles.messagesArea}>
@@ -520,6 +526,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
               type="button"
               className={styles.sessionToggle}
               onClick={() => setShowSessionMenu((v) => !v)}
+              disabled={isLoading}
             >
               <span className={styles.sessionToggleLabel}>
                 {activeSession?.title ?? tr("chat.newChat")}
@@ -544,6 +551,7 @@ function WalletChatInner({ variant, chatPosition, onChatPositionChange, walletAd
             className={styles.circleBtn}
             onClick={handleNewChat}
             title={tr("chat.newChat")}
+            disabled={isLoading}
           >
             <Plus size={15} />
           </button>

@@ -37,15 +37,29 @@ function extractJsonObject(text: string): unknown {
   const trimmed = text.trim();
   if (!trimmed) return null;
 
-  const firstBrace = trimmed.indexOf("{");
-  const lastBrace = trimmed.lastIndexOf("}");
+  // Strip markdown fences and leading prose
+  let cleaned = trimmed.replace(/```(?:json)?\s*([\s\S]*?)```/g, '$1').trim();
+
+  // Strip any prose before first { and after last }
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
   if (firstBrace < 0 || lastBrace <= firstBrace) return null;
 
-  const candidate = trimmed.slice(firstBrace, lastBrace + 1);
+  cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+
+  // Try direct parse
   try {
-    return JSON.parse(candidate);
+    return JSON.parse(cleaned);
   } catch {
-    return null;
+    // Strip trailing commas (common Gemini issue) and retry
+    try {
+      const fixed = cleaned
+        .replace(/,\s*}/g, '}')
+        .replace(/,\s*]/g, ']');
+      return JSON.parse(fixed);
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -63,7 +77,7 @@ export function sanitizeResponse(raw: string): {
 } {
   const parsed = extractJsonObject(raw) as Record<string, unknown> | null;
   if (!parsed) {
-    return { rawText: raw, text: raw, charts: [], tables: [], actions: [] };
+    return { rawText: raw, text: "", charts: [], tables: [], actions: [] };
   }
 
   const text = sanitizeText((parsed.text as string) ?? "");
@@ -98,12 +112,21 @@ export function sanitizeResponse(raw: string): {
       return t as unknown as TableSpec;
     });
 
-  const actions: ActionSpec[] = (Array.isArray(parsed.actions) ? parsed.actions : []).filter(
-    (a): a is ActionSpec =>
-      a && typeof a === "object" &&
-      typeof (a as Record<string, unknown>).label === "string" &&
-      typeof (a as Record<string, unknown>).href === "string",
-  );
+  const actions: ActionSpec[] = (Array.isArray(parsed.actions) ? parsed.actions : [])
+    .filter((a): a is Record<string, unknown> =>
+      a !== null && typeof a === "object" &&
+      typeof (a as Record<string, unknown>).label === "string",
+    )
+    .map((a) => {
+      const r = a as Record<string, unknown>;
+      return {
+        label: r.label as string,
+        href: typeof r.href === "string" && r.href.trim()
+          ? r.href
+          : `#ask:${typeof r.query === "string" ? r.query : r.label}`,
+        ...(r.index !== undefined ? { index: r.index as number | null } : {}),
+      } satisfies ActionSpec;
+    });
 
   const tldr: string[] | undefined = Array.isArray(parsed.tldr)
     ? (parsed.tldr as string[]).filter((s): s is string => typeof s === "string").slice(0, 3)

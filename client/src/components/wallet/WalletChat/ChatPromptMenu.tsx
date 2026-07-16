@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useChatPrompts, type ChatPromptData, type CreatePromptInput, type PromptScope, type UpdatePromptInput } from "./useChatPrompts";
+import type { ChatSessionContextType } from "./useChatSessions";
 import { PREDEFINED_QUESTIONS } from "./WalletChatConstants";
 import { ChatPromptDialog } from "./ChatPromptDialog";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +26,7 @@ type PromptCategory = "system" | "popular" | "new" | "saved";
 
 interface Props {
   walletAddress?: string;
+  contextType: ChatSessionContextType;
   onSelect: (query: string, promptId?: string) => void;
   onClose: () => void;
 }
@@ -61,7 +63,7 @@ const SYSTEM_PROMPT_ICONS: Partial<Record<string, LucideIcon>> = {
   riskComparison: ShieldCheck,
 };
 
-export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
+export function ChatPromptMenu({ walletAddress, contextType, onSelect, onClose }: Props) {
   const { tr } = useLocalization();
   const { user } = useAuth();
   const {
@@ -162,13 +164,14 @@ export function ChatPromptMenu({ walletAddress, onSelect, onClose }: Props) {
   const filterText = searchQuery.toLowerCase().trim();
 
   const filteredSystemPrompts = useMemo(() => {
-    if (!filterText) return PREDEFINED_QUESTIONS;
-    return PREDEFINED_QUESTIONS.filter((q) => {
+    const byContext = PREDEFINED_QUESTIONS.filter(q => q.contextTypes?.includes(contextType));
+    if (!filterText) return byContext;
+    return byContext.filter((q) => {
       const label = resolveLabel(q).toLowerCase();
       const query = resolveQuery(q).toLowerCase();
       return label.includes(filterText) || query.includes(filterText);
     });
-  }, [filterText, resolveLabel, resolveQuery]);
+  }, [filterText, resolveLabel, resolveQuery, contextType]);
 
   const handleCreate = useCallback(async (input: CreatePromptInput | UpdatePromptInput) => {
     const result = await createPrompt(input as CreatePromptInput);
