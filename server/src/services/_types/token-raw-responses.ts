@@ -485,7 +485,54 @@ const mbl_TokenTopHoldersMetadataSchema = z
     entityDiscord: z.string().nullable(),
     entityTelegram: z.string().nullable(),
   })
-  .nullable();
+    .nullable();
+
+const mbl_TokenAllocationSchema = z.object({
+  name: z.string(),
+  percentage: z.coerce.number(),
+});
+
+const mbl_TokenUnlockEventSchema = z.object({
+  unlock_date: z.coerce.number(),
+  tokens_to_unlock: z.coerce.number().nullish().transform((value) => value ?? 0),
+  allocation_details: z
+    .record(z.string(), z.coerce.number())
+    .nullish()
+    .transform((value) => value ?? {}),
+});
+
+const mbl_TokenInvestorSchema = z.object({
+  name: z.string(),
+  type: z.string().nullish().transform((value) => value ?? ""),
+  image: z.string().nullish().transform((value) => value ?? ""),
+  country_name: z.string().nullish().transform((value) => value ?? ""),
+  description: z.string().nullish().transform((value) => value ?? ""),
+  lead: z.boolean().nullish().transform((value) => value ?? false),
+});
+
+export const mbl_TokenFundamentalsResponseSchema = z.object({
+  data: z.object({
+    distribution: z
+      .array(mbl_TokenAllocationSchema)
+      .nullable()
+      .transform((value) => value ?? [])
+      .optional(),
+    release_schedule: z
+      .array(mbl_TokenUnlockEventSchema)
+      .nullable()
+      .transform((value) => value ?? [])
+      .optional(),
+    investors: z
+      .array(mbl_TokenInvestorSchema)
+      .nullable()
+      .transform((value) => value ?? [])
+      .optional(),
+  }),
+});
+
+export type MBL_TokenFundamentalsResponse = z.infer<
+  typeof mbl_TokenFundamentalsResponseSchema
+>;
 
 export const mbl_TokenTopHoldersSchema = z.object({
   data: z.array(

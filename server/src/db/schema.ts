@@ -86,6 +86,90 @@ export const tokenDetails = pgTable("token_details", {
     .$onUpdate(() => new Date()),
 });
 
+export const tokenFundamentals = pgTable("token_fundamentals", {
+  tokenAddress: varchar("token_address", { length: 44 }).primaryKey(),
+  allocationsObservedAt: timestamp("allocations_observed_at"),
+  unlockScheduleObservedAt: timestamp("unlock_schedule_observed_at"),
+  investorsObservedAt: timestamp("investors_observed_at"),
+});
+
+export const tokenAllocations = pgTable(
+  "token_allocations",
+  {
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    category: varchar("category", { length: 128 }).notNull(),
+    percentage: decimal("percentage").notNull(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$onUpdate(() => dayjs.utc().toDate()),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tokenAddress, table.category] }),
+  ],
+);
+
+export const tokenUnlockEvents = pgTable(
+  "token_unlock_events",
+  {
+    id: serial("id").primaryKey(),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    unlockAt: timestamp("unlock_at").notNull(),
+    tokensToUnlock: decimal("tokens_to_unlock").notNull(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$onUpdate(() => dayjs.utc().toDate()),
+  },
+  (table) => [
+    uniqueIndex("token_unlock_events_token_date_uq").on(
+      table.tokenAddress,
+      table.unlockAt,
+    ),
+  ],
+);
+
+export const tokenUnlockAllocations = pgTable(
+  "token_unlock_allocations",
+  {
+    unlockEventId: integer("unlock_event_id")
+      .notNull()
+      .references(() => tokenUnlockEvents.id, { onDelete: "cascade" }),
+    category: varchar("category", { length: 128 }).notNull(),
+    tokenAmount: decimal("token_amount").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.unlockEventId, table.category] }),
+  ],
+);
+
+export const investors = pgTable("investors", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 256 }).notNull().unique(),
+  type: varchar("type", { length: 128 }),
+  imageUrl: varchar("image_url"),
+  countryName: varchar("country_name", { length: 128 }),
+  description: text("description"),
+  updatedAt: timestamp("updated_at")
+    .notNull()
+    .$onUpdate(() => dayjs.utc().toDate()),
+});
+
+export const tokenInvestors = pgTable(
+  "token_investors",
+  {
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    investorId: integer("investor_id")
+      .notNull()
+      .references(() => investors.id, { onDelete: "cascade" }),
+    lead: boolean("lead").notNull().default(false),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$onUpdate(() => dayjs.utc().toDate()),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tokenAddress, table.investorId] }),
+  ],
+);
+
 export const tokenMarketData = pgTable("token_market_data", {
   address: varchar("address", { length: 44 }).primaryKey(),
 
