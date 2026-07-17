@@ -210,8 +210,8 @@ export const translation = {
       language: "Language",
       languageMenu: "Language menu",
       currentLanguage: "Current language",
-      english: "English",
-      vietnamese: "Tiếng Việt",
+      english: "English — English",
+      vietnamese: "Vietnamese — Tiếng Việt",
       toggleMenu: "Toggle menu",
       switchToLightMode: "Switch to Light Mode",
       switchToDarkMode: "Switch to Dark Mode",
@@ -1564,6 +1564,8 @@ export const translation = {
     theme: "Theme",
     account: "Account",
     language: "Language",
+    currentLanguage: "Current",
+    switchLanguage: "Switch",
     search: "Search",
     searchPlaceholder: "Search",
     searchHint: "Type to search for tokens, pools, or wallets",
@@ -1693,8 +1695,8 @@ export const translation = {
     ruleCreateSuccess: "Alert rule saved and address list sent to Helius.",
   },
   lang: {
-    vi: "Vietnam - Tiếng Việt (Vietnamese)",
-    en: "United States - English (English)",
+    vi: "Vietnamese — Tiếng Việt",
+    en: "English — English",
   },
   // Validation errors
   validation: {
@@ -2434,6 +2436,7 @@ export const translation = {
       rank1130: "11–30",
       rank3150: "31–50",
       others: "Others",
+      ofTotalSupply: "of total supply",
       supplyBillion: "{{count}} billion {{symbol}}",
       supplyMillion: "{{count}} million {{symbol}}",
       supplyThousand: "{{count}} thousand {{symbol}}",
@@ -2828,5 +2831,3 @@ export const translation = {
 // English as base translation
 export const defineTranslation =
   defineTranslationWithBase<typeof translation>();
-
-

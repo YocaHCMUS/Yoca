@@ -76,6 +76,7 @@ type DonutTooltipParam = {
 function buildDonutOption(
   distribution: DistributionData,
   labels: { top10: string; mid1: string; mid2: string; others: string },
+  ofTotalSupply: string,
   isDark: boolean,
 ): EChartsOption {
   const mid1Key = "11_25";
@@ -104,7 +105,7 @@ function buildDonutOption(
         const barStr = "█".repeat(filled) + "░".repeat(track - filled);
         return [
           `<b style="color:#fff;font-size:14px">${params.name}</b>`,
-          `<span style="color:${params.color}">●</span> ${params.value.toFixed(2)}% của tổng cung`,
+          `<span style="color:${params.color}">●</span> ${params.value.toFixed(2)}% ${ofTotalSupply}`,
           `<span style="font-family:monospace;color:#7bb8f5;font-size:11px">${barStr}</span>`,
         ].join("<br/>");
       },
@@ -344,7 +345,7 @@ export function TokenInsightTabs({
                 <div className={styles.chartPlaceholder} />
               ) : distribution ? (
                 <div className={styles.chartBody}>
-                  <ReactECharts option={buildDonutOption(distribution, donutLabels, isDark)} style={{ height: "100%", width: "100%" }} notMerge />
+                  <ReactECharts option={buildDonutOption(distribution, donutLabels, tr("token.insightTabs.ofTotalSupply"), isDark)} style={{ height: "100%", width: "100%" }} notMerge />
                 </div>
               ) : (
                 <div className={styles.noData}>—</div>

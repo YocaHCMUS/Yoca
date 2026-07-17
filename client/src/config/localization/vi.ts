@@ -169,8 +169,8 @@ export const translation = defineTranslation({
       language: "Ngôn ngữ",
       languageMenu: "Menu ngôn ngữ",
       currentLanguage: "Ngôn ngữ hiện tại",
-      english: "English",
-      vietnamese: "Tiếng Việt",
+      english: "Tiếng Anh — English",
+      vietnamese: "Tiếng Việt — Tiếng Việt",
       toggleMenu: "Mở hoặc đóng menu",
       switchToLightMode: "Chuyển sang giao diện sáng",
       switchToDarkMode: "Chuyển sang giao diện tối",
@@ -1523,6 +1523,8 @@ export const translation = defineTranslation({
     settings: "Cài đặt",
     theme: "Giao diện",
     language: "Ngôn ngữ",
+    currentLanguage: "Hiện tại",
+    switchLanguage: "Chuyển đổi",
     account: "Tài khoản",
     search: "Tìm kiếm",
     switchToLightTheme: "Chuyển sang tông màu sáng",
@@ -1653,8 +1655,8 @@ export const translation = defineTranslation({
       "Đã lưu quy tắc cảnh báo và cập nhật danh sách địa chỉ tới Helius.",
   },
   lang: {
-    vi: "Tiếng Việt - Tiếng Việt (Vietnamese)",
-    en: "Mỹ - English (English)",
+    vi: "Tiếng Việt — Tiếng Việt",
+    en: "Tiếng Anh — English",
   },
   // Validation errors
   validation: {
@@ -2432,6 +2434,7 @@ export const translation = defineTranslation({
       rank1130: "11-30",
       rank3150: "31-50",
       others: "Khác",
+      ofTotalSupply: "của tổng cung",
       volumeQ:
         "Khối lượng giao dịch hàng ngày của {{name}} ({{symbol}}) là bao nhiêu?",
       volumeA:
@@ -2822,4 +2825,3 @@ export const translation = defineTranslation({
     },
   },
 });
-
