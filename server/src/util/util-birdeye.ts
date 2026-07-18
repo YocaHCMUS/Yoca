@@ -1,4 +1,5 @@
 import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.js";
+import { defineProvider } from "@sv/util/rate-limit.js";
 import Bottleneck from "bottleneck";
 import { apiKeyManager, buildApiKeyMetadata } from "./api-key-manager.js";
 import env from "./load-env.js";
@@ -95,4 +96,9 @@ export const limiter = new Bottleneck({
   reservoirRefreshInterval: 1000, // every second
   maxConcurrent: 5, // avoid huge parallelism
   minTime: 75, // ~13 req/sec spacing
+});
+
+export const spec = defineProvider({
+  id: "birdeye",
+  limiter,
 });

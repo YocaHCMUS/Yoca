@@ -1,7 +1,6 @@
 import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.js";
-import type { ProviderSpec } from "@sv/util/rate-limit.js";
+import { defineProvider } from "@sv/util/rate-limit.js";
 import Bottleneck from "bottleneck";
-import { createHelius } from "helius-sdk";
 import { apiKeyManager, buildApiKeyMetadata } from "./api-key-manager.js";
 import env from "./load-env.js";
 
@@ -13,10 +12,10 @@ export const limiter = new Bottleneck({
   maxConcurrent: 2,
 });
 
-export const spec: ProviderSpec = {
+export const spec = defineProvider({
   id: "helius",
   limiter,
-};
+});
 
 const HELIUS_SERVICE_NAME = "helius";
 let heliusKeysInitialized = false;
@@ -90,9 +89,3 @@ export function getRequiredHeadersWithMetadata(): {
     apiKey: buildApiKeyMetadata(apiKey, "HELIUS_API_KEY"),
   };
 }
-
-const client = createHelius({
-  apiKey: env.HELIUS_API_KEY!,
-});
-
-export { client };

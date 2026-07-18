@@ -19,7 +19,7 @@ import {
 import { validateApiResult } from "@sv/middlewares/validation.js";
 import { excluded } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
-import { rlFetch } from "@sv/util/rate-limit.js";
+import { pFetch } from "@sv/util/rate-limit.js";
 import dayjs from "dayjs";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { cg_TokenMarketChartSchema } from "../_types/token-raw-responses.js";
@@ -92,10 +92,9 @@ export async function fetch24hTokenMarketChart(
     to: toUnixSecondsString(to),
   }).toString();
 
-  const resp = await rlFetch(cgEndpoint, {
+  const resp = await pFetch(cg.spec, "coingecko.svc.token_price_chart", cgEndpoint, {
     method: "GET",
     headers: cg.getRequiredHeaders(),
-    rlLimiter: cg.limiter,
   });
 
   if (!resp.ok) {
@@ -195,10 +194,9 @@ async function fetchAndCacheChartRange(
     vs_currency: "usd",
   }).toString();
 
-  const resp = await rlFetch(cgEndpoint, {
+  const resp = await pFetch(cg.spec, "coingecko.svc.pool_price_chart", cgEndpoint, {
     method: "GET",
     headers: cg.getRequiredHeaders(),
-    rlLimiter: cg.limiter,
   });
 
   if (!resp.ok) {

@@ -7,7 +7,7 @@ import type {
 import { toWalletPageInfo } from "@sv/services/wallet/walletData.core.js";
 import { resolveRequestedRange } from "@sv/services/wallet/walletRange.utils.js";
 import * as mobula from "@sv/util/util-mobula";
-import { rlFetch } from "@sv/util/rate-limit";
+import { pFetch } from "@sv/util/rate-limit";
 import { validateApiResult } from "@sv/middlewares/validation";
 import {
     excluded,
@@ -951,10 +951,9 @@ async function mbl_fetchWalletActivityRange({
       unlistedAssets: "false",
     }).toString();
 
-    const response = await rlFetch(endpoint, {
+    const response = await pFetch(mobula.spec, "mobula.svc.wallet_activity", endpoint, {
       method: "GET",
       headers: mobula.getRequiredHeaders(),
-      rlLimiter: mobula.limiter,
     });
     const result = await validateApiResult(
       mbl_WalletActivitySchema,

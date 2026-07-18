@@ -18,9 +18,9 @@ import {
 import {
     getEndpoint,
     getRequiredHeaders,
-    limiter as heliusLimiter,
+    spec as heliusSpec,
 } from "@sv/util/util-helius.js";
-import { rlFetch } from "@sv/util/rate-limit.js";
+import { pFetch } from "@sv/util/rate-limit.js";
 import { statusCode } from "@sv/util/responses.js";
 
 export const WALLET_IDENTITY_MAX_BATCH_SIZE = 100;
@@ -390,10 +390,9 @@ export async function getWalletIdentityRaw(address: string): Promise<WalletIdent
 
     let response: Response;
     try {
-        response = await rlFetch(endpoint, {
+        response = await pFetch(heliusSpec, "helius.svc.wallet_identity", endpoint, {
             method: "GET",
             headers: getRequiredHeaders(),
-            rlLimiter: heliusLimiter,
         });
     } catch {
         throw new WalletIdentityServiceError(
@@ -440,11 +439,10 @@ export async function getWalletIdentityBatchRaw(
 
         let response: Response;
         try {
-            response = await rlFetch(endpoint, {
+            response = await pFetch(heliusSpec, "helius.svc.wallet_identity_batch", endpoint, {
                 method: "POST",
                 headers: getRequiredHeaders(),
                 body: JSON.stringify({ addresses: chunk }),
-                rlLimiter: heliusLimiter,
             });
         } catch {
             throw new WalletIdentityServiceError(

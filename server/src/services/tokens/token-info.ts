@@ -20,7 +20,7 @@ import {
 } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import * as moralis from "@sv/util/util-moralis.js";
-import { rlFetch } from "@sv/util/rate-limit.js";
+import { pFetch } from "@sv/util/rate-limit.js";
 import { validateApiResult } from "@sv/middlewares/validation.js";
 import {
     cg_CoinDetailSchema,
@@ -67,10 +67,9 @@ async function fetchTokenDetails(tokenAddresses: string[]) {
           include_categories_details: "true",
         }).toString();
 
-        const resp = await rlFetch(endpoint, {
+        const resp = await pFetch(cg.spec, "coingecko.svc.token_metadata", endpoint, {
           method: "GET",
           headers: cg.getRequiredHeaders(),
-          rlLimiter: cg.limiter,
         });
 
         if (!resp.ok) {
@@ -306,10 +305,9 @@ export async function getTokenMeta(tokenAddresses: string[]) {
         const endpoint = moralis.getEndpoint(
           `/token/mainnet/${address}/metadata`,
         );
-        const response = await rlFetch(endpoint, {
+        const response = await pFetch(moralis.spec, "moralis.svc.token_metadata", endpoint, {
           method: "GET",
           headers: moralis.getRequiredHeaders(),
-          rlLimiter: moralis.limiter,
         });
         const parsed = await validateApiResult(
           mrl_tokenMetadataSchema,

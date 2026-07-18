@@ -21,7 +21,7 @@ import {
     WALLET_BALANCE_HISTORY_STORED_TTL_MS,
     MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS,
 } from "@sv/config/constants.js";
-import { rlFetch } from "@sv/util/rate-limit.js";
+import { pFetch } from "@sv/util/rate-limit.js";
 import { excluded } from "@sv/util/orm-sql.js";
 
 /**
@@ -232,10 +232,9 @@ async function fetchWalletBalanceHistory(
     unlistedAssets: "false",
   }).toString();
 
-  const resp = await rlFetch(endpoint, {
+  const resp = await pFetch(mobula.spec, "mobula.svc.wallet_balance_chart", endpoint, {
     method: "GET",
     headers: mobula.getRequiredHeaders(),
-    rlLimiter: mobula.limiter,
     rlTimeoutMs: WALLET_BALANCE_HISTORY_FETCH_TIMEOUT_MS,
   });
 

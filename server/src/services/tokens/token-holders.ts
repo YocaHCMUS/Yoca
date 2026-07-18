@@ -12,7 +12,7 @@ import {
     type MBL_TokenTopHolderSchema,
 } from "@sv/services/_types/token-raw-responses.js";
 import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
-import { rlFetch } from "@sv/util/rate-limit.js";
+import { pFetch } from "@sv/util/rate-limit.js";
 import * as mobula from "@sv/util/util-mobula.js";
 import { eq } from "drizzle-orm";
 
@@ -26,10 +26,9 @@ export async function fetchTokenHolderPositions(
     limit: "1000",
   }).toString();
 
-  const resp = await rlFetch(endpoint, {
+  const resp = await pFetch(mobula.spec, "mobula.svc.token_holders", endpoint, {
     method: "GET",
     headers: mobula.getRequiredHeaders(),
-    rlLimiter: mobula.limiter,
   });
 
   if (!resp.ok) {

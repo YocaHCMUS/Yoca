@@ -33,7 +33,7 @@ async function fetchMobulaTokenFundamentals(
 
   const resp = await pFetch(
     mobula.spec,
-    "svc.token_fundamentals",
+    "mobula.svc.token_fundamentals",
     endpoint,
     {
       method: "GET",

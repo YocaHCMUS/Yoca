@@ -1,5 +1,5 @@
 import Bottleneck from "bottleneck";
-import type { ProviderSpec } from "./rate-limit.js";
+import { defineProvider } from "./rate-limit.js";
 import env from "./load-env.js";
 
 export const limiter = new Bottleneck({
@@ -7,10 +7,10 @@ export const limiter = new Bottleneck({
   minTime: 1_000,
 });
 
-export const spec: ProviderSpec = {
+export const spec = defineProvider({
   id: "mobula",
   limiter,
-};
+});
 
 export function getEndpoint(path: string): URL {
   const baseUrl = env.MOBULA_API_BASE_URL.endsWith("/")

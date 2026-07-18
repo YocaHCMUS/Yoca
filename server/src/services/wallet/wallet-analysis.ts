@@ -8,7 +8,7 @@ import { db } from "@sv/db/index.js";
 import { walletAnalyses, type WalletAnalysisSelect } from "@sv/db/schema.js";
 import { validateApiResult } from "@sv/middlewares/validation.js";
 import { mbl_WalletAnalysisSchema } from "@sv/services/_types/wallet-raw-responses.js";
-import { rlFetch } from "@sv/util/rate-limit.js";
+import { pFetch } from "@sv/util/rate-limit.js";
 import * as mobula from "@sv/util/util-mobula.js";
 import dayjs from "dayjs";
 import { and, eq } from "drizzle-orm";
@@ -60,10 +60,9 @@ export async function fetchWalletAnalysis(
     period: MOBULA_PERIOD_BY_WINRATE_PERIOD[period],
   }).toString();
 
-  const response = await rlFetch(endpoint, {
+  const response = await pFetch(mobula.spec, "mobula.svc.wallet_analysis", endpoint, {
     method: "GET",
     headers: mobula.getRequiredHeaders(),
-    rlLimiter: mobula.limiter,
   });
   const result = await validateApiResult(mbl_WalletAnalysisSchema, response);
   if (!result) {

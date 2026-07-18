@@ -1,6 +1,6 @@
 import * as cg from "@sv/util/util-coingecko.js";
 import { validateApiResult } from "@sv/middlewares/validation.js";
-import { rlFetch } from "@sv/util/rate-limit.js";
+import { pFetch } from "@sv/util/rate-limit.js";
 import { Hono } from "hono";
 import { z } from "zod";
 
@@ -73,10 +73,9 @@ const app = new Hono()
 
     try {
       const endpoint = cg.getEndpoint("/exchange_rates");
-      const resp = await rlFetch(endpoint, {
+      const resp = await pFetch(cg.spec, "coingecko.svc.exchange_rates", endpoint, {
         method: "GET",
         headers: cg.getRequiredHeaders(),
-        rlLimiter: cg.limiter,
       });
       if (!resp.ok) {
         if (cachedRates) return c.json(cachedRates); // serve stale on error

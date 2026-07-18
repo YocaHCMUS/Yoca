@@ -10,7 +10,7 @@ import {
     type TokenTopPoolInsert,
 } from "@sv/db/schema.js";
 import { validateApiResult } from "@sv/middlewares/validation.js";
-import { rlFetch } from "@sv/util/rate-limit.js";
+import { pFetch } from "@sv/util/rate-limit.js";
 import { excludedAuto, excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, eq, gt } from "drizzle-orm";
@@ -61,10 +61,9 @@ async function fetchDexLogos(): Promise<Map<string, string>> {
       page: String(page),
     }).toString();
 
-    const resp = await rlFetch(cgEndpoint, {
+    const resp = await pFetch(cg.spec, "coingecko.svc.exchange_list", cgEndpoint, {
       method: "GET",
       headers: cg.getRequiredHeaders(),
-      rlLimiter: cg.limiter,
     });
 
     if (!resp.ok) {
@@ -107,10 +106,9 @@ async function fetchTokenTopPools(tokenAddress: string) {
     page: "1",
   }).toString();
 
-  const resp = await rlFetch(cgEndpoint, {
+  const resp = await pFetch(cg.spec, "coingecko.svc.token_top_pools", cgEndpoint, {
     method: "GET",
     headers: cg.getRequiredHeaders(),
-    rlLimiter: cg.limiter,
   });
 
   if (!resp.ok) {
@@ -315,10 +313,9 @@ async function fetchPoolData(poolAddress: string) {
     include_composition: "true",
   }).toString();
 
-  const resp = await rlFetch(cgEndpoint, {
+  const resp = await pFetch(cg.spec, "coingecko.svc.pool_details", cgEndpoint, {
     method: "GET",
     headers: cg.getRequiredHeaders(),
-    rlLimiter: cg.limiter,
   });
 
   if (!resp.ok) {

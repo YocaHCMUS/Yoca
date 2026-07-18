@@ -14,7 +14,7 @@ import {
     type MBL_WalletPositions,
 } from "@sv/services/_types/wallet-raw-responses.js";
 import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
-import { rlFetch } from "@sv/util/rate-limit.js";
+import { pFetch } from "@sv/util/rate-limit.js";
 import * as mobula from "@sv/util/util-mobula.js";
 import dayjs from "dayjs";
 import { eq } from "drizzle-orm";
@@ -34,10 +34,9 @@ export async function fetchTokenDetails(
     onlyOpen: "false",
   }).toString();
 
-  const response = await rlFetch(endpoint, {
+  const response = await pFetch(mobula.spec, "mobula.svc.wallet_token_details", endpoint, {
     method: "GET",
     headers: mobula.getRequiredHeaders(),
-    rlLimiter: mobula.limiter,
   });
   const result = await validateApiResult(
     mbl_WalletPositionsSchema,

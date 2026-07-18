@@ -14,23 +14,30 @@ export type RateLimitedFetchOptions = RequestInit &
     trackingId?: string;
   };
 
-export interface ProviderSpec {
-  id: string;
+export interface ProviderSpec<ProviderId extends string> {
+  id: ProviderId;
   limiter: Bottleneck;
 }
 
-export type ServiceOperationId = `svc.${string}`;
+export function defineProvider<const ProviderId extends string>(
+  spec: ProviderSpec<ProviderId>,
+): ProviderSpec<ProviderId> {
+  return spec;
+}
 
-export async function pFetch(
-  spec: ProviderSpec,
-  operation: ServiceOperationId,
+export type ServiceOperationId<ProviderId extends string> =
+  `${ProviderId}.svc.${string}`;
+
+export async function pFetch<ProviderId extends string>(
+  spec: ProviderSpec<ProviderId>,
+  trackingId: ServiceOperationId<ProviderId>,
   url: URL,
   options: RequestInit & FetchRetryOptions = {},
 ): Promise<Response> {
   return rlFetch(url, {
     ...options,
     rlLimiter: spec.limiter,
-    trackingId: `${spec.id}.${operation}`,
+    trackingId,
   });
 }
 

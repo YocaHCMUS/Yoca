@@ -8,7 +8,7 @@ import {
   type BDS_TokenListV3,
   type CG_TopPoolData,
 } from "@sv/services/_types/token-raw-responses.js";
-import { rlFetch } from "@sv/util/rate-limit.js";
+import { pFetch } from "@sv/util/rate-limit.js";
 import type { MarketPoolItem } from "@sv/types/market-pool.js";
 import * as bds from "@sv/util/util-birdeye.js";
 import * as cg from "@sv/util/util-coingecko.js";
@@ -106,10 +106,9 @@ async function fetchCgPools(
       ...query,
     }).toString();
 
-    const resp = await rlFetch(cgEndpoint, {
+    const resp = await pFetch(cg.spec, "coingecko.svc.market_pools", cgEndpoint, {
       method: "GET",
       headers: cg.getRequiredHeaders(),
-      rlLimiter: cg.limiter,
     });
 
     if (!resp.ok) {
@@ -264,10 +263,9 @@ async function fetchNewMarketPools() {
       page: String(page),
     }).toString();
 
-    const resp = await rlFetch(cgEndpoint, {
+    const resp = await pFetch(cg.spec, "coingecko.svc.trending_pools", cgEndpoint, {
       method: "GET",
       headers: cg.getRequiredHeaders(),
-      rlLimiter: cg.limiter,
     });
 
     if (resp.ok) {
@@ -343,10 +341,9 @@ async function fetchBirdeyeGainers(): Promise<
     limit: String(GAINER_TOKEN_COUNT),
   }).toString();
 
-  const resp = await rlFetch(endpoint, {
+  const resp = await pFetch(bds.spec, "birdeye.svc.market_gainers", endpoint, {
     method: "GET",
     headers: bds.getRequiredHeaders(),
-    rlLimiter: bds.limiter,
   });
 
   if (!resp.ok) {
@@ -374,10 +371,9 @@ async function fetchTopGainerMarketPools(): Promise<MarketPoolItem[]> {
     );
     endpoint.search = new URLSearchParams({ include: "top_pools" }).toString();
 
-    const resp = await rlFetch(endpoint, {
+    const resp = await pFetch(cg.spec, "coingecko.svc.token_market_batch", endpoint, {
       method: "GET",
       headers: cg.getRequiredHeaders(),
-      rlLimiter: cg.limiter,
     });
     if (!resp.ok) {
       throw new Error(`CoinGecko token pool resolution failed: ${resp.status}`);
@@ -408,10 +404,9 @@ async function fetchTopGainerMarketPools(): Promise<MarketPoolItem[]> {
     );
     endpoint.search = new URLSearchParams({ include: INCLUDE }).toString();
 
-    const resp = await rlFetch(endpoint, {
+    const resp = await pFetch(cg.spec, "coingecko.svc.pool_market_batch", endpoint, {
       method: "GET",
       headers: cg.getRequiredHeaders(),
-      rlLimiter: cg.limiter,
     });
     if (!resp.ok) {
       throw new Error(`CoinGecko pool enrichment failed: ${resp.status}`);

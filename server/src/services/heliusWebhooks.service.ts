@@ -298,7 +298,7 @@ export async function listManagedWebhooksFromDb(): Promise<
 export async function createWebhook(addresses: string[]): Promise<string> {
   const response = await pFetch(
     helius.spec,
-    "svc.webhook_create",
+    "helius.svc.webhook_create",
     heliusWebhooksUrl(),
     {
       method: "POST",
@@ -322,7 +322,7 @@ export async function updateWebhook(
 ): Promise<void> {
   const response = await pFetch(
     helius.spec,
-    "svc.webhook_update",
+    "helius.svc.webhook_update",
     heliusWebhookUrl(heliusWebhookId),
     {
       method: "PUT",
@@ -356,7 +356,7 @@ export async function deleteWebhookById(
   try {
     const response = await pFetch(
       helius.spec,
-      "svc.webhook_delete",
+      "helius.svc.webhook_delete",
       heliusWebhookUrl(heliusWebhookId),
       { method: "DELETE" },
     );

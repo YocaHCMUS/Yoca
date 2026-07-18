@@ -2,7 +2,7 @@ import { TOKEN_MARKET_DATA_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import { tokenMarketData, type TokenMarketDataInsert } from "@sv/db/schema.js";
 import { excludedAuto } from "@sv/util/orm-sql.js";
-import { rlFetch } from "@sv/util/rate-limit.js";
+import { pFetch } from "@sv/util/rate-limit.js";
 import { validateApiResult } from "@sv/middlewares/validation.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import {
@@ -47,10 +47,9 @@ export async function fetchCgMarketDataBatched(
           price_change_percentage: "1h,24h,7d,14d,30d,200d,1y",
         }).toString();
 
-        const resp = await rlFetch(endpoint, {
+        const resp = await pFetch(cg.spec, "coingecko.svc.token_market_data", endpoint, {
           method: "GET",
           headers: cg.getRequiredHeaders(),
-          rlLimiter: cg.limiter,
         });
 
         if (!resp.ok) {
