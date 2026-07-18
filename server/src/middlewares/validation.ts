@@ -397,16 +397,15 @@ export const envSchema = z.object({
   ZERION_API_BASE_URL: z.url().default("https://api.zerion.io/v1"),
   ZERION_API_KEY: z.string(),
 
-  COINMARKETCAP_API_BASE_URL: z.url().default("https://pro-api.coinmarketcap.com"),
-  COINMARKETCAP_API_KEY: z.string().optional(),
-
-  HELIUS_API_KEY: z.string(),
-  HELIUS_API_BASE_URL: z.url().optional().default("https://api.helius.xyz"),
-  HELIUS_AUTH_HEADER: z.string().optional().default(""),
-  HELIUS_WEBHOOK_AUTH_KEY: z.string(),
-  HELIUS_WEBHOOK_ID: z.string().optional().default(""),
-  PUBLIC_WEBHOOK_URL: z.string().optional().default(""),
-  WEBHOOK_PUBLIC_URL: z.string().optional().default(""),
+  HELIUS_API_KEY: z.string().trim().min(1, "Helius API key is required"),
+  HELIUS_API_BASE_URL: z.url().default("https://api.helius.xyz"),
+  HELIUS_WEBHOOK_AUTH_KEY: z.string().trim().optional().default(""),
+  WEBHOOK_PUBLIC_URL: z
+    .union([z.literal(""), z.url("Invalid Helius webhook URL")])
+    .optional()
+    .default(""),
+  NGROK_AUTHTOKEN: z.string().trim().optional().default(""),
+  NGROK_DOMAIN: z.string().trim().optional().default(""),
   WEBHOOK_SOL_PRICE_USD: z.coerce.number().positive().optional().default(150),
   MORALIS_API_BASE_URL: z.url().default("https://solana-gateway.moralis.io"),
   MORALIS_API_KEY: z.string(),
@@ -468,6 +467,32 @@ export const envSchema = z.object({
     .default("gemini-3.1-flash-lite"),
   CHAT_MODEL: z.string().optional().default("gemini-3.1-flash-lite"),
   AI_USAGE_LIMIT_ENABLED: z.enum(["true", "false"]),
+}).superRefine((env, ctx) => {
+  const hasWebhookUrl = env.WEBHOOK_PUBLIC_URL.length > 0;
+  const hasWebhookAuthKey = env.HELIUS_WEBHOOK_AUTH_KEY.length > 0;
+
+  if (env.NODE_ENV == "production" && hasWebhookUrl != hasWebhookAuthKey) {
+    ctx.addIssue({
+      code: "custom",
+      message:
+        "WEBHOOK_PUBLIC_URL and HELIUS_WEBHOOK_AUTH_KEY must be configured together in production",
+      path: hasWebhookUrl
+        ? ["HELIUS_WEBHOOK_AUTH_KEY"]
+        : ["WEBHOOK_PUBLIC_URL"],
+    });
+  }
+
+  if (
+    env.NODE_ENV == "production" &&
+    hasWebhookUrl &&
+    !env.WEBHOOK_PUBLIC_URL.startsWith("https://")
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      message: "WEBHOOK_PUBLIC_URL must use HTTPS in production",
+      path: ["WEBHOOK_PUBLIC_URL"],
+    });
+  }
 });
 
 export type Env = z.infer<typeof envSchema>;

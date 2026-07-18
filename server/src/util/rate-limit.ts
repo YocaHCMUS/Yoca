@@ -11,7 +11,28 @@ type FetchRetryOptions = {
 export type RateLimitedFetchOptions = RequestInit &
   FetchRetryOptions & {
     rlLimiter: Bottleneck;
+    trackingId?: string;
   };
+
+export interface ProviderSpec {
+  id: string;
+  limiter: Bottleneck;
+}
+
+export type ServiceOperationId = `svc.${string}`;
+
+export async function pFetch(
+  spec: ProviderSpec,
+  operation: ServiceOperationId,
+  url: URL,
+  options: RequestInit & FetchRetryOptions = {},
+): Promise<Response> {
+  return rlFetch(url, {
+    ...options,
+    rlLimiter: spec.limiter,
+    trackingId: `${spec.id}.${operation}`,
+  });
+}
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -43,6 +64,22 @@ function computeBackoff(attempt: number, baseDelay: number) {
   return baseDelay * Math.pow(2, attempt) + Math.floor(Math.random() * 250);
 }
 
+function sanitizedRequestUrl(url: URL): string {
+  const sanitized = new URL(url);
+  for (const key of sanitized.searchParams.keys()) {
+    const normalized = key.toLowerCase();
+    if (
+      normalized.includes("key") ||
+      normalized.includes("token") ||
+      normalized.includes("secret") ||
+      normalized.includes("authorization")
+    ) {
+      sanitized.searchParams.set(key, "[REDACTED]");
+    }
+  }
+  return sanitized.toString();
+}
+
 async function readResponsePreview(resp: Response): Promise<string | null> {
   try {
     const text = await resp.clone().text();
@@ -70,13 +107,14 @@ export async function rlFetch(
     rlRetries = 3,
     rlRetryDelayMs = 500,
     rlTimeoutMs = 30_000,
+    trackingId,
     ...fetchInit
   } = options;
 
   return rlLimiter.schedule(async () => {
     let lastErr: unknown;
     const requestStartedAtMs = Date.now();
-    const requestUrl = url.toString();
+    const requestUrl = sanitizedRequestUrl(url);
     const requestMethod = fetchInit.method ?? "GET";
 
     for (let attempt = 0; attempt <= rlRetries; attempt++) {
@@ -94,6 +132,7 @@ export async function rlFetch(
               "Outbound request returned retryable status after retries",
               {
                 url: requestUrl,
+                trackingId,
                 method: requestMethod,
                 status: resp.status,
                 attempt: attempt + 1,
@@ -126,6 +165,7 @@ export async function rlFetch(
               } else {
                 console.warn("Outbound request received invalid Retry-After", {
                   url: requestUrl,
+                  trackingId,
                   method: requestMethod,
                   status: resp.status,
                   retryAfter: normalizedRetryAfter,
@@ -136,6 +176,7 @@ export async function rlFetch(
 
           console.warn("Outbound request retry", {
             url: requestUrl,
+            trackingId,
             method: requestMethod,
             status: resp.status,
             attempt: attempt + 1,
@@ -167,6 +208,7 @@ export async function rlFetch(
 
         console.info("Outbound request completed", {
           url: requestUrl,
+          trackingId,
           method: requestMethod,
           status: resp.status,
           attempt: attempt + 1,
@@ -185,6 +227,7 @@ export async function rlFetch(
 
         console.warn("Outbound request network-error retry", {
           url: requestUrl,
+          trackingId,
           method: requestMethod,
           status: null,
           attempt: attempt + 1,
@@ -203,6 +246,7 @@ export async function rlFetch(
 
     console.error("Outbound request failed after retries", {
       url: requestUrl,
+      trackingId,
       method: requestMethod,
       status: null,
       attempts: rlRetries + 1,

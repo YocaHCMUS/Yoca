@@ -1,19 +1,19 @@
 import { TOKEN_FUNDAMENTALS_TTL_MS } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import {
-  investors,
-  tokenAllocations,
-  tokenFundamentals,
-  tokenInvestors,
-  tokenUnlockAllocations,
-  tokenUnlockEvents,
+    investors,
+    tokenAllocations,
+    tokenFundamentals,
+    tokenInvestors,
+    tokenUnlockAllocations,
+    tokenUnlockEvents,
 } from "@sv/db/schema.js";
 import { validateApiResult } from "@sv/middlewares/validation.js";
 import {
-  mbl_TokenFundamentalsResponseSchema,
-  type MBL_TokenFundamentalsResponse,
+    mbl_TokenFundamentalsResponseSchema,
+    type MBL_TokenFundamentalsResponse,
 } from "@sv/services/_types/token-raw-responses.js";
-import { rlFetch } from "@sv/util/rate-limit.js";
+import { pFetch } from "@sv/util/rate-limit.js";
 import * as mobula from "@sv/util/util-mobula.js";
 import dayjs from "dayjs";
 import { and, eq, gte } from "drizzle-orm";
@@ -21,7 +21,9 @@ import { and, eq, gte } from "drizzle-orm";
 async function fetchMobulaTokenFundamentals(
   address: string,
 ): Promise<MBL_TokenFundamentalsResponse["data"] | null> {
+
   // Build and validate the provider request before domain normalization.
+
   const endpoint = mobula.getEndpoint("/1/metadata");
   endpoint.search = new URLSearchParams({
     asset: address,
@@ -29,18 +31,23 @@ async function fetchMobulaTokenFundamentals(
     full: "true",
   }).toString();
 
-  const response = await rlFetch(endpoint, {
-    method: "GET",
-    headers: mobula.getRequiredHeaders(),
-    rlLimiter: mobula.limiter,
-  });
-  if (!response.ok) {
+  const resp = await pFetch(
+    mobula.spec,
+    "svc.token_fundamentals",
+    endpoint,
+    {
+      method: "GET",
+      headers: mobula.getRequiredHeaders(),
+    },
+  );
+
+  if (!resp.ok) {
     return null;
   }
 
   const parsed = await validateApiResult(
     mbl_TokenFundamentalsResponseSchema,
-    response,
+    resp,
   );
   return parsed?.data ?? null;
 }

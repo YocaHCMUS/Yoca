@@ -15,6 +15,7 @@
   },
   "scripts": {
     "dev": "npm run dev -w=server & npm run dev -w=client",
+    "dev:webhook": "npm run dev:webhook -w=server & npm run dev -w=client",
     "build": "npm run build --workspaces",
     "preview": "npm run start -w=server & npm run preview -w=client",
     "lint": "npm run lint --workspaces",
@@ -25,6 +26,7 @@
     "client:preview": "npm run preview -w=client",
     "client:clean": "npm run clean -w=client",
     "server:dev": "npm run dev -w=server",
+    "server:dev-webhook": "npm run dev:webhook -w=server",
     "server:build": "npm run build -w=server",
     "server:preview": "npm run start -w=server",
     "server:clean": "npm run clean -w=server",

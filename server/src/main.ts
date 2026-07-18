@@ -30,10 +30,6 @@ import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
 import payment from "./routes/payment.route.js";
 import washTradingRoutes from "./routes/wash-trading.route.js";
-import { warnIfLegacyHeliusWebhookConfigured } from "@sv/services/heliusWebhooks.service.js";
-
-warnIfLegacyHeliusWebhookConfigured();
-
 const app = new Hono()
   .use("*", logger())
   .use("*", requestContextMiddleware)
