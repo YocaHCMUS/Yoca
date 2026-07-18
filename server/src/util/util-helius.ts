@@ -1,4 +1,3 @@
-import { trackApiCallResponse } from "@sv/services/tracking/apiCallTracker.service.js";
 import type { ApiKeyMetadata } from "@sv/services/tracking/apiCallTracker.types.js";
 import type { ProviderSpec } from "@sv/util/rate-limit.js";
 import Bottleneck from "bottleneck";
