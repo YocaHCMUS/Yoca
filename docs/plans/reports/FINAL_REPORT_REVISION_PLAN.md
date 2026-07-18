@@ -172,7 +172,8 @@ Các batch từ 9 trở đi là một phần của đợt hoàn thiện báo cá
 ### ⚠️ CHECKLIST NHÓM BẮT BUỘC TỰ THAO TÁC — KHÔNG ĐƯỢC ĐÁNH DẤU XONG CHỈ VÌ CODE/BÁO CÁO ĐÃ VIẾT
 
 - [ ] **DATABASE:** xác nhận đúng database demo có thể xóa dữ liệu, sau đó chạy `db:reset` để Supabase nhận schema mới. Không chạy nhầm project/database cần giữ dữ liệu; lưu lại kết quả reset không chứa connection string.
-- [ ] **ALERT DELIVERY:** tạo hoặc follow một alert rule thật, cấu hình ít nhất một kênh email/Discord hợp lệ và phát sinh một Helius event phù hợp điều kiện.
+- [ ] **ALERT DELIVERY:** managed Helius webhook đã được tạo và nhận SWAP thật, đồng thời loại retry trùng trong cùng process. Còn cấu hình ít nhất một kênh email/Discord hợp lệ để xác nhận delivery và Alert History; sau đó chuyển signature dedupe sang persistence để giữ idempotency qua restart.
+- [ ] **WEBHOOK HARDENING:** tách bước trả `2xx` khỏi email/Discord delivery bằng hàng đợi hoặc outbox; lần smoke test chưa có delivery mất 596 ms nên xử lý đồng bộ có thể vượt thời hạn phản hồi khi kênh ngoài chậm.
 - [ ] **ALERT HISTORY:** xác nhận delivery thành công tạo đúng một history row; retry/cùng event không tạo trùng; history chỉ xuất hiện với đúng tài khoản.
 - [ ] **READ STATE:** kiểm tra mark read, mark unread, mark all read và unread count trên giao diện Profile sau khi tải lại trang.
 - [ ] **ALERT SCREENSHOT:** chụp Alert History có dữ liệu thật và trạng thái read/unread; che email, webhook, user ID, transaction signature và địa chỉ ví nếu nhạy cảm.

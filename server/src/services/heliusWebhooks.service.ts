@@ -585,6 +585,9 @@ async function syncManagedWebhook(
         await deps.deleteWebhook(extra.heliusWebhookId);
         deletedWebhookIds.push(extra.heliusWebhookId);
       }
+      if (deletedWebhookIds.length > 0 && action == "unchanged") {
+        action = "updated";
+      }
     }
 
     await deps.persistManagedState(assignment, deletedWebhookIds);

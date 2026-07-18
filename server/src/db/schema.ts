@@ -210,7 +210,7 @@ export const tokenMarketData = pgTable("token_market_data", {
   updatedAt: timestamp("updated_at")
     .notNull()
     .defaultNow()
-    .$onUpdate(() => new Date()),
+    .$onUpdate(() => dayjs.utc().toDate()),
 });
 
 export const tokenPoolData = pgTable("token_pool_data", {
@@ -1029,7 +1029,7 @@ export const alertRules = pgTable("alert_rules", {
     .$onUpdate(() => new Date()),
 });
 
-/** Managed Helius webhook shards for wallet alert address fan-out. */
+/** Managed Helius webhook for wallet alert address fan-out. */
 export const heliusWebhooks = pgTable("helius_webhooks", {
   id: serial("id").primaryKey(),
   heliusWebhookId: text("helius_webhook_id").notNull().unique(),
@@ -1048,7 +1048,7 @@ export const heliusWebhooks = pgTable("helius_webhooks", {
   updatedAt: timestamp("updated_at")
     .notNull()
     .defaultNow()
-    .$onUpdate(() => new Date()),
+    .$onUpdate(() => dayjs.utc().toDate()),
 });
 
 export const heliusWebhookAddresses = pgTable(

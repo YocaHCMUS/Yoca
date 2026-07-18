@@ -1,25 +1,50 @@
 import ngrok from "@ngrok/ngrok";
 import { config } from "dotenv";
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 config({ path: fileURLToPath(new URL("../../.env", import.meta.url)) });
 
 let serverProcess: ChildProcess | null = null;
+let clientProcess: ChildProcess | null = null;
+let syncProcess: ChildProcess | null = null;
 let listener: Awaited<ReturnType<typeof ngrok.forward>> | null = null;
 let shuttingDown = false;
+
+function stopProcess(child: ChildProcess | null): void {
+  if (!child?.pid) return;
+  if (process.platform == "win32") {
+    const result = spawnSync(
+      "taskkill",
+      ["/PID", String(child.pid), "/T", "/F"],
+      {
+      stdio: "ignore",
+      },
+    );
+    if (result.status != 0) child.kill("SIGTERM");
+    return;
+  }
+  try {
+    process.kill(-child.pid, "SIGTERM");
+  } catch {
+    child.kill("SIGTERM");
+  }
+}
 
 async function shutdown(exitCode: number): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
 
-  serverProcess?.kill("SIGTERM");
+  stopProcess(syncProcess);
+  stopProcess(clientProcess);
+  stopProcess(serverProcess);
   if (listener) await listener.close().catch(() => undefined);
   await ngrok.kill().catch(() => undefined);
   process.exit(exitCode);
 }
 
 async function main(): Promise<void> {
+  const startClient = process.argv.includes("--client");
   const authtoken = process.env.NGROK_AUTHTOKEN?.trim() || "";
   const configuredDomain = process.env.NGROK_DOMAIN?.trim() || "";
   const port = Number(process.env.SERVER_PORT || 4000);
@@ -52,6 +77,7 @@ async function main(): Promise<void> {
     ["run", "dev"],
     {
       cwd: fileURLToPath(new URL("../../", import.meta.url)),
+      detached: process.platform != "win32",
       env: childEnvironment,
       stdio: "inherit",
     },
@@ -59,6 +85,22 @@ async function main(): Promise<void> {
   serverProcess.once("exit", (code) => {
     if (!shuttingDown) void shutdown(code || 1);
   });
+
+  if (startClient) {
+    clientProcess = spawn(
+      process.platform == "win32" ? "npm.cmd" : "npm",
+      ["run", "dev"],
+      {
+        cwd: fileURLToPath(new URL("../../../client/", import.meta.url)),
+        detached: process.platform != "win32",
+        env: process.env,
+        stdio: "inherit",
+      },
+    );
+    clientProcess.once("exit", (code) => {
+      if (!shuttingDown) void shutdown(code || 1);
+    });
+  }
 
   const localHealthUrl = `http://127.0.0.1:${port}/api`;
   let localReady = false;
@@ -112,11 +154,12 @@ async function main(): Promise<void> {
   console.log(`[dev:webhook] tunnel ready: ${publicUrl} -> localhost:${port}`);
   console.log("[dev:webhook] synchronizing the managed Helius webhook");
 
-  const syncProcess = spawn(
+  syncProcess = spawn(
     process.platform == "win32" ? "npm.cmd" : "npm",
     ["run", "alerts:sync-helius"],
     {
       cwd: fileURLToPath(new URL("../../", import.meta.url)),
+      detached: process.platform != "win32",
       env: childEnvironment,
       stdio: "inherit",
     },
@@ -124,11 +167,16 @@ async function main(): Promise<void> {
   const syncExitCode = await new Promise<number>((resolve) => {
     syncProcess.once("exit", (code) => resolve(code ?? 1));
   });
+  syncProcess = null;
   if (syncExitCode != 0) {
     throw new Error("Helius synchronization failed");
   }
 
-  console.log("[dev:webhook] ready; press Ctrl+C to stop server and tunnel");
+  console.log(
+    `[dev:webhook] ready; press Ctrl+C to stop ${
+      startClient ? "client, server and tunnel" : "server and tunnel"
+    }`,
+  );
 }
 
 process.once("SIGINT", () => void shutdown(0));
