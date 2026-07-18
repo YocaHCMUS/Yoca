@@ -1,0 +1,1018 @@
+{
+  "generatedAt": "2026-07-18T10:06:10.366Z",
+  "baseUrl": "http://localhost:4000",
+  "candidateCount": 149,
+  "preflightCount": 60,
+  "selectedCount": 24,
+  "excludedWallets": [
+    "3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH"
+  ],
+  "wallets": [
+    {
+      "resourceId": "wallet_001",
+      "address": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk",
+      "source": "project_seed",
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-07-18T09:09:31.000Z",
+      "activity": "high",
+      "coverage": {
+        "identity": {
+          "status": 200,
+          "durationMs": 877,
+          "classification": "data",
+          "payloadBytes": 697
+        },
+        "overview": {
+          "status": 200,
+          "durationMs": 1051,
+          "classification": "data",
+          "payloadBytes": 2159
+        },
+        "transfers": {
+          "status": 200,
+          "durationMs": 1698,
+          "classification": "data",
+          "payloadBytes": 9863
+        },
+        "swaps": {
+          "status": 200,
+          "durationMs": 2024,
+          "classification": "data",
+          "payloadBytes": 33
+        },
+        "portfolio": {
+          "status": 200,
+          "durationMs": 4974,
+          "classification": "data",
+          "payloadBytes": 1174357
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_002",
+      "address": "DgLcG7dhE8VBoA4rJu1resczXkYTSGUx7Ry1HicqcqZr",
+      "source": "token_holder",
+      "relatedToken": "2FPyTwcZLUg1MDrwsyoP4D6s1tM7hAkHYRjkNb5w6Pxk",
+      "holderRank": 0,
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-07-18T07:10:08.000Z",
+      "activity": "high",
+      "coverage": {
+        "overview": {
+          "status": 200,
+          "durationMs": 986,
+          "classification": "data",
+          "payloadBytes": 1622
+        },
+        "identity": {
+          "status": 200,
+          "durationMs": 1067,
+          "classification": "data",
+          "payloadBytes": 329
+        },
+        "transfers": {
+          "status": 200,
+          "durationMs": 2015,
+          "classification": "data",
+          "payloadBytes": 33
+        },
+        "portfolio": {
+          "status": 200,
+          "durationMs": 2187,
+          "classification": "data",
+          "payloadBytes": 58112
+        },
+        "swaps": {
+          "status": 200,
+          "durationMs": 2948,
+          "classification": "data",
+          "payloadBytes": 33
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_003",
+      "address": "GcEXZEUhbK4KyFV7B7q28Zh7PKzGsC3oqgjvGRLaZJZu",
+      "source": "token_holder",
+      "relatedToken": "2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv",
+      "holderRank": 0,
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-07-18T07:10:33.000Z",
+      "activity": "high",
+      "coverage": {
+        "identity": {
+          "status": 200,
+          "durationMs": 237,
+          "classification": "data",
+          "payloadBytes": 329
+        },
+        "overview": {
+          "status": 200,
+          "durationMs": 259,
+          "classification": "data",
+          "payloadBytes": 1622
+        },
+        "transfers": {
+          "status": 200,
+          "durationMs": 866,
+          "classification": "data",
+          "payloadBytes": 3190
+        },
+        "swaps": {
+          "status": 200,
+          "durationMs": 1163,
+          "classification": "data",
+          "payloadBytes": 33
+        },
+        "portfolio": {
+          "status": 200,
+          "durationMs": 1397,
+          "classification": "data",
+          "payloadBytes": 46803
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_004",
+      "address": "8pFhUqCU7Fkxfg2DLytRDf7a9oK4XGtN92PrYwtVQc6G",
+      "source": "token_holder",
+      "relatedToken": "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
+      "holderRank": 0,
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-07-18T09:31:04.000Z",
+      "activity": "high",
+      "coverage": {
+        "overview": {
+          "status": 200,
+          "durationMs": 258,
+          "classification": "data",
+          "payloadBytes": 1625
+        },
+        "identity": {
+          "status": 200,
+          "durationMs": 258,
+          "classification": "data",
+          "payloadBytes": 352
+        },
+        "transfers": {
+          "status": 200,
+          "durationMs": 879,
+          "classification": "data",
+          "payloadBytes": 565
+        },
+        "portfolio": {
+          "status": 200,
+          "durationMs": 925,
+          "classification": "data",
+          "payloadBytes": 28628
+        },
+        "swaps": {
+          "status": 200,
+          "durationMs": 1146,
+          "classification": "data",
+          "payloadBytes": 33
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_005",
+      "address": "GV6UUmNxz2RpKxmNAPadYKb7uQpszwqQAu3qLJxVdC52",
+      "source": "token_holder",
+      "relatedToken": "9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump",
+      "holderRank": 0,
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-07-18T09:51:18.000Z",
+      "activity": "high",
+      "coverage": {
+        "overview": {
+          "status": 200,
+          "durationMs": 206,
+          "classification": "data",
+          "payloadBytes": 2118
+        },
+        "identity": {
+          "status": 200,
+          "durationMs": 2069,
+          "classification": "data",
+          "payloadBytes": 421
+        },
+        "transfers": {
+          "status": 200,
+          "durationMs": 5115,
+          "classification": "data",
+          "payloadBytes": 10102
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45007,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45007,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_006",
+      "address": "6nbufGfNrDodGdv5Ta8VUowuZPujkwaPdFT1eGrfg2rg",
+      "source": "token_holder",
+      "relatedToken": "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",
+      "holderRank": 0,
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-07-18T09:54:06.000Z",
+      "activity": "high",
+      "coverage": {
+        "identity": {
+          "status": 200,
+          "durationMs": 1852,
+          "classification": "data",
+          "payloadBytes": 346
+        },
+        "portfolio": {
+          "status": 200,
+          "durationMs": 2942,
+          "classification": "data",
+          "payloadBytes": 2907
+        },
+        "swaps": {
+          "status": 200,
+          "durationMs": 3155,
+          "classification": "data",
+          "payloadBytes": 33
+        },
+        "transfers": {
+          "status": 200,
+          "durationMs": 5037,
+          "classification": "data",
+          "payloadBytes": 33
+        },
+        "overview": {
+          "status": 200,
+          "durationMs": 10036,
+          "classification": "data",
+          "payloadBytes": 1665
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_007",
+      "address": "5yB7eaEQbPARxcMAjMaiAmPmoixkXUHi1zEQRhrt5kVP",
+      "source": "token_holder",
+      "relatedToken": "CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH",
+      "holderRank": 0,
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-07-18T08:55:05.000Z",
+      "activity": "high",
+      "coverage": {
+        "identity": {
+          "status": 200,
+          "durationMs": 1886,
+          "classification": "data",
+          "payloadBytes": 346
+        },
+        "portfolio": {
+          "status": 200,
+          "durationMs": 1941,
+          "classification": "data",
+          "payloadBytes": 1207
+        },
+        "transfers": {
+          "status": 200,
+          "durationMs": 3762,
+          "classification": "data",
+          "payloadBytes": 33
+        },
+        "overview": {
+          "status": null,
+          "durationMs": 45001,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45002,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_008",
+      "address": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+      "source": "token_holder",
+      "relatedToken": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+      "holderRank": 0,
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-07-18T09:43:39.000Z",
+      "activity": "high",
+      "coverage": {
+        "identity": {
+          "status": 200,
+          "durationMs": 2554,
+          "classification": "data",
+          "payloadBytes": 392
+        },
+        "swaps": {
+          "status": 200,
+          "durationMs": 3281,
+          "classification": "data",
+          "payloadBytes": 33
+        },
+        "transfers": {
+          "status": 500,
+          "durationMs": 36801,
+          "classification": "internal_error",
+          "payloadBytes": 35
+        },
+        "overview": {
+          "status": null,
+          "durationMs": 45006,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45008,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_009",
+      "address": "6b4aypBhH337qSzzkbeoHWzTLt4DjG2aG8GkrrTQJfQA",
+      "source": "token_holder",
+      "relatedToken": "EchesyfXePKdLtoiZSL8pBe8Myagyy8ZRqsACNCFGnvp",
+      "holderRank": 0,
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-05-31T15:43:47.000Z",
+      "activity": "high",
+      "coverage": {
+        "overview": {
+          "status": null,
+          "durationMs": 45002,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45001,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "transfers": {
+          "status": null,
+          "durationMs": 45002,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45001,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "identity": {
+          "status": null,
+          "durationMs": 45001,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_010",
+      "address": "51yZyDSnec4xnUv7XLRVYcDyV4x3wUtzrDcRaYbmQU5j",
+      "source": "token_holder",
+      "relatedToken": "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
+      "holderRank": 0,
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-07-18T08:59:45.000Z",
+      "activity": "high",
+      "coverage": {
+        "overview": {
+          "status": null,
+          "durationMs": 45005,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45005,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "transfers": {
+          "status": null,
+          "durationMs": 45004,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "identity": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_011",
+      "address": "1tjoQzWg21ceMAhyLVs4s2Zc1Pm27mLTcJ9EfEFu7km",
+      "source": "token_holder",
+      "relatedToken": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+      "holderRank": 10,
+      "transactionSampleCount": 40,
+      "latestTransactionAt": "2026-07-06T08:10:16.000Z",
+      "activity": "medium",
+      "coverage": {
+        "overview": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "transfers": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "identity": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_012",
+      "address": "DwzTuEDaE9pkrVJQvznV7zz7YNJcggKxN5wKhYt8JqXY",
+      "source": "token_holder",
+      "relatedToken": "EchesyfXePKdLtoiZSL8pBe8Myagyy8ZRqsACNCFGnvp",
+      "holderRank": 10,
+      "transactionSampleCount": 63,
+      "latestTransactionAt": "2026-07-16T02:13:20.000Z",
+      "activity": "medium",
+      "coverage": {
+        "overview": {
+          "status": null,
+          "durationMs": 45004,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "transfers": {
+          "status": null,
+          "durationMs": 45006,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45005,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "identity": {
+          "status": null,
+          "durationMs": 45006,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_013",
+      "address": "Dk6vXck4Z7ahDwv8RdkBpDCSK1tj2NWK6HA1K1LxyoAZ",
+      "source": "token_holder",
+      "relatedToken": "kinXdEcpDQeHPEuQnqmUgtYykqKGVFq6CeVX5iAHJq6",
+      "holderRank": 0,
+      "transactionSampleCount": 7,
+      "latestTransactionAt": "2026-01-29T17:55:04.000Z",
+      "activity": "low",
+      "coverage": {
+        "overview": {
+          "status": null,
+          "durationMs": 45000,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45001,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "transfers": {
+          "status": null,
+          "durationMs": 45001,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45002,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "identity": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_014",
+      "address": "EbQHXLmhGmppVasFLe4zQcqZqZ1FXBE9ErLxQToKR1Jy",
+      "source": "token_holder",
+      "relatedToken": "SHDWyBxihqiCj6YekG2GUr7wqKLeLAMK1gHZck9pL6y",
+      "holderRank": 0,
+      "transactionSampleCount": 8,
+      "latestTransactionAt": "2026-06-03T06:02:01.000Z",
+      "activity": "low",
+      "coverage": {
+        "overview": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "transfers": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45004,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "identity": {
+          "status": null,
+          "durationMs": 45007,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_015",
+      "address": "6Tc6KGyMgkCwDvXjcLEMcpZpEEpTeSekvFUGcnAqBAqc",
+      "source": "token_holder",
+      "relatedToken": "CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH",
+      "holderRank": 1,
+      "transactionSampleCount": 11,
+      "latestTransactionAt": "2026-06-27T01:15:18.000Z",
+      "activity": "low",
+      "coverage": {
+        "overview": {
+          "status": null,
+          "durationMs": 45002,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45004,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "transfers": {
+          "status": null,
+          "durationMs": 45004,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45005,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "identity": {
+          "status": null,
+          "durationMs": 45007,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_016",
+      "address": "AKj7yCpjx6PJ5dW4fGK2DA35HD2VTr7J2se8r3iPPBap",
+      "source": "token_holder",
+      "relatedToken": "CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH",
+      "holderRank": 5,
+      "transactionSampleCount": 9,
+      "latestTransactionAt": "2026-04-08T02:47:52.000Z",
+      "activity": "low",
+      "coverage": {
+        "overview": {
+          "status": null,
+          "durationMs": 45008,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45011,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "transfers": {
+          "status": null,
+          "durationMs": 45011,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45011,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "identity": {
+          "status": null,
+          "durationMs": 45009,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_017",
+      "address": "Fue5m7uwemAhv1uyPSC44hd6UpBgAkubxiFCvBGmc8Ah",
+      "source": "token_holder",
+      "relatedToken": "orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE",
+      "holderRank": 5,
+      "transactionSampleCount": 8,
+      "latestTransactionAt": "2026-07-10T17:44:25.000Z",
+      "activity": "low",
+      "coverage": {
+        "overview": {
+          "status": null,
+          "durationMs": 45001,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45002,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "transfers": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "identity": {
+          "status": null,
+          "durationMs": 45006,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_018",
+      "address": "7VHUFJHWu2CuExkJcJrzhQPJ2oygupTWkL2A2For4BmE",
+      "source": "token_holder",
+      "relatedToken": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "holderRank": 0,
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-07-18T09:11:10.000Z",
+      "activity": "high",
+      "coverage": {
+        "overview": {
+          "status": null,
+          "durationMs": 45007,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45008,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "transfers": {
+          "status": null,
+          "durationMs": 45010,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45011,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "identity": {
+          "status": null,
+          "durationMs": 45012,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_019",
+      "address": "A3znyaRYUvi7GbQv1pp9CqqiVo7anddU9rPKFH55V28R",
+      "source": "token_holder",
+      "relatedToken": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+      "holderRank": 0,
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-07-18T09:25:36.000Z",
+      "activity": "high",
+      "coverage": {
+        "overview": {
+          "status": null,
+          "durationMs": 45001,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45002,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "transfers": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45006,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "identity": {
+          "status": null,
+          "durationMs": 45007,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_020",
+      "address": "5WumPYv4jDPRqWjWr3EeybLczpcohHrMPShK9WQ85qfY",
+      "source": "token_holder",
+      "relatedToken": "HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3",
+      "holderRank": 0,
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-07-18T09:49:13.000Z",
+      "activity": "high",
+      "coverage": {
+        "overview": {
+          "status": null,
+          "durationMs": 45007,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45007,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "transfers": {
+          "status": null,
+          "durationMs": 45008,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45009,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "identity": {
+          "status": null,
+          "durationMs": 45009,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_021",
+      "address": "9DrvZvyWh1HuAoZxvYWMvkf2XCzryCpGgHqrMjyDWpmo",
+      "source": "token_holder",
+      "relatedToken": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+      "holderRank": 0,
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-07-18T09:56:50.000Z",
+      "activity": "high",
+      "coverage": {
+        "overview": {
+          "status": null,
+          "durationMs": 45002,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45004,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "transfers": {
+          "status": null,
+          "durationMs": 45006,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45006,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "identity": {
+          "status": null,
+          "durationMs": 45009,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_022",
+      "address": "5eosrve6LktMZgVNszYzebgmmC7BjLK8NoWyRQtcmGTF",
+      "source": "token_holder",
+      "relatedToken": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+      "holderRank": 0,
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-07-18T07:43:54.000Z",
+      "activity": "high",
+      "coverage": {
+        "overview": {
+          "status": null,
+          "durationMs": 45010,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45012,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "transfers": {
+          "status": null,
+          "durationMs": 45013,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45013,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "identity": {
+          "status": null,
+          "durationMs": 45015,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_023",
+      "address": "EXJHiMkj6NRFDfhWBMKccHNwdSpCT7tdvQeRf87yHm6T",
+      "source": "token_holder",
+      "relatedToken": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+      "holderRank": 0,
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-07-18T09:48:58.000Z",
+      "activity": "high",
+      "coverage": {
+        "overview": {
+          "status": null,
+          "durationMs": 45002,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45001,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "transfers": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45003,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "identity": {
+          "status": null,
+          "durationMs": 45005,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    },
+    {
+      "resourceId": "wallet_024",
+      "address": "GwH3Hiv5mACLX3ufTw1pFsrhSPon5tdw252DBs4Rx4PV",
+      "source": "token_holder",
+      "relatedToken": "orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE",
+      "holderRank": 0,
+      "transactionSampleCount": 100,
+      "latestTransactionAt": "2026-07-13T07:39:55.000Z",
+      "activity": "high",
+      "coverage": {
+        "overview": {
+          "status": null,
+          "durationMs": 45007,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "portfolio": {
+          "status": null,
+          "durationMs": 45009,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "transfers": {
+          "status": null,
+          "durationMs": 45011,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "swaps": {
+          "status": null,
+          "durationMs": 45015,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        },
+        "identity": {
+          "status": null,
+          "durationMs": 45015,
+          "classification": "internal_error",
+          "payloadBytes": 0
+        }
+      }
+    }
+  ]
+}

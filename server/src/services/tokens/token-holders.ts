@@ -14,6 +14,7 @@ import {
 import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import { pFetch } from "@sv/util/rate-limit.js";
 import * as mobula from "@sv/util/util-mobula.js";
+import dayjs from "dayjs";
 import { eq } from "drizzle-orm";
 
 export async function fetchTokenHolderPositions(
@@ -88,7 +89,21 @@ export async function refreshTokenHolderSnapshot(tokenAddress: string) {
 
     const holders =
       topHolders.length > 0
-        ? await tx.insert(topTokenHolders).values(topHolders).returning()
+        ? await tx
+            .insert(topTokenHolders)
+            .values(topHolders)
+            .onConflictDoUpdate({
+              target: [topTokenHolders.tokenAddress, topTokenHolders.rank],
+              set: {
+                ...excludedAutoFromInsert(
+                  topTokenHolders,
+                  [topTokenHolders.tokenAddress, topTokenHolders.rank],
+                  topHolders,
+                ),
+                updatedAt: dayjs.utc().toDate(),
+              },
+            })
+            .returning()
         : [];
 
     const persistedStats = await tx

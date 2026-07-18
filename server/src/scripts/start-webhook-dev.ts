@@ -154,7 +154,7 @@ async function main(): Promise<void> {
   console.log(`[dev:webhook] tunnel ready: ${publicUrl} -> localhost:${port}`);
   console.log("[dev:webhook] synchronizing the managed Helius webhook");
 
-  syncProcess = spawn(
+  const spawnedSyncProcess = spawn(
     process.platform == "win32" ? "npm.cmd" : "npm",
     ["run", "alerts:sync-helius"],
     {
@@ -164,8 +164,9 @@ async function main(): Promise<void> {
       stdio: "inherit",
     },
   );
+  syncProcess = spawnedSyncProcess;
   const syncExitCode = await new Promise<number>((resolve) => {
-    syncProcess.once("exit", (code) => resolve(code ?? 1));
+    spawnedSyncProcess.once("exit", (code) => resolve(code ?? 1));
   });
   syncProcess = null;
   if (syncExitCode != 0) {

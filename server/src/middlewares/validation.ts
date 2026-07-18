@@ -390,6 +390,8 @@ export const envSchema = z.object({
   // API Keys and URLs
   COINGECKO_API_BASE_URL: z.url().default("https://api.coingecko.com/api/v3"),
   COINGECKO_API_KEY: z.string(),
+  JUPITER_API_KEY: z.string().trim().optional().default(""),
+  YOCA_BENCHMARK_BASE_URL: z.url().optional().default("http://localhost:4000"),
 
   BIRDEYE_API_BASE_URL: z.url().default("https://public-api.birdeye.so"),
   BIRDEYE_API_KEY: z.string(),

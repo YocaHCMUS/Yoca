@@ -721,12 +721,12 @@ export const helius_WalletFundedBySchema = z.strictObject({
 
 export type HL_WalletFundedBy = z.infer<typeof helius_WalletFundedBySchema>;
 
-const helius_EnhancedRawTokenAmountSchema = z.strictObject({
+const helius_EnhancedRawTokenAmountSchema = z.object({
   tokenAmount: z.string().optional(),
   decimals: z.number().optional(),
 });
 
-const helius_EnhancedSwapLegSchema = z.strictObject({
+const helius_EnhancedSwapLegSchema = z.object({
   mint: z.string().optional(),
   tokenAmount: z.coerce.number().optional(),
   amount: z.coerce.number().optional(),
@@ -743,7 +743,7 @@ const helius_EnhancedSwapLegSchema = z.strictObject({
   rawTokenAmount: helius_EnhancedRawTokenAmountSchema.optional(),
 });
 
-const helius_EnhancedSwapNativeLegSchema = z.strictObject({
+const helius_EnhancedSwapNativeLegSchema = z.object({
   amount: z.coerce.number().optional(),
   userAccount: z.string().optional(),
   account: z.string().optional(),
@@ -751,7 +751,7 @@ const helius_EnhancedSwapNativeLegSchema = z.strictObject({
   destination: z.string().optional(),
 });
 
-const helius_EnhancedSwapEventSchema = z.strictObject({
+const helius_EnhancedSwapEventSchema = z.object({
   user: z.string().optional(),
   userAccount: z.string().optional(),
   tokenInputs: z.array(helius_EnhancedSwapLegSchema).optional(),
@@ -763,7 +763,7 @@ const helius_EnhancedSwapEventSchema = z.strictObject({
   programId: z.string().optional(),
   innerSwaps: z
     .array(
-      z.strictObject({
+      z.object({
         user: z.string().optional(),
         userAccount: z.string().optional(),
         tokenInputs: z.array(helius_EnhancedSwapLegSchema).optional(),
@@ -778,13 +778,13 @@ const helius_EnhancedSwapEventSchema = z.strictObject({
     .optional(),
 });
 
-const helius_EnhancedInstructionSchema = z.strictObject({
+const helius_EnhancedInstructionSchema = z.object({
   accounts: z.array(z.string()).optional(),
   data: z.string().optional(),
   programId: z.string().optional(),
   innerInstructions: z
     .array(
-      z.strictObject({
+      z.object({
         accounts: z.array(z.string()).optional(),
         data: z.string().optional(),
         programId: z.string().optional(),
@@ -793,7 +793,7 @@ const helius_EnhancedInstructionSchema = z.strictObject({
     .optional(),
 });
 
-const helius_EnhancedTokenTransferSchema = z.strictObject({
+const helius_EnhancedTokenTransferSchema = z.object({
   mint: z.string().optional(),
   tokenMint: z.string().optional(),
   tokenAmount: z.coerce.number().optional(),
@@ -813,7 +813,7 @@ const helius_EnhancedTokenTransferSchema = z.strictObject({
   tokenStandard: z.string().nullable().optional(),
 });
 
-const helius_EnhancedNativeTransferSchema = z.strictObject({
+const helius_EnhancedNativeTransferSchema = z.object({
   amount: z.coerce.number().optional(),
   fromUserAccount: z.string().optional(),
   toUserAccount: z.string().optional(),
@@ -824,7 +824,7 @@ const helius_EnhancedNativeTransferSchema = z.strictObject({
 });
 
 export const helius_EnhancedTransactionsSchema = z.array(
-  z.strictObject({
+  z.object({
     signature: z.string(),
     feePayer: z.string().optional(),
     fee: z.number().optional(),
@@ -836,21 +836,21 @@ export const helius_EnhancedTransactionsSchema = z.array(
     programName: z.string().optional(),
     instructions: z.array(helius_EnhancedInstructionSchema).optional(),
     events: z
-      .strictObject({
+      .object({
         swap: helius_EnhancedSwapEventSchema.optional(),
         nft: z.unknown().optional(),
         compressed: z.unknown().optional(),
       })
       .optional(),
     transactionEvents: z
-      .strictObject({
+      .object({
         swap: helius_EnhancedSwapEventSchema.optional(),
       })
       .optional(),
     accountData: z.array(z.unknown()).optional(),
     transactionError: z.unknown().optional(),
     info: z
-      .strictObject({
+      .object({
         feePayer: z.string().optional(),
         fee: z.number().optional(),
         slot: z.number().optional(),

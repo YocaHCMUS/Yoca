@@ -139,9 +139,9 @@ Mục tiêu: tạo một đặc tả đo có thể chạy lại và không phụ
 - [x] Wallet hoạt động mạnh khởi đầu: `Bi4rd5FH5bYEN8scZ7wevxNZyNmKHdaBcvewdPFxYdLt`.
 - [x] Smoke-test Token Fundamentals ngày 2026-07-17 trên 12 token Solana; SOL và PYTH là hai mẫu dương có dữ liệu thật để giữ trong deep subset.
 - [ ] Xác định chính xác asset/network/address của AVAX từng dùng demo; không tự giả định một địa chỉ vì AVAX là tài sản native của Avalanche và Yoca đang phân tích Solana.
-- [ ] Xây tập tối thiểu **24 token Solana**; 20 là ngưỡng chấp nhận tối thiểu, bốn trường hợp dự phòng tránh dataset quá sát ngưỡng.
+- [x] Xây tập tối thiểu **24 token Solana**; snapshot warm compatibility ngày 2026-07-18 có 24 token từ seed và Jupiter verified candidates.
 - [ ] Trong 24 token phải có: token thanh khoản cao, token cộng đồng/meme, token cũ, token mới, token ít thanh khoản, token có trường nullable/metadata thiếu và token từng làm Yoca lỗi hoặc không có dữ liệu.
-- [ ] Xây tập tối thiểu **24 wallet Solana**; 20 là ngưỡng chấp nhận tối thiểu.
+- [x] Xây tập tối thiểu **24 wallet Solana**; snapshot discovery ngày 2026-07-18 lấy từ 149 candidate và tiền kiểm 60 địa chỉ bằng Helius.
 - [ ] Trong 24 wallet phải có: ví hoạt động cao, trung bình, thấp, gần như rỗng, nhiều token spam/dust, lịch sử giao dịch dài và wallet từng làm Yoca lỗi hoặc trả dữ liệu mâu thuẫn.
 - [ ] Tìm candidate ví hoạt động mạnh từ GMGN và Birdeye Profitable Traders, sau đó xác minh địa chỉ và hoạt động bằng một nguồn độc lập trước khi đưa vào dataset.
 - [ ] Ghi nguồn và thời điểm chọn wallet; không xem nhãn profitable trader của một provider là ground truth.
@@ -172,20 +172,20 @@ Nhóm không phải copy thủ công hàng trăm địa chỉ. Tạo một disco
 
 #### Candidate token
 
-- [ ] Thu khoảng 100-150 token candidate từ các danh sách Solana trending pools, top pools, new pools và gainers mà Yoca/CoinGecko-GeckoTerminal hỗ trợ.
+- [x] Thu 213 token candidate từ seed cùng Jupiter top organic, trending và recent; Jupiter chỉ dùng cho discovery, kết quả coverage lấy từ API Yoca.
 - [ ] Lấy base token/quote token từ pool, chuẩn hóa mint và loại stablecoin/wrapped native bị lặp khi cần.
 - [ ] Gắn nguồn, thời điểm thu thập, liquidity, volume, tuổi pool và trạng thái metadata.
-- [ ] Deduplicate theo mint; giữ PENGU và các token nhóm cung cấp làm seed bắt buộc.
+- [x] Deduplicate theo mint; giữ SOL, PYTH, PENGU và các token nhóm cung cấp làm seed bắt buộc.
 - [ ] Chia candidate thành nhóm thanh khoản/tuổi/độ đầy đủ dữ liệu trước khi chọn 24 token compatibility.
 
 #### Candidate wallet
 
 - [ ] Lấy candidate wallet từ trader/holder positions của các token thanh khoản, recent pool trades và các danh sách profitable trader có quyền truy cập hợp lệ.
 - [ ] Không lấy LP, program account, token account hoặc địa chỉ hệ thống làm user wallet nếu chưa phân loại rõ.
-- [ ] Xác minh hoạt động gần đây và độ dài lịch sử bằng Helius/Mobula ở bước preflight giới hạn quota.
+- [x] Xác minh hoạt động gần đây bằng mẫu tối đa 100 Enhanced Transactions của Helius; tập được chọn gồm 17 ví hoạt động cao, 2 trung bình và 5 thấp.
 - [ ] Gắn nguồn phát hiện, token liên quan, recency, số giao dịch mẫu và dấu hiệu spam/dust.
-- [ ] Deduplicate theo wallet address; giữ wallet nhóm cung cấp làm seed bắt buộc.
-- [ ] Thu khoảng 100-150 candidate rồi phân tầng để chọn 24 wallet compatibility.
+- [x] Deduplicate theo wallet address; giữ wallet nhóm cung cấp làm seed và loại ví arbitrage bot mà Mobula không hỗ trợ ổn định.
+- [x] Thu 149 candidate từ holder đã lưu, sau đó phân tầng để chọn 24 wallet compatibility.
 
 #### Quy tắc quota và nguồn
 
@@ -230,7 +230,7 @@ Nguồn địa chỉ: danh sách token đã xác minh của Jupiter/Solana và c
 - [x] **WBTC (Wormhole)** — `3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh`: phản hồi rỗng hợp lệ.
 - [x] Gọi lại SOL và PYTH trong thời hạn freshness đều trả `200` từ dữ liệu đã lưu, không phát sinh outbound Mobula request.
 - [ ] Khi chạy regression, ít nhất SOL và PYTH phải trả một nhóm fundamentals có dữ liệu; nếu cả hai cùng rỗng, kiểm tra thay đổi độ phủ/gói API của Mobula trước khi kết luận lỗi mapping.
-- [ ] Mở rộng snapshot này thành tập 24 token và chạy toàn bộ ma trận endpoint, không chỉ Token Fundamentals.
+- [x] Mở rộng thành 24 token và chạy metadata, market, pools, holders, fundamentals: 120/120 phản hồi hợp lệ, gồm 101 `data` và 19 `empty_valid`; đây là warm compatibility, chưa thay cho cold benchmark.
 
 ### Quy tắc chạy
 
@@ -241,6 +241,14 @@ Nguồn địa chỉ: danh sách token đã xác minh của Jupiter/Solana và c
 - Không tạo tải cao vào provider thật nếu chưa kiểm tra quota và điều khoản sử dụng.
 
 **Decision gate 2:** đặc tả đã hoàn thành; chờ nhóm duyệt tám quyết định tại cuối `BENCHMARK_OBSERVABILITY_DESIGN.md` trước Batch 3.
+
+### Snapshot Wallet Discovery — 2026-07-18
+
+- [x] Artifact: `benchmark-results/datasets/wallets-2026-07-18.json`.
+- [x] Loại `3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH` vì Mobula không cung cấp coverage ổn định cho ví arbitrage bot này.
+- [x] Ứng viên thay thế chính: `DgLcG7dhE8VBoA4rJu1resczXkYTSGUx7Ry1HicqcqZr`; mẫu Helius có 100 giao dịch và cả Overview, Portfolio, Transfers, Swaps, Identity đều trả dữ liệu.
+- [x] Có thêm bốn ứng viên hoạt động cao chạy đủ năm module: `4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk`, `GcEXZEUhbK4KyFV7B7q28Zh7PKzGsC3oqgjvGRLaZJZu`, `8pFhUqCU7Fkxfg2DLytRDf7a9oK4XGtN92PrYwtVQc6G`, `6nbufGfNrDodGdv5Ta8VUowuZPujkwaPdFT1eGrfg2rg`.
+- [!] Lượt compatibility giới hạn hai ví đồng thời nhưng mỗi ví gọi năm module song song. 33/120 kết quả có dữ liệu; 87 kết quả còn lại chủ yếu chạm timeout 45 giây. Không diễn giải các timeout này thành provider không hỗ trợ; phải chạy lại tuần tự theo module hoặc với concurrency thấp hơn sau khi có instrumentation.
 
 ## Batch 3 — Instrumentation tối thiểu
 
