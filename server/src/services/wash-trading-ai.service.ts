@@ -6,6 +6,7 @@ import { washTradingVerdictCache, type WashTradingVerdictPersisted } from "@sv/d
 import { dataUsage } from "@sv/middlewares/request-context.js";
 import { pFetch, type ServiceOperationId } from "@sv/util/rate-limit.js";
 import * as helius from "@sv/util/util-helius.js";
+import { trackGemini } from "@sv/services/tracking/gemini-metrics.js";
 
 export type Timeframe = "1h" | "24h" | "7d" | "30d";
 export type GnnAlgorithm = "GCN" | "GAT" | "GraphSAGE";
@@ -1060,8 +1061,9 @@ async function tryGeminiAnalysis(base: WashTradingAIResult["aiAnalysis"], params
           "- detailedFindings must be short dashboard-ready sentences. Do not use Markdown, backticks, Markdown bullets, or camelCase variable names such as circularPattern; use user-facing phrases instead.",
         ].join("\n");
 
-    const response = await ai.models.generateContent({
-      model: WALLET_AUDIT_MODEL || "gemini-2.5-flash",
+    const model = WALLET_AUDIT_MODEL || "gemini-2.5-flash";
+    const response = await trackGemini("gemini.svc.wash_trading_analysis", model, () => ai.models.generateContent({
+      model,
       contents: `${intro} theo cấu trúc: {"verdict":"HIGH_RISK|MEDIUM_RISK|LOW_RISK|CLEAN","summary":"...","detailedFindings":["..."],"suspiciousPatterns":[{"patternName":"...","description":"...","affectedWallets":["..."],"severity":"HIGH|MEDIUM|LOW"}],"recommendation":"...","confidenceNote":"..."}.\n\n${requirements}\n\nData: ${JSON.stringify({
         mint: params.mint,
         symbol: params.symbol,
@@ -1074,7 +1076,7 @@ async function tryGeminiAnalysis(base: WashTradingAIResult["aiAnalysis"], params
         suspiciousWallets: params.suspiciousWallets.slice(0, 8),
       })}`,
       config: { temperature: 0.2, responseMimeType: "application/json" },
-    });
+    }));
 
     const text = response.text?.replace(/```json|```/g, "").trim() ?? "";
     const parsed = JSON.parse(text) as Partial<WashTradingAIResult["aiAnalysis"]>;

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { WALLET_AUDIT_MODEL } from "@sv/config/constants.js";
+import { trackGemini } from "@sv/services/tracking/gemini-metrics.js";
 import { z } from "zod";
 
 import {
@@ -2068,7 +2069,7 @@ async function generateGeminiAnswerForModel(
 
   try {
     const client = new GoogleGenAI({ apiKey });
-    const response = await client.models.generateContent({
+    const response = await trackGemini("gemini.svc.token_ai_chat", model, () => client.models.generateContent({
       model,
       contents: buildPrompt({ request, context, intent }),
       config: {
@@ -2108,7 +2109,7 @@ async function generateGeminiAnswerForModel(
           required: ["tldr", "sections", "warnings", "confidence", "disclaimer"],
         },
       },
-    });
+    }));
 
     const rawText = response.text ?? "";
     const json = parseGeminiJsonText(rawText);

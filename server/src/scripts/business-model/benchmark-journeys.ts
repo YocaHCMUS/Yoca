@@ -5,13 +5,30 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
+import { sign } from "hono/jwt";
+import dayjs from "dayjs";
+import "@sv/util/date.js";
+import {
+  BENCHMARK_TOKEN_ADDRESS,
+  BENCHMARK_TOKEN_SYMBOL,
+  BENCHMARK_USER_ID,
+  BENCHMARK_WALLET_ADDRESS,
+  BENCHMARK_WASH_TOKEN_ADDRESS,
+  BENCHMARK_WASH_TOKEN_SYMBOL,
+} from "./benchmark-constants.js";
 
 type JourneyName =
   | "market_radar"
   | "token_overview"
   | "wallet_core"
   | "wallet_activity"
-  | "wallet_token_chart";
+  | "wallet_token_chart"
+  | "token_ai"
+  | "general_ai_chat"
+  | "wallet_ai"
+  | "wash_trading_ai"
+  | "token_chart_news_ai"
+  | "volatility_ai";
 type PassName = "cold" | "observed_first" | "warm_repeat";
 
 type MetricSample = {
@@ -57,6 +74,8 @@ type JourneyResult = {
   providerAttempts: MetricDelta[];
   providerRetries: MetricDelta[];
   dataUsage: MetricDelta[];
+  aiRequests: MetricDelta[];
+  aiTokens: MetricDelta[];
 };
 
 const tokenDatasetSchema = z.object({
@@ -207,13 +226,15 @@ async function requestEndpoint(
   requestIndex: number,
   route: string,
   url: string,
+  init: RequestInit = {},
 ): Promise<RequestResult> {
   const startedAtMs = Date.now();
   try {
+    const headers = new Headers(init.headers);
+    headers.set("x-request-id", `${runId}-${requestIndex}`);
     const response = await fetch(`${baseUrl}${url}`, {
-      headers: {
-        "x-request-id": `${runId}-${requestIndex}`,
-      },
+      ...init,
+      headers,
       signal: AbortSignal.timeout(120_000),
     });
     const text = await response.text();
@@ -251,6 +272,60 @@ async function requestEndpoint(
       payload: null,
     };
   }
+}
+
+async function runAiRequest(
+  baseUrl: string,
+  runId: string,
+  pass: PassName,
+  journey: "token_ai" | "general_ai_chat" | "wallet_ai" | "wash_trading_ai" | "token_chart_news_ai" | "volatility_ai",
+  route: string,
+  body: Record<string, unknown> | null,
+  authToken: string,
+  url = route,
+): Promise<JourneyResult> {
+  const startedAtMs = Date.now();
+  const startedAt = new Date(startedAtMs).toISOString();
+  const before = await fetchMetrics(baseUrl);
+  const endpoint = await requestEndpoint(
+    baseUrl,
+    runId,
+    1,
+    route,
+    url,
+    body == null
+      ? {
+          method: "GET",
+          headers: {
+            Cookie: `auth_token=${authToken}`,
+            Origin: "http://localhost:3000",
+          },
+        }
+      : {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Cookie: `auth_token=${authToken}`,
+            Origin: "http://localhost:3000",
+          },
+          body: JSON.stringify(body),
+        },
+  );
+  const after = await fetchMetrics(baseUrl);
+
+  return {
+    journey,
+    pass,
+    resourceId: journey,
+    startedAt,
+    durationMs: Date.now() - startedAtMs,
+    endpoints: [publicEndpointResult(endpoint)],
+    providerAttempts: metricDelta(before, after, "yoca_provider_requests_total"),
+    providerRetries: metricDelta(before, after, "yoca_provider_retries_total"),
+    dataUsage: metricDelta(before, after, "yoca_request_data_source_total"),
+    aiRequests: metricDelta(before, after, "yoca_ai_requests_total"),
+    aiTokens: metricDelta(before, after, "yoca_ai_tokens_total"),
+  };
 }
 
 function publicEndpointResult(result: RequestResult): EndpointResult {
@@ -322,6 +397,8 @@ async function runTokenOverview(
     providerAttempts: metricDelta(before, after, "yoca_provider_requests_total"),
     providerRetries: metricDelta(before, after, "yoca_provider_retries_total"),
     dataUsage: metricDelta(before, after, "yoca_request_data_source_total"),
+    aiRequests: metricDelta(before, after, "yoca_ai_requests_total"),
+    aiTokens: metricDelta(before, after, "yoca_ai_tokens_total"),
   };
 }
 
@@ -359,6 +436,8 @@ async function runMarketRadar(
     providerAttempts: metricDelta(before, after, "yoca_provider_requests_total"),
     providerRetries: metricDelta(before, after, "yoca_provider_retries_total"),
     dataUsage: metricDelta(before, after, "yoca_request_data_source_total"),
+    aiRequests: metricDelta(before, after, "yoca_ai_requests_total"),
+    aiTokens: metricDelta(before, after, "yoca_ai_tokens_total"),
   };
 }
 
@@ -396,6 +475,8 @@ async function runWalletCore(
     providerAttempts: metricDelta(before, after, "yoca_provider_requests_total"),
     providerRetries: metricDelta(before, after, "yoca_provider_retries_total"),
     dataUsage: metricDelta(before, after, "yoca_request_data_source_total"),
+    aiRequests: metricDelta(before, after, "yoca_ai_requests_total"),
+    aiTokens: metricDelta(before, after, "yoca_ai_tokens_total"),
   };
 }
 
@@ -446,6 +527,8 @@ async function runWalletActivity(
     providerAttempts: metricDelta(before, after, "yoca_provider_requests_total"),
     providerRetries: metricDelta(before, after, "yoca_provider_retries_total"),
     dataUsage: metricDelta(before, after, "yoca_request_data_source_total"),
+    aiRequests: metricDelta(before, after, "yoca_ai_requests_total"),
+    aiTokens: metricDelta(before, after, "yoca_ai_tokens_total"),
   };
 }
 
@@ -498,6 +581,8 @@ async function runWalletTokenChart(
     providerAttempts: metricDelta(before, after, "yoca_provider_requests_total"),
     providerRetries: metricDelta(before, after, "yoca_provider_retries_total"),
     dataUsage: metricDelta(before, after, "yoca_request_data_source_total"),
+    aiRequests: metricDelta(before, after, "yoca_ai_requests_total"),
+    aiTokens: metricDelta(before, after, "yoca_ai_tokens_total"),
   };
 }
 
@@ -507,8 +592,8 @@ async function main(): Promise<void> {
   }
 
   const requestedJourney = argumentValue("journey") ?? "all";
-  if (!["all", "market", "token", "wallet", "activity", "activity-sequential", "chart"].includes(requestedJourney)) {
-    throw new Error("--journey must be all, market, token, wallet, activity, activity-sequential, or chart");
+  if (!["all", "market", "token", "wallet", "activity", "activity-sequential", "chart", "ai", "ai-summaries"].includes(requestedJourney)) {
+    throw new Error("--journey must be all, market, token, wallet, activity, activity-sequential, chart, ai, or ai-summaries");
   }
   const passCount = Number(argumentValue("passes") ?? "2");
   if (!Number.isInteger(passCount) || passCount < 1 || passCount > 2) {
@@ -590,6 +675,15 @@ async function main(): Promise<void> {
   );
 
   const results: JourneyResult[] = [];
+  const authToken = await sign(
+    {
+      id: BENCHMARK_USER_ID,
+      displayName: "Yoca Benchmark",
+      avatarUrl: null,
+      exp: dayjs.utc().add(2, "hour").unix(),
+    },
+    env.JWT_SECRET,
+  );
   for (let passIndex = 0; passIndex < passCount; passIndex += 1) {
     const pass: PassName = passIndex == 0
       ? requestedPhase == "cold" ? "cold" : "observed_first"
@@ -663,6 +757,119 @@ async function main(): Promise<void> {
         );
       }
     }
+    if (requestedJourney == "ai") {
+      results.push(
+        await runAiRequest(
+          env.YOCA_BENCHMARK_BASE_URL,
+          `${runId}-token_ai-${pass}`,
+          pass,
+          "token_ai",
+          "/api/token-ai-chat",
+          {
+            address: BENCHMARK_TOKEN_ADDRESS,
+            symbol: BENCHMARK_TOKEN_SYMBOL,
+            name: "Pyth Network",
+            question: "Summarize the strongest opportunities and risks supported by the current Yoca evidence.",
+            timeframe: "24h",
+            language: "en",
+            includeNews: true,
+            includeVolatility: true,
+            modelMode: "balanced",
+          },
+          authToken,
+        ),
+        await runAiRequest(
+          env.YOCA_BENCHMARK_BASE_URL,
+          `${runId}-general_ai_chat-${pass}`,
+          pass,
+          "general_ai_chat",
+          "/api/chat",
+          {
+            addresses: [BENCHMARK_WALLET_ADDRESS],
+            query: "Summarize this wallet's portfolio, recent activity, and main risks using Yoca data.",
+            language: "en",
+            contextType: "wallet",
+            skipCache: true,
+            skipSessionSave: true,
+          },
+          authToken,
+        ),
+        await runAiRequest(
+          env.YOCA_BENCHMARK_BASE_URL,
+          `${runId}-wallet_ai-${pass}`,
+          pass,
+          "wallet_ai",
+          "/api/wallet-analysis/analyze",
+          {
+            walletAddress: BENCHMARK_WALLET_ADDRESS,
+            transactionLimit: 100,
+            language: "en",
+            userLevel: "INTERMEDIATE",
+            maxSummaryLength: "MEDIUM",
+          },
+          authToken,
+        ),
+        await runAiRequest(
+          env.YOCA_BENCHMARK_BASE_URL,
+          `${runId}-wash_trading_ai-${pass}`,
+          pass,
+          "wash_trading_ai",
+          "/api/v1/wash-trading/ai-analyze",
+          {
+            mint: BENCHMARK_WASH_TOKEN_ADDRESS,
+            symbol: BENCHMARK_WASH_TOKEN_SYMBOL,
+            timeframe: "24h",
+            algorithm: "GCN",
+            language: "en",
+            limit: 20,
+          },
+          authToken,
+        ),
+      );
+    }
+    if (requestedJourney == "ai-summaries") {
+      const chartNewsQuery = new URLSearchParams({
+        address: BENCHMARK_TOKEN_ADDRESS,
+        symbol: BENCHMARK_TOKEN_SYMBOL,
+        name: "Pyth Network",
+        timeframe: "1m",
+        includeSummary: "true",
+        forceRefresh: "true",
+      });
+      const volatilityQuery = new URLSearchParams({
+        address: BENCHMARK_TOKEN_ADDRESS,
+        symbol: BENCHMARK_TOKEN_SYMBOL,
+        name: "Pyth Network",
+        threshold: "20",
+        timeframe: "daily",
+        window: "auto",
+        maxEventsWithNews: "3",
+        includeSummary: "true",
+        forceRefresh: "true",
+      });
+      results.push(
+        await runAiRequest(
+          env.YOCA_BENCHMARK_BASE_URL,
+          `${runId}-token_chart_news_ai-${pass}`,
+          pass,
+          "token_chart_news_ai",
+          "/api/token-chart-news-events",
+          null,
+          authToken,
+          `/api/token-chart-news-events?${chartNewsQuery.toString()}`,
+        ),
+        await runAiRequest(
+          env.YOCA_BENCHMARK_BASE_URL,
+          `${runId}-volatility_ai-${pass}`,
+          pass,
+          "volatility_ai",
+          "/api/token-volatility-news",
+          null,
+          authToken,
+          `/api/token-volatility-news?${volatilityQuery.toString()}`,
+        ),
+      );
+    }
   }
 
   await writeFile(
@@ -692,6 +899,8 @@ async function main(): Promise<void> {
       endpoints: result.endpoints,
       providerAttempts: result.providerAttempts,
       dataUsage: result.dataUsage,
+      aiRequests: result.aiRequests,
+      aiTokens: result.aiTokens,
     })),
   };
   await writeFile(

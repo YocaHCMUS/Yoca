@@ -1,6 +1,6 @@
 # Local observability stack
 
-Prometheus scrapes the Yoca server at `host.docker.internal:4000/metrics` every five seconds and keeps local data for seven days. Grafana reads Prometheus through the internal Docker network and loads the Yoca dashboard automatically.
+Prometheus scrapes the Yoca server at `host.docker.internal:4000/metrics` every five seconds and keeps local data for seven days. Grafana reads Prometheus through the internal Docker network and loads the Yoca dashboard automatically. The same endpoint includes HTTP, external-provider, data-source and Gemini token metrics.
 
 Set these values in `server/.env` before starting the server:
 
@@ -27,6 +27,8 @@ password: yoca-local
 ```
 
 The home dashboard is provisioned as `Yoca — API and Provider Observability`. Its default range is the last 15 minutes and it refreshes every five seconds. Use the Route and Provider filters to isolate a benchmark journey before taking a screenshot or exporting results.
+
+Gemini panels group calls by stable operation ID and requested model. Token counters come from the Gemini response metadata and contain no prompt or response text. For paid-cost calculations, use prompt tokens as input and add output plus thinking tokens as billable output; `total` is a reconciliation counter and must not be added again. Brave Web and News requests appear in the provider panels under provider `brave`.
 
 In `Observed Blockchain Data Usage`, `none` means that a route in the benchmark scope did not explicitly register a DB, memory or provider result. Treat it as an instrumentation-coverage signal, not as a cache miss. Investigate a large `none` slice by grouping `yoca_request_data_source_total` by both `route` and `source`.
 

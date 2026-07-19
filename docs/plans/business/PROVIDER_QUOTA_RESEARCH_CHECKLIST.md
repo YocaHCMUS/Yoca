@@ -134,6 +134,27 @@ Nguồn chính thức:
 - https://www.helius.dev/docs/billing/rate-limits
 - https://www.helius.dev/docs/api-reference/admin
 
+### Brave Search và Gemini
+
+Brave Search API hiện tính Search theo pay-as-you-go: 5 USD/1.000 request và tự cấp 5 USD credit mỗi tháng, tương đương khoảng 1.000 request Search. Yoca không dùng Brave Answers. Web Search và News Search là các request độc lập; nếu một luồng gọi cả hai thì phải cộng hai request.
+
+Gemini có Free Tier theo model/project và Paid Tier tính theo token. Không dùng một con số RPM/RPD chung vì Google yêu cầu xem active limits trong AI Studio. Mô hình hiện dùng giá Standard: Gemini 3.1 Flash-Lite là 0,25 USD/1 triệu input token và 1,50 USD/1 triệu output/thinking token; Gemini 2.5 Flash là 0,30/2,50 USD; Gemini 2.5 Flash-Lite là 0,10/0,40 USD. Chuyển sang Paid Tier bằng cách liên kết billing và nạp trước tối thiểu 10 USD; đây là credit nạp trước, không phải phí thuê bao tháng.
+
+OpenGraph trong Yoca không phải API thương mại nên được loại khỏi cost model chi tiết; ảnh hưởng nhỏ được hấp thụ trong chi phí hosting chung.
+
+- [x] Instrument bốn Brave operation bằng `pFetch`; mỗi outbound attempt được đếm riêng và không tự retry.
+- [x] Instrument mười Gemini operation; ghi model, outcome, latency và token metadata, không ghi prompt/response.
+- [-] Đã chạy pilot prompt cố định và lưu artifact cho Token AI, General/Wallet Chat và Wash Trading AI; cần lặp mẫu để lấy distribution. Các Wallet AI modal đã bị loại khỏi runtime pricing.
+- [x] Pilot PYTH cho Token Chart News và Volatility đã ghi nhận cả Gemini token lẫn Brave fan-out; cost v0 đã được cập nhật trong `AI_TIER_COST_MODEL_2026-07-19.md`.
+- [ ] Đo tỷ lệ Brave fallback thực tế trên token-news journey; không giả định mọi lượt xem đều gọi Brave.
+
+Nguồn chính thức:
+
+- https://brave.com/search/api/
+- https://ai.google.dev/gemini-api/docs/pricing
+- https://ai.google.dev/gemini-api/docs/billing
+- https://ai.google.dev/gemini-api/docs/rate-limits
+
 ## Quy trình đo operation có cost ẩn hoặc động
 
 - [ ] Tắt client, polling, webhook sync và các benchmark khác đang dùng cùng key trong cửa sổ đo.
@@ -181,6 +202,8 @@ Phân loại billing: CoinGecko và Zerion là `request_based`; Birdeye là `fix
 | Helius | Standard RPC: `getTransaction`, `getSignaturesForAddress`, `getTokenLargestAccounts` | 1 credit/call | bảng Helius Credits |
 | Helius | webhook create/update/delete | 100 credits/call | bảng Helius Credits |
 | Helius | webhook event delivery | 1 credit/event | phát sinh nền, không gắn vào page journey |
+| Brave | `chat_news_search`, `chat_web_search`, `token_news_search`, `token_web_search` | 1 Search request/attempt | 5 USD/1.000 request; 5 USD monthly credit tương đương khoảng 1.000 request |
+| Gemini | mọi `gemini.svc.*` | theo input/output token của model | đo từ `usageMetadata`; retry và model fallback là call riêng |
 
 ### Fan-out cần đưa vào journey model
 
@@ -190,6 +213,7 @@ Phân loại billing: CoinGecko và Zerion là `request_based`; Birdeye là `fix
 - [x] Moralis swaps: `fallow --trace` xác nhận `fetchMoralisSolanaSwap` không có reference; client production dùng Mobula-backed swaps history. Không benchmark hoặc cộng Moralis swaps vào runtime cost model cho đến khi có consumer thật.
 - [x] Helius Wash Trading Enhanced path: code gọi tối đa một address-transactions request, tương đương 100 credits; cache transfer process-local 5 phút có thể tránh gọi lại cùng mint/timeframe.
 - [x] Helius Wash Trading RPC fallback: chỉ chạy khi Enhanced không đủ tám transfer; tối đa 1 largest-accounts + 5 signatures + 70 transactions = 76 standard RPC credits. Một fallback đầy đủ gồm cả Enhanced attempt nên upper bound on-chain là 176 Helius credits/lượt.
+- [x] Helius Wallet Core: Portfolio và Overview dùng chung một refresh. Ba core samples chỉ dùng một balances page, tương đương 100 credits/refresh; ví nhiều holdings phải tính `100 × số trang`, không dùng hằng số 100 hoặc 200 cho mọi ví.
 - [x] Helius webhook: tách khỏi page journey và dự báo bằng event count. Event delivery là 1 credit/event; create/update/delete là 100 credits/lần và chỉ phát sinh khi cấu hình địa chỉ thay đổi. Database hiện không lưu toàn bộ received event nên chưa có observed event-rate đáng tin cậy.
 
 ## Việc nhóm phải kiểm tra thủ công
@@ -210,3 +234,20 @@ Phân loại billing: CoinGecko và Zerion là `request_based`; Birdeye là `fix
 - [x] Có raw isolated observations cho Birdeye cost trước đây chưa rõ và provider quota header/dashboard.
 - [x] Có quy tắc upgrade dựa trên projected quota, peak throughput, 429/error rate và provisional latency SLO tại `benchmark-results/JOURNEY_COST_INPUTS_2026-07-19.md`.
 - [ ] Nhóm duyệt bảng trước khi thêm metadata vào code production.
+
+## Gói nâng cấp gần nhất dùng cho cost scenario
+
+Bảng này chỉ ghi bước nâng cấp đầu tiên có khả năng liên quan đến runtime hiện tại. Giá là giá niêm yết theo tháng tại ngày rà soát; khuyến mãi và giá trả theo năm được giữ riêng để tránh làm chi phí cơ sở thấp giả tạo.
+
+| Provider | Bước nâng cấp gần nhất | Giá niêm yết/tháng | Quota và throughput chính | Cách dùng trong mô hình |
+| --- | --- | ---: | --- | --- |
+| Birdeye | Lite | 39 USD | 1,5 triệu CU/tháng, 15 RPS | Ứng viên nâng đầu tiên khi Market Radar vượt 30.000 CU Standard; không dùng con số Lite 2,5 triệu cũ. |
+| Mobula | Start-up | 50 USD | 125.000 credits/tháng | Ứng viên nâng đầu tiên khi Wallet Core/Activity vượt 10.000 credits Free. |
+| CoinGecko | Basic | 35 USD trả tháng; 29 USD/tháng nếu trả năm | 100.000 credits/tháng, 300 call/phút | Dùng giá 35 USD trong monthly scenario; giá năm chỉ dùng khi phân tích cam kết dài hạn. |
+| Helius | Developer | 49 USD | 10 triệu credits/tháng, 50 RPC RPS, 10 DAS/Enhanced RPS | Dùng list price 49 USD; không lấy giá khuyến mãi hiển thị tạm thời làm baseline. |
+| Moralis | Starter | 49 USD/tháng khi trả năm | 2 triệu CU/tháng, 40 RPS | Chưa đưa vào runtime base cost vì Moralis swaps hiện không có production consumer; chỉ kích hoạt nếu source trace thay đổi. |
+| Zerion | Chưa có giá public đủ chắc chắn | unknown | Key nhóm đang ở Developer 0 USD, 10 request/giây và 2.000 request/ngày | Giữ unknown; không tự gán giá khi dashboard/docs chưa công bố tier kế tiếp. |
+| Brave Search | Search pay-as-you-go | 5 USD/1.000 request sau credit | 5 USD credit miễn phí/tháng, 50 query/giây | 1.000 Search request đầu tương đương 0 USD; sau đó 0,005 USD/request. |
+| Gemini | Paid Tier / Tier 1 | Không có phí thuê bao; nạp trước tối thiểu 10 USD | Tính theo token; rate limit thực tế phụ thuộc model/project và xem trong AI Studio | Dùng đúng model: 3.1 Flash-Lite 0,25/1,50 USD và 2.5 Flash 0,30/2,50 USD cho 1 triệu input/output token. |
+
+Nguồn chính thức được dùng: Birdeye Pricing, Mobula Pricing, CoinGecko API Pricing, Helius Pricing/Credits, Moralis Pricing, Zerion Rate Limits, Brave Search API Pricing và Gemini API Pricing/Billing/Rate Limits đã liệt kê trong từng provider ở trên.
