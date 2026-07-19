@@ -388,6 +388,7 @@ export const translation = {
       volatilitySummary: "Volatility Signal Summary: {{$count}}/day",
       walletAiAnalysis: "Wallet AI Analysis: {{$count}}/day",
       washTradingAiAnalysis: "Wash Trading AI Analysis: {{$count}}/day",
+      washTradingAiChat: "Wash Trading AI Chat: {{$count}} messages/day",
       dailyReset: "Daily limits reset at 00:00 UTC",
     },
     cta: {

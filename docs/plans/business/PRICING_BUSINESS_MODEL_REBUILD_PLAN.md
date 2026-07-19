@@ -418,45 +418,46 @@ Mục tiêu: biến số request đo được thành chi phí có căn cứ.
 
 Mục tiêu: nối kết quả đo với các giả định kinh doanh.
 
-- [ ] Định nghĩa đầy đủ MAU khi xuất hiện lần đầu.
-- [ ] Tách khách chưa đăng nhập và tài khoản đăng nhập nếu cần.
-- [ ] Chốt ba mốc quy mô; mặc định 300, 3.000 và 30.000 MAU.
-- [ ] Chốt session/user/tháng và tỷ lệ truy cập từng hành trình dưới dạng giả định.
-- [ ] Không dùng một cache hit ratio chung; xây theo loại tài nguyên và hành vi truy cập.
-- [ ] Tính request/credit/provider/tháng bằng công thức có thể kiểm tra.
-- [ ] Tạo kịch bản thận trọng, cơ sở và thuận lợi.
-- [ ] Tính data, AI, hosting, database và phí thanh toán ở mức phù hợp với phạm vi nhóm chọn.
-- [ ] Gọi đúng tên biên đóng góp/lợi nhuận gộp/lợi nhuận ròng.
-- [ ] Phân tích độ nhạy đối với conversion, cache reuse và AI usage.
+- [x] Định nghĩa đầy đủ MAU khi xuất hiện lần đầu.
+- [x] Gộp khách chưa đăng nhập và tài khoản đăng nhập trong MAU cost model; doanh thu chỉ lấy từ payer mix. Việc nhận diện anonymous user được giữ làm yêu cầu analytics tương lai.
+- [x] Giữ 300, 3.000 và 30.000 MAU làm ba lát cắt trình bày; calculator quét liên tục để breakpoint không bị khóa vào ba mốc.
+- [x] Chốt session/user/tháng và tỷ lệ truy cập từng hành trình dưới dạng giả định trong ba demand profile.
+- [x] Không dùng một cache hit ratio chung; xây theo loại tài nguyên và hành vi truy cập.
+- [x] Tính request/credit/provider/tháng bằng công thức có thể kiểm tra.
+- [x] Tạo kịch bản favorable, base và pressure với cùng MAU/payer mix để cô lập độ nhạy demand.
+- [x] Tính data, AI, hosting, database và phí thanh toán ở mức phù hợp với cost scenario.
+- [x] Gọi đúng tên biên đóng góp; không gọi phần còn lại là lợi nhuận ròng.
+- [x] Phân tích độ nhạy cache reuse/AI usage bằng demand profile và conversion bằng một trục riêng.
 - [ ] Thay sample cost của Chart News, Volatility và Wash Trading Chat bằng median/p95 sau benchmark.
 
 ## Batch 7 — Pricing và mô hình doanh thu
 
 Mục tiêu: định giá theo giá trị và đối tượng sử dụng, không chỉ lấy chi phí cộng biên lợi nhuận.
 
-- [ ] Xác định chân dung người dùng Free, Lite, Plus và Pro.
-- [ ] Viết giá trị tăng thêm của mỗi tier.
-- [ ] Chỉ liệt kê phần khác biệt so với tier trước.
-- [ ] Chốt giá tháng và năm.
-- [ ] Đối chiếu đối thủ theo nhóm tính năng và đối tượng, không chỉ so con số giá.
-- [ ] Chốt payer conversion dưới dạng giả định.
-- [ ] Tính doanh thu và biên đóng góp theo ba kịch bản.
-- [ ] Xác định nguồn vốn hiện tại và kịch bản mở rộng.
-- [ ] Chưa cập nhật Stripe/UI cho đến khi nhóm duyệt giá cuối.
+- [x] Xác định chân dung người dùng Free, Lite, Plus và Pro.
+- [x] Viết giá trị tăng thêm của mỗi tier.
+- [x] Cấu trúc pricing chỉ liệt kê phần khác biệt so với tier trước.
+- [x] Chốt giá đề xuất tháng 39/79/149 USD và năm bằng 10 tháng sử dụng cho 12 tháng.
+- [x] Đối chiếu đối thủ theo nhóm tính năng và đối tượng, không chỉ so con số giá.
+- [x] Chốt payer conversion 8% (5% Lite, 2% Plus, 1% Pro) dưới dạng giả định.
+- [x] Tính doanh thu và biên đóng góp theo ba lát cắt MAU và ba demand profile.
+- [x] Xác định nguồn vốn hiện tại là nguồn lực tự có của nhóm; chi phí nâng cấp là kịch bản từ doanh thu, chưa phải vốn đã huy động.
+- [x] Đồng bộ giá, quota AI và quyền lợi Wash Trading vào Pricing UI và entitlement.
+- [!] Xác nhận thủ công Stripe Price ID tháng/năm trên dashboard trước khi mở thanh toán thật; giá nằm sau environment ID nên repo không tự kiểm chứng được.
 
 ## Batch 8 — Nội dung bàn giao và phản biện
 
 Mục tiêu: chuyển nghiên cứu kỹ thuật thành nội dung mà nhóm hiểu và trình bày được.
 
-- [ ] Bản phân tích nội bộ có công thức, nguồn và kết quả benchmark.
-- [ ] Một slide Business Model ngắn, không chứa lịch sử agent hoặc đường dẫn source.
-- [ ] Một bảng Pricing tháng/năm, diff-only.
-- [ ] Một sơ đồ nguồn chi phí từ hành trình người dùng đến provider.
-- [ ] Một bảng ba kịch bản MAU và chi phí/doanh thu.
+- [x] Bản phân tích nội bộ có công thức, nguồn và kết quả benchmark.
+- [x] Chốt nội dung Business Model trong bộ ba slide, không chứa lịch sử agent hoặc đường dẫn source.
+- [x] Một bảng Pricing tháng/năm, diff-only.
+- [x] Một sơ đồ nguồn chi phí từ hành trình người dùng đến provider.
+- [x] Một bảng ba kịch bản MAU và chi phí/doanh thu; calculator và phân tích độ nhạy có thể chạy lại.
 - [ ] Một slide AI in-house với điều kiện chuyển đổi rõ ràng.
-- [ ] Bộ câu hỏi phản biện về dữ liệu, cache, provider, bảo mật, test và pricing.
+- [x] Bộ câu hỏi phản biện trọng tâm về dữ liệu, cache, provider, hạ tầng và pricing trong developer handbook.
 - [ ] Mỗi khẳng định trong slide có người trong nhóm giải thích được căn cứ.
-- [ ] Chỉ cập nhật báo cáo cuối hoặc pricing UI sau khi nhóm duyệt bản trình bày.
+- [x] Tách bản hướng thầy và developer handbook; báo cáo cuối LaTeX chỉ cập nhật khi nhóm chủ động yêu cầu.
 
 ## Bộ công cụ: quyết định sơ bộ
 

@@ -347,6 +347,7 @@ export const translation = defineTranslation({
       tokenChartNewsSummary: "Tóm tắt tin tức trên chart: {{$count}}/ngày",
       walletAiAnalysis: "Wallet AI Analysis: {{$count}}/ngày",
       washTradingAiAnalysis: "Wash Trading AI Analysis: {{$count}}/ngày",
+      washTradingAiChat: "Wash Trading AI Chat: {{$count}} tin nhắn/ngày",
       volatilitySummary: "Tóm tắt Volatility Signals: {{$count}}/ngày",
       dailyReset: "Hạn mức được làm mới lúc 00:00 UTC mỗi ngày",
     },

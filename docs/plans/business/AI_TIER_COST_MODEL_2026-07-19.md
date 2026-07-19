@@ -1,6 +1,6 @@
 # AI tier cost model — 2026-07-19
 
-Tài liệu nội bộ này nối các chức năng AI đang được client sử dụng với chi phí Gemini, dữ liệu provider và hạn mức thương mại. Các con số đề xuất là đầu vào cho business model; chúng chưa mặc nhiên mô tả trạng thái enforcement của source.
+Tài liệu nội bộ này nối các chức năng AI đang được client sử dụng với chi phí Gemini, dữ liệu provider và hạn mức thương mại. Quota v0 trong tài liệu đã được đồng bộ vào entitlement và Pricing UI ngày 2026-07-19; các số đo chi phí vẫn là đầu vào cần cập nhật khi có thêm benchmark.
 
 ## Nguyên tắc
 
@@ -69,6 +69,19 @@ Các implementation Wallet AI cũ, Behavior Analysis, Swap Summary và Token Dee
 
 Wash Trading Analysis và Chat tách quota vì một bên dựng verdict/graph, bên còn lại là hội thoại diễn giải. Trong cost model, một phiên chat có tối đa một refresh on-chain và nhiều Gemini explanation; không nhân Helius cost với mọi câu nếu transaction input vẫn fresh.
 
+### Vì sao thay quota cũ
+
+Trước đợt đồng bộ ngày 2026-07-19, source và Pricing UI dùng mức Free 5/5/5/10, Lite 20/20/20/25 và Plus/Pro 50/100 lượt cho phần lớn feature. Nhân trực tiếp các giới hạn này với full cost proxy Gemini + Brave sau free credit cho ra stress ceiling tối thiểu sau, dù đã loại Wallet AI cũ và chưa cộng Wash Trading Chat:
+
+| Tier hiện hành | Stress ceiling/tháng/người | So với giá tháng |
+| --- | ---: | ---: |
+| Free | khoảng 12,36 USD | Không có doanh thu trực tiếp |
+| Lite | khoảng 40,98 USD | Vượt giá 39 USD trước data, hosting và payment fee |
+| Plus | khoảng 103,50 USD | Vượt giá 79 USD |
+| Pro | khoảng 207,00 USD | Vượt giá 149 USD |
+
+Stress ceiling không phải expected cost, nhưng quota thương mại phải còn an toàn khi một nhóm người dùng sử dụng quyền lợi rất cao. Mức cũ không đạt điều kiện này và còn quảng bá Wallet AI đã bị loại khỏi runtime pricing. Vì vậy quota v0 đã thay thế mức cũ trong entitlement và Pricing UI; Wash Trading Chat có counter riêng và yêu cầu gói Plus trở lên.
+
 ## Kiểm tra trần AI/Search
 
 Nếu một thuê bao dùng hết mọi quota mỗi ngày trong 30 ngày và mọi lượt đều là cache miss, cost proxy tạo trần sau:
@@ -107,8 +120,8 @@ Các tỷ lệ là giả định sản phẩm để dựng ba scenario, không p
 - Ghi thêm mẫu cho Token Chart News và Volatility Summary.
 - Đo tỷ lệ Brave fallback của Ask Yoca AI.
 - Tách Wallet Chat prompt theo intent; overview, PnL và exact transactions không có cùng provider fan-out.
-- Khi triển khai entitlement, reserve usage ngay trước lần gọi Gemini/provider có tính phí và không trừ lượt cho fresh cache hit.
-- Bổ sung feature ID riêng `wash_trading_ai_chat`; không dùng chung counter với analysis.
+- Tiếp tục áp dụng nguyên tắc reserve usage ngay trước lần gọi Gemini/provider có tính phí và release reservation khi xử lý thất bại.
+- Smoke test cả hai counter Wash Trading Analysis và `wash_trading_ai_chat` sau mỗi thay đổi entitlement.
 
 ## Cách đưa vào business model
 

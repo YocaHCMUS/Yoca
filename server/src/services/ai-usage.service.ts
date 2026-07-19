@@ -14,6 +14,7 @@ export const AI_FEATURES = {
   TokenChartNewsSummary: "token_chart_news_summary",
   WalletAiAnalysis: "wallet_ai_analysis",
   WashTradingAiAnalysis: "wash_trading_ai_analysis",
+  WashTradingAiChat: "wash_trading_ai_chat",
 } as const;
 
 export type AiFeature = (typeof AI_FEATURES)[keyof typeof AI_FEATURES];
@@ -21,28 +22,28 @@ export type AiTier = EffectivePlanTier;
 
 const AI_DAILY_LIMITS: Record<AiFeature, Record<AiTier, number>> = {
   [AI_FEATURES.AskYocaAi]: {
-    Free: 5,
-    Lite: 20,
-    Plus: 50,
-    Pro: 100,
+    Free: 1,
+    Lite: 3,
+    Plus: 6,
+    Pro: 12,
   },
   [AI_FEATURES.VolatilitySignalSummary]: {
-    Free: 10,
-    Lite: 25,
-    Plus: 50,
-    Pro: 100,
+    Free: 1,
+    Lite: 3,
+    Plus: 4,
+    Pro: 8,
   },
   [AI_FEATURES.GeneralAiChat]: {
-    Free: 5,
-    Lite: 20,
-    Plus: 50,
-    Pro: 100,
+    Free: 1,
+    Lite: 4,
+    Plus: 8,
+    Pro: 12,
   },
   [AI_FEATURES.TokenChartNewsSummary]: {
-    Free: 5,
-    Lite: 20,
-    Plus: 50,
-    Pro: 100,
+    Free: 1,
+    Lite: 2,
+    Plus: 4,
+    Pro: 8,
   },
   [AI_FEATURES.WalletAiAnalysis]: {
     Free: 0,
@@ -53,14 +54,21 @@ const AI_DAILY_LIMITS: Record<AiFeature, Record<AiTier, number>> = {
   [AI_FEATURES.WashTradingAiAnalysis]: {
     Free: 0,
     Lite: 0,
-    Plus: 50,
-    Pro: 100,
+    Plus: 3,
+    Pro: 5,
+  },
+  [AI_FEATURES.WashTradingAiChat]: {
+    Free: 0,
+    Lite: 0,
+    Plus: 5,
+    Pro: 10,
   },
 };
 
 const AI_FEATURE_REQUIRED_TIER: Partial<Record<AiFeature, Exclude<AiTier, "Free">>> = {
   [AI_FEATURES.WalletAiAnalysis]: "Plus",
   [AI_FEATURES.WashTradingAiAnalysis]: "Plus",
+  [AI_FEATURES.WashTradingAiChat]: "Plus",
 };
 
 const TIER_RANK: Record<AiTier, number> = {
