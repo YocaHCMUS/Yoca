@@ -320,12 +320,14 @@ export function WalletTransactionActivity({ address }: { address: string }) {
       param: { address },
       query: swapQuery,
     },
+    { enabled: activeActivityTab == "swaps" },
   );
 
   const transferResp: UseGetResp<WalletTransferData> = useGet(
     client.api.wallets.transfers.history[":address"],
     200,
     { param: { address }, query: transferQuery },
+    { enabled: activeActivityTab == "transfers" },
   );
   // Swap rows – plain text
   const swapRows = useMemo(() => {

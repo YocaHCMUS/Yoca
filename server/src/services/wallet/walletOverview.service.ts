@@ -1,7 +1,8 @@
-import { buildActivitySnapshotFromProviders, buildHoldingsSnapshotFromProviders, buildOverviewResponse, getLatestOverviewCacheRow, getOverviewFromFreshCache, OVERVIEW_PERIOD_KEYS } from "@sv/services/wallet/walletData.core.js";
+import { buildActivitySnapshotFromProviders, buildHoldingsSnapshotFromPortfolio, buildOverviewResponse, getLatestOverviewCacheRow, getOverviewFromFreshCache, OVERVIEW_PERIOD_KEYS } from "@sv/services/wallet/walletData.core.js";
 import type { WalletOverview, WalletOverviewPeriodKey, WalletOverviewQueryOptions } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { saveOverviewCache } from "@sv/services/wallet/db/walletDataCacher.js";
 import { dataUsage } from "@sv/middlewares/request-context.js";
+import { getWalletPortfolio } from "@sv/services/wallet/walletPortfolio.service.js";
 
 export async function getWalletOverview(address: string, query?: WalletOverviewQueryOptions): Promise<WalletOverview> {
     if (query?.force) {
@@ -20,7 +21,8 @@ export async function getWalletOverview(address: string, query?: WalletOverviewQ
         return cachedOverview;
     }
 
-    const holdingsSnapshot = await buildHoldingsSnapshotFromProviders(address, cacheRow);
+    const portfolio = await getWalletPortfolio(address, { force: query?.force });
+    const holdingsSnapshot = await buildHoldingsSnapshotFromPortfolio(portfolio, cacheRow);
     const { periodSnapshots, providerFailuresByPeriod } = await buildActivitySnapshotFromProviders(address, cacheRow);
 
     const holdingsUsedCache = holdingsSnapshot.source == "overview-cache";

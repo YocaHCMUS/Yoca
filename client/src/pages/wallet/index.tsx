@@ -14,30 +14,14 @@ import { useWalletWinrate } from "@/hooks/useWalletWinrate";
 
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
 import { useLocalization } from "@/contexts/LocalizationContext.tsx";
-import { useGet } from "@/hooks/useGet";
+import { useGet, type UseGetResp } from "@/hooks/useGet";
 import {
-  fetchWalletSwaps,
-  fetchWalletTransfers,
-  fetchWalletPortfolio,
-  fetchWalletOverview,
-  fetchWalletIntelligence,
-  type WalletSwap,
-  type WalletTransfer,
   type WalletPortfolioItem,
-  type WalletIntelligenceResponse,
   type WalletOverviewMultiPeriodResponse,
-  type WalletPageInfo,
 } from "@/services/wallet/walletApi.ts";
-import { fetchWalletTags } from "@/services/wallet/walletTagsApi.ts";
 import { AiGenerate, Close } from "@carbon/icons-react";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import { flushSync } from "react-dom";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 
 import { mapPortfolioItems } from "../../util/wallet-portfolio-mapper.ts";
@@ -74,27 +58,21 @@ export default function WalletPage() {
   const { address } = useParams<{ address: string }>();
   const walletAddress = address ?? "";
 
-  const [, setSwapPages] = useState<Record<number, WalletSwap[]>>({});
-  const [, setSwapPageInfoByPage] = useState<
-    Record<number, WalletPageInfo>
-  >({});
-  const [, setSwapLoading] = useState(false);
+  const portfolioRequest: UseGetResp<WalletPortfolioItem[]> = useGet(
+    client.api.wallets.portfolio,
+    200,
+    { query: { address: walletAddress } },
+    { enabled: Boolean(walletAddress) && walletAddress != "null" },
+  );
+  const portfolio = portfolioRequest.data ?? [];
 
-  const [, setTransferPages] = useState<
-    Record<number, WalletTransfer[]>
-  >({});
-  const [, setTransferPageInfoByPage] = useState<
-    Record<number, WalletPageInfo>
-  >({});
-  const [, setTransferLoading] = useState(false);
-  const [portfolioLoading, setPortfolioLoading] = useState(false);
-
-  const [portfolio, setPortfolio] = useState<WalletPortfolioItem[]>([]);
-  const [overviewReport, setOverviewReport] =
-    useState<WalletOverviewMultiPeriodResponse | null>(null);
-  const [, setIntelligenceReport] =
-    useState<WalletIntelligenceResponse | null>(null);
-  const [, setWalletTags] = useState<string[]>([]);
+  const overviewRequest: UseGetResp<WalletOverviewMultiPeriodResponse> = useGet(
+    client.api.wallets.overview,
+    200,
+    { query: { address: walletAddress, period: "24H" } },
+    { enabled: Boolean(walletAddress) && walletAddress != "null" },
+  );
+  const overviewReport = overviewRequest.data ?? null;
 
   const [selectedPeriod, setSelectedPeriod] =
     useState<WalletOverviewPeriodKey>("24H");
@@ -191,78 +169,6 @@ export default function WalletPage() {
 
 
 
-  // const handleSwapPageChange = async (): Promise<boolean> => {
-  //   if (!address || swapLoading) return false;
-  //   const maxLoadedPage = getMaxLoadedPage(swapPages);
-  //   if (maxLoadedPage < 1) return false;
-  //   const previousPageInfo = swapPageInfoByPage[maxLoadedPage];
-  //   if (!previousPageInfo?.hasMore || !previousPageInfo.nextCursor)
-  //     return false;
-  //   setSwapLoading(true);
-  //   try {
-  //     const response = await fetchWalletSwaps(address, {
-  //       cursor: previousPageInfo.nextCursor,
-  //       before: previousPageInfo.nextCursor,
-  //     });
-  //     const nextRows = Array.isArray(response.swaps) ? response.swaps : [];
-  //     const nextPage = maxLoadedPage + 1;
-  //     setSwapPages((prev) => ({ ...prev, [nextPage]: nextRows }));
-  //     setSwapPageInfoByPage((prev) => ({
-  //       ...prev,
-  //       [nextPage]: response.pageInfo,
-  //     }));
-  //     return nextRows.length > 0;
-  //   } catch (error) {
-  //     console.error("Failed to load wallet swap page", error);
-  //     return false;
-  //   } finally {
-  //     setSwapLoading(false);
-  //   }
-  // };
-
-  // const handleTransferPageChange = async (): Promise<boolean> => {
-  //   if (!address || transferLoading) return false;
-  //   const maxLoadedPage = getMaxLoadedPage(transferPages);
-  //   if (maxLoadedPage < 1) return false;
-  //   const previousPageInfo = transferPageInfoByPage[maxLoadedPage];
-  //   if (!previousPageInfo?.hasMore || !previousPageInfo.nextCursor)
-  //     return false;
-  //   setTransferLoading(true);
-  //   try {
-  //     const response = await fetchWalletTransfers(address, {
-  //       cursor: previousPageInfo.nextCursor,
-  //     });
-  //     const nextRows = Array.isArray(response.transfers)
-  //       ? response.transfers
-  //       : [];
-  //     const nextPage = maxLoadedPage + 1;
-  //     setTransferPages((prev) => ({ ...prev, [nextPage]: nextRows }));
-  //     setTransferPageInfoByPage((prev) => ({
-  //       ...prev,
-  //       [nextPage]: response.pageInfo,
-  //     }));
-  //     return nextRows.length > 0;
-  //   } catch (error) {
-  //     console.error("Failed to load wallet transfer page", error);
-  //     return false;
-  //   } finally {
-  //     setTransferLoading(false);
-  //   }
-  // };
-
-  useEffect(() => {
-    if (!address || address === "null") {
-      setWalletTags([]);
-      return;
-    }
-
-    fetchWalletTags(address)
-      .then(setWalletTags)
-      .catch((error) => {
-        console.error("[WalletPage] Failed to load wallet tags:", error);
-        setWalletTags([]);
-      });
-  }, [address]);
   useEffect(() => {
     const handleChatShortcut = (event: globalThis.KeyboardEvent) => {
       if (
@@ -281,117 +187,6 @@ export default function WalletPage() {
     window.addEventListener("keydown", handleChatShortcut);
     return () => window.removeEventListener("keydown", handleChatShortcut);
   }, []);
-  const loadPortfolioData = useCallback(async (): Promise<
-    WalletPortfolioItem[]
-  > => {
-    if (!address || address === "null") {
-      return [];
-    }
-    setPortfolioLoading(true);
-    try {
-      const portfolioResult = await fetchWalletPortfolio(address);
-      const rows = Array.isArray(portfolioResult) ? portfolioResult : [];
-      flushSync(() => {
-        setPortfolio(rows);
-      });
-      return rows;
-    } catch (error) {
-      console.error("[WalletPage] Failed to load portfolio", error);
-      flushSync(() => {
-        setPortfolio([]);
-      });
-      return [];
-    } finally {
-      setPortfolioLoading(false);
-    }
-  }, [address]);
-
-  const loadActivityData = useCallback(async (): Promise<{
-    swaps: WalletSwap[];
-    transfers: WalletTransfer[];
-  }> => {
-    if (!address || address === "null") {
-      return { swaps: [], transfers: [] };
-    }
-    setSwapLoading(true);
-    setTransferLoading(true);
-    try {
-      const [swapsResult, transfersResult] = await Promise.allSettled([
-        fetchWalletSwaps(address),
-        fetchWalletTransfers(address),
-      ]);
-
-      let swaps: WalletSwap[] = [];
-      let transfers: WalletTransfer[] = [];
-
-      if (swapsResult.status === "fulfilled") {
-        const swapsData = swapsResult.value?.swaps || [];
-        if (Array.isArray(swapsData)) {
-          swaps = swapsData;
-        }
-      }
-
-      if (transfersResult.status === "fulfilled") {
-        const transfersData = transfersResult.value?.transfers || [];
-        if (Array.isArray(transfersData)) {
-          transfers = transfersData;
-        }
-      }
-
-      flushSync(() => {
-        if (swapsResult.status === "fulfilled") {
-          setSwapPages({ 1: swaps });
-          setSwapPageInfoByPage({ 1: swapsResult.value.pageInfo });
-        }
-
-        if (transfersResult.status === "fulfilled") {
-          setTransferPages({ 1: transfers });
-          setTransferPageInfoByPage({ 1: transfersResult.value.pageInfo });
-        }
-      });
-
-      return { swaps, transfers };
-    } catch (error) {
-      console.error("[WalletPage] Failed to load activity data", error);
-      return { swaps: [], transfers: [] };
-    } finally {
-      setSwapLoading(false);
-      setTransferLoading(false);
-    }
-  }, [address]);
-
-  useEffect(() => {
-    if (!address || address === "null") {
-      setPortfolio([]);
-      setSwapPages({});
-      setSwapPageInfoByPage({});
-      setTransferPages({});
-      setTransferPageInfoByPage({});
-      setOverviewReport(null);
-      setIntelligenceReport(null);
-      return;
-    }
-
-    // Load all data on mount
-    void loadPortfolioData();
-    void loadActivityData();
-
-    fetchWalletOverview(address)
-      .then(setOverviewReport)
-      .catch((err) =>
-        console.error("[WalletPage] Failed to load overview:", err),
-      );
-
-    fetchWalletIntelligence(address, "solana")
-      .then(setIntelligenceReport)
-      .catch((err) =>
-        console.error("[WalletPage] Failed to load intelligence:", err),
-      );
-  }, [address, loadPortfolioData, loadActivityData]);
-
-
-
-
   if (!address) {
     return (
       <PageWrapper>
@@ -448,7 +243,7 @@ export default function WalletPage() {
           <WalletHero
             overview={overviewReport}
             selectedPeriod={selectedPeriod}
-            loading={false}
+            loading={overviewRequest.isLoading}
             winRateStats={stats}
             winRateLoading={loading}
           />
@@ -491,7 +286,7 @@ export default function WalletPage() {
                   walletAddress={walletAddress}
                   portfolio={portfolio}
                   portfolioMeta={portfolioMetaAsMap}
-                  loading={portfolioLoading}
+                  loading={portfolioRequest.isLoading}
                 />
               </Card>
             </aside>

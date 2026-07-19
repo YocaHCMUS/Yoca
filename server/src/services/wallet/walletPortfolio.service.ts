@@ -17,6 +17,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { fetchHeliusSolanaPortfolio } from "./fetchers/walletDataFetcher.service.js";
 import { dataUsage } from "@sv/middlewares/request-context.js";
+import { singleFlight } from "@sv/services/util/single-flight.js";
 
 const walletPortfolioCacheSchema = z.array(
   z.object({
@@ -70,6 +71,52 @@ async function syncPortfolioTokenMeta(portfolio: WalletPortfolioItem[]) {
     });
 }
 
+async function refreshWalletPortfolio(
+  address: string,
+  cachedData: WalletPortfolioItem[],
+): Promise<WalletPortfolioItem[]> {
+  let selectedPortfolio: WalletPortfolioItem[] = [];
+  try {
+    selectedPortfolio = await fetchHeliusSolanaPortfolio(address);
+  } catch (err) {
+    console.error("Failed to fetch Solana portfolio from Helius", err);
+  }
+
+  if (selectedPortfolio.length == 0) {
+    if (cachedData.length > 0) {
+      dataUsage.record("db_result", "stale_fallback");
+      await syncPortfolioTokenMeta(cachedData);
+      const enrichedStale = await enrichWalletPortfolioMetadata(cachedData, {
+        address,
+        source: "stale-cache",
+      });
+      return enrichedStale.portfolio;
+    }
+
+    return [];
+  }
+
+  await syncPortfolioTokenMeta(selectedPortfolio);
+  const enrichedPortfolio = await enrichWalletPortfolioMetadata(
+    selectedPortfolio,
+    {
+      address,
+      source: "helius",
+    },
+  );
+
+  await db
+    .insert(walletPortfolioCache)
+    .values({ address, data: enrichedPortfolio.portfolio })
+    .onConflictDoUpdate({
+      target: [walletPortfolioCache.address],
+      set: { data: enrichedPortfolio.portfolio, fetchedAt: new Date() },
+    });
+  return enrichedPortfolio.portfolio;
+}
+
+const walletPortfolioFlight = singleFlight(refreshWalletPortfolio);
+
 export async function getWalletPortfolio(
   address: string,
   options?: { force?: boolean },
@@ -117,42 +164,7 @@ export async function getWalletPortfolio(
     return enrichedCached.portfolio;
   }
 
-  let selectedPortfolio: WalletPortfolioItem[] = [];
-  try {
-    selectedPortfolio = await fetchHeliusSolanaPortfolio(address);
-  } catch (err) {
-    console.error("Failed to fetch Solana portfolio from Helius", err);
-  }
-
-  if (selectedPortfolio.length === 0) {
-    if (cachedData.length > 0) {
-      dataUsage.record("db_result", "stale_fallback");
-      await syncPortfolioTokenMeta(cachedData);
-      const enrichedStale = await enrichWalletPortfolioMetadata(cachedData, {
-        address,
-        source: "stale-cache",
-      });
-      return enrichedStale.portfolio;
-    }
-
-    return [];
-  }
-
-  await syncPortfolioTokenMeta(selectedPortfolio);
-  const enrichedPortfolio = await enrichWalletPortfolioMetadata(
-    selectedPortfolio,
-    {
-      address,
-      source: "helius",
-    },
-  );
-
-  await db
-    .insert(walletPortfolioCache)
-    .values({ address, data: enrichedPortfolio.portfolio })
-    .onConflictDoUpdate({
-      target: [walletPortfolioCache.address],
-      set: { data: enrichedPortfolio.portfolio, fetchedAt: new Date() },
-    });
-  return enrichedPortfolio.portfolio;
+  return walletPortfolioFlight
+    .key(`wallet_portfolio:${address}`)
+    .run(address, cachedData);
 }

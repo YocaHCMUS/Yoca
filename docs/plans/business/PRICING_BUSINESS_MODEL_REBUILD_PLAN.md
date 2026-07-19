@@ -319,6 +319,21 @@ Mục tiêu: tách đúng các loại kiểm tra, không gọi mọi thứ là s
 - [x] Pilot đạt 24/24 endpoint-pass 2xx, không retry: Token Overview giảm 18.671 ms xuống 1.277 ms và provider attempt giảm 17 xuống 0; Wallet Core giảm 5.738 ms xuống 826 ms và provider attempt giảm 7 xuống 0.
 - [x] Đóng bốn instrumentation gap tại token details, holder stats, market chart và pool trades. Lượt kiểm tra sau sửa có 0/12 route `source=none`; artifact: `benchmark-results/runs/2026-07-19T06-21-50-093Z_journey-observed/`.
 - [x] Xác nhận tracker phân biệt được các nhánh thực tế trong cùng lượt: `db` cho details/holder stats, `db_provider` cho chart stale được nối thêm dữ liệu mới, và `provider` cho pool trades refresh.
+- [x] Chạy lại cold/warm sau khi thêm single-flight: Token Overview giảm từ 18.633 ms và 16 provider attempt xuống 1.268 ms và 0 attempt; Wallet Core giảm từ 6.486 ms và 7 attempt xuống 814 ms và 0 attempt. Artifact: `benchmark-results/runs/2026-07-19T09-01-00-323Z_journey-cold/` và `benchmark-results/runs/2026-07-19T09-03-47-373Z_journey-cold/`.
+- [x] Xác nhận refresh holder đồng thời chỉ còn một `mobula.svc.token_holders`; request Win Rate dùng chung refresh Wallet Analysis 30D với Overview. Bốn Wallet Analysis attempt còn lại ứng với bốn kỳ 24H, 7D, 30D và 90D, không phải bốn request trùng khóa.
+- [ ] Xử lý hai `helius.svc.wallet_balances` trùng nhau trong cold Wallet Core nếu có thể giữ nguyên trách nhiệm persistence của Portfolio và Wallet Tokens.
+- [x] Chạy Market Radar observed-first sau lượt reset gần nhất: 6/6 endpoint, 22.023 ms, 22 provider attempt và 2 retry; warm repeat 695 ms, 0 provider attempt. Artifact: `benchmark-results/runs/2026-07-19T09-06-48-529Z_journey-observed/`.
+- [x] Đo fan-out Market Radar hiện tại: 17 CoinGecko call cho một lượt refresh; Birdeye thành công tương ứng 135 CU, còn request lỗi/retry chưa cộng vào CU khi chưa xác nhận chính sách tính phí.
+- [x] Thêm Wallet Activity journey đúng hành vi client: swaps và transfers chạy đồng thời, không truyền limit nên mỗi nhánh có thể quét tối đa 10 trang x 100 giao dịch.
+- [x] Observed-first Wallet Activity đạt 2/2 endpoint trong 20.592 ms với 15 Mobula calls; warm repeat 1.260 ms và 0 provider call. Artifact: `benchmark-results/runs/2026-07-19T09-35-25-204Z_journey-observed/`.
+- [x] Loại duplicate refresh của swaps/transfers bằng ba lớp nhỏ: client chỉ tải tab đang mở, Mobula page-level single-flight, và coverage metadata được ghi cho cả hai dataset từ cùng provider response.
+- [x] Mở rộng Wallet Activity thêm hai ví: hai ví mới mỗi ví dùng 2 Mobula calls; ba observed samples hiện là 2, 2 và 15, chứng minh fan-out phụ thuộc mật độ giao dịch.
+- [x] Thêm Wallet Token Chart journey chọn ba token: observed-first 6.469 ms với một Zerion fungible lookup + ba chart calls; warm repeat 810 ms và 0 provider call. Artifact: `benchmark-results/runs/2026-07-19T09-38-14-672Z_journey-observed/`.
+- [x] Loại Moralis wallet swaps khỏi runtime journey model: `fallow --trace` xác nhận export `fetchMoralisSolanaSwap` unused; client production dùng Mobula-backed swaps history.
+- [x] Chốt Wash Trading on-chain bound từ đường code production mà không lách auth/Gemini quota: Enhanced-success 100 Helius credits; RPC fallback đầy đủ tối đa 176 credits gồm Enhanced attempt + 76 Standard RPC calls.
+- [x] Tách webhook khỏi page journey: management 100 Helius credits/lần cấu hình, delivery 1 credit/event; chưa có event-rate quan sát vì database không lưu toàn bộ webhook deliveries.
+- [x] Regression Wallet Activity trên đúng ví baseline nặng: concurrent observed-first giảm 15 xuống 10 Mobula calls, warm repeat 0; cả hai route được phân loại `db_provider`. Artifact: `benchmark-results/runs/2026-07-19T09-59-59-065Z_journey-observed/`.
+- [x] Sequential tab regression trên ví mới: Swaps dùng 6 Mobula pages, Transfers sau đó đọc database và không gọi provider; artifact `benchmark-results/runs/2026-07-19T09-57-56-592Z_journey-observed/`.
 
 ### Load test
 
@@ -378,15 +393,16 @@ Nguồn cần dùng khi viết kết quả: Supabase Compute and Disk, Connectin
 
 Mục tiêu: biến số request đo được thành chi phí có căn cứ.
 
-- [ ] Chỉ giữ CoinGecko/GeckoTerminal, Birdeye, Helius, Mobula, Zerion, Moralis và các provider thật sự còn dùng.
-- [ ] Đối chiếu endpoint được dùng với free tier và paid tier từ nguồn chính thức.
-- [ ] Ghi ngày truy cập.
-- [ ] Xác định request, credit hoặc compute unit theo từng endpoint.
-- [ ] Xác định rate limit theo tài khoản/key/endpoint.
+- [x] Chỉ giữ CoinGecko/GeckoTerminal, Birdeye, Helius, Mobula, Zerion, Moralis và các provider thật sự còn dùng trong runtime catalog.
+- [x] Đối chiếu endpoint runtime với free tier hiện tại và nguồn chính thức; các tier trả phí chỉ bổ sung khi cần xác định ngưỡng nâng cấp.
+- [x] Ghi ngày truy cập và nguồn trong `PROVIDER_QUOTA_RESEARCH_CHECKLIST.md`.
+- [x] Xác định request, credit hoặc compute unit cho toàn bộ operation trong runtime catalog v0; giữ fan-out riêng ở cấp journey.
+- [x] Ghi quota theo kỳ và throughput khả dụng theo tài liệu, response header, usage endpoint hoặc dashboard; các giới hạn chưa kiểm chứng vẫn được đánh dấu rõ.
 - [x] Loại multi-key/key rotation khỏi cost model, slide, benchmark và phương án scale.
 - [ ] Nếu source còn `ApiKeyManager` hoặc round-robin nhiều key, ghi nhận là implementation/legacy cần rà riêng; không tính lợi ích của nó vào kết quả đồ án.
 - [ ] Khi vượt quota, chỉ đánh giá các hướng có thể bảo vệ: cache, request coalescing, batching, throttling/queue, giảm refresh không cần thiết và nâng gói chính thức phù hợp.
-- [ ] Xác định gói nâng cấp hợp lý và thay đổi kỹ thuật cần thiết.
+- [x] Chốt quy tắc cảnh báo/nâng gói theo projected quota, headroom, peak throughput, 429/error rate và provisional latency SLO tại `benchmark-results/JOURNEY_COST_INPUTS_2026-07-19.md`.
+- [ ] Xác định gói nâng cấp hợp lý và thay đổi kỹ thuật cần thiết sau khi ba kịch bản traffic cho thấy provider nào chạm ngưỡng trước.
 - [ ] Đối chiếu Gemini theo input/output token thực tế từ benchmark.
 - [ ] Research AI mã nguồn mở và hosting bằng nguồn chính thức hoặc nguồn có thể kiểm chứng.
 

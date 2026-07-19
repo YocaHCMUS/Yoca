@@ -43,6 +43,7 @@ import {
     MOUBAL_SOL_CONTRACT,
 } from "@sv/config/constants";
 import { isBaseAsset } from "./walletDayActivity.service.js";
+import { singleFlight } from "@sv/services/util/single-flight.js";
 import {
   and,
   desc,
@@ -72,6 +73,46 @@ type WalletTransferHistoryMetaInsert =
 type WalletSwapHistoryMetaInsert = typeof walletSwapHistoryMeta.$inferInsert;
 
 type WalletActivityTarget = "swap" | "transfer";
+
+const mbl_fetchWalletActivityPage = singleFlight(async ({
+  address,
+  fromMs,
+  toMs,
+  offset,
+}: {
+  address: string;
+  fromMs: number;
+  toMs: number;
+  offset: number;
+}) => {
+  const endpoint = mobula.getEndpoint("/2/wallet/activity");
+  endpoint.search = new URLSearchParams({
+    wallet: address,
+    chainIds: "solana:solana",
+    from: String(fromMs),
+    to: String(toMs),
+    offset: String(offset),
+    limit: String(MOBULA_WALLET_ACTIVITY_PAGE_SIZE),
+    order: "desc",
+    filterSpam: "true",
+    unlistedAssets: "false",
+  }).toString();
+
+  const response = await pFetch(mobula.spec, "mobula.svc.wallet_activity", endpoint, {
+    method: "GET",
+    headers: mobula.getRequiredHeaders(),
+  });
+  const result = await validateApiResult(mbl_WalletActivitySchema, response);
+  if (!result) {
+    return null;
+  }
+
+  const extracted = mbl_extractActivity(address, result.data);
+  await mbl_writeActivityHistory(extracted);
+  return { result, extracted };
+}).by(({ address, fromMs, toMs, offset }) =>
+  `${address}:${fromMs}:${toMs}:${offset}`
+);
 
 async function upsertWalletSwapHistoryMeta(
   value: WalletSwapHistoryMetaInsert,
@@ -617,6 +658,21 @@ type WalletActivityFetchResult = {
   cutOffByLimit: boolean;
 };
 
+async function upsertWalletActivityHistoryMeta(
+  address: string,
+  result: WalletActivityFetchResult,
+): Promise<void> {
+  const fetchedAtMs = dayjs.utc().valueOf();
+  const value = {
+    address,
+    fromExclusiveMs: result.coveredFromExclusiveMs,
+    toInclusiveMs: result.coveredToInclusiveMs,
+    fetchedAtMs,
+  };
+  await upsertWalletSwapHistoryMeta(value);
+  await upsertWalletTransferHistoryMeta(value);
+}
+
 function mbl_getActionId(actionIndex: number): string {
   return String(actionIndex).padStart(6, "0");
 }
@@ -940,30 +996,17 @@ async function mbl_fetchWalletActivityRange({
   let exhaustedRange = false;
 
   for (let page = 0; page < MOBULA_WALLET_ACTIVITY_MAX_PAGES; page++) {
-    const endpoint = mobula.getEndpoint("/2/wallet/activity");
-    endpoint.search = new URLSearchParams({
-      wallet: address,
-      chainIds: "solana:solana",
-      from: String(fromMs),
-      to: String(toMs),
-      offset: String(offset),
-      limit: String(MOBULA_WALLET_ACTIVITY_PAGE_SIZE),
-      order: "desc",
-      filterSpam: "true",
-      unlistedAssets: "false",
-    }).toString();
-
-    const response = await pFetch(mobula.spec, "mobula.svc.wallet_activity", endpoint, {
-      method: "GET",
-      headers: mobula.getRequiredHeaders(),
+    const pageResult = await mbl_fetchWalletActivityPage({
+      address,
+      fromMs,
+      toMs,
+      offset,
     });
-    const result = await validateApiResult(
-      mbl_WalletActivitySchema,
-      response,
-    );
-    if (!result) {
+    if (!pageResult) {
       return null;
     }
+    dataUsage.record("provider_result");
+    const { result, extracted } = pageResult;
 
     if (result.data.length == 0 || result.pagination.pageEntries == 0) {
       exhaustedRange = true;
@@ -975,8 +1018,6 @@ async function mbl_fetchWalletActivityRange({
       ...result.data.map((transaction) => transaction.txDateMs),
     );
 
-    const extracted = mbl_extractActivity(address, result.data);
-    await mbl_writeActivityHistory(extracted);
     swaps.push(...extracted.swaps);
     transfers.push(...extracted.transfers);
 
@@ -1098,12 +1139,7 @@ async function fetchWalletSwapHistoryCore(
   if (!res) return null;
   if (res.swaps.length == 0) {
     if (writeMeta) {
-      await upsertWalletSwapHistoryMeta({
-        address,
-        fromExclusiveMs: res.coveredFromExclusiveMs,
-        toInclusiveMs: res.coveredToInclusiveMs,
-        fetchedAtMs: dayjs.utc().valueOf(),
-      });
+      await upsertWalletActivityHistoryMeta(address, res);
     }
 
     return {
@@ -1115,12 +1151,7 @@ async function fetchWalletSwapHistoryCore(
   }
 
   if (writeMeta) {
-    await upsertWalletSwapHistoryMeta({
-      address,
-      fromExclusiveMs: res.coveredFromExclusiveMs,
-      toInclusiveMs: res.coveredToInclusiveMs,
-      fetchedAtMs: dayjs.utc().valueOf(),
-    });
+    await upsertWalletActivityHistoryMeta(address, res);
   }
 
   return {
@@ -1138,7 +1169,7 @@ function normalizeRange(
   fromMs?: number,
   toMs?: number,
 ): { fromMs: number; toMs: number } {
-  const nowMs = dayjs.utc().valueOf();
+  const nowMs = dayjs.utc().startOf("second").valueOf();
   const maxNowMs = nowMs - MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS;
   const defaultPeriodMs = MONTH_MS;
 
@@ -1626,12 +1657,7 @@ async function fetchWalletTransferHistoryCore(
   if (!res) return null;
   if (res.transfers.length == 0) {
     if (writeMeta) {
-      await upsertWalletTransferHistoryMeta({
-        address,
-        fromExclusiveMs: res.coveredFromExclusiveMs,
-        toInclusiveMs: res.coveredToInclusiveMs,
-        fetchedAtMs: dayjs.utc().valueOf(),
-      });
+      await upsertWalletActivityHistoryMeta(address, res);
     }
 
     return {
@@ -1643,12 +1669,7 @@ async function fetchWalletTransferHistoryCore(
   }
 
   if (writeMeta) {
-    await upsertWalletTransferHistoryMeta({
-      address,
-      fromExclusiveMs: res.coveredFromExclusiveMs,
-      toInclusiveMs: res.coveredToInclusiveMs,
-      fetchedAtMs: dayjs.utc().valueOf(),
-    });
+    await upsertWalletActivityHistoryMeta(address, res);
   }
 
   return {

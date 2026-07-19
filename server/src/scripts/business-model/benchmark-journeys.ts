@@ -6,7 +6,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
-type JourneyName = "market_radar" | "token_overview" | "wallet_core";
+type JourneyName =
+  | "market_radar"
+  | "token_overview"
+  | "wallet_core"
+  | "wallet_activity"
+  | "wallet_token_chart";
 type PassName = "cold" | "observed_first" | "warm_repeat";
 
 type MetricSample = {
@@ -71,6 +76,12 @@ const walletDatasetSchema = z.object({
     }),
   ),
 });
+
+const walletPortfolioSchema = z.array(
+  z.object({
+    tokenAddress: z.string(),
+  }).passthrough(),
+);
 
 const poolListSchema = z.array(
   z.object({
@@ -388,14 +399,116 @@ async function runWalletCore(
   };
 }
 
+async function runWalletActivity(
+  baseUrl: string,
+  runId: string,
+  pass: PassName,
+  resourceId: string,
+  address: string,
+  concurrent = true,
+): Promise<JourneyResult> {
+  const startedAtMs = Date.now();
+  const startedAt = new Date(startedAtMs).toISOString();
+  const before = await fetchMetrics(baseUrl);
+  let requestIndex = 0;
+  const requests = [
+    [
+      "/api/wallets/swaps/history/:address",
+      `/api/wallets/swaps/history/${address}`,
+    ],
+    [
+      "/api/wallets/transfers/history/:address",
+      `/api/wallets/transfers/history/${address}`,
+    ],
+  ];
+  const endpointResults: RequestResult[] = [];
+  if (concurrent) {
+    endpointResults.push(...await Promise.all(requests.map(([route, url]) => {
+      requestIndex += 1;
+      return requestEndpoint(baseUrl, runId, requestIndex, route, url);
+    })));
+  } else {
+    for (const [route, url] of requests) {
+      requestIndex += 1;
+      endpointResults.push(
+        await requestEndpoint(baseUrl, runId, requestIndex, route, url),
+      );
+    }
+  }
+  const after = await fetchMetrics(baseUrl);
+  return {
+    journey: "wallet_activity",
+    pass,
+    resourceId,
+    startedAt,
+    durationMs: Date.now() - startedAtMs,
+    endpoints: endpointResults.map(publicEndpointResult),
+    providerAttempts: metricDelta(before, after, "yoca_provider_requests_total"),
+    providerRetries: metricDelta(before, after, "yoca_provider_retries_total"),
+    dataUsage: metricDelta(before, after, "yoca_request_data_source_total"),
+  };
+}
+
+async function runWalletTokenChart(
+  baseUrl: string,
+  runId: string,
+  pass: PassName,
+  resourceId: string,
+  address: string,
+): Promise<JourneyResult> {
+  const portfolioResult = await requestEndpoint(
+    baseUrl,
+    runId,
+    0,
+    "/api/wallets/portfolio",
+    `/api/wallets/portfolio?address=${address}`,
+  );
+  const portfolio = walletPortfolioSchema.parse(portfolioResult.payload);
+  const tokenAddresses = portfolio
+    .map((token) => token.tokenAddress)
+    .slice(0, 3);
+  if (tokenAddresses.length == 0) {
+    throw new Error(`Wallet ${resourceId} has no portfolio tokens for chart benchmark`);
+  }
+
+  const startedAtMs = Date.now();
+  const startedAt = new Date(startedAtMs).toISOString();
+  const before = await fetchMetrics(baseUrl);
+  const route = "/api/charts/balance/tokens";
+  const query = new URLSearchParams({
+    timePeriod: "7D",
+    wallet: address,
+    tokens: tokenAddresses.join(","),
+  });
+  const endpointResult = await requestEndpoint(
+    baseUrl,
+    runId,
+    1,
+    route,
+    `${route}?${query.toString()}`,
+  );
+  const after = await fetchMetrics(baseUrl);
+  return {
+    journey: "wallet_token_chart",
+    pass,
+    resourceId,
+    startedAt,
+    durationMs: Date.now() - startedAtMs,
+    endpoints: [publicEndpointResult(endpointResult)],
+    providerAttempts: metricDelta(before, after, "yoca_provider_requests_total"),
+    providerRetries: metricDelta(before, after, "yoca_provider_retries_total"),
+    dataUsage: metricDelta(before, after, "yoca_request_data_source_total"),
+  };
+}
+
 async function main(): Promise<void> {
   if (!env.API_METRICS_ENABLED) {
     throw new Error("API_METRICS_ENABLED must be true for journey benchmarks");
   }
 
   const requestedJourney = argumentValue("journey") ?? "all";
-  if (!["all", "market", "token", "wallet"].includes(requestedJourney)) {
-    throw new Error("--journey must be all, market, token, or wallet");
+  if (!["all", "market", "token", "wallet", "activity", "activity-sequential", "chart"].includes(requestedJourney)) {
+    throw new Error("--journey must be all, market, token, wallet, activity, activity-sequential, or chart");
   }
   const passCount = Number(argumentValue("passes") ?? "2");
   if (!Number.isInteger(passCount) || passCount < 1 || passCount > 2) {
@@ -508,6 +621,39 @@ async function main(): Promise<void> {
         const resourceId = `wallet_${String(walletIndex + 1).padStart(3, "0")}`;
         results.push(
           await runWalletCore(
+            env.YOCA_BENCHMARK_BASE_URL,
+            `${runId}-${resourceId}-${pass}`,
+            pass,
+            resourceId,
+            wallet.address,
+          ),
+        );
+      }
+    }
+    if (
+      requestedJourney == "all" ||
+      requestedJourney == "activity" ||
+      requestedJourney == "activity-sequential"
+    ) {
+      for (const [walletIndex, wallet] of wallets.entries()) {
+        const resourceId = `wallet_${String(walletIndex + 1).padStart(3, "0")}`;
+        results.push(
+          await runWalletActivity(
+            env.YOCA_BENCHMARK_BASE_URL,
+            `${runId}-${resourceId}-${pass}`,
+            pass,
+            resourceId,
+            wallet.address,
+            requestedJourney != "activity-sequential",
+          ),
+        );
+      }
+    }
+    if (requestedJourney == "all" || requestedJourney == "chart") {
+      for (const [walletIndex, wallet] of wallets.entries()) {
+        const resourceId = `wallet_${String(walletIndex + 1).padStart(3, "0")}`;
+        results.push(
+          await runWalletTokenChart(
             env.YOCA_BENCHMARK_BASE_URL,
             `${runId}-${resourceId}-${pass}`,
             pass,

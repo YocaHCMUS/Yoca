@@ -175,7 +175,7 @@ Phân loại billing: CoinGecko và Zerion là `request_based`; Birdeye là `fix
 | Zerion | `wallet_token_balances` → `/fungibles/` | 1 request | observed daily remaining; một batch tối đa 25 address theo TODO code |
 | Zerion | `wallet_token_chart` → `/wallets/:address/charts/:period` | 1 request/token | fan-out theo số token cần biểu đồ |
 | Moralis | `token_metadata` → Solana token metadata | 10 CU | bảng Data API công khai |
-| Moralis | `wallet_swaps` → Solana wallet swaps | 50 CU/page | bảng Data API công khai; cursor pagination tối đa 50 page trong code |
+| Moralis | `wallet_swaps` → Solana wallet swaps | 50 CU/page | implementation hiện unused theo source trace và bị loại khỏi runtime journey model; giữ làm legacy inventory |
 | Helius | Wallet API: balances/history/transfers/funding/identity | 100 credits/call | bảng Helius Credits |
 | Helius | Enhanced Transactions/address transactions | 100 credits/call | bảng Helius Credits |
 | Helius | Standard RPC: `getTransaction`, `getSignaturesForAddress`, `getTokenLargestAccounts` | 1 credit/call | bảng Helius Credits |
@@ -184,13 +184,13 @@ Phân loại billing: CoinGecko và Zerion là `request_based`; Birdeye là `fix
 
 ### Fan-out cần đưa vào journey model
 
-- [ ] CoinGecko Market Radar: đếm số page của `market_pools`/`trending_pools` và số batch enrichment thay vì gán một call cho cả trang.
-- [ ] Mobula Wallet Activity: ghi số page theo activity density và time range; ví hoạt động mạnh không dùng cùng hệ số với ví nhỏ.
-- [ ] Zerion token chart: ghi số token người dùng chọn; một chart token là một provider request.
-- [ ] Moralis swaps: ghi cursor page count; không dùng mức tối đa 50 page làm trung bình.
-- [ ] Helius Wash Trading Enhanced path: 100 credit cho mỗi address-transactions call.
-- [ ] Helius Wash Trading RPC fallback: tối đa hiện tại là 1 largest-accounts + 5 signatures + 70 transactions, tương đương tối đa 76 standard RPC credits nhưng có latency/RPS cao hơn.
-- [ ] Helius webhook: dự báo riêng bằng số wallet theo dõi và event rate; management calls chỉ phát sinh khi cấu hình thay đổi.
+- [x] CoinGecko Market Radar: observed-first journey ngày 2026-07-19 ghi 17 call gồm 11 `market_pools`, 2 `trending_pools`, 2 `token_market_batch` và 2 `pool_market_batch`; warm repeat là 0. Đây là fan-out của input hiện tại, không phải hằng số cho mọi page size.
+- [x] Mobula Wallet Activity: baseline ba ví là 2, 2 và 15 calls khi swaps/transfers cùng cold-start. Sau client lazy loading, shared coverage metadata và page-level single-flight, ví baseline nặng giảm 15 xuống 10 calls; concurrent light case dùng 1 call và sequential heavy case dùng 6 calls rồi tab sau đọc database. Upper bound hiện tại là 10 unique pages/range, vẫn phải dùng phân phối fan-out theo mật độ giao dịch.
+- [x] Zerion token chart: interaction chọn ba token tạo một `wallet_token_balances` lookup và ba `wallet_token_chart` requests; warm repeat là 0. Sau khi mapping đã có, chart fan-out chính là một request cho mỗi token được chọn.
+- [x] Moralis swaps: `fallow --trace` xác nhận `fetchMoralisSolanaSwap` không có reference; client production dùng Mobula-backed swaps history. Không benchmark hoặc cộng Moralis swaps vào runtime cost model cho đến khi có consumer thật.
+- [x] Helius Wash Trading Enhanced path: code gọi tối đa một address-transactions request, tương đương 100 credits; cache transfer process-local 5 phút có thể tránh gọi lại cùng mint/timeframe.
+- [x] Helius Wash Trading RPC fallback: chỉ chạy khi Enhanced không đủ tám transfer; tối đa 1 largest-accounts + 5 signatures + 70 transactions = 76 standard RPC credits. Một fallback đầy đủ gồm cả Enhanced attempt nên upper bound on-chain là 176 Helius credits/lượt.
+- [x] Helius webhook: tách khỏi page journey và dự báo bằng event count. Event delivery là 1 credit/event; create/update/delete là 100 credits/lần và chỉ phát sinh khi cấu hình địa chỉ thay đổi. Database hiện không lưu toàn bộ received event nên chưa có observed event-rate đáng tin cậy.
 
 ## Việc nhóm phải kiểm tra thủ công
 
@@ -208,5 +208,5 @@ Phân loại billing: CoinGecko và Zerion là `request_based`; Birdeye là `fix
 - [x] Mỗi provider operation đã được phân loại billing; fan-out được giữ riêng thay vì gộp vào unit cost.
 - [x] Có quota theo kỳ, throughput limit khả dụng, nguồn và ngày khảo sát; trường provider không công bố được giữ rõ là unknown.
 - [x] Có raw isolated observations cho Birdeye cost trước đây chưa rõ và provider quota header/dashboard.
-- [ ] Có quy tắc upgrade dựa trên projected quota, peak throughput, 429/error rate và latency SLO.
+- [x] Có quy tắc upgrade dựa trên projected quota, peak throughput, 429/error rate và provisional latency SLO tại `benchmark-results/JOURNEY_COST_INPUTS_2026-07-19.md`.
 - [ ] Nhóm duyệt bảng trước khi thêm metadata vào code production.
