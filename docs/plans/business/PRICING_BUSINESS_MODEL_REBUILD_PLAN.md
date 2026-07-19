@@ -272,7 +272,9 @@ Mục tiêu: thu số liệu mà không thay đổi hành vi nghiệp vụ.
 - [x] Chọn `pFetch`/`rlFetch` và request context làm điểm tập kết; service chỉ khai báo data usage có ngữ nghĩa.
 - [x] Tạo correlation ID cho request; benchmark journey ID vẫn để batch client/runner.
 - [x] Ghi provider attempt count, latency, retry, status và outcome bằng Prometheus-compatible metrics.
-- [ ] Ghi cache hit/miss theo domain và loại cache.
+- [!] Không tạo domain/cache/storage ID. Số liệu cost dùng Hono route template, `provider.svc.operation` và fact do service đăng ký.
+- [x] Thêm `memory_result` cho bốn in-memory data cache reachable; migration sang PostgreSQL không còn là gate cứng.
+- [x] Tổng hợp request từ các fact `db`, `memory`, `provider` hoặc tổ hợp; giữ `forced_refresh` và `stale_fallback` riêng.
 - [x] Cho phép bật/tắt bằng `API_METRICS_ENABLED`; `/metrics` mặc định 404 và production bắt buộc Bearer token.
 - [x] Aggregate metrics không ghi secret, payload, URL, query, address hoặc request ID; HTTP label dùng Hono route template.
 - [ ] Viết kiểm tra cho logic tổng hợp metrics nếu logic này được giữ trong code.
@@ -280,6 +282,16 @@ Mục tiêu: thu số liệu mà không thay đổi hành vi nghiệp vụ.
 
 - [x] Cài `prom-client@15.1.3` trong workspace server và thêm HTTP/provider counter + histogram.
 - [x] Runtime check trên port 4000: endpoint tắt trả 404, sai/thiếu Bearer token trả 401, token đúng trả 200; `/metrics` không tự làm tăng HTTP counter.
+
+### Quyết định về in-memory data cache
+
+- [x] Chốt PostgreSQL là nơi lưu data/result cache ưu tiên; không thêm Redis hoặc in-memory data cache mới.
+- [x] Xác định bốn vi phạm/ứng viên cần xử lý: exchange rates, Wallet Token AI Analysis, Wash Trading transaction input và RSS OpenGraph image lookup.
+- [!] Không nhầm SDK/Gemini client singleton, request-local `Map`, throttle, auth challenge, API-key usage state hoặc in-flight coalescing với data cache.
+- [x] Instrument bốn cache hit bằng `memory_result`; Exchange Rates runtime check cho đúng một provider request và một memory hit.
+- [ ] Migrate từng data cache khi lợi ích đủ lớn và có thể giữ nguyên hành vi người dùng; không trộn migration vào analytics batch.
+- [x] Chuyển Helius Enhanced Transactions và các RPC call của Wash Trading sang `pFetch`, với operation ID riêng cho từng loại request.
+- [!] Gemini SDK và OpenGraph raw fetch vẫn cần transport adapter riêng nếu được đưa vào cost dashboard.
 
 File cụ thể chỉ được chốt sau khi đọc source và type hiện tại. Mọi thay đổi code phải được nhóm duyệt trước.
 

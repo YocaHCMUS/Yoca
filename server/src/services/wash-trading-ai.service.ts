@@ -3,6 +3,9 @@ import { GoogleGenAI } from "@google/genai";
 import { and, eq } from "drizzle-orm";
 import { db } from "@sv/db/index.js";
 import { washTradingVerdictCache, type WashTradingVerdictPersisted } from "@sv/db/schema.js";
+import { dataUsage } from "@sv/middlewares/request-context.js";
+import { pFetch, type ServiceOperationId } from "@sv/util/rate-limit.js";
+import * as helius from "@sv/util/util-helius.js";
 
 export type Timeframe = "1h" | "24h" | "7d" | "30d";
 export type GnnAlgorithm = "GCN" | "GAT" | "GraphSAGE";
@@ -165,30 +168,6 @@ function isRateLimitLike(message: string): boolean {
   return text.includes("429") || text.includes("rate limited") || text.includes("too many requests") || text.includes("overloaded");
 }
 
-async function withRetry<T>(task: () => Promise<T>, options: { label: string; retries?: number; baseDelayMs?: number } ): Promise<T> {
-  const retries = options.retries ?? 2;
-  const baseDelayMs = options.baseDelayMs ?? 700;
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt <= retries; attempt += 1) {
-    try {
-      return await task();
-    } catch (error) {
-      lastError = error;
-      const message = error instanceof Error ? error.message : String(error);
-      if (!isRateLimitLike(message) || attempt === retries) {
-        throw error;
-      }
-
-      const delay = baseDelayMs * 2 ** attempt + Math.round(Math.random() * 250);
-      console.warn(`[WashTradingAI] ${options.label} temporarily limited, retrying in ${delay}ms...`);
-      await sleep(delay);
-    }
-  }
-
-  throw lastError;
-}
-
 function getSafeApiLimit(limit: number, timeframe: Timeframe): number {
   return Math.min(Math.max(limit || 50, 20), API_LIMIT_BY_TIMEFRAME[timeframe]);
 }
@@ -254,38 +233,47 @@ function filterByTimeframe(txs: NormalizedTx[], timeframe: Timeframe): Normalize
   return filtered.length >= 8 ? filtered : txs;
 }
 
-async function fetchJsonWithTimeout<T>(url: string, init: RequestInit = {}, timeoutMs = 35_000): Promise<T> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+async function fetchHeliusJson<T>(
+  trackingId: ServiceOperationId<"helius">,
+  url: URL,
+  init: RequestInit = {},
+  timeoutMs = 35_000,
+): Promise<T> {
+  const response = await pFetch(helius.spec, trackingId, url, {
+    ...init,
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(init.headers ?? {}),
+    },
+    rlRetries: 2,
+    rlTimeoutMs: timeoutMs,
+  });
 
-  try {
-    const response = await fetch(url, {
-      ...init,
-      signal: controller.signal,
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        ...(init.headers ?? {}),
-      },
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`${response.status} ${response.statusText}${text ? ` — ${text.slice(0, 300)}` : ""}`);
-    }
-
-    return (await response.json()) as T;
-  } finally {
-    clearTimeout(timer);
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`${response.status} ${response.statusText}${text ? ` — ${text.slice(0, 300)}` : ""}`);
   }
+
+  return response.json();
 }
 
-async function heliusRpc<T>(method: string, params: unknown[]): Promise<T> {
+type HeliusRpcResponse<T> =
+  | { result: T; error?: never }
+  | { result?: never; error: { message?: string; code?: number } };
+
+async function heliusRpc<T>(
+  trackingId: ServiceOperationId<"helius">,
+  method: string,
+  params: unknown[],
+): Promise<T> {
   const apiKey = getHeliusApiKey();
   if (!apiKey) throw new Error("HELIUS_API_KEY is not set");
 
-  const url = `${HELIUS_RPC_BASE}/?api-key=${encodeURIComponent(apiKey)}`;
-  const payload = await fetchJsonWithTimeout<{ result?: T; error?: { message?: string; code?: number } }>(
+  const url = new URL(HELIUS_RPC_BASE);
+  url.searchParams.set("api-key", apiKey);
+  const payload = await fetchHeliusJson<HeliusRpcResponse<T>>(
+    trackingId,
     url,
     {
       method: "POST",
@@ -303,7 +291,7 @@ async function heliusRpc<T>(method: string, params: unknown[]): Promise<T> {
     throw new Error(`Helius RPC ${method} failed: ${payload.error.message ?? payload.error.code}`);
   }
 
-  return payload.result as T;
+  return payload.result;
 }
 
 async function heliusEnhancedAddressTransactions(address: string, limit: number): Promise<RawTransaction[]> {
@@ -314,7 +302,12 @@ async function heliusEnhancedAddressTransactions(address: string, limit: number)
   url.searchParams.set("api-key", apiKey);
   url.searchParams.set("limit", String(Math.min(Math.max(limit, 1), 100)));
 
-  return fetchJsonWithTimeout<RawTransaction[]>(url.toString(), { method: "GET" }, 35_000);
+  return fetchHeliusJson<RawTransaction[]>(
+    "helius.svc.wash_trading_enhanced_transactions",
+    url,
+    { method: "GET" },
+    35_000,
+  );
 }
 
 function getUiAmount(balance?: RpcTokenBalance): number {
@@ -371,9 +364,10 @@ async function fetchHeliusRpcTokenAccountTransactions(
 ): Promise<NormalizedTx[]> {
   const safeLimit = getSafeApiLimit(limit, timeframe);
 
-  const largestAccounts = await withRetry(
-    () => heliusRpc<{ value?: RpcTokenAccount[] }>("getTokenLargestAccounts", [mint]),
-    { label: "getTokenLargestAccounts", retries: 2, baseDelayMs: 1_200 },
+  const largestAccounts = await heliusRpc<{ value?: RpcTokenAccount[] }>(
+    "helius.svc.wash_trading_get_token_largest_accounts",
+    "getTokenLargestAccounts",
+    [mint],
   );
 
   const tokenAccounts = (largestAccounts.value ?? [])
@@ -389,12 +383,10 @@ async function fetchHeliusRpcTokenAccountTransactions(
   for (const tokenAccount of tokenAccounts) {
     try {
       await sleep(320);
-      const signatures = await withRetry(
-        () => heliusRpc<Array<{ signature: string; blockTime?: number | null }>>(
-          "getSignaturesForAddress",
-          [tokenAccount, { limit: perAccountLimit }],
-        ),
-        { label: `getSignaturesForAddress ${shortAddress(tokenAccount)}`, retries: 2, baseDelayMs: 900 },
+      const signatures = await heliusRpc<Array<{ signature: string; blockTime?: number | null }>>(
+        "helius.svc.wash_trading_get_signatures_for_address",
+        "getSignaturesForAddress",
+        [tokenAccount, { limit: perAccountLimit }],
       );
 
       for (const item of signatures ?? []) {
@@ -412,16 +404,17 @@ async function fetchHeliusRpcTokenAccountTransactions(
   for (const signature of signatures) {
     try {
       await sleep(230);
-      const tx = await withRetry(
-        () => heliusRpc<RpcParsedTransaction | null>("getTransaction", [
+      const tx = await heliusRpc<RpcParsedTransaction | null>(
+        "helius.svc.wash_trading_get_transaction",
+        "getTransaction",
+        [
           signature,
           {
             encoding: "jsonParsed",
             maxSupportedTransactionVersion: 0,
             commitment: "confirmed",
           },
-        ]),
-        { label: `getTransaction ${signature.slice(0, 8)}`, retries: 1, baseDelayMs: 1_100 },
+        ],
       );
 
       const normalized = parseRpcTransactionToTokenTransfer(tx, mint);
@@ -451,9 +444,9 @@ async function fetchHeliusRpcTokenAccountTransactions(
 }
 
 async function fetchHeliusEnhancedMintTransactions(mint: string, limit: number, timeframe: Timeframe): Promise<NormalizedTx[]> {
-  const raw = await withRetry(
-    () => heliusEnhancedAddressTransactions(mint, Math.min(getSafeApiLimit(limit, timeframe), 100)),
-    { label: "Helius Enhanced address transactions", retries: 2, baseDelayMs: 900 },
+  const raw = await heliusEnhancedAddressTransactions(
+    mint,
+    Math.min(getSafeApiLimit(limit, timeframe), 100),
   );
   const normalized: NormalizedTx[] = [];
 
@@ -553,6 +546,7 @@ async function fetchTokenTransactions(
   const cached = transferCache.get(cacheKey);
 
   if (cached && Date.now() - cached.createdAt < CACHE_TTL_MS) {
+    dataUsage.record("memory_result");
     return {
       txs: cached.txs.slice(0, safeLimit),
       source: cached.source,

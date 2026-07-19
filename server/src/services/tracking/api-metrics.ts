@@ -58,6 +58,21 @@ const providerRetries = new Counter<"provider" | "operation" | "reason">({
   registers: [registry],
 });
 
+const requestDataSources = new Counter<
+  "route" | "status_class" | "source" | "forced_refresh" | "stale_fallback"
+>({
+  name: "yoca_request_data_source_total",
+  help: "Total requests grouped by explicitly observed data sources",
+  labelNames: [
+    "route",
+    "status_class",
+    "source",
+    "forced_refresh",
+    "stale_fallback",
+  ],
+  registers: [registry],
+});
+
 function getStatusClass(status: number | null): string {
   if (status == null) {
     return "none";
@@ -125,6 +140,24 @@ export function recordApiMetrics(
 
   httpRequests.inc(labels);
   httpRequestDuration.observe(labels, durationMs / 1_000);
+
+  const sources: string[] = [];
+  if (context.databaseResultUsed) {
+    sources.push("db");
+  }
+  if (context.memoryResultUsed) {
+    sources.push("memory");
+  }
+  if (context.outboundAttempts.length > 0) {
+    sources.push("provider");
+  }
+  requestDataSources.inc({
+    route: context.route,
+    status_class: getStatusClass(status),
+    source: sources.length > 0 ? sources.join("_") : "none",
+    forced_refresh: String(context.forcedRefreshRequested),
+    stale_fallback: String(context.staleFallbackUsed),
+  });
 
   for (let index = 0; index < context.outboundAttempts.length; index++) {
     const attempt = context.outboundAttempts[index];

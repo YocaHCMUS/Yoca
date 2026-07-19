@@ -20,6 +20,7 @@ import {
 } from "./dtos/walletTokenAnalysisObjects.js";
 import env from "@sv/util/load-env.js";
 import { statusCode } from "@sv/util/responses.js";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 // ---------------------------------------------------------------------------
 // Error
 // ---------------------------------------------------------------------------
@@ -328,7 +329,10 @@ export async function getTokenDeepAnalysis(
   }
 
   const cached = readCached(normalizedAddress, normalizedToken, language);
-  if (cached) return cached;
+  if (cached) {
+    dataUsage.record("memory_result");
+    return cached;
+  }
 
   const swapsResult = await getWalletSwaps(normalizedAddress);
   const recent = (swapsResult.swaps ?? []).slice(0, SWAPS_SAMPLE_SIZE);
