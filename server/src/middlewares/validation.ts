@@ -386,6 +386,8 @@ export const envSchema = z.object({
   JWT_SECRET: z.string().min(1, "Jwt is required"),
   GOOGLE_CLIENT_ID: z.string().min(1, "Google client id is required"),
   SERVER_PORT: z.coerce.number().default(4000),
+  API_METRICS_ENABLED: z.enum(["true", "false"]).optional().default("false"),
+  API_METRICS_BEARER_TOKEN: z.string().trim().optional().default(""),
 
   // API Keys and URLs
   COINGECKO_API_BASE_URL: z.url().default("https://api.coingecko.com/api/v3"),
@@ -493,6 +495,18 @@ export const envSchema = z.object({
       code: "custom",
       message: "WEBHOOK_PUBLIC_URL must use HTTPS in production",
       path: ["WEBHOOK_PUBLIC_URL"],
+    });
+  }
+
+  if (
+    env.NODE_ENV == "production" &&
+    env.API_METRICS_ENABLED == "true" &&
+    env.API_METRICS_BEARER_TOKEN.length == 0
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      message: "API_METRICS_BEARER_TOKEN is required when metrics are enabled in production",
+      path: ["API_METRICS_BEARER_TOKEN"],
     });
   }
 });

@@ -241,6 +241,10 @@ export async function rlFetch(
           attempt: attempt + 1,
           status: null,
           durationMs: Date.now() - attemptStartedAtMs,
+          failure:
+            e instanceof Error && e.name == "AbortError"
+              ? "timeout"
+              : "network_error",
         });
 
         if (attempt == rlRetries) {

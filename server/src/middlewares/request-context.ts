@@ -1,6 +1,8 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import type { MiddlewareHandler } from "hono";
+import { routePath } from "hono/route";
+import { recordApiMetrics } from "@sv/services/tracking/api-metrics.js";
 import {
     API_CALL_TRACKER_ENABLED,
     API_OBSERVABILITY_ROUTE_PREFIXES,
@@ -11,12 +13,14 @@ export interface OutboundAttempt {
     attempt: number;
     status: number | null;
     durationMs: number;
+    failure?: "network_error" | "timeout";
 }
 
 export interface RequestContext {
     requestId: string;
     route: string;
     method: string;
+    startedAtMs: number;
     firstCaller?: string;
     outboundAttempts: OutboundAttempt[];
     databaseResultUsed: boolean;
@@ -89,8 +93,9 @@ export const requestContextMiddleware: MiddlewareHandler = async (c, next) => {
     const requestId = c.req.header("x-request-id")?.trim() || randomUUID();
     const ctx: RequestContext = {
         requestId,
-        route: c.req.path,
+        route: "unmatched",
         method: c.req.method,
+        startedAtMs: Date.now(),
         outboundAttempts: [],
         databaseResultUsed: false,
         forcedRefreshRequested: false,
@@ -100,6 +105,9 @@ export const requestContextMiddleware: MiddlewareHandler = async (c, next) => {
     await storage.run(ctx, async () => {
         await next();
     });
+
+    ctx.route = routePath(c, -1) || "unmatched";
+    recordApiMetrics(ctx, c.res.status, Date.now() - ctx.startedAtMs);
 
     const isObservedRoute = API_OBSERVABILITY_ROUTE_PREFIXES.some((prefix) =>
         ctx.route.startsWith(prefix),

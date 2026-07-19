@@ -138,6 +138,8 @@ export const API_CALL_TRACKER_ENABLED = readBooleanEnv(
   "API_CALL_TRACKER_ENABLED",
   false,
 );
+export const API_METRICS_ENABLED = env.API_METRICS_ENABLED == "true";
+export const API_METRICS_BEARER_TOKEN = env.API_METRICS_BEARER_TOKEN;
 export const API_OBSERVABILITY_ROUTE_PREFIXES = [
   "/api/charts/",
   "/api/tokens/",

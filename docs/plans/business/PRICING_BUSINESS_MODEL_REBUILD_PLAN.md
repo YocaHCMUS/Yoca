@@ -268,15 +268,18 @@ Nguồn địa chỉ: danh sách token đã xác minh của Jupiter/Solana và c
 
 Mục tiêu: thu số liệu mà không thay đổi hành vi nghiệp vụ.
 
-- [ ] Rà type và đường đi thật của lớp provider/cache trước khi viết code.
-- [ ] Chọn một điểm đo chung hoặc số điểm đo tối thiểu; tránh chèn log thủ công vào mọi service.
-- [ ] Tạo correlation ID cho một request/hành trình.
-- [ ] Ghi provider call count, latency, retry và status.
+- [x] Rà type và đường đi thật của lớp provider/cache trước khi viết code.
+- [x] Chọn `pFetch`/`rlFetch` và request context làm điểm tập kết; service chỉ khai báo data usage có ngữ nghĩa.
+- [x] Tạo correlation ID cho request; benchmark journey ID vẫn để batch client/runner.
+- [x] Ghi provider attempt count, latency, retry, status và outcome bằng Prometheus-compatible metrics.
 - [ ] Ghi cache hit/miss theo domain và loại cache.
-- [ ] Cho phép bật/tắt bằng cấu hình benchmark.
-- [ ] Bảo đảm instrumentation không ghi secret hoặc payload nhạy cảm.
+- [x] Cho phép bật/tắt bằng `API_METRICS_ENABLED`; `/metrics` mặc định 404 và production bắt buộc Bearer token.
+- [x] Aggregate metrics không ghi secret, payload, URL, query, address hoặc request ID; HTTP label dùng Hono route template.
 - [ ] Viết kiểm tra cho logic tổng hợp metrics nếu logic này được giữ trong code.
 - [ ] Rà overhead để instrumentation không làm sai đáng kể kết quả latency.
+
+- [x] Cài `prom-client@15.1.3` trong workspace server và thêm HTTP/provider counter + histogram.
+- [x] Runtime check trên port 4000: endpoint tắt trả 404, sai/thiếu Bearer token trả 401, token đúng trả 200; `/metrics` không tự làm tăng HTTP counter.
 
 File cụ thể chỉ được chốt sau khi đọc source và type hiện tại. Mọi thay đổi code phải được nhóm duyệt trước.
 

@@ -1,0 +1,160 @@
+import {
+  API_METRICS_ENABLED,
+} from "@sv/config/constants.js";
+import type {
+  OutboundAttempt,
+  RequestContext,
+} from "@sv/middlewares/request-context.js";
+import { Counter, Histogram, Registry } from "prom-client";
+
+const registry = new Registry();
+
+const httpRequests = new Counter<
+  "route" | "method" | "status_class" | "journey"
+>({
+  name: "yoca_http_requests_total",
+  help: "Total number of HTTP requests handled by Yoca",
+  labelNames: ["route", "method", "status_class", "journey"],
+  registers: [registry],
+});
+
+const httpRequestDuration = new Histogram<
+  "route" | "method" | "status_class" | "journey"
+>({
+  name: "yoca_http_request_duration_seconds",
+  help: "HTTP request duration in seconds",
+  labelNames: ["route", "method", "status_class", "journey"],
+  registers: [registry],
+});
+
+const providerRequests = new Counter<
+  "provider" | "operation" | "status_class" | "outcome" | "attempt_kind"
+>({
+  name: "yoca_provider_requests_total",
+  help: "Total number of outbound blockchain data provider attempts",
+  labelNames: [
+    "provider",
+    "operation",
+    "status_class",
+    "outcome",
+    "attempt_kind",
+  ],
+  registers: [registry],
+});
+
+const providerRequestDuration = new Histogram<
+  "provider" | "operation" | "outcome"
+>({
+  name: "yoca_provider_request_duration_seconds",
+  help: "Outbound blockchain data provider attempt duration in seconds",
+  labelNames: ["provider", "operation", "outcome"],
+  registers: [registry],
+});
+
+const providerRetries = new Counter<"provider" | "operation" | "reason">({
+  name: "yoca_provider_retries_total",
+  help: "Total number of outbound blockchain data provider retry attempts",
+  labelNames: ["provider", "operation", "reason"],
+  registers: [registry],
+});
+
+function getStatusClass(status: number | null): string {
+  if (status == null) {
+    return "none";
+  }
+
+  return `${Math.floor(status / 100)}xx`;
+}
+
+function getProviderOperation(trackingId: string): {
+  provider: string;
+  operation: string;
+} {
+  const serviceMarker = ".svc.";
+  const serviceMarkerIndex = trackingId.indexOf(serviceMarker);
+  const provider = serviceMarkerIndex > 0
+    ? trackingId.slice(0, serviceMarkerIndex)
+    : "other";
+  const operation = serviceMarkerIndex > 0
+    ? trackingId.slice(serviceMarkerIndex + serviceMarker.length)
+    : trackingId;
+
+  return { provider, operation };
+}
+
+function recordProviderMetrics(attempt: OutboundAttempt): void {
+  const { provider, operation } = getProviderOperation(attempt.trackingId);
+  const outcome = attempt.failure ?? (
+    attempt.status != null && attempt.status >= 200 && attempt.status < 300
+      ? "success"
+      : "http_error"
+  );
+
+  providerRequests.inc({
+    provider,
+    operation,
+    status_class: getStatusClass(attempt.status),
+    outcome,
+    attempt_kind: attempt.attempt == 1 ? "initial" : "retry",
+  });
+  providerRequestDuration.observe(
+    { provider, operation, outcome },
+    attempt.durationMs / 1_000,
+  );
+}
+
+export function recordApiMetrics(
+  context: RequestContext,
+  status: number,
+  durationMs: number,
+): void {
+  if (!API_METRICS_ENABLED) {
+    return;
+  }
+
+  if (context.route == "/metrics") {
+    return;
+  }
+
+  const labels = {
+    route: context.route,
+    method: context.method,
+    status_class: getStatusClass(status),
+    journey: "unclassified",
+  };
+
+  httpRequests.inc(labels);
+  httpRequestDuration.observe(labels, durationMs / 1_000);
+
+  for (let index = 0; index < context.outboundAttempts.length; index++) {
+    const attempt = context.outboundAttempts[index];
+    recordProviderMetrics(attempt);
+
+    const nextAttempt = context.outboundAttempts[index + 1];
+    const causedRetry =
+      nextAttempt != null &&
+      nextAttempt.trackingId == attempt.trackingId &&
+      nextAttempt.attempt == attempt.attempt + 1;
+    if (!causedRetry) {
+      continue;
+    }
+
+    const { provider, operation } = getProviderOperation(attempt.trackingId);
+    let reason = "network";
+    if (attempt.failure == "timeout") {
+      reason = "timeout";
+    } else if (attempt.status == 429) {
+      reason = "429";
+    } else if (attempt.status != null && attempt.status >= 500) {
+      reason = "5xx";
+    }
+
+    providerRetries.inc({ provider, operation, reason });
+  }
+}
+
+export function getApiMetrics(): Promise<string> {
+  return registry.metrics();
+}
+
+export const apiMetricsContentType = registry.contentType;
