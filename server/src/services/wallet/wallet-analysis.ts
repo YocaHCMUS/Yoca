@@ -7,6 +7,7 @@ import {
 import { db } from "@sv/db/index.js";
 import { walletAnalyses, type WalletAnalysisSelect } from "@sv/db/schema.js";
 import { validateApiResult } from "@sv/middlewares/validation.js";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 import { mbl_WalletAnalysisSchema } from "@sv/services/_types/wallet-raw-responses.js";
 import { pFetch } from "@sv/util/rate-limit.js";
 import * as mobula from "@sv/util/util-mobula.js";
@@ -186,6 +187,7 @@ export async function getWalletAnalysis(
     stored &&
     stored.fetchedAtMs >= dayjs.utc().valueOf() - WINRATE_TTL_BY_PERIOD[period]
   ) {
+    dataUsage.record("db_result");
     return stored;
   }
 
@@ -193,6 +195,7 @@ export async function getWalletAnalysis(
     return await fetchWalletAnalysis(walletAddress, period);
   } catch (error) {
     if (stored) {
+      dataUsage.record("db_result", "stale_fallback");
       console.warn("Mobula win-rate refresh failed; returning stored data", {
         walletAddress,
         period,

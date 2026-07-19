@@ -11,6 +11,7 @@ import {
 } from "@sv/db/schema.js";
 import { validateApiResult } from "@sv/middlewares/validation.js";
 import { pFetch } from "@sv/util/rate-limit.js";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 import { excludedAuto, excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { and, eq, gt } from "drizzle-orm";
@@ -299,6 +300,7 @@ export async function getTokenTopPools(tokenAddress: string) {
     return await fetchTokenTopPools(tokenAddress);
   }
 
+  dataUsage.record("db_result");
   return pools;
 }
 
@@ -417,6 +419,10 @@ async function fetchPoolData(poolAddress: string) {
 }
 
 export async function getTokenPoolData(poolAddress: string, forceRefresh: boolean = false) {
+  if (forceRefresh) {
+    dataUsage.record("forced_refresh");
+  }
+
   if (!forceRefresh) {
     const thresholdDate = new Date(Date.now() - TOKEN_POOL_DATA_TTL_MS);
 
@@ -432,6 +438,7 @@ export async function getTokenPoolData(poolAddress: string, forceRefresh: boolea
       .limit(1);
 
     if (poolData.length > 0) {
+      dataUsage.record("db_result");
       return poolData[0];
     }
   }

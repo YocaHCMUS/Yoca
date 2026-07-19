@@ -9,6 +9,7 @@ import { resolveRequestedRange } from "@sv/services/wallet/walletRange.utils.js"
 import * as mobula from "@sv/util/util-mobula";
 import { pFetch } from "@sv/util/rate-limit";
 import { validateApiResult } from "@sv/middlewares/validation";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 import {
     excluded,
     excludedAutoFromInsert,
@@ -365,6 +366,7 @@ function postProcessWalletTxHistory<T>(data: {
   fromExclusiveMs: number;
   hasUnresolvedRange: boolean;
 }): WalletTransactionHistory<T> {
+  dataUsage.record("db_result");
   const pageEntries = data.entries.slice(0, data.limit);
   const lastEntry = pageEntries[pageEntries.length - 1];
   const hasMore = data.entries.length > data.limit || data.hasUnresolvedRange;

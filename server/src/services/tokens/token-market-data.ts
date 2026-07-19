@@ -11,6 +11,7 @@ import {
 } from "../_types/token-raw-responses.js";
 import { and, gte, inArray } from "drizzle-orm";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 
 function isCgRateLimitError(error: unknown): boolean {
   if (!error || typeof error !== "object") {
@@ -206,6 +207,7 @@ export async function getTokenMarketData(tokenAddresses: string[]) {
   );
 
   if (staleAddresses.length == 0) {
+    dataUsage.record("db_result");
     return addressToMarketData;
   }
 
@@ -223,6 +225,9 @@ export async function getTokenMarketData(tokenAddresses: string[]) {
         addressToMarketData[row.address] = row;
       }
 
+      if (Object.keys(addressToMarketData).length > 0) {
+        dataUsage.record("db_result", "stale_fallback");
+      }
       return addressToMarketData;
     }
 
@@ -230,6 +235,9 @@ export async function getTokenMarketData(tokenAddresses: string[]) {
   }
 
   if (!refreshed || refreshed.length == 0) {
+    if (Object.keys(addressToMarketData).length > 0) {
+      dataUsage.record("db_result");
+    }
     return addressToMarketData;
   }
 
@@ -237,5 +245,8 @@ export async function getTokenMarketData(tokenAddresses: string[]) {
     addressToMarketData[data.address] = data;
   }
 
+  if (res.length > 0) {
+    dataUsage.record("db_result");
+  }
   return addressToMarketData;
 }

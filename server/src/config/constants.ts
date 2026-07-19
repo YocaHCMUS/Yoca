@@ -138,6 +138,13 @@ export const API_CALL_TRACKER_ENABLED = readBooleanEnv(
   "API_CALL_TRACKER_ENABLED",
   false,
 );
+export const API_OBSERVABILITY_ROUTE_PREFIXES = [
+  "/api/charts/",
+  "/api/tokens/",
+  "/api/token-chart-news-events",
+  "/api/token-volatility-news",
+  "/api/wallets/",
+];
 export const API_CALL_TRACKER_EXPORT_DIR =
   process.env.API_CALL_TRACKER_EXPORT_DIR?.trim() ||
   "server/src/logs/api-tracker";

@@ -2,17 +2,18 @@ import { validateApiResult } from "@sv/middlewares/validation.js";
 import { db } from "@sv/db/index.js";
 import { marketPoolLists } from "@sv/db/schema.js";
 import {
-  bds_TokenListV3Schema,
-  cg_MultiTokenTopPoolsSchema,
-  cg_TopPoolDataSchema,
-  type BDS_TokenListV3,
-  type CG_TopPoolData,
+    bds_TokenListV3Schema,
+    cg_MultiTokenTopPoolsSchema,
+    cg_TopPoolDataSchema,
+    type BDS_TokenListV3,
+    type CG_TopPoolData,
 } from "@sv/services/_types/token-raw-responses.js";
 import { pFetch } from "@sv/util/rate-limit.js";
 import type { MarketPoolItem } from "@sv/types/market-pool.js";
 import * as bds from "@sv/util/util-birdeye.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { eq } from "drizzle-orm";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 
 const INCLUDE = "base_token,quote_token,dex";
 const TARGET_POOL_COUNT = 100;
@@ -44,6 +45,7 @@ async function getStoredMarketPools(
     .limit(1);
 
   if (existingList && existingList.expiresAt > new Date()) {
+    dataUsage.record("db_result");
     return existingList.responseJson;
   }
 
@@ -69,6 +71,7 @@ async function getStoredMarketPools(
     return fetchedPools;
   } catch (error) {
     if (existingList) {
+      dataUsage.record("db_result", "stale_fallback");
       console.warn(
         `Using stored market pool list after refresh failure: ${listKey}`,
       );

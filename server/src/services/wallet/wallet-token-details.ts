@@ -9,6 +9,7 @@ import {
     type WalletTokenDetailsSelect,
 } from "@sv/db/schema.js";
 import { validateApiResult } from "@sv/middlewares/validation.js";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 import {
     mbl_WalletPositionsSchema,
     type MBL_WalletPositions,
@@ -119,14 +120,19 @@ export async function getTokenDetails(
     stored[0].updatedAtMs >=
       dayjs.utc().valueOf() - WALLET_TOKEN_DETAILS_TTL_MS
   ) {
+    dataUsage.record("db_result");
     return stored;
   }
 
   try {
     const refreshed = await fetchTokenDetails(wallet);
+    if (!refreshed && stored.length > 0) {
+      dataUsage.record("db_result", "stale_fallback");
+    }
     return refreshed ?? (stored.length > 0 ? stored : null);
   } catch (error) {
     if (stored.length > 0) {
+      dataUsage.record("db_result", "stale_fallback");
       console.warn("Mobula wallet positions failed; returning stored data", {
         wallet,
         error,

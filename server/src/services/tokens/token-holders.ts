@@ -16,6 +16,7 @@ import { pFetch } from "@sv/util/rate-limit.js";
 import * as mobula from "@sv/util/util-mobula.js";
 import dayjs from "dayjs";
 import { eq } from "drizzle-orm";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 
 export async function fetchTokenHolderPositions(
   tokenAddress: string,
@@ -154,5 +155,6 @@ export async function getTopTokenHolders(tokenAddress: string) {
     const refreshed = await refreshTokenHolderSnapshot(tokenAddress);
     return refreshed?.holders ?? null;
   }
+  dataUsage.record("db_result");
   return res;
 }

@@ -16,6 +16,7 @@ import { excludedAutoNonNullFromInsert } from "@sv/util/orm-sql.js";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { fetchHeliusSolanaPortfolio } from "./fetchers/walletDataFetcher.service.js";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 
 const walletPortfolioCacheSchema = z.array(
   z.object({
@@ -73,6 +74,10 @@ export async function getWalletPortfolio(
   address: string,
   options?: { force?: boolean },
 ): Promise<WalletPortfolioItem[]> {
+  if (options?.force) {
+    dataUsage.record("forced_refresh");
+  }
+
   // 0) DB-first: use cached portfolio if fresh
   const portfolioThreshold = new Date(Date.now() - WALLET_PORTFOLIO_TTL_MS);
   const cachedPortfolio = await db
@@ -92,6 +97,7 @@ export async function getWalletPortfolio(
     cachedDataResult.success &&
     cachedPortfolio[0].fetchedAt >= portfolioThreshold
   ) {
+    dataUsage.record("db_result");
     await syncPortfolioTokenMeta(cachedData);
     const enrichedCached = await enrichWalletPortfolioMetadata(cachedData, {
       address,
@@ -120,6 +126,7 @@ export async function getWalletPortfolio(
 
   if (selectedPortfolio.length === 0) {
     if (cachedData.length > 0) {
+      dataUsage.record("db_result", "stale_fallback");
       await syncPortfolioTokenMeta(cachedData);
       const enrichedStale = await enrichWalletPortfolioMetadata(cachedData, {
         address,

@@ -1,6 +1,10 @@
 // rate-limited-fetch.ts
 
 import Bottleneck from "bottleneck";
+import {
+  captureUsageContext,
+  recordProviderAttempt,
+} from "@sv/middlewares/request-context.js";
 
 type FetchRetryOptions = {
   rlRetries?: number;
@@ -117,6 +121,7 @@ export async function rlFetch(
     trackingId,
     ...fetchInit
   } = options;
+  const requestContext = captureUsageContext();
 
   return rlLimiter.schedule(async () => {
     let lastErr: unknown;
@@ -129,6 +134,12 @@ export async function rlFetch(
 
       try {
         const resp = await fetchWithTimeout(url, fetchInit, rlTimeoutMs);
+        recordProviderAttempt(requestContext, {
+          trackingId: trackingId ?? "untracked",
+          attempt: attempt + 1,
+          status: resp.status,
+          durationMs: Date.now() - attemptStartedAtMs,
+        });
 
         if (resp.status == 429 || (resp.status >= 500 && resp.status <= 599)) {
           const retryAfter = resp.headers.get("Retry-After");
@@ -225,6 +236,12 @@ export async function rlFetch(
         return resp;
       } catch (e) {
         lastErr = e;
+        recordProviderAttempt(requestContext, {
+          trackingId: trackingId ?? "untracked",
+          attempt: attempt + 1,
+          status: null,
+          durationMs: Date.now() - attemptStartedAtMs,
+        });
 
         if (attempt == rlRetries) {
           break;

@@ -17,6 +17,7 @@ import {
 } from "@sv/config/constants.js";
 import { db } from "@sv/db/index.js";
 import { walletAuditCache } from "@sv/db/schema.js";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 
 import type { WalletTransactionHelius } from "./dtos/walletDataObjects.js";
 import { getWalletTransactionHelius } from "./walletHistory.service.js";
@@ -315,9 +316,14 @@ export async function getWalletAudit(
   address: string,
   options?: { force?: boolean },
 ): Promise<WalletAuditReport> {
+  if (options?.force) {
+    dataUsage.record("forced_refresh");
+  }
+
   if (!options?.force) {
     const cached = await readCachedAudit(address);
     if (cached) {
+      dataUsage.record("db_result");
       return cached;
     }
   }

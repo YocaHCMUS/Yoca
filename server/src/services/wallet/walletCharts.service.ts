@@ -22,6 +22,7 @@ import {
     MOBULA_WALLET_ACTIVITY_BACKWARD_OVERLAP_MS,
 } from "@sv/config/constants.js";
 import { pFetch } from "@sv/util/rate-limit.js";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 import { excluded } from "@sv/util/orm-sql.js";
 
 /**
@@ -196,6 +197,7 @@ export async function getWalletBalanceHistory(
   const storedUpdatedRecently = newestStoredUpdateMs >= storedThresholdMs;
 
   if (hasRangeCoverage && hasFreshTail && storedUpdatedRecently) {
+    dataUsage.record("db_result");
     return storedPoints;
   }
 
@@ -207,9 +209,11 @@ export async function getWalletBalanceHistory(
       end,
     );
     if (!fetched) {
+      dataUsage.record("db_result", "stale_fallback");
       return storedPoints;
     }
 
+    dataUsage.record("db_result");
     return normalizeByDay([...storedPoints, ...fetched]);
   }
 

@@ -8,6 +8,7 @@ import {
     zerionTokenList,
 } from "@sv/db/schema.js";
 import { pFetch } from "@sv/util/rate-limit.js";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 import dayjs from "dayjs";
 import { and, between, eq, inArray } from "drizzle-orm";
 import {
@@ -200,10 +201,12 @@ export async function getWalletTokenBalanceHistory(
     );
     const merged = { ...grouped, ...fetched };
     const normalizedGrouped = normalizeByDay(merged);
+    dataUsage.record("db_result");
     return alignEndTimestamps(normalizedGrouped);
   }
 
   const normalizedGrouped = normalizeByDay(grouped);
+  dataUsage.record("db_result");
   return alignEndTimestamps(normalizedGrouped);
 }
 

@@ -11,6 +11,7 @@ import {
     saveWalletIdentityCache,
 } from "@sv/services/wallet/db/walletIdentityCache.js";
 import { validateApiResult } from "@sv/middlewares/validation.js";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 import {
     hls_WalletIdentityBatchSchema,
     hls_WalletIdentitySchema,
@@ -502,6 +503,7 @@ export async function getWalletIdentity(
     const cachedIdentity = await getCachedWalletIdentity(validatedAddress);
 
     if (cachedIdentity?.isFresh) {
+        dataUsage.record("db_result");
         return buildWalletIdentityResponse(
             validatedAddress,
             cachedIdentity.identity,
@@ -558,6 +560,7 @@ export async function getWalletIdentity(
         );
     } catch (err) {
         if (cachedIdentity) {
+            dataUsage.record("db_result", "stale_fallback");
             const providerError = err instanceof WalletIdentityServiceError ? err : null;
             return buildWalletIdentityResponse(
                 validatedAddress,
@@ -602,11 +605,14 @@ export async function getWalletIdentityBatch(
     const cacheMap = new Map(cacheEntries);
     const resultByAddress = new Map<string, WalletIdentityResponse>();
     const addressesNeedingProviderFetch: string[] = [];
+    let databaseResultUsed = false;
+    let staleFallbackUsed = false;
 
     for (const address of uniqueAddresses) {
         const cached = cacheMap.get(address) ?? null;
 
         if (cached?.isFresh) {
+            databaseResultUsed = true;
             resultByAddress.set(
                 address,
                 buildWalletIdentityResponse(address, cached.identity, {
@@ -655,6 +661,8 @@ export async function getWalletIdentityBatch(
             for (const address of addressesNeedingProviderFetch) {
                 const cached = cacheMap.get(address) ?? null;
                 if (cached) {
+                    databaseResultUsed = true;
+                    staleFallbackUsed = true;
                     resultByAddress.set(
                         address,
                         buildWalletIdentityResponse(address, cached.identity, {
@@ -682,6 +690,12 @@ export async function getWalletIdentityBatch(
     }
 
     const byAddress = new Map(resultByAddress.entries());
+
+    if (databaseResultUsed && staleFallbackUsed) {
+        dataUsage.record("db_result", "stale_fallback");
+    } else if (databaseResultUsed) {
+        dataUsage.record("db_result");
+    }
 
     return {
         results: normalizedInputAddresses.map(

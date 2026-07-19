@@ -1,11 +1,17 @@
 import { buildActivitySnapshotFromProviders, buildHoldingsSnapshotFromProviders, buildOverviewResponse, getLatestOverviewCacheRow, getOverviewFromFreshCache, OVERVIEW_PERIOD_KEYS } from "@sv/services/wallet/walletData.core.js";
 import type { WalletOverview, WalletOverviewPeriodKey, WalletOverviewQueryOptions } from "@sv/services/wallet/dtos/walletDataObjects.js";
 import { saveOverviewCache } from "@sv/services/wallet/db/walletDataCacher.js";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 
 export async function getWalletOverview(address: string, query?: WalletOverviewQueryOptions): Promise<WalletOverview> {
+    if (query?.force) {
+        dataUsage.record("forced_refresh");
+    }
+
     const cacheRow = await getLatestOverviewCacheRow(address);
     const cachedOverview = query?.force ? null : getOverviewFromFreshCache(cacheRow, address);
     if (cachedOverview) {
+        dataUsage.record("db_result");
         console.log("[wallet-overview]", {
             address,
             cacheHit: true,
@@ -16,6 +22,14 @@ export async function getWalletOverview(address: string, query?: WalletOverviewQ
 
     const holdingsSnapshot = await buildHoldingsSnapshotFromProviders(address, cacheRow);
     const { periodSnapshots, providerFailuresByPeriod } = await buildActivitySnapshotFromProviders(address, cacheRow);
+
+    const holdingsUsedCache = holdingsSnapshot.source == "overview-cache";
+    const activityUsedCache = cacheRow != null && OVERVIEW_PERIOD_KEYS.some(
+        (period) => providerFailuresByPeriod[period],
+    );
+    if (holdingsUsedCache || activityUsedCache) {
+        dataUsage.record("db_result", "stale_fallback");
+    }
 
     const overview = buildOverviewResponse({
         address,

@@ -15,6 +15,7 @@ import {
 } from "@sv/services/_types/token-raw-responses.js";
 import { pFetch } from "@sv/util/rate-limit.js";
 import * as mobula from "@sv/util/util-mobula.js";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 import dayjs from "dayjs";
 import { and, eq, gte } from "drizzle-orm";
 
@@ -144,6 +145,7 @@ export async function getTokenFundamentals(address: string) {
     .limit(1);
 
   if (freshState) {
+    dataUsage.record("db_result");
     return readTokenFundamentals(address);
   }
 
@@ -157,6 +159,9 @@ export async function getTokenFundamentals(address: string) {
     // Refresh only when at least one domain group is not recent.
     const fetched = await fetchMobulaTokenFundamentals(address);
     if (!fetched) {
+      if (state) {
+        dataUsage.record("db_result", "stale_fallback");
+      }
       return state ? readTokenFundamentals(address) : null;
     }
 
@@ -278,12 +283,16 @@ export async function getTokenFundamentals(address: string) {
         });
     });
 
+    dataUsage.record("db_result");
     return readTokenFundamentals(address);
   } catch (error) {
     console.warn("Token fundamentals refresh failed", {
       address,
       error: error instanceof Error ? error.message : String(error),
     });
+    if (state) {
+      dataUsage.record("db_result", "stale_fallback");
+    }
     return state ? readTokenFundamentals(address) : null;
   }
 }
