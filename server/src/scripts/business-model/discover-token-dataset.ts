@@ -1,8 +1,10 @@
 import env from "@sv/util/load-env.js";
+import "@sv/util/date.js";
 import { defineProvider, pFetch } from "@sv/util/rate-limit.js";
 import Bottleneck from "bottleneck";
+import dayjs from "dayjs";
 import { Buffer } from "node:buffer";
-import { mkdir, open, unlink, writeFile } from "node:fs/promises";
+import { mkdir, open, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import z from "zod";
@@ -25,6 +27,40 @@ const fundamentalsResultSchema = z.object({
   release_schedule: z.array(z.unknown()),
   investors: z.array(z.unknown()),
 });
+const metadataResultSchema = z.array(
+  z.object({
+    address: z.string(),
+    name: z.string().nullable(),
+    symbol: z.string().nullable(),
+  }),
+);
+const marketResultSchema = z.record(
+  z.string(),
+  z.object({
+    address: z.string(),
+    priceUsd: z.number().nullable(),
+  }),
+);
+const poolsResultSchema = z.array(
+  z.object({
+    rankInfo: z.object({
+      tokenAddress: z.string(),
+      poolAddress: z.string(),
+    }),
+    data: z.object({
+      poolAddress: z.string(),
+      liquidityUsd: z.number().nullable(),
+    }),
+  }),
+);
+const holdersResultSchema = z.array(
+  z.object({
+    tokenAddress: z.string(),
+    holderAddress: z.string(),
+    rank: z.number(),
+    percentage: z.number(),
+  }),
+);
 type JupiterTokenCandidate = z.infer<typeof tokenCandidateSchema>;
 
 type DiscoveredToken = {
@@ -40,7 +76,72 @@ type ResultClassification =
   | "unsupported"
   | "validation_error"
   | "upstream_error"
-  | "internal_error";
+  | "server_error"
+  | "timeout"
+  | "network_error";
+
+type TokenModule = "metadata" | "market" | "pools" | "holders" | "fundamentals";
+
+type ModuleCoverage = {
+  status: number | null;
+  durationMs: number;
+  classification: ResultClassification;
+  itemCount: number;
+  payloadBytes: number;
+};
+
+function classifyPayload(
+  module: TokenModule,
+  payload: unknown,
+): Pick<ModuleCoverage, "classification" | "itemCount"> {
+  if (module == "metadata") {
+    const parsed = metadataResultSchema.safeParse(payload);
+    if (!parsed.success) return { classification: "validation_error", itemCount: 0 };
+    return {
+      classification: parsed.data.length > 0 ? "data" : "empty_valid",
+      itemCount: parsed.data.length,
+    };
+  }
+
+  if (module == "market") {
+    const parsed = marketResultSchema.safeParse(payload);
+    if (!parsed.success) return { classification: "validation_error", itemCount: 0 };
+    const itemCount = Object.keys(parsed.data).length;
+    return { classification: itemCount > 0 ? "data" : "empty_valid", itemCount };
+  }
+
+  if (module == "pools") {
+    const parsed = poolsResultSchema.safeParse(payload);
+    if (!parsed.success) return { classification: "validation_error", itemCount: 0 };
+    return {
+      classification: parsed.data.length > 0 ? "data" : "empty_valid",
+      itemCount: parsed.data.length,
+    };
+  }
+
+  if (module == "holders") {
+    const parsed = holdersResultSchema.safeParse(payload);
+    if (!parsed.success) return { classification: "validation_error", itemCount: 0 };
+    return {
+      classification: parsed.data.length > 0 ? "data" : "empty_valid",
+      itemCount: parsed.data.length,
+    };
+  }
+
+  const parsed = fundamentalsResultSchema.safeParse(payload);
+  if (!parsed.success) return { classification: "validation_error", itemCount: 0 };
+  const itemCount =
+    parsed.data.distribution.length +
+    parsed.data.release_schedule.length +
+    parsed.data.investors.length;
+  return { classification: itemCount > 0 ? "data" : "empty_valid", itemCount };
+}
+
+async function writeJsonAtomically(filePath: string, payload: unknown): Promise<void> {
+  const temporaryPath = `${filePath}.tmp`;
+  await writeFile(temporaryPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  await rename(temporaryPath, filePath);
+}
 
 const seeds = [
   { id: "So11111111111111111111111111111111111111112", symbol: "SOL", source: "required_seed" },
@@ -142,35 +243,48 @@ const selected = Array.from(discovered.values())
   .filter((token) => !token.jupiter || token.jupiter.isVerified == true)
   .slice(0, 24);
 const results = [];
+const currentFile = fileURLToPath(import.meta.url);
+const outputDir = path.resolve(
+  path.dirname(currentFile),
+  "../../../../docs/plans/business/benchmark-results/datasets",
+);
+await mkdir(outputDir, { recursive: true });
+const checkpointPath = path.join(outputDir, "token-discovery-checkpoint.json");
 
 for (const [index, token] of selected.entries()) {
-  const endpoints = {
+  const endpoints: Record<TokenModule, string> = {
     metadata: `/api/tokens/meta/${token.id}`,
     market: `/api/tokens/markets/${token.id}`,
     pools: `/api/tokens/${token.id}/pools`,
     holders: `/api/tokens/holders/${token.id}`,
     fundamentals: `/api/tokens/fundamentals/${token.id}`,
   };
-  const coverage: Record<string, {
-    status: number | null;
-    durationMs: number;
-    classification: ResultClassification;
-    payloadBytes: number;
-  }> = {};
+  const coverage: Partial<Record<TokenModule, ModuleCoverage>> = {};
 
-  for (const [module, route] of Object.entries(endpoints)) {
+  const modules: TokenModule[] = [
+    "metadata",
+    "market",
+    "pools",
+    "holders",
+    "fundamentals",
+  ];
+  for (const module of modules) {
+    const route = endpoints[module];
     const startedAt = Date.now();
     try {
-      const response = await fetch(`${baseUrl}${route}`);
+      const response = await fetch(`${baseUrl}${route}`, {
+        signal: AbortSignal.timeout(45_000),
+      });
       const text = await response.text();
       let classification: ResultClassification | null = null;
+      let itemCount = 0;
 
       if (response.status == 404) {
         classification = "unsupported";
       } else if (response.status == 422) {
         classification = "validation_error";
       } else if (response.status >= 500 && response.status <= 599) {
-        classification = response.status == 502 ? "upstream_error" : "internal_error";
+        classification = response.status == 502 ? "upstream_error" : "server_error";
       } else if (!response.ok) {
         classification = "upstream_error";
       } else {
@@ -182,35 +296,28 @@ for (const [index, token] of selected.entries()) {
         }
 
         if (!classification) {
-          const fundamentals = fundamentalsResultSchema.safeParse(payload);
-          const fundamentalsEmpty =
-            module == "fundamentals" &&
-            fundamentals.success &&
-            fundamentals.data.distribution.length == 0 &&
-            fundamentals.data.release_schedule.length == 0 &&
-            fundamentals.data.investors.length == 0;
-          const empty =
-            fundamentalsEmpty ||
-            payload == null ||
-            (Array.isArray(payload) && payload.length == 0) ||
-            (typeof payload == "object" &&
-              !Array.isArray(payload) &&
-              Object.keys(payload).length == 0);
-          classification = empty ? "empty_valid" : "data";
+          const classified = classifyPayload(module, payload);
+          classification = classified.classification;
+          itemCount = classified.itemCount;
         }
       }
 
       coverage[module] = {
         status: response.status,
         durationMs: Date.now() - startedAt,
-        classification,
+        classification: classification ?? "validation_error",
+        itemCount,
         payloadBytes: Buffer.byteLength(text),
       };
-    } catch {
+    } catch (error) {
       coverage[module] = {
         status: null,
         durationMs: Date.now() - startedAt,
-        classification: "internal_error",
+        classification:
+          error instanceof Error && error.name == "TimeoutError"
+            ? "timeout"
+            : "network_error",
+        itemCount: 0,
         payloadBytes: 0,
       };
     }
@@ -223,29 +330,46 @@ for (const [index, token] of selected.entries()) {
     source: token.source,
     coverage,
   });
+  await writeJsonAtomically(checkpointPath, {
+    artifactKind: "token_discovery_checkpoint",
+    completed: results.length,
+    total: selected.length,
+    tokens: results,
+  });
   console.log(`[token-discovery] ${index + 1}/${selected.length} ${token.symbol ?? token.id}`);
 }
 
-const generatedAt = new Date().toISOString();
-const fileName = `tokens-${generatedAt.slice(0, 10)}.json`;
-const currentFile = fileURLToPath(import.meta.url);
-const outputDir = path.resolve(
-  path.dirname(currentFile),
-  "../../../../docs/plans/business/benchmark-results/datasets",
+const generatedAt = dayjs.utc().toISOString();
+const fileName = `tokens-${dayjs.utc().format("YYYY-MM-DD-HHmmss")}.json`;
+const coreModules: TokenModule[] = ["metadata", "market", "pools", "holders"];
+const coreQualified = results.filter((token) =>
+  coreModules.every((module) => token.coverage[module]?.classification == "data"),
 );
-await mkdir(outputDir, { recursive: true });
-await writeFile(
+const tokenomicsPositive = results.filter(
+  (token) => token.coverage.fundamentals?.classification == "data",
+);
+const rejected = results.filter(
+  (token) => !coreQualified.some((qualified) => qualified.address == token.address),
+);
+await writeJsonAtomically(
   path.join(outputDir, fileName),
-  `${JSON.stringify({
+  {
+    artifactKind: "token_compatibility",
     generatedAt,
     baseUrl,
     candidateCount: discovered.size,
     selectedCount: selected.length,
     jupiterDiscoveryEnabled: Boolean(jupiterApiKey),
+    coreQualifiedCount: coreQualified.length,
+    tokenomicsPositiveCount: tokenomicsPositive.length,
+    rejectedCount: rejected.length,
     tokens: results,
-  }, null, 2)}\n`,
-  "utf8",
+    coreQualified,
+    tokenomicsPositive,
+    rejected,
+  },
 );
+await unlink(checkpointPath).catch(() => undefined);
 
   console.log(`[token-discovery] wrote ${path.join(outputDir, fileName)}`);
   } finally {

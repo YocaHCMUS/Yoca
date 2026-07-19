@@ -231,6 +231,11 @@ Nguồn địa chỉ: danh sách token đã xác minh của Jupiter/Solana và c
 - [x] Gọi lại SOL và PYTH trong thời hạn freshness đều trả `200` từ dữ liệu đã lưu, không phát sinh outbound Mobula request.
 - [ ] Khi chạy regression, ít nhất SOL và PYTH phải trả một nhóm fundamentals có dữ liệu; nếu cả hai cùng rỗng, kiểm tra thay đổi độ phủ/gói API của Mobula trước khi kết luận lỗi mapping.
 - [x] Mở rộng thành 24 token và chạy metadata, market, pools, holders, fundamentals: 120/120 phản hồi hợp lệ, gồm 101 `data` và 19 `empty_valid`; đây là warm compatibility, chưa thay cho cold benchmark.
+- [x] Nâng discovery script bằng validator riêng cho từng module, timeout 45 giây, phân loại transport/server/upstream, item count, checkpoint atomic và timestamp trong filename.
+- [x] Chạy lại hai lượt trên 24 token: 24/24 core-qualified, không có classification hoặc item-count thay đổi. Artifact: `benchmark-results/datasets/token-benchmark-stable-2026-07-19.json`.
+- [x] Tách Fundamentals khỏi điều kiện core: SOL, PYTH, HNT, RAY và ORCA có tokenomics; 19 token còn lại rỗng hợp lệ, không bị gắn nhãn lỗi.
+- [!] Pools là module chậm nhất ở lượt warm, trung bình khoảng 5,0 giây. Holders không nhanh hơn ở lượt warm; không diễn giải cache hit chỉ từ chênh lệch latency.
+- [ ] Chọn 5–8 token đại diện để chạy provider refresh/cold benchmark sau khi xác định được cơ chế force hoặc làm stale có kiểm soát; không reset toàn database.
 
 ### Quy tắc chạy
 
@@ -244,11 +249,20 @@ Nguồn địa chỉ: danh sách token đã xác minh của Jupiter/Solana và c
 
 ### Snapshot Wallet Discovery — 2026-07-18
 
-- [x] Artifact: `benchmark-results/datasets/wallets-2026-07-18.json`.
+- [x] Artifact cũ `benchmark-results/datasets/wallets-2026-07-18.json` được giữ làm dữ liệu sàng lọc, không phải tập 24 ví ổn định.
+- [x] Script hiện ghi artifact mới theo tên `wallet-candidates-YYYY-MM-DD.json`, đồng thời tách `coverageQualifiedWallets` khỏi toàn bộ ứng viên.
+- [x] Có checkpoint theo từng batch tại `wallet-discovery-checkpoint.json`; chỉ xóa checkpoint sau khi ghi artifact hoàn chỉnh.
 - [x] Loại `3nMNd89AxwHUa1AFvQGqohRkxFEQsTsgiEyEyqXFHyyH` vì Mobula không cung cấp coverage ổn định cho ví arbitrage bot này.
-- [x] Ứng viên thay thế chính: `DgLcG7dhE8VBoA4rJu1resczXkYTSGUx7Ry1HicqcqZr`; mẫu Helius có 100 giao dịch và cả Overview, Portfolio, Transfers, Swaps, Identity đều trả dữ liệu.
-- [x] Có thêm bốn ứng viên hoạt động cao chạy đủ năm module: `4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk`, `GcEXZEUhbK4KyFV7B7q28Zh7PKzGsC3oqgjvGRLaZJZu`, `8pFhUqCU7Fkxfg2DLytRDf7a9oK4XGtN92PrYwtVQc6G`, `6nbufGfNrDodGdv5Ta8VUowuZPujkwaPdFT1eGrfg2rg`.
-- [!] Lượt compatibility giới hạn hai ví đồng thời nhưng mỗi ví gọi năm module song song. 33/120 kết quả có dữ liệu; 87 kết quả còn lại chủ yếu chạm timeout 45 giây. Không diễn giải các timeout này thành provider không hỗ trợ; phải chạy lại tuần tự theo module hoặc với concurrency thấp hơn sau khi có instrumentation.
+- [x] Nguồn ứng viên ưu tiên chủ ví của giao dịch gần đây và profitable trader; top holder chỉ là nguồn dự phòng vì thường lẫn vault, authority, sàn và giao thức.
+- [x] Lượt mới nhất sàng lọc 68 ứng viên: 6 có swap, 50 rỗng hợp lệ và 12 timeout. Trong 24 ứng viên được kiểm tra đầy đủ, chỉ 5 ví có dữ liệu ở cả Overview, Portfolio, Transfers, Swaps và Identity.
+- [x] Loại khỏi tập người dùng các địa chỉ đã xác định là Kamino Reserve, Kraken Hot Wallet, Save Lending Authority và Jupiter Perps Vault Authority; giữ riêng làm stress/negative case.
+- [x] Dùng Birdeye Gainers/Losers raw API với `limit=100` cho các khung `today`, `1W`, `30d`, `90d`; khử trùng 400 kết quả thành 288 ứng viên. PnL Birdeye chỉ là metadata khám phá, không phải chuẩn đối chiếu PnL Mobula.
+- [x] Hoàn thành 24 ví warm-stable tại `benchmark-results/datasets/wallet-benchmark-stable-2026-07-19.json`; tất cả có Overview, Portfolio, Transfers và Swaps không rỗng, Identity đúng cấu trúc qua lượt lặp.
+- [x] Chuyển Ansem (`GV6...`) sang stress case vì Overview và Portfolio tiếp tục timeout; thay bằng `H7PK...`, có 65 token, 20 swap, 20 transfer và qua lượt warm-repeat.
+- [x] Chạy mixed refresh trên 8 ví đại diện: Overview/Portfolio dùng `force=1`, Transfers/Swaps theo stored-range, Identity theo TTL; 8/8 ví thành công. Artifact: `benchmark-results/datasets/wallet-benchmark-mixed-refresh-2026-07-19.json`.
+- [!] Chưa gọi lượt trên là full cold benchmark: shell hiện trỏ database `localhost:5432` nên không thể làm stale metadata của database mà server đang dùng. Query thất bại trước khi xóa hàng; không có dữ liệu bị thay đổi.
+- [ ] Chỉ chạy full cold/stale benchmark khi môi trường script và server cùng database; không `db:reset` toàn bộ database.
+- [!] Timeout và phản hồi rỗng không được xem là coverage ổn định. Kết quả phải lưu riêng candidate, stable user-like, stress case và negative case.
 
 ## Batch 3 — Instrumentation tối thiểu
 
