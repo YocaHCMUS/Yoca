@@ -23,6 +23,7 @@ import {
 } from "@sv/config/constants.js";
 import { pFetch } from "@sv/util/rate-limit.js";
 import { dataUsage } from "@sv/middlewares/request-context.js";
+import { singleFlight } from "@sv/services/util/single-flight.js";
 import { excluded } from "@sv/util/orm-sql.js";
 
 /**
@@ -172,7 +173,10 @@ export async function getWalletBalanceHistory(
     .orderBy(walletBalanceHistory.timestampMs);
 
   if (res.length == 0) {
-    return fetchWalletBalanceHistory(address, start, end);
+    dataUsage.record("provider_result");
+    return walletBalanceHistoryFlight
+      .key(`wallet_balance_history:${address}:${start}:${end}`)
+      .run(address, start, end);
   }
 
   const storedPoints = normalizeByDay(
@@ -203,11 +207,10 @@ export async function getWalletBalanceHistory(
 
   if (hasRangeCoverage && lastStoredPoint != null) {
     const partialStart = Math.max(start, lastStoredPoint.timestampMs - DAY_MS);
-    const fetched = await fetchWalletBalanceHistory(
-      address,
-      partialStart,
-      end,
-    );
+    dataUsage.record("provider_result");
+    const fetched = await walletBalanceHistoryFlight
+      .key(`wallet_balance_history:${address}:${partialStart}:${end}`)
+      .run(address, partialStart, end);
     if (!fetched) {
       dataUsage.record("db_result", "stale_fallback");
       return storedPoints;
@@ -217,7 +220,10 @@ export async function getWalletBalanceHistory(
     return normalizeByDay([...storedPoints, ...fetched]);
   }
 
-  return fetchWalletBalanceHistory(address, start, end);
+  dataUsage.record("provider_result");
+  return walletBalanceHistoryFlight
+    .key(`wallet_balance_history:${address}:${start}:${end}`)
+    .run(address, start, end);
 }
 
 async function fetchWalletBalanceHistory(
@@ -278,6 +284,8 @@ async function fetchWalletBalanceHistory(
 
   return normalizedPoints;
 }
+
+const walletBalanceHistoryFlight = singleFlight(fetchWalletBalanceHistory);
 
 // Group data points by UTC day, keeping only the latest point per day.
 function normalizeByDay(

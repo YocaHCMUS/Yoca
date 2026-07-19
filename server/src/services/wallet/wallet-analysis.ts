@@ -9,6 +9,7 @@ import { walletAnalyses, type WalletAnalysisSelect } from "@sv/db/schema.js";
 import { validateApiResult } from "@sv/middlewares/validation.js";
 import { dataUsage } from "@sv/middlewares/request-context.js";
 import { mbl_WalletAnalysisSchema } from "@sv/services/_types/wallet-raw-responses.js";
+import { singleFlight } from "@sv/services/util/single-flight.js";
 import { pFetch } from "@sv/util/rate-limit.js";
 import * as mobula from "@sv/util/util-mobula.js";
 import dayjs from "dayjs";
@@ -50,9 +51,7 @@ const MOBULA_PERIOD_BY_WINRATE_PERIOD: Record<WinratePeriod, string> = {
   "90D": "90d",
 };
 
-const pendingAnalysisRefreshes = new Map<string, Promise<WalletAnalysisSelect>>();
-
-export async function fetchWalletAnalysis(
+async function fetchAndStoreWalletAnalysis(
   walletAddress: string,
   period: WinratePeriod,
 ): Promise<WalletAnalysisSelect> {
@@ -63,10 +62,15 @@ export async function fetchWalletAnalysis(
     period: MOBULA_PERIOD_BY_WINRATE_PERIOD[period],
   }).toString();
 
-  const response = await pFetch(mobula.spec, "mobula.svc.wallet_analysis", endpoint, {
-    method: "GET",
-    headers: mobula.getRequiredHeaders(),
-  });
+  const response = await pFetch(
+    mobula.spec,
+    "mobula.svc.wallet_analysis",
+    endpoint,
+    {
+      method: "GET",
+      headers: mobula.getRequiredHeaders(),
+    },
+  );
   if (!response.ok) {
     const body = await response.text().catch(() => "");
     throw new Error(
@@ -111,7 +115,8 @@ export async function fetchWalletAnalysis(
       winningTrades: profitableTokens,
       losingTrades: unprofitableTokens,
       avgWinUsd: profitableTokens > 0 ? totalWinUsd / profitableTokens : 0,
-      avgLossUsd: unprofitableTokens > 0 ? totalLossUsd / unprofitableTokens : 0,
+      avgLossUsd:
+        unprofitableTokens > 0 ? totalLossUsd / unprofitableTokens : 0,
       win0To50Count,
       win50To200Count,
       win200To500Count,
@@ -142,7 +147,8 @@ export async function fetchWalletAnalysis(
         winningTrades: profitableTokens,
         losingTrades: unprofitableTokens,
         avgWinUsd: profitableTokens > 0 ? totalWinUsd / profitableTokens : 0,
-        avgLossUsd: unprofitableTokens > 0 ? totalLossUsd / unprofitableTokens : 0,
+        avgLossUsd:
+          unprofitableTokens > 0 ? totalLossUsd / unprofitableTokens : 0,
         win0To50Count,
         win50To200Count,
         win200To500Count,
@@ -176,6 +182,10 @@ export async function fetchWalletAnalysis(
   return saved;
 }
 
+export const fetchWalletAnalysis = singleFlight(fetchAndStoreWalletAnalysis).by(
+  (walletAddress, period) => `wallet_analysis:${walletAddress}:${period}`,
+);
+
 export async function getWalletAnalysis(
   walletAddress: string,
   period: WinratePeriod,
@@ -200,17 +210,10 @@ export async function getWalletAnalysis(
     return stored;
   }
 
-  const refreshKey = `${walletAddress}:${period}`;
-  const pendingRefresh = pendingAnalysisRefreshes.get(refreshKey);
-  const refresh = pendingRefresh ?? fetchWalletAnalysis(walletAddress, period);
-  if (pendingRefresh) {
-    dataUsage.record("provider_result");
-  } else {
-    pendingAnalysisRefreshes.set(refreshKey, refresh);
-  }
+  dataUsage.record("provider_result");
 
   try {
-    return await refresh;
+    return await fetchWalletAnalysis(walletAddress, period);
   } catch (error) {
     if (stored) {
       dataUsage.record("db_result", "stale_fallback");
@@ -223,13 +226,8 @@ export async function getWalletAnalysis(
     }
 
     throw error;
-  } finally {
-    if (pendingAnalysisRefreshes.get(refreshKey) == refresh) {
-      pendingAnalysisRefreshes.delete(refreshKey);
-    }
   }
 }
-
 
 export * from "./wallet-analysis/wallet-winrate";
 export * from "./wallet-analysis/wallet-pnl";

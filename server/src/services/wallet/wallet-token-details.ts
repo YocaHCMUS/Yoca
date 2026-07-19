@@ -14,13 +14,14 @@ import {
     mbl_WalletPositionsSchema,
     type MBL_WalletPositions,
 } from "@sv/services/_types/wallet-raw-responses.js";
+import { singleFlight } from "@sv/services/util/single-flight.js";
 import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import { pFetch } from "@sv/util/rate-limit.js";
 import * as mobula from "@sv/util/util-mobula.js";
 import dayjs from "dayjs";
 import { eq } from "drizzle-orm";
 
-export async function fetchTokenDetails(
+async function fetchAndStoreTokenDetails(
   wallet: string,
 ): Promise<WalletTokenDetailsSelect[] | null> {
   const endpoint = mobula.getEndpoint("/2/wallet/positions");
@@ -107,6 +108,8 @@ export async function fetchTokenDetails(
     .returning();
 }
 
+const tokenDetailsFlight = singleFlight(fetchAndStoreTokenDetails);
+
 export async function getTokenDetails(
   wallet: string,
 ): Promise<WalletTokenDetailsSelect[] | null> {
@@ -124,8 +127,11 @@ export async function getTokenDetails(
     return stored;
   }
 
+  dataUsage.record("provider_result");
   try {
-    const refreshed = await fetchTokenDetails(wallet);
+    const refreshed = await tokenDetailsFlight
+      .key(`wallet_token_details:${wallet}`)
+      .run(wallet);
     if (!refreshed && stored.length > 0) {
       dataUsage.record("db_result", "stale_fallback");
     }

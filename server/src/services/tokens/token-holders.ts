@@ -11,6 +11,7 @@ import {
     mbl_TokenTopHoldersSchema,
     type MBL_TokenTopHolderSchema,
 } from "@sv/services/_types/token-raw-responses.js";
+import { singleFlight } from "@sv/services/util/single-flight.js";
 import { excludedAutoFromInsert } from "@sv/util/orm-sql.js";
 import { pFetch } from "@sv/util/rate-limit.js";
 import * as mobula from "@sv/util/util-mobula.js";
@@ -45,7 +46,7 @@ export async function fetchTokenHolderPositions(
   return res;
 }
 
-export async function refreshTokenHolderSnapshot(tokenAddress: string) {
+async function fetchAndStoreTokenHolderSnapshot(tokenAddress: string) {
   const positions = await fetchTokenHolderPositions(tokenAddress);
 
   if (!positions) {
@@ -131,6 +132,10 @@ export async function refreshTokenHolderSnapshot(tokenAddress: string) {
   });
 }
 
+export const refreshTokenHolderSnapshot = singleFlight(
+  fetchAndStoreTokenHolderSnapshot,
+).by((tokenAddress) => `token_holders:${tokenAddress}`);
+
 export async function getTopTokenHolders(tokenAddress: string) {
   const res = await db
     .select()
@@ -152,6 +157,7 @@ export async function getTopTokenHolders(tokenAddress: string) {
   }
 
   if (stale) {
+    dataUsage.record("provider_result");
     const refreshed = await refreshTokenHolderSnapshot(tokenAddress);
     return refreshed?.holders ?? null;
   }
