@@ -17,6 +17,7 @@ import {
     type TokenMarketChartHourlyInsert,
 } from "@sv/db/schema.js";
 import { validateApiResult } from "@sv/middlewares/validation.js";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 import { excluded } from "@sv/util/orm-sql.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { pFetch } from "@sv/util/rate-limit.js";
@@ -156,8 +157,14 @@ export async function get24hTokenMarketChart(tokenAddress: string) {
     .orderBy(tokenMarketChart24h.unixTimestampMs);
 
   if (chartData.length == 0) {
-    return fetch24hTokenMarketChart(tokenAddress);
+    const freshChartData = await fetch24hTokenMarketChart(tokenAddress);
+    if (freshChartData.length > 0) {
+      dataUsage.record("provider_result");
+    }
+    return freshChartData;
   }
+
+  dataUsage.record("db_result");
 
   const latestUpdate = chartData[chartData.length - 1].unixTimestampMs;
   const isStale =
@@ -169,7 +176,8 @@ export async function get24hTokenMarketChart(tokenAddress: string) {
       latestUpdate,
     );
 
-    if (newerChartData) {
+    if (newerChartData.length > 0) {
+      dataUsage.record("provider_result");
       return [...chartData, ...newerChartData];
     }
   }

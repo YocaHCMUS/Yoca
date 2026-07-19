@@ -120,17 +120,6 @@ export const mbl_WalletAnalysisSchema = z.object({
       tradingTimeFrames: z.number(),
       winRealizedPnl: z.number(),
       winRealizedPnlRate: z.number(),
-      fundingInfo: z
-        .object({
-          from: z.string(),
-          date: z.string(),
-          chainId: z.string(),
-          txHash: z.string(),
-          amount: z.string(),
-          fromWalletLogo: z.string().nullish(),
-          fromWalletTag: z.string().nullish(),
-        })
-        .nullish(),
       nativeBalance: z
         .object({
           rawBalance: z.string(),

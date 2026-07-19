@@ -22,6 +22,7 @@
     "alerts:sync-helius": "tsx src/scripts/sync-helius-webhook.ts",
     "business:discover-tokens": "tsx src/scripts/business-model/discover-token-dataset.ts",
     "business:discover-wallets": "tsx src/scripts/business-model/discover-wallet-dataset.ts",
+    "business:benchmark-journeys": "tsx src/scripts/business-model/benchmark-journeys.ts",
     "db:studio": "drizzle-kit studio",
     "db:clear": "drizzle-kit push --force --config drizzle-empty.config.ts",
     "db:reset": "npm run db:clear && npm run db:push"

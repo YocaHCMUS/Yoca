@@ -27,9 +27,9 @@ export interface WalletWinrateData {
   walletAddress: string;
   walletName?: string;
   winrate: number;
-  totalTrades: number;
-  winningTrades: number;
-  losingTrades: number;
+  totalTokens: number;
+  profitableTokens: number;
+  unprofitableTokens: number;
   winningDistribution: WinrateBin[];
   losingDistribution: WinrateBin[];
   avgWinUsd: number;
@@ -50,6 +50,8 @@ const MOBULA_PERIOD_BY_WINRATE_PERIOD: Record<WinratePeriod, string> = {
   "90D": "90d",
 };
 
+const pendingAnalysisRefreshes = new Map<string, Promise<WalletAnalysisSelect>>();
+
 export async function fetchWalletAnalysis(
   walletAddress: string,
   period: WinratePeriod,
@@ -65,6 +67,13 @@ export async function fetchWalletAnalysis(
     method: "GET",
     headers: mobula.getRequiredHeaders(),
   });
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(
+      `Mobula wallet analysis failed (${response.status})${body ? `: ${body.slice(0, 300)}` : ""}`,
+    );
+  }
+
   const result = await validateApiResult(mbl_WalletAnalysisSchema, response);
   if (!result) {
     throw new Error(
@@ -79,10 +88,9 @@ export async function fetchWalletAnalysis(
   const winOver500Count = distribution[">500%"];
   const loss0To50Count = distribution["-50%-0%"];
   const lossOver50Count = distribution["<-50%"];
-  const winningTrades =
-    win0To50Count + win50To200Count + win200To500Count + winOver500Count;
-  const losingTrades = loss0To50Count + lossOver50Count;
-  const totalTrades = winningTrades + losingTrades;
+  const profitableTokens = result.data.stat.periodWinCount;
+  const totalTokens = result.data.stat.periodActiveTokensCount;
+  const unprofitableTokens = Math.max(0, totalTokens - profitableTokens);
   const totalWinUsd = result.data.stat.winRealizedPnl;
   const totalLossUsd = Math.max(
     0,
@@ -90,7 +98,7 @@ export async function fetchWalletAnalysis(
   );
   const fetchedAtMs = dayjs.utc().valueOf();
 
-  const winrate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
+  const winrate = totalTokens > 0 ? (profitableTokens / totalTokens) * 100 : 0;
 
   const rows = await db
     .insert(walletAnalyses)
@@ -98,11 +106,12 @@ export async function fetchWalletAnalysis(
       walletAddress,
       period,
       winrate,
-      totalTrades,
-      winningTrades,
-      losingTrades,
-      avgWinUsd: winningTrades > 0 ? totalWinUsd / winningTrades : 0,
-      avgLossUsd: losingTrades > 0 ? totalLossUsd / losingTrades : 0,
+      // Legacy database column names store token-level win-rate counts.
+      totalTrades: totalTokens,
+      winningTrades: profitableTokens,
+      losingTrades: unprofitableTokens,
+      avgWinUsd: profitableTokens > 0 ? totalWinUsd / profitableTokens : 0,
+      avgLossUsd: unprofitableTokens > 0 ? totalLossUsd / unprofitableTokens : 0,
       win0To50Count,
       win50To200Count,
       win200To500Count,
@@ -129,11 +138,11 @@ export async function fetchWalletAnalysis(
       target: [walletAnalyses.walletAddress, walletAnalyses.period],
       set: {
         winrate,
-        totalTrades,
-        winningTrades,
-        losingTrades,
-        avgWinUsd: winningTrades > 0 ? totalWinUsd / winningTrades : 0,
-        avgLossUsd: losingTrades > 0 ? totalLossUsd / losingTrades : 0,
+        totalTrades: totalTokens,
+        winningTrades: profitableTokens,
+        losingTrades: unprofitableTokens,
+        avgWinUsd: profitableTokens > 0 ? totalWinUsd / profitableTokens : 0,
+        avgLossUsd: unprofitableTokens > 0 ? totalLossUsd / unprofitableTokens : 0,
         win0To50Count,
         win50To200Count,
         win200To500Count,
@@ -191,8 +200,17 @@ export async function getWalletAnalysis(
     return stored;
   }
 
+  const refreshKey = `${walletAddress}:${period}`;
+  const pendingRefresh = pendingAnalysisRefreshes.get(refreshKey);
+  const refresh = pendingRefresh ?? fetchWalletAnalysis(walletAddress, period);
+  if (pendingRefresh) {
+    dataUsage.record("provider_result");
+  } else {
+    pendingAnalysisRefreshes.set(refreshKey, refresh);
+  }
+
   try {
-    return await fetchWalletAnalysis(walletAddress, period);
+    return await refresh;
   } catch (error) {
     if (stored) {
       dataUsage.record("db_result", "stale_fallback");
@@ -205,6 +223,10 @@ export async function getWalletAnalysis(
     }
 
     throw error;
+  } finally {
+    if (pendingAnalysisRefreshes.get(refreshKey) == refresh) {
+      pendingAnalysisRefreshes.delete(refreshKey);
+    }
   }
 }
 

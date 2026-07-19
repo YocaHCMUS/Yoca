@@ -162,7 +162,8 @@ Không chạy mọi phép benchmark nặng trên toàn bộ 24 token và 24 wall
 #### Tầng 2 — Deep benchmark
 
 - [ ] Chọn 6-8 token và 6-8 wallet đại diện cho các nhóm ở Tầng 1.
-- [ ] Chạy cold cache, warm cache, repeated access và concurrent access.
+- [x] Hoàn thành pilot cold/warm có kiểm soát trên một token và một wallet ổn định; DB được `db:reset` ngay trước lượt cold, sau đó lặp lại cùng journey trên DB warm.
+- [ ] Mở rộng cold/warm sang tập sâu 6-8 token và 6-8 wallet; sau đó mới chạy repeated access và concurrent access.
 - [ ] Đo latency, external request, credit/token usage, retry, error và database connection.
 - [ ] Chỉ dùng tập sâu này để suy ra cost per journey; toàn bộ dataset dùng để đánh giá độ tương thích, không dùng để nhân trung bình một cách máy móc.
 
@@ -282,6 +283,9 @@ Mục tiêu: thu số liệu mà không thay đổi hành vi nghiệp vụ.
 
 - [x] Cài `prom-client@15.1.3` trong workspace server và thêm HTTP/provider counter + histogram.
 - [x] Runtime check trên port 4000: endpoint tắt trả 404, sai/thiếu Bearer token trả 401, token đúng trả 200; `/metrics` không tự làm tăng HTTP counter.
+- [x] Dựng Prometheus 3.11 local bằng Docker Compose, lưu dữ liệu bảy ngày và chỉ mở UI trên localhost.
+- [x] Kiểm tra end-to-end: target `yoca-server` chuyển `UP` và query được `yoca_http_requests_total` sau request thật.
+- [x] Dựng Grafana 12.1.1 local, provision Prometheus datasource và dashboard Yoca gồm 11 panel cho HTTP, provider, data usage, refresh/fallback và retry; chỉ mở UI trên localhost.
 
 ### Quyết định về in-memory data cache
 
@@ -309,9 +313,12 @@ Mục tiêu: tách đúng các loại kiểm tra, không gọi mọi thứ là s
 
 ### Integration benchmark
 
-- [ ] Chạy server và database thật trong môi trường kiểm soát.
-- [ ] Có thể gọi provider thật ở số lượng nhỏ để xác nhận đường tích hợp.
-- [ ] So sánh cold cache và warm cache.
+- [x] Chạy server và database thật trong môi trường kiểm soát.
+- [x] Gọi provider thật ở quy mô pilot để xác nhận đường tích hợp.
+- [x] So sánh cold và warm trên pilot Token Overview + Wallet Core. Artifact: `benchmark-results/runs/2026-07-19T06-15-38-732Z_journey-cold/`.
+- [x] Pilot đạt 24/24 endpoint-pass 2xx, không retry: Token Overview giảm 18.671 ms xuống 1.277 ms và provider attempt giảm 17 xuống 0; Wallet Core giảm 5.738 ms xuống 826 ms và provider attempt giảm 7 xuống 0.
+- [x] Đóng bốn instrumentation gap tại token details, holder stats, market chart và pool trades. Lượt kiểm tra sau sửa có 0/12 route `source=none`; artifact: `benchmark-results/runs/2026-07-19T06-21-50-093Z_journey-observed/`.
+- [x] Xác nhận tracker phân biệt được các nhánh thực tế trong cùng lượt: `db` cho details/holder stats, `db_provider` cho chart stale được nối thêm dữ liệu mới, và `provider` cho pool trades refresh.
 
 ### Load test
 
@@ -468,6 +475,15 @@ Mỗi thay đổi sửa lỗi phải có phạm vi file, cách rollback và phé
 ## Backlog kỹ thuật cần xử lý sớm
 
 Backlog này không thuộc trực tiếp Pricing/Business Model nhưng ảnh hưởng độ tin cậy của tracker và phạm vi kiến trúc dùng khi phản biện. Có thể thực hiện xen giữa Batch 2-4 khi đã đủ bằng chứng; không được tự động xóa hoặc refactor chỉ dựa trên static analysis.
+
+### Ngữ nghĩa Wallet Win Rate
+
+- [x] Đối chiếu raw Mobula Wallet Analysis trên nhiều ví: `periodWinCount` khớp tổng bucket PnL dương; `periodActiveTokensCount` và `periodTradingTokens` khớp tổng tất cả bucket. `periodBuys + periodSells` là số transaction riêng và có thể lớn hơn nhiều.
+- [x] Chốt chỉ số hiện hành là **Token Win Rate**: `periodWinCount / periodActiveTokensCount`; không trình bày nó như profitable trades trên giao diện hoặc API.
+- [ ] Đổi tên ba cột legacy `wallet_analyses.total_trades`, `winning_trades`, `losing_trades` sang tên token-level trong một đợt schema cleanup riêng; hiện service phải ghi chú rõ các cột này chỉ lưu số token.
+- [ ] Rà và bỏ hoặc nối lại `WalletOverviewWinRateBanner`: component còn contract cũ `winCount/totalTraded`, dùng ép kiểu trong `WalletOverview` và chưa nhận dữ liệu từ response overview thực tế.
+- [ ] Xác minh ý nghĩa `winRealizedPnlRate` với Mobula trước khi hiển thị hoặc dùng trong công thức. Thực nghiệm có giá trị lớn hơn 100 nên không được coi là win-rate frequency chỉ dựa trên mô tả tài liệu.
+- [ ] Nếu sau này cần trade-level win rate, lập batch riêng dùng closed position cycles; không suy ra từ số buy/sell transaction và không làm trong Pricing/Business Model hiện tại.
 
 ### Bảo mật và đường gọi provider phía client
 

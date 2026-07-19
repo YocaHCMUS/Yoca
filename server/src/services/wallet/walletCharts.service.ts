@@ -233,7 +233,7 @@ async function fetchWalletBalanceHistory(
     to: String(endMs),
     period: "1d",
     filterSpam: "true",
-    unlistedAssets: "false",
+    unlistedAssets: "true",
   }).toString();
 
   const resp = await pFetch(mobula.spec, "mobula.svc.wallet_balance_chart", endpoint, {

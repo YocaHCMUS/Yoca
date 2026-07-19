@@ -22,6 +22,7 @@ import * as cg from "@sv/util/util-coingecko.js";
 import * as moralis from "@sv/util/util-moralis.js";
 import { pFetch } from "@sv/util/rate-limit.js";
 import { validateApiResult } from "@sv/middlewares/validation.js";
+import { dataUsage } from "@sv/middlewares/request-context.js";
 import {
     cg_CoinDetailSchema,
     mrl_tokenMetadataSchema,
@@ -269,6 +270,7 @@ export async function getTokenMeta(tokenAddresses: string[]) {
     .from(tokenMeta)
     .where(inArray(tokenMeta.address, uniqueAddresses))
     .limit(uniqueAddresses.length);
+  dataUsage.record("db_result");
   const cachedByAddress = new Map(
     cachedRows.map((meta) => [meta.address, meta]),
   );
@@ -379,6 +381,7 @@ export async function getTokenDetails(tokenAddresses: string[]) {
       ),
     );
   if (res.length == tokenAddresses.length) {
+    dataUsage.record("db_result");
     return res;
   }
 
@@ -395,6 +398,9 @@ export async function getTokenDetails(tokenAddresses: string[]) {
     refreshedDetails = fetched.details;
   } catch (error) {
     if (isCgRateLimitError(error)) {
+      if (res.length > 0) {
+        dataUsage.record("db_result", "stale_fallback");
+      }
       return res;
     }
     throw error;
@@ -411,6 +417,13 @@ export async function getTokenDetails(tokenAddresses: string[]) {
       details: addressToRefreshedDetails[meta.address],
     }));
   const full = [...res, ...refreshed];
+
+  if (res.length > 0) {
+    dataUsage.record("db_result");
+  }
+  if (refreshed.length > 0) {
+    dataUsage.record("provider_result");
+  }
 
   return full;
 }
@@ -437,6 +450,7 @@ export async function getTokenHolderStats(tokenAddresses: string[]) {
   );
 
   if (staleAddresses.length == 0) {
+    dataUsage.record("db_result");
     return res;
   }
 
@@ -446,6 +460,13 @@ export async function getTokenHolderStats(tokenAddresses: string[]) {
   const refreshedStats = refreshed.flatMap((snapshot) =>
     snapshot ? [snapshot.stats] : [],
   );
+
+  if (res.length > 0) {
+    dataUsage.record("db_result");
+  }
+  if (refreshedStats.length > 0) {
+    dataUsage.record("provider_result");
+  }
 
   return [...res, ...refreshedStats];
 }

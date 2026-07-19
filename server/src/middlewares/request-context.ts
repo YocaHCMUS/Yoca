@@ -25,6 +25,7 @@ export interface RequestContext {
     outboundAttempts: OutboundAttempt[];
     databaseResultUsed: boolean;
     memoryResultUsed: boolean;
+    providerResultUsed: boolean;
     forcedRefreshRequested: boolean;
     staleFallbackUsed: boolean;
 }
@@ -60,6 +61,7 @@ function recordOutboundAttempt(
 export type DataAccessMark =
     | "db_result"
     | "memory_result"
+    | "provider_result"
     | "forced_refresh"
     | "stale_fallback";
 
@@ -76,6 +78,9 @@ function record(...usage: DataAccessMark[]): void {
                 break;
             case "memory_result":
                 store.memoryResultUsed = true;
+                break;
+            case "provider_result":
+                store.providerResultUsed = true;
                 break;
             case "forced_refresh":
                 store.forcedRefreshRequested = true;
@@ -104,6 +109,7 @@ export const requestContextMiddleware: MiddlewareHandler = async (c, next) => {
         outboundAttempts: [],
         databaseResultUsed: false,
         memoryResultUsed: false,
+        providerResultUsed: false,
         forcedRefreshRequested: false,
         staleFallbackUsed: false,
     };
@@ -128,6 +134,7 @@ export const requestContextMiddleware: MiddlewareHandler = async (c, next) => {
             requestSucceeded,
             databaseResultUsed: ctx.databaseResultUsed,
             memoryResultUsed: ctx.memoryResultUsed,
+            providerResultUsed: ctx.providerResultUsed,
             forcedRefreshRequested: ctx.forcedRefreshRequested,
             staleFallbackUsed: ctx.staleFallbackUsed,
             outboundAttempts: ctx.outboundAttempts,
