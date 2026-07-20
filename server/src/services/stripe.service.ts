@@ -47,7 +47,17 @@ export async function findOrCreateStripeCustomer(
   const stripe = getStripe();
 
   if (existingCustomerId) {
-    return existingCustomerId;
+    try {
+      const existing = await stripe.customers.retrieve(existingCustomerId);
+      if (!existing.deleted) {
+        return existingCustomerId;
+      }
+    } catch (err) {
+      if (!(err instanceof Stripe.errors.StripeInvalidRequestError && err.code === "resource_missing")) {
+        throw err;
+      }
+      // customer gone (e.g. test-mode data reset) — fall through and recreate
+    }
   }
 
   const customer = await stripe.customers.create({
