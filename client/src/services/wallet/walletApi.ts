@@ -585,9 +585,9 @@ export function fetchWalletTransfers(
   return client.api.wallets.transfers.history[":address"].$get({
     param: { address },
     query: {
-      limit: params?.limit != null ? String(params.limit) : undefined,
+      limit: params?.limit,
       cursor: params?.cursor,
-      minValueUsd: params?.minValueUsd != null ? String(params.minValueUsd) : undefined,
+      minValueUsd: params?.minValueUsd,
     },
   }).then(resp => {
     if (resp.ok) {
@@ -644,9 +644,9 @@ export function fetchWalletSwaps(
   return client.api.wallets.swaps.history[":address"].$get({
     param: { address },
     query: {
-      limit: params?.limit != null ? String(params.limit) : undefined,
+      limit: params?.limit,
       cursor: params?.cursor,
-      minValueUsd: params?.minValueUsd != null ? String(params.minValueUsd) : undefined,
+      minValueUsd: params?.minValueUsd,
     },
   }).then(resp => {
     if (resp.ok) {
