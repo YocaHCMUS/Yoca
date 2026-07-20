@@ -12,11 +12,11 @@ import { Connection, PublicKey } from "@solana/web3.js";
 
 /**
  * Merchant public key that receives SOL payments.
- * Loaded from SOLANA_MERCHANT_ADDRESS in server/.env.
+ * Loaded from VITE_SOLANA_MERCHANT_ADDRESS in server/.env.
  * Must match the client's VITE_SOLANA_MERCHANT_ADDRESS in client/.env.
  * The server is the AUTHORITATIVE source - client value is only used to build the tx.
  */
-const MERCHANT_ADDRESS = process.env.SOLANA_MERCHANT_ADDRESS || "YourMerchantAddressHere";
+const MERCHANT_ADDRESS = process.env.VITE_SOLANA_MERCHANT_ADDRESS || "YourMerchantAddressHere";
 
 /**
  * The Solana network this server is configured to accept payments on.
