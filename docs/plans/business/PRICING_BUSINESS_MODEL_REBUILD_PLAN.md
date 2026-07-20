@@ -424,10 +424,10 @@ Mục tiêu: nối kết quả đo với các giả định kinh doanh.
 - [x] Chốt session/user/tháng và tỷ lệ truy cập từng hành trình dưới dạng giả định trong ba demand profile.
 - [x] Không dùng một cache hit ratio chung; xây theo loại tài nguyên và hành vi truy cập.
 - [x] Tính request/credit/provider/tháng bằng công thức có thể kiểm tra.
-- [x] Tạo kịch bản favorable, base và pressure với cùng MAU/payer mix để cô lập độ nhạy demand.
+- [x] Chốt một kịch bản cơ sở duy nhất để nhóm dễ theo dõi; thay trực tiếp giả định khi có analytics thật.
 - [x] Tính data, AI, hosting, database và phí thanh toán ở mức phù hợp với cost scenario.
 - [x] Gọi đúng tên biên đóng góp; không gọi phần còn lại là lợi nhuận ròng.
-- [x] Phân tích độ nhạy cache reuse/AI usage bằng demand profile và conversion bằng một trục riêng.
+- [x] Loại các bảng độ nhạy khỏi tài liệu bàn giao để tránh nhiều nhánh giả định song song.
 - [ ] Thay sample cost của Chart News, Volatility và Wash Trading Chat bằng median/p95 sau benchmark.
 
 ## Batch 7 — Pricing và mô hình doanh thu
@@ -439,11 +439,14 @@ Mục tiêu: định giá theo giá trị và đối tượng sử dụng, khôn
 - [x] Cấu trúc pricing chỉ liệt kê phần khác biệt so với tier trước.
 - [x] Chốt giá đề xuất tháng 39/79/149 USD và năm bằng 10 tháng sử dụng cho 12 tháng.
 - [x] Đối chiếu đối thủ theo nhóm tính năng và đối tượng, không chỉ so con số giá.
-- [x] Chốt payer conversion 8% (5% Lite, 2% Plus, 1% Pro) dưới dạng giả định.
+- [x] Chốt payer conversion cơ sở 2%: 1,25% Lite, 0,5% Plus và 0,25% Pro.
 - [x] Tính doanh thu và biên đóng góp theo ba lát cắt MAU và ba demand profile.
 - [x] Xác định nguồn vốn hiện tại là nguồn lực tự có của nhóm; chi phí nâng cấp là kịch bản từ doanh thu, chưa phải vốn đã huy động.
 - [x] Đồng bộ giá, quota AI và quyền lợi Wash Trading vào Pricing UI và entitlement.
 - [!] Xác nhận thủ công Stripe Price ID tháng/năm trên dashboard trước khi mở thanh toán thật; giá nằm sau environment ID nên repo không tự kiểm chứng được.
+- [ ] **DEV-ONLY:** Hoàn thiện Alert entitlement: Free 0; Lite 2 ví/3 rule/100 event; Plus 5/10/500; Pro 15/30/2.000. Counter phải nằm trong database và không chặn password reset.
+- [ ] **DEV-ONLY:** Instrument Resend/Discord delivery, quota header và rate limit; calculator đã dành 0/20/20 USD cho ba mốc MAU.
+- [ ] **DEV-ONLY:** Smoke test Wash Trading Chat locked/limit/release và hoàn thiện cách UI diễn giải 401/403/429 trước khi xem là hoàn tất.
 
 ## Batch 8 — Nội dung bàn giao và phản biện
 

@@ -35,29 +35,27 @@ Quyết định nâng gói không gắn cứng vào MAU. Nhóm bắt đầu đá
 
 ## Kịch bản doanh thu và chi phí
 
-MAU trong phân tích là số người dùng khác nhau có ít nhất một tương tác cần dữ liệu Yoca trong cửa sổ 30 ngày. Kịch bản cơ sở giả định mỗi MAU có tám phiên hoạt động mỗi tháng và 8% người dùng trả phí, gồm 5% Lite, 2% Plus và 1% Pro. Đây là đầu vào kinh doanh dùng để khảo sát, chưa được trình bày như số liệu vận hành đã quan sát.
+MAU trong phân tích là số người dùng khác nhau có ít nhất một tương tác cần dữ liệu Yoca trong cửa sổ 30 ngày. Mô hình sử dụng duy nhất một kịch bản cơ sở: mỗi MAU có tám phiên hoạt động mỗi tháng và 2% người dùng trả phí, gồm 1,25% Lite, 0,5% Plus và 0,25% Pro. Đây là đầu vào lập kế hoạch thận trọng cho giai đoạn MVP.
 
 | Chỉ tiêu/tháng | 300 MAU | 3.000 MAU | 30.000 MAU |
 | --- | ---: | ---: | ---: |
-| Doanh thu | 1.506 USD | 15.060 USD | 150.600 USD |
-| Data provider | 85 USD | 523 USD | từ 1.787 USD |
-| Gemini và Brave Search | 71,78 USD | 762,84 USD | 7.673,43 USD |
+| Doanh thu | 376,50 USD | 3.765 USD | 37.650 USD |
+| Data provider | 85 USD | 523 USD | từ 1.342 USD |
+| Gemini và Brave Search | 71,75 USD | 762,49 USD | 7.669,88 USD |
 | Render và Supabase | 7 USD | 50 USD | 80 USD |
-| Phí thanh toán ước tính | 50,87 USD | 508,74 USD | 5.087,40 USD |
-| Số dư đóng góp | 1.291,34 USD | 13.215,42 USD | 135.972,17 USD |
-| Biên đóng góp | 85,75% | 87,75% | 90,29% |
+| Email giao dịch | 0 USD | 20 USD | 20 USD |
+| Phí thanh toán ước tính | 12,72 USD | 127,19 USD | 1.271,85 USD |
+| Số dư đóng góp | 200,03 USD | 2.282,33 USD | 27.266,27 USD |
+| Biên đóng góp | 53,13% | 60,62% | 72,42% |
 
-Số dư đóng góp là phần còn lại sau chi phí trực tiếp, dùng để trang trải nhân sự, marketing, thuế, pháp lý, hỗ trợ người dùng và đầu tư sản phẩm. Con số này chưa phải lợi nhuận ròng. Ở quy mô 30.000 MAU, giá Mobula được dùng theo mức khởi điểm Enterprise nên được xem là sàn ngân sách cần thay bằng báo giá thực tế.
-
-Nhóm còn chạy ba profile nhu cầu trên cùng MAU và payer mix. Profile thuận lợi có ít phiên hơn, khả năng tái sử dụng dữ liệu cao và mức dùng AI thấp; profile áp lực có nhiều phiên, nhiều ví cần làm mới và AI adoption cao. Biên đóng góp của ba profile lần lượt nằm trong khoảng 90,87%–76,02% tại 300 MAU, 90,88%–79,99% tại 3.000 MAU và 93,64%–83,15% tại 30.000 MAU. Khi payer conversion giảm từ 8% xuống 4%, mô hình vẫn còn số dư đóng góp dương nhưng ngân sách dành cho nhân sự và tăng trưởng giảm rõ rệt.
+Số dư đóng góp là phần còn lại sau chi phí trực tiếp, dùng để trang trải nhân sự, marketing, thuế, pháp lý, hỗ trợ người dùng và đầu tư sản phẩm. Con số này chưa phải lợi nhuận ròng. Ở quy mô 30.000 MAU, ngân sách Mobula dùng mức Enterprise công khai từ 750 USD; hợp đồng thực tế được chốt theo báo giá khi triển khai.
 
 ## Vận hành, nhân sự và nguồn vốn
 
-Yoca được phát triển theo tiến trình PoC, MVP, vận hành ban đầu và mở rộng. Trong giai đoạn đầu, hai thành viên nòng cốt trực tiếp duy trì sản phẩm; phần doanh thu tạo ra được ưu tiên cho dữ liệu, hạ tầng, quỹ dự phòng và hoàn thiện tính năng. Khi doanh thu định kỳ cùng khối lượng hỗ trợ tăng lên, nhóm có thể bổ sung nhân sự vận hành hoặc thuê dịch vụ chuyên môn theo từng đợt.
+Yoca được phát triển theo tiến trình PoC, MVP, vận hành ban đầu và mở rộng. Ở mốc 300 MAU, bốn thành viên tiếp tục tham gia bán thời gian và ưu tiên nguồn lực cho sản phẩm. Khoảng 3.000 MAU cho thấy sản phẩm đã có sức sống và có thể duy trì bốn vị trí thường xuyên ở mức chi phí thận trọng. Khi tiến đến 30.000 MAU, phạm vi hỗ trợ, bảo mật, dữ liệu và phát triển thị trường đòi hỏi mở rộng thành một doanh nghiệp nhỏ; phần lớn nguồn tiền tiếp tục được dành cho nhân sự và duy trì tăng trưởng.
 
 Mô hình cơ sở sử dụng tăng trưởng tự tài trợ. Sau khi MVP chứng minh được khả năng kỹ thuật, sản phẩm hình thành tập người dùng ổn định và có bằng chứng về doanh thu định kỳ, Yoca có thể tiếp cận chương trình hỗ trợ startup, đối tác chiến lược hoặc nhà đầu tư thiên thần/seed. Nguồn vốn mở rộng được gắn với kế hoạch sử dụng cụ thể cho nhân sự, dữ liệu, hạ tầng, bảo mật và phát triển thị trường.
 
 ## Kết luận
 
-Mô hình cho thấy pricing của Yoca có thể trang trải chi phí trực tiếp trong các kịch bản đã khảo sát, với điều kiện hệ thống tiếp tục kiểm soát cache reuse, AI usage và fan-out của phân tích ví. Ba mốc MAU đóng vai trò là các lát cắt dễ trình bày; hoạt động nâng cấp thực tế dựa trên quota, throughput và số đo vận hành. Cấu trúc freemium cùng bốn tier cho phép nhóm duy trì khả năng trải nghiệm ban đầu, tạo doanh thu từ nhu cầu phân tích chuyên sâu và mở rộng theo từng giai đoạn có kiểm soát.
-
+Mô hình cho thấy pricing của Yoca có thể trang trải chi phí trực tiếp theo kịch bản cơ sở 2%, với điều kiện hệ thống tiếp tục kiểm soát khả năng tái sử dụng dữ liệu, AI usage và fan-out của phân tích ví. Ba mốc MAU thể hiện tiến trình từ MVP tự trang trải, sang duy trì đội ngũ thường xuyên và cuối cùng là mở rộng thành một doanh nghiệp nhỏ với biên an toàn có kiểm soát.

@@ -1,0 +1,72 @@
+{
+  "benchmarks": [
+    {
+      "name": "Market Radar",
+      "coldMs": 25440,
+      "warmMs": 661,
+      "cold": "25,44 s",
+      "warm": "0,66 s",
+      "speedup": "38,5×",
+      "pass": "12/12"
+    },
+    {
+      "name": "Token Overview",
+      "coldMs": 17570,
+      "warmMs": 1141,
+      "cold": "17,57 s",
+      "warm": "1,14 s",
+      "speedup": "15,4×",
+      "pass": "16/16"
+    },
+    {
+      "name": "Wallet Core",
+      "coldMs": 5476,
+      "warmMs": 799,
+      "cold": "5,48 s",
+      "warm": "0,80 s",
+      "speedup": "6,9×",
+      "pass": "8/8"
+    }
+  ],
+  "scenarios": [
+    {
+      "mau": "300",
+      "revenue": "$377",
+      "directCost": "$176",
+      "contribution": "$200",
+      "costRatio": 46.87,
+      "margin": 53.13
+    },
+    {
+      "mau": "3.000",
+      "revenue": "$3.765",
+      "directCost": "$1.483",
+      "contribution": "$2.282",
+      "costRatio": 39.38,
+      "margin": 60.62
+    },
+    {
+      "mau": "30.000",
+      "revenue": "$37.650",
+      "directCost": "$10.384",
+      "contribution": "$27.266",
+      "costRatio": 27.58,
+      "margin": 72.42
+    }
+  ],
+  "costMix3k": [
+    { "name": "Gemini + Brave", "value": "$762", "share": "51%", "color": "#0f62fe" },
+    { "name": "Data provider", "value": "$523", "share": "35%", "color": "#4589ff" },
+    { "name": "Thanh toán", "value": "$127", "share": "9%", "color": "#78a9ff" },
+    { "name": "Hạ tầng", "value": "$50", "share": "3%", "color": "#a6c8ff" },
+    { "name": "Email", "value": "$20", "share": "1%", "color": "#d0e2ff" }
+  ],
+  "providerQuotas": [
+    { "name": "CoinGecko", "quota": "10K credits/tháng" },
+    { "name": "Birdeye", "quota": "30K CU/kỳ" },
+    { "name": "Mobula", "quota": "10K credits/tháng" },
+    { "name": "Helius", "quota": "1M credits/tháng" },
+    { "name": "Zerion", "quota": "2K requests/ngày" },
+    { "name": "Moralis", "quota": "40K CU/ngày" }
+  ]
+}

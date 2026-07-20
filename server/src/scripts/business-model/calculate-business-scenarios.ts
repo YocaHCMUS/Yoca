@@ -2,7 +2,7 @@ type ProviderPlan = {
   name: string;
   monthlyUsd: number;
   includedUnits: number | null;
-  priceStatus: "public" | "floor";
+  priceStatus: "public" | "starting";
 };
 
 type ScenarioInput = {
@@ -14,7 +14,7 @@ type ScenarioInput = {
 };
 
 type DemandProfile = {
-  name: "favorable" | "base" | "pressure";
+  name: "base";
   sessionsPerMau: number;
   marketRefreshFactor: number;
   tokenColdFactor: number;
@@ -26,9 +26,15 @@ type DemandProfile = {
 };
 
 const payerMix = {
-  lite: 0.05,
-  plus: 0.02,
-  pro: 0.01,
+  lite: 0.0125,
+  plus: 0.005,
+  pro: 0.0025,
+};
+
+const monthlyAlertDeliveryLimits = {
+  lite: 100,
+  plus: 500,
+  pro: 2_000,
 };
 
 const monthlyPrices = {
@@ -37,41 +43,17 @@ const monthlyPrices = {
   pro: 149,
 };
 
-const demandProfiles: DemandProfile[] = [
-  {
-    name: "favorable",
-    sessionsPerMau: 6,
-    marketRefreshFactor: 0.7,
-    tokenColdFactor: 0.75,
-    walletColdShare: 0.65,
-    activityColdShare: 0.2,
-    activityPages: 2,
-    tokenChartColdShare: 0.2,
-    aiUsageFactor: 0.6,
-  },
-  {
-    name: "base",
-    sessionsPerMau: 8,
-    marketRefreshFactor: 1,
-    tokenColdFactor: 1,
-    walletColdShare: 0.9,
-    activityColdShare: 0.35,
-    activityPages: 3,
-    tokenChartColdShare: 0.3,
-    aiUsageFactor: 1,
-  },
-  {
-    name: "pressure",
-    sessionsPerMau: 12,
-    marketRefreshFactor: 1.3,
-    tokenColdFactor: 1.25,
-    walletColdShare: 1,
-    activityColdShare: 0.55,
-    activityPages: 5,
-    tokenChartColdShare: 0.5,
-    aiUsageFactor: 1.6,
-  },
-];
+const baseProfile: DemandProfile = {
+  name: "base",
+  sessionsPerMau: 8,
+  marketRefreshFactor: 1,
+  tokenColdFactor: 1,
+  walletColdShare: 0.9,
+  activityColdShare: 0.35,
+  activityPages: 3,
+  tokenChartColdShare: 0.3,
+  aiUsageFactor: 1,
+};
 
 const scenarios: ScenarioInput[] = [
   {
@@ -113,12 +95,18 @@ const providerPlans: Record<string, ProviderPlan[]> = {
     { name: "Free", monthlyUsd: 0, includedUnits: 10_000, priceStatus: "public" },
     { name: "Start-up", monthlyUsd: 50, includedUnits: 125_000, priceStatus: "public" },
     { name: "Growth", monthlyUsd: 400, includedUnits: 1_250_000, priceStatus: "public" },
-    { name: "Enterprise floor", monthlyUsd: 750, includedUnits: null, priceStatus: "floor" },
+    { name: "Enterprise (starting price)", monthlyUsd: 750, includedUnits: null, priceStatus: "starting" },
   ],
   helius: [
     { name: "Free", monthlyUsd: 0, includedUnits: 1_000_000, priceStatus: "public" },
     { name: "Developer", monthlyUsd: 49, includedUnits: 10_000_000, priceStatus: "public" },
     { name: "Business", monthlyUsd: 499, includedUnits: 100_000_000, priceStatus: "public" },
+  ],
+  zerion: [
+    { name: "Developer", monthlyUsd: 0, includedUnits: 60_000, priceStatus: "public" },
+    { name: "Builder", monthlyUsd: 149, includedUnits: 250_000, priceStatus: "public" },
+    { name: "Startup", monthlyUsd: 499, includedUnits: 1_000_000, priceStatus: "public" },
+    { name: "Growth", monthlyUsd: 999, includedUnits: 2_500_000, priceStatus: "public" },
   ],
 };
 
@@ -133,11 +121,10 @@ function smallestPlan(provider: string, units: number): ProviderPlan {
 function calculateScenario(
   scenario: ScenarioInput,
   profile: DemandProfile,
-  payerScale = 1,
 ) {
-  const liteUsers = scenario.mau * payerMix.lite * payerScale;
-  const plusUsers = scenario.mau * payerMix.plus * payerScale;
-  const proUsers = scenario.mau * payerMix.pro * payerScale;
+  const liteUsers = scenario.mau * payerMix.lite;
+  const plusUsers = scenario.mau * payerMix.plus;
+  const proUsers = scenario.mau * payerMix.pro;
   const paidUsers = liteUsers + plusUsers + proUsers;
   const monthlyRevenue =
     liteUsers * monthlyPrices.lite +
@@ -183,12 +170,27 @@ function calculateScenario(
   const coingeckoPlan = smallestPlan("coingecko", coingeckoCredits);
   const birdeyePlan = smallestPlan("birdeye", birdeyeCu);
   const mobulaPlan = smallestPlan("mobula", mobulaCredits);
-  const heliusPlan = smallestPlan("helius", heliusCredits);
+  const publishedHeliusPlan = smallestPlan("helius", heliusCredits);
+  const heliusAdditionalCreditMillions =
+    heliusCredits > 10_000_000 && heliusCredits <= 100_000_000
+      ? Math.ceil((heliusCredits - 10_000_000) / 1_000_000)
+      : 0;
+  const heliusPlan: ProviderPlan =
+    publishedHeliusPlan.name == "Business" && heliusAdditionalCreditMillions > 0
+      ? {
+          name: `Developer + ${heliusAdditionalCreditMillions}M additional credits`,
+          monthlyUsd: 49 + heliusAdditionalCreditMillions * 5,
+          includedUnits: 10_000_000 + heliusAdditionalCreditMillions * 1_000_000,
+          priceStatus: "public",
+        }
+      : publishedHeliusPlan;
+  const zerionPlan = smallestPlan("zerion", tokenChartRequests);
   const providerUsd =
     coingeckoPlan.monthlyUsd +
     birdeyePlan.monthlyUsd +
     mobulaPlan.monthlyUsd +
-    heliusPlan.monthlyUsd;
+    heliusPlan.monthlyUsd +
+    zerionPlan.monthlyUsd;
 
   const geminiUsdPerGeneralUser =
     profile.sessionsPerMau *
@@ -213,9 +215,22 @@ function calculateScenario(
   const braveUsd = Math.max(0, braveRequests - 1_000) * 0.005;
   const aiUsd = geminiUsd + braveUsd;
 
+  // Alert entitlement is planned but not enforced yet. Budget 10% utilization
+  // of the monthly delivery allowance and a 5% password-reset rate per MAU.
+  const alertEmails =
+    (liteUsers * monthlyAlertDeliveryLimits.lite +
+      plusUsers * monthlyAlertDeliveryLimits.plus +
+      proUsers * monthlyAlertDeliveryLimits.pro) *
+    0.1;
+  const passwordResetEmails = scenario.mau * 0.05;
+  const resendEmails = alertEmails + passwordResetEmails;
+  // Review before 70% of the Free quota to retain room for daily traffic spikes.
+  const resendUsd = resendEmails <= 2_100 ? 0 : resendEmails <= 50_000 ? 20 : 35;
+
   const paymentUsd = monthlyRevenue * 0.029 + paidUsers * 0.3;
   const infrastructureUsd = scenario.renderUsd + scenario.supabaseUsd;
-  const totalCostUsd = providerUsd + aiUsd + paymentUsd + infrastructureUsd;
+  const totalCostUsd =
+    providerUsd + aiUsd + resendUsd + paymentUsd + infrastructureUsd;
   const contributionUsd = monthlyRevenue - totalCostUsd;
 
   return {
@@ -229,6 +244,9 @@ function calculateScenario(
       walletColdLoads,
       walletActivityPages,
       tokenChartRequests,
+      alertEmails,
+      passwordResetEmails,
+      resendEmails,
     },
     providerUsage: {
       coingeckoCredits,
@@ -242,18 +260,14 @@ function calculateScenario(
       birdeye: birdeyePlan,
       mobula: mobulaPlan,
       helius: heliusPlan,
-      zerion: {
-        name: "Developer",
-        monthlyUsd: 0,
-        includedUnits: 2_000 * 30,
-        priceStatus: "public",
-      },
+      zerion: zerionPlan,
     },
     costs: {
       providerUsd,
       geminiUsd,
       braveUsd,
       aiUsd,
+      resendUsd,
       renderUsd: scenario.renderUsd,
       supabaseUsd: scenario.supabaseUsd,
       paymentUsd,
@@ -264,20 +278,8 @@ function calculateScenario(
   };
 }
 
-const baseProfile = demandProfiles.find((profile) => profile.name == "base");
-if (!baseProfile) throw new Error("Base demand profile is missing");
-
 const results = scenarios.map((scenario) =>
   calculateScenario(scenario, baseProfile),
-);
-const sensitivityScenarios = scenarios.flatMap((scenario) =>
-  demandProfiles.map((profile) => calculateScenario(scenario, profile)),
-);
-const conversionScenarios = scenarios.flatMap((scenario) =>
-  [0.5, 1, 1.5].map((payerScale) => ({
-    payerConversion: 0.08 * payerScale,
-    ...calculateScenario(scenario, baseProfile, payerScale),
-  })),
 );
 
 // Scan a continuous MAU range so plan changes are not tied to presentation anchors.
@@ -337,8 +339,6 @@ console.log(
   JSON.stringify(
     {
       representativeScenarios: results,
-      sensitivityScenarios,
-      conversionScenarios,
       providerUpgradeBreakpoints,
     },
     null,

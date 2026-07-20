@@ -7,7 +7,7 @@
 Nguồn chuẩn hiện tại:
 
 - `calculate-business-scenarios.ts`: công thức và kết quả có thể chạy lại.
-- `BUSINESS_SCENARIOS_2026-07-19.md`: giải thích scenario và sensitivity.
+- `BUSINESS_SCENARIOS_2026-07-19.md`: giải thích kịch bản cơ sở.
 - `PROVIDER_QUOTA_RESEARCH_CHECKLIST.md`: giá, quota và operation cost.
 - `JOURNEY_COST_INPUTS_2026-07-19.md`: benchmark journey và fan-out.
 - `AI_TIER_COST_MODEL_2026-07-19.md`: AI sample cost và quota.
@@ -55,6 +55,40 @@ Quota reset lúc 00:00 UTC. Wash Trading Analysis và Chat yêu cầu Plus. Wall
 - Cần kiểm tra Stripe Dashboard để bảo đảm Price ID tháng/năm trong environment trỏ đúng 39/390, 79/790 và 149/1.490 USD. Repo không thể tự xác nhận giá nằm sau Price ID.
 - Luồng thanh toán SOL hiện dùng Devnet/Testnet với số SOL cố định 0,001/0,005/0,01 nhằm kiểm thử xác minh giao dịch. Đây chưa phải USD→SOL pricing cho Mainnet và không được dùng làm nguồn giá thương mại.
 
+## Việc giới hạn tính năng còn phải hoàn thiện
+
+Mục này chỉ dùng nội bộ, không đưa vào bản hướng giảng viên hoặc slide.
+
+### Alert và chi phí Resend
+
+Alert hiện có thể gửi đồng thời một email qua Resend và một Discord webhook khi giao dịch khớp rule. Password reset cũng dùng Resend, vì vậy hai luồng dùng chung quota email. Discord không có đơn giá gửi tin nhắn trong mô hình nhưng vẫn tạo request, chịu rate limit và làm tăng tải xử lý.
+
+Entitlement dự kiến:
+
+| Tier | Ví theo dõi | Rule hoạt động | Event gửi ra ngoài/tháng |
+| --- | ---: | ---: | ---: |
+| Free | 0 | 0 | 0 |
+| Lite | 2 | 3 | 100 |
+| Plus | 5 | 10 | 500 |
+| Pro | 15 | 30 | 2.000 |
+
+Một giao dịch khớp rule tính là một event dù gửi qua một hay cả hai kênh. Khi hết quota, hệ thống có thể tiếp tục ghi lịch sử nhưng không gửi email/Discord. Password reset không bị chặn bởi quota Alert.
+
+Calculator tạm giả định người dùng sử dụng 10% hạn mức event và 5% MAU phát sinh một email khôi phục mỗi tháng. Resend Free có 3.000 email/tháng và 100 email/ngày; Pro 20 USD có 50.000 email/tháng. Mô hình nâng lên Pro khi dự báo vượt 2.100 email, tương đương 70% quota Free, để dành headroom cho đợt giao dịch tăng đột biến. Nguồn: https://resend.com/pricing và https://resend.com/docs/knowledge-base/account-quotas-and-limits, khảo sát ngày 2026-07-19.
+
+**TODO kỹ thuật trước khi công bố entitlement Alert:**
+
+- Chặn tạo followed wallet và alert rule ở Free.
+- Enforce số ví, số rule hoạt động và số event gửi theo tier tại server.
+- Dùng counter bền vững trong database; không dùng bộ đếm process-local.
+- Ghi Resend success/failure, quota header và Discord dispatch vào analytics.
+- Dành quota riêng cho password reset để Alert không làm gián đoạn khôi phục tài khoản.
+- Thêm queue/throttling vì Resend mặc định giới hạn 5 request/giây trên toàn team.
+
+### Wash Trading Chat
+
+Backend đã có feature ID, kiểm tra Plus/Pro, reserve/release usage và hạn mức 5/10 lượt mỗi ngày cho Plus/Pro. Phần còn lại cần hoàn thiện là xử lý trạng thái locked/limit nhất quán trên giao diện và smoke test các trường hợp 401, 403, 429 cùng việc hoàn lượt khi Gemini thất bại. Không mô tả giới hạn này là đã hoàn thiện trong tài liệu hướng giảng viên cho đến khi kiểm tra xong luồng người dùng.
+
 ## Phương pháp tính
 
 MAU là số người dùng khác nhau có ít nhất một tương tác cần dữ liệu Yoca trong 30 ngày. Anonymous user cần identifier ổn định khi có analytics thật. Cost model hiện gộp guest và account; revenue dùng payer mix riêng.
@@ -78,6 +112,7 @@ Mobula    = T + 21W + pages(A) credits
 Helius    = 100 × wallet balance pages + Wash Trading credits
 Zerion    = Z + missing mapping batches
 AI        = Gemini input/output/thinking + Brave Search
+Email     = Alert deliveries + password reset emails → Resend tier
 ```
 
 Không cộng các đơn vị khác nhau thành một quota chung. Retry chỉ được cộng vào billing khi provider xác nhận cách tính hoặc phép đo usage cho thấy có trừ quota.
@@ -97,35 +132,66 @@ AI hiện dùng sample cost/proxy, chưa phải median/p95. Wallet Chat đặc b
 
 ## Assumptions và kết quả
 
-Base dùng 8 session/MAU/tháng, payer conversion 8% với Lite/Plus/Pro bằng 5%/2%/1%. Token, wallet, activity và AI adoption được ghi chi tiết trong calculator.
+Mô hình duy nhất dùng 8 session/MAU/tháng và payer conversion 2%, gồm Lite/Plus/Pro bằng 1,25%/0,5%/0,25%. Token, wallet, activity, Alert và AI adoption được ghi chi tiết trong calculator.
 
 | MAU | Revenue | Direct cost | Contribution | Margin |
 | ---: | ---: | ---: | ---: | ---: |
-| 300 | 1.506,00 | 214,66 | 1.291,34 | 85,75% |
-| 3.000 | 15.060,00 | 1.844,58 | 13.215,42 | 87,75% |
-| 30.000 | 150.600,00 | 14.627,83 | 135.972,17 | 90,29% |
+| 300 | 376,50 | 176,47 | 200,03 | 53,13% |
+| 3.000 | 3.765,00 | 1.482,67 | 2.282,33 | 60,62% |
+| 30.000 | 37.650,00 | 10.383,73 | 27.266,27 | 72,42% |
 
-Direct cost gồm blockchain data provider, Gemini/Brave, Render/Supabase và payment processing proxy. Contribution chưa trừ lương, marketing, thuế, pháp lý và support.
+Direct cost gồm blockchain data provider, Gemini/Brave, Resend, Render/Supabase và payment processing proxy. Contribution chưa trừ lương, marketing, thuế, pháp lý và support.
 
-### Demand sensitivity
+Để nhóm dễ hiểu và trình bày thống nhất, calculator không còn xuất nhiều profile nhu cầu hoặc nhiều conversion. Khi có analytics người dùng thật, nhóm thay trực tiếp bộ giả định cơ sở và tính lại, thay vì duy trì nhiều kịch bản song song.
 
-| MAU | Favorable | Base | Pressure |
-| ---: | ---: | ---: | ---: |
-| 300 | 90,87% | 85,75% | 76,02% |
-| 3.000 | 90,88% | 87,75% | 79,99% |
-| 30.000 | 93,64% | 90,29% | 83,15% |
+## Phân tích số dư và phân bổ nguồn tiền
 
-Các số là contribution margin. Favorable dùng 6 session, cache reuse cao và 60% AI usage của base. Pressure dùng 12 session, wallet cold cao, activity dày và 160% AI usage.
+Phần này trả lời câu hỏi “Yoca lời bao nhiêu?” theo cách nhóm có thể giải thích được. Quy đổi minh họa dùng 1 USD bằng 25.000 đồng. `Contribution` là số dư sau chi phí trực tiếp, chưa phải lợi nhuận ròng. Chỉ phần được chủ động giữ lại sau ngân sách nhân sự, tăng trưởng, dự phòng và nghĩa vụ doanh nghiệp mới có thể xem là thặng dư vận hành.
 
-### Conversion sensitivity trên base demand
+### Mốc 300 MAU — MVP tự trang trải
 
-| MAU | 4% payer | 8% payer | 12% payer |
-| ---: | ---: | ---: | ---: |
-| 300 | 74,87% | 85,75% | 89,37% |
-| 3.000 | 78,88% | 87,75% | 90,71% |
-| 30.000 | 83,96% | 90,29% | 92,40% |
+Trong 300 MAU có khoảng 6 người trả phí. Doanh thu là 376,50 USD/tháng; sau 176,47 USD chi phí trực tiếp còn 200,03 USD, tương đương khoảng 5 triệu đồng.
 
-Payer mix giữ tỷ lệ Lite:Plus:Pro bằng 5:2:1. Conversion là giả định, chưa phải product analytics.
+| Phân bổ | Tỷ lệ | USD/tháng | Xấp xỉ VND/tháng |
+| --- | ---: | ---: | ---: |
+| Dự phòng provider và phát triển sản phẩm | 40% | 80,01 | 2,00 triệu |
+| Thu hút và hỗ trợ người dùng | 30% | 60,01 | 1,50 triệu |
+| Hỗ trợ 4 thành viên bán thời gian | 20% | 40,01 | 1,00 triệu |
+| Hành chính và chi phí phát sinh | 10% | 20,00 | 0,50 triệu |
+
+Khoản hỗ trợ bình quân chỉ khoảng 250 nghìn đồng mỗi người. Mốc này chứng minh sản phẩm có thể tự thanh toán chi phí và tiếp tục phát triển; chưa tạo ra thu nhập ổn định.
+
+### Mốc 3.000 MAU — duy trì đội ngũ thường xuyên
+
+Trong 3.000 MAU có khoảng 60 người trả phí. Doanh thu là 3.765 USD/tháng; sau 1.482,67 USD chi phí trực tiếp còn 2.282,33 USD, tương đương khoảng 57,06 triệu đồng. Lượng người dùng ổn định ở mốc này là tín hiệu sản phẩm có tiềm năng, vì vậy nhóm chuyển sang cơ cấu bốn vị trí thường xuyên thay vì tiếp tục xem đây là công việc phụ.
+
+| Phân bổ | Tỷ lệ | USD/tháng | Xấp xỉ VND/tháng |
+| --- | ---: | ---: | ---: |
+| Thu nhập đội ngũ | 60% | 1.369,40 | 34,24 triệu |
+| Marketing và phát triển người dùng | 20% | 456,47 | 11,41 triệu |
+| Dự phòng và phát triển sản phẩm | 10% | 228,23 | 5,71 triệu |
+| Hành chính, thuế và pháp lý | 10% | 228,23 | 5,71 triệu |
+
+Nếu bốn thành viên cùng làm thường xuyên, ngân sách đội ngũ bình quân khoảng 342 USD, tương đương 8,56 triệu đồng mỗi người. Đây là mức vận hành thận trọng của một nhóm nhỏ, chưa tạo nhiều dư địa tuyển thêm người.
+
+### Mốc 30.000 MAU — mở rộng thành đơn vị vận hành
+
+Trong 30.000 MAU có khoảng 600 người trả phí. Doanh thu là 37.650 USD/tháng; sau 10.383,73 USD chi phí trực tiếp còn 27.266,27 USD, tương đương khoảng 681,66 triệu đồng. Đây là quy mô một doanh nghiệp nhỏ, nhưng Yoca phải tiếp tục chi mạnh để duy trì 30.000 người dùng và phục vụ 600 khách hàng trả phí.
+
+| Phân bổ | Tỷ lệ | USD/tháng | Xấp xỉ VND/tháng |
+| --- | ---: | ---: | ---: |
+| Nhân sự khoảng 20 người | 25% | 6.816,57 | 170,41 triệu |
+| Marketing, thu hút và giữ người dùng | 40% | 10.906,51 | 272,66 triệu |
+| Phát triển sản phẩm và bảo mật | 15% | 4.089,94 | 102,25 triệu |
+| Hành chính, thuế và pháp lý | 10% | 2.726,63 | 68,17 triệu |
+| Dự phòng | 5% | 1.363,31 | 34,08 triệu |
+| Thặng dư vận hành | 5% | 1.363,31 | 34,08 triệu |
+
+Ngân sách nhân sự bình quân khoảng 8,52 triệu đồng/người cho đội ngũ 20 người. Đây là ngân sách bình quân, còn phải điều chỉnh theo vai trò và nghĩa vụ lao động. Thặng dư chỉ chiếm 5%; biến động về chi phí thu hút người dùng, provider hoặc conversion có thể làm phần này giảm đáng kể.
+
+### Lập luận nhóm cần thống nhất
+
+300 MAU giúp Yoca tự nuôi sản phẩm; 3.000 MAU tạo điều kiện duy trì bốn người làm việc thường xuyên với mức thu nhập thận trọng; 30.000 MAU đòi hỏi mở rộng thành doanh nghiệp nhỏ khoảng 20 người nhưng vẫn chỉ giữ 5% thặng dư. Các tỷ lệ phân bổ là nguyên tắc lập ngân sách, không phải cam kết lương hay kết quả đã đạt được.
 
 ## Provider breakpoint và policy nâng gói
 
@@ -139,9 +205,9 @@ Base scan từ 100 đến 50.000 MAU cho các tín hiệu ngân sách:
 | 1.600 | Mobula Start-up → Growth |
 | 2.775 | Helius Free → Developer |
 | 3.525 | CoinGecko Basic → Analyst |
-| 15.925 | Mobula Growth → Enterprise floor |
+| 15.925 | Mobula Growth → Enterprise, giá từ 750 USD |
 | 26.325 | CoinGecko Analyst → Lite |
-| 27.650 | Helius Developer → Business |
+| 27.750 | Helius Developer → Developer + credit bổ sung |
 
 Breakpoint phụ thuộc demand assumptions. Policy vận hành:
 
@@ -151,13 +217,13 @@ Breakpoint phụ thuộc demand assumptions. Policy vận hành:
 - Xem 429, RPS/RPM và p95 latency tách khỏi quota tháng.
 - Nâng Render theo CPU/RAM/latency khi có số đo; không nâng chỉ vì MAU.
 
-Mobula trên 1,25 triệu credit dùng giá Enterprise từ 750 USD nên chỉ là floor. Helius quanh 10 triệu credit cần kiểm tra khả năng mua thêm credit Developer trước khi mặc định Business. Zerion Developer 0 USD có 2.000 request/ngày; giá tier kế tiếp chưa có nguồn public đủ chắc chắn.
+Mobula trên 1,25 triệu credit dùng giá Enterprise công khai từ 750 USD; giá hợp đồng cụ thể chỉ cần xác nhận khi mua. Helius công bố credit bổ sung cho gói trả phí ở mức 5 USD mỗi 1 triệu credit, nên vượt nhẹ 10 triệu vẫn giữ Developer thay vì lên Business. Zerion Developer của key hiện tại có 2.000 request/ngày; tier kế tiếp là Builder 149 USD/tháng với 250.000 request.
 
 ## Hạ tầng và nhân sự
 
 Cost scenario dùng Static Site 0 USD, Render Starter 7 USD làm production floor, Standard 25 USD cho mức cao hơn và ngân sách 25–50 USD ở lát cắt lớn. Supabase dùng Free ban đầu và Pro từ 25 USD. Đây là capacity budget, không phải claim hệ thống chịu được một MAU cụ thể.
 
-Giai đoạn đầu có hai maintainer nòng cốt và công sức chưa tạo thành cash salary. Doanh thu ưu tiên provider, hạ tầng, reserve và sản phẩm. Khi recurring revenue ổn định, bổ sung compensation và support/ops. External funding chỉ xuất hiện sau PoC/MVP, traction và kế hoạch sử dụng vốn; baseline vẫn có thể tăng trưởng từ doanh thu.
+Nhân sự và phân bổ nguồn tiền được trình bày riêng ở mục trên. External funding chỉ xuất hiện sau PoC/MVP, traction và kế hoạch sử dụng vốn; baseline vẫn ưu tiên tăng trưởng từ doanh thu.
 
 ## Quy trình cập nhật mô hình
 
@@ -182,17 +248,21 @@ MAU giúp tạo kịch bản kinh doanh. Calculator chuyển MAU thành session,
 
 Ba mốc là lát cắt dễ đọc trên slide. Calculator quét liên tục để phát hiện breakpoint nên quyết định nâng cấp không bị khóa vào ba mốc.
 
-### 85–90% có phải lợi nhuận không?
+### 53–71% có phải lợi nhuận không?
 
 Đó là contribution margin sau direct cost. Lương, marketing, thuế, pháp lý và support chưa được trừ.
 
-### Vì sao contribution margin tăng khi MAU tăng?
+### Thầy hỏi: “Rốt cuộc tụi em lời bao nhiêu?”
+
+> Trong kịch bản cơ sở 300 MAU, nhóm em dự kiến thu khoảng 377 USD và còn khoảng 200 USD sau chi phí trực tiếp. Khoản này chủ yếu được giữ cho sản phẩm nên chưa tạo thu nhập đáng kể. Khoảng 3.000 MAU, với 60 người trả phí, mới là mốc đủ duy trì bốn thành viên làm việc thường xuyên ở mức khoảng 8–9 triệu đồng mỗi người. Khi đạt 30.000 MAU, Yoca phải mở rộng đội ngũ và tiếp tục dành phần lớn nguồn tiền cho tăng trưởng; thặng dư vận hành dự kiến chỉ khoảng 5% số dư sau chi phí trực tiếp.
+
+### Vì sao biên đóng góp tăng khi MAU tăng?
 
 Revenue tăng gần tuyến tính theo payer mix, còn provider bán theo gói quota. Giữa hai breakpoint, phần quota chưa dùng tạo operating leverage. Khi đổi gói, cost nhảy bậc.
 
 ### Vì sao 300 MAU đã phải nâng provider?
 
-Base giả định wallet cold rate cao và 8 session/MAU. Favorable profile cho kết quả khác. Breakpoint là tín hiệu ngân sách từ assumptions, chưa phải quan sát production.
+Mô hình giả định wallet cold rate cao và 8 session/MAU. Breakpoint là tín hiệu ngân sách từ bộ giả định cơ sở, chưa phải quan sát production.
 
 ### Vì sao quota AI thấp hơn UI cũ?
 
@@ -244,7 +314,6 @@ Giai đoạn đầu tái đầu tư revenue. Sau khi PoC/MVP có traction và re
 | Headroom | Phần quota/capacity giữ lại để hấp thụ biến động |
 | Rate limit | Giới hạn tốc độ gọi API |
 | Stress ceiling | Chi phí tối đa theo quyền lợi nếu người dùng dùng gần hết quota |
-| Sensitivity analysis | Thay đổi một nhóm giả định để xem kết quả biến động ra sao |
 | Single-flight | Cho các request cùng khóa dùng chung một lần refresh đang chạy |
 | Cache stampede | Nhiều request cùng thấy stale và đồng thời gọi provider |
 
@@ -288,14 +357,13 @@ Giai đoạn đầu tái đầu tư revenue. Sau khi PoC/MVP có traction và re
 
 | MAU | Revenue | Direct cost | Contribution margin |
 | ---: | ---: | ---: | ---: |
-| 300 | 1.506 USD | 215 USD | 85,75% |
-| 3.000 | 15.060 USD | 1.845 USD | 87,75% |
-| 30.000 | 150.600 USD | từ 14.628 USD | 90,29% |
+| 300 | 377 USD | 176 USD | 53,13% |
+| 3.000 | 3.765 USD | 1.483 USD | 60,62% |
+| 30.000 | 37.650 USD | từ 10.384 USD | 72,42% |
 
-> Base assumption: 8% payer conversion  
-> Pressure margin: 76,02% / 79,99% / 83,15%
+> Một giả định xuyên suốt: 2% payer conversion, gồm 1,25% Lite · 0,5% Plus · 0,25% Pro
 
-> Hai maintainer giai đoạn đầu → tái đầu tư doanh thu → bổ sung nhân sự/nguồn vốn khi có traction
+> 4 thành viên bán thời gian → 4 vị trí thường xuyên → doanh nghiệp nhỏ khoảng 20 người
 
 **Speaker note:** Đây là contribution, chưa phải net profit. Ba mốc là lát cắt; calculator quét liên tục và cost được cập nhật khi provider/pricing thay đổi.
 
@@ -306,9 +374,8 @@ Giai đoạn đầu tái đầu tư revenue. Sau khi PoC/MVP có traction và re
 - [ ] Wash Trading Chat 401/403/429 được UI diễn giải rõ.
 - [ ] Chạy smoke test reservation/release cho sáu AI feature.
 - [ ] Chạy calculator và lưu output dùng cho slide.
-- [ ] Thay Mobula Enterprise floor nếu có báo giá thật.
-- [ ] Kiểm tra Helius Developer overage trước khi chọn Business.
+- [x] Dùng giá Mobula Enterprise công khai từ 750 USD; xin báo giá chỉ khi chuẩn bị mua.
+- [x] Tính Helius Developer kèm credit bổ sung 5 USD/1 triệu trước khi cân nhắc Business.
 - [ ] Ghi ngày khảo sát trên slide hoặc speaker note.
 - [ ] Mỗi thành viên giải thích được MAU, conversion và contribution margin.
 - [ ] Không gọi contribution là net profit.
-
