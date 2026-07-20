@@ -123,7 +123,13 @@ export function TokenOverviewChart({
     const sorted = [...topPools.data].sort(
       (a, b) => (b.data.liquidityUsd ?? 0) - (a.data.liquidityUsd ?? 0),
     );
-    return sorted[0]?.data?.poolAddress ?? null;
+    // Prefer a pool quoted in USD (stablecoin) — GeckoTerminal's embed can
+    // fail to resolve a chart for pools quoted in an obscure token.
+    const usdQuoted = sorted.find((pool) => {
+      const quotePriceUsd = Number(pool.data.quoteTokenPriceUsd);
+      return quotePriceUsd > 0.98 && quotePriceUsd < 1.02;
+    });
+    return (usdQuoted ?? sorted[0])?.data?.poolAddress ?? null;
   }, [topPools.data]);
   const [prices, setPrices] = useState<[number, number][]>([]);
   const [marketCaps, setMarketCaps] = useState<[number, number][]>([]);
