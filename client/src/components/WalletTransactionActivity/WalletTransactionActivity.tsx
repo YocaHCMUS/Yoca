@@ -70,6 +70,10 @@ function mergeMinValueUsd(hiddenLowValue: boolean, explicitMin?: number): number
   return explicitMin == null ? 1 : Math.max(1, explicitMin);
 }
 
+function numToQuery(value?: number): string | undefined {
+  return value == null ? undefined : String(value);
+}
+
 function makeTokenOptions(items: Array<{ address: string; symbol: string | null; name?: string | null }>): TbleSelectFilterOption[] {
   const byAddress = new Map<string, TbleSelectFilterOption>();
   for (const item of items) {
@@ -287,8 +291,8 @@ export function WalletTransactionActivity({ address }: { address: string }) {
       search: debouncedSwapSearch.trim() || undefined,
       soldTokenAddress: firstSelected(flowFilter.sold ?? null),
       boughtTokenAddress: firstSelected(flowFilter.bought ?? null),
-      minValueUsd: mergeMinValueUsd(hideLowValue, valueFilter.min),
-      maxValueUsd: valueFilter.max,
+      minValueUsd: numToQuery(mergeMinValueUsd(hideLowValue, valueFilter.min)),
+      maxValueUsd: numToQuery(valueFilter.max),
       sortBy: swapSort?.key === "value" ? ("value" as const) : undefined,
       sortDirection: swapSort?.direction,
     };
@@ -304,10 +308,10 @@ export function WalletTransactionActivity({ address }: { address: string }) {
       direction: firstSelected(flowFilter.direction ?? null) as "send" | "receive" | undefined,
       counterpartyAddress: firstSelected(flowFilter.counterparty ?? null),
       tokenAddress: firstSelected(tokenFilter.symbol ?? null),
-      minTokenAmount: amountFilter.min,
-      maxTokenAmount: amountFilter.max,
-      minValueUsd: mergeMinValueUsd(hideLowValue, valueFilter.min),
-      maxValueUsd: valueFilter.max,
+      minTokenAmount: numToQuery(amountFilter.min),
+      maxTokenAmount: numToQuery(amountFilter.max),
+      minValueUsd: numToQuery(mergeMinValueUsd(hideLowValue, valueFilter.min)),
+      maxValueUsd: numToQuery(valueFilter.max),
       sortBy: transferSort?.key === "value" ? ("value" as const) : undefined,
       sortDirection: transferSort?.direction,
     };
