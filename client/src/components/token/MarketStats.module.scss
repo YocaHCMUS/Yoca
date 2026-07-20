@@ -1,17 +1,9 @@
-@use "@carbon/react/scss/theme" as *;
-// @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-// Semantic colors (same in both themes)
-$color-success: #10b981; // Emerald 500
-$color-danger: #ef4444; // Red 500
-// $font-family: 'Inter', system-ui, sans-serif;
-
 .container {
   display: flex;
   flex-direction: column;
   width: 100%;
   border-radius: 0;
-  background: $background;
+  background: transparent;
   overflow: visible;
   box-sizing: border-box;
 
@@ -24,7 +16,7 @@ $color-danger: #ef4444; // Red 500
 .gridRow {
   display: flex;
   width: 100%;
-  border-bottom: 1px solid $border-subtle;
+  border-bottom: 1px solid var(--yoca-border);
   min-height: 60px;
 
   &:last-child {
@@ -47,7 +39,7 @@ $color-danger: #ef4444; // Red 500
   align-items: center;
   justify-content: center;
   padding: 12px 8px;
-  border-right: 1px solid $border-subtle;
+  border-right: 1px solid var(--yoca-border);
   gap: 4px;
 
   &:last-child {
@@ -81,11 +73,11 @@ $color-danger: #ef4444; // Red 500
 // Labels & Values
 
 .label {
-  font-size: 13px;
-  font-weight: 400;
-  color: $text-helper;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--yoca-text-muted);
   text-transform: uppercase;
-  letter-spacing: -0.1px;
+  letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
@@ -97,46 +89,46 @@ $color-danger: #ef4444; // Red 500
 
 .subtext {
   font-size: 12px;
-  color: $text-helper;
+  color: var(--yoca-text-muted);
   font-weight: 500;
 }
 
 .valueLarge {
   font-size: 15px;
-  font-weight: 600;
-  color: $text-primary;
+  font-weight: 700;
+  color: var(--yoca-text-main);
 }
 
 .valueMedium {
   font-size: 15px;
-  font-weight: 500;
-  color: $text-primary;
+  font-weight: 600;
+  color: var(--yoca-text-main);
 }
 
 .valueSmall {
   font-size: 15px;
-  font-weight: 500;
-  color: $text-primary;
+  font-weight: 600;
+  color: var(--yoca-text-main);
 }
 
 // Utility Colors
 
 .buyColor {
-  color: $color-success !important;
+  color: var(--yoca-success) !important;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .sellColor {
-  color: $color-danger !important;
+  color: var(--yoca-danger) !important;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .positive {
-  color: $color-success !important;
+  color: var(--yoca-success) !important;
 }
 
 .negative {
-  color: $color-danger !important;
+  color: var(--yoca-danger) !important;
 }

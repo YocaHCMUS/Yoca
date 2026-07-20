@@ -139,7 +139,7 @@ function useTokenPageData(address: string, poolAddress: string) {
 
 export default function TokenPage() {
   const navigate = useNavigate();
-  const { fmt } = useLocalization();
+  const { tr, fmt } = useLocalization();
 
   const { address, poolAddress } = useParams<{
     address: string;
@@ -249,7 +249,7 @@ export default function TokenPage() {
     <PageWrapper>
       <div className={styles.tokenPoolPage}>
         <section className={styles.pageHero}>
-          <div className={styles.pageHeroEyebrow}>Pool Intelligence</div>
+          <div className={styles.pageHeroEyebrow}>{tr("token.poolPage.eyebrow")}</div>
           <div className={styles.pageHeroBody}>
             <div className={styles.pageHeroTitleRow}>
               <h1 className={styles.pageHeroTitle}>
@@ -260,56 +260,10 @@ export default function TokenPage() {
               )}
             </div>
             <p className={styles.pageHeroDescription}>
-              Monitor the selected pool&apos;s live market structure, liquidity,
-              holder concentration, trading flow, and event-driven signals
-              without changing any existing token analytics behavior.
+              {tr("token.poolPage.description")}
             </p>
           </div>
 
-          <div className={styles.heroStats}>
-            <div className={styles.heroStat}>
-              <span className={styles.heroStatLabel}>Price</span>
-              <span className={styles.heroStatValue}>
-                {fmt.num.currency(
-                  pool.baseTokenPriceUsd != null
-                    ? Number(pool.baseTokenPriceUsd)
-                    : null,
-                )}
-              </span>
-            </div>
-            <div className={styles.heroStat}>
-              <span className={styles.heroStatLabel}>Liquidity</span>
-              <span className={styles.heroStatValue}>
-                {fmt.num.compact.currency(
-                  pool.liquidityUsd != null ? Number(pool.liquidityUsd) : null,
-                )}
-              </span>
-            </div>
-            <div className={styles.heroStat}>
-              <span className={styles.heroStatLabel}>24h Volume</span>
-              <span className={styles.heroStatValue}>
-                {fmt.num.compact.currency(
-                  pool.volumeUsd24h != null ? Number(pool.volumeUsd24h) : null,
-                )}
-              </span>
-            </div>
-            <div className={styles.heroStat}>
-              <span className={styles.heroStatLabel}>24h Change</span>
-              <span
-                className={`${styles.heroStatValue} ${
-                  (pool.priceChangePercentage24h ?? 0) >= 0
-                    ? styles.heroStatPositive
-                    : styles.heroStatNegative
-                }`}
-              >
-                {fmt.num.percent(
-                  pool.priceChangePercentage24h != null
-                    ? Number(pool.priceChangePercentage24h)
-                    : null,
-                )}
-              </span>
-            </div>
-          </div>
         </section>
 
         <div className={styles.tokenPageGrid}>

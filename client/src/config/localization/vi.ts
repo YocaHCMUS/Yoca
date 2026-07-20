@@ -2308,6 +2308,11 @@ export const translation = defineTranslation({
     poolSelector: {
       selectPool: "Chọn Pool",
     },
+    poolPage: {
+      eyebrow: "Thông Tin Pool",
+      description:
+        "Theo dõi cấu trúc thị trường, thanh khoản, mức độ tập trung của người nắm giữ, dòng giao dịch và các tín hiệu theo sự kiện của pool đã chọn theo thời gian thực, không thay đổi các phân tích token hiện có.",
+    },
     tabs: {
       overview: "Tổng quan",
       markets: "Thị trường",

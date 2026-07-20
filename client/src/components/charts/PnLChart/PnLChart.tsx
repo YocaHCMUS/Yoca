@@ -289,7 +289,9 @@ export const PnLChart: React.FC<PnLChartProps> = ({
           : undefined,
         grid: {
           ...baseOption.grid,
-          top: walletLabel ? "3.5rem" : "2rem",
+          // echarts grid offsets don't understand CSS units (e.g. "rem") —
+          // it parses them with parseFloat, so "4rem" silently became 4px.
+          top: walletLabel ? 56 : 48,
           left: "1.25rem",
           right: displayMode == "both" ? "2.75rem" : "1.5rem",
           bottom: "2rem",

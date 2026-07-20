@@ -2310,6 +2310,11 @@ export const translation = {
     poolSelector: {
       selectPool: "Select Pool",
     },
+    poolPage: {
+      eyebrow: "Pool Intelligence",
+      description:
+        "Monitor the selected pool's live market structure, liquidity, holder concentration, trading flow, and event-driven signals without changing any existing token analytics behavior.",
+    },
     tabs: {
       overview: "Overview",
       markets: "Markets",

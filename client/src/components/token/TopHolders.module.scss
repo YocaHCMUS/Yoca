@@ -1,8 +1,6 @@
-@use "@carbon/react/scss/theme" as *;
-
 .container {
   margin-top: 0;
-  background: $background;
+  background: transparent;
   padding: 0;
 }
 
@@ -10,82 +8,84 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 16px;
+  padding: 0 0 14px;
   cursor: pointer;
-  background: $background;
+  background: transparent;
   border-bottom: none;
 }
 
 .title {
   margin: 0;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: $text-primary;
+  color: var(--yoca-text-muted);
 }
 
 .stats {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .totalPercentage {
   font-size: 16px;
-  font-weight: 500;
-  color: $text-primary;
+  font-weight: 700;
+  color: var(--yoca-text-main);
 }
 
 .accordionButton {
-  background: $layer-accent-01;
-  border: none;
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-md);
   padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: $text-secondary;
-  transition: background 0.2s;
-  width: 24px;
-  height: 24px;
+  color: var(--yoca-text-muted);
+  transition: background 0.15s, border-color 0.15s;
+  width: 26px;
+  height: 26px;
 
   &:hover {
-    background: $border-subtle;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--yoca-accent);
   }
 }
 
 // Table Wrapper Overrides
 .tableWrapper {
   padding: 0;
-  background: $background;
+  background: transparent;
 
   // Deep selector to override Carbon Table styles
   :global {
     .cds--data-table-container {
       padding-top: 0;
-      background: $background;
+      background: transparent;
     }
 
     .cds--data-table {
-      background: $background;
+      background: transparent;
 
       thead {
-        background: $background;
+        background: transparent;
 
         tr {
-          height: 32px;
+          height: 36px;
         }
       }
 
       th {
-        background: $background;
-        color: $text-helper;
-        font-weight: 600;
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--yoca-text-muted);
+        font-weight: 700;
         font-size: 11px;
         text-transform: uppercase;
-        border-bottom: none;
-        padding: 4px 8px;
+        border-bottom: 1px solid var(--yoca-border);
+        padding: 8px;
         text-align: left;
 
         // Rank column (#)
@@ -120,17 +120,22 @@
 
       tbody {
         tr {
-          background: $background;
+          background: transparent;
           height: 44px;
+          border-bottom: 1px solid var(--yoca-border);
 
           // Top 1 Holder Highlight
           &:first-child td {
-            background-color: $layer-accent-01;
-            font-weight: 600;
+            background-color: rgba(45, 212, 191, 0.06);
+            font-weight: 700;
+          }
+
+          &:last-child {
+            border-bottom: none;
           }
 
           &:hover {
-            background-color: transparent;
+            background-color: rgba(255, 255, 255, 0.04);
 
             td {
               background-color: transparent;
@@ -138,12 +143,12 @@
           }
 
           td {
-            background: $background;
+            background: transparent;
             border-top: none;
             border-bottom: none;
             padding: 4px 8px;
-            color: $text-primary;
-            font-size: 14px;
+            color: var(--yoca-text-main);
+            font-size: 13px;
             font-weight: 500;
             text-align: left;
 
@@ -175,9 +180,9 @@
 }
 
 .rank {
-  color: $text-secondary;
-  font-size: 14px;
-  font-weight: 500;
+  color: var(--yoca-text-muted);
+  font-size: 13px;
+  font-weight: 600;
   width: 24px;
   display: inline-block;
 }
@@ -189,37 +194,39 @@
 }
 
 .addressLink {
-  color: $link-primary;
+  color: var(--yoca-primary-2);
   text-decoration: none;
-  font-size: 14px;
-  font-weight: 400;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
 
   &:hover {
     text-decoration: underline;
+    opacity: 0.9;
   }
 }
 
 .copyButton {
-  color: $text-helper;
+  color: var(--yoca-text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
 
   &:hover {
-    color: $text-secondary;
+    color: var(--yoca-text-main);
   }
 }
 
 .percentage {
   text-align: right;
-  font-size: 14px;
-  font-weight: 500;
-  color: $text-primary;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--yoca-text-main);
 }
 
 .emptyState {
   padding: 32px;
   text-align: center;
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-size: 14px;
 }
