@@ -29,7 +29,6 @@ interface WalletHoldingsPanelProps {
   portfolio: WalletPortfolioItem[];
   portfolioMeta: Map<number, { tokenAddress: string; logoUri: string | null; fullName: string | null }>;
   loading: boolean;
-  actions?: React.ReactNode;
 }
 
 interface HoldingTableRow extends TblRw {
@@ -46,7 +45,6 @@ export function WalletHoldingsPanel({
   portfolio,
   portfolioMeta,
   loading,
-  actions,
 }: WalletHoldingsPanelProps) {
   const { tr, fmt, lang } = useLocalization();
   const { user } = useAuth();
@@ -158,22 +156,6 @@ export function WalletHoldingsPanel({
       );
     },
   };
-
-  if (loading && portfolio.length === 0) {
-    return (
-      <div className={styles.holdingsPanel}>
-        <div className={styles.holdingsHeader}>
-          <span className={styles.holdingsTitle}>Holdings</span>
-          {actions && <div>{actions}</div>}
-        </div>
-        <div className={styles.loadingSkeleton}>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className={styles.skeletonRow} />
-          ))}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={styles.holdingsPanel}>
