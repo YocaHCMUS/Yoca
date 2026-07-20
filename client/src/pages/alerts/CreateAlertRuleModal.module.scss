@@ -7,7 +7,7 @@
     linear-gradient(180deg, rgba(124, 58, 237, 0.08), rgba(255, 255, 255, 0.02)),
     var(--yoca-surface-elevated, rgba(24, 31, 48, 0.92));
   color: var(--yoca-text-main, #f8fafc);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.42);
+  box-shadow: var(--yoca-shadow-card, 0 18px 50px rgba(0, 0, 0, 0.32)), 0 30px 80px rgba(0, 0, 0, 0.2);
 }
 
 .modalRoot :global(.cds--modal-header),
@@ -41,8 +41,14 @@
 }
 
 .modalRoot :global(.cds--btn--secondary) {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--yoca-text-soft, #cbd5e1);
+  background: transparent;
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+  color: var(--yoca-text-main, #f8fafc);
+}
+
+.modalRoot :global(.cds--btn--secondary:hover) {
+  background: rgba(124, 58, 237, 0.14);
+  border-color: rgba(124, 58, 237, 0.35);
 }
 
 .modalRoot :global(.cds--text-input),
@@ -50,8 +56,8 @@
 .modalRoot :global(.cds--select-input),
 .modalRoot :global(.cds--list-box__field) {
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(148, 163, 184, 0.14);
+  background: var(--yoca-bg-soft, rgba(255, 255, 255, 0.04));
+  border-color: var(--yoca-border, rgba(148, 163, 184, 0.14));
   color: var(--yoca-text-main, #f8fafc);
 }
 
@@ -78,15 +84,17 @@
 
 .stepIndicator {
   margin: 0;
-  color: var(--yoca-text-muted, #94a3b8);
-  font-size: 0.85rem;
+  color: var(--yoca-text-soft, #cbd5e1);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .notice {
   max-inline-size: none;
   border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.12));
+  background: var(--yoca-surface-hover, rgba(255, 255, 255, 0.035));
 }
 
 .stepFields {
@@ -101,20 +109,20 @@
 
 .deliveryOverrides {
   padding: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.12);
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.12));
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--yoca-surface-hover, rgba(255, 255, 255, 0.025));
 }
 
 .previewCard {
   padding: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.12);
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.12));
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--yoca-surface-hover, rgba(255, 255, 255, 0.025));
 }
 
 .modalFooter {
-  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  border-top: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.12));
 }
 
 @media (max-width: 640px) {

@@ -90,10 +90,9 @@
   gap: 0.45rem;
   min-height: 6rem;
   padding: 1rem 1.05rem;
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.14));
   border-radius: var(--yoca-radius-md, 12px);
-  background: rgba(255, 255, 255, 0.035);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  background: var(--yoca-surface-hover, rgba(255, 255, 255, 0.035));
 }
 
 .metricValue {
@@ -132,8 +131,8 @@
 
 .heroPill {
   padding: 0.62rem 0.88rem;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.14));
+  background: var(--yoca-surface-hover, rgba(255, 255, 255, 0.035));
   color: var(--yoca-text-soft, #cbd5e1);
 }
 
@@ -165,7 +164,7 @@
   justify-content: space-between;
   gap: $spacing-05;
   padding: 1.4rem 1.45rem 1rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  border-bottom: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.12));
 }
 
 .panelHeading {
@@ -208,8 +207,8 @@
 
 .statusPill {
   padding: 0.55rem 0.8rem;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.14));
+  background: var(--yoca-surface-hover, rgba(255, 255, 255, 0.035));
   color: var(--yoca-text-soft, #cbd5e1);
 
   &[data-tone='success'] {
@@ -234,9 +233,9 @@
 .emptyState {
   flex-direction: column;
   gap: 0.5rem;
-  border: 1px dashed rgba(148, 163, 184, 0.18);
+  border: 1px dashed var(--yoca-border, rgba(148, 163, 184, 0.18));
   border-radius: var(--yoca-radius-md, 12px);
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--yoca-surface-hover, rgba(255, 255, 255, 0.025));
 }
 
 .emptyStateTitle {
@@ -274,9 +273,9 @@
 
 .tableWrap {
   overflow-x: auto;
-  border: 1px solid rgba(148, 163, 184, 0.12);
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.12));
   border-radius: calc(var(--yoca-radius-lg, 18px) - 4px);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--yoca-surface-hover, rgba(255, 255, 255, 0.02));
 }
 
 .actionsCell {
@@ -305,9 +304,9 @@
 
 .tableTag {
   padding: 0.5rem 0.72rem;
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.14));
   color: var(--yoca-text-soft, #cbd5e1);
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--yoca-surface-hover, rgba(255, 255, 255, 0.035));
 
   &[data-tone='primary'] {
     border-color: rgba(37, 99, 235, 0.24);
@@ -361,8 +360,8 @@
 .page :global(.cds--text-area),
 .page :global(.cds--select-input),
 .page :global(.cds--list-box__field) {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(148, 163, 184, 0.14);
+  background: var(--yoca-surface-hover, rgba(255, 255, 255, 0.04));
+  border-color: var(--yoca-border, rgba(148, 163, 184, 0.14));
   color: var(--yoca-text-main, #f8fafc);
 }
 
@@ -392,7 +391,7 @@
 
 .page :global(.cds--btn--tertiary),
 .page :global(.cds--btn--ghost) {
-  border-color: rgba(148, 163, 184, 0.14);
+  border-color: var(--yoca-border, rgba(148, 163, 184, 0.14));
   color: var(--yoca-text-soft, #cbd5e1);
 }
 
@@ -404,8 +403,8 @@
 .page :global(.cds--inline-notification) {
   max-inline-size: none;
   border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.12));
+  background: var(--yoca-surface-hover, rgba(255, 255, 255, 0.035));
 }
 
 .page :global(.cds--data-table),
@@ -419,12 +418,12 @@
 
 .page :global(.cds--data-table th) {
   color: var(--yoca-text-muted, #94a3b8);
-  border-bottom-color: rgba(148, 163, 184, 0.12);
+  border-bottom-color: var(--yoca-border, rgba(148, 163, 184, 0.12));
 }
 
 .page :global(.cds--data-table td) {
   color: var(--yoca-text-soft, #cbd5e1);
-  border-bottom-color: rgba(148, 163, 184, 0.08);
+  border-bottom-color: var(--yoca-border, rgba(148, 163, 184, 0.08));
 }
 
 .page :global(.cds--data-table tbody tr:hover td) {
