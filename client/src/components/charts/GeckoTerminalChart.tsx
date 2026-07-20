@@ -14,8 +14,8 @@ export const GeckoTerminalChart = ({
   const { theme } = useUserTheme();
   const isLight = theme === "light";
 
-  // URL embed chuẩn từ GeckoTerminal
-  const embedUrl = `https://www.geckoterminal.com/solana/pools/${poolAddress}?embed=1&info=0&swaps=0&light_chart=${isLight ? 1 : 0}&resolution=15m&bg_color=${isLight ? "ffffff" : "161616"}`;
+  // URL embed chuẩn từ GeckoTerminal — bg_color khớp nền --yoca-bg-soft của app
+  const embedUrl = `https://www.geckoterminal.com/solana/pools/${poolAddress}?embed=1&info=0&swaps=0&light_chart=${isLight ? 1 : 0}&resolution=15m&bg_color=${isLight ? "edf1f8" : "0b1020"}`;
 
   return (
     <iframe
