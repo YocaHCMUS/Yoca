@@ -434,7 +434,7 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
-.page :global(.cds--toggle-input:checked + .cds--toggle__switch) {
+.page :global(.cds--toggle__switch--checked) {
   background: linear-gradient(135deg, var(--yoca-primary, #7c3aed), var(--yoca-primary-2, #2563eb));
 }
 
