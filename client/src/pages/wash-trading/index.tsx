@@ -1072,15 +1072,29 @@ const AlgorithmTab: React.FC<{
 const WalletRow: React.FC<{ wallet: SuspiciousWallet; index: number; selected?: boolean; onClick?: () => void }> = ({ wallet, index, selected = false, onClick }) => {
   const { tr } = useLocalization();
   const risk = normalizeRiskLevel(wallet.riskLevel);
+
   return (
-    <button type="button" className={`${styles.walletRow} ${selected ? styles.walletRowSelected : ""}`} onClick={onClick}>
+    <div className={`${styles.walletRow} ${selected ? styles.walletRowSelected : ""}`}>
+      <button
+        type="button"
+        className={styles.walletRowSelectArea}
+        aria-pressed={selected}
+        aria-label={`${tr("washTrading.wallets.selectedWallet")} ${shortAddress(wallet.wallet)}`}
+        onClick={onClick}
+      />
       <div className={styles.walletInfo}>
-        <span className={styles.walletAddr}>{shortAddress(wallet.wallet)}</span>
+        <Link
+          className={`${styles.walletAddr} ${styles.walletAddrLink}`}
+          to={`/wallets/${encodeURIComponent(wallet.wallet)}`}
+          title={wallet.wallet}
+        >
+          {shortAddress(wallet.wallet)}
+        </Link>
         <span className={styles.walletDesc}>{getPatternLabel(wallet.pattern, tr)} · {tr("washTrading.wallets.graphRank", { rank: String(index + 1) })}</span>
       </div>
       <span className={styles.walletGnn}>{tr("washTrading.wallets.gnn", { score: wallet.score.toFixed(2) })}</span>
       <span className={`${styles.riskBadge} ${styles[`risk${risk}`]}`}>{getRiskLevelLabel(risk, tr)}</span>
-    </button>
+    </div>
   );
 };
 
