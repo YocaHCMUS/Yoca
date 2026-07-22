@@ -9,7 +9,6 @@ import {
   WalletChat,
   ChatContextProvider,
 } from "@/components/wallet/WalletChat";
-import { AiAnalysisModal } from "@/components/wallet/AiAnalysisModal/AiAnalysisModal.tsx";
 import { useWalletWinrate } from "@/hooks/useWalletWinrate";
 
 import { PageWrapper } from "@/components/wrapper/PageWrapper.tsx";
@@ -76,7 +75,6 @@ export default function WalletPage() {
 
   const [selectedPeriod, setSelectedPeriod] =
     useState<WalletOverviewPeriodKey>("24H");
-  const [aiAnalysisOpen, setAiAnalysisOpen] = useState(false);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatPosition, setChatPosition] = useState<ChatPosition>("right");
@@ -108,7 +106,7 @@ export default function WalletPage() {
   }, [selectedToken]);
 
   const walletTokenDetails = useGet(
-    client.api.wallets[":address"].tokens,
+    client.api.wallets[":address"]["recent-traded-desc-breakdown"],
     200,
     { param: { address: address || "" } },
     { enabled: !!address },
@@ -199,31 +197,6 @@ export default function WalletPage() {
     <PageWrapper
       noMarketTickers
       wideContent
-      extraHeaderPanel={{
-        isOpen: !!selectedToken,
-        content: selectedToken && (
-          <>
-            <TokenAverageTradePrice
-              walletAddress={address}
-              tokenAddress={selectedToken.address}
-              tokenImgUrl={
-                tokenMeta.data?.[selectedToken.address]?.imageUrl || null
-              }
-              tokenName={tokenMeta.data?.[selectedToken.address]?.name || null}
-              tokenSymbol={
-                tokenMeta.data?.[selectedToken.address]?.symbol || null
-              }
-              tokenCurrentPrice={
-                tokenMarket.data?.[selectedToken.address]?.priceUsd || null
-              }
-              avgBuyPrice={selectedToken.avgBuyCost}
-              avgSellPrice={selectedToken.avgSellCost}
-            />
-          </>
-        ),
-        size: "lg",
-        onClose: () => setSelectedToken(null),
-      }}
     >
       <div className={`${styles.pageLayout}${isRightSidebarOpen ? ` ${styles.rightSidebarExpanded}` : ''}`}>
         <div className={styles.shell}>
@@ -235,7 +208,6 @@ export default function WalletPage() {
 
           <WalletTopbar
             address={walletAddress}
-            onAiAnalysisOpen={() => setAiAnalysisOpen(true)}
             currentPeriod={selectedPeriod}
             onPeriodChange={(period) => setSelectedPeriod(period)}
           />
@@ -403,12 +375,6 @@ export default function WalletPage() {
         walletAddress={walletAddress}
       />
 
-      <AiAnalysisModal
-        isOpen={aiAnalysisOpen}
-        onClose={() => setAiAnalysisOpen(false)}
-        walletAddress={walletAddress}
-        language={lang === "vi" ? "vi" : "en"}
-      />
     </PageWrapper>
   );
 }

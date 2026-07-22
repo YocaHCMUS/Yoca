@@ -7,34 +7,61 @@ import {
 } from "../wallet-analysis";
 import dayjs from "dayjs";
 
-export interface WalletPnLData {
+export interface WalletPnlHistoryData {
   walletAddress: string;
   walletName?: string;
-  dailyPnL: PnLDataPoint[];
+  dailyPnL: DailyPnlActivityPoint[];
   cumulativePnL: PnLDataPoint[];
   totalPnL: number;
   realizedPnL: number;
   unrealizedPnL: number;
 }
 
-function mapStoredAnalysisToPnLResponse(
+export interface DailyPnlActivityPoint extends PnLDataPoint {
+  buyCount: number | null;
+  sellCount: number | null;
+  swapCount: number | null;
+  buyVolumeUsd: number | null;
+  sellVolumeUsd: number | null;
+  totalVolumeUsd: number | null;
+}
+
+function mapStoredAnalysisToPnlHistory(
   row: WalletAnalysisSelect,
-): WalletPnLData {
+): WalletPnlHistoryData {
   const sourceDays =
     row.calendarBreakdown.length > 0
       ? row.calendarBreakdown.map((day) => ({
           date: day.date,
           realizedPnlUsd: day.realizedPnlUSD,
+          buyCount: day.buys,
+          sellCount: day.sells,
+          swapCount: day.buys + day.sells,
+          buyVolumeUsd: day.volumeBuy,
+          sellVolumeUsd: day.volumeSell,
+          totalVolumeUsd: day.totalVolume,
         }))
       : row.periodTimeframes.map((timeframe) => ({
           date: timeframe.date,
           realizedPnlUsd: timeframe.realized,
+          buyCount: null,
+          sellCount: null,
+          swapCount: null,
+          buyVolumeUsd: null,
+          sellVolumeUsd: null,
+          totalVolumeUsd: null,
         }));
 
   const dailyPnL = sourceDays
     .map((day) => ({
       timestamp: dayjs.utc(day.date).startOf("day").valueOf(),
       value: day.realizedPnlUsd,
+      buyCount: day.buyCount,
+      sellCount: day.sellCount,
+      swapCount: day.swapCount,
+      buyVolumeUsd: day.buyVolumeUsd,
+      sellVolumeUsd: day.sellVolumeUsd,
+      totalVolumeUsd: day.totalVolumeUsd,
     }))
     .filter((day) => Number.isFinite(day.timestamp))
     .sort((left, right) => left.timestamp - right.timestamp);
@@ -59,36 +86,34 @@ function mapStoredAnalysisToPnLResponse(
   };
 }
 
-export async function fetchWalletPnLData(
+export async function fetchWalletPnlHistory(
   walletAddress: string,
   period: WinratePeriod,
-): Promise<WalletPnLData> {
-  return mapStoredAnalysisToPnLResponse(
+): Promise<WalletPnlHistoryData> {
+  return mapStoredAnalysisToPnlHistory(
     await fetchWalletAnalysis(walletAddress, period),
   );
 }
 
-export async function getWalletPnLData(
+export async function getWalletPnlHistory(
   walletAddress: string,
   period: WinratePeriod,
-): Promise<WalletPnLData> {
-  return mapStoredAnalysisToPnLResponse(
+): Promise<WalletPnlHistoryData> {
+  return mapStoredAnalysisToPnlHistory(
     await getWalletAnalysis(walletAddress, period),
   );
 }
 
-export async function getPnLData(
+export async function getPnlHistory(
   wallets: string[] = [],
   period: WinratePeriod = "30D",
-): Promise<WalletPnLData[]> {
+): Promise<WalletPnlHistoryData[]> {
   const normalizedWallets = Array.from(
     new Set(wallets.map((wallet) => wallet.trim()).filter(Boolean)),
   );
-  const pnlItems = await Promise.all(
+  return Promise.all(
     normalizedWallets.map((walletAddress) =>
-      getWalletPnLData(walletAddress, period),
+      getWalletPnlHistory(walletAddress, period),
     ),
   );
-
-  return pnlItems;
 }

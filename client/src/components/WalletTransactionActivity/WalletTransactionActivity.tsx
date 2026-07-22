@@ -12,6 +12,8 @@ import { TrendNum } from "../TrendNum";
 import styles from "./WalletTransactionActivity.module.scss";
 import { ArrowRight, Clock, ExternalLink } from "lucide-react";
 import { SOLSCAN_TX_URL } from "@/config/constants";
+import { Link } from "react-router";
+import { resolveNativeSolTokenAddress } from "@/util/wallet-portfolio-mapper";
 
 type WalletSwapData = {
   transactions: {
@@ -180,8 +182,20 @@ function TokenAmountCell({
         size="sm"
       />
       <Flex gap={2} align="center">
-        <TknImg size={22} src={logoUri} />
-        <Txt size="sm">{symbol}</Txt>
+        <Link
+          to={`/tokens/${resolveNativeSolTokenAddress(address)}`}
+          title={symbol}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            color: "inherit",
+            textDecoration: "none",
+          }}
+        >
+          <TknImg size={22} src={logoUri} />
+          <Txt size="sm">{symbol}</Txt>
+        </Link>
         <CpyBtn copyWhat={address} size="xs" />
       </Flex>
     </Flex>
@@ -536,7 +550,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           loading={swapLoading}
           height="auto"
           enablePagination
-          pageSize={16}
+          pageSize={8}
           boxed
           pageUnknown
           enableSearch
@@ -584,7 +598,7 @@ export function WalletTransactionActivity({ address }: { address: string }) {
           loading={transferLoading}
           height="auto"
           enablePagination
-          pageSize={16}
+          pageSize={8}
           boxed
           pageUnknown
           enableSearch

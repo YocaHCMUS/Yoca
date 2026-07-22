@@ -20,12 +20,12 @@ import {
   fetchWalletIntelligence,
   fetchWalletOverview,
   fetchWalletPortfolio,
-  fetchWalletTokenDetails,
+  fetchWalletRecentTradedDescBreakdown,
   type WalletIntelligenceResponse,
   type WalletOverviewMultiPeriodResponse,
   type WalletOverviewPeriodKey,
   type WalletPortfolioItem,
-  type WalletTokenDetails,
+  type WalletRecentTradedDescBreakdown,
 } from "@/services/wallet/walletApi";
 import { fetchBalanceTrend } from "@/services/chart/chartApi";
 import { MultiWalletBalanceChart } from "@/components/charts/BalanceChartMultiV2";
@@ -231,7 +231,7 @@ export default function ProfileDashboardTab({
   }, [walletData, period]);
 
   // ── Token Performance & Win Rate Logic ──────────────────
-  const [tokenDetails, setTokenDetails] = useState<WalletTokenDetails[]>([]);
+  const [tokenDetails, setTokenDetails] = useState<WalletRecentTradedDescBreakdown[]>([]);
 
   useEffect(() => {
     let isActive = true;
@@ -239,7 +239,7 @@ export default function ProfileDashboardTab({
     (async () => {
       try {
         const results = await Promise.all(
-          trackedWallets.map((addr) => fetchWalletTokenDetails(addr)),
+          trackedWallets.map((addr) => fetchWalletRecentTradedDescBreakdown(addr)),
         );
         const allTokens = results.flat().filter(Boolean);
         if (isActive) {
@@ -270,7 +270,7 @@ export default function ProfileDashboardTab({
       (t) => t.lastTradeUnixTime >= cutoffUnix,
     );
 
-    const aggMap = new Map<string, WalletTokenDetails>();
+    const aggMap = new Map<string, WalletRecentTradedDescBreakdown>();
     filteredByTime.forEach((t) => {
       if (!t?.tokenAddress) return;
       if (!aggMap.has(t.tokenAddress)) {

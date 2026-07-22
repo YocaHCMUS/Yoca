@@ -230,4 +230,4 @@ export async function getWalletAnalysis(
 }
 
 export * from "./wallet-analysis/wallet-winrate";
-export * from "./wallet-analysis/wallet-pnl";
+export * from "./wallet-analysis/wallet-pnl-history";

@@ -6,7 +6,6 @@ import {
   NotificationFilled,
   Repeat,
   Share,
-  AiGenerate,
   Tag as TagIcon,
 } from "@carbon/icons-react";
 import { Tag } from "@carbon/react";
@@ -120,14 +119,12 @@ function resolveWalletAgeDays(
 
 export interface WalletTopbarProps {
   address: string;
-  onAiAnalysisOpen: () => void;
   currentPeriod: WalletOverviewPeriodKey;
   onPeriodChange: (period: WalletOverviewPeriodKey) => void;
 }
 
 export function WalletTopbar({
   address,
-  onAiAnalysisOpen,
   currentPeriod = "24H",
   onPeriodChange,
 }: WalletTopbarProps) {
@@ -610,15 +607,6 @@ export function WalletTopbar({
             <Tooltip label={tr("wallet.shareWallet")} align="bottom-left">
               <button type="button" className={styles.iconBtn}>
                 <Share size={16} />
-              </button>
-            </Tooltip>
-            <Tooltip label="AI Analysis" align="bottom-left">
-              <button
-                type="button"
-                className={styles.iconBtn}
-                onClick={onAiAnalysisOpen}
-              >
-                <AiGenerate size={16} />
               </button>
             </Tooltip>
           </div>

@@ -47,7 +47,7 @@ export function useWalletComparisonSummary(
   );
 
   const pnlResp = useGet(
-    client.api.wallets.analysis.pnl,
+    client.api.wallets.analysis["pnl-history"],
     200,
     { query: { wallets: walletsString, period: period as never } },
     { enabled },

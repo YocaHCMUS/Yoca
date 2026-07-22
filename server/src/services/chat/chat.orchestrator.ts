@@ -761,7 +761,7 @@ async function generateResponse(
   const TIME_SERIES_TOOLS = new Set([
     "get_balance_history",
     "get_drawdown_chart",
-    "get_pnl_chart",
+    "get_wallet_pnl_history",
     "get_token_price_24h",
     "get_token_price_hourly",
     "get_token_price_daily",

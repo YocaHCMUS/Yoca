@@ -1066,8 +1066,8 @@ export const heliusWebhookAddresses = pgTable(
   (t) => [unique().on(t.heliusWebhookId, t.walletAddress)],
 );
 
-export const walletTokenDetails = pgTable(
-  "wallet_token_details",
+export const walletRecentTradedDescBreakdown = pgTable(
+  "wallet_recent_traded_desc_breakdown",
   {
     address: varchar("address", { length: 44 }).notNull(),
     tokenAddress: varchar("token_address", { length: 44 }).notNull(),
@@ -1104,6 +1104,34 @@ export const walletTokenDetails = pgTable(
     updatedAtMs: bigint("updated_at_ms", { mode: "number" })
       .notNull()
       .$onUpdate(() => dayjs.utc().valueOf()),
+  },
+  (t) => [primaryKey({ columns: [t.address, t.tokenAddress] })],
+);
+
+export const walletRealizedPnlDescBreakdown = pgTable(
+  "wallet_realized_pnl_desc_breakdown",
+  {
+    address: varchar("address", { length: 44 }).notNull(),
+    tokenAddress: varchar("token_address", { length: 44 }).notNull(),
+    symbol: varchar("symbol"),
+    lastTradeUnixTime: integer("last_trade_unix_time").notNull(),
+    totalBuyCount: integer("total_buy_count").notNull(),
+    totalSellCount: integer("total_sell_count").notNull(),
+    totalTradeCount: integer("total_trade_count").notNull(),
+    totalBoughtAmount: decimal("total_bought_amount").notNull(),
+    totalSoldAmount: decimal("total_sold_amount").notNull(),
+    balanceAmount: decimal("balance_amount").notNull(),
+    costOfQuantitySold: decimal("cost_of_quantity_sold").notNull(),
+    totalBoughtUsd: decimal("total_bought_usd").notNull(),
+    totalSoldUsd: decimal("total_sold_usd").notNull(),
+    currentValue: decimal("current_value").notNull(),
+    realizedProfitUsd: decimal("realized_profit_usd").notNull(),
+    realizedProfitPercent: decimal("realized_profit_percent").notNull(),
+    unrealizedProfitUsd: decimal("unrealized_profit_usd").notNull(),
+    unrealizedProfitPercent: decimal("unrealized_profit_percent").notNull(),
+    avgBuyCost: decimal("avg_buy_cost").notNull(),
+    avgSellCost: decimal("avg_sell_cost").notNull(),
+    updatedAtMs: bigint("updated_at_ms", { mode: "number" }).notNull(),
   },
   (t) => [primaryKey({ columns: [t.address, t.tokenAddress] })],
 );
@@ -1330,8 +1358,10 @@ export type WalletEnhancedTxMetaInsert =
   typeof walletEnhancedTxMeta.$inferInsert;
 export type walletSwapMetaInsert = typeof walletSwapMeta.$inferInsert;
 export type WalletUserTagsInsert = typeof walletUserTags.$inferInsert;
-export type WalletTokenDetailsInsert = typeof walletTokenDetails.$inferInsert;
-export type WalletTokenDetailsSelect = typeof walletTokenDetails.$inferSelect;
+export type WalletRecentTradedDescBreakdownInsert = typeof walletRecentTradedDescBreakdown.$inferInsert;
+export type WalletRecentTradedDescBreakdownSelect = typeof walletRecentTradedDescBreakdown.$inferSelect;
+export type WalletRealizedPnlDescBreakdownInsert = typeof walletRealizedPnlDescBreakdown.$inferInsert;
+export type WalletRealizedPnlDescBreakdownSelect = typeof walletRealizedPnlDescBreakdown.$inferSelect;
 export type WalletFirstFundInsert = typeof walletFirstFund.$inferInsert;
 export type FollowedWalletInsert = typeof followedWallets.$inferInsert;
 export type FollowedWalletRow = typeof followedWallets.$inferSelect;

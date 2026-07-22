@@ -6,23 +6,6 @@
   min-height: 0;
 }
 
-.holdingsHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.holdingsTitle {
-  color: var(--yoca-text-main, #f8fafc);
-  font-size: 0.95rem;
-  font-weight: 700;
-}
-
-.holdingsCount {
-  color: var(--yoca-text-muted, #94a3b8);
-  font-size: 0.75rem;
-}
-
 .chartSection,
 .tableSection {
   border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
@@ -75,32 +58,61 @@
   background: rgba(124, 58, 237, 0.08) !important;
 }
 
-.loadingSkeleton {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 16px;
+.portfolioSkeleton {
+  min-width: 0;
+  overflow: hidden;
   border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
   border-radius: var(--yoca-radius-lg, 18px);
   background: var(--yoca-surface, rgba(18, 24, 38, 0.82));
 }
 
-.skeletonRow {
-  height: 36px;
-  border-radius: 12px;
-  background: linear-gradient(90deg, rgba(124, 58, 237, 0.14), rgba(37, 99, 235, 0.1), rgba(45, 212, 191, 0.12));
-  animation: pulse 1.5s infinite;
+.portfolioSkeletonHeader,
+.portfolioSkeletonColumns,
+.portfolioSkeletonRow {
+  display: grid;
+  grid-template-columns: 3rem minmax(11rem, 1fr) minmax(7rem, 0.7fr) minmax(9rem, 0.9fr);
+  align-items: center;
+  min-width: 30rem;
 }
 
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 0.45;
-  }
+.portfolioSkeletonHeader {
+  grid-template-columns: minmax(0, 1fr) 9rem;
+  gap: 1rem;
+  min-height: 4rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+}
 
-  50% {
-    opacity: 0.85;
-  }
+.portfolioSkeletonSearch {
+  width: 9rem;
+  height: 2rem;
+}
+
+.portfolioSkeletonColumns {
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  background: var(--yoca-surface-raised, rgba(255, 255, 255, 0.03));
+  border-bottom: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));
+}
+
+.portfolioSkeletonRows {
+  min-width: 30rem;
+}
+
+.portfolioSkeletonRow {
+  min-height: 3.5rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.1));
+}
+
+.portfolioSkeletonRow:last-child {
+  border-bottom: 0;
+}
+
+.portfolioSkeletonIcon {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
 }
 .watchButton {
   display: inline-flex;
@@ -155,4 +167,3 @@
   font-size: 0.72rem;
   line-height: 1.2;
 }
-
