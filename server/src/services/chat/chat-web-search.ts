@@ -87,7 +87,7 @@ async function fetchBrave(
     rlTimeoutMs: BRAVE_TIMEOUT_MS,
   });
   if (!res.ok) throw new Error(`Brave responded ${res.status}`);
-  return res.json();
+  return JSON.parse(await res.text());
 }
 
 export async function searchNews(

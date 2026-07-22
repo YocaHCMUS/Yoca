@@ -95,7 +95,7 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
         const formatted = yAxisFmt
           ? formatYValue(value, yAxisFmt, fmt)
           : value;
-        const query = interpolate(spec.pointActions!.query, { label });
+        const query = interpolate(spec.pointActions!.query, { label, date: label, x: label });
         return `${label}: ${formatted}<br/><span style="color:#2a6df4;font-size:10px">${tr("chat.clickToAsk", { query })}</span>`;
       };
     }
@@ -103,7 +103,7 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
     if (!isPie) {
       tooltip.formatter = (params: unknown) => {
         const arr = Array.isArray(params) ? params : [params];
-        const p = arr[0] as { axisValue?: number; axisValueLabel?: string } | undefined;
+        const p = arr[0] as { axisValue?: number; axisValueLabel?: string; dataIndex?: number } | undefined;
 
         const xLabel = isTimeAxis
           ? formatXValue(p?.axisValue ?? 0, xAxisFmt ?? "datetime", fmt)
@@ -111,8 +111,8 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
 
         const clickLine = spec.pointActions
           ? (() => {
-            const label = p?.axisValueLabel ?? "";
-            const query = interpolate(spec.pointActions!.query, { label });
+            const label = p?.axisValueLabel ?? (p?.dataIndex != null ? labels[p.dataIndex] ?? "" : "");
+            const query = interpolate(spec.pointActions!.query, { label, date: label, x: label });
             return `<br/><span style="color:#2a6df4;font-size:10px">${tr("chat.clickToAsk", { query })}</span>`;
           })()
           : "";
@@ -230,7 +230,7 @@ function ChartRenderer({ spec, data, onAction }: ChartRendererProps) {
       const idx = params.dataIndex;
       if (idx == null || idx >= labels.length) return;
       const label = labels[idx] ?? "";
-      const query = interpolate(spec.pointActions!.query, { label });
+      const query = interpolate(spec.pointActions!.query, { label, date: label, x: label });
       onAction(query);
     };
     chart.on("click", handler);

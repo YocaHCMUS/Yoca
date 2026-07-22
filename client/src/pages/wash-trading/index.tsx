@@ -315,6 +315,8 @@ const NetworkGraph: React.FC<{
   isFullscreen = false,
 }) => {
   const { tr, fmt } = useLocalization();
+  const { theme } = useUserTheme();
+  const isLightGraph = theme === "light";
   const chartRef = useRef<HTMLDivElement | null>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
 
@@ -428,6 +430,23 @@ const NetworkGraph: React.FC<{
   );
 
   const option = useMemo<echarts.EChartsOption>(() => {
+    // ECharts uses a canvas renderer here, so CSS custom properties are not
+    // resolved consistently. Define a small theme-aware palette in JavaScript
+    // to keep neutral flows and their hover labels readable in both themes.
+    const neutralEdgeColor = isLightGraph ? "#64748b" : "#94a3b8";
+    const neutralEdgeHoverColor = isLightGraph ? "#334155" : "#e2e8f0";
+    const neutralEdgeOpacity = isLightGraph ? 0.48 : 0.54;
+    const edgeLabelText = isLightGraph ? "#0f172a" : "#f8fafc";
+    const edgeLabelBackground = isLightGraph
+      ? "rgba(255, 255, 255, 0.98)"
+      : "rgba(15, 23, 42, 0.97)";
+    const edgeLabelBorder = isLightGraph
+      ? "rgba(100, 116, 139, 0.62)"
+      : "rgba(148, 163, 184, 0.58)";
+    const edgeLabelShadow = isLightGraph
+      ? "rgba(15, 23, 42, 0.18)"
+      : "rgba(0, 0, 0, 0.55)";
+
     const categories = [
       { name: String(tr("washTrading.graph.highRiskWallet")), itemStyle: { color: "#e24b4a" } },
       { name: String(tr("washTrading.graph.bridgeWallet")), itemStyle: { color: "#ef9f27" } },
@@ -495,7 +514,7 @@ const NetworkGraph: React.FC<{
         ? 2.5 + edge.weight * (isFullscreen ? 4.2 : 3.2)
         : edge.suspicious
           ? 1.8 + edge.weight * (isFullscreen ? 3.8 : 2.8)
-          : 0.8 + edge.weight * 1.4;
+          : 1.15 + edge.weight * (isFullscreen ? 2.1 : 1.75);
 
       return {
         id: edge.id,
@@ -507,8 +526,8 @@ const NetworkGraph: React.FC<{
         lineStyle: {
           // This is the original ECharts graph edge, not a second drawn edge.
           width: lineWidth,
-          opacity: isCircularEdge ? 0.96 : edge.suspicious ? 0.78 : 0.24,
-          color: isCircularEdge ? "#a855f7" : edge.suspicious ? "#0ea5e9" : "#64748b",
+          opacity: isCircularEdge ? 0.96 : edge.suspicious ? 0.78 : neutralEdgeOpacity,
+          color: isCircularEdge ? "#a855f7" : edge.suspicious ? "#0ea5e9" : neutralEdgeColor,
           curveness: edge.curveness,
           shadowBlur: isCircularEdge ? 12 : 0,
           shadowColor: isCircularEdge ? "rgba(168, 85, 247, 0.62)" : "transparent",
@@ -518,19 +537,35 @@ const NetworkGraph: React.FC<{
           lineStyle: {
             width: Math.max(lineWidth + 2, isCircularEdge ? 6 : edge.suspicious ? 5 : 3),
             opacity: 1,
-            color: isCircularEdge ? "#a855f7" : undefined,
+            color: isCircularEdge
+              ? "#a855f7"
+              : edge.suspicious
+                ? "#0ea5e9"
+                : neutralEdgeHoverColor,
+            shadowBlur: isCircularEdge ? 12 : edge.suspicious ? 8 : 5,
+            shadowColor: isCircularEdge
+              ? "rgba(168, 85, 247, 0.62)"
+              : edge.suspicious
+                ? "rgba(14, 165, 233, 0.38)"
+                : isLightGraph
+                  ? "rgba(51, 65, 85, 0.22)"
+                  : "rgba(226, 232, 240, 0.22)",
           },
           label: {
             show: true,
             formatter: `${formatGraphAmount(edge.amount)}${edge.transferCount > 1 ? ` · ${edge.transferCount} tx` : ""}`,
-            color: isCircularEdge ? "#7e22ce" : edge.suspicious ? "#0369a1" : "#334155",
-            fontSize: 11,
+            color: edgeLabelText,
+            fontSize: isFullscreen ? 12 : 11,
             fontWeight: 700,
-            backgroundColor: "rgba(255,255,255,0.92)",
-            borderColor: "rgba(148,163,184,0.45)",
+            backgroundColor: edgeLabelBackground,
+            borderColor: edgeLabelBorder,
             borderWidth: 1,
-            borderRadius: 6,
-            padding: [3, 6],
+            borderRadius: 7,
+            padding: [4, 7],
+            shadowBlur: 10,
+            shadowColor: edgeLabelShadow,
+            textBorderColor: edgeLabelBackground,
+            textBorderWidth: 1,
           },
         },
         label: {
@@ -631,7 +666,7 @@ const NetworkGraph: React.FC<{
         } as echarts.GraphSeriesOption,
       ],
     } as echarts.EChartsOption;
-  }, [visibleNodes, readableEdges, isFullscreen, tr, formatGraphAmount, circularHighlight]);
+  }, [visibleNodes, readableEdges, isFullscreen, tr, formatGraphAmount, circularHighlight, isLightGraph]);
 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -1037,15 +1072,29 @@ const AlgorithmTab: React.FC<{
 const WalletRow: React.FC<{ wallet: SuspiciousWallet; index: number; selected?: boolean; onClick?: () => void }> = ({ wallet, index, selected = false, onClick }) => {
   const { tr } = useLocalization();
   const risk = normalizeRiskLevel(wallet.riskLevel);
+
   return (
-    <button type="button" className={`${styles.walletRow} ${selected ? styles.walletRowSelected : ""}`} onClick={onClick}>
+    <div className={`${styles.walletRow} ${selected ? styles.walletRowSelected : ""}`}>
+      <button
+        type="button"
+        className={styles.walletRowSelectArea}
+        aria-pressed={selected}
+        aria-label={`${tr("washTrading.wallets.selectedWallet")} ${shortAddress(wallet.wallet)}`}
+        onClick={onClick}
+      />
       <div className={styles.walletInfo}>
-        <span className={styles.walletAddr}>{shortAddress(wallet.wallet)}</span>
+        <Link
+          className={`${styles.walletAddr} ${styles.walletAddrLink}`}
+          to={`/wallets/${encodeURIComponent(wallet.wallet)}`}
+          title={wallet.wallet}
+        >
+          {shortAddress(wallet.wallet)}
+        </Link>
         <span className={styles.walletDesc}>{getPatternLabel(wallet.pattern, tr)} · {tr("washTrading.wallets.graphRank", { rank: String(index + 1) })}</span>
       </div>
       <span className={styles.walletGnn}>{tr("washTrading.wallets.gnn", { score: wallet.score.toFixed(2) })}</span>
       <span className={`${styles.riskBadge} ${styles[`risk${risk}`]}`}>{getRiskLevelLabel(risk, tr)}</span>
-    </button>
+    </div>
   );
 };
 

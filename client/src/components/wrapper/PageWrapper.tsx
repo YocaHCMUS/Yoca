@@ -328,9 +328,8 @@ export function PageWrapper({
                   type="button"
                   role="menuitemradio"
                   aria-checked={lang == "vi"}
-                  className={`${styles.languageMenuOption} ${
-                    lang == "vi" ? styles.languageMenuOptionActive : ""
-                  }`}
+                  className={`${styles.languageMenuOption} ${lang == "vi" ? styles.languageMenuOptionActive : ""
+                    }`}
                   onClick={() => handleLanguageSelect("vi")}
                 >
                   <span className={styles.languageMenuLocale}>
@@ -343,9 +342,8 @@ export function PageWrapper({
                   type="button"
                   role="menuitemradio"
                   aria-checked={lang == "en"}
-                  className={`${styles.languageMenuOption} ${
-                    lang == "en" ? styles.languageMenuOptionActive : ""
-                  }`}
+                  className={`${styles.languageMenuOption} ${lang == "en" ? styles.languageMenuOptionActive : ""
+                    }`}
                   onClick={() => handleLanguageSelect("en")}
                 >
                   <span className={styles.languageMenuLocale}>{tr("lang.en")}</span>
@@ -355,14 +353,14 @@ export function PageWrapper({
             )}
           </div>
 
-          <HeaderGlobalAction
+          {/* <HeaderGlobalAction
             className={styles.headerGlobalAction}
             aria-label={tr("nav.notification")}
             isActive={isHeaderNotificationPanelOpen}
             onClick={() => togglePanel("notifications")}
           >
             <Notification size={20} />
-          </HeaderGlobalAction>
+          </HeaderGlobalAction> */}
 
           <div className={styles.accountMenuAnchor} ref={accountMenuRef}>
             <HeaderGlobalAction
@@ -465,9 +463,8 @@ export function PageWrapper({
                 type="button"
                 role="radio"
                 aria-checked={lang == "en"}
-                className={`${styles.languageOption} ${
-                  lang == "en" ? styles.languageOptionActive : ""
-                }`}
+                className={`${styles.languageOption} ${lang == "en" ? styles.languageOptionActive : ""
+                  }`}
                 onClick={() => handleLanguageSelect("en")}
               >
                 <span className={styles.languageOptionLabel}>{tr("lang.en")}</span>
@@ -487,9 +484,8 @@ export function PageWrapper({
                 type="button"
                 role="radio"
                 aria-checked={lang == "vi"}
-                className={`${styles.languageOption} ${
-                  lang == "vi" ? styles.languageOptionActive : ""
-                }`}
+                className={`${styles.languageOption} ${lang == "vi" ? styles.languageOptionActive : ""
+                  }`}
                 onClick={() => handleLanguageSelect("vi")}
               >
                 <span className={styles.languageOptionLabel}>{tr("lang.vi")}</span>
@@ -528,15 +524,15 @@ export function PageWrapper({
                 ) : (
                   <User size={16} />
                 )}
-                </span>
-                <span className={styles.accountPanelIdentity}>
-                  <strong>
+              </span>
+              <span className={styles.accountPanelIdentity}>
+                <strong>
                   {user
                     ? user.displayName || `${user.userId.slice(0, 8)}…`
                     : ""}
-                  </strong>
-                  <small>{tr("nav.profile")}</small>
-                </span>
+                </strong>
+                <small>{tr("nav.profile")}</small>
+              </span>
             </button>
             <button
               type="button"
@@ -629,7 +625,7 @@ export function PageWrapper({
             : wideContent
               ? `${styles.appContent} ${styles.wideContent}`
               : styles.appContent
-          }
+        }
         style={
           {
             "--page-content-top-offset": noMarketTickers ? "0rem" : "3.5rem",
@@ -638,15 +634,15 @@ export function PageWrapper({
         onClick={
           isAnyExtraPanelOpen
             ? () => {
-                if (openPanel == "notifications") {
-                  setOpenPanel(null);
-                }
-
-                if (isExtraPanelOpen) {
-                  setIsExtraHeaderPanelOpen(false);
-                  extraHeaderPanel?.onClose();
-                }
+              if (openPanel == "notifications") {
+                setOpenPanel(null);
               }
+
+              if (isExtraPanelOpen) {
+                setIsExtraHeaderPanelOpen(false);
+                extraHeaderPanel?.onClose();
+              }
+            }
             : undefined
         }
       >

@@ -1,11 +1,9 @@
-@use '@carbon/react/scss/theme' as *;
-
 // Container owns the 6 columns — all rows inherit via subgrid for true alignment
 .container {
   display: grid;
   grid-template-columns: max-content 1fr max-content max-content 1fr max-content;
-  background: $background;
-  border-radius: 8px;
+  background: transparent;
+  border-radius: var(--yoca-radius-md);
   overflow: hidden;
 }
 
@@ -13,14 +11,14 @@
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
-  border-bottom: 1px solid $border-subtle;
+  border-bottom: 1px solid var(--yoca-border);
 
   &:last-child {
     border-bottom: none;
   }
 
   &:hover {
-    background: $layer-hover-01;
+    background: rgba(255, 255, 255, 0.04);
   }
 
   @media (max-width: 560px) {
@@ -40,9 +38,9 @@
 }
 
 .pair {
-  font-size: 14px;
-  font-weight: 600;
-  color: $text-primary;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--yoca-text-main);
   white-space: nowrap;
   padding: 14px 8px 14px 16px;
   display: flex;
@@ -50,8 +48,9 @@
 }
 
 .currency {
-  font-size: 14px;
-  color: $text-secondary;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--yoca-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -62,9 +61,9 @@
 }
 
 .price {
-  font-size: 14px;
-  font-weight: 600;
-  color: $text-primary;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--yoca-text-main);
   white-space: nowrap;
   padding: 14px 16px 14px 8px;
   display: flex;
@@ -75,7 +74,7 @@
 .skeletonRow {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  border-bottom: 1px solid $border-subtle;
+  border-bottom: 1px solid var(--yoca-border);
 
   &:last-child {
     border-bottom: none;
@@ -85,8 +84,8 @@
 .skeletonCell {
   height: 48px;
   margin: 8px 16px;
-  border-radius: 3px;
-  background: $skeleton-background;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
   animation: pulse 1.4s ease-in-out infinite;
 }
 
@@ -101,7 +100,7 @@
   display: flex;
   justify-content: center;
   padding: 16px 0 8px;
-  border-top: 1px solid $border-subtle;
+  border-top: 1px solid var(--yoca-border);
 }
 
 .showMoreBtn {
@@ -109,16 +108,17 @@
   align-items: center;
   justify-content: center;
   padding: 7px 20px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  border: none;
-  border-radius: 8px;
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-md);
   cursor: pointer;
-  background: $layer-01;
-  color: $text-primary;
-  transition: background 0.15s;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--yoca-text-main);
+  transition: background 0.15s, border-color 0.15s;
 
   &:hover {
-    background: $layer-hover-01;
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--yoca-accent);
   }
 }

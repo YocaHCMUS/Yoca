@@ -4,9 +4,9 @@ import {
   SOLSCAN_TX_URL,
 } from "@/config/constants";
 import { Launch } from "@carbon/icons-react";
-import { Pagination } from "@carbon/react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
+import { TblePagination } from "@/components/TblePagination";
 import styles from "./RecentTransactions.module.scss";
 
 const DEFAULT_PAGE_SIZE = 12;
@@ -194,27 +194,15 @@ export const RecentTransactions = ({
       {/* Pagination */}
       {filteredTrades.length > pageSize && (
         <div className={styles.paginationContainer}>
-          <Pagination
+          <TblePagination
             page={page}
             pageSize={pageSize}
             pageSizes={[12, 24, 48]}
             totalItems={filteredTrades.length}
-            itemsPerPageText={tr("table.itemsPerPageText")}
-            pageRangeText={(current, total) =>
-              tr("table.pageRangeText", { count: current, total })
-            }
-            itemRangeText={(min, max, total) =>
-              tr("table.itemRangeText", { min, max, count: total })
-            }
-            forwardText={tr("table.nextPage")}
-            backwardText={tr("table.previousPage")}
-            onChange={({ page: nextPage, pageSize: nextPageSize }) => {
-              if (nextPageSize !== pageSize) {
-                setPageSize(nextPageSize);
-                setPage(1);
-              } else {
-                setPage(nextPage);
-              }
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
             }}
           />
         </div>

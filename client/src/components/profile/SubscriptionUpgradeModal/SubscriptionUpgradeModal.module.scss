@@ -1,0 +1,212 @@
+.backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(3, 7, 18, 0.58);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.card {
+    width: min(30rem, 100%);
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem;
+    border: 1px solid var(--yoca-border);
+    border-radius: 8px;
+    background: linear-gradient(140deg, rgba(124, 58, 237, 0.1), rgba(45, 212, 191, 0.06)), var(--yoca-surface-elevated);
+    box-shadow: var(--yoca-shadow-card), 0 24px 70px rgba(0, 0, 0, 0.34);
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.title {
+    color: var(--yoca-text-main);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.closeBtn {
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid var(--yoca-border);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--yoca-text-muted);
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+
+    &:hover {
+        color: var(--yoca-text-main);
+        background: rgba(124, 58, 237, 0.16);
+        border-color: rgba(124, 58, 237, 0.28);
+        transform: translateY(-1px);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--yoca-highlight);
+        outline-offset: 2px;
+    }
+}
+
+.body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+}
+
+.description {
+    color: var(--yoca-text-main);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.summaryCard {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-radius: 8px;
+    background: var(--yoca-surface);
+    border: 1px solid var(--yoca-border);
+}
+
+.summaryRow {
+    display: flex;
+    justify-content: space-between;
+    color: var(--yoca-text-main);
+    font-size: 0.875rem;
+}
+
+.summaryTotal {
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid var(--yoca-border);
+    padding-top: 0.75rem;
+    font-weight: 700;
+    color: var(--yoca-text-main);
+    font-size: 0.875rem;
+}
+
+.totalAmount {
+    color: var(--yoca-success);
+}
+
+.hint {
+    color: var(--yoca-text-muted);
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+.loadingRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--yoca-text-muted);
+    font-size: 0.8125rem;
+}
+
+.spinner {
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--yoca-border);
+    border-top-color: var(--yoca-primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--yoca-border);
+}
+
+.cancelBtn,
+.confirmBtn {
+    min-height: 2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0.5rem 0.875rem;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--yoca-highlight);
+        outline-offset: 2px;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+}
+
+.cancelBtn {
+    border: 1px solid var(--yoca-border);
+    background: transparent;
+    color: var(--yoca-text-main);
+
+    &:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(124, 58, 237, 0.28);
+    }
+}
+
+.confirmBtn {
+    border: 1px solid transparent;
+    background: linear-gradient(120deg, var(--yoca-primary), var(--yoca-primary-2));
+    color: #fff;
+
+    &:hover:not(:disabled) {
+        filter: brightness(1.04);
+    }
+}
+
+@media (max-width: 520px) {
+    .card {
+        padding: 0.875rem;
+    }
+
+    .footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .cancelBtn,
+    .confirmBtn {
+        width: 100%;
+    }
+}

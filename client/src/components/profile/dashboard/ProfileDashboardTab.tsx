@@ -1,4 +1,8 @@
-import { Button } from "@carbon/react";
+import Tble, { type TblRw } from "@/components/Tble";
+import { Card } from "@/components/common/Card/Card";
+import { MetricCard } from "@/components/common/MetricCard/MetricCard";
+import { PageHeader } from "@/components/common/PageHeader/PageHeader";
+import { EmptyState } from "@/components/common/EmptyState/EmptyState";
 import ProfileLoadingState from "@/components/profile/shared/ProfileLoadingState";
 import { Activity, ChartColumn, Currency, Wallet } from "@carbon/react/icons";
 import ReactEChartsCore from "echarts-for-react/lib/core";
@@ -683,12 +687,11 @@ export default function ProfileDashboardTab({
 
   if (error) {
     return (
-      <div className={styles.errorState}>
-        <p>Failed to load dashboard: {error}</p>
-        <Button kind="secondary" size="sm" onClick={fetchAllData}>
-          Retry
-        </Button>
-      </div>
+      <EmptyState
+        title="Failed to load dashboard"
+        message={error}
+        action={{ label: "Retry", onClick: fetchAllData }}
+      />
     );
   }
 
@@ -704,67 +707,52 @@ export default function ProfileDashboardTab({
   return (
     <ChartProvider>
       <section className={styles.dashboardRoot}>
+        <PageHeader
+          eyebrow="Portfolio Intelligence"
+          title="Dashboard"
+          tabs={[
+            { label: "7D", value: "7D" },
+            { label: "30D", value: "30D" },
+            { label: "90D", value: "90D" },
+          ]}
+          activeTab={period}
+          onTabChange={(v) => setPeriod(v as WalletOverviewPeriodKey)}
+        />
+
         {/* ── KPI Cards ─────────────────────────────────────── */}
         <div className={styles.kpiStrip}>
-          <article className={styles.kpiCard}>
-            <div className={`${styles.kpiIcon} ${styles.kpiIconBlue}`}>
-              <Currency size={22} />
-            </div>
-            <span className={styles.kpiLabel}>Total Balance</span>
-            <span className={styles.kpiValue}>{fmtUsd(kpis.totalAssets)}</span>
-            <span className={styles.kpiSub}>All wallets total</span>
-          </article>
-
-          <article className={`${styles.kpiCard} ${styles.kpiCardGreen}`}>
-            <div className={`${styles.kpiIcon} ${styles.kpiIconGreen}`}>
-              <Activity size={22} />
-            </div>
-            <span className={styles.kpiLabel}>Transactions</span>
-            <span className={styles.kpiValue}>{fmtNum(kpis.totalTx)}</span>
-            <span className={styles.kpiSub}>Total count</span>
-          </article>
-
-          <article className={`${styles.kpiCard} ${styles.kpiCardPurple}`}>
-            <div className={`${styles.kpiIcon} ${styles.kpiIconPurple}`}>
-              <ChartColumn size={22} />
-            </div>
-            <span className={styles.kpiLabel}>Trading Volume</span>
-            <span className={styles.kpiValue}>{fmtUsd(kpis.totalVolume)}</span>
-            <span className={styles.kpiSub}>Total volume</span>
-          </article>
-
-          <article className={`${styles.kpiCard} ${styles.kpiCardOrange}`}>
-            <div className={`${styles.kpiIcon} ${styles.kpiIconOrange}`}>
-              <Wallet size={22} />
-            </div>
-            <span className={styles.kpiLabel}>Unique Tokens</span>
-            <span className={styles.kpiValue}>{fmtNum(kpis.totalTokens)}</span>
-            <span className={styles.kpiSub}>Across all wallets</span>
-          </article>
+          <MetricCard
+            label="Total Balance"
+            value={fmtUsd(kpis.totalAssets)}
+            subtitle="All wallets total"
+            icon={<Currency size={20} />}
+          />
+          <MetricCard
+            label="Transactions"
+            value={fmtNum(kpis.totalTx)}
+            subtitle="Total count"
+            icon={<Activity size={20} />}
+          />
+          <MetricCard
+            label="Trading Volume"
+            value={fmtUsd(kpis.totalVolume)}
+            subtitle="Total volume"
+            icon={<ChartColumn size={20} />}
+          />
+          <MetricCard
+            label="Unique Tokens"
+            value={fmtNum(kpis.totalTokens)}
+            subtitle="Across all wallets"
+            icon={<Wallet size={20} />}
+          />
         </div>
 
-        {/* ── Header Controls ───────────────────────────────── */}
-        <div className={styles.headerRow}>
-          <div className={styles.periodSwitcherPills}>
-            {["7D", "30D", "90D"].map((p) => (
-              <button
-                key={p}
-                className={`${styles.periodPill} ${period == p ? styles.periodPillActive : ""}`}
-                onClick={() => setPeriod(p as WalletOverviewPeriodKey)}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ── HÀNG 1: 3 biểu đồ đầu tiên ────────────────────────── */}
+        {/* ── Row 1 ──────────────────────────────────────────── */}
         <div
           className={styles.chartRow}
-          style={{ gridTemplateColumns: "1fr 1fr 2fr", gap: "12px" }}
+          style={{ gridTemplateColumns: "1fr 1fr 2fr" }}
         >
-          <div className={styles.panel}>
-            <h4 className={styles.panelTitle}>Wallet Asset Contribution</h4>
+          <Card title="Wallet Asset Contribution">
             <ReactEChartsCore
               echarts={echarts}
               option={contributionDonutOption}
@@ -773,10 +761,9 @@ export default function ProfileDashboardTab({
               notMerge
               lazyUpdate
             />
-          </div>
+          </Card>
 
-          <div className={styles.panel}>
-            <h4 className={styles.panelTitle}>Buy / Sell Volume Ratio</h4>
+          <Card title="Buy / Sell Volume Ratio">
             <ReactEChartsCore
               echarts={echarts}
               option={netFlowChartOption}
@@ -785,10 +772,9 @@ export default function ProfileDashboardTab({
               notMerge
               lazyUpdate
             />
-          </div>
+          </Card>
 
-          <div className={styles.panel}>
-            <h4 className={styles.panelTitle}>Trading Activity Momentum</h4>
+          <Card title="Trading Activity Momentum">
             <ReactEChartsCore
               echarts={echarts}
               option={activityTrendOption}
@@ -797,24 +783,23 @@ export default function ProfileDashboardTab({
               notMerge
               lazyUpdate
             />
-          </div>
+          </Card>
         </div>
 
-        {/* ── HÀNG 2: 3 thành phần còn lại ────────────────────────── */}
+        {/* ── Row 2 ──────────────────────────────────────────── */}
         <div
           className={styles.chartRow}
-          style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}
+          style={{ gridTemplateColumns: "1fr 1fr 1fr" }}
         >
-          <div className={styles.panel}>
+          <Card title="Balance Trend">
             <MultiWalletBalanceChart
               addresses={walletData.map((w) => w.address)}
               showTotal={false}
               show24Change={false}
             />
-          </div>
+          </Card>
 
-          <div className={styles.panel}>
-            <h4 className={styles.panelTitle}>Top 5 Tokens by PNL</h4>
+          <Card title="Top 5 Tokens by PNL">
             <ReactEChartsCore
               echarts={echarts}
               option={topTokensChartOption}
@@ -823,70 +808,62 @@ export default function ProfileDashboardTab({
               notMerge
               lazyUpdate
             />
-          </div>
+          </Card>
 
-          <div className={styles.panel}>
-            <h4 className={styles.panelTitle}>Asset Composition</h4>
-            <div
-              className={styles.matrixTableWrapper}
-              style={{ height: 250, overflowY: "auto", overflowX: "hidden" }}
-            >
-              <table className={styles.matrixTable}>
-                <thead>
-                  <tr>
-                    <th>Asset</th>
-                    <th>Total Value</th>
-                    <th style={{ width: "20%" }}>Composition</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {matrixData.rows.map((row) => (
-                    <tr key={row.key}>
-                      <td>
-                        {row.logoUri ? (
-                          <img
-                            src={row.logoUri}
-                            alt={row.symbol}
-                            className={styles.tokenAvatar}
-                          />
-                        ) : (
-                          <div className={styles.tokenAvatarPlaceholder} />
-                        )}
-                        {row.symbol}
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{fmtUsd(row.total)}</td>
-                      <td>
-                        <div className={styles.dataBarCell}>
-                          <div
-                            className={styles.dataBarFill}
-                            style={{
-                              width: `${matrixData.maxTotal > 0 ? (row.total / matrixData.maxTotal) * 100 : 0}%`,
-                            }}
-                          />
-                          <span className={styles.dataBarText}>
-                            {matrixData.overallTotal > 0
-                              ? (
-                                  (row.total / matrixData.overallTotal) *
-                                  100
-                                ).toFixed(2)
-                              : "0.00"}
-                            %
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {matrixData.rows.length == 0 && (
-                    <tr>
-                      <td colSpan={3} className={styles.emptyState}>
-                        No asset data available
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <Card title="Asset Composition">
+            <Tble
+              headers={[
+                { key: "asset", header: "Asset" },
+                { key: "totalValue", header: "Total Value" },
+                { key: "composition", header: "Composition" },
+              ]}
+              rows={matrixData.rows.map((row) => ({
+                id: row.key,
+                asset: row,
+                totalValue: row.total,
+                composition: row,
+              } as TblRw))}
+              cellRenderers={{
+                asset: (value: unknown) => {
+                  const r = value as { logoUri?: string; symbol: string };
+                  return (
+                    <>
+                      {r.logoUri ? (
+                        <img src={r.logoUri} alt={r.symbol} className={styles.tokenAvatar} />
+                      ) : (
+                        <div className={styles.tokenAvatarPlaceholder} />
+                      )}
+                      {r.symbol}
+                    </>
+                  );
+                },
+                totalValue: (value: unknown) => (
+                  <span style={{ fontWeight: 600 }}>{fmtUsd(Number(value))}</span>
+                ),
+                composition: (value: unknown) => {
+                  const r = value as { total: number };
+                  return (
+                    <div className={styles.dataBarCell}>
+                      <div
+                        className={styles.dataBarFill}
+                        style={{
+                          width: `${matrixData.maxTotal > 0 ? (r.total / matrixData.maxTotal) * 100 : 0}%`,
+                        }}
+                      />
+                      <span className={styles.dataBarText}>
+                        {matrixData.overallTotal > 0
+                          ? ((r.total / matrixData.overallTotal) * 100).toFixed(2)
+                          : "0.00"}
+                        %
+                      </span>
+                    </div>
+                  );
+                },
+              }}
+              height={250}
+              boxed
+            />
+          </Card>
         </div>
       </section>
     </ChartProvider>

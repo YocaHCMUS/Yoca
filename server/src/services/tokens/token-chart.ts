@@ -19,13 +19,16 @@ import {
 import { validateApiResult } from "@sv/middlewares/validation.js";
 import { dataUsage } from "@sv/middlewares/request-context.js";
 import { excluded } from "@sv/util/orm-sql.js";
+import * as bds from "@sv/util/util-birdeye.js";
 import * as cg from "@sv/util/util-coingecko.js";
 import { pFetch } from "@sv/util/rate-limit.js";
 import dayjs from "dayjs";
 import { and, eq, gte, lte } from "drizzle-orm";
-import { cg_TokenMarketChartSchema } from "../_types/token-raw-responses.js";
+import {
+    bds_HistoryPriceSchema,
+    cg_TokenMarketChartSchema
+} from "../_types/token-raw-responses.js";
 import { getCoinGeckoIdsByAddresses } from "./token-list.js";
-import { getMobulaChartData } from "./mobula-chart-data.js";
 
 type TokenChartCacheRow = {
   unixTimestampMs: number;
@@ -378,17 +381,40 @@ export async function getDailyTokenMarketChart(
   return existing;
 }
 
-async function fetchMobulaDayRange(
+async function fetchHistoricalRange(
   tokenAddress: string,
+  fromSec: number,
+  toSec: number,
 ): Promise<void> {
-  const points = await getMobulaChartData(tokenAddress, "24h");
-  if (points.length == 0) return;
+  const url = bds.getEndpoint("/defi/history_price");
+  url.searchParams.set("address", tokenAddress);
+
+  url.search = new URLSearchParams({
+    address: tokenAddress,
+    address_type: "token",
+    type: "15m",
+    time_from: fromSec.toString(),
+    time_to: toSec.toString(),
+    ui_amount_mode: "raw",
+  }).toString();
+
+  const resp = await pFetch(bds.spec, "birdeye.svc.token_history_price", url, {
+    method: "GET",
+    headers: bds.getRequiredHeaders(),
+  });
+
+  const res = await validateApiResult(bds_HistoryPriceSchema, resp);
+
+  if (!res) return;
+
+  const items = res.data.items;
+  if (items.length == 0) return;
 
   const nowMs = Date.now();
-  const inserts: TokenMarketChartHourlyInsert[] = points.map((p) => ({
+  const points: TokenMarketChartHourlyInsert[] = items.map((item) => ({
     address: tokenAddress,
-    unixTimestampMs: p.unixTimestampMs,
-    price: p.price,
+    unixTimestampMs: item.unixTime * 1000,
+    price: item.value,
     marketCap: 0,
     totalVolume: 0,
     unixUpdatedAtMs: nowMs,
@@ -396,7 +422,7 @@ async function fetchMobulaDayRange(
 
   await db
     .insert(tokenMarketChartHourly)
-    .values(inserts)
+    .values(points)
     .onConflictDoUpdate({
       target: [
         tokenMarketChartHourly.address,
@@ -458,9 +484,13 @@ export async function getTokenPriceChartForDay(
   const isStale =
     Date.now() - latestUpdatedAt > TOKEN_CHART_HOURLY_UPDATE_THRESHOLD;
 
-  // If incomplete or stale, fetch from Mobula for this specific day
+  // If incomplete or stale, fetch from Birdeye for this specific day
   if (existing.length == 0 || isStale) {
-    await fetchMobulaDayRange(tokenAddress);
+    await fetchHistoricalRange(
+      tokenAddress,
+      Math.floor(fromMs / 1000),
+      Math.floor(toMs / 1000),
+    );
 
     // Re-query after fetch
     const refreshed = await db

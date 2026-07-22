@@ -16,7 +16,6 @@ import {
   buildToolSelectionPrompt,
   buildResponseGenerationPrompt,
   CHAT_SYSTEM_INSTRUCTION,
-  CHAT_TOOL_SELECTION_SYSTEM_INSTRUCTION,
 } from "./chat.prompts.js";
 import { getCachedResponse, setCachedResponse } from "./chat.cache.js";
 import { chatInfo, chatWarn, chatError, chatDebug } from "./chat.logger.js";
@@ -129,7 +128,6 @@ async function selectTool(
   const raw = await callGemini(
     "gemini.svc.chat_tool_selection",
     prompt,
-    CHAT_TOOL_SELECTION_SYSTEM_INSTRUCTION,
   );
 
   if (!raw) {
@@ -699,9 +697,7 @@ async function generateResponse(
   }
 
   if (!text && charts.length === 0 && tables.length === 0 && actions.length === 0) {
-    chatWarn("generateResponse: rejected malformed or empty structured response", {
-      raw: trunc(raw, 300),
-    });
+    chatWarn("generateResponse: sanitizeResponse returned empty", { raw: trunc(raw, 300) });
     return {
       text: getMessage(language, "dataError"),
       data: {},
@@ -732,6 +728,14 @@ async function generateResponse(
     if (!result || result.error || result.fullData == null) continue;
     const transformer = DATA_TRANSFORMERS[result.name];
     resolvedData[spec.dataRef] = transformer ? transformer(result.fullData) : result.fullData;
+  }
+
+  // Ensure tables with unresolvable dataRef still have a fallback entry
+  for (const table of tables) {
+    if (table.dataRef && resolvedData[table.dataRef] == null) {
+      chatWarn("generateResponse: table dataRef has no resolved data, injecting empty array", { tableId: table.id, dataRef: table.dataRef });
+      resolvedData[table.dataRef] = [];
+    }
   }
 
   // Ensure every chart has pointActions for interactive drill-down

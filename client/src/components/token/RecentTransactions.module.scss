@@ -1,26 +1,22 @@
-@use "@carbon/react/scss/theme" as *;
-
-// Semantic colors (same in both themes)
-$color-buy: #10b981;
-$color-sell: #f43f5e;
-
 .container {
   margin-top: 0;
-  background: $background;
-  border-radius: 0;
+  border-radius: var(--yoca-radius-lg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border: none;
-  border-top: 1px solid $border-subtle;
+  border: 1px solid var(--yoca-border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 32%),
+    var(--yoca-surface);
+  box-shadow: var(--yoca-shadow-card);
   flex-shrink: 0;
 }
 
 .tabsHeader {
   display: flex;
   align-items: center;
-  border-bottom: 1px solid $border-subtle;
-  background: $background;
+  border-bottom: 1px solid var(--yoca-border);
+  background: transparent;
   padding: 0;
   gap: 0;
   flex-wrap: wrap;
@@ -30,21 +26,21 @@ $color-sell: #f43f5e;
   padding: 12px 20px;
   font-size: 14px;
   font-weight: 600;
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   transition: all 0.2s;
   white-space: nowrap;
 
   &:hover {
-    color: $text-primary;
-    background: $layer-02;
+    color: var(--yoca-text-main);
+    background: rgba(255, 255, 255, 0.03);
   }
 
   &.active {
-    color: $text-primary;
-    border-bottom-color: $focus;
-    background: $background;
+    color: var(--yoca-text-main);
+    border-bottom-color: var(--yoca-accent);
+    background: transparent;
   }
 }
 
@@ -65,10 +61,10 @@ $color-sell: #f43f5e;
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid $border-subtle;
+  border-radius: var(--yoca-radius-md);
+  border: 1px solid var(--yoca-border);
   background: transparent;
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -76,31 +72,31 @@ $color-sell: #f43f5e;
   white-space: nowrap;
 
   &:hover {
-    background: $layer-hover-01;
-    color: $text-primary;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--yoca-text-main);
   }
 
   // "All" active state
   &.filterAll {
-    background: $layer-01;
-    color: $text-primary;
-    border-color: $border-strong;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--yoca-text-main);
+    border-color: var(--yoca-text-muted);
     font-weight: 600;
   }
 
   // Buy active state
   &.filterBuyActive {
-    background: rgba(16, 185, 129, 0.12);
-    color: $color-buy;
-    border-color: rgba(16, 185, 129, 0.4);
+    background: rgba(34, 197, 94, 0.12);
+    color: var(--yoca-success);
+    border-color: rgba(34, 197, 94, 0.4);
     font-weight: 600;
   }
 
   // Sell active state
   &.filterSellActive {
-    background: rgba(244, 63, 94, 0.12);
-    color: $color-sell;
-    border-color: rgba(244, 63, 94, 0.4);
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--yoca-danger);
+    border-color: rgba(239, 68, 68, 0.4);
     font-weight: 600;
   }
 }
@@ -115,44 +111,44 @@ $color-sell: #f43f5e;
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
-  background: $layer-01;
-  color: $text-helper;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--yoca-text-muted);
 }
 
 .filterCountBuy {
-  background: rgba(16, 185, 129, 0.15);
-  color: $color-buy;
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--yoca-success);
 }
 
 .filterCountSell {
-  background: rgba(244, 63, 94, 0.15);
-  color: $color-sell;
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--yoca-danger);
 }
 
 // ── Row tinting ─────────────────────────────────────
 .rowBuy {
   td {
-    background: rgba(16, 185, 129, 0.028);
+    background: rgba(34, 197, 94, 0.028);
   }
 
   &:hover td {
-    background: rgba(16, 185, 129, 0.055);
+    background: rgba(34, 197, 94, 0.055);
   }
 }
 
 .rowSell {
   td {
-    background: rgba(244, 63, 94, 0.028);
+    background: rgba(239, 68, 68, 0.028);
   }
 
   &:hover td {
-    background: rgba(244, 63, 94, 0.055);
+    background: rgba(239, 68, 68, 0.055);
   }
 }
 
-// ── Pagination (Carbon) ─────────────────────────────
+// ── Pagination ───────────────────────────────────────
 .paginationContainer {
-  border-top: 1px solid $border-subtle;
+  border-top: 1px solid var(--yoca-border);
 }
 
 .content {
@@ -164,7 +160,7 @@ $color-sell: #f43f5e;
 .emptyState {
   padding: 32px;
   text-align: center;
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   font-size: 14px;
 }
 
@@ -211,11 +207,14 @@ $color-sell: #f43f5e;
   th {
     text-align: right;
     padding: 12px 16px;
-    color: $text-secondary;
-    font-weight: 500;
-    border-bottom: 1px solid $border-subtle;
+    color: var(--yoca-text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    border-bottom: 1px solid var(--yoca-border);
     white-space: nowrap;
-    background: $background;
+    background: rgba(255, 255, 255, 0.02);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -231,8 +230,8 @@ $color-sell: #f43f5e;
 
   td {
     padding: 10px 16px;
-    border-bottom: 1px solid $border-subtle;
-    color: $text-primary;
+    border-bottom: 1px solid var(--yoca-border);
+    color: var(--yoca-text-main);
     vertical-align: middle;
     text-align: right;
     white-space: nowrap;
@@ -240,11 +239,11 @@ $color-sell: #f43f5e;
     text-overflow: ellipsis;
 
     &.buy {
-      color: $color-buy;
+      color: var(--yoca-success);
     }
 
     &.sell {
-      color: $color-sell;
+      color: var(--yoca-danger);
     }
 
     &:first-child {
@@ -256,8 +255,8 @@ $color-sell: #f43f5e;
     }
 
     .dateBadge {
-      background: $layer-accent-01;
-      color: $text-secondary;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--yoca-text-muted);
       padding: 2px 6px;
       border-radius: 4px;
       font-size: 11px;
@@ -266,60 +265,60 @@ $color-sell: #f43f5e;
     }
 
     .timeText {
-      color: $text-secondary;
+      color: var(--yoca-text-muted);
       font-size: 13px;
       white-space: nowrap;
     }
 
     .type {
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
       font-size: 12px;
 
       &.buy {
-        color: $color-buy;
+        color: var(--yoca-success);
       }
 
       &.sell {
-        color: $color-sell;
+        color: var(--yoca-danger);
       }
     }
 
     .price,
     .amount,
     .value {
-      font-weight: 500;
+      font-weight: 600;
 
       &.buy {
-        color: $color-buy;
+        color: var(--yoca-success);
       }
 
       &.sell {
-        color: $color-sell;
+        color: var(--yoca-danger);
       }
     }
 
     .link {
-      color: $text-secondary;
+      color: var(--yoca-text-muted);
       text-decoration: none;
-      font-family: monospace;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 13px;
-      font-weight: 400;
+      font-weight: 500;
 
       &:hover {
-        color: $text-primary;
+        color: var(--yoca-text-main);
         text-decoration: underline;
       }
     }
 
     .iconLink {
-      color: $text-helper;
+      color: var(--yoca-text-muted);
       display: inline-flex;
       align-items: center;
       justify-content: center;
 
       &:hover {
-        color: $text-secondary;
+        color: var(--yoca-text-main);
       }
     }
   }
@@ -341,17 +340,16 @@ $color-sell: #f43f5e;
 }
 
 .modalContent {
-  background: $background;
-  border-radius: 8px;
+  background: var(--yoca-surface-elevated);
+  border: 1px solid var(--yoca-border);
+  border-radius: var(--yoca-radius-lg);
   width: 88%;
   max-width: 960px;
   height: 78vh;
   max-height: 680px;
   display: flex;
   flex-direction: column;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--yoca-shadow-card);
 }
 
 .modalHeader {
@@ -359,13 +357,13 @@ $color-sell: #f43f5e;
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  border-bottom: 1px solid $border-subtle;
+  border-bottom: 1px solid var(--yoca-border);
 
   h3 {
     margin: 0;
     font-size: 18px;
     font-weight: 600;
-    color: $text-primary;
+    color: var(--yoca-text-main);
   }
 }
 
@@ -373,14 +371,14 @@ $color-sell: #f43f5e;
   background: none;
   border: none;
   font-size: 24px;
-  color: $text-secondary;
+  color: var(--yoca-text-muted);
   cursor: pointer;
   padding: 4px 8px;
   line-height: 1;
   transition: color 0.2s;
 
   &:hover {
-    color: $text-primary;
+    color: var(--yoca-text-main);
   }
 }
 

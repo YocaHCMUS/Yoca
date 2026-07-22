@@ -61,6 +61,9 @@ describe("recordInvoicePayment", () => {
     vi.clearAllMocks();
     vi.stubEnv("STRIPE_PRICE_LITE", "price_lite");
     vi.stubEnv("STRIPE_PRICE_PLUS", "price_plus");
+    vi.stubEnv("STRIPE_PRICE_LITE_YEARLY", "price_lite_yearly");
+    vi.stubEnv("STRIPE_PRICE_PLUS_YEARLY", "price_plus_yearly");
+    vi.stubEnv("STRIPE_PRICE_PRO_YEARLY", "price_pro_yearly");
     selectLimitMock.mockResolvedValue([
       { id: "local-sub-123", userId: "user-id-123" },
     ]);

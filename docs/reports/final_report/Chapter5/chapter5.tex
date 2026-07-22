@@ -1,9 +1,9 @@
-\chapter{Kết luận và hướng phát triển}
-\label{Chapter6}
+\chapter{Kết luận và Hướng phát triển}
+\label{Chapter5}
 
 Chương này tổng kết những kết quả chính của đề tài, đánh giá phạm vi mà Yoca đã giải quyết và trình bày các hướng phát triển có thể mở rộng giá trị của hệ thống. Các kết quả được xem xét trên cả hai phương diện: trải nghiệm phân tích dành cho người dùng và nền tảng kỹ thuật phục vụ việc thu thập, tổ chức và diễn giải dữ liệu Solana.
 
-\section{Kết quả và đóng góp chính}
+\section{Tổng kết các kết quả đạt được}
 
 Yoca đã hình thành một hành trình phân tích liên tục từ thị trường đến dữ liệu ví. Người dùng có thể bắt đầu tại trang tổng quan để nhận biết token hoặc pool đáng chú ý, mở trang chi tiết để xem giá, thanh khoản, holder và giao dịch, sau đó tiếp tục đến các ví liên quan để quan sát danh mục tài sản và hành vi theo thời gian. Thanh tìm kiếm và các liên kết giữa những đối tượng giúp quá trình này diễn ra trong cùng một hệ thống, giữ được ngữ cảnh khi người dùng chuyển từ góc nhìn tổng quan sang dữ liệu chi tiết.
 
@@ -25,7 +25,7 @@ Khả năng phân tích của Yoca chịu ảnh hưởng bởi độ phủ dữ 
 
 Các chỉ số PnL, nội dung AI và điểm Wash Trading được sử dụng như công cụ hỗ trợ phân tích. Giá trị của chúng phụ thuộc vào khoảng thời gian, dữ liệu giá và tập giao dịch được quan sát. Đối với Wash Trading, các đặc trưng và trọng số chỉ làm nổi bật các cấu trúc có dấu hiệu bất thường trên đồ thị; người dùng cần đối chiếu thêm giao dịch gốc, bối cảnh thị trường và nguồn dữ liệu liên quan trước khi đưa ra nhận định cuối cùng. Kết quả từ nguồn demo-fallback chỉ minh họa luồng giao diện và không được xem là kết luận từ dữ liệu on-chain thật. Hoạt động đánh giá của đề tài tập trung vào tính đúng đắn của luồng xử lý và các chức năng cốt lõi.
 
-\section{Hướng phát triển}
+Ngoài kết quả về chức năng, đề tài đã giải quyết các vấn đề quan trọng khi làm việc với dữ liệu Web3. Cơ chế điều phối yêu cầu, luân phiên khóa truy cập và thử lại có kiểm soát giúp hạn chế tác động của giới hạn truy vấn. Chiến lược lưu đệm theo phạm vi thời gian cho phép tái sử dụng dữ liệu đã có và chỉ truy xuất phần còn thiếu. Đối với giá trị danh mục lịch sử, hệ thống tái dựng số dư tại từng thời điểm và kết hợp với dữ liệu giá tương ứng, qua đó tạo cơ sở cho biểu đồ số dư và PnL.
 
 Hướng phát triển đầu tiên là mở rộng chiều sâu của dữ liệu và khả năng theo dõi chất lượng nguồn. Khi hệ thống phục vụ nhiều người dùng hơn, các chỉ số về thời gian phản hồi, tỷ lệ lỗi, mức sử dụng quota và hiệu quả cache có thể được tổng hợp để điều chỉnh chiến lược cập nhật theo từng provider. Dữ liệu lịch sử cũng có thể được lưu trữ theo các lớp thời gian phù hợp với nhu cầu truy vấn, giúp các phân tích dài hạn duy trì tốc độ phản hồi ổn định.
 

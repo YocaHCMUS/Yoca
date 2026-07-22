@@ -75,6 +75,8 @@
 \usepackage{float}
 \usepackage{placeins}
 
+\usepackage[unicode]{hyperref}
+
 % Đổi tên mặc định
 \renewcommand{\chaptername}{Chương}
 \renewcommand{\figurename}{Hình}
@@ -131,9 +133,8 @@
 \addcontentsline{toc}{chapter}{Danh sách bảng}
 \listoftables
 
-\include{Appendix/glossary}
-
-\include{Appendix/summary}
+%\addcontentsline{toc}{chapter}{Tóm tắt}
+%\include{Appendix/summary}
 
 \clearpage
 
@@ -144,8 +145,6 @@
 \include{Chapter2/chapter2}
 
 \include{Chapter3/chapter3}
-
-\include{Chapter4/architecture}
 
 \include{Chapter4/chapter4}
 

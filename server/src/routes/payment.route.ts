@@ -61,8 +61,8 @@ const app = new Hono()
           user.email,
         );
 
-        // Persist the customer ID if it was just created
-        if (!user.stripeCustomerId) {
+        // Persist the customer ID if it was just created or replaced
+        if (user.stripeCustomerId !== stripeCustomerId) {
           await db
             .update(users)
             .set({ stripeCustomerId })

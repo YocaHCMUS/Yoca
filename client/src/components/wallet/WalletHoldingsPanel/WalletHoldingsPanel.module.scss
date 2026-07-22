@@ -6,6 +6,11 @@
   min-height: 0;
 }
 
+.holdingsCount {
+  color: var(--yoca-text-muted, #94a3b8);
+  font-size: 0.75rem;
+}
+
 .chartSection,
 .tableSection {
   border: 1px solid var(--yoca-border, rgba(148, 163, 184, 0.16));

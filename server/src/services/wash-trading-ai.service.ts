@@ -256,7 +256,7 @@ async function fetchHeliusJson<T>(
     throw new Error(`${response.status} ${response.statusText}${text ? ` — ${text.slice(0, 300)}` : ""}`);
   }
 
-  return response.json();
+  return JSON.parse(await response.text());
 }
 
 type HeliusRpcResponse<T> =

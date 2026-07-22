@@ -11,6 +11,13 @@ const TEST_ENV_DEFAULTS: Record<string, string> = {
   MOBULA_API_KEY: "test-mobula",
   CLIENT_PROD_DOMAIN: "http://localhost:3000",
   AI_USAGE_LIMIT_ENABLED: "true",
+
+  STRIPE_PRICE_LITE: "price_lite_test",
+  STRIPE_PRICE_PLUS: "price_plus_test",
+  STRIPE_PRICE_PRO: "price_pro_test",
+  STRIPE_PRICE_LITE_YEARLY: "price_lite_yearly_test",
+  STRIPE_PRICE_PLUS_YEARLY: "price_plus_yearly_test",
+  STRIPE_PRICE_PRO_YEARLY: "price_pro_yearly_test",
 };
 
 for (const [key, value] of Object.entries(TEST_ENV_DEFAULTS)) {

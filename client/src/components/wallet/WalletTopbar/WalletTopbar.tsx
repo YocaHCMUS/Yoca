@@ -5,7 +5,6 @@ import {
   Notification,
   NotificationFilled,
   Repeat,
-  Share,
   Tag as TagIcon,
 } from "@carbon/icons-react";
 import { Tag } from "@carbon/react";
@@ -602,11 +601,6 @@ export function WalletTopbar({
                 }
               >
                 <Repeat size={16} />
-              </button>
-            </Tooltip>
-            <Tooltip label={tr("wallet.shareWallet")} align="bottom-left">
-              <button type="button" className={styles.iconBtn}>
-                <Share size={16} />
               </button>
             </Tooltip>
           </div>

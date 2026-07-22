@@ -12,6 +12,9 @@ Primary key tổng hợp được dùng cho dữ liệu chuỗi thời gian và 
 
 Wallet address và token address có thể xuất hiện trước metadata tương ứng nên không bị buộc vào một bảng cha vật lý. Service chuẩn hóa định danh trước khi đọc hoặc ghi và sử dụng cùng khóa nghiệp vụ để ghép dữ liệu. Dữ liệu công khai từ blockchain được tách khỏi dữ liệu cá nhân; các truy vấn profile, watchlist, cảnh báo, chat và thanh toán luôn giới hạn theo user ID đã xác thực. Password được lưu dưới dạng hash, còn API key và secret của provider nằm trong cấu hình môi trường, không đi vào bảng nghiệp vụ.
 
+% TODO(runtime): Hoàn thiện ghi alert_history sau khi delivery thành công.
+% TODO(runtime): Bổ sung API lấy lịch sử, đánh dấu đã đọc và chống gửi trùng.
+
 \subsection{Tổng kết thiết kế cơ sở dữ liệu}
 \label{subsec:db_tong_ket}
 

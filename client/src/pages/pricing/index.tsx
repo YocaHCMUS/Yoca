@@ -287,7 +287,7 @@ export default function PricingPage() {
         </div>
 
         {/* ── Monthly / Yearly toggle ── */}
-        <div className="relative z-10 mt-12 grid grid-cols-2 gap-1 rounded-full border border-[var(--landing-card-border)] bg-[var(--landing-card-bg)] p-1.5">
+        <div className="relative z-10 !mt-8 grid grid-cols-2 gap-1 rounded-full border border-[var(--landing-card-border)] bg-[var(--landing-card-bg)] p-1.5">
           <button
             type="button"
             onClick={() => setBillingInterval("monthly")}

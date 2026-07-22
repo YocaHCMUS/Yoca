@@ -1,28 +1,15 @@
-import ProfileUnavailableState from "@/components/profile/shared/ProfileUnavailableState";
-import { FilterType, SortType, Table } from "@/components/tables/Table";
+import { EmptyState } from "@/components/common/EmptyState/EmptyState";
+import { StatusBadge } from "@/components/common/StatusBadge/StatusBadge";
+import Tble, { TbleFilterType, TbleSortType, type TblRw } from "@/components/Tble";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import type {
   AlertNotification,
   AlertRule,
   ProfileAlertsData,
 } from "@/types/profile";
-import {
-  getAlertHistory,
-  markAllAlertHistoryRead,
-  setAlertHistoryRead,
-} from "@/services/notifications/alertHistoryApi";
-import { AddLarge } from "@carbon/icons-react";
-import {
-  Button,
-  ComposedModal,
-  ModalBody,
-  ModalFooter,
-  ModalHeader,
-  TextArea,
-  TextInput,
-  Toggle,
-} from "@carbon/react";
-import { useEffect, useMemo, useState } from "react";
+import { Pencil, PlayCircle, Plus, PauseCircle, Trash2, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import localStyles from "./ProfileAlertTab.module.scss";
 import styles from "@/components/profile/shared/profile.module.scss";
 
 interface ProfileAlertTabProps {
@@ -33,31 +20,6 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
   const { tr } = useLocalization();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<AlertRule | null>(null);
-  const [notifications, setNotifications] = useState(data.notifications);
-  const [historyLoading, setHistoryLoading] = useState(true);
-  const [historyError, setHistoryError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    getAlertHistory()
-      .then((result) => {
-        if (!active) return;
-        setNotifications(result.notifications);
-        setHistoryError(null);
-      })
-      .catch((error) => {
-        if (!active) return;
-        setHistoryError(
-          error instanceof Error ? error.message : "Failed to load alert history",
-        );
-      })
-      .finally(() => {
-        if (active) setHistoryLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const modalTitle = useMemo(() => {
     if (!editingRule) return tr("profileTabs.alerts.createAlertTitle");
@@ -66,28 +28,27 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
     });
   }, [editingRule, tr]);
 
-  if (
-    data.alerts.length === 0 &&
-    notifications.length === 0 &&
-    !historyLoading &&
-    !historyError
-  ) {
+  const alertTableRows = useMemo(() =>
+    data.alerts.map((rule) => ({
+      id: String(rule.id),
+      token: rule.tokenSymbol,
+      type: rule.alertType,
+      condition: rule.conditionText,
+      status: rule.status,
+      updated: new Date(rule.updatedAt).toLocaleString(),
+      rule,
+    } as TblRw)),
+  [data.alerts]);
+
+  if (data.alerts.length === 0 && data.notifications.length === 0) {
     return (
-      <ProfileUnavailableState
+      <EmptyState
         title={tr("profileTabs.alerts.unavailableTitle")}
-        description={tr("profileTabs.alerts.unavailableDescription")}
+        message={tr("profileTabs.alerts.unavailableDescription")}
       />
     );
   }
 
-  const alertTableData = data.alerts.map((rule) => [
-    rule.tokenSymbol,
-    rule.alertType,
-    rule.conditionText,
-    rule.status,
-    new Date(rule.updatedAt).toLocaleString(),
-    rule.id,
-  ]);
   const openCreateModal = () => {
     setEditingRule(null);
     setIsEditorOpen(true);
@@ -103,184 +64,164 @@ export function ProfileAlertTab({ data }: ProfileAlertTabProps) {
     setEditingRule(null);
   };
 
-  const tableHeaders = [
-    tr("profileTabs.alerts.tableHeaders.token"),
-    tr("profileTabs.alerts.tableHeaders.type"),
-    tr("profileTabs.alerts.tableHeaders.condition"),
-    tr("profileTabs.alerts.tableHeaders.status"),
-    tr("profileTabs.alerts.tableHeaders.updated"),
-    tr("profileTabs.alerts.tableHeaders.actions"),
-  ];
-
   return (
     <section className={styles.contentStack}>
-      <Table
+      <Tble
         title={tr("profileTabs.alerts.tableTitle") as string}
-        headers={tableHeaders}
-        initialFilters={{}}
-        fetcher={Promise.resolve([])}
-        filterSchema={{
-          0: { type: FilterType.Select },
-          1: { type: FilterType.Select },
-          3: { type: FilterType.Select },
-        }}
-        dataEntries={alertTableData}
-        cellRenderers={[
-          null,
-          null,
-          null,
-          null,
-          null,
-          (_value, row) => {
-            const rule = data.alerts.find((item) => item.id === row[5]);
-
+        headers={[
+          { key: "token", header: tr("profileTabs.alerts.tableHeaders.token") },
+          { key: "type", header: tr("profileTabs.alerts.tableHeaders.type") },
+          { key: "condition", header: tr("profileTabs.alerts.tableHeaders.condition") },
+          { key: "status", header: tr("profileTabs.alerts.tableHeaders.status") },
+          { key: "updated", header: tr("profileTabs.alerts.tableHeaders.updated") },
+          { key: "actions", header: tr("profileTabs.alerts.tableHeaders.actions") },
+        ]}
+        rows={alertTableRows}
+        cellRenderers={{
+          status: (value: unknown) => {
+            const s = String(value ?? "");
+            if (s === "active") return <StatusBadge label="Active" variant="success" size="sm" />;
+            if (s === "paused") return <StatusBadge label="Paused" variant="warning" size="sm" />;
+            return <StatusBadge label={s} variant="neutral" size="sm" />;
+          },
+          actions: (_value: unknown, row: TblRw) => {
+            const rule = row.rule as AlertRule | undefined;
             if (!rule) return null;
 
             return (
-              <div className={styles.inlineActions}>
-                <Button
-                  size="sm"
-                  kind="ghost"
-                  onClick={() => openEditModal(rule)}
-                >
-                  Edit
-                </Button>
-                <Button size="sm" kind="ghost">
-                  Pause/Resume
-                </Button>
-                <Button size="sm" kind="ghost">
-                  Delete
-                </Button>
+              <div className={localStyles.inlineActions}>
+                <button type="button" className={localStyles.btnGhost} onClick={() => openEditModal(rule)} title="Edit">
+                  <Pencil size={14} />
+                </button>
+                <button type="button" className={localStyles.btnGhost} title="Pause/Resume">
+                  {rule.status === "paused" ? <PlayCircle size={14} /> : <PauseCircle size={14} />}
+                </button>
+                <button type="button" className={localStyles.btnDangerGhost} title="Delete">
+                  <Trash2 size={14} />
+                </button>
               </div>
             );
           },
-        ]}
-        isSortable={[true, true, false, true, true, false]}
-        sortConfigs={{
-          4: { type: SortType.Date },
         }}
-        actions={
+        filterSchema={{
+          token: { type: TbleFilterType.Select },
+          type: { type: TbleFilterType.Select },
+          status: { type: TbleFilterType.Select },
+        }}
+        sortConfigs={{
+          updated: { type: TbleSortType.Number },
+        }}
+        toolBar={
           <button className={styles.triggerButton} onClick={openCreateModal}>
-            <AddLarge size={20} />
+            <Plus size={20} />
             Add alert
           </button>
         }
       />
 
-      <ProfileAlertNotificationPanel
-        notifications={notifications}
-        loading={historyLoading}
-        error={historyError}
-        onToggleRead={async (notification) => {
-          const nextRead = notification.readAt == null;
-          await setAlertHistoryRead(notification.id, nextRead);
-          setNotifications((current) =>
-            current.map((item) =>
-              item.id == notification.id
-                ? {
-                    ...item,
-                    readAt: nextRead ? new Date().toISOString() : null,
-                  }
-                : item,
-            ),
-          );
-        }}
-        onMarkAllRead={async () => {
-          await markAllAlertHistoryRead();
-          const readAt = new Date().toISOString();
-          setNotifications((current) =>
-            current.map((item) => ({ ...item, readAt: item.readAt ?? readAt })),
-          );
-        }}
-      />
+      {isEditorOpen && (
+        <div className={localStyles.modalOverlay} onClick={closeEditorModal}>
+          <div className={localStyles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={localStyles.modalHeader}>
+              <div>
+                <span className={localStyles.modalEyebrow}>Alerts</span>
+                <h2 className={localStyles.modalTitle}>{modalTitle}</h2>
+              </div>
+              <button type="button" className={localStyles.modalClose} onClick={closeEditorModal}>
+                <X size={18} />
+              </button>
+            </div>
 
-      <ComposedModal open={isEditorOpen} onClose={closeEditorModal}>
-        <ModalHeader label="Alerts" title={modalTitle} />
-        <ModalBody hasScrollingContent>
-          <form className={styles.contentStack}>
-            <TextInput
-              id="alert-token"
-              labelText="Token"
-              defaultValue={editingRule?.tokenSymbol ?? ""}
-              placeholder="SOL"
-            />
-            <TextInput
-              id="alert-type"
-              labelText="Alert type"
-              defaultValue={editingRule?.alertType ?? "price"}
-              placeholder="price"
-            />
-            <TextInput
-              id="alert-condition"
-              labelText="Condition"
-              defaultValue={editingRule?.conditionText ?? ""}
-              placeholder="Price > 210"
-            />
-            <TextArea
-              id="alert-channels"
-              labelText="Channels"
-              placeholder="Email, Telegram"
-            />
-            <Toggle
-              id="alert-enabled"
-              labelText="Enable alert"
-              labelA="Disabled"
-              labelB="Enabled"
-              defaultToggled={editingRule?.status !== "paused"}
-            />
-          </form>
-        </ModalBody>
-        <ModalFooter>
-          <Button kind="secondary" onClick={closeEditorModal}>
-            Cancel
-          </Button>
-          <Button onClick={closeEditorModal}>Save alert</Button>
-        </ModalFooter>
-      </ComposedModal>
+            <div className={localStyles.modalBody}>
+              <div className={localStyles.formGroup}>
+                <label className={localStyles.fieldLabel} htmlFor="alert-token">Token</label>
+                <input
+                  id="alert-token"
+                  className={localStyles.fieldInput}
+                  defaultValue={editingRule?.tokenSymbol ?? ""}
+                  placeholder="SOL"
+                />
+              </div>
+              <div className={localStyles.formGroup}>
+                <label className={localStyles.fieldLabel} htmlFor="alert-type">Alert type</label>
+                <select
+                  id="alert-type"
+                  className={localStyles.fieldSelect}
+                  defaultValue={editingRule?.alertType ?? "price"}
+                >
+                  <option value="price">Price</option>
+                  <option value="volume">Volume</option>
+                  <option value="trend">Trend</option>
+                </select>
+              </div>
+              <div className={localStyles.formGroup}>
+                <label className={localStyles.fieldLabel} htmlFor="alert-condition">Condition</label>
+                <input
+                  id="alert-condition"
+                  className={localStyles.fieldInput}
+                  defaultValue={editingRule?.conditionText ?? ""}
+                  placeholder="Price > 210"
+                />
+              </div>
+              <div className={localStyles.formGroup}>
+                <label className={localStyles.fieldLabel} htmlFor="alert-channels">Channels</label>
+                <textarea
+                  id="alert-channels"
+                  className={localStyles.fieldTextarea}
+                  placeholder="Email, Telegram"
+                />
+              </div>
+              <div className={localStyles.formGroup}>
+                <label className={localStyles.toggleRow}>
+                  <span className={localStyles.fieldLabel}>Enable alert</span>
+                  <label className={localStyles.toggleSwitch}>
+                    <input type="checkbox" defaultChecked={editingRule?.status !== "paused"} />
+                    <span className={localStyles.toggleSlider} />
+                  </label>
+                </label>
+              </div>
+            </div>
+
+            <div className={localStyles.modalFooter}>
+              <button type="button" className={localStyles.btnSecondary} onClick={closeEditorModal}>
+                Cancel
+              </button>
+              <button type="button" className={localStyles.btnPrimary} onClick={closeEditorModal}>
+                Save alert
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
 
 interface ProfileAlertNotificationPanelProps {
   notifications: AlertNotification[];
-  loading: boolean;
-  error: string | null;
-  onToggleRead: (notification: AlertNotification) => Promise<void>;
-  onMarkAllRead: () => Promise<void>;
 }
 
 export function ProfileAlertNotificationPanel({
   notifications,
-  loading,
-  error,
-  onToggleRead,
-  onMarkAllRead,
 }: ProfileAlertNotificationPanelProps) {
-  if (loading) {
-    return <section className={styles.contentStack}>Loading alert history...</section>;
+  if (notifications.length === 0) {
+    return (
+      <EmptyState
+        title="No notifications"
+        message="You have no alert notifications yet."
+        compact
+      />
+    );
   }
 
   return (
     <section className={styles.contentStack}>
-      <div className={styles.inlineActions}>
-        <h3>Alert notifications</h3>
-        {notifications.some((note) => note.readAt == null) ? (
-          <Button size="sm" kind="ghost" onClick={() => void onMarkAllRead()}>
-            Mark all as read
-          </Button>
-        ) : null}
-      </div>
-      {error ? <p>{error}</p> : null}
-      {!error && notifications.length == 0 ? <p>No alert history yet.</p> : null}
+      <h3>Alert notifications</h3>
       {notifications.map((note) => (
         <article key={note.id} className={styles.notificationItem}>
           <strong>{note.severity.toUpperCase()}</strong>
-          {note.title ? <h4>{note.title}</h4> : null}
           <p>{note.message}</p>
           <small>{new Date(note.timestamp).toLocaleString()}</small>
-          <Button size="sm" kind="ghost" onClick={() => void onToggleRead(note)}>
-            {note.readAt == null ? "Mark as read" : "Mark as unread"}
-          </Button>
         </article>
       ))}
     </section>

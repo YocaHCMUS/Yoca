@@ -1,29 +1,26 @@
-\chapter{Hệ thống và nguồn dữ liệu liên quan}
+\chapter{Các hệ thống và công nghệ liên quan}
 \label{Chapter2}
 
 Chương này trình bày những hệ thống mà nhóm chúng em đã khảo sát khi xác định hướng phát triển cho Yoca, sau đó đi vào các nguồn dữ liệu đang được sử dụng. Hai góc nhìn bổ sung cho nhau: Arkham, Dune và Nansen cho thấy cách một sản phẩm phân tích on-chain tổ chức thông tin; CoinGecko, Birdeye, Helius, Mobula, Zerion và Moralis cung cấp dữ liệu để Yoca vận hành. Qua đó, chương làm rõ khoảng trống sản phẩm cùng các ràng buộc ảnh hưởng đến kiến trúc.
 
-\section{Các hệ thống liên quan}
+
+\section{Các hệ thống tương tự trên thị trường}
 \label{sec:cac_he_thong_tuong_tu}
 
 Trong giai đoạn đầu của đồ án, từ ngày 07/09/2025 đến ngày 21/09/2025, nhóm chúng em khảo sát năm nền tảng gồm Arkham Intelligence, Birdeye, CoinGecko, Dune Analytics và Nansen. Mỗi nền tảng đại diện cho một cách tiếp cận: điều tra thực thể và dòng tiền, theo dõi token theo thời gian thực, tổng hợp thị trường, truy vấn dữ liệu tùy biến hoặc phân tích nhóm ví có ảnh hưởng. Việc đặt các cách tiếp cận cạnh nhau giúp nhóm xác định những điểm phù hợp với hành trình người dùng của đề tài.
 
-\subsection{Arkham Intelligence}
+Việc khảo sát các hệ thống này giúp nhóm nhận diện rõ hơn những yêu cầu thực tế của người dùng trong lĩnh vực phân tích dữ liệu blockchain. Một mặt, các nền tảng hiện có đã giải quyết tốt nhiều bài toán quan trọng như cung cấp dữ liệu giá, biểu đồ giao dịch, bảng xếp hạng token, nhãn ví hoặc dashboard truy vấn dữ liệu. Mặt khác, chúng vẫn còn tồn tại một số hạn chế khi đặt trong bối cảnh người dùng phổ thông tại Việt Nam cần một công cụ trực quan, dễ sử dụng, tập trung vào phân tích ví và hành vi tài sản trên Solana. Do đó, phần khảo sát này được trình bày theo hướng phân tích vai trò, ưu điểm, hạn chế và bài học rút ra cho hệ thống Yoca.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[height=1.5cm]{images/chapter2/arkm-logo.png}
-    \caption{Logo nền tảng Arkham Intelligence}
-    \label{fig:platform_arkham_logo}
-\end{figure}
+\subsection{Nền tảng Arkham Intelligence}
 
-\noindent\textit{URL: \url{https://intel.arkm.com/}}
+\noindent\textit{\small URL: \url{https://intel.arkm.com/} \quad--- \quad Thời điểm khảo sát: 07/09/2025 -- 21/09/2025 (Sprint 1 của đồ án)}
+\vspace{1mm}
 
 Arkham Intelligence tập trung vào việc liên kết địa chỉ blockchain với thực thể, trực quan hóa quan hệ giữa các ví và hỗ trợ truy vết dòng tiền \cite{arkham}. Nhóm chúng em đặc biệt quan tâm đến cách Arkham biến những địa chỉ khó đọc thành một mạng lưới có ngữ cảnh. Người dùng có thể bắt đầu từ một ví, theo dõi tài sản di chuyển qua các địa chỉ trung gian và quan sát mối quan hệ giữa những thực thể đã được gắn nhãn.
 
-Cách tiếp cận này có giá trị cao đối với điều tra chuyên sâu, nhưng cũng khiến giao diện chứa nhiều thông tin và đòi hỏi người dùng hiểu mục đích của từng công cụ. Yoca không đặt mục tiêu xây dựng một cơ sở định danh thực thể có quy mô tương đương. Bài học nhóm rút ra là dữ liệu ví chỉ thực sự hữu ích khi được đặt trong ngữ cảnh; vì vậy, Yoca ưu tiên danh mục, lịch sử giao dịch, biến động tài sản và những tín hiệu hành vi có thể giải thích trực tiếp cho người dùng.
+Cách tiếp cận của Arkham mang lại giá trị lớn đối với các nhà phân tích chuyên sâu vì dữ liệu blockchain về bản chất là công khai nhưng không dễ diễn giải. Luồng \textbf{truy vết dòng tiền (fund flow tracing)} cho phép người dùng chọn một địa chỉ hoặc thực thể làm điểm xuất phát, sau đó hệ thống dựng \textbf{biểu đồ mạng lưới giao dịch (network graph)} thể hiện các bước di chuyển tài sản qua nhiều địa chỉ trung gian kèm giá trị và thời điểm của từng bước chuyển. Nhờ kết hợp dữ liệu giao dịch, dữ liệu định danh và biểu đồ mạng lưới, Arkham giúp quá trình truy vết dòng tiền trở nên trực quan hơn so với việc phân tích thủ công trên các trình khám phá khối.
 
-\subsection{Birdeye và CoinGecko}
+Tuy nhiên, chính điểm mạnh về định danh thực thể cũng tạo ra một số vấn đề khi xét đến quyền riêng tư và mức độ phù hợp với người dùng phổ thông. Việc gắn nhãn ví và liên kết dữ liệu giao dịch với thực thể cụ thể có thể tạo nên nhiều tranh luận liên quan đến tính ẩn danh, quyền riêng tư và cách sử dụng dữ liệu công khai trên blockchain. Bên cạnh đó, hệ thống của Arkham thiên về điều tra dữ liệu, truy vết dòng tiền và phân tích thực thể ở mức chuyên sâu. Với những người dùng mới tham gia thị trường, khối lượng thông tin lớn và cách tổ chức dữ liệu theo hướng điều tra có thể khiến trải nghiệm ban đầu trở nên khó tiếp cận.
 
 \begin{figure}[H]
     \centering
@@ -34,33 +31,43 @@ Cách tiếp cận này có giá trị cao đối với điều tra chuyên sâu
     \label{fig:platform_birdeye_coingecko_logo}
 \end{figure}
 
-\noindent\textit{URL: \url{https://birdeye.so/} và \url{https://www.coingecko.com/}}
+\subsection{Nền tảng Birdeye và CoinGecko}
 
-Birdeye và CoinGecko cùng giúp người dùng tiếp cận dữ liệu token, nhưng có trọng tâm khác nhau. Birdeye nổi bật ở dữ liệu DEX, pool, giao dịch và biến động ngắn hạn, đặc biệt trong hệ sinh thái Solana \cite{birdeye}. CoinGecko có phạm vi thị trường rộng hơn, cung cấp danh mục coin, metadata, giá, vốn hóa, khối lượng và lịch sử thị trường trên nhiều hệ sinh thái \cite{coingecko}. Với người dùng, cả hai đều rút ngắn đáng kể quá trình tìm token, quan sát biểu đồ và đánh giá tình trạng thị trường.
+\noindent\textit{\small Birdeye --- URL: \url{https://birdeye.so/} \quad--- \quad Thời điểm khảo sát: 07/09/2025 -- 21/09/2025 (Sprint 1 của đồ án)}\\
+\noindent\textit{\small CoinGecko --- URL: \url{https://www.coingecko.com/} \quad--- \quad Thời điểm khảo sát: 07/09/2025 -- 21/09/2025 (Sprint 1 của đồ án)}
+\vspace{1mm}
 
 Qua hai nền tảng này, nhóm chúng em nhận thấy một trang thị trường tốt cần dẫn người dùng từ thông tin tổng quan đến một token hoặc pool cụ thể. Góc nhìn thị trường sau đó được nối với phần phân tích ví để trả lời tài sản đã thay đổi như thế nào, giao dịch nào tạo ra lãi hoặc lỗ và hoạt động nào đáng chú ý.
 
-\subsection{Dune Analytics và Nansen}
+CoinGecko là một nền tảng tổng hợp dữ liệu thị trường tài sản số với phạm vi bao phủ rộng trên nhiều blockchain và nhiều loại tài sản khác nhau \cite{coingecko}. Luồng xử lý cốt lõi của CoinGecko là \textbf{tổng hợp giá đa sàn (price aggregation)}: hệ thống thu thập giá và khối lượng giao dịch của cùng một tài sản từ hàng trăm sàn giao dịch, sau đó tính giá tham chiếu bằng trung bình có trọng số theo khối lượng nhằm hạn chế sai lệch do một sàn đơn lẻ thao túng giá. Thay vì tập trung vào một mạng lưới cụ thể, CoinGecko đóng vai trò như một nguồn tham chiếu dữ liệu thị trường tổng quát, cung cấp thông tin về giá, vốn hóa thị trường, khối lượng giao dịch, dữ liệu lịch sử và xu hướng của nhiều token. Trong các hệ thống phân tích dữ liệu blockchain, CoinGecko thường được sử dụng như một nguồn dữ liệu chuẩn để lấy giá hiện tại hoặc dữ liệu lịch sử phục vụ việc quy đổi giá trị tài sản.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[height=1.5cm]{images/chapter2/dune-logo.png}
-    \hspace{1.5cm}
-    \includegraphics[height=1.5cm]{images/chapter2/nansen-logo.png}
-    \caption{Logo nền tảng Dune Analytics và Nansen}
-    \label{fig:platform_dune_nansen_logo}
-\end{figure}
+Điểm mạnh của Birdeye và CoinGecko nằm ở khả năng cung cấp dữ liệu thị trường trực quan, dễ tiếp cận và có tính ứng dụng cao. Người dùng có thể nhanh chóng biết một token đang tăng hay giảm, khối lượng giao dịch có đột biến hay không, vốn hóa thị trường đang ở mức nào và biểu đồ giá có xu hướng ra sao. Những dữ liệu này là nền tảng quan trọng cho bất kỳ hệ thống phân tích tài sản số nào, vì giá trị danh mục ví và hành vi giao dịch của người dùng đều cần được đặt trong bối cảnh biến động thị trường.
 
-\noindent\textit{URL: \url{https://dune.com/} và \url{https://www.nansen.ai/}}
+Tuy nhiên, hai nền tảng này chủ yếu tập trung vào góc nhìn thị trường và token hơn là phân tích hành vi ví một cách chuyên sâu. Người dùng có thể xem dữ liệu giá hoặc thông tin token, nhưng việc trả lời các câu hỏi như một ví đã thay đổi danh mục ra sao, dòng tiền vào ra như thế nào, ví có xu hướng nắm giữ hay giao dịch ngắn hạn, hoặc tài sản nào đóng góp nhiều nhất vào biến động tổng giá trị danh mục vẫn cần thêm nhiều thao tác phân tích. Bên cạnh đó, khi các hệ thống bên ngoài được sử dụng thông qua API, bài toán giới hạn số lượt gọi, độ trễ, dữ liệu thiếu và sự không đồng nhất giữa các nhà cung cấp cũng trở thành vấn đề kỹ thuật cần được xử lý.
 
 Dune Analytics cho phép cộng đồng truy vấn dữ liệu blockchain đã được lập chỉ mục và xây dựng dashboard bằng SQL \cite{dune}. Sức mạnh của Dune nằm ở khả năng tùy biến: cùng một tập dữ liệu có thể trả lời nhiều câu hỏi nghiên cứu khác nhau. Cách sử dụng này phù hợp với nhà phân tích am hiểu cấu trúc dữ liệu và SQL, nhưng tạo thêm bước chuẩn bị cho người dùng muốn xem nhanh một token hoặc ví.
 
 Nansen tiếp cận bài toán từ dữ liệu ví đã được gắn nhãn và các nhóm hành vi như smart money \cite{nansenai}. Nền tảng làm nổi bật dòng tiền cùng hoạt động của những nhóm ví đáng chú ý, qua đó giảm công sức đọc từng giao dịch riêng lẻ. Hướng này gần với mong muốn của nhóm chúng em về việc đưa dữ liệu đã xử lý đến gần người dùng hơn, dù Nansen chủ yếu phục vụ người dùng chuyên nghiệp và dựa trên lớp dữ liệu độc quyền. Yoca lựa chọn phạm vi hẹp hơn, chuẩn bị sẵn các luồng phân tích phổ biến, duy trì khả năng kiểm chứng chỉ số nền và sử dụng AI như lớp hỗ trợ diễn giải.
 
-\section{Đối chiếu và bài toán đặt ra cho Yoca}
-\label{sec:platform_comparison_and_problem}
+\noindent\textit{\small Dune Analytics --- URL: \url{https://dune.com/} \quad--- \quad Thời điểm khảo sát: 07/09/2025 -- 21/09/2025 (Sprint 1 của đồ án)}\\
+\noindent\textit{\small Nansen --- URL: \url{https://www.nansen.ai/} \quad--- \quad Thời điểm khảo sát: 07/09/2025 -- 21/09/2025 (Sprint 1 của đồ án)}
+\vspace{1mm}
 
-Các nền tảng được khảo sát không tạo thành một thang đo hơn--kém duy nhất. Arkham và Nansen có lợi thế về ngữ cảnh thực thể; Birdeye và CoinGecko mạnh ở dữ liệu thị trường; Dune trao nhiều quyền tùy biến cho người phân tích. Vì vậy, nhóm chúng em chọn các tiêu chí đối chiếu dựa trên hành trình mà Yoca muốn hỗ trợ: khám phá thị trường, đi sâu vào token hoặc pool, xem hoạt động của ví, lưu lại đối tượng quan tâm và nhận phần diễn giải dễ đọc hơn.
+Dune Analytics là một nền tảng phân tích dữ liệu blockchain theo hướng truy vấn và xây dựng dashboard cộng đồng \cite{dune}. Luồng xử lý nền tảng của Dune là \textbf{lập chỉ mục dữ liệu on-chain (on-chain indexing)}: hệ thống giải mã dữ liệu block, giao dịch và log sự kiện của nhiều blockchain thành các bảng quan hệ có cấu trúc, cập nhật liên tục theo từng block mới. Trên nền dữ liệu đã lập chỉ mục, luồng \textbf{truy vấn SQL tùy biến} cho phép người dùng viết truy vấn để khai thác dữ liệu, sau đó trình bày kết quả dưới dạng bảng, biểu đồ hoặc dashboard. Với cách tiếp cận này, Dune đặc biệt phù hợp với các nhà phân tích dữ liệu, nhà nghiên cứu và cộng đồng phát triển cần xây dựng các bảng phân tích tùy chỉnh cho từng giao thức, từng bộ sưu tập NFT hoặc từng xu hướng thị trường.
+
+Ưu điểm lớn nhất của Dune là tính linh hoạt. Người dùng có kiến thức về truy vấn dữ liệu có thể tự định nghĩa chỉ số, tự xây dựng dashboard và chia sẻ kết quả phân tích cho cộng đồng. Nhờ đó, Dune trở thành một kho tri thức lớn về dữ liệu on-chain, nơi nhiều phân tích chuyên sâu được đóng góp bởi cộng đồng. Tuy nhiên, chính sự linh hoạt này cũng là rào cản đối với người dùng phổ thông. Để khai thác tối đa Dune, người dùng thường cần hiểu cấu trúc dữ liệu blockchain, biết cách viết truy vấn và biết cách diễn giải kết quả. Điều này khiến Dune mạnh về mặt phân tích dữ liệu nhưng không phải lúc nào cũng phù hợp với người dùng mới hoặc người dùng cần một giao diện ra quyết định nhanh.
+
+Nansen là một nền tảng phân tích on-chain tập trung vào việc gắn nhãn ví, phân tích dòng tiền thông minh và cung cấp các tín hiệu thị trường dựa trên hoạt động của những nhóm ví có ảnh hưởng \cite{nansenai}. Luồng \textbf{gắn nhãn ví quy mô lớn (wallet labeling)} của Nansen kết hợp dữ liệu on-chain với thông tin thu thập thủ công và mô hình phân loại để gán nhãn cho hơn một trăm triệu địa chỉ theo loại thực thể như sàn giao dịch, quỹ đầu tư hoặc nhà giao dịch cá nhân. Dựa trên tập nhãn này, luồng \textbf{theo dõi smart money} tổng hợp hoạt động mua bán của các nhóm ví có lịch sử giao dịch hiệu quả thành tín hiệu thị trường, giúp người dùng theo dõi hoạt động của các ví lớn, quỹ đầu tư, nhà giao dịch chuyên nghiệp hoặc các nhóm ví có hành vi đặc biệt mà không cần tự phân tích dữ liệu thô. Đây là một hướng tiếp cận có giá trị trong bối cảnh thị trường tiền mã hóa thường bị ảnh hưởng mạnh bởi hoạt động của các ví lớn.
+
+Điểm mạnh của Nansen là khả năng chuyển dữ liệu on-chain thành các tín hiệu có ý nghĩa hơn đối với quyết định đầu tư. Thay vì chỉ cung cấp dữ liệu giao dịch thô, hệ thống tập trung vào việc phân loại ví, phát hiện xu hướng dòng tiền và làm nổi bật các hoạt động đáng chú ý. Tuy nhiên, Nansen cũng có một số hạn chế đối với phạm vi đề tài của Yoca. Nền tảng này thường hướng đến nhóm người dùng chuyên nghiệp, có chi phí sử dụng cao hơn so với nhu cầu của nhiều người dùng phổ thông. Ngoài ra, các chỉ số chuyên sâu và cách tổ chức thông tin theo hướng chuyên nghiệp có thể khiến người mới gặp khó khăn trong quá trình tiếp cận.
+
+Từ Dune và Nansen, nhóm nhận thấy rằng một hệ thống phân tích on-chain có giá trị cần cân bằng giữa tính linh hoạt, độ sâu phân tích và khả năng sử dụng. Nếu hệ thống quá linh hoạt theo hướng truy vấn, người dùng phổ thông sẽ khó tiếp cận. Nếu hệ thống quá chuyên sâu theo hướng dữ liệu tổ chức và nhãn ví, chi phí sử dụng và độ phức tạp có thể tăng cao. Vì vậy, Yoca lựa chọn hướng tiếp cận trung gian: cung cấp các chức năng phân tích được thiết kế sẵn cho những nhu cầu phổ biến như theo dõi thị trường, phân tích token, phân tích ví và trực quan hóa biến động tài sản, đồng thời bổ sung trợ lý AI để hỗ trợ diễn giải dữ liệu bằng ngôn ngữ tự nhiên.
+
+\subsection{Bảng đối chiếu tính năng và Bài toán đặt ra cho Yoca}
+
+Từ việc khảo sát các nền tảng trên, có thể thấy mỗi hệ thống đều giải quyết tốt một phần của bài toán phân tích dữ liệu blockchain. Arkham mạnh về truy vết ví và phân tích thực thể. Birdeye và CoinGecko mạnh về dữ liệu thị trường và token. Dune mạnh về truy vấn dữ liệu tùy chỉnh và dashboard cộng đồng. Nansen mạnh về nhãn ví, dòng tiền thông minh và tín hiệu chuyên sâu. Tuy nhiên, khi đặt trong bối cảnh xây dựng một hệ thống hướng đến người dùng cần phân tích dữ liệu on-chain Solana một cách trực quan, dễ hiểu và có khả năng tổng hợp hành vi ví, vẫn còn một khoảng trống đáng chú ý.
+
+Khoảng trống này nằm ở việc kết hợp nhiều góc nhìn dữ liệu trong cùng một trải nghiệm thống nhất. Người dùng không chỉ cần biết giá token đang thay đổi như thế nào, mà còn cần biết ví của họ đang nắm giữ những tài sản nào, giá trị danh mục thay đổi ra sao, lịch sử giao dịch phản ánh hành vi gì và các biểu đồ có thể cho thấy xu hướng nào. Nếu các thông tin này bị phân tán trên nhiều nền tảng khác nhau, người dùng phải tự tổng hợp, tự đối chiếu và tự diễn giải. Đây là một quá trình tốn thời gian, dễ sai sót và không phù hợp với người dùng mới.
 
 \input{Chapter2/platform_comparison_table}
 
@@ -68,20 +75,20 @@ Bảng~\ref{tab:platform-comparison} xác định phạm vi riêng của Yoca: n
 
 Khi hiện thực hóa luồng trên, nhóm chúng em phải kết hợp dữ liệu phân tán giữa nhiều dịch vụ. Cùng một khái niệm có thể có khóa định danh, độ sâu lịch sử và trường dữ liệu khác nhau; một phản hồi hợp lệ về mặt HTTP vẫn có thể thiếu symbol, giá hoặc phần mô tả giao dịch. Quota và chi phí của API cũng ảnh hưởng đến nhịp cập nhật, khả năng tái sử dụng dữ liệu và cách phân công nguồn. Những ràng buộc này dẫn đến lớp tích hợp provider, validation runtime, cache và các read model được trình bày trong Chương 4.
 
-\section{Các nhà cung cấp dữ liệu được sử dụng trong Yoca}
-\label{sec:data_providers}
+\section{Cơ sở lý thuyết và công nghệ áp dụng}
+\label{sec:cong_nghe_ap_dung}
 
 Yoca sử dụng các API chuyên biệt cho từng miền dữ liệu rồi chuẩn hóa kết quả về mô hình nội bộ. Danh sách dưới đây phản ánh các nguồn vận hành của hệ thống tại ngày khảo sát 11/07/2026.
 
-\subsection{Dữ liệu thị trường, token và pool}
+Phần này trình bày các nền tảng lý thuyết và công nghệ chính được sử dụng trong hệ thống. Nội dung được tổ chức theo luồng từ bản chất dữ liệu on-chain, đặc điểm của mạng lưới Solana, kiến trúc mã nguồn, backend, frontend, cơ chế tích hợp dữ liệu bên thứ ba, cho đến khả năng ứng dụng mô hình ngôn ngữ lớn trong việc diễn giải dữ liệu tài chính.
 
 CoinGecko là nguồn có phạm vi sử dụng rộng nhất ở miền thị trường của Yoca. Các API coin cung cấp danh sách token, metadata, tìm kiếm, giá, vốn hóa và lịch sử; nhóm Onchain DEX do GeckoTerminal cung cấp dữ liệu pool, giao dịch và tìm kiếm theo địa chỉ. CoinGecko cung cấp REST API trong cả gói Demo miễn phí và các gói trả phí; nhóm endpoint công khai bao phủ dữ liệu coin, market và một phần dữ liệu on-chain \cite{coingecko-api-docs}. Giới hạn truy vấn theo phút và phạm vi lịch sử được xử lý bằng cache cùng cơ chế tái sử dụng dữ liệu giữa các lần tương tác.
 
 Birdeye được sử dụng cho trending token, recent trades, trader gainers/losers và một số chuỗi lịch sử giá. Trong quá trình thực hiện đề tài, nhóm chúng em sử dụng gói Lite để khảo sát các endpoint có độ sâu lịch sử lớn. Theo bảng giá tại thời điểm khảo sát, gói Standard miễn phí có phạm vi API giới hạn; gói Lite có giá 39 USD/tháng và 2,5 triệu compute unit \cite{birdeye-pricing}. Quota và chi phí vì vậy trở thành tiêu chí quan trọng khi xác định chu kỳ cache và phạm vi dữ liệu cần đồng bộ.
 
-Mobula cũng được dùng để lấy thống kê holder của token. Tuy nhiên, vai trò quan trọng hơn của dịch vụ này nằm ở miền ví, được trình bày ở phần tiếp theo.
+Tuy nhiên, dữ liệu on-chain không được sinh ra để phục vụ trực tiếp cho việc đọc hiểu của người dùng cuối. Một giao dịch blockchain thường bao gồm nhiều trường dữ liệu kỹ thuật như chữ ký giao dịch, địa chỉ người gửi, địa chỉ người nhận, chương trình được gọi, token mint, số lượng token, block time và nhiều metadata khác. Nếu không có lớp xử lý trung gian, người dùng rất khó chuyển các thông tin này thành nhận định có ý nghĩa. Do đó, một hệ thống phân tích on-chain cần thực hiện nhiều bước xử lý, bao gồm thu thập dữ liệu, chuẩn hóa dữ liệu, lưu trữ, tính toán chỉ số, trực quan hóa và diễn giải kết quả.
 
-\subsection{Dữ liệu ví và giao dịch}
+Solana là một mạng lưới blockchain có hiệu năng cao, được thiết kế để xử lý số lượng lớn giao dịch với chi phí thấp \cite{solana}. Đặc điểm này khiến Solana trở thành một môi trường phù hợp cho các ứng dụng tài chính phi tập trung, giao dịch token, NFT và nhiều loại ứng dụng Web3 khác. Tuy nhiên, hiệu năng cao cũng kéo theo khối lượng dữ liệu lớn. Việc theo dõi lịch sử giao dịch của một ví hoạt động thường xuyên, tổng hợp số dư token, xác định lịch sử chuyển tài sản và tính toán giá trị danh mục theo thời gian đòi hỏi hệ thống phải có chiến lược truy xuất và lưu trữ dữ liệu hợp lý.
 
 Helius là nguồn dữ liệu gắn chặt với Solana trong Yoca. Hệ thống dùng Helius Wallet API cho portfolio, lịch sử, transfer, funded-by và identity; Enhanced Transactions cung cấp giao dịch đã giải mã với token transfer, native transfer, account data và instruction \cite{helius-enhanced-transactions}. Dữ liệu này phục vụ lịch sử hoạt động, chi tiết giao dịch và webhook cảnh báo, trong khi các chỉ số PnL tổng hợp được lấy từ nguồn phân tích chuyên biệt.
 

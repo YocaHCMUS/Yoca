@@ -405,7 +405,7 @@ async function fetchBraveEndpoint(
     );
   }
 
-  return response.json();
+  return JSON.parse(await response.text());
 }
 
 export async function fetchBraveTokenNews(options: BraveNewsSearchOptions) {

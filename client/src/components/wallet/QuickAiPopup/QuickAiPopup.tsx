@@ -290,6 +290,7 @@ export function QuickAiPopup({
               {showPromptMenu && (
                 <ChatPromptMenu
                   walletAddress={addresses[0]}
+                  contextType={contextType}
                   onSelect={(query, promptId) => {
                     setShowPromptMenu(false);
                     handlePredefined(query, promptId);

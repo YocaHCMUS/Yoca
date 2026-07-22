@@ -1,6 +1,5 @@
 .searchRow {
   padding: 0.5rem;
-  border-block-end: 1px solid var(--cds-border-subtle-01);
 }
 
 .list {
@@ -19,7 +18,7 @@
 }
 
 .item:hover {
-  background: var(--cds-layer-hover-01);
+  background: var(--yoca-surface-hover);
 }
 
 .symbol {
@@ -30,7 +29,7 @@
 }
 
 .name {
-  color: var(--cds-text-secondary);
+  color: var(--yoca-text-muted);
   font-size: 0.75rem;
   overflow: hidden;
   text-overflow: ellipsis;
