@@ -2709,7 +2709,7 @@ export const translation = defineTranslation({
         },
       },
       highRiskWallet: "Ví rủi ro cao",
-      bridgeWallet: "Ví trung gian",
+      bridgeWallet: "Ví đáng ngờ khác",
       normalWallet: "Ví bình thường",
       walletGraphName: "Graph giao dịch ví",
       suspiciousFlow: "Luồng đáng ngờ",
@@ -2765,7 +2765,7 @@ export const translation = defineTranslation({
         "AI đánh dấu ví này vì pattern {{pattern}} trên token {{symbol}}. Điểm GNN hiện tại là {{score}}/100.",
       topFeature: "Đặc trưng nổi bật",
       featureScore: "Điểm đặc trưng",
-      note: "Cách đọc: circularPattern cao thường cho thấy ví tham gia vòng giao dịch khép kín; timeRegularity cao cho thấy nhịp giao dịch giống bot; amountSimilarity cao cho thấy lượng token lặp lại bất thường; volumeSignal cao cho thấy ví chuyển lượng token lớn so với ví có volume lớn nhất trong graph.",
+      note: "Cách đọc: circularPattern cao thường cho thấy ví tham gia vòng giao dịch khép kín; timeRegularity cao cho thấy tần suất giao dịch giống bot; amountSimilarity cao cho thấy lượng token lặp lại bất thường; volumeSignal cao cho thấy ví chuyển lượng token lớn so với ví có volume lớn nhất trong graph.",
     },
     patterns: {
       circularTrade: "Giao dịch vòng lặp",

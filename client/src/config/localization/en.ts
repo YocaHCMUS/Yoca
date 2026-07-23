@@ -2709,7 +2709,7 @@ export const translation = {
         },
       },
       highRiskWallet: "High risk wallet",
-      bridgeWallet: "Bridge wallet",
+      bridgeWallet: "Other suspicious wallet",
       normalWallet: "Normal wallet",
       walletGraphName: "Wallet transaction graph",
       suspiciousFlow: "Suspicious flow",
