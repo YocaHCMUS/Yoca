@@ -449,7 +449,7 @@ const NetworkGraph: React.FC<{
 
     const categories = [
       { name: String(tr("washTrading.graph.highRiskWallet")), itemStyle: { color: "#e24b4a" } },
-      { name: String(tr("washTrading.graph.bridgeWallet")), itemStyle: { color: "#ef9f27" } },
+      { name: String(tr("washTrading.graph.bridgeWallet")), itemStyle: { color: "#ef6d27" } },
       { name: String(tr("washTrading.graph.normalWallet")), itemStyle: { color: "#64748b" } },
     ];
 
