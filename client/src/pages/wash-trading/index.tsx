@@ -464,11 +464,17 @@ const NetworkGraph: React.FC<{
     const graphNodes = visibleNodes.map((node, index) => {
       const score = typeof node.score === "number" ? Math.round(Math.max(0, Math.min(1, node.score)) * 100) : 0;
       const isWash = node.type === "wash";
-      const isBridge = node.type === "bridge";
+      // The backend keeps the legacy "bridge" value for API compatibility.
+      // In the UI it represents another suspicious wallet, not a proven intermediary role.
+      const isOtherSuspicious = node.type === "bridge";
       const isCircular = circularHighlight.nodeIds.has(node.id);
-      const typeLabel = isWash ? tr("washTrading.graph.highRiskWallet") : isBridge ? tr("washTrading.graph.bridgeWallet") : tr("washTrading.graph.normalWallet");
+      const typeLabel = isWash
+        ? tr("washTrading.graph.highRiskWallet")
+        : isOtherSuspicious
+          ? tr("washTrading.graph.bridgeWallet")
+          : tr("washTrading.graph.normalWallet");
       const angle = (Math.PI * 2 * index) / Math.max(visibleNodes.length, 1);
-      const riskRadiusFactor = isWash ? 0.62 : isBridge ? 0.78 : 1;
+      const riskRadiusFactor = isWash ? 0.62 : isOtherSuspicious ? 0.78 : 1;
       const ringOffset = (index % 3) * (isFullscreen ? 42 : 26);
       const radius = initialRadius * riskRadiusFactor + ringOffset;
 
@@ -479,10 +485,10 @@ const NetworkGraph: React.FC<{
         category: categoryIndex(node.type),
         x: Math.cos(angle) * radius,
         y: Math.sin(angle) * radius,
-        symbolSize: isWash ? Math.max(34, 24 + score * 0.28) : isBridge ? 32 : 24,
+        symbolSize: isWash ? Math.max(34, 24 + score * 0.28) : isOtherSuspicious ? 32 : 24,
         draggable: true,
         label: {
-          show: isWash || isBridge || isFullscreen,
+          show: isWash || isOtherSuspicious || isFullscreen,
           formatter: "{b}",
           position: "right",
           distance: 8,
@@ -490,9 +496,9 @@ const NetworkGraph: React.FC<{
         },
         itemStyle: {
           // Keep the wallet fill colour from its risk category. Circular membership is
-          // expressed only by a purple ring/glow so High/Bridge/Normal remain readable.
+          // expressed only by a purple ring/glow so High/Other suspicious/Normal remain readable.
           borderWidth: isCircular ? 3.5 : isWash ? 3 : 1.5,
-          borderColor: isCircular ? "#c084fc" : isWash ? "#fecaca" : isBridge ? "#fde68a" : "#94a3b8",
+          borderColor: isCircular ? "#c084fc" : isWash ? "#fecaca" : isOtherSuspicious ? "#fde68a" : "#94a3b8",
           shadowBlur: isCircular ? 16 : isWash ? 13 : 5,
           shadowColor: isCircular ? "rgba(168, 85, 247, 0.58)" : isWash ? "rgba(226, 75, 74, 0.55)" : "rgba(15, 23, 42, 0.25)",
         },
