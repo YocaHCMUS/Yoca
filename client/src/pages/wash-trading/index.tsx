@@ -13,6 +13,7 @@ const API_DOMAIN: string = import.meta.env.VITE_CLIENT_API_DOMAIN || "";
 type Timeframe = "24h" | "7d" | "30d";
 type GnnAlgorithm = "GCN" | "GAT" | "GraphSAGE";
 type RiskLevel = "High" | "Medium" | "Low";
+type WalletFilter = "All" | RiskLevel;
 type Severity = "high" | "medium" | "info" | "success";
 
 interface SuspiciousWallet {
@@ -449,7 +450,7 @@ const NetworkGraph: React.FC<{
 
     const categories = [
       { name: String(tr("washTrading.graph.highRiskWallet")), itemStyle: { color: "#e24b4a" } },
-      { name: String(tr("washTrading.graph.bridgeWallet")), itemStyle: { color: "#ef9f27" } },
+      { name: String(tr("washTrading.graph.bridgeWallet")), itemStyle: { color: "#ef6d27" } },
       { name: String(tr("washTrading.graph.normalWallet")), itemStyle: { color: "#64748b" } },
     ];
 
@@ -1189,7 +1190,7 @@ const WashTradingPage: React.FC = () => {
   const [aiUsage, setAiUsage] = useState<ApiResponse["usage"]>(undefined);
   const [result, setResult] = useState<WashTradingResult | null>(null);
   const [algoTab, setAlgoTab] = useState<GnnAlgorithm>(["GCN", "GAT", "GraphSAGE"].includes(algorithmFromUrl) ? algorithmFromUrl : "GCN");
-  const [walletFilter, setWalletFilter] = useState<"All" | "High risk" | "New">("All");
+  const [walletFilter, setWalletFilter] = useState<WalletFilter>("All");
   const [selectedWalletAddress, setSelectedWalletAddress] = useState<string | null>(null);
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
   const [isAiVerdictOpen, setIsAiVerdictOpen] = useState(true);
@@ -1323,13 +1324,39 @@ const WashTradingPage: React.FC = () => {
     updateUrlParam("algorithm", next);
   };
 
-  const filteredWallets = (result?.suspiciousWallets ?? []).filter((wallet) => {
-    if (walletFilter === "High risk") return wallet.riskLevel === "High";
-    if (walletFilter === "New") return wallet.riskLevel !== "High";
-    return true;
-  });
+  const walletFilters = useMemo(
+    () => [
+      { value: "All" as const, label: tr("washTrading.wallets.all") },
+      { value: "High" as const, label: tr("washTrading.wallets.highRisk") },
+      { value: "Medium" as const, label: tr("washTrading.wallets.mediumRisk") },
+      { value: "Low" as const, label: tr("washTrading.wallets.lowRisk") },
+    ],
+    [tr],
+  );
 
-  const selectedWallet = result?.suspiciousWallets.find((wallet) => wallet.wallet === selectedWalletAddress) ?? result?.suspiciousWallets[0];
+  const filteredWallets = useMemo(() => {
+    const wallets = result?.suspiciousWallets ?? [];
+    if (walletFilter === "All") return wallets;
+    return wallets.filter((wallet) => wallet.riskLevel === walletFilter);
+  }, [result?.suspiciousWallets, walletFilter]);
+
+  useEffect(() => {
+    if (filteredWallets.length === 0) {
+      if (selectedWalletAddress !== null) setSelectedWalletAddress(null);
+      return;
+    }
+
+    const selectedWalletIsVisible = filteredWallets.some(
+      (wallet) => wallet.wallet === selectedWalletAddress,
+    );
+    if (!selectedWalletIsVisible) {
+      setSelectedWalletAddress(filteredWallets[0].wallet);
+    }
+  }, [filteredWallets, selectedWalletAddress]);
+
+  const selectedWallet = filteredWallets.find(
+    (wallet) => wallet.wallet === selectedWalletAddress,
+  ) ?? filteredWallets[0];
   const topWallet = selectedWallet;
   const featureSource = topWallet?.features;
   const summary = result?.summary;
@@ -1547,13 +1574,15 @@ const WashTradingPage: React.FC = () => {
                 <span className={styles.cardIcon}>🔍</span>
                 <h2 className={styles.cardTitle}>{tr("washTrading.wallets.title")}</h2>
                 <div className={styles.walletTabs}>
-                  {(["All", "High risk", "New"] as const).map((filter) => (
+                  {walletFilters.map((filter) => (
                     <button
-                      key={filter}
-                      className={`${styles.walletTab} ${walletFilter === filter ? styles.walletTabActive : ""}`}
-                      onClick={() => setWalletFilter(filter)}
+                      key={filter.value}
+                      type="button"
+                      className={`${styles.walletTab} ${walletFilter === filter.value ? styles.walletTabActive : ""}`}
+                      onClick={() => setWalletFilter(filter.value)}
+                      aria-pressed={walletFilter === filter.value}
                     >
-                      {filter === "All" ? tr("washTrading.wallets.all") : filter === "High risk" ? tr("washTrading.wallets.highRisk") : tr("washTrading.wallets.new")}
+                      {filter.label}
                     </button>
                   ))}
                 </div>

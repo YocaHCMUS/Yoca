@@ -403,6 +403,12 @@
   border-radius: 8px;
 }
 
+.walletTabs {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
 .algoTab,
 .walletTab {
   border: none;
@@ -412,6 +418,7 @@
   padding: 5px 9px;
   font-size: 12px;
   cursor: pointer;
+  white-space: nowrap;
 
   &:hover {
     color: var(--text-primary);
