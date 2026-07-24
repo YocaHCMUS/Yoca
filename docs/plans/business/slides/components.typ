@@ -1,269 +1,359 @@
 #import "theme.typ": *
+#import "@preview/cetz:0.5.2": canvas
+#import "@preview/cetz-plot:0.1.4": chart
 
-#let eyebrow(body) = text(size: 8.5pt, weight: "semibold", fill: accent, tracking: 0.1em, upper(body))
-
-#let takeaway(body) = block(
-  width: 100%, inset: (x: 12pt, y: 7pt), radius: panel-radius, fill: panel-gradient,
-)[#text(size: 9.5pt, weight: "semibold", fill: text-on-color)[#body]]
-
-#let full-grid(content-height: 348pt, ..args) = block(width: 100%, height: content-height)[#grid(..args)]
-
-#let flow-node(icon, label) = grid(
-  columns: (15pt, 1fr), gutter: 5pt, align: horizon,
-  image(icon, width: 14pt, height: 14pt, fit: "contain"),
-  text(size: 8.5pt, weight: "semibold")[#label],
+#let eyebrow(body) = text(
+  size: 8.5pt,
+  weight: "semibold",
+  fill: accent,
+  tracking: 0.1em,
+  upper(body),
 )
 
-#let compact-product-flow() = block(width: 100%)[
-  #eyebrow([Hành trình phân tích của người dùng])
-  #v(6pt)
+#let takeaway(body) = block(
+  width: 100%,
+  inset: (x: 12pt, y: 7pt),
+  radius: panel-radius,
+  fill: panel-gradient,
+)[#text(size: 9.5pt, weight: "semibold", fill: text-on-color)[#body]]
+
+#let full-grid(content-height: 348pt, ..args) = block(
+  width: 100%,
+  height: content-height,
+)[#grid(..args)]
+
+#let panel(body, fill: layer-1, inset: 11pt) = block(
+  width: 100%,
+  inset: inset,
+  radius: panel-radius,
+  fill: fill,
+)[#body]
+
+#let icon-label(icon, label, detail: none) = grid(
+  columns: (20pt, 1fr),
+  gutter: 7pt,
+  align: horizon,
+  image(icon, width: 18pt, height: 18pt, fit: "contain"),
+  [
+    #text(size: 9.5pt, weight: "semibold")[#label]
+    #if detail != none {
+      linebreak()
+      text(size: 7pt, fill: muted)[#detail]
+    }
+  ],
+)
+
+#let product-flow() = block(width: 100%)[
+  #eyebrow([Hành trình tạo giá trị])
+  #v(7pt)
   #grid(
-    columns: (1fr, auto, 1fr, auto, 1fr, auto, 1.35fr),
-    gutter: 5pt,
+    columns: (1fr, auto, 1fr, auto, 1fr, auto, 1.25fr),
+    gutter: 8pt,
     align: horizon,
-    flow-node("assets/chart-line.svg", [Market]),
-    text(size: 10pt, fill: accent)[→],
-    flow-node("assets/currency-dollar.svg", [Token]),
-    text(size: 10pt, fill: accent)[→],
-    flow-node("assets/wallet.svg", [Wallet]),
-    text(size: 10pt, fill: accent)[→],
-    flow-node("assets/data-analytics.svg", [Wash Trading & AI]),
+    icon-label("assets/chart-line.svg", [Market], detail: [khám phá]),
+    text(size: 13pt, fill: accent)[→],
+    icon-label("assets/currency-dollar.svg", [Token], detail: [đánh giá]),
+    text(size: 13pt, fill: accent)[→],
+    icon-label("assets/wallet.svg", [Wallet], detail: [phân tích]),
+    text(size: 13pt, fill: accent)[→],
+    icon-label("assets/data-analytics.svg", [Wash Trading & AI], detail: [diễn giải]),
   )
 ]
 
-#let price-chip(name, price, free: false) = block(
-  width: 100%, inset: (x: 7pt, y: 5pt), radius: small-radius,
+#let tier-card(name, price, audience, benefit, free: false) = block(
+  width: 100%,
+  height: 108pt,
+  inset: 10pt,
+  radius: panel-radius,
   fill: if free { layer-1 } else { panel-gradient },
 )[
-  #text(size: 7pt, fill: if free { muted } else { highlight })[#name]
-  #h(3pt)
-  #text(size: 10pt, weight: "bold", fill: if free { ink } else { white })[#price]
+  #text(size: 8pt, weight: "semibold", fill: if free { muted } else { highlight })[#upper(name)]
+  #v(5pt)
+  #text(size: 21pt, weight: "bold", fill: if free { ink } else { white })[#price]
+  #v(6pt)
+  #text(size: 8pt, weight: "semibold", fill: if free { ink } else { white })[#audience]
+  #v(4pt)
+  #text(size: 7pt, fill: if free { muted } else { highlight })[#benefit]
 ]
 
-#let pricing-strip() = block(width: 100%)[
-  #eyebrow([Thuê bao tháng])
-  #v(5pt)
+#let conversion-card(mau, conversion, paid) = panel([
   #grid(
-    columns: (1fr, 1fr, 1fr, 1fr),
-    gutter: 5pt,
-    price-chip([Standard], [\$0], free: true),
-    price-chip([Lite], [\$39]),
-    price-chip([Plus], [\$79]),
-    price-chip([Pro], [\$149]),
+    columns: (1fr, auto),
+    gutter: 8pt,
+    align: horizon,
+    [
+      #text(size: 8pt, weight: "semibold")[#mau MAU]
+      #linebreak()
+      #text(size: 6.7pt, fill: muted)[#paid người trả phí]
+    ],
+    text(size: 18pt, weight: "bold", fill: accent)[#conversion],
   )
-]
+], inset: 9pt)
 
 #let latency-row(item) = block(width: 100%)[
   #grid(
-    columns: (1fr, auto, auto), gutter: 8pt, align: horizon,
+    columns: (1fr, auto),
+    gutter: 8pt,
+    align: horizon,
     text(size: 9pt, weight: "semibold")[#item.name],
-    text(size: 7.3pt, fill: muted)[#item.pass endpoint],
-    block(inset: (x: 5pt, y: 2pt), radius: small-radius, fill: highlight)[
-      #text(size: 7.5pt, weight: "semibold", fill: accent)[#item.speedup]
-    ],
+    text(size: 8pt, weight: "bold", fill: accent)[#item.speedup],
   )
   #v(4pt)
   #grid(
-    columns: (28pt, 1fr, 37pt), gutter: 5pt, align: horizon,
+    columns: (30pt, 1fr, 42pt),
+    gutter: 5pt,
+    align: horizon,
     text(size: 7pt, fill: muted)[Cold],
-    align(left, rect(width: item.coldMs / 25440 * 100%, height: 7pt, radius: 0pt, fill: background-inverse)),
+    align(left, rect(width: item.coldMs / 25440 * 100%, height: 7pt, fill: background-inverse)),
     align(right, text(size: 7pt, weight: "semibold")[#item.cold]),
     text(size: 7pt, fill: muted)[Warm],
-    align(left, rect(width: item.warmMs / 25440 * 100%, height: 7pt, radius: 0pt, fill: accent)),
+    align(left, rect(width: item.warmMs / 25440 * 100%, height: 7pt, fill: accent)),
     align(right, text(size: 7pt, weight: "semibold", fill: accent)[#item.warm]),
   )
 ]
 
-#let metric(value) = text(size: 7.5pt, weight: "semibold", fill: accent)[#value]
-#let dash = text(size: 7.5pt, fill: border-subtle)[—]
-
-#let provider-header(name, unit) = grid(
-  rows: (auto, auto), row-gutter: 4pt,
-  text(size: 5.2pt, weight: "semibold", fill: muted)[#name],
-  text(size: 4.6pt, fill: muted)[#unit],
-)
-
-#let quota-chip(item) = block(
-  width: 100%, height: 23pt, inset: (x: 5pt, y: 3pt),
-  radius: small-radius, fill: layer-1, clip: true,
-)[
+#let cost-pipeline() = block(width: 100%)[
+  #eyebrow([Luồng đọc dữ liệu])
+  #v(5pt)
   #grid(
-    rows: (auto, auto), row-gutter: 6pt,
-    text(size: 4.8pt, fill: muted)[#item.name],
-    text(size: 5.5pt, weight: "semibold")[#item.quota],
-  )
-]
-
-#let quota-panel(items) = block(width: 100%)[
-  #eyebrow([Hạn mức gói hiện tại])
-  #v(2pt)
-  #grid(
-    columns: (1fr, 1fr, 1fr, 1fr, 1fr, 1fr), rows: (23pt,), gutter: 3pt,
-    ..items.map(item => quota-chip(item)),
-  )
-]
-
-#let journey-cost-matrix(quotas) = block(width: 100%)[
-  #eyebrow([Mức sử dụng provider theo tác vụ])
-  #v(2pt)
-  #block(width: 100%, radius: 0pt, clip: true, stroke: 0.6pt + border-subtle)[
-    #grid(
-      columns: (1.8fr, 0.65fr, 0.65fr, 0.65fr, 0.65fr, 0.65fr, 0.65fr),
-      rows: (24pt, 22pt, 22pt, 22pt, 22pt, 22pt, 22pt),
-      gutter: 0pt,
-      inset: (x: 4pt, y: 4pt),
-      stroke: 0.45pt + border-subtle,
-      align: horizon,
-      fill: (x, y) => if y == 0 { layer-1 },
-      text(size: 6.6pt, weight: "semibold", fill: muted)[TÁC VỤ],
-      provider-header([CG], [credits]),
-      provider-header([BDS], [CU]),
-      provider-header([Mobula], [credits]),
-      provider-header([Helius], [credits]),
-      provider-header([Zerion], [requests]),
-      provider-header([Moralis], [CU]),
-      text(size: 6.5pt, weight: "semibold")[Market Radar], metric([17]), metric([135]), dash, dash, dash, dash,
-      text(size: 6.5pt, weight: "semibold")[Token Overview], metric([15]), dash, metric([1]), dash, dash, dash,
-      text(size: 6.5pt, weight: "semibold")[Wallet Core], dash, dash, metric([21]), metric([100]), dash, dash,
-      text(size: 6.5pt, weight: "semibold")[Wallet Activity], dash, dash, metric([1–10]), dash, dash, dash,
-      text(size: 6.5pt, weight: "semibold")[Token Chart], dash, dash, dash, dash, metric([1/token]), dash,
-      text(size: 6.5pt, weight: "semibold")[Token Metadata], dash, dash, dash, dash, dash, metric([10]),
-    )
-  ]
-  #v(4pt)
-  #quota-panel(quotas)
-]
-
-#let finance-group(item) = block(width: 100%)[
-  #block(width: 100%, height: 118pt)[
-    #align(bottom, grid(
-      columns: (1fr, 1fr, 1fr), gutter: 7pt, align: bottom,
-      [
-        #align(center, text(size: 6.5pt, weight: "semibold")[#item.revenue])
-        #v(3pt)
-        #rect(width: 100%, height: 86pt, radius: 0pt, fill: background-inverse)
-      ],
-      [
-        #align(center, text(size: 6.5pt, weight: "semibold")[#item.directCost])
-        #v(3pt)
-        #rect(width: 100%, height: item.costRatio / 100 * 86pt, radius: 0pt, fill: cost-color)
-      ],
-      [
-        #align(center, text(size: 6.5pt, weight: "semibold", fill: accent)[#item.contribution])
-        #v(3pt)
-        #rect(width: 100%, height: item.margin / 100 * 86pt, radius: 0pt, fill: accent)
-      ],
-    ))
-  ]
-  #v(4pt)
-  #grid(
-    columns: (1fr, 1fr, 1fr), gutter: 7pt,
-    align(center, text(size: 6.5pt, fill: muted)[Thu]),
-    align(center, text(size: 6.5pt, fill: muted)[Chi]),
-    align(center, text(size: 6.5pt, fill: muted)[Còn]),
+    columns: (1fr, auto, 1fr, auto, 1fr),
+    gutter: 6pt,
+    align: horizon,
+    panel([
+      #text(size: 8.5pt, weight: "semibold")[Hành trình]
+      #linebreak()
+      #text(size: 6.8pt, fill: muted)[Market · Token · Wallet]
+    ], inset: 8pt),
+    text(size: 12pt, fill: accent)[→],
+    panel([
+      #text(size: 8.5pt, weight: "semibold")[PostgreSQL]
+      #linebreak()
+      #text(size: 6.8pt, fill: muted)[đọc dữ liệu trước]
+    ], inset: 8pt),
+    text(size: 12pt, fill: accent)[→],
+    panel([
+      #text(size: 8.5pt, weight: "semibold")[Provider]
+      #linebreak()
+      #text(size: 6.8pt, fill: muted)[chỉ gọi khi cần làm mới]
+    ], inset: 8pt),
   )
   #v(5pt)
-  #align(center)[
-    #text(size: 10pt, weight: "bold")[#item.mau MAU]
-    #h(4pt)
-    #text(size: 8pt, weight: "semibold", fill: accent)[#str(item.margin)\%]
-  ]
+  #panel([
+    #grid(
+      columns: (1fr, 1fr),
+      gutter: 10pt,
+      [
+        #text(size: 7.5pt, weight: "semibold", fill: accent)[WARM]
+        #h(4pt)
+        #text(size: 6.7pt, fill: muted)[dùng dữ liệu còn hiệu lực]
+      ],
+      [
+        #text(size: 7.5pt, weight: "semibold")[COLD]
+        #h(4pt)
+        #text(size: 6.7pt, fill: muted)[làm mới rồi lưu lại]
+      ],
+    )
+  ], inset: 7pt)
 ]
 
-#let cost-legend(color, name, share) = block(width: 100%)[
-  #grid(
-    columns: (7pt, 1fr, auto), gutter: 5pt, align: horizon,
-    rect(width: 7pt, height: 7pt, radius: 0pt, fill: color),
-    text(size: 7pt, fill: muted)[#name],
-    text(size: 7pt, weight: "semibold")[#share],
-  )
-  #v(3pt)
-]
-
-#let cost-donut(items) = block(width: 100%)[
-  #eyebrow([Cơ cấu chi phí · 3.000 MAU])
-  #v(1pt)
-  #grid(
-    columns: (80pt, 1fr), gutter: 10pt, align: horizon,
-    box(width: 78pt, height: 78pt)[
-      #image("assets/cost-mix-3k.svg", width: 78pt, height: 78pt, fit: "contain")
-      #place(center + horizon)[
-        #align(center)[
-          #text(size: 12pt, weight: "bold")[\$1.483]
-          #linebreak()
-          #text(size: 6.5pt, fill: muted)[trực tiếp]
-        ]
-      ]
-    ],
-    [
-      #for item in items {
-        cost-legend(rgb(item.color), item.name, item.share)
-      }
-    ],
-  )
-]
-
-#let breakpoint(mau, provider, tier) = (
-  circle(
-    width: 25pt, height: 25pt, fill: layer-1, stroke: 0.6pt + border-subtle,
-    align(center + horizon, text(size: 7pt, weight: "bold")[#mau]),
+#let journey-table() = table(
+  columns: (1.35fr, 1.2fr, 1fr),
+  inset: (x: 7pt, y: 6pt),
+  stroke: 0.5pt + border-subtle,
+  fill: (x, y) => if y == 0 { layer-1 },
+  table.header(
+    text(size: 7.5pt, weight: "semibold")[Hành trình],
+    text(size: 7.5pt, weight: "semibold")[Provider],
+    text(size: 7.5pt, weight: "semibold")[Đơn vị/lần],
   ),
-  align(horizon)[
-    #text(size: 7.5pt, weight: "semibold")[#provider]
-    #linebreak()
-    #text(size: 6.5pt, fill: muted)[→ #tier]
-  ],
+  text(size: 7.5pt, weight: "semibold")[Market Radar],
+  text(size: 7pt)[CoinGecko · Birdeye],
+  text(size: 7pt, fill: accent)[17 credits · 135 CU],
+  text(size: 7.5pt, weight: "semibold")[Token Overview],
+  text(size: 7pt)[CoinGecko · Mobula],
+  text(size: 7pt, fill: accent)[15 credits · 1 credit],
+  text(size: 7.5pt, weight: "semibold")[Wallet Core],
+  text(size: 7pt)[Mobula · Helius],
+  text(size: 7pt, fill: accent)[21 credits · 100 credits],
 )
 
-#let breakpoint-track() = block(width: 100%)[
-  #eyebrow([Các ngưỡng nâng gói đầu tiên])
-  #v(2pt)
-  #grid(
-    columns: (29pt, 1fr, 29pt, 1fr),
-    rows: (auto, auto),
-    gutter: 6pt,
-    ..breakpoint([150], [Mobula], [Start-up]),
-    ..breakpoint([300], [CoinGecko], [Basic]),
-    ..breakpoint([1.600], [Mobula], [Growth]),
-    ..breakpoint([2.775], [Helius], [Developer]),
+#let cost-donut(items) = canvas(length: 1cm, {
+  let total = items.fold(0, (sum, item) => sum + item.amount)
+  chart.piechart(
+    items.map(item => ([#item.name], item.amount)),
+    value-key: 1,
+    label-key: none,
+    radius: 2.35,
+    inner-radius: 1.05,
+    stroke: white + 1pt,
+    slice-style: items.map(item => rgb(item.color)),
+    outer-label: (
+      content: (value, label) => text(size: 5.8pt, weight: "semibold")[
+        #str(calc.round(value / total * 100, digits: 1))%
+      ],
+      radius: 109%,
+    ),
   )
-]
+})
 
-#let infra-chip(mau, render, supabase) = block(
-  width: 100%, height: 44pt, inset: (x: 7pt, y: 5pt),
-  radius: small-radius, fill: layer-1, clip: true,
+#let cost-legend(item) = grid(
+  columns: (8pt, 1fr, auto, auto),
+  gutter: 6pt,
+  align: horizon,
+  rect(width: 8pt, height: 8pt, fill: rgb(item.color)),
+  text(size: 7.3pt, fill: muted)[#item.name],
+  text(size: 7.3pt, weight: "semibold")[#item.value],
+  text(size: 7.3pt, weight: "semibold", fill: accent)[#item.share],
+)
+
+#let cost-panel(title, total, items) = panel([
+  #eyebrow(title)
+  #v(4pt)
+  #grid(
+    columns: (0.9fr, 1.1fr),
+    gutter: 10pt,
+    align: horizon,
+    box(width: 140pt, height: 140pt)[#cost-donut(items)],
+    [
+      #text(size: 18pt, weight: "bold")[#total]
+      #linebreak()
+      #text(size: 7pt, fill: muted)[chi phí trực tiếp/tháng]
+      #v(9pt)
+      #grid(
+        rows: items.map(_ => auto),
+        row-gutter: 6pt,
+        ..items.map(item => cost-legend(item)),
+      )
+    ],
+  )
+], fill: white)
+
+#let ai-model-card(title, model, lines, inverse: false) = block(
+  width: 100%,
+  height: 160pt,
+  inset: 13pt,
+  radius: panel-radius,
+  fill: if inverse { panel-gradient } else { layer-1 },
 )[
-  #text(size: 7.5pt, weight: "bold", fill: accent)[#mau MAU]
-  #v(-4pt)
-  #grid(
-    columns: (1.1fr, 0.9fr), gutter: 1pt, align: horizon,
+  #text(size: 8pt, weight: "semibold", fill: if inverse { highlight } else { accent })[#upper(title)]
+  #v(7pt)
+  #text(size: 17pt, weight: "bold", fill: if inverse { white } else { ink })[#model]
+  #v(9pt)
+  #for line in lines {
     grid(
-      columns: (9pt, 1fr), gutter: 6pt, align: horizon,
-      image("assets/cloud-app.svg", width: 12pt, height: 12pt, fit: "contain"),
-      grid(
-        rows: (auto, auto), row-gutter: 3pt,
-        text(size: 5pt, fill: muted)[Render],
-        text(size: 4.5pt, weight: "medium")[#render],
-      ),
-    ),
-    grid(
-      columns: (9pt, 1fr), gutter: 6pt, align: horizon,
-      image("assets/datastore.svg", width: 12pt, height: 12pt, fit: "contain"),
-      grid(
-        rows: (auto, auto), row-gutter: 3pt,
-        text(size: 5pt, fill: muted)[Supabase],
-        text(size: 4.5pt, weight: "medium")[#supabase],
-      ),
-    ),
-  )
+      columns: (8pt, 1fr),
+      gutter: 5pt,
+      text(size: 8pt, fill: if inverse { highlight } else { accent })[•],
+      text(size: 8pt, fill: if inverse { white } else { muted })[#line],
+    )
+    v(5pt)
+  }
 ]
 
-#let infrastructure-scale() = block(width: 100%)[
-  #eyebrow([Hạ tầng Render + Supabase theo quy mô])
+#let kpi-card(value, label) = panel([
+  #text(size: 16pt, weight: "bold", fill: accent)[#value]
+  #v(3pt)
+  #text(size: 7pt, fill: muted)[#label]
+], inset: 9pt)
+
+#let finance-bars(items) = block(width: 100%)[
   #grid(
-    columns: (1fr, 1fr, 1fr), gutter: 6pt,
-    infra-chip([300], [Starter], [Free]),
-    infra-chip([3.000], [Standard], [Pro Micro]),
-    infra-chip([30.000], [2× Standard], [Pro Small]),
+    columns: (auto, auto, auto, auto, auto, auto, auto, auto),
+    gutter: 6pt,
+    align: horizon,
+    rect(width: 8pt, height: 8pt, fill: background-inverse),
+    text(size: 7pt, fill: muted)[Trực tiếp],
+    rect(width: 8pt, height: 8pt, fill: rgb("#78a9ff")),
+    text(size: 7pt, fill: muted)[Nhân sự],
+    rect(width: 8pt, height: 8pt, fill: rgb("#d0e2ff")),
+    text(size: 7pt, fill: muted)[Tăng trưởng/vận hành],
+    rect(width: 8pt, height: 8pt, fill: accent),
+    text(size: 7pt, fill: muted)[Lợi nhuận],
   )
+  #v(9pt)
+  #for item in items {
+    grid(
+      columns: (64pt, 1fr, 42pt),
+      gutter: 8pt,
+      align: horizon,
+      text(size: 8.5pt, weight: "semibold")[#item.mau MAU],
+      grid(
+        columns: (
+          item.directRatio * 1fr,
+          item.personnelRatio * 1fr,
+          item.reinvestmentRatio * 1fr,
+          item.profitMargin * 1fr,
+        ),
+        gutter: 0pt,
+        rect(width: 100%, height: 20pt, fill: background-inverse),
+        rect(width: 100%, height: 20pt, fill: rgb("#78a9ff")),
+        rect(width: 100%, height: 20pt, fill: rgb("#d0e2ff")),
+        rect(width: 100%, height: 20pt, fill: accent),
+      ),
+      text(size: 8pt, weight: "bold", fill: accent)[#str(item.profitMargin)%],
+    )
+    v(8pt)
+  }
 ]
+
+#let finance-table(items) = table(
+  columns: (0.75fr, 0.7fr, 0.85fr, 1fr, 1fr, 1fr, 0.9fr),
+  inset: (x: 7pt, y: 6pt),
+  stroke: 0.5pt + border-subtle,
+  fill: (x, y) => if y == 0 { layer-1 },
+  table.header(
+    text(size: 7.3pt, weight: "semibold")[MAU],
+    text(size: 7.3pt, weight: "semibold")[Conv.],
+    text(size: 7.3pt, weight: "semibold")[Trả phí],
+    text(size: 7.3pt, weight: "semibold")[Doanh thu],
+    text(size: 7.3pt, weight: "semibold")[Trực tiếp],
+    text(size: 7.3pt, weight: "semibold")[Tổng chi],
+    text(size: 7.3pt, weight: "semibold")[Lợi nhuận],
+  ),
+  ..items.map(item => (
+    item.mau,
+    item.conversion,
+    item.paidUsers,
+    item.revenue,
+    item.directCost,
+    item.totalCost,
+    item.profit,
+  )).flatten().map(cell => text(size: 7.5pt)[#cell]),
+)
+
+#let scale-stage(mau, title, infrastructure, people, salary, focus) = block(
+  width: 100%,
+  height: 176pt,
+  inset: 11pt,
+  radius: panel-radius,
+  fill: layer-1,
+)[
+  #text(size: 8pt, weight: "semibold", fill: accent)[#mau MAU]
+  #v(5pt)
+  #text(size: 15pt, weight: "bold")[#title]
+  #v(9pt)
+  #text(size: 7pt, fill: muted)[HẠ TẦNG]
+  #linebreak()
+  #text(size: 8pt, weight: "semibold")[#infrastructure]
+  #v(8pt)
+  #text(size: 7pt, fill: muted)[NHÂN SỰ]
+  #linebreak()
+  #text(size: 8pt, weight: "semibold")[#people]
+  #linebreak()
+  #text(size: 7pt, fill: muted)[#salary]
+  #v(8pt)
+  #text(size: 7pt, fill: muted)[TRỌNG TÂM]
+  #linebreak()
+  #text(size: 8pt, weight: "semibold")[#focus]
+]
+
+#let quota-card(item) = panel([
+  #grid(
+    columns: (1fr, auto),
+    gutter: 7pt,
+    text(size: 8.5pt, weight: "semibold")[#item.name],
+    text(size: 7pt, weight: "semibold", fill: accent)[#item.plan],
+  )
+  #v(5pt)
+  #text(size: 7pt, fill: muted)[#item.quota]
+], inset: 9pt)

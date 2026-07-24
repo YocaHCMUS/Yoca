@@ -105,7 +105,7 @@
   )
 ]
 
-#let cost-mix-chart(items) = canvas(length: 1cm, {
+#let cost-mix-chart(items, labels: true) = canvas(length: 1cm, {
   let total = items.fold(0, (sum, item) => sum + item.amount)
   chart.piechart(
     items.map(item => ([#item.name], item.amount)),
@@ -116,8 +116,14 @@
     stroke: white + 1pt,
     slice-style: items.map(item => rgb(item.color)),
     outer-label: (
-      content: (value, label) => text(size: 6.5pt, weight: "medium")[#str(calc.round(value / total * 100))%],
-      radius: 106%,
+      content: (value, label) => if labels {
+        text(size: 6pt, weight: "medium")[
+          #str(calc.round(value / total * 100, digits: 1))%
+        ]
+      } else {
+        []
+      },
+      radius: 109%,
     ),
   )
 })
@@ -134,6 +140,58 @@
     #text(size: 9pt, fill: muted)[#body]
   ],
 )
+
+#let profit-chart(items) = block(
+  width: 100%, inset: (x: 10pt, y: 9pt), fill: white,
+)[
+  #grid(
+    columns: (auto, auto, auto, auto, auto, auto, auto, auto),
+    gutter: 6pt,
+    align: horizon,
+    rect(width: 10pt, height: 7pt, fill: rgb("#525252")),
+    text(size: 8pt, fill: muted)[Chi phí trực tiếp],
+    rect(width: 10pt, height: 7pt, fill: rgb("#78a9ff")),
+    text(size: 8pt, fill: muted)[Nhân sự],
+    rect(width: 10pt, height: 7pt, fill: rgb("#d0e2ff")),
+    text(size: 8pt, fill: muted)[Tăng trưởng và vận hành],
+    rect(width: 10pt, height: 7pt, fill: blue),
+    text(size: 8pt, fill: muted)[Lợi nhuận],
+  )
+  #v(8pt)
+  #for item in items {
+    grid(
+      columns: (58pt, 1fr), gutter: 8pt, align: horizon,
+      text(size: 9pt, weight: "semibold")[#item.mau MAU],
+      grid(
+        columns: (
+          item.directRatio * 1fr,
+          item.personnelRatio * 1fr,
+          item.reinvestmentRatio * 1fr,
+          item.profitMargin * 1fr,
+        ),
+        gutter: 0pt,
+        rect(width: 100%, height: 18pt, fill: rgb("#525252")),
+        rect(width: 100%, height: 18pt, fill: rgb("#78a9ff")),
+        rect(width: 100%, height: 18pt, fill: rgb("#d0e2ff")),
+        rect(width: 100%, height: 18pt, fill: blue),
+      ),
+    )
+    v(7pt)
+  }
+  #grid(
+    columns: (58pt, 1fr), gutter: 8pt,
+    [],
+    grid(
+      columns: (auto, 1fr, auto, 1fr, auto, 1fr, auto, 1fr, auto, 1fr, auto),
+      text(size: 8pt, fill: subtle)[0], [],
+      text(size: 8pt, fill: subtle)[20], [],
+      text(size: 8pt, fill: subtle)[40], [],
+      text(size: 8pt, fill: subtle)[60], [],
+      text(size: 8pt, fill: subtle)[80], [],
+      text(size: 8pt, fill: subtle)[100%],
+    ),
+  )
+]
 
 #let source-note(body) = block(width: 100%, above: 4pt)[
   #text(size: 8pt, fill: subtle)[#emph([Nguồn: #body])]

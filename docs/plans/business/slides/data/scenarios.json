@@ -6,8 +6,7 @@
       "warmMs": 661,
       "cold": "25,44 s",
       "warm": "0,66 s",
-      "speedup": "38,5×",
-      "pass": "12/12"
+      "speedup": "38,5×"
     },
     {
       "name": "Token Overview",
@@ -15,8 +14,7 @@
       "warmMs": 1141,
       "cold": "17,57 s",
       "warm": "1,14 s",
-      "speedup": "15,4×",
-      "pass": "16/16"
+      "speedup": "15,4×"
     },
     {
       "name": "Wallet Core",
@@ -24,58 +22,69 @@
       "warmMs": 799,
       "cold": "5,48 s",
       "warm": "0,80 s",
-      "speedup": "6,9×",
-      "pass": "8/8"
+      "speedup": "6,9×"
     }
   ],
   "scenarios": [
     {
       "mau": "300",
-      "revenue": "$377",
-      "revenueValue": 376.5,
-      "directCost": "$176",
-      "directCostValue": 176.47,
-      "contribution": "$200",
-      "contributionValue": 200.03,
-      "costRatio": 46.87,
-      "margin": 53.13
+      "conversion": "2%",
+      "paidUsers": "6",
+      "revenue": "$303",
+      "directCost": "$190",
+      "totalCost": "$278",
+      "profit": "$24,60",
+      "directRatio": 62.84,
+      "personnelRatio": 13.2,
+      "reinvestmentRatio": 15.84,
+      "profitMargin": 8.12
     },
     {
       "mau": "3.000",
-      "revenue": "$3.765",
-      "revenueValue": 3765,
-      "directCost": "$1.483",
-      "directCostValue": 1482.67,
-      "contribution": "$2.282",
-      "contributionValue": 2282.33,
-      "costRatio": 39.38,
-      "margin": 60.62
+      "conversion": "2,5%",
+      "paidUsers": "75",
+      "revenue": "$3.787",
+      "directCost": "$1.628",
+      "totalCost": "$3.548",
+      "profit": "$239",
+      "directRatio": 43,
+      "personnelRatio": 29.57,
+      "reinvestmentRatio": 21.12,
+      "profitMargin": 6.31
     },
     {
       "mau": "30.000",
-      "revenue": "$37.650",
-      "revenueValue": 37650,
-      "directCost": "$10.384",
-      "directCostValue": 10383.73,
-      "contribution": "$27.266",
-      "contributionValue": 27266.27,
-      "costRatio": 27.58,
-      "margin": 72.42
+      "conversion": "3%",
+      "paidUsers": "900",
+      "revenue": "$45.450",
+      "directCost": "$9.656",
+      "totalCost": "$42.901",
+      "profit": "$2.549",
+      "directRatio": 21.25,
+      "personnelRatio": 14.08,
+      "reinvestmentRatio": 59.06,
+      "profitMargin": 5.61
     }
   ],
   "costMix3k": [
-    { "name": "Gemini + Brave", "value": "$762", "amount": 762.49, "share": "51%", "color": "#0f62fe" },
-    { "name": "Data provider", "value": "$523", "amount": 523, "share": "35%", "color": "#4589ff" },
-    { "name": "Thanh toán", "value": "$127", "amount": 127.19, "share": "9%", "color": "#78a9ff" },
-    { "name": "Hạ tầng", "value": "$50", "amount": 50, "share": "3%", "color": "#a6c8ff" },
-    { "name": "Email", "value": "$20", "amount": 20, "share": "1%", "color": "#d0e2ff" }
+    { "name": "Gemini + Brave", "value": "$903", "amount": 903.1, "share": "55,5%", "color": "#0f62fe" },
+    { "name": "Data provider", "value": "$523", "amount": 523, "share": "32,1%", "color": "#4589ff" },
+    { "name": "Thanh toán", "value": "$132", "amount": 132.34, "share": "8,1%", "color": "#78a9ff" },
+    { "name": "Hạ tầng + email", "value": "$70", "amount": 70, "share": "4,3%", "color": "#d0e2ff" }
+  ],
+  "costMix30k": [
+    { "name": "Qwen GPU", "value": "$3.166", "amount": 3166, "share": "32,8%", "color": "#0f62fe" },
+    { "name": "Brave Search", "value": "$3.460", "amount": 3460, "share": "35,8%", "color": "#0043ce" },
+    { "name": "Data provider", "value": "$1.342", "amount": 1342, "share": "13,9%", "color": "#4589ff" },
+    { "name": "Thanh toán", "value": "$1.588", "amount": 1588.05, "share": "16,4%", "color": "#78a9ff" },
+    { "name": "Hạ tầng + email", "value": "$100", "amount": 100, "share": "1,0%", "color": "#d0e2ff" }
   ],
   "providerQuotas": [
-    { "name": "CoinGecko", "quota": "10K credits/tháng" },
-    { "name": "Birdeye", "quota": "30K CU/kỳ" },
-    { "name": "Mobula", "quota": "10K credits/tháng" },
-    { "name": "Helius", "quota": "1M credits/tháng" },
-    { "name": "Zerion", "quota": "2K requests/ngày" },
-    { "name": "Moralis", "quota": "40K CU/ngày" }
+    { "name": "CoinGecko", "plan": "Demo", "quota": "10K credits/tháng" },
+    { "name": "Birdeye", "plan": "Standard", "quota": "30K CU/kỳ" },
+    { "name": "Mobula", "plan": "Free", "quota": "10K credits/tháng · 1 RPS" },
+    { "name": "Helius", "plan": "Free", "quota": "1M credits/tháng" },
+    { "name": "Zerion", "plan": "Developer", "quota": "2K requests/ngày" },
+    { "name": "Moralis", "plan": "Free", "quota": "40K CU/ngày" }
   ]
 }

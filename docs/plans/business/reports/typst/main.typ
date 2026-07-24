@@ -1,7 +1,7 @@
 #import "theme.typ": *
 #import "components.typ": *
 
-#let data = json("../../slides/data/scenarios.json")
+#let data = json("data/scenarios.json")
 
 #show: report-theme.with(
   title: "Mô hình kinh doanh và kế hoạch vận hành Yoca",
@@ -22,12 +22,12 @@
       #set par(leading: 0.95em)
       #text(size: 31pt, weight: "semibold", fill: ink)[Mô hình kinh doanh\ và kế hoạch vận hành]
       #v(16pt)
-      #text(size: 13pt, fill: muted)[Phân tích dựa trên hành trình sử dụng, quota dịch vụ và ba mốc quy mô]
+      #text(size: 13pt, fill: muted)[Từ hành trình người dùng đến chi phí, doanh thu và kế hoạch mở rộng]
       #v(28pt)
       #grid(
         columns: (1fr, 1fr, 1fr), gutter: 10pt,
         metric-card([Mô hình], [Freemium], note: [4 gói thuê bao]),
-        metric-card([Kịch bản], [2%], note: [người dùng trả phí]),
+        metric-card([Chuyển đổi], [2–3%], note: [tăng theo độ trưởng thành]),
         metric-card([Quy mô], [3 mốc], note: [300 · 3.000 · 30.000 MAU]),
       )
     ],
@@ -39,10 +39,7 @@
   )
 ]
 
-#set page(
-  paper: "a4",
-  margin: 20mm,
-)
+#set page(paper: "a4", margin: 20mm)
 #counter(page).update(1)
 
 #pagebreak()
@@ -53,162 +50,163 @@
 #v(18pt)
 #callout(
   [Phạm vi],
-  [Báo cáo trình bày mô hình doanh thu, cơ sở hình thành chi phí trực tiếp và kế hoạch mở rộng của Yoca. Số liệu được tổng hợp từ benchmark cục bộ ngày 19/7/2026, quota công khai của nhà cung cấp và một kịch bản nhu cầu thống nhất.],
+  [Báo cáo trình bày cách Yoca tạo giá trị, hình thành doanh thu và kiểm soát chi phí tại ba mốc 300, 3.000 và 30.000 người dùng hoạt động hằng tháng. Các phép tính sử dụng một kịch bản cơ sở thống nhất và tỷ giá quy ước 25.000 VND/USD.],
 )
 
 #pagebreak()
-= Định hướng sản phẩm và mô hình doanh thu
+= Tổng quan mô hình kinh doanh
 
-Yoca hỗ trợ người dùng theo dõi thị trường tài sản số, khảo sát token và pool, phân tích hoạt động ví, nhận diện dấu hiệu wash trading và sử dụng trợ lý AI theo ngữ cảnh. Hành trình của sản phẩm nối bốn lớp thông tin: thị trường, tài sản, ví và phân tích nâng cao. Người dùng có thể bắt đầu từ Market Radar, mở Token Overview, đánh giá danh mục ví rồi tiếp tục với lịch sử giao dịch, PnL, wash trading hoặc trợ lý AI.
+Yoca hỗ trợ người dùng blockchain theo dõi thị trường, khảo sát token và pool, phân tích hoạt động ví, nhận diện dấu hiệu wash trading và sử dụng trợ lý AI theo ngữ cảnh. Sản phẩm kết nối các bước thường bị phân tán trên nhiều nền tảng thành một hành trình liên tục: từ tín hiệu thị trường, thông tin tài sản đến hành vi giao dịch của ví và các lớp phân tích nâng cao.
 
-Mô hình doanh thu được xây dựng theo hướng freemium kết hợp thuê bao. Standard cung cấp trải nghiệm dữ liệu lõi và quota AI thử nghiệm. Lite phục vụ người dùng theo dõi token và ví thường xuyên. Plus mở nhóm phân tích wash trading chuyên sâu. Pro dành cho người dùng cá nhân có tần suất nghiên cứu cao. Cấu trúc này tạo lối vào miễn phí cho người dùng mới và gắn doanh thu với các tác vụ có chi phí biến đổi lớn hơn.
-
-== Giá trị cung cấp
+Mô hình freemium tạo điểm tiếp cận cho người dùng mới và thu phí theo mức sử dụng. Dữ liệu thị trường phổ biến có thể được tái sử dụng giữa nhiều người dùng, trong khi phân tích ví, AI và cảnh báo phát sinh chi phí gần hơn với từng yêu cầu. Vì vậy, quyền lợi trả phí tập trung vào hạn mức, tần suất cập nhật và các chức năng phân tích chuyên sâu.
 
 #block(breakable: false)[
   #grid(
     columns: (1fr, 1fr), gutter: 9pt,
-    callout([Dữ liệu hợp nhất], [Các phản hồi từ nhiều provider được chuẩn hóa thành dữ liệu token, pool, ví và giao dịch có cấu trúc.], tone: "neutral"),
-    callout([Phân tích theo hành trình], [Người dùng chuyển từ tín hiệu thị trường sang tài sản và ví trong cùng một luồng tra cứu.], tone: "neutral"),
-    callout([Tái sử dụng dữ liệu], [Database-first giúp nhiều lượt xem dùng chung dữ liệu còn hiệu lực và giảm mức tiêu thụ quota.], tone: "neutral"),
-    callout([AI theo ngữ cảnh], [Trợ lý AI khai thác dữ liệu Yoca và tìm kiếm bổ sung theo giới hạn của từng gói.], tone: "neutral"),
+    callout([Dữ liệu hợp nhất], [Dữ liệu token, pool, ví và giao dịch từ nhiều provider được chuẩn hóa trong cùng một hệ thống.], tone: "neutral"),
+    callout([Hành trình phân tích], [Người dùng đi từ Market Radar đến Token Overview, Wallet Analysis và các phân tích nâng cao.], tone: "neutral"),
+    callout([Tái sử dụng dữ liệu], [Database-first giảm số lần gọi provider khi nhiều lượt xem dùng chung dữ liệu còn hiệu lực.], tone: "neutral"),
+    callout([AI theo ngữ cảnh], [Trợ lý AI diễn giải dữ liệu Yoca và sử dụng công cụ bổ sung theo hạn mức từng gói.], tone: "neutral"),
   )
 ]
 
-= Phương pháp xác định chi phí
+== Hành trình tạo giá trị
 
-== Đơn vị phân tích
-
-Chi phí được đo theo một lần làm mới của từng hành trình. Backend đọc dữ liệu đã chuẩn hóa trong PostgreSQL, kiểm tra thời hạn sử dụng rồi mới gọi provider khi dữ liệu cần cập nhật. Cùng một token được nhiều người xem trong một cửa sổ cập nhật có thể tái sử dụng kết quả. Phân tích ví mang tính cá nhân hơn nên tỷ lệ làm mới cao hơn.
-
-#v(4pt)
 #grid(
   columns: (1fr, 1fr), gutter: 10pt,
-  flow-step([01], [Ghi nhận hành trình], [Chạy Market Radar, Token Overview và Wallet Core với tập dữ liệu ổn định.]),
-  flow-step([02], [Tách cold và warm], [Cold làm mới provider; warm đọc dữ liệu còn hiệu lực trong database.]),
-  flow-step([03], [Đối chiếu đơn vị], [Quy đổi từng operation sang credit, CU hoặc request theo tài liệu provider.]),
-  flow-step([04], [Chiếu lên quy mô], [Kết hợp mức sử dụng với session, adoption và tỷ lệ thuê bao trả phí.]),
+  flow-step([01], [Khám phá thị trường], [Theo dõi xu hướng, token, pool và các biến động đáng chú ý.]),
+  flow-step([02], [Đánh giá tài sản], [Xem metadata, thanh khoản, tokenomics, holder và lịch sử giá.]),
+  flow-step([03], [Phân tích ví], [Khảo sát danh mục, PnL, giao dịch, transfer và hoạt động theo thời gian.]),
+  flow-step([04], [Phân tích nâng cao], [Wash trading, cảnh báo và trợ lý AI giúp diễn giải dữ liệu theo ngữ cảnh.]),
 )
 
-== Kết quả cold và warm
+= Khách hàng và nguồn doanh thu
 
-#figure(
-  benchmark-chart(data.benchmarks),
-  caption: [Thời gian phản hồi cold và warm của ba hành trình lõi],
-) <benchmark-cold-warm>
-
-Kết quả ở @benchmark-cold-warm cho thấy warm database giảm thời gian phản hồi khoảng 6,9 đến 38,5 lần trong lần chạy quan sát. Cơ chế này đồng thời giảm số provider request phát sinh ở các lượt xem lặp lại. Benchmark được sử dụng làm đầu vào kỹ thuật cho mô hình chi phí và được giữ riêng với phép đo tải production.
-
-#source-note([Benchmark cục bộ ngày 19/7/2026; 12 endpoint Market Radar, 16 endpoint Token Overview và 8 endpoint Wallet Core.])
-
-= Hệ sinh thái dữ liệu và quota
-
-Yoca sử dụng sáu nhà cung cấp dữ liệu blockchain trong các hành trình đang phân tích. Mỗi nhà cung cấp áp dụng một đơn vị thanh toán riêng, vì vậy quota được theo dõi độc lập. CoinGecko, Mobula và Helius tính theo credit; Birdeye và Moralis dùng compute unit (CU); Zerion theo số request. Giá và giới hạn được khảo sát từ tài liệu chính thức @coingecko-pricing @birdeye-pricing @mobula-pricing @helius-pricing @zerion-api @moralis-pricing.
-
-#figure(
-  report-table(
-    4,
-    ([Provider], [Vai trò trong Yoca], [Gói hiện tại], [Hạn mức chính]),
-    (
-      ([CoinGecko], [Market và token market data], [Demo], [10.000 credits/tháng]),
-      ([Birdeye], [Market Radar, pool và price history], [Standard], [30.000 CU/kỳ hiện tại]),
-      ([Mobula], [Wallet analysis, PnL và activity], [Free], [10.000 credits/tháng; 1 RPS]),
-      ([Helius], [Wallet balances, enhanced transaction và webhook], [Free], [1 triệu credits/tháng]),
-      ([Zerion], [Biểu đồ balance theo từng token], [Developer], [2.000 requests/ngày; 10 RPS]),
-      ([Moralis], [Bổ sung token metadata], [Free], [40.000 CU/ngày]),
-    ),
-    widths: (0.85fr, 1.65fr, 0.75fr, 1.35fr),
-  ),
-  caption: [Vai trò và hạn mức của các provider trong mô hình],
-) <provider-quota>
-
-== Mức sử dụng theo tác vụ
-
-#figure(
-  report-table(
-    4,
-    ([Tác vụ làm mới], [Provider], [Mức sử dụng quan sát], [Yếu tố làm thay đổi]),
-    (
-      ([Market Radar], [CoinGecko · Birdeye], [17 credits · 135 CU], [Số market endpoint và retry]),
-      ([Token Overview], [CoinGecko · Mobula], [15 credits · 1 credit], [Số batch token/pool]),
-      ([Wallet Core], [Mobula · Helius], [21 credits · 100 credits], [Số trang holdings]),
-      ([Wallet Activity], [Mobula], [1–10 credits], [Mật độ giao dịch và phân trang]),
-      ([Wallet Token Chart], [Zerion], [1 request/token], [Số token được người dùng chọn]),
-      ([Token Metadata], [Moralis], [10 CU], [Lần bổ sung metadata]),
-    ),
-    widths: (1.15fr, 1.2fr, 1.2fr, 1.45fr),
-  ),
-  caption: [Đơn vị provider cho một lần làm mới],
-) <journey-units>
-
-Những con số trong @journey-units là cost proxy của một lần thực thi thành công. Khi hành trình có phân trang hoặc retry, tracker lưu từng attempt để mức sử dụng phản ánh đúng fan-out. Quy tắc vận hành bắt đầu rà soát ở 70% quota, chuẩn bị nâng gói ở 85% và duy trì tối thiểu 20% khoảng dự phòng cho tải đột biến.
-
-= Phân khúc và bảng giá
-
-Giá thuê bao tháng được chốt ở 0, 39, 79 và 149 USD. Giá năm tương đương mười tháng và cung cấp quyền truy cập trong mười hai tháng. Vùng giá được đối chiếu với CryptoQuant, Dune và Nansen tại thời điểm khảo sát tháng 7/2026 @cryptoquant-pricing @dune-billing @nansen-pricing.
+Yoca sử dụng bốn gói thuê bao. Standard duy trì trải nghiệm dữ liệu lõi và một hạn mức AI nhỏ. Lite dành cho người theo dõi token và ví thường xuyên. Plus bổ sung nhóm phân tích wash trading. Pro phục vụ người dùng cá nhân có tần suất nghiên cứu cao và cần hạn mức lớn hơn trên toàn bộ hệ thống.
 
 #figure(
   report-table(
     5,
-    ([Gói], [Giá tháng], [Giá năm], [Đối tượng], [Quyền lợi chính]),
+    ([Gói], [Giá tháng], [Giá năm], [Đối tượng], [Quyền lợi tạo khác biệt]),
     (
       ([Standard], [\$0], [\$0], [Người dùng mới], [Dữ liệu lõi và AI ở mức trải nghiệm]),
-      ([Lite], [\$39], [\$390], [Người theo dõi thường xuyên], [Quota AI thường nhật cao hơn]),
+      ([Lite], [\$39], [\$390], [Người theo dõi thường xuyên], [Hạn mức AI và theo dõi cao hơn]),
       ([Plus], [\$79], [\$790], [Active trader/researcher], [Wash Trading Analysis và Chat]),
-      ([Pro], [\$149], [\$1.490], [Power user cá nhân], [Quota cao cho toàn bộ nhóm phân tích]),
+      ([Pro], [\$149], [\$1.490], [Power user cá nhân], [Hạn mức cao cho toàn bộ nhóm phân tích]),
     ),
     widths: (0.75fr, 0.7fr, 0.75fr, 1.35fr, 2fr),
   ),
   caption: [Bảng giá và phân khúc người dùng],
 ) <pricing-tiers>
 
-Quota AI được phân theo đặc điểm phát sinh chi phí. Ask Yoca có thể mở rộng tìm kiếm; Wallet Chat sử dụng nhiều công cụ dữ liệu; Token Chart News tạo tóm tắt theo sự kiện; Wash Trading kết hợp dữ liệu giao dịch và diễn giải từ mô hình. Gemini được tính theo input, output và thinking token; Brave Search được tính theo request @gemini-pricing @brave-pricing.
+Giá năm tương đương mười tháng và cung cấp quyền truy cập trong mười hai tháng. Vùng giá được đối chiếu với CryptoQuant, Dune và Nansen tại thời điểm khảo sát tháng 7/2026 @cryptoquant-pricing @dune-billing @nansen-pricing.
 
-== Giả định cơ sở
+== Giả định chuyển đổi
+
+Cơ cấu người trả phí gồm 80% Lite, 15% Plus và 5% Pro, tương ứng doanh thu bình quân 50,5 USD trên mỗi thuê bao trả phí trong một tháng. Tỷ lệ chuyển đổi được đặt ở mức 2% tại 300 MAU, 2,5% tại 3.000 MAU và 3% tại 30.000 MAU. Mức tăng phản ánh sự trưởng thành của sản phẩm, độ hoàn thiện của hành trình sử dụng và khả năng giữ người dùng tốt hơn khi quy mô phát triển.
 
 #grid(
   columns: (1fr, 1fr, 1fr), gutter: 8pt,
-  metric-card([Tỷ lệ trả phí], [2%], note: [1,25% Lite · 0,5% Plus · 0,25% Pro]),
-  metric-card([Mức hoạt động], [8 phiên], note: [trên mỗi MAU mỗi tháng]),
-  metric-card([Chu kỳ đo], [30 ngày], note: [MAU có ít nhất một tương tác dữ liệu]),
+  metric-card([300 MAU], [2%], note: [6 người trả phí]),
+  metric-card([3.000 MAU], [2,5%], note: [75 người trả phí]),
+  metric-card([30.000 MAU], [3%], note: [900 người trả phí]),
 )
 
-Một phiên được phân bổ cho Market Radar, Token Overview, Wallet Core, Wallet Activity, AI và Alert theo tỷ lệ sử dụng trong calculator. Tỷ lệ cold của token giảm khi quy mô tăng vì dữ liệu phổ biến được chia sẻ giữa nhiều người dùng. Dữ liệu ví giữ tỷ lệ cold cao hơn do mỗi địa chỉ tạo một tập phân tích riêng.
+Giả định này nằm dưới vùng 3–5% được ChartMogul và ProductLed ghi nhận là mức chuyển đổi tốt của mô hình freemium tự phục vụ. Stripe cũng lưu ý rằng conversion của freemium thường ở vùng một chữ số thấp và người dùng miễn phí vẫn tạo ra chi phí vận hành @chartmogul-conversion @stripe-freemium.
 
-= Kịch bản tài chính
+= Cách chi phí hình thành
 
-== Doanh thu và chi phí trực tiếp
+== Từ hành trình đến yêu cầu dữ liệu
+
+Backend đọc dữ liệu đã chuẩn hóa trong PostgreSQL và kiểm tra thời hạn sử dụng trước khi làm mới từ provider. Một lượt cold cần cập nhật dữ liệu bên ngoài; một lượt warm sử dụng dữ liệu còn hiệu lực trong database. Cơ chế này giúp các token và dữ liệu thị trường phổ biến được chia sẻ giữa nhiều lượt xem. Dữ liệu ví có tỷ lệ cold cao hơn vì mỗi địa chỉ tạo một tập phân tích riêng.
 
 #figure(
-  finance-chart(data.scenarios),
-  caption: [Tỷ trọng chi phí trực tiếp và số dư đóng góp theo doanh thu],
-) <finance-composition>
+  benchmark-chart(data.benchmarks),
+  caption: [Thời gian phản hồi cold và warm của ba hành trình lõi],
+) <benchmark-cold-warm>
+
+Kết quả ở @benchmark-cold-warm cho thấy lượt warm giảm thời gian phản hồi khoảng 6,9 đến 38,5 lần trong benchmark cục bộ ngày 19/7/2026. Việc tái sử dụng dữ liệu đồng thời giảm số provider request phát sinh khi người dùng lặp lại cùng một hành trình.
+
+== Năm nhóm chi phí trực tiếp
 
 #figure(
   report-table(
-    5,
-    ([MAU], [Người trả phí], [Doanh thu/tháng], [Chi phí trực tiếp], [Số dư đóng góp]),
+    3,
+    ([Nhóm chi phí], [Thành phần], [Yếu tố quyết định]),
     (
-      ([300], [6], [\$376,50], [\$176,47], [\$200,03 · 53,13%]),
-      ([3.000], [60], [\$3.765,00], [\$1.482,67], [\$2.282,33 · 60,62%]),
-      ([30.000], [600], [\$37.650,00], [\$10.383,73], [\$27.266,27 · 72,42%]),
+      ([Dữ liệu blockchain], [CoinGecko, Birdeye, Mobula, Helius, Zerion và Moralis], [Credit, CU, request, RPS và tỷ lệ cold]),
+      ([AI và tìm kiếm], [Gemini hoặc Qwen; Brave Search], [Input, output, tool call và mức sử dụng theo chức năng]),
+      ([Hạ tầng], [Render, Supabase và hạ tầng GPU], [CPU, bộ nhớ, database, tải đồng thời]),
+      ([Email và Alert], [Resend], [Số cảnh báo, email khôi phục và hạn mức gửi]),
+      ([Thanh toán], [Phí xử lý giao dịch], [Doanh thu và số thuê bao trả phí]),
     ),
-    widths: (0.7fr, 0.95fr, 1.15fr, 1.15fr, 1.4fr),
+    widths: (1.1fr, 1.85fr, 2.05fr),
   ),
-  caption: [Kết quả kịch bản cơ sở tại ba mốc quy mô],
+  caption: [Các nhóm chi phí trực tiếp của Yoca],
+) <direct-cost-groups>
+
+Mỗi MAU được giả định có tám phiên hoạt động trong một tháng. Một phiên được phân bổ cho Market Radar, Token Overview, Wallet Core, Wallet Activity, AI và Alert theo đặc điểm sử dụng. Tỷ lệ cold của token giảm khi quy mô tăng nhờ dữ liệu phổ biến được chia sẻ rộng hơn; dữ liệu ví giữ tỷ lệ cold cao hơn.
+
+= Kế hoạch công nghệ theo quy mô
+
+#figure(
+  report-table(
+    4,
+    ([Quy mô], [AI], [Backend và database], [Tổ chức vận hành]),
+    (
+      ([300 MAU], [Gemini theo mức sử dụng], [Render Starter · Supabase Free], [Bốn thành viên bán thời gian]),
+      ([3.000 MAU], [Gemini với quota theo chức năng], [Render Standard · Supabase Pro], [Bốn nhân sự toàn thời gian]),
+      ([30.000 MAU], [Qwen self-host theo tải], [Render và Supabase mở rộng], [Doanh nghiệp nhỏ khoảng 20 người]),
+    ),
+    widths: (0.8fr, 1.4fr, 1.45fr, 1.75fr),
+  ),
+  caption: [Cấu hình công nghệ và tổ chức theo quy mô],
+) <technology-scale>
+
+Frontend Vite được triển khai dưới dạng Render Static Site, API chạy như Render Web Service và PostgreSQL được lưu trữ trên Supabase. Hạ tầng được nâng theo CPU, bộ nhớ, p95 latency, connection pool và dung lượng database. Chi phí tham chiếu được lấy từ bảng giá Render và Supabase @render-pricing @supabase-pricing.
+
+== Phương án AI tại 30.000 MAU
+
+Tại 30.000 MAU, Yoca sử dụng Qwen3-30B-A3B-Instruct-2507, một mô hình Apache 2.0 có 30,5 tỷ tham số và kích hoạt 3,3 tỷ tham số cho mỗi token. Phiên bản này hoạt động ở chế độ non-thinking, phù hợp với các tác vụ diễn giải dữ liệu có cấu trúc và giúp kiểm soát độ trễ @qwen-model.
+
+Hệ thống duy trì bốn GPU RTX 6000 Ada 48GB và mở rộng tối đa sáu GPU theo tải. Chi phí bình quân theo năm GPU cùng lưu trữ và giám sát đạt khoảng 3.166 USD mỗi tháng theo đơn giá RunPod tại thời điểm khảo sát @runpod-pricing. Nhóm đặt mục tiêu giảm 20–25% input token, 10–15% output token và 15–20% số lượt gọi công cụ thông qua tối ưu prompt, dữ liệu đầu vào và luồng xử lý. Thời gian phản hồi mục tiêu được giữ trong khoảng 30 giây cho mỗi yêu cầu.
+
+= Kịch bản tài chính
+
+== Doanh thu, tổng chi phí và lợi nhuận
+
+Chi phí trực tiếp bao gồm dữ liệu blockchain, AI và tìm kiếm, hạ tầng, email cùng phí thanh toán. Tổng chi phí tiếp tục cộng nhân sự, marketing, phát triển sản phẩm, bảo mật, hành chính, thuế, pháp lý và dự phòng. Vì vậy, lợi nhuận trong @financial-results là phần còn lại sau toàn bộ ngân sách của kịch bản.
+
+#figure(
+  profit-chart(data.scenarios),
+  caption: [Cơ cấu doanh thu theo chi phí và lợi nhuận tại ba mốc quy mô],
+) <profit-composition>
+
+#figure(
+  report-table(
+    7,
+    ([MAU], [Conversion], [Người trả phí], [Doanh thu], [Chi phí trực tiếp], [Tổng chi phí], [Lợi nhuận]),
+    (
+      ([300], [2%], [6], [\$303,00], [\$190,40], [\$278,40], [\$24,60 · 8,1%]),
+      ([3.000], [2,5%], [75], [\$3.787,50], [\$1.628,44], [\$3.548,43], [\$239,07 · 6,3%]),
+      ([30.000], [3%], [900], [\$45.450,00], [\$9.656,05], [\$42.901,25], [\$2.548,75 · 5,6%]),
+    ),
+    widths: (0.58fr, 0.72fr, 0.85fr, 1fr, 1fr, 1fr, 1.25fr),
+  ),
+  caption: [Kết quả tài chính theo tháng, đơn vị USD],
 ) <financial-results>
 
-Số dư đóng góp trong @financial-results là phần còn lại sau blockchain data provider, Gemini và Brave Search, Render và Supabase, email giao dịch cùng phí thanh toán. Khoản này được dùng cho nhân sự, marketing, thuế, pháp lý, hỗ trợ khách hàng, dự phòng và phát triển sản phẩm.
+Ba mốc đều duy trì lợi nhuận dương. Biên lợi nhuận giảm từ 8,1% xuống 5,6% do Yoca chủ động tăng chi cho nhân sự, thu hút người dùng, bảo mật và dự phòng khi sản phẩm mở rộng.
 
-== Cơ cấu chi phí tại 3.000 MAU
+== Cơ cấu chi phí trực tiếp
 
 #grid(
-  columns: (0.9fr, 1.1fr), gutter: 16pt, align: horizon,
-  figure(
-    cost-mix-chart(data.costMix3k),
-    caption: [Tỷ trọng chi phí trực tiếp tại 3.000 MAU],
-  ),
+  columns: (1fr, 1fr), gutter: 12pt, align: top,
   [
+    #figure(
+      cost-mix-chart(data.costMix3k),
+      caption: [Cơ cấu chi phí trực tiếp tại 3.000 MAU],
+    )
     #report-table(
       3,
       ([Nhóm chi phí], [USD/tháng], [Tỷ trọng]),
@@ -221,16 +219,56 @@ Số dư đóng góp trong @financial-results là phần còn lại sau blockcha
         item.value,
         item.share,
       )),
-      widths: (1.4fr, 0.8fr, 0.65fr),
+      widths: (1.45fr, 0.8fr, 0.65fr),
     )
-    #v(7pt)
-    #text(size: 8.7pt, fill: muted)[AI và tìm kiếm chiếm tỷ trọng lớn nhất. Blockchain data provider đứng thứ hai và có đặc điểm tăng theo từng bậc quota. Hai nhóm này quyết định phần lớn thời điểm điều chỉnh entitlement hoặc nâng gói dịch vụ.]
+  ],
+  [
+    #figure(
+      cost-mix-chart(data.costMix30k),
+      caption: [Cơ cấu chi phí trực tiếp tại 30.000 MAU],
+    )
+    #report-table(
+      3,
+      ([Nhóm chi phí], [USD/tháng], [Tỷ trọng]),
+      data.costMix30k.map(item => (
+        grid(
+          columns: (7pt, 1fr), gutter: 5pt, align: horizon,
+          rect(width: 7pt, height: 7pt, fill: rgb(item.color)),
+          [#item.name],
+        ),
+        item.value,
+        item.share,
+      )),
+      widths: (1.45fr, 0.8fr, 0.65fr),
+    )
   ],
 )
 
-= Kế hoạch vận hành và mở rộng
+Tại 3.000 MAU, Gemini và Brave Search chiếm 55,5% chi phí trực tiếp, còn data provider chiếm 32,1%. Khi đạt 30.000 MAU, Qwen GPU trở thành một khoản hạ tầng AI có thể dự báo theo số worker; Brave Search tiếp tục biến đổi theo số lượt tìm kiếm. Hai thành phần này chiếm 68,6% chi phí trực tiếp và là trọng tâm của kế hoạch tối ưu prompt, tool call và dữ liệu đầu vào.
 
-== Các ngưỡng nâng gói đầu tiên
+== Nhân sự và phân bổ nguồn lực
+
+#figure(
+  report-table(
+    4,
+    ([Quy mô], [Nhân sự], [Ngân sách chính], [Lợi nhuận giữ lại]),
+    (
+      ([300 MAU], [4 thành viên bán thời gian; hỗ trợ tổng \$40 (1 triệu VND)], [Tăng trưởng \$20; sản phẩm và dự phòng \$20; hành chính \$8], [\$24,60]),
+      ([3.000 MAU], [4 người toàn thời gian; \$280/người (7 triệu VND)], [Marketing \$320; sản phẩm \$200; hành chính \$120; dự phòng \$160], [\$239,07]),
+      ([30.000 MAU], [Khoảng 20 người; \$320/người (8 triệu VND)], [Marketing \$14.317,60; sản phẩm và bảo mật \$5.369,20; hành chính \$3.579,20; dự phòng \$3.579,20], [\$2.548,75]),
+    ),
+    widths: (0.72fr, 1.35fr, 2.35fr, 0.9fr),
+  ),
+  caption: [Phân bổ số dư sau chi phí trực tiếp],
+) <resource-allocation>
+
+Mức 300 MAU giúp sản phẩm tự trang trải và tạo một khoản tích lũy nhỏ. Tại 3.000 MAU, bốn thành viên có thể chuyển sang làm việc toàn thời gian với mức thu nhập 280 USD (7 triệu VND) mỗi người. Khi đạt 30.000 MAU, đội ngũ mở rộng để bổ sung năng lực kỹ thuật, dữ liệu, bảo mật, hỗ trợ và phát triển thị trường; thu nhập bình quân tăng lên 320 USD (8 triệu VND) mỗi người.
+
+= Kế hoạch mở rộng và kiểm soát chi phí
+
+== Ngưỡng rà soát dịch vụ
+
+Yoca bắt đầu rà soát khi dự báo đạt 70% quota, chuẩn bị nâng gói ở 85% và duy trì khoảng dự phòng cho retry hoặc tải đột biến. Quyết định nâng cấp kết hợp quota, giới hạn RPS/RPM, lỗi 429 và độ trễ p95. Cách theo dõi này giúp phân biệt thiếu hạn mức provider với thiếu năng lực của backend hoặc database.
 
 #figure(
   report-table(
@@ -249,80 +287,90 @@ Số dư đóng góp trong @financial-results là phần còn lại sau blockcha
   caption: [Các breakpoint đầu tiên trong kịch bản cơ sở],
 ) <provider-breakpoints>
 
-Breakpoint trong @provider-breakpoints là tín hiệu lập ngân sách. Quyết định vận hành kết hợp mức quota dự phóng, lỗi 429, giới hạn RPS/RPM và độ trễ p95. Cách theo dõi này giúp nhóm phân biệt tình huống thiếu quota với tình huống thiếu throughput hoặc tài nguyên máy chủ.
+== Nguồn vốn và tiến trình phát triển
 
-== Hạ tầng và tổ chức
+Giai đoạn đầu được duy trì bằng nguồn lực của nhóm và doanh thu thuê bao. Khi MVP hình thành tập người dùng ổn định, doanh thu định kỳ và số liệu sử dụng trở thành cơ sở cho chương trình hỗ trợ startup, hợp tác chiến lược hoặc vòng vốn thiên thần/seed. Nguồn vốn mở rộng được gắn với kế hoạch sử dụng cho nhân sự, dữ liệu, hạ tầng, bảo mật và phát triển thị trường.
+
+#grid(
+  columns: (1fr, 1fr, 1fr), gutter: 8pt,
+  metric-card([300 MAU], [Tự trang trải], note: [duy trì và hoàn thiện MVP]),
+  metric-card([3.000 MAU], [Đội ngũ lõi], note: [4 vị trí toàn thời gian]),
+  metric-card([30.000 MAU], [Mở rộng], note: [AI self-host và doanh nghiệp nhỏ]),
+)
+
+= Kết luận
+
+Yoca tạo doanh thu bằng mô hình freemium kết hợp bốn gói thuê bao, trong đó mức chi trả gắn với tần suất sử dụng và chiều sâu phân tích. Cơ chế database-first giúp giảm chi phí dữ liệu ở những lượt xem lặp lại, còn quota theo chức năng giữ mức sử dụng AI và Alert phù hợp với từng gói.
+
+Kịch bản cơ sở duy trì lợi nhuận dương ở cả ba mốc. Lợi nhuận theo tháng lần lượt đạt khoảng 24,60 USD, 239,07 USD và 2.548,75 USD tại 300, 3.000 và 30.000 MAU. Phần lớn nguồn lực ở giai đoạn mở rộng tiếp tục được dành cho nhân sự, tăng trưởng, bảo mật và dự phòng.
+
+Việc chuyển sang Qwen self-host tại 30.000 MAU tạo khả năng kiểm soát chi phí AI dài hạn. Cùng với cơ chế theo dõi quota và các ngưỡng nâng gói, mô hình cho phép Yoca mở rộng theo số liệu sử dụng mà vẫn duy trì một biên lợi nhuận thận trọng.
+
+#set heading(numbering: none)
+#pagebreak()
+= Phụ lục A — Provider và đơn vị sử dụng
 
 #figure(
   report-table(
     4,
-    ([Quy mô], [Render API], [Supabase], [Tổ chức vận hành]),
+    ([Provider], [Vai trò trong Yoca], [Gói tham chiếu], [Đơn vị chính]),
     (
-      ([300 MAU], [Starter], [Free], [Bốn thành viên bán thời gian; ưu tiên duy trì MVP]),
-      ([3.000 MAU], [Standard], [Pro Micro], [Bốn vị trí thường xuyên; bổ sung ngân sách tăng trưởng]),
-      ([30.000 MAU], [Hai Standard instance], [Pro Small], [Doanh nghiệp nhỏ khoảng 20 người]),
+      ([CoinGecko], [Market và token market data], [Demo], [Credit/tháng]),
+      ([Birdeye], [Market Radar, pool và price history], [Standard], [CU/kỳ]),
+      ([Mobula], [Wallet analysis, PnL và activity], [Free], [Credit/tháng; RPS]),
+      ([Helius], [Wallet balance, transaction và webhook], [Free], [Credit/tháng]),
+      ([Zerion], [Balance chart theo từng token], [Developer], [Request/ngày; RPS]),
+      ([Moralis], [Bổ sung token metadata], [Free], [CU/ngày]),
     ),
-    widths: (0.8fr, 1.1fr, 1.05fr, 2.05fr),
+    widths: (0.85fr, 1.75fr, 1fr, 1.4fr),
   ),
-  caption: [Cấu hình hạ tầng và tổ chức theo ba mốc quy mô],
-) <infrastructure-scale>
-
-Frontend Vite được triển khai dưới dạng Render Static Site. API chạy như Render Web Service và PostgreSQL được lưu trữ trên Supabase. Cấu hình trong @infrastructure-scale là mức ngân sách dung lượng ứng với từng giai đoạn; quá trình nâng cấp dựa trên CPU, bộ nhớ, p95 latency, connection pool và dung lượng database. Giá hạ tầng được đối chiếu từ Render và Supabase @render-pricing @supabase-pricing. Email khôi phục và Alert sử dụng Resend, được đưa vào chi phí theo quota gửi thư @resend-pricing.
-
-== Phân bổ nguồn lực
-
-Ở 300 MAU, số dư đóng góp khoảng 200 USD mỗi tháng giúp trang trải hoạt động sản phẩm và tạo quỹ dự phòng nhỏ. Mốc 3.000 MAU tạo khoảng 2.282 USD số dư đóng góp, đủ duy trì bốn vị trí thường xuyên ở mức ngân sách thận trọng cùng chi phí marketing và phát triển sản phẩm. Tại 30.000 MAU, mô hình dành phần lớn nguồn lực cho nhân sự, thu hút người dùng, bảo mật và dự phòng; thặng dư vận hành được giữ ở mức 5%.
-
-Nguồn vốn ban đầu đến từ đóng góp của nhóm và doanh thu thuê bao. Sau giai đoạn MVP, dữ liệu về người dùng hoạt động, tỷ lệ chuyển đổi, chi phí thu hút khách hàng và doanh thu định kỳ tạo cơ sở để tiếp cận chương trình hỗ trợ startup, đối tác chiến lược hoặc vòng vốn thiên thần/seed.
+  caption: [Vai trò và đơn vị sử dụng của các provider],
+) <provider-overview>
 
 #figure(
   report-table(
-    3,
-    ([Mốc], [Trọng tâm], [Nguyên tắc phân bổ số dư đóng góp]),
+    4,
+    ([Tác vụ làm mới], [Provider], [Mức sử dụng quan sát], [Yếu tố làm thay đổi]),
     (
-      ([300 MAU], [Tự trang trải MVP], [Sản phẩm và dự phòng 40%; thu hút/hỗ trợ người dùng 30%; hỗ trợ nhóm 20%; hành chính 10%]),
-      ([3.000 MAU], [Duy trì đội ngũ], [Thu nhập đội ngũ 60%; marketing 20%; sản phẩm và dự phòng 10%; hành chính, thuế và pháp lý 10%]),
-      ([30.000 MAU], [Mở rộng doanh nghiệp nhỏ], [Nhân sự 25%; marketing 40%; sản phẩm và bảo mật 15%; hành chính 10%; dự phòng 5%; thặng dư vận hành 5%]),
+      ([Market Radar], [CoinGecko · Birdeye], [17 credits · 135 CU], [Số market endpoint và retry]),
+      ([Token Overview], [CoinGecko · Mobula], [15 credits · 1 credit], [Số batch token/pool]),
+      ([Wallet Core], [Mobula · Helius], [21 credits · 100 credits], [Số trang holdings]),
+      ([Wallet Activity], [Mobula], [1–10 credits], [Mật độ giao dịch và phân trang]),
+      ([Wallet Token Chart], [Zerion], [1 request/token], [Số token được chọn]),
+      ([Token Metadata], [Moralis], [10 CU], [Lần bổ sung metadata]),
     ),
-    widths: (0.8fr, 1.15fr, 3.05fr),
+    widths: (1.15fr, 1.2fr, 1.2fr, 1.45fr),
   ),
-  caption: [Định hướng phân bổ nguồn lực theo quy mô],
-) <resource-allocation>
+  caption: [Đơn vị provider cho một lần làm mới],
+) <journey-units>
 
-= Kết luận
+Giá và giới hạn được khảo sát từ tài liệu chính thức của CoinGecko, Birdeye, Mobula, Helius, Zerion và Moralis @coingecko-pricing @birdeye-pricing @mobula-pricing @helius-pricing @zerion-api @moralis-pricing.
 
-Kịch bản cơ sở cho thấy bảng giá Yoca có khả năng trang trải chi phí trực tiếp tại cả ba mốc quy mô với tỷ lệ chuyển đổi 2%. Nền tảng database-first giữ vai trò quan trọng vì làm tăng khả năng tái sử dụng dữ liệu và giảm provider usage ở các lượt xem lặp lại. Phân tích ví, AI và tìm kiếm vẫn là các nhóm cần theo dõi sát do chi phí gắn nhiều hơn với từng người dùng.
-
-Mô hình được duy trì bằng chu trình đo hành trình, đối chiếu quota, cập nhật calculator và rà breakpoint. Khi dữ liệu vận hành tích lũy, các giả định về session, adoption và tỷ lệ cold được thay bằng số đo thực tế; cấu trúc tính toán và các đơn vị provider vẫn giữ nguyên để nhóm so sánh qua từng giai đoạn.
-
-#pagebreak()
-= Bảng thuật ngữ và chữ viết tắt
+= Phụ lục B — Bảng thuật ngữ
 
 #figure(
   report-table(
     3,
     ([Thuật ngữ], [Tên đầy đủ hoặc cách đọc], [Ý nghĩa trong báo cáo]),
     (
-      ([MAU], [Monthly Active Users], [Số người dùng khác nhau có ít nhất một tương tác dữ liệu trong cửa sổ 30 ngày.]),
+      ([MAU], [Monthly Active Users], [Số người dùng khác nhau có ít nhất một tương tác dữ liệu trong 30 ngày.]),
       ([CU], [Compute Unit], [Đơn vị Birdeye và Moralis dùng để tính mức sử dụng API.]),
-      ([Credit], [Tín dụng API], [Đơn vị quota của CoinGecko, Mobula và Helius; chi phí mỗi operation phụ thuộc provider.]),
+      ([Credit], [Tín dụng API], [Đơn vị quota của CoinGecko, Mobula và Helius.]),
       ([RPS / RPM], [Requests per second / minute], [Số request tối đa trong một giây hoặc một phút.]),
       ([p95 latency], [Phân vị 95 của độ trễ], [Mức thời gian mà 95% request hoàn thành nhanh hơn hoặc bằng giá trị này.]),
-      ([Cold], [Lần tải cần làm mới dữ liệu], [Yêu cầu phải gọi một hoặc nhiều provider để cập nhật dữ liệu.]),
-      ([Warm], [Lần tải dùng dữ liệu còn hiệu lực], [Yêu cầu đọc dữ liệu đã lưu trong database mà chưa cần làm mới provider.]),
-      ([Database-first], [Ưu tiên dữ liệu trong cơ sở dữ liệu], [Luồng đọc database, kiểm tra thời hạn rồi mới gọi provider khi cần cập nhật.]),
-      ([Fan-out], [Mức mở rộng request], [Số provider request phát sinh từ một hành trình do batch, phân trang, tool hoặc retry.]),
-      ([Quota], [Hạn mức sử dụng], [Số credit, CU hoặc request được phép dùng trong một chu kỳ.]),
-      ([Headroom], [Khoảng dự phòng], [Phần quota hoặc tài nguyên được giữ lại cho tải đột biến, retry và sai lệch dự báo.]),
-      ([TTL], [Time to live], [Khoảng thời gian dữ liệu được xem là còn hiệu lực trước khi cần làm mới.]),
-      ([Conversion rate], [Tỷ lệ chuyển đổi], [Tỷ lệ MAU chuyển từ gói miễn phí sang thuê bao trả phí.]),
-      ([Contribution], [Số dư đóng góp], [Doanh thu còn lại sau chi phí trực tiếp để trang trải nhân sự và hoạt động doanh nghiệp.]),
-      ([Freemium], [Miễn phí kết hợp trả phí], [Mô hình cung cấp gói cơ bản miễn phí và thu phí cho hạn mức hoặc phân tích cao hơn.]),
-      ([PnL], [Profit and Loss], [Kết quả lãi hoặc lỗ của hoạt động giao dịch trong một khoảng thời gian.]),
-      ([Provider], [Nhà cung cấp dữ liệu], [Dịch vụ bên ngoài cung cấp dữ liệu blockchain, thị trường, ví hoặc AI cho Yoca.]),
-      ([Breakpoint], [Ngưỡng chuyển gói], [Mốc nhu cầu dự kiến khiến gói dịch vụ hiện tại cần được rà soát hoặc nâng cấp.]),
+      ([Cold], [Lần tải cần làm mới], [Yêu cầu gọi provider để cập nhật dữ liệu.]),
+      ([Warm], [Lần tải dùng dữ liệu còn hiệu lực], [Yêu cầu đọc dữ liệu trong database mà chưa cần gọi provider.]),
+      ([Database-first], [Ưu tiên cơ sở dữ liệu], [Đọc database, kiểm tra thời hạn rồi mới làm mới khi cần.]),
+      ([Tool call], [Lời gọi công cụ của AI], [Thao tác AI dùng để lấy dữ liệu Yoca hoặc tìm kiếm bổ sung.]),
+      ([Non-thinking], [Không sinh chuỗi suy luận riêng], [Chế độ Qwen tạo trực tiếp câu trả lời mà không xuất reasoning token.]),
+      ([Quota], [Hạn mức sử dụng], [Số credit, CU hoặc request được dùng trong một chu kỳ.]),
+      ([Conversion rate], [Tỷ lệ chuyển đổi], [Tỷ lệ MAU trở thành người dùng trả phí.]),
+      ([Freemium], [Miễn phí kết hợp trả phí], [Mô hình có gói cơ bản miễn phí và các gói nâng cấp.]),
+      ([PnL], [Profit and Loss], [Kết quả lãi hoặc lỗ của hoạt động giao dịch.]),
+      ([Provider], [Nhà cung cấp dữ liệu], [Dịch vụ bên ngoài cung cấp dữ liệu hoặc năng lực xử lý cho Yoca.]),
+      ([Breakpoint], [Ngưỡng chuyển gói], [Mốc nhu cầu khiến gói dịch vụ cần được rà soát hoặc nâng cấp.]),
     ),
-    widths: (0.9fr, 1.5fr, 2.6fr),
+    widths: (0.95fr, 1.55fr, 2.5fr),
   ),
   caption: [Các thuật ngữ và chữ viết tắt sử dụng trong báo cáo],
 ) <business-glossary>

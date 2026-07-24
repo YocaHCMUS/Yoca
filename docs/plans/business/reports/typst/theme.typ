@@ -49,19 +49,37 @@
   show heading.where(level: 1): it => block(
     above: 12pt, below: 7pt, breakable: false,
   )[
-    #text(size: 17pt, weight: "semibold", fill: ink)[#context counter(heading).display(it.numbering) #h(7pt) #it.body]
+    #text(size: 17pt, weight: "semibold", fill: ink)[
+      #if it.numbering != none {
+        context counter(heading).display(it.numbering)
+        h(7pt)
+      }
+      #it.body
+    ]
     #v(2pt)
     #line(length: 46pt, stroke: 2pt + blue)
   ]
   show heading.where(level: 2): it => block(
     above: 10pt, below: 16pt, breakable: false,
   )[
-    #text(size: 12.5pt, weight: "semibold", fill: blue-dark)[#context counter(heading).display(it.numbering) #h(6pt) #it.body]
+    #text(size: 12.5pt, weight: "semibold", fill: blue-dark)[
+      #if it.numbering != none {
+        context counter(heading).display(it.numbering)
+        h(6pt)
+      }
+      #it.body
+    ]
   ]
   show heading.where(level: 3): it => block(
     above: 9pt, below: 3pt, breakable: false,
   )[
-    #text(size: 10.5pt, weight: "semibold")[#context counter(heading).display(it.numbering) #h(5pt) #it.body]
+    #text(size: 10.5pt, weight: "semibold")[
+      #if it.numbering != none {
+        context counter(heading).display(it.numbering)
+        h(5pt)
+      }
+      #it.body
+    ]
   ]
   show figure.caption: it => {
     set text(size: 9pt, fill: muted)
